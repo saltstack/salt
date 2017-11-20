@@ -493,6 +493,18 @@ def apply_(mods=None,
             Values passed this way will override Pillar values set via
             ``pillar_roots`` or an external Pillar source.
 
+    exclude
+        Exclude specific states from execution. Accepts a list of sls names, a
+        comma-separated string of sls names, or a list of dictionaries
+        containing ``sls`` or ``id`` keys. Glob-patterns may be used to match
+        multiple states.
+
+        .. code-block:: bash
+
+            salt '*' state.apply exclude=bar,baz
+            salt '*' state.apply exclude=foo*
+            salt '*' state.apply exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+
     queue : False
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
@@ -755,6 +767,18 @@ def highstate(test=None, queue=False, **kwargs):
 
         .. versionadded:: 2016.3.0
 
+    exclude
+        Exclude specific states from execution. Accepts a list of sls names, a
+        comma-separated string of sls names, or a list of dictionaries
+        containing ``sls`` or ``id`` keys. Glob-patterns may be used to match
+        multiple states.
+
+        .. code-block:: bash
+
+            salt '*' state.higstate exclude=bar,baz
+            salt '*' state.higstate exclude=foo*
+            salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+
     queue : False
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
@@ -904,6 +928,18 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
         the ``pillar`` value. Currently, only ``gpg`` is supported.
 
         .. versionadded:: 2016.3.0
+
+    exclude
+        Exclude specific states from execution. Accepts a list of sls names, a
+        comma-separated string of sls names, or a list of dictionaries
+        containing ``sls`` or ``id`` keys. Glob-patterns may be used to match
+        multiple states.
+
+        .. code-block:: bash
+
+            salt '*' state.sls foo,bar,baz exclude=bar,baz
+            salt '*' state.sls foo,bar,baz exclude=ba*
+            salt '*' state.sls foo,bar,baz exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
 
     queue : False
         Instead of failing immediately when another state run is in progress,
