@@ -591,13 +591,15 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test watch_in requisite when there is a success
         '''
         ret = self.run_function('state.sls', mods='requisites.watch_in')
-        out = iter(ret)
-        f_state = next(out)
-        s_state = next(out)
+        changes = 'test_|-return_changes_|-return_changes_|-succeed_with_changes'
+        watch = 'test_|-watch_states_|-watch_states_|-succeed_without_changes'
 
-        self.assertEqual('Watch statement fired.', ret[f_state]['comment'])
+        self.assertEqual(ret[changes]['__run_num__'], 0)
+        self.assertEqual(ret[watch]['__run_num__'], 2)
+
+        self.assertEqual('Watch statement fired.', ret[watch]['comment'])
         self.assertEqual('Something pretended to change',
-                         ret[s_state]['changes']['testing']['new'])
+                         ret[changes]['changes']['testing']['new'])
 
     def test_watch_in_failure(self):
         '''
