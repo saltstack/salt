@@ -903,6 +903,8 @@ class Single(object):
                 ret = json.dumps({'local': opts_pkg})
                 return ret, retcode
 
+            if 'known_hosts_file' in self.opts:
+                opts_pkg['known_hosts_file'] = self.opts['known_hosts_file']
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
