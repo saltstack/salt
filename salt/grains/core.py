@@ -2475,10 +2475,9 @@ def _linux_iqn():
     if os.path.isfile(initiator):
         with salt.utils.files.fopen(initiator, 'r') as _iscsi:
             for line in _iscsi:
-                if line.find('InitiatorName') != -1:
-                    iqn = line.split('=')
-                    final_iqn = iqn[1].rstrip()
-                    ret.extend([final_iqn])
+                line = line.strip()
+                if line.startswith('InitiatorName='):
+                    ret.append(line.split('=', 1)[1])
     return ret
 
 
@@ -2492,9 +2491,10 @@ def _aix_iqn():
 
     aixret = __salt__['cmd.run'](aixcmd)
     if aixret[0].isalpha():
-        iqn = aixret.split()
-        final_iqn = iqn[1].rstrip()
-        ret.extend([final_iqn])
+        try:
+            ret.append(aixret.split()[1].rstrip())
+        except IndexError:
+            pass
     return ret
 
 
@@ -2507,8 +2507,7 @@ def _linux_wwns():
     for fcfile in glob.glob('/sys/class/fc_host/*/port_name'):
         with salt.utils.files.fopen(fcfile, 'r') as _wwn:
             for line in _wwn:
-                line = line.rstrip()
-                ret.extend([line[2:]])
+                ret.append(line.rstrip()[2:])
     return ret
 
 
@@ -2534,8 +2533,7 @@ def _windows_iqn():
     for line in cmdret['stdout'].splitlines():
         if line[0].isalpha():
             continue
-        line = line.rstrip()
-        ret.extend([line])
+        ret.append(line.rstrip())
 
     return ret
 
@@ -2551,7 +2549,6 @@ def _windows_wwns():
     cmdret = __salt__['cmd.run_ps'](ps_cmd)
 
     for line in cmdret:
-        line = line.rstrip()
-        ret.append(line)
+        ret.append(line.rstrip())
 
     return ret
