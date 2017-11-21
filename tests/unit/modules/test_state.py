@@ -991,3 +991,17 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                   ({}, None)]:
                     assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
 
+    def test_get_pillar_errors_EC(self):
+        '''
+        Test _get_pillar_errors function.
+        EC: External erroneous, Internal clean
+        :return:
+        '''
+        errors = ['failure', 'everywhere']
+        for int_pillar, ext_pillar in [({'foo': 'bar'}, {'fred': 'baz', '_errors': errors}),
+                                       ({}, {'fred': 'baz', '_errors': ['failure', 'everywhere']})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, errors),
+                                  ({}, errors)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
