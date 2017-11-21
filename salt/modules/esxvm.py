@@ -20,18 +20,10 @@ def __virtual__():
     '''
     Only work on proxy
     '''
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return __virtualname__
     return False
 
 
 def get_details():
     return __proxy__['esxvm.get_details']()
-
-
-def grains():
-    return __proxy__['esxvm.grains']()
-
-
-
-
