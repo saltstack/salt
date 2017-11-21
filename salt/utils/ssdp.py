@@ -359,4 +359,8 @@ class SSDPDiscoveryClient(SSDPBase):
                 if "timestamp" in err:
                     raise TimeStampException(err)
             else:
-                return json.loads(msg.split(':@:')[-1]), "%s:%s" % addr
+                data, addr, attempt = json.loads(msg.split(':@:')[-1]), "%s:%s" % addr, True
+        else:
+            data, addr, attempt = {}, '', False
+
+        return data, addr, attempt
