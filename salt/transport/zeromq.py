@@ -28,6 +28,7 @@ import salt.payload
 import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
+from salt.ext import six
 from salt.exceptions import SaltReqTimeoutError
 
 import zmq
@@ -47,6 +48,13 @@ except ImportError:
 import tornado
 import tornado.gen
 import tornado.concurrent
+
+# pylint: disable=import-error,no-name-in-module
+if six.PY2:
+    import urlparse
+else:
+    import urllib.parse as urlparse
+# pylint: enable=import-error,no-name-in-module
 
 # Import third party libs
 from salt.ext import six
@@ -166,9 +174,24 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
     @property
     def master_uri(self):
-        log.error('Calling master_uri')
-        log.error('Master URI is: %s', self.opts['master_uri'])
-        return self.opts['master_uri']
+        if tuple(zmq.pyzmq_version().split('.')) >= (16,):
+            log.error('Calling master_uri')
+            log.error('Master URI is: %s', self.opts['master_uri'])
+            return self.opts['master_uri']
+        parse = urlparse.urlparse(self.opts['master_uri'])
+        netloc_parts = parse.netloc.rsplit(';', 1)
+        source_ip, source_port = (None, None)
+        if len(netloc_parts) == 1:
+            master_ip, master_port = netloc_parts[0].rsplit(':', 1)
+        elif len(netloc_parts) == 2:
+            source_ip, source_port = netloc_parts[0].rsplit(':', 1)
+            master_ip, master_port = netloc_parts[1].rsplit(':', 1)
+            log.warning('If you need a certain source IP/port, consider upgrading pyzmq >= 16.0')
+        return '{scheme}://{master_ip}:{master_port}'.format(
+            scheme=parse.scheme,
+            master_ip=master_ip,
+            master_port=master_port
+        )
 
     def _package_load(self, load):
         return {
