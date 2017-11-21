@@ -719,11 +719,19 @@ class MinionBase(object):
         '''
         if self.opts['master'] == DEFAULT_MINION_OPTS['master'] and self.opts['discovery'] is not False:
             master_discovery_client = salt.utils.ssdp.SSDPDiscoveryClient()
-            try:
-                proto_data, ssdp_addr = master_discovery_client.discover()
-            except Exception as err:
-                log.error('SSDP discovery failure: {0}'.format(err))
-                proto_data = {'master': 'salt', 'mapping': {}}
+            for att in range(self.opts['discovery'].get('attempts', 3)):
+                try:
+                    att += 1
+                    log.info('Attempting {0} time{1} to discover masters'.format(att, (att > 1 and 's' or '')))
+                    proto_data, ssdp_addr, attempt = master_discovery_client.discover()
+                    if not attempt:
+                        time.sleep(self.opts['discovery'].get('pause', 5))
+                    else:
+                        break
+                except Exception as err:
+                    log.error('SSDP discovery failure: {0}'.format(err))
+                    proto_data = {'master': 'salt', 'mapping': {}}
+                    break
 
             policy = self.opts.get(u'discovery', {}).get(u'match', DEFAULT_MINION_OPTS[u'discovery'][u'match'])
             if policy not in ['any', 'all']:
