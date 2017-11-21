@@ -124,6 +124,10 @@ VALID_OPTS = {
     # master address will not be split into IP and PORT.
     'master_uri_format': str,
 
+    'source_interface': str,
+    'source_address': str,
+    'source_port': (six.string_types, int),
+
     # The fingerprint of the master key may be specified to increase security. Generate
     # a master fingerprint with `salt-key -F master`
     'master_finger': str,
@@ -1145,6 +1149,9 @@ DEFAULT_MINION_OPTS = {
     'master': 'salt',
     'master_type': 'str',
     'master_uri_format': 'default',
+    'source_interface': '',
+    'source_address': '',
+    'source_port': 0,
     'master_port': 4506,
     'master_finger': '',
     'master_shuffle': False,
