@@ -213,6 +213,43 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
                 ret['comment'] = ('Python package {0} was already '
                                   'installed'.format(state_pkg_name))
                 return ret
+        if force_reinstall is False and upgrade:
+            # Check desired version (if any) against currently-installed
+            include_alpha = False
+            include_beta = False
+            include_rc = False
+            if any(version_spec):
+                for spec in version_spec:
+                    if 'a' in spec[1]:
+                        include_alpha = True
+                    if 'b' in spec[1]:
+                        include_beta = True
+                    if 'rc' in spec[1]:
+                        include_rc = True
+            available_versions = __salt__['pip.list_all_versions'](
+                prefix_realname, bin_env=bin_env, include_alpha=include_alpha,
+                include_beta=include_beta, include_rc=include_rc, user=user,
+                cwd=cwd)
+            desired_version = ''
+            if any(version_spec):
+                for version in reversed(available_versions):
+                    if _fulfills_version_spec(version, version_spec):
+                        desired_version = version
+                        break
+            else:
+                desired_version = available_versions[-1]
+            if not desired_version:
+                ret['result'] = True
+                ret['comment'] = ('Python package {0} was already '
+                                  'installed and\nthe available upgrade '
+                                  'doesn\'t fulfills the version '
+                                  'requirements'.format(prefix_realname))
+                return ret
+            if _pep440_version_cmp(pip_list[prefix_realname], desired_version) == 0:
+                ret['result'] = True
+                ret['comment'] = ('Python package {0} was already '
+                                  'installed'.format(state_pkg_name))
+                return ret
 
     return ret
 
