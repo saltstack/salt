@@ -863,12 +863,18 @@ def hypermedia_handler(*args, **kwargs):
     except (salt.exceptions.SaltDaemonNotRunning,
             salt.exceptions.SaltReqTimeoutError) as exc:
         raise cherrypy.HTTPError(503, exc.strerror)
-    except (cherrypy.TimeoutError if hasattr(cherrypy, 'TimeoutError') else None,
-            salt.exceptions.SaltClientTimeout):
+    except salt.exceptions.SaltClientTimeout:
         raise cherrypy.HTTPError(504)
     except cherrypy.CherryPyException:
         raise
     except Exception as exc:
+        # The TimeoutError exception class was removed in CherryPy in 12.0.0, but
+        # Still check existence of TimeoutError and handle in CherryPy < 12.
+        # The check was moved down from the SaltClientTimeout error line because
+        # A one-line if statement throws a BaseException inheritance TypeError.
+        if hasattr(cherrypy, 'TimeoutError') and isinstance(exc, cherrypy.TimeoutError):
+            raise cherrypy.HTTPError(504)
+
         import traceback
 
         logger.debug("Error while processing request for: %s",
