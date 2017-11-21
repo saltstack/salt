@@ -266,12 +266,20 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         resolver = kwargs.get('resolver')
 
         parse = urlparse.urlparse(self.opts['master_uri'])
-        host, port = parse.netloc.rsplit(':', 1)
-        self.master_addr = (host, int(port))
+        netloc_parts = parse.netloc.rsplit(';', 1)
+        source_ip, source_port = (None, None)
+        if len(netloc_parts) == 1:
+            master_host, master_port = netloc_parts[0].rsplit(':', 1)
+            self.master_addr = (master_host, int(master_port))
+        elif len(netloc_parts) == 2:
+            source_ip, source_port = netloc_parts[0].rsplit(':', 1)
+            master_host, master_port = netloc_parts[1].rsplit(':', 1)
+            self.master_addr = (master_host, int(master_port))
         self._closing = False
         self.message_client = SaltMessageClientPool(self.opts,
-                                                    args=(self.opts, host, int(port),),
-                                                    kwargs={'io_loop': self.io_loop, 'resolver': resolver})
+                                                    args=(self.opts, master_host, int(master_port),),
+                                                    kwargs={'io_loop': self.io_loop, 'resolver': resolver,
+                                                            'source_ip': self.source_ip, 'source_port': self.source_port})
 
     def close(self):
         if self._closing:
@@ -833,10 +841,13 @@ class SaltMessageClient(object):
     Low-level message sending client
     '''
     def __init__(self, opts, host, port, io_loop=None, resolver=None,
-                 connect_callback=None, disconnect_callback=None):
+                 connect_callback=None, disconnect_callback=None,
+                 source_ip=None, source_port=None):
         self.opts = opts
         self.host = host
         self.port = port
+        self.source_ip = source_ip
+        self.source_port = source_port
         self.connect_callback = connect_callback
         self.disconnect_callback = disconnect_callback
 
@@ -932,9 +943,21 @@ class SaltMessageClient(object):
             if self._closing:
                 break
             try:
-                self._stream = yield self._tcp_client.connect(self.host,
-                                                              self.port,
-                                                              ssl_options=self.opts.get('ssl'))
+                if (self.source_ip or self.source_port) and tornado.version_info >= (4, 5):
+                    ### source_ip and source_port are supported only in Tornado >= 4.5
+                    # See http://www.tornadoweb.org/en/stable/releases/v4.5.0.html
+                    # Otherwise will just ignore these args
+                    self._stream = yield self._tcp_client.connect(self.host,
+                                                                  self.port,
+                                                                  ssl_options=self.opts.get('ssl'),
+                                                                  source_ip=self.source_ip,
+                                                                  source_port=self.source_port)
+                else:
+                    if self.source_ip or self.source_port:
+                        log.warning('If you need a certain source IP/port, consider upgrading Tornado >= 4.5')
+                    self._stream = yield self._tcp_client.connect(self.host,
+                                                                  self.port,
+                                                                  ssl_options=self.opts.get('ssl'))
                 self._connecting_future.set_result(True)
                 break
             except Exception as e:
