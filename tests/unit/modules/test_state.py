@@ -857,14 +857,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                True),
                                      ["A"])
 
-                mock = MagicMock(side_effect=[False,
-                                              True,
-                                              True,
-                                              True,
-                                              True])
-                with patch.object(state, '_check_pillar', mock):
+                mock = MagicMock(side_effect=[['E', '1'], None, None, None, None])
+                with patch.object(state, '_get_pillar_errors', mock):
                     with patch.dict(state.__context__, {"retcode": 5}):
-                        with patch.dict(state.__pillar__, {"_errors": "E1"}):
+                        with patch.dict(state.__pillar__, {"_errors": ['E', '1']}):
                             self.assertListEqual(state.sls("core,edit.vim dev",
                                                            None,
                                                            None,
