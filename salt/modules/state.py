@@ -99,7 +99,7 @@ def _set_retcode(ret, highstate=None):
         __context__['retcode'] = 2
 
 
-def _check_pillar(kwargs, pillar=None):
+def _get_pillar_errors(kwargs, pillar=None):
     '''
     Check the pillar for errors, refuse to run the state if there are errors
     in the pillar and return the pillar errors
