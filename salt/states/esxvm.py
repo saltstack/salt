@@ -237,7 +237,7 @@ def vm_configured(name, vm_name, cpu, memory, image, version, interfaces,
 
     log.trace('Validating virtual machine configuration')
     schema = ESXVirtualMachineConfigSchema.serialize()
-    log.trace('schema = {}'.format(schema))
+    log.trace('schema = {0}'.format(schema))
     try:
         jsonschema.validate({'vm_name': vm_name,
                              'cpu': cpu,
@@ -264,7 +264,7 @@ def vm_configured(name, vm_name, cpu, memory, image, version, interfaces,
     try:
         __salt__['vsphere.get_vm'](vm_name, vm_properties=['name'],
                                    service_instance=service_instance)
-    except salt.exceptions.VMwareObjectRetrievalException:
+    except salt.exceptions.VMwareObjectRetrievalError:
         vm_file = __salt__['vsphere.get_vm_config_file'](
             vm_name, datacenter,
             placement, datastore,
@@ -356,7 +356,7 @@ def vm_updated(name, vm_name, cpu, memory, image, version, interfaces,
          'cd_drives': cd_dvd_drives,
          'sata_controllers': sata_controllers,
          'advanced_configs': advanced_configs},
-         current_config)
+        current_config)
     if not diffs:
         result.update({
             'result': True,
@@ -366,11 +366,10 @@ def vm_updated(name, vm_name, cpu, memory, image, version, interfaces,
 
     if __opts__['test']:
         comment = 'State vm_updated will update virtual machine \'{0}\' ' \
-                  'in datacenter \'{1}\':\n{2}'.format(
-            vm_name,
-            datacenter,
-            '\n'.join([':\n'.join([key, difference.changes_str]) \
-                       for key, difference in six.iteritems(diffs)]))
+                  'in datacenter \'{1}\':\n{2}'.format(vm_name,
+                                                       datacenter,
+                  '\n'.join([':\n'.join([key, difference.changes_str]) \
+                      for key, difference in six.iteritems(diffs)]))
         result.update({'result': None,
                        'comment': comment})
         __salt__['vsphere.disconnect'](service_instance)
@@ -397,7 +396,7 @@ def vm_updated(name, vm_name, cpu, memory, image, version, interfaces,
     if power_on:
         try:
             __salt__['vsphere.power_on_vm'](vm_name, datacenter)
-        except salt.exceptions.VMwarePowerOnException:
+        except salt.exceptions.VMwarePowerOnError:
             pass
         except salt.exceptions.VMwarePowerOnError as exc:
             log.error('Error: {}'.format(exc))
@@ -464,7 +463,7 @@ def vm_created(name, vm_name, cpu, memory, image, version, interfaces,
         try:
             __salt__['vsphere.power_on_vm'](vm_name, datacenter,
                                             service_instance=service_instance)
-        except salt.exceptions.VMwarePowerOnException:
+        except salt.exceptions.VMwarePowerOnError:
             pass
         except salt.exceptions.VMwarePowerOnError as exc:
             log.error('Error: {0}'.format(exc))
@@ -504,7 +503,7 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
         __salt__['vsphere.register_vm'](vm_name, datacenter,
                                         placement, vmx_path,
                                         service_instance=service_instance)
-    except salt.exceptions.VMwareObjectDuplicateException as exc:
+    except salt.exceptions.VMwareMultipleObjectsError as exc:
         log.error('Error: {0}'.format(str(exc)))
         if service_instance:
             __salt__['vsphere.disconnect'](service_instance)
@@ -523,7 +522,7 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
         try:
             __salt__['vsphere.power_on_vm'](vm_name, datacenter,
                                             service_instance=service_instance)
-        except salt.exceptions.VMwarePowerOnException:
+        except salt.exceptions.VMwarePowerOnError:
             pass
         except salt.exceptions.VMwarePowerOnError as exc:
             log.error('Error: {0}'.format(exc))
