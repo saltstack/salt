@@ -166,6 +166,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
     @property
     def master_uri(self):
+        log.error('Calling master_uri')
+        log.error('Master URI is: %s', self.opts['master_uri'])
         return self.opts['master_uri']
 
     def _package_load(self, load):
@@ -379,6 +381,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if not self.auth.authenticated:
             yield self.auth.authenticate()
         self.publish_port = self.auth.creds['publish_port']
+        log.error('Trying to connect to master pub: %s', self.master_pub)
         self._socket.connect(self.master_pub)
 
     @property
@@ -954,6 +957,7 @@ class AsyncReqMessageClient(object):
             elif hasattr(zmq, 'IPV4ONLY'):
                 self.socket.setsockopt(zmq.IPV4ONLY, 0)
         self.socket.linger = self.linger
+        log.error('Trying to connect to: %s', self.addr)
         self.socket.connect(self.addr)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self.socket, io_loop=self.io_loop)
 
