@@ -3170,9 +3170,9 @@ def get_vm_by_property(service_instance, name, datacenter=None, vm_properties=No
                                                          traversal_spec=traversal_spec)
     vm_formatted = [vm for vm in vm_list if vm['name'] == name]
     if not vm_formatted:
-        raise salt.exceptions.VMwareObjectRetrievalException('The virtual machine was not found.')
+        raise salt.exceptions.VMwareObjectRetrievalError('The virtual machine was not found.')
     elif len(vm_formatted) > 1:
-        raise salt.exceptions.VMwareObjectDuplicateException('Multiple virtual machines were found with the '
+        raise salt.exceptions.VMwareMultipleObjectsError('Multiple virtual machines were found with the '
                                                   'same name, please specify a container.')
     return vm_formatted[0]
 
@@ -3200,12 +3200,12 @@ def get_folder(service_instance, datacenter, placement, base_vm_name=None):
         if 'parent' in vm_props:
             folder_object = vm_props['parent']
         else:
-            raise salt.exceptions.VMwareObjectRetrievalException('The virtual machine parent '
+            raise salt.exceptions.VMwareObjectRetrievalError('The virtual machine parent '
                                                       'object is not defined')
     elif 'folder' in placement:
         folder_objects = salt.utils.vmware.get_folders(service_instance, [placement['folder']], datacenter)
         if len(folder_objects) > 1:
-            raise salt.exceptions.VMwareObjectDuplicateException('Multiple instances are available of the '
+            raise salt.exceptions.VMwareMultipleObjectsError('Multiple instances are available of the '
                                                       'specified folder {0}'.format(placement['folder']))
         folder_object = folder_objects[0]
     elif datacenter:
@@ -3214,7 +3214,7 @@ def get_folder(service_instance, datacenter, placement, base_vm_name=None):
         if 'vmFolder' in dc_props:
             folder_object = dc_props['vmFolder']
         else:
-            raise salt.exceptions.VMwareObjectRetrievalException('The datacenter vm folder object is not defined')
+            raise salt.exceptions.VMwareObjectRetrievalError('The datacenter vm folder object is not defined')
     return folder_object
 
 
@@ -3236,7 +3236,7 @@ def get_placement(service_instance, datacenter, placement=None):
     if 'host' in placement:
         host_objects = get_hosts(service_instance, datacenter_name=datacenter, host_names=[placement['host']])
         if not host_objects:
-            raise salt.exceptions.VMwareObjectRetrievalException('The specified host {0} cannot be found.'.format(placement['host']))
+            raise salt.exceptions.VMwareObjectRetrievalError('The specified host {0} cannot be found.'.format(placement['host']))
         try:
             host_props = get_properties_of_managed_object(host_objects[0],
                                                           properties=['resourcePool'])
@@ -3258,7 +3258,7 @@ def get_placement(service_instance, datacenter, placement=None):
             if resourcepools:
                 resourcepool_object = resourcepools[0]['object']
             else:
-                raise salt.exceptions.VMwareObjectRetrievalException(
+                raise salt.exceptions.VMwareObjectRetrievalError(
                     'The resource pool of host {0} cannot be found.'.format(placement['host']))
         placement_object = host_objects[0]
     elif 'resourcepool' in placement:
@@ -3266,7 +3266,7 @@ def get_placement(service_instance, datacenter, placement=None):
                                                   [placement['resourcepool']],
                                                   datacenter_name=datacenter)
         if len(resourcepool_objects) > 1:
-            raise salt.exceptions.VMwareObjectDuplicateException('Multiple instances are available of the '
+            raise salt.exceptions.VMwareMultipleObjectsError('Multiple instances are available of the '
                                                       'specified host {}.'.format(placement['host']))
         resourcepool_object = resourcepool_objects[0]
         res_props = get_properties_of_managed_object(resourcepool_object,
@@ -3274,7 +3274,7 @@ def get_placement(service_instance, datacenter, placement=None):
         if 'parent' in res_props:
             placement_object = res_props['parent']
         else:
-            raise salt.exceptions.VMwareObjectRetrievalException('The resource pool\'s parent '
+            raise salt.exceptions.VMwareObjectRetrievalError('The resource pool\'s parent '
                                                       'object is not defined')
     elif 'cluster' in placement:
         datacenter_object = get_datacenter(service_instance, datacenter)
@@ -3284,12 +3284,12 @@ def get_placement(service_instance, datacenter, placement=None):
         if 'resourcePool' in clus_props:
             resourcepool_object = clus_props['resourcePool']
         else:
-            raise salt.exceptions.VMwareObjectRetrievalException('The cluster\'s resource pool '
+            raise salt.exceptions.VMwareObjectRetrievalError('The cluster\'s resource pool '
                                                       'object is not defined')
         placement_object = cluster_object
     else:
         # We are checking the schema for this object, this exception should never be raised
-        raise salt.exceptions.VMwareObjectRetrievalException('Placement is not defined.')
+        raise salt.exceptions.VMwareObjectRetrievalError('Placement is not defined.')
     return (resourcepool_object, placement_object)
 
 
@@ -3451,10 +3451,10 @@ def register_vm(datacenter, name, vmx_path, resourcepool_object, host_object=Non
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     try:
         vm_ref = wait_for_task(task, name, 'RegisterVM Task')
-    except salt.exceptions.VMwareNotFoundError as exc:
-        raise salt.exceptions.VMwareVmRegisterError('An error occurred during registration '
-                                         'operation, the configuration file '
-                                         'was not found: {0}'.format(str(exc)))
+    except salt.exceptions.VMwareFileNotFoundError as exc:
+        raise salt.exceptions.VMwareVmRegisterError(
+            'An error occurred during registration operation, the '
+            'configuration file was not found: {0}'.format(str(exc)))
     return vm_ref
 
 
