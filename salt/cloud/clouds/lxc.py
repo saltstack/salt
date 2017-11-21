@@ -80,6 +80,7 @@ def _master_opts(cfg='master'):
     cfg = os.environ.get(
         'SALT_MASTER_CONFIG', os.path.join(default_dir, cfg))
     opts = config.master_config(cfg)
+    opts['output'] = 'quiet'
     return opts
 
 
