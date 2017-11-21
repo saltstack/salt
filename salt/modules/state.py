@@ -101,8 +101,12 @@ def _set_retcode(ret, highstate=None):
 
 def _get_pillar_errors(kwargs, pillar=None):
     '''
-    Check the pillar for errors, refuse to run the state if there are errors
-    in the pillar and return the pillar errors
+    Checks all pillars (external and internal) for errors.
+    Return an error message, if anywhere or None.
+
+    :param kwargs: dictionary of options
+    :param pillar: external pillar
+    :return: None or an error message
     '''
     return None if kwargs.get('force') else (pillar or {}).get('_errors', __pillar__.get('_errors')) or None
 
