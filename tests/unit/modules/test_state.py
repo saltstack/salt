@@ -1034,6 +1034,11 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(state.pkg(tar_file, 0, "md5"), True)
 
                 MockTarFile.path = ""
+<<<<<<< HEAD
+=======
+                MockJson.flag = False
+
+>>>>>>> Add unit test for _get_pillar_errors when external and internal pillars are clean
                 if six.PY2:
                     with patch('salt.utils.files.fopen', mock_open()), \
                             patch.dict(state.__utils__, {'state.check_result': MagicMock(return_value=True)}):
