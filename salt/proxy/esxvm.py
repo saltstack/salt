@@ -1,7 +1,148 @@
 # -*- coding: utf-8 -*-
 '''
-TODO Add and review comments
+Proxy Minion interface module for managing VMWare ESXi virtual machines.
 
+Dependencies
+============
+
+- pyVmomi
+- jsonschema
+
+Configuration
+=============
+To use this integration proxy module, please configure the following:
+
+Pillar
+------
+
+Proxy minions get their configuration from Salt's Pillar. This can now happen
+from the proxy's configuration file.
+
+Example pillars:
+
+``userpass`` mechanism:
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: esxvm
+      datacenter: <datacenter name>
+      vcenter: <ip or dns name of parent vcenter>
+      mechanism: userpass
+      username: <vCenter username>
+      passwords: (required if userpass is used)
+        - first_password
+        - second_password
+        - third_password
+
+``sspi`` mechanism:
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: esxvm
+      datacenter: <datacenter name>
+      vcenter: <ip or dns name of parent vcenter>
+      mechanism: sspi
+      domain: <user domain>
+      principal: <host kerberos principal>
+
+proxytype
+^^^^^^^^^
+To use this Proxy Module, set this to ``esxvm``.
+
+datacenter
+^^^^^^^^^^
+Name of the datacenter where the virtual machine should be deployed. Required.
+
+vcenter
+^^^^^^^
+The location of the VMware vCenter server (host of ip) where the virtual
+machine should be managed. Required.
+
+mechanism
+^^^^^^^^^
+The mechanism used to connect to the vCenter server. Supported values are
+``userpass`` and ``sspi``. Required.
+
+Note:
+    Connections are attempted using all (``username``, ``password``)
+    combinations on proxy startup.
+
+username
+^^^^^^^^
+The username used to login to the host, such as ``root``. Required if mechanism
+is ``userpass``.
+
+passwords
+^^^^^^^^^
+A list of passwords to be used to try and login to the vCenter server. At least
+one password in this list is required if mechanism is ``userpass``.  When the
+proxy comes up, it will try the passwords listed in order.
+
+domain
+^^^^^^
+User realm domain. Required if mechanism is ``sspi``.
+
+principal
+^^^^^^^^
+Kerberos principal. Rquired if mechanism is ``sspi``.
+
+protocol
+^^^^^^^^
+If the ESXi host is not using the default protocol, set this value to an
+alternate protocol. Default is ``https``.
+
+port
+^^^^
+If the ESXi host is not using the default port, set this value to an
+alternate port. Default is ``443``.
+
+Salt Proxy
+----------
+
+After your pillar is in place, you can test the proxy. The proxy can run on
+any machine that has network connectivity to your Salt Master and to the
+vCenter server in the pillar. SaltStack recommends that the machine running the
+salt-proxy process also run a regular minion, though it is not strictly
+necessary.
+
+To start a proxy minion one needs to establish its identity <id>:
+
+.. code-block:: bash
+
+    salt-proxy --proxyid <proxy_id>
+
+On the machine that will run the proxy, make sure there is a configuration file
+present. By default this is ``/etc/salt/proxy``. If in a different location, the
+``<configuration_folder>`` has to be specified when running the proxy:
+file with at least the following in it:
+
+.. code-block:: bash
+
+    salt-proxy --proxyid <proxy_id> -c <configuration_folder>
+
+Commands
+--------
+
+Once the proxy is running it will connect back to the specified master and
+individual commands can be runs against it:
+
+.. code-block:: bash
+
+    # Master - minion communication
+    salt <proxy_id> test.ping
+
+    # Test vcenter connection
+    salt <proxy_id> vsphere.test_vcenter_connection
+
+States
+------
+
+Associated states are documented in
+:mod:`salt.states.esxvm </ref/states/all/salt.states.esxvm>`.
+Look there to find an example structure for Pillar as well as an example
+``.sls`` file for configuring an ESX virtual machine from scratch.
 '''
 
 # Import Python Libs

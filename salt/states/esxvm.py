@@ -2,8 +2,6 @@
 '''
 Salt state to create, update VMware ESXi Virtual Machines.
 
-:codeauthor: :email:`Agnes Tevesz <agnes.tevesz@morganstaley.com>`
-
 Dependencies
 ============
 
