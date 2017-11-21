@@ -2120,8 +2120,16 @@ def list_installed_patches():
 
 def list_provides(**kwargs):
     '''
-    List package provides currently installed as a dict.
-    {'<provided_name>': ['<package_name', 'package_name', ...]}
+    .. versionadded:: Oxygen
+
+    List package provides of installed packages as a dict.
+    {'<provided_name>': ['<package_name>', '<package_name>', ...]}
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_provides
     '''
     ret = __context__.get('pkg.list_provides')
     if not ret:
