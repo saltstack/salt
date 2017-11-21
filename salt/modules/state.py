@@ -1089,7 +1089,6 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
         mods = mods.split(',')
 
     st_.push_active()
-    ret = {}
     try:
         high_, errors = st_.render_highstate({opts['environment']: mods})
 
