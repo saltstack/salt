@@ -975,3 +975,19 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 MockJson.flag = False
                 with patch('salt.utils.fopen', mock_open()):
                     self.assertTrue(state.pkg(tar_file, 0, "md5"))
+
+    def test_get_pillar_errors_CC(self):
+        '''
+        Test _get_pillar_errors function.
+        CC: External clean, Internal clean
+        :return:
+        '''
+        for int_pillar, ext_pillar in [({'foo': 'bar'}, {'fred': 'baz'}),
+                                       ({'foo': 'bar'}, None),
+                                       ({}, {'fred': 'baz'})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, None),
+                                  ({}, None)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
