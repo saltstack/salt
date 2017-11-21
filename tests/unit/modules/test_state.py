@@ -999,7 +999,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         '''
         errors = ['failure', 'everywhere']
         for int_pillar, ext_pillar in [({'foo': 'bar'}, {'fred': 'baz', '_errors': errors}),
-                                       ({}, {'fred': 'baz', '_errors': ['failure', 'everywhere']})]:
+                                       ({}, {'fred': 'baz', '_errors': errors})]:
             with patch('salt.modules.state.__pillar__', int_pillar):
                 for opts, res in [({'force': True}, None),
                                   ({'force': False}, errors),
