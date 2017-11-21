@@ -9514,6 +9514,11 @@ def power_on_vm(name, datacenter=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.power_on_vm name=my_vm
+
     '''
     log.trace('Powering on virtual machine {0}'.format(name))
     vm_properties = [
@@ -9551,6 +9556,11 @@ def power_off_vm(name, datacenter=None, service_instance=None):
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
         Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.power_off_vm name=my_vm
+
     '''
     log.trace('Powering off virtual machine {0}'.format(name))
     vm_properties = [
@@ -9633,6 +9643,11 @@ def delete_vm(name, datacenter, placement=None, power_off=False,
 
     service_instance
         vCenter service instance for connection and configuration
+
+    .. code-block:: bash
+
+        salt '*' vsphere.delete_vm name=my_vm datacenter=my_datacenter
+
     '''
     results = {}
     schema = ESXVirtualMachineDeleteSchema.serialize()
@@ -9672,6 +9687,11 @@ def unregister_vm(name, datacenter, placement=None, power_off=False,
 
     service_instance
         vCenter service instance for connection and configuration
+
+    .. code-block:: bash
+
+        salt '*' vsphere.unregister_vm name=my_vm datacenter=my_datacenter
+
     '''
     results = {}
     schema = ESXVirtualMachineUnregisterSchema.serialize()
