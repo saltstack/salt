@@ -106,6 +106,13 @@ A REST API for Salt
     expire_responses : True
         Whether to check for and kill HTTP responses that have exceeded the
         default timeout.
+
+        .. deprecated:: 2016.11.9, 2017.7.3, Oxygen
+
+            The "expire_responses" configuration setting, which corresponds
+            to the ``timeout_monitor`` setting in CherryPy, is no longer
+            supported in CherryPy versions >= 12.0.0.
+
     max_request_body_size : ``1048576``
         Maximum size for the HTTP request body.
     collect_stats : False
@@ -490,6 +497,8 @@ import salt.ext.six as six
 # Import Salt libs
 import salt
 import salt.auth
+import salt.exceptions
+import salt.utils
 import salt.utils.event
 
 # Import salt-api libs
@@ -734,7 +743,8 @@ def hypermedia_handler(*args, **kwargs):
     except (salt.exceptions.SaltDaemonNotRunning,
             salt.exceptions.SaltReqTimeoutError) as exc:
         raise cherrypy.HTTPError(503, exc.strerror)
-    except (cherrypy.TimeoutError, salt.exceptions.SaltClientTimeout):
+    except (cherrypy.TimeoutError if hasattr(cherrypy, 'TimeoutError') else None,
+            salt.exceptions.SaltClientTimeout):
         raise cherrypy.HTTPError(504)
     except cherrypy.CherryPyException:
         raise
@@ -2548,8 +2558,6 @@ class API(object):
                 'server.socket_port': self.apiopts.get('port', 8000),
                 'server.thread_pool': self.apiopts.get('thread_pool', 100),
                 'server.socket_queue_size': self.apiopts.get('queue_size', 30),
-                'engine.timeout_monitor.on': self.apiopts.get(
-                    'expire_responses', True),
                 'max_request_body_size': self.apiopts.get(
                     'max_request_body_size', 1048576),
                 'debug': self.apiopts.get('debug', False),
@@ -2566,6 +2574,14 @@ class API(object):
                 'tools.cors_tool.on': True,
             },
         }
+
+        if salt.utils.version_cmp(cherrypy.__version__, '12.0.0') < 0:
+            # CherryPy >= 12.0 no longer supports "timeout_monitor", only set
+            # this config option when using an older version of CherryPy.
+            # See Issue #44601 for more information.
+            conf['global']['engine.timeout_monitor.on'] = self.apiopts.get(
+                'expire_responses', True
+            )
 
         if cpstats and self.apiopts.get('collect_stats', False):
             conf['/']['tools.cpstats.on'] = True
