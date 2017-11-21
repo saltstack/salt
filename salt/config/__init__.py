@@ -1174,6 +1174,12 @@ VALID_OPTS = {
 
     # Port definition.
     'port': int,
+
+    # SSDP discovery attempts to send query to the Universe
+    'attempts': int,
+
+    # SSDP discovery pause between the attempts
+    'pause': int,
 }
 
 # default configurations
