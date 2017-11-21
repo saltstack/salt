@@ -23,6 +23,7 @@ requisite to a pkg.installed state for the package which provides pip
 from __future__ import absolute_import
 import re
 import logging
+from pkg_resources import parse_version
 
 # Import salt libs
 import salt.utils
@@ -94,7 +95,7 @@ def _fulfills_version_spec(version, version_spec):
     for oper, spec in version_spec:
         if oper is None:
             continue
-        if not salt.utils.compare_versions(ver1=version, oper=oper, ver2=spec):
+        if not salt.utils.compare_versions(ver1=version, oper=oper, ver2=spec, cmp_func=_pep440_version_cmp):
             return False
     return True
 
@@ -214,6 +215,29 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
                 return ret
 
     return ret
+
+
+def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
+    '''
+    Compares two version strings using pkg_resources.parse_version.
+    Return -1 if version1 < version2, 0 if version1 ==version2,
+    and 1 if version1 > version2. Return None if there was a problem
+    making the comparison.
+    '''
+    normalize = lambda x: str(x).split('!', 1)[-1] if ignore_epoch else str(x)
+    pkg1 = normalize(pkg1)
+    pkg2 = normalize(pkg2)
+
+    try:
+        if parse_version(pkg1) < parse_version(pkg2):
+            return -1
+        if parse_version(pkg1) == parse_version(pkg2):
+            return 0
+        if parse_version(pkg1) > parse_version(pkg2):
+            return 1
+    except Exception as exc:
+        logger.exception(exc)
+    return None
 
 
 def installed(name,
