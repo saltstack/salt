@@ -1464,6 +1464,8 @@ DEFAULT_MINION_OPTS = {
         'automatic': ['IPAddress', 'Gateway',
                       'GlobalIPv6Address', 'IPv6Gateway'],
     'discovery': {
+        'attempts': 3,
+        'pause': 5,
         'port': 4520,
         'match': 'any',
         'mapping': {},
