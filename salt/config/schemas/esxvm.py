@@ -324,15 +324,15 @@ class ESXVirtualMachineConfigSchema(DefinitionsSchema):
                          required=True)
     interfaces = ArrayItem(items=ESXVirtualMachineInterfaceSchemaItem(),
                            min_items=1,
-                           required=True,
+                           required=False,
                            unique_items=True)
     disks = ArrayItem(items=ESXVirtualMachineDiskSchemaItem(),
                       min_items=1,
-                      required=True,
+                      required=False,
                       unique_items=True)
     scsi_devices = ArrayItem(items=ESXVirtualMachineScsiSchemaItem(),
                              min_items=1,
-                             required=True,
+                             required=False,
                              unique_items=True)
     serial_ports = ArrayItem(items=ESXVirtualMachineSerialSchemaItem(),
                              min_items=0,
