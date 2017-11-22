@@ -27,13 +27,6 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 
-# Import 3rd-party libs
-try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
 # Import Salt Libs
 import salt.returners
 
@@ -48,8 +41,6 @@ def __virtual__():
 
     :return: The virtual name of the module.
     '''
-    if not HAS_REQUESTS:
-        return False
     return __virtualname__
 
 
@@ -61,7 +52,6 @@ def _get_options(ret=None):
     :return:        Dictionary containing the data and options needed to send
                     them to telegram.
     '''
-
     attrs = {'chat_id': 'chat_id',
             'token': 'token'}
 
@@ -81,7 +71,6 @@ def returner(ret):
     :param ret:     The data to be sent.
     :return:        Boolean if message was sent successfully.
     '''
-
     _options = _get_options(ret)
 
     chat_id = _options.get('chat_id')
@@ -105,51 +94,6 @@ def returner(ret):
                     ret.get('jid'),
                     returns)
 
-    telegram = _post_message(chat_id,
-                            message,
-                            token)
-
-    return telegram
-
-
-def _post_message(chat_id, message, token):
-    '''
-    Send a message to a Telegram chat.
-
-    :param chat_id:     The chat id.
-    :param message:     The message to send to the telegram chat.
-    :param token:       The Telegram API token.
-    :return:            Boolean if message was sent successfully.
-    '''
-
-    url = 'https://api.telegram.org/bot{0}/sendMessage'.format(token)
-
-    parameters = dict()
-    if chat_id:
-        parameters['chat_id'] = chat_id
-    if message:
-        parameters['text'] = message
-
-    try:
-        response = requests.post(
-            url,
-            data=parameters
-        )
-        result = response.json()
-
-        log.debug(
-            'Raw response of the telegram request is {0}'.format(response))
-
-    except Exception:
-        log.exception(
-            'Sending telegram api request failed'
-        )
-        result = False
-
-    if response and 'message_id' in result:
-        success = True
-    else:
-        success = False
-
-    log.debug('result {0}'.format(success))
-    return bool(success)
+    return __salt__['telegram.post_message'](message,
+                                             chat_id=chat_id,
+                                             token=token)
