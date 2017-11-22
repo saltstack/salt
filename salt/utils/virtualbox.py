@@ -19,9 +19,7 @@ from salt.utils.timeout import wait_for
 log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
-from salt.ext import six
 from salt.ext.six.moves import range
-
 # Import virtualbox libs
 HAS_LIBS = False
 try:
@@ -281,17 +279,20 @@ def vb_get_network_addresses(machine_name=None, machine=None):
     # We can't trust virtualbox to give us up to date guest properties if the machine isn't running
     # For some reason it may give us outdated (cached?) values
     if machine.state == _virtualboxManager.constants.MachineState_Running:
+        _total_slots = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/Count')
+
         try:
-            total_slots = int(machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/Count'))
-        except ValueError:
-            total_slots = 0
-        for i in range(total_slots):
-            try:
-                address = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/{0}/V4/IP'.format(i))
-                if address:
-                    ip_addresses.append(address)
-            except Exception as e:
-                log.debug(e.message)
+            total_slots = int(_total_slots)
+            for i in range(total_slots):
+                try:
+                    address = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/{0}/V4/IP'.format(i))
+                    if address:
+                        ip_addresses.append(address)
+                except Exception as e:
+                    log.debug(e.message)
+        except ValueError as e:
+            log.debug(e.message)
+            return None
 
     return ip_addresses
 
