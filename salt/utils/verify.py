@@ -34,7 +34,7 @@ import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
-ROOT_DIR = 'c:\\salt' if salt.utils.is_windows() else '/'
+ROOT_DIR = 'c:\\salt' if salt.utils.platform.is_windows() else '/'
 
 
 def zmq_version():

@@ -31,7 +31,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             self.service_name = 'systemd-journald'
             cmd_name = 'systemctl'
 
-        if salt.utils.which(cmd_name) is None:
+        if salt.utils.path.which(cmd_name) is None:
             self.skipTest('{0} is not installed'.format(cmd_name))
 
     def check_service_status(self, exp_return):

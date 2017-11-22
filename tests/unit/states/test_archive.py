@@ -20,7 +20,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.archive as archive
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
-import salt.utils
+import salt.utils.platform
 
 
 def _isfile_side_effect(path):
@@ -63,7 +63,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         archive.extracted tar options
         '''
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             source = 'c:\\tmp\\foo.tar.gz'
             tmp_dir = 'c:\\tmp\\test_extracted_tar'
         else:
@@ -112,7 +112,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                               'file.source_list': mock_source_list}),\
                 patch.dict(archive.__states__, {'file.directory': mock_true}),\
                 patch.object(os.path, 'isfile', isfile_mock),\
-                patch('salt.utils.which', MagicMock(return_value=True)):
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
 
             for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
                 archive.extracted(tmp_dir, source, options=test_opts,
@@ -152,7 +152,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                            'file.source_list': mock_source_list}),\
                 patch.dict(archive.__states__, {'file.directory': mock_true}),\
                 patch.object(os.path, 'isfile', isfile_mock),\
-                patch('salt.utils.which', MagicMock(return_value=True)):
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
             ret = archive.extracted(os.path.join(os.sep + 'tmp', 'out'),
                                     source,
                                     options='xvzf',
@@ -191,7 +191,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                            'file.source_list': mock_source_list}),\
                 patch.dict(archive.__states__, {'file.directory': mock_true}),\
                 patch.object(os.path, 'isfile', isfile_mock),\
-                patch('salt.utils.which', MagicMock(return_value=True)):
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
             ret = archive.extracted(os.path.join(os.sep + 'tmp', 'out'),
                                     source,
                                     options='xvzf',

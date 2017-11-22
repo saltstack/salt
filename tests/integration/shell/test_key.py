@@ -66,7 +66,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         pki_dir = self.master_opts['pki_dir']
         key = os.path.join(pki_dir, 'minions', min_name)
 
-        with salt.utils.fopen(key, 'w') as fp:
+        with salt.utils.files.fopen(key, 'w') as fp:
             fp.write(textwrap.dedent('''\
                      -----BEGIN PUBLIC KEY-----
                      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoqIZDtcQtqUNs0wC7qQz
