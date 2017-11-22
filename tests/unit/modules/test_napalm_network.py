@@ -311,11 +311,11 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_traceroute(self):
         ret = napalm_network.traceroute('destination.com')
-        assert ret['out'].keys()[0] == 'success'
+        assert list(ret['out'].keys())[0] == 'success'
 
     def test_ping(self):
         ret = napalm_network.ping('destination.com')
-        assert ret['out'].keys()[0] == 'success'
+        assert list(ret['out'].keys())[0] == 'success'
 
     def test_arp(self):
         ret = napalm_network.arp()
