@@ -65,7 +65,7 @@ def peered(name):
 
     try:
         suc.check_name(name, 'a-zA-Z0-9._-')
-    except SaltCloudException as e:
+    except SaltCloudException:
         ret['comment'] = 'Invalid characters in peer name.'
         return ret
 
@@ -93,8 +93,7 @@ def peered(name):
         ret['result'] = None
         return ret
 
-    peered = __salt__['glusterfs.peer'](name)
-    if not peered:
+    if not __salt__['glusterfs.peer'](name):
         ret['comment'] = 'Failed to peer with {0}, please check logs for errors'.format(name)
         return ret
 
@@ -110,7 +109,7 @@ def peered(name):
 
 
 def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
-            transport='tcp', start=False, force=False):
+                   transport='tcp', start=False, force=False):
     '''
     Ensure that the volume exists
 
@@ -159,9 +158,10 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
             ret['result'] = None
             return ret
 
-        vol_created = __salt__['glusterfs.create_volume'](name, bricks, stripe,
-                                                  replica, device_vg,
-                                                  transport, start, force)
+        vol_created = __salt__['glusterfs.create_volume'](
+            name, bricks, stripe,
+            replica, device_vg,
+            transport, start, force)
 
         if not vol_created:
             ret['comment'] = 'Creation of volume {0} failed'.format(name)

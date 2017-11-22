@@ -4,7 +4,6 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
-import socket
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -296,7 +295,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'result': True})
             ret.update({'comment': 'Bricks already added in volume salt'})
             self.assertDictEqual(glusterfs.add_volume_bricks(name, old_bricks),
-                                                             ret)
+                                 ret)
 
             mock_info.side_effect = [volinfo, new_volinfo]
             ret.update({'comment': 'Bricks successfully added to volume salt',
