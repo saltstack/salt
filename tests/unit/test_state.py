@@ -503,6 +503,16 @@ class StateReturnsTestCase(TestCase):
             'changes': {},
         }
 
+    def test_state_output_check_changes_is_dict(self):
+        '''
+        Test that changes key contains a dictionary.
+        :return:
+        '''
+        data = {'changes': []}
+        with pytest.raises(salt.exceptions.SaltException) as err:
+            statedecorators.state_output_check(lambda: data)()
+        assert "'Changes' should be a dictionary" in str(err)
+
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
