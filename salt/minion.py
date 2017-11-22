@@ -239,8 +239,10 @@ def resolve_dns(opts, fallback=True):
         log.debug('Using %s as source IP address', ret[u'source_ip'])
     if opts[u'source_ret_port']:
         ret[u'source_ret_port'] = int(opts[u'source_ret_port'])
+        log.debug('Using %d as source port for the ret server', ret[u'source_ret_port'])
     if opts[u'source_publish_port']:
         ret[u'source_publish_port'] = int(opts[u'source_publish_port'])
+        log.debug('Using %d as source port for the master pub', ret[u'source_publish_port'])
     ret[u'master_uri'] = u'tcp://{ip}:{port}'.format(
         ip=ret[u'master_ip'], port=opts[u'master_port'])
     log.debug('Master URI: %s', ret[u'master_uri'])

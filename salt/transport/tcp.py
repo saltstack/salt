@@ -273,7 +273,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
                                                     args=(self.opts, master_host, int(master_port),),
                                                     kwargs={'io_loop': self.io_loop, 'resolver': resolver,
                                                             'source_ip': self.opts.get('source_ip'),
-                                                            'source_port': self.opts.get('source_port')})
+                                                            'source_port': self.opts.get('source_ret_port')})
 
     def close(self):
         if self._closing:
@@ -503,7 +503,9 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
                     args=(self.opts, self.opts['master_ip'], int(self.auth.creds['publish_port']),),
                     kwargs={'io_loop': self.io_loop,
                             'connect_callback': self.connect_callback,
-                            'disconnect_callback': self.disconnect_callback})
+                            'disconnect_callback': self.disconnect_callback,
+                            'source_ip': self.opts.get('source_ip'),
+                            'source_port': self.opts.get('source_publish_port')})
                 yield self.message_client.connect()  # wait for the client to be connected
                 self.connected = True
         # TODO: better exception handling...
