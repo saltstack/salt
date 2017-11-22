@@ -210,7 +210,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_call(self, arg_str, local=False, with_retcode=False, catch_stderr=False):
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False):
         arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
                                                     self.get_config_dir(), arg_str)
 
@@ -551,7 +551,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                catch_stderr=catch_stderr,
                                timeout=60)
 
-    def run_call(self, arg_str, local=False, with_retcode=False, catch_stderr=False):
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False):
         '''
         Execute salt-call.
         '''
