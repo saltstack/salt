@@ -523,6 +523,16 @@ class StateReturnsTestCase(TestCase):
             statedecorators.state_output_check(lambda: data)()
         assert 'Malformed state return, return must be a dict' in str(err)
 
+    def test_state_output_check_return_is_dict(self):
+        '''
+        Test that changes key contains a dictionary.
+        :return:
+        '''
+        data = {'arbitrary': 'data', 'changes': {}}
+        with pytest.raises(salt.exceptions.SaltException) as err:
+            statedecorators.state_output_check(lambda: data)()
+        assert ' The following keys were not present in the state return: name, result, comment' in str(err)
+
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
