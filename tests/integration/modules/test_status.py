@@ -11,6 +11,7 @@ from tests.support.unit import skipIf
 # Import Salt libs
 import salt.utils
 
+
 class StatusModuleTest(ModuleCase):
     '''
     Test the status module
