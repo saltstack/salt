@@ -676,6 +676,31 @@ class Compiler(object):
         return high
 
 
+def state_output_unificator(func):
+    '''
+    While comments as a list are allowed,
+    comments needs to be strings for backward compatibility.
+    See such claim here: https://github.com/saltstack/salt/pull/43070
+
+    Rules applied:
+      - 'comment' is joined into a multi-line string, in case the value is a list.
+      - 'result' should be always either True, False or None.
+
+    :param func: module function
+    :return: Joins 'comment' list into a multi-line string
+    '''
+    def _func(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if isinstance(result.get('comment'), list):
+            result['comment'] = '\n'.join([str(elm) for elm in result['comment']])
+        if result.get('result') is not None:
+            result['result'] = bool(result['result'])
+
+        return result
+
+    return _func
+
+
 class State(object):
     '''
     Class used to execute salt states
