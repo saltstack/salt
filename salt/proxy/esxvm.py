@@ -199,18 +199,18 @@ def init(opts):
             raise excs.InvalidProxyInputError(
                 'Mechanism is set to \'userpass\' , but no '
                 '\'username\' key found in pillar for this proxy.')
-        if not 'passwords' in proxy_conf:
+        if 'passwords' not in proxy_conf:
             raise excs.InvalidProxyInputError(
                 'Mechanism is set to \'userpass\' , but no '
                 '\'passwords\' key found in pillar for this proxy.')
         for key in ('username', 'passwords'):
             DETAILS[key] = proxy_conf[key]
     else:
-        if not 'domain' in proxy_conf:
+        if 'domain' not in proxy_conf:
             raise excs.InvalidProxyInputError(
                 'Mechanism is set to \'sspi\' , but no '
                 '\'domain\' key found in pillar for this proxy.')
-        if not 'principal' in proxy_conf:
+        if 'principal' not in proxy_conf:
             raise excs.InvalidProxyInputError(
                 'Mechanism is set to \'sspi\' , but no '
                 '\'principal\' key found in pillar for this proxy.')
@@ -237,7 +237,7 @@ def init(opts):
 
 def ping():
     '''
-    Returns True. 
+    Returns True.
 
     CLI Example:
 
@@ -285,4 +285,3 @@ def get_details():
     Function that returns the cached details
     '''
     return DETAILS
-

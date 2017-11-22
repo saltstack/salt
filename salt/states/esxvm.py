@@ -175,7 +175,12 @@ About
 -----
 
 This state module was written to be used in conjunction with Salt's
-:doc:`ESXi Proxy Minion Tutorial </topics/tutorials/esxi_proxy_minion>`
+:mod:`ESXi Proxy Minion <salt.proxy.esxi>` For a tutorial on how to use Salt's
+ESXi Proxy Minion, please refer to the
+:ref:`ESXi Proxy Minion Tutorial <tutorial-esxi-proxy>` for
+configuration examples, dependency installation instructions, how to run remote
+execution functions against ESXi hosts via a Salt Proxy Minion, and a larger state
+example.
 '''
 
 # Import Python libs
@@ -269,7 +274,7 @@ def vm_configured(name, vm_name, cpu, memory, image, version, interfaces,
             service_instance=service_instance)
         if vm_file:
             if __opts__['test']:
-                result.update({'comment': 'The virtual machine {0}' \
+                result.update({'comment': 'The virtual machine {0}'
                                           ' will be registered.'.format(vm_name)})
                 __salt__['vsphere.disconnect'](service_instance)
                 return result
@@ -278,7 +283,7 @@ def vm_configured(name, vm_name, cpu, memory, image, version, interfaces,
             return result
         else:
             if __opts__['test']:
-                result.update({'comment': 'The virtual machine {0}' \
+                result.update({'comment': 'The virtual machine {0}'
                                           ' will be created.'.format(vm_name)})
                 __salt__['vsphere.disconnect'](service_instance)
                 return result
@@ -366,7 +371,7 @@ def vm_updated(name, vm_name, cpu, memory, image, version, interfaces,
         comment = 'State vm_updated will update virtual machine \'{0}\' ' \
                   'in datacenter \'{1}\':\n{2}'.format(vm_name,
                                                        datacenter,
-                  '\n'.join([':\n'.join([key, difference.changes_str]) \
+                  '\n'.join([':\n'.join([key, difference.changes_str])
                       for key, difference in six.iteritems(diffs)]))
         result.update({'result': None,
                        'comment': comment})
@@ -394,8 +399,6 @@ def vm_updated(name, vm_name, cpu, memory, image, version, interfaces,
     if power_on:
         try:
             __salt__['vsphere.power_on_vm'](vm_name, datacenter)
-        except salt.exceptions.VMwarePowerOnError:
-            pass
         except salt.exceptions.VMwarePowerOnError as exc:
             log.error('Error: {}'.format(exc))
             if service_instance:
@@ -411,7 +414,7 @@ def vm_updated(name, vm_name, cpu, memory, image, version, interfaces,
     result = {'name': name,
               'result': True,
               'changes': changes,
-              'comment': 'Virtual machine ' \
+              'comment': 'Virtual machine '
                          '{0} was updated successfully'.format(vm_name)}
 
     return result
@@ -432,7 +435,7 @@ def vm_created(name, vm_name, cpu, memory, image, version, interfaces,
     if __opts__['test']:
         result.update({'result': None,
                        'changes': None,
-                       'comment': 'Virtual machine ' \
+                       'comment': 'Virtual machine '
                                   '{0} will be created'.format(vm_name)})
         return result
 
@@ -461,8 +464,6 @@ def vm_created(name, vm_name, cpu, memory, image, version, interfaces,
         try:
             __salt__['vsphere.power_on_vm'](vm_name, datacenter,
                                             service_instance=service_instance)
-        except salt.exceptions.VMwarePowerOnError:
-            pass
         except salt.exceptions.VMwarePowerOnError as exc:
             log.error('Error: {0}'.format(exc))
             if service_instance:
@@ -478,7 +479,7 @@ def vm_created(name, vm_name, cpu, memory, image, version, interfaces,
     result = {'name': name,
               'result': True,
               'changes': changes,
-              'comment': 'Virtual machine ' \
+              'comment': 'Virtual machine '
                          '{0} created successfully'.format(vm_name)}
 
     return result
@@ -520,8 +521,6 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
         try:
             __salt__['vsphere.power_on_vm'](vm_name, datacenter,
                                             service_instance=service_instance)
-        except salt.exceptions.VMwarePowerOnError:
-            pass
         except salt.exceptions.VMwarePowerOnError as exc:
             log.error('Error: {0}'.format(exc))
             if service_instance:
@@ -533,7 +532,7 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
     __salt__['vsphere.disconnect'](service_instance)
     result.update({'result': True,
                    'changes': {'name': vm_name, 'power_on': power_on},
-                   'comment': 'Virtual machine ' \
+                   'comment': 'Virtual machine '
                               '{0} registered successfully'.format(vm_name)})
 
     return result
