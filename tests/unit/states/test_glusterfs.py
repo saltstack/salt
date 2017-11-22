@@ -18,6 +18,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.glusterfs as glusterfs
 import salt.utils.cloud
+import salt.utils.network
 import salt.modules.glusterfs as mod_glusterfs
 
 
@@ -47,19 +48,24 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {}}
 
         mock_ip = MagicMock(return_value=['1.2.3.4', '1.2.3.5'])
-        mock_hostbyname = MagicMock(return_value='1.2.3.5')
+        mock_ip6 = MagicMock(return_value=['2001:db8::1'])
+        mock_host_ips = MagicMock(return_value=['1.2.3.5'])
         mock_peer = MagicMock(return_value=True)
         mock_status = MagicMock(return_value={'uuid1': {'hostnames': [name]}})
 
         with patch.dict(glusterfs.__salt__, {'glusterfs.peer_status': mock_status,
-                                             'glusterfs.peer': mock_peer,
-                                             'network.ip_addrs': mock_ip}):
-            with patch.object(socket, 'gethostbyname', mock_hostbyname):
+                                             'glusterfs.peer': mock_peer}):
+            with patch.object(salt.utils.network, 'ip_addrs', mock_ip), \
+                 patch.object(salt.utils.network, 'ip_addrs6', mock_ip6), \
+                 patch.object(salt.utils.network, 'host_to_ips', mock_host_ips):
                 comt = 'Peering with localhost is not needed'
                 ret.update({'comment': comt})
                 self.assertDictEqual(glusterfs.peered(name), ret)
 
-                mock_hostbyname.return_value = '1.2.3.42'
+                mock_host_ips.return_value = ['2001:db8::1']
+                self.assertDictEqual(glusterfs.peered(name), ret)
+
+                mock_host_ips.return_value = ['1.2.3.42']
                 comt = ('Host {0} already peered'.format(name))
                 ret.update({'comment': comt})
                 self.assertDictEqual(glusterfs.peered(name), ret)
