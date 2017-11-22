@@ -351,7 +351,7 @@ The name of the interface to use when establishing the connection to the Master.
     This option requires modern version of the underlying libraries used by
     the selected transport:
 
-    - ``zeromq`` requires ``pyzmq`` >= 16.0.3
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
     - ``tcp`` requires ``tornado`` >= 4.5
 
 Configuration example:
@@ -399,7 +399,7 @@ The source port to be used when connecting the Minion to the Master ret server.
     This option requires modern version of the underlying libraries used by
     the selected transport:
 
-    - ``zeromq`` requires ``pyzmq`` >= 16.0.3
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
     - ``tcp`` requires ``tornado`` >= 4.5
 
 Configuration example:
@@ -423,7 +423,7 @@ server.
     This option requires modern version of the underlying libraries used by
     the selected transport:
 
-    - ``zeromq`` requires ``pyzmq`` >= 16.0.3
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
     - ``tcp`` requires ``tornado`` >= 4.5
 
 Configuration example:
