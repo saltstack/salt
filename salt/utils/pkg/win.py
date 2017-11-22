@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 r'''
-Collect information about software installed on Windows OS
+Collect informaiotn about software installed on Windows OS
 ================
 
 :maintainer: Salt Stack <https://github.com/saltstack>
@@ -22,7 +22,7 @@ Collect information about software installed on Windows OS
 :depends: pywin32, six
 :platform: windows
 
-Known Bugs, install_date may not match Control Panel\Programs\Programs and Features
+Known But install_date may not match Control Panel\Programs\Programs and Features
 
 '''
 
@@ -33,6 +33,7 @@ Known Bugs, install_date may not match Control Panel\Programs\Programs and Featu
 # Python 3.6 or newer is recommended.
 
 # Import _future_ python libs first & before any other code
+# pylint: disable=incompatible-py3-code
 from __future__ import absolute_import
 from __future__ import unicode_literals
 __version__ = '0.1'
@@ -90,6 +91,7 @@ except ImportError:
 
 
 # pylint: disable=too-many-instance-attributes
+
 class RegSoftwareInfo(object):
     """
     Retrieve Registry data on a single installed software item or component.
@@ -1274,10 +1276,10 @@ def __main():
         """ Main run code when this modules is run directly
         """
         pkg_list = WinSoftware(user_pkgs=user_pkgs, version_only=version_only)
-        print(json.dumps(pkg_list.data, sort_keys=True, indent=4))
-        print('Total: {}'.format(len(pkg_list)))
+        print(json.dumps(pkg_list.data, sort_keys=True, indent=4))  # pylint: disable=superfluous-parens
+        print('Total: {}'.format(len(pkg_list)))  # pylint: disable=superfluous-parens
 
-    print('Time Taken: {}'.format(timeit.timeit(run, number=1)))
+    print('Time Taken: {}'.format(timeit.timeit(run, number=1)))  # pylint: disable=superfluous-parens
 
 
 if __name__ == '__main__':
