@@ -2016,7 +2016,11 @@ def check_state_result(running, recurse=False, highstate=None):
 
     ret = True
     for state_id, state_result in six.iteritems(running):
-        if not recurse and not isinstance(state_result, dict):
+        expected_type = dict
+        # The __extend__ state is a list
+        if "__extend__" == state_id:
+            expected_type = list
+        if not recurse and not isinstance(state_result, expected_type):
             ret = False
         if ret and isinstance(state_result, dict):
             result = state_result.get('result', _empty)
