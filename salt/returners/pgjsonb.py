@@ -254,14 +254,14 @@ def returner(ret):
         with _get_serv(ret, commit=True) as cur:
             sql = '''INSERT INTO salt_returns
                     (fun, jid, return, id, success, full_ret, alter_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)'''
+                    VALUES (%s, %s, %s, %s, %s, %s, to_timestamp(%s))'''
 
             cur.execute(sql, (ret['fun'], ret['jid'],
                               psycopg2.extras.Json(ret['return']),
                               ret['id'],
                               ret.get('success', False),
                               psycopg2.extras.Json(ret),
-                              time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
+                              time.time()))
     except salt.exceptions.SaltMasterError:
         log.critical('Could not store return with pgjsonb returner. PostgreSQL server unavailable.')
 
@@ -278,9 +278,9 @@ def event_return(events):
             tag = event.get('tag', '')
             data = event.get('data', '')
             sql = '''INSERT INTO salt_events (tag, data, master_id, alter_time)
-                     VALUES (%s, %s, %s, %s)'''
+                     VALUES (%s, %s, %s, to_timestamp(%s))'''
             cur.execute(sql, (tag, psycopg2.extras.Json(data),
-                              __opts__['id'], time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
+                              __opts__['id'], time.time()))
 
 
 def save_load(jid, load, minions=None):
