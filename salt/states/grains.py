@@ -5,9 +5,11 @@ Manage grains on the minion
 
 This state allows for grains to be set.
 Grains set or altered this way are stored in the 'grains'
-file on the minions, by default at: /etc/salt/grains
+file on the minions, by default at: ``/etc/salt/grains``
 
-Note: This does NOT override any grains set in the minion file.
+.. Note::
+    
+   This does **NOT** override any grains set in the minion file.
 '''
 
 # Import Python libs

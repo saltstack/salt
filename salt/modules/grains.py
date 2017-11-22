@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 Return/control aspects of the grains data
+
+Grains set or altered this way are stored in the 'grains'
+file on the minions, by default at: ``/etc/salt/grains``
+
+.. Note::
+
+   This does **NOT** override any grains set in the minion file.
 '''
 
 # Import python libs
