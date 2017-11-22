@@ -340,6 +340,10 @@ def zone_compare(timezone):
     if 'Solaris' in __grains__['os_family'] or 'AIX' in __grains__['os_family']:
         return timezone == get_zone()
 
+    if 'FreeBSD' in __grains__['os_family']:
+        if not os.path.isfile(_get_etc_localtime_path()):
+            return timezone == get_zone()
+
     tzfile = _get_etc_localtime_path()
     zonepath = _get_zone_file(timezone)
     try:
