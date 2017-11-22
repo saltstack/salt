@@ -193,6 +193,13 @@ TEST_TERM_CONFIG = {
     'already_configured': False
 }
 
+TEST_NTP_PEERS = {
+    '192.168.0.1': 1,
+    '172.17.17.1': 2,
+    '172.17.17.2': 3,
+    '2400:cb00:6:1024::c71b:840a': 4
+}
+
 
 class MockNapalmDevice(object):
     '''Setup a mock device for our tests'''
@@ -270,6 +277,9 @@ class MockNapalmDevice(object):
     def get_bgp_neighbors_detail(self, neighbor_address=None, **kwargs):
         assert neighbor_address is None or "test_address"
         return TEST_BGP_NEIGHBORS
+
+    def get_ntp_peers(self, **kwargs):
+        return TEST_NTP_PEERS
 
 
 def mock_proxy_napalm_wrap(func):
