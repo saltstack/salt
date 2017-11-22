@@ -491,18 +491,6 @@ class StateReturnsTestCase(TestCase):
     TestCase for code handling state returns.
     '''
 
-    def test_comment_lists_are_converted_to_string(self):
-        '''
-        Tests that states returning a list of comments
-        have that converted to a single string
-        '''
-        ret = {
-            'name': 'myresource',
-            'result': True,
-            'comment': ['comment 1', 'comment 2'],
-            'changes': {},
-        }
-
     def test_state_output_check_changes_is_dict(self):
         '''
         Test that changes key contains a dictionary.
