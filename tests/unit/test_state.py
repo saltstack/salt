@@ -534,6 +534,14 @@ class StateReturnsTestCase(TestCase):
         expected = 'data\nin\nthe\nlist'
         assert statedecorators.state_output_unificator(lambda: data)()['comment'] == expected
 
+    def test_state_output_unificator_result_converted_to_true(self):
+        '''
+        Test for output is unified so the comment is converted to a multi-line string
+        :return:
+        '''
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'Fantastic'}
+        assert statedecorators.state_output_unificator(lambda: data)()['result'] is True
+
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
