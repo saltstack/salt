@@ -321,6 +321,109 @@ option on the Salt master.
 
     master_port: 4506
 
+.. conf_minion:: source_interface_name
+
+``source_interface_name``
+-------------------------
+
+The name of the interface to use when establishing the connection to the Master.
+
+.. note::
+
+    If multiple IP addresses are configured on the named interface,
+    the first one will be selected. In that case, for a better selection,
+    consider using the :conf_minion:`source_address` option.
+
+.. note::
+
+    To use an IPv6 address from the named interface, make sure the option
+    :conf_minion:`ipv6` is enabled, i.e., ``ipv6: true``.
+
+.. note::
+
+    If the interface is down, it will avoid using it, and the Minion
+    will bind to ``0.0.0.0`` (all interfaces).
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.3
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_interface_name: bond0.1234
+
+.. conf_minion:: source_address
+
+``source_address``
+------------------
+
+The source IP address or the domain name to be used when connecting the Minion
+to the Master.
+See :conf_minion:`ipv6` for IPv6 connections to the Master.
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.3
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_address: if-bond0-1234.sjc.us-west.internal
+
+.. conf_minion:: source_ret_port
+
+``source_ret_port``
+-------------------
+
+The source port to be used when connecting the Minion to the Master ret server.
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.3
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_ret_port: 49017
+
+.. conf_minion:: source_publish_port
+
+``source_publish_port``
+-----------------------
+
+The source port to be used when connecting the Minion to the Master publish
+server.
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.3
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_publish_port: 49018
+
 .. conf_minion:: user
 
 ``user``
