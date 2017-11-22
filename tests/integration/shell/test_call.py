@@ -494,13 +494,13 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         '''
         ret = self.run_call('state.highstate', local=True)
 
+        destpath = os.path.join(TMP, 'testfile')
         exp_out = ['    Function: file.managed', '      Result: True',
-                   'Succeeded: 1 (changed=1)']
+                   '          ID: {0}'.format(destpath)]
 
         for out in exp_out:
             self.assertIn(out, ret)
 
-        destpath = os.path.join(TMP, 'testfile')
         self.assertTrue(os.path.exists(destpath))
 
     def test_exit_status_correct_usage(self):
