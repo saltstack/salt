@@ -503,7 +503,7 @@ class StateReturnsTestCase(TestCase):
 
     def test_state_output_check_return_is_dict(self):
         '''
-        Test that changes key contains a dictionary.
+        Test for the entire return is a dictionary
         :return:
         '''
         data = ['whatever']
@@ -513,7 +513,7 @@ class StateReturnsTestCase(TestCase):
 
     def test_state_output_check_return_is_dict(self):
         '''
-        Test that changes key contains a dictionary.
+        Test for name/result/comment keys are inside the return.
         :return:
         '''
         data = {'arbitrary': 'data', 'changes': {}}
@@ -523,7 +523,7 @@ class StateReturnsTestCase(TestCase):
 
     def test_state_output_unificator_comment_is_not_list(self):
         '''
-        Test that changes key contains a dictionary.
+        Test for output is unified so the comment is converted to a multi-line string
         :return:
         '''
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'fantastic!'}
