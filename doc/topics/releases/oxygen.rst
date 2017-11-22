@@ -46,6 +46,17 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+New (Proxy) Minion Configuration Options
+----------------------------------------
+
+To be able to connect the Minion to the Master using a certain source IP address
+or port, the following options have been added:
+
+- :conf_minion:`source_interface_name`
+- :conf_minion:`source_address`
+- :conf_minion:`source_ret_port`
+- :conf_minion:`source_publish_port`
+
 New Grains
 ----------
 
@@ -111,7 +122,7 @@ environments (i.e. ``saltenvs``) have been added:
    available as saltenvs.
 
 Additional output modes
-------------------
+-----------------------
 
 The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``terse_id``.
 Just like ``mixed_id``, these use the state ID as name in the highstate output.
