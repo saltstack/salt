@@ -58,7 +58,7 @@ SCHEDULE_CONF = [
         'return_config',
         'return_kwargs',
         'run_on_start'
-        'not_during_range',
+        'skip_during_range',
 ]
 
 
@@ -354,7 +354,7 @@ def build_schedule_item(name, **kwargs):
 
     for item in ['range', 'when', 'once', 'once_fmt', 'cron',
                  'returner', 'after', 'return_config', 'return_kwargs',
-                 'until', 'run_on_start', 'not_during_range']:
+                 'until', 'run_on_start', 'skip_during_range']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
 

@@ -409,6 +409,7 @@ class Schedule(object):
         self.proxy = proxy
         self.functions = functions
         self.standalone = standalone
+        self.skip_function = None
         if isinstance(intervals, dict):
             self.intervals = intervals
         else:
@@ -948,7 +949,7 @@ class Schedule(object):
                         # Let's make sure we exit the process!
                         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
-    def eval(self):
+    def eval(self, now=None):
         '''
         Evaluate and execute the schedule
         '''
@@ -974,8 +975,12 @@ class Schedule(object):
             raise ValueError('Schedule must be of type dict.')
         if 'enabled' in schedule and not schedule['enabled']:
             return
+        if 'skip_function' in schedule:
+            self.skip_function = schedule['skip_function']
         for job, data in six.iteritems(schedule):
             if job == 'enabled' or not data:
+                continue
+            if job == 'skip_function' or not data:
                 continue
             if not isinstance(data, dict):
                 log.error('Scheduled job "{0}" should have a dict value, not {1}'.format(job, type(data)))
@@ -1011,7 +1016,8 @@ class Schedule(object):
                     '_run_on_start' not in data:
                 data['_run_on_start'] = True
 
-            now = int(time.time())
+            if not now:
+                now = int(time.time())
 
             if 'until' in data:
                 if not _WHEN_SUPPORTED:
@@ -1312,7 +1318,11 @@ class Schedule(object):
                                     if start <= now <= end:
                                         run = True
                                     else:
-                                        run = False
+                                        if self.skip_function:
+                                            run = True
+                                            func = self.skip_function
+                                        else:
+                                            run = False
                             else:
                                 log.error('schedule.handle_func: Invalid range, end must be larger than start. \
                                          Ignoring job {0}.'.format(job))
@@ -1322,26 +1332,30 @@ class Schedule(object):
                                      Ignoring job {0}.'.format(job))
                             continue
 
-                if 'not_during_range' in data:
+                if 'skip_during_range' in data:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
                         continue
                     else:
-                        if isinstance(data['not_during_range'], dict):
+                        if isinstance(data['skip_during_range'], dict):
                             try:
-                                start = int(time.mktime(dateutil_parser.parse(data['not_during_range']['start']).timetuple()))
+                                start = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['start']).timetuple()))
                             except ValueError:
-                                log.error('Invalid date string for start in not_during_range. Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for start in skip_during_range. Ignoring job {0}.'.format(job))
                                 continue
                             try:
-                                end = int(time.mktime(dateutil_parser.parse(data['not_during_range']['end']).timetuple()))
+                                end = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['end']).timetuple()))
                             except ValueError:
-                                log.error('Invalid date string for end in not_during_range. Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for end in skip_during_range. Ignoring job {0}.'.format(job))
                                 log.error(data)
                                 continue
                             if end > start:
                                 if start <= now <= end:
-                                    run = False
+                                    if self.skip_function:
+                                        run = True
+                                        func = self.skip_function
+                                    else:
+                                        run = False
                                 else:
                                     run = True
                             else:
@@ -1352,6 +1366,28 @@ class Schedule(object):
                             log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
                                      Ignoring job {0}.'.format(job))
                             continue
+
+                if 'skip_explicit' in data:
+                    _skip_explicit = data['skip_explicit']
+
+                    if isinstance(_skip_explicit, six.string_types):
+                        _skip_explicit = [_skip_explicit]
+
+                    # Copy the list so we can loop through it
+                    for i in copy.deepcopy(_skip_explicit):
+                        if len(_skip_explicit) > 1:
+                            if i < now - self.opts['loop_interval']:
+                                _skip_explicit.remove(i)
+
+                    if _skip_explicit:
+                        if _skip_explicit[0] <= now <= (_skip_explicit[0] + self.opts['loop_interval']):
+                            if self.skip_function:
+                                run = True
+                                func = self.skip_function
+                            else:
+                                run = False
+                        else:
+                            run = True
 
             if not run:
                 continue
