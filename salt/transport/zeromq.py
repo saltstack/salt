@@ -73,12 +73,11 @@ def _get_master_uri(master_ip,
 
     Source: http://api.zeromq.org/4-1:zmq-tcp
     '''
-    zmq_version_tup = tuple(map(int, zmq.pyzmq_version().split('.')))
-    if zmq_version_tup >= (16, 0, 3):
-        # TODO: still not clear from the pyzmq release notes when this has been introduced
-        # in 14.0.4 this feature is not supported, but we can use it in 16.0.3.
-        # So it must be somewhere between, but the changelog does not state that:
-        # http://pyzmq.readthedocs.io/en/latest/changelog.html
+    libzmq_version_tup = tuple(map(int, zmq.zmq_version().split('.')))
+    pyzmq_version_tup = tuple(map(int, zmq.pyzmq_version().split('.')))
+    if libzmq_version_tup >= (4, 1, 6) and pyzmq_version_tup >= (16, 0, 1):
+        # The source:port syntax for ZeroMQ has been added in libzmq 4.1.6
+        # which is included in the pyzmq wheels starting with 16.0.1.
         if source_ip or source_port:
             if source_ip and source_port:
                 return 'tcp://{source_ip}:{source_port};{master_ip}:{master_port}'.format(
@@ -94,7 +93,7 @@ def _get_master_uri(master_ip,
                         master_ip=master_ip, master_port=master_port)
     if source_ip or source_port:
         log.warning('Unable to connect to the Master using a specific source IP / port')
-        log.warning('Consider upgrading to pyzmq >= 16')
+        log.warning('Consider upgrading to pyzmq >= 16.0.1 and libzmq >= 4.1.6')
     return 'tcp://{master_ip}:{master_port}'.format(
                 master_ip=master_ip, master_port=master_port)
 
