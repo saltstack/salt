@@ -530,6 +530,10 @@ class StateReturnsTestCase(TestCase):
         expected = {'comment': 'data\nin\nthe\nlist', 'changes': {}, 'name': None, 'result': True}
         assert statedecorators.state_output_unificator(lambda: data)() == expected
 
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': None}
+        expected = 'data\nin\nthe\nlist'
+        assert statedecorators.state_output_unificator(lambda: data)()['comment'] == expected
+
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
