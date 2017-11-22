@@ -37,13 +37,13 @@ class ConvertToKbTestCase(TestCase):
         pass
 
     def test_gb_conversion_call(self):
-        self.assertEqual(vmware.convert_to_kb('Gb', 10), {'size': 10485760L, 'unit': 'KB'})
+        self.assertEqual(vmware.convert_to_kb('Gb', 10), {'size': int(10485760), 'unit': 'KB'})
 
     def test_mb_conversion_call(self):
-        self.assertEqual(vmware.convert_to_kb('Mb', 10), {'size': 10240L, 'unit': 'KB'})
+        self.assertEqual(vmware.convert_to_kb('Mb', 10), {'size': int(10240), 'unit': 'KB'})
 
     def test_kb_conversion_call(self):
-        self.assertEqual(vmware.convert_to_kb('Kb', 10), {'size': 10L, 'unit': 'KB'})
+        self.assertEqual(vmware.convert_to_kb('Kb', 10), {'size': int(10), 'unit': 'KB'})
 
     def test_conversion_bad_input_argument_fault(self):
         self.assertRaises(ArgumentValueError, vmware.convert_to_kb, 'test', 10)
@@ -110,7 +110,7 @@ class CreateVirtualMachineTestCase(TestCase):
             vmware.create_vm(self.vm_name, self.mock_config_spec,
                              self.mock_folder_object, self.mock_resourcepool_object)
         mock_wait_for_task.assert_called_once_with(
-            self.mock_task, self.vm_name,  'CreateVM Task', 10, 'info')
+            self.mock_task, self.vm_name, 'CreateVM Task', 10, 'info')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

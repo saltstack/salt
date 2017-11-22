@@ -170,6 +170,8 @@ from functools import wraps
 
 # Import Salt Libs
 from salt.ext import six
+from salt.ext.six.moves import range
+from salt.ext.six.moves import zip
 import salt.utils.args
 import salt.utils.dictupdate as dictupdate
 import salt.utils.http
@@ -7305,7 +7307,7 @@ def get_vm_config_file(name, datacenter, placement, datastore,
                                                   container_object,
                                                   browser_spec)
     if files and len(files[0].file) > 1:
-        raise salt.exceptions.VMwareObjectDuplicateException(
+        raise salt.exceptions.VMwareMultipleObjectsError(
             'Multiple configuration files found in '
             'the same virtual machine folder')
     elif files and files[0].file:
@@ -7381,11 +7383,11 @@ def _apply_memory_config(config_spec, memory):
     if 'size' in memory and 'unit' in memory:
         try:
             if memory['unit'].lower() == 'kb':
-                memory_mb = memory['size'] / 1024L
+                memory_mb = memory['size'] / 1024
             elif memory['unit'].lower() == 'mb':
-                memory_mb = int(memory['size'])
+                memory_mb = memory['size']
             elif memory['unit'].lower() == 'gb':
-                memory_mb = int(float(memory['size']) * 1024L)
+                memory_mb = int(float(memory['size']) * 1024)
         except (TypeError, ValueError):
             memory_mb = int(memory['size'])
         config_spec.memoryMB = memory_mb
@@ -7395,7 +7397,7 @@ def _apply_memory_config(config_spec, memory):
         config_spec.memoryHotAddEnabled = memory['hotadd']
 
 
-depends(HAS_PYVMOMI)
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxvm', 'esxcluster', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def get_advanced_configs(vm_name, datacenter, service_instance=None):
@@ -7627,15 +7629,9 @@ def _apply_hard_disk(unit_number, key, operation, disk_label=None, size=None,
     disk_spec.device.key = key
     disk_spec.device.unitNumber = unit_number
     disk_spec.device.deviceInfo = vim.Description()
-    size_kb = None
-    if unit.lower() == 'gb':
-        size_kb = int(size * 1024L * 1024L)
-    elif unit.lower() == 'mb':
-        size_kb = int(size * 1024L)
-    elif unit.lower() == 'kb':
-        size_kb = long(size)
-    if size_kb:
-        disk_spec.device.capacityInKB = size_kb
+    if size:
+        convert_size = salt.utils.vmware.convert_to_kb(unit, size)
+        disk_spec.device.capacityInKB = convert_size['size']
     if disk_label:
         disk_spec.device.deviceInfo.label = disk_label
     if thin_provision is not None or eagerly_scrub is not None:
@@ -7728,7 +7724,7 @@ def _create_network_backing(network_name, switch_type, parent_ref):
     backing = {}
     if network_name:
         if switch_type == 'standard':
-            networks = salt.utils.vmware.get_dvportgroups(
+            networks = salt.utils.vmware.get_networks(
                 parent_ref,
                 network_names=[network_name])
             if not networks:
@@ -7921,13 +7917,12 @@ def _create_ide_controllers(ide_controllers):
     '''
     ide_ctrls = []
     keys = range(-200, -250, -1)
-    log.trace(
-        'Creating IDE controllers {0}'.format(
-            [ide['adapter'] for ide in ide_controllers])) \
-        if ide_controllers else None
-    for ide, key in zip(ide_controllers, keys):
-        ide_ctrls.append(_apply_ide_controller_config(ide['adapter'], 'add',
-                                                      key, abs(key + 200)))
+    if ide_controllers:
+        devs = [ide['adapter'] for ide in ide_controllers]
+        log.trace('Creating IDE controllers {0}'.format(devs))
+        for ide, key in zip(ide_controllers, keys):
+            ide_ctrls.append(_apply_ide_controller_config(
+                ide['adapter'], 'add', key, abs(key + 200)))
     return ide_ctrls
 
 
@@ -7976,14 +7971,12 @@ def _create_sata_controllers(sata_controllers):
     '''
     sata_ctrls = []
     keys = range(-15000, -15050, -1)
-    log.trace('Creating SATA controllers {0}'.format(
-        [sata['adapter'] for sata in sata_controllers])) \
-        if sata_controllers else None
-    for sata, key in zip(sata_controllers, keys):
-        sata_ctrls.append(_apply_sata_controller_config(sata['adapter'],
-                                                        'add',
-                                                        key,
-                                                        sata['bus_number']))
+    if sata_controllers:
+        devs = [sata['adapter'] for sata in sata_controllers]
+        log.trace('Creating SATA controllers {0}'.format(devs))
+        for sata, key in zip(sata_controllers, keys):
+            sata_ctrls.append(_apply_sata_controller_config(
+                sata['adapter'], 'add', key, sata['bus_number']))
     return sata_ctrls
 
 
@@ -8253,9 +8246,9 @@ def _create_disks(service_instance, disks, scsi_controllers=None, parent=None):
     '''
     disk_specs = []
     keys = range(-2000, -2050, -1)
-    log.trace('Creating disks {0}'.format([disk['adapter']
-                                           for disk in disks])) \
-        if disks else None
+    if disks:
+        devs = [disk['adapter'] for disk in disks]
+        log.trace('Creating disks {0}'.format(devs))
     for disk, key in zip(disks, keys):
         # create the disk
         filename, datastore, datastore_ref = None, None, None
@@ -8320,21 +8313,21 @@ def _create_scsi_devices(scsi_devices):
         List of SCSI device properties
     '''
     keys = range(-1000, -1050, -1)
-    log.trace('Creating SCSI devices {0}'.format([scsi['adapter']
-                                                  for scsi in scsi_devices]))\
-        if scsi_devices else None
-    # unitNumber for disk attachment, 0:0 1st 0 is the controller busNumber,
-    # 2nd is the unitNumber
     scsi_specs = []
-    for (key, scsi_controller) in zip(keys, scsi_devices):
-        # create the SCSI controller
-        scsi_spec = _apply_scsi_controller(scsi_controller['adapter'],
-                                           scsi_controller['type'],
-                                           scsi_controller['bus_sharing'],
-                                           key,
-                                           scsi_controller['bus_number'],
-                                           'add')
-        scsi_specs.append(scsi_spec)
+    if scsi_devices:
+        devs = [scsi['adapter'] for scsi in scsi_devices]
+        log.trace('Creating SCSI devices {0}'.format(devs))
+        # unitNumber for disk attachment, 0:0 1st 0 is the controller busNumber,
+        # 2nd is the unitNumber
+        for (key, scsi_controller) in zip(keys, scsi_devices):
+            # create the SCSI controller
+            scsi_spec = _apply_scsi_controller(scsi_controller['adapter'],
+                                               scsi_controller['type'],
+                                               scsi_controller['bus_sharing'],
+                                               key,
+                                               scsi_controller['bus_number'],
+                                               'add')
+            scsi_specs.append(scsi_spec)
     return scsi_specs
 
 
@@ -8361,27 +8354,27 @@ def _create_network_adapters(network_interfaces, parent=None):
     network_specs = []
     nics_settings = []
     keys = range(-4000, -4050, -1)
-    log.trace('Creating network interfaces {0}'.format(
-        [inter['adapter'] for inter in network_interfaces])) \
-        if network_interfaces else None
-    for interface, key in zip(network_interfaces, keys):
-        network_spec = _apply_network_adapter_config(
-            key, interface['name'],
-            interface['adapter_type'],
-            interface['switch_type'],
-            network_adapter_label=interface['adapter'],
-            operation='add',
-            connectable=interface['connectable'] if 'connectable' in interface else None,
-            mac=interface['mac'], parent=parent)
-        network_specs.append(network_spec)
-        if 'mapping' in interface:
-            adapter_mapping = _set_network_adapter_mapping(
-                interface['mapping']['domain'],
-                interface['mapping']['gateway'],
-                interface['mapping']['ip_addr'],
-                interface['mapping']['subnet_mask'],
-                interface['mac'])
-            nics_settings.append(adapter_mapping)
+    if network_interfaces:
+        devs = [inter['adapter'] for inter in network_interfaces]
+        log.trace('Creating network interfaces {0}'.format(devs))
+        for interface, key in zip(network_interfaces, keys):
+            network_spec = _apply_network_adapter_config(
+                key, interface['name'],
+                interface['adapter_type'],
+                interface['switch_type'],
+                network_adapter_label=interface['adapter'],
+                operation='add',
+                connectable=interface['connectable'] if 'connectable' in interface else None,
+                mac=interface['mac'], parent=parent)
+            network_specs.append(network_spec)
+            if 'mapping' in interface:
+                adapter_mapping = _set_network_adapter_mapping(
+                    interface['mapping']['domain'],
+                    interface['mapping']['gateway'],
+                    interface['mapping']['ip_addr'],
+                    interface['mapping']['subnet_mask'],
+                    interface['mac'])
+                nics_settings.append(adapter_mapping)
     return (network_specs, nics_settings)
 
 
@@ -8395,13 +8388,12 @@ def _create_serial_ports(serial_ports):
     '''
     ports = []
     keys = range(-9000, -9050, -1)
-    log.trace(
-        'Creating serial ports {0}'.format(
-            [serial['adapter'] for serial in serial_ports])) \
-        if serial_ports else None
-    for port, key in zip(serial_ports, keys):
-        serial_port_device = _apply_serial_port(port, key, 'add')
-        ports.append(serial_port_device)
+    if serial_ports:
+        devs = [serial['adapter'] for serial in serial_ports]
+        log.trace('Creating serial ports {0}'.format(devs))
+        for port, key in zip(serial_ports, keys):
+            serial_port_device = _apply_serial_port(port, key, 'add')
+            ports.append(serial_port_device)
     return ports
 
 
@@ -8421,25 +8413,27 @@ def _create_cd_drives(cd_drives, controllers=None, parent_ref=None):
     '''
     cd_drive_specs = []
     keys = range(-3000, -3050, -1)
-    log.trace('Creating cd/dvd drives {0}'.format(
-        [dvd['adapter'] for dvd in cd_drives])) if cd_drives else None
-    for drive, key in zip(cd_drives, keys):
-        # if a controller is not available/cannot be created we should use the
-        #  one which is available by default, this is 'IDE 0'
-        controller_key = 200
-        if controllers:
-            controller = _get_device_by_label(controllers, drive['controller'])
-            controller_key = controller.key
-        cd_drive_specs.append(_apply_cd_drive(
-            drive['adapter'],
-            key,
-            drive['device_type'],
-            'add',
-            client_device=drive['client_device'] if 'client_device' in drive else None,
-            datastore_iso_file=drive['datastore_iso_file'] if 'datastore_iso_file' in drive else None,
-            connectable=drive['connectable'] if 'connectable' in drive else None,
-            controller_key=controller_key,
-            parent_ref=parent_ref))
+    if cd_drives:
+        devs = [dvd['adapter'] for dvd in cd_drives]
+        log.trace('Creating cd/dvd drives {0}'.format(devs))
+        for drive, key in zip(cd_drives, keys):
+            # if a controller is not available/cannot be created we should use the
+            #  one which is available by default, this is 'IDE 0'
+            controller_key = 200
+            if controllers:
+                controller = \
+                    _get_device_by_label(controllers, drive['controller'])
+                controller_key = controller.key
+            cd_drive_specs.append(_apply_cd_drive(
+                drive['adapter'],
+                key,
+                drive['device_type'],
+                'add',
+                client_device=drive['client_device'] if 'client_device' in drive else None,
+                datastore_iso_file=drive['datastore_iso_file'] if 'datastore_iso_file' in drive else None,
+                connectable=drive['connectable'] if 'connectable' in drive else None,
+                controller_key=controller_key,
+                parent_ref=parent_ref))
 
     return cd_drive_specs
 
@@ -8455,9 +8449,9 @@ def _get_device_by_key(devices, key):
     key
         Unique key of device
     '''
-    for device in devices:
-        if device.key == key:
-            return device
+    device_keys = [d for d in devices if d.key == key]
+    if device_keys:
+        return device_keys[0]
     else:
         raise salt.exceptions.VMwareObjectNotFoundError(
             'Virtual machine device with unique key '
@@ -8475,9 +8469,9 @@ def _get_device_by_label(devices, label):
     key
         Unique key of device
     '''
-    for device in devices:
-        if device.deviceInfo.label == label:
-            return device
+    device_labels = [d for d in devices if d.deviceInfo.label == label]
+    if device_labels:
+        return device_labels[0]
     else:
         raise salt.exceptions.VMwareObjectNotFoundError(
             'Virtual machine device with '
@@ -8491,10 +8485,11 @@ def _convert_units(devices):
     devices
         List of device data objects
     '''
-    for device in devices:
-        if 'unit' in device and 'size' in device:
-            device.update(
-                salt.utils.vmware.convert_to_kb(device['unit'], device['size']))
+    if devices:
+        for device in devices:
+            if 'unit' in device and 'size' in device:
+                device.update(
+                    salt.utils.vmware.convert_to_kb(device['unit'], device['size']))
     else:
         return False
     return True
@@ -8825,38 +8820,42 @@ def _update_disks(disks_old_new):
         objects
     '''
     disk_changes = []
-    log.trace('Updating disks {0}'.format(
-        [disk['old']['address'] for disk in disks_old_new])) \
-        if disks_old_new else None
-    for item in disks_old_new:
-        current_disk = item['old']
-        next_disk = item['new']
-        difference = recursive_diff(current_disk, next_disk)
-        difference.ignore_unset_values = False
-        if difference.changed():
-            if next_disk['size'] < current_disk['size']:
-                raise salt.exceptions.VMwareSaltError(
-                    'Disk cannot be downsized size={0} unit={1} '
-                    'controller_key={2} '
-                    'unit_number={3}'.format(next_disk['size'],
-                                             next_disk['unit'],
-                                             current_disk['controller_key'],
-                                             current_disk['unit_number']))
-            log.trace('Virtual machine disk will be updated '
-                      'size={0} unit={1} controller_key={2} '
-                      'unit_number={3}'.format(next_disk['size'],
-                                               next_disk['unit'],
-                                               current_disk['controller_key'],
-                                               current_disk['unit_number']))
-            device_config_spec = _apply_hard_disk(
-                current_disk['unit_number'],
-                current_disk['key'], 'edit',
-                size=next_disk['size'],
-                unit=next_disk['unit'],
-                controller_key=current_disk['controller_key'])
-            # The backing didn't change and we must supply one for reconfigure
-            device_config_spec.device.backing = current_disk['object'].backing
-            disk_changes.append(device_config_spec)
+    if disks_old_new:
+        devs = [disk['old']['address'] for disk in disks_old_new]
+        log.trace('Updating disks {0}'.format(devs))
+        for item in disks_old_new:
+            current_disk = item['old']
+            next_disk = item['new']
+            difference = recursive_diff(current_disk, next_disk)
+            difference.ignore_unset_values = False
+            if difference.changed():
+                if next_disk['size'] < current_disk['size']:
+                    raise salt.exceptions.VMwareSaltError(
+                        'Disk cannot be downsized size={0} unit={1} '
+                        'controller_key={2} '
+                        'unit_number={3}'.format(
+                            next_disk['size'],
+                            next_disk['unit'],
+                            current_disk['controller_key'],
+                            current_disk['unit_number']))
+                log.trace('Virtual machine disk will be updated '
+                          'size={0} unit={1} controller_key={2} '
+                          'unit_number={3}'.format(
+                    next_disk['size'],
+                    next_disk['unit'],
+                    current_disk['controller_key'],
+                    current_disk['unit_number']))
+                device_config_spec = _apply_hard_disk(
+                    current_disk['unit_number'],
+                    current_disk['key'], 'edit',
+                    size=next_disk['size'],
+                    unit=next_disk['unit'],
+                    controller_key=current_disk['controller_key'])
+                # The backing didn't change and we must supply one for
+                # reconfigure
+                device_config_spec.device.backing = \
+                    current_disk['object'].backing
+                disk_changes.append(device_config_spec)
 
     return disk_changes
 
@@ -8870,53 +8869,54 @@ def _update_scsi_devices(scsis_old_new, current_disks):
         List of old and new scsi properties
     '''
     device_config_specs = []
-    log.trace('Updating SCSI controllers {0}'.format(
-        [scsi['old']['adapter'] for scsi in scsis_old_new])) \
-        if scsis_old_new else None
-    for item in scsis_old_new:
-        next_scsi = item['new']
-        current_scsi = item['old']
-        difference = recursive_diff(current_scsi, next_scsi)
-        difference.ignore_unset_values = False
-        if difference.changed():
-            log.trace('Virtual machine scsi device will be updated '
-                      'key={0} bus_number={1} type={2} '
-                      'bus_sharing={3}'.format(current_scsi['key'],
-                                               current_scsi['bus_number'],
-                                               next_scsi['type'],
-                                               next_scsi['bus_sharing']))
-            # The sharedBus property is not optional
-            # The type can only be updated if we delete the original
-            # controller, create a new one with the properties and then
-            # attach the disk object to the newly created controller, even
-            # though the controller key stays the same the last step is
-            # mandatory
-            if next_scsi['type'] != current_scsi['type']:
-                device_config_specs.append(
-                    _delete_device(current_scsi['object']))
-                device_config_specs.append(_apply_scsi_controller(
-                    current_scsi['adapter'],
-                    next_scsi['type'],
-                    next_scsi['bus_sharing'],
-                    current_scsi['key'],
-                    current_scsi['bus_number'], 'add'))
-                disks_to_update = []
-                for disk_key in current_scsi['device']:
-                    disk_objects = [disk['object'] for disk in current_disks]
-                    disks_to_update.append(
-                        _get_device_by_key(disk_objects, disk_key))
-                for current_disk in disks_to_update:
-                    disk_spec = vim.vm.device.VirtualDeviceSpec()
-                    disk_spec.device = current_disk
-                    disk_spec.operation = 'edit'
-                    device_config_specs.append(disk_spec)
-            else:
-                device_config_specs.append(_apply_scsi_controller(
-                    current_scsi['adapter'],
-                    current_scsi['type'],
-                    next_scsi['bus_sharing'],
-                    current_scsi['key'],
-                    current_scsi['bus_number'], 'edit'))
+    if scsis_old_new:
+        devs = [scsi['old']['adapter'] for scsi in scsis_old_new]
+        log.trace('Updating SCSI controllers {0}'.format(devs))
+        for item in scsis_old_new:
+            next_scsi = item['new']
+            current_scsi = item['old']
+            difference = recursive_diff(current_scsi, next_scsi)
+            difference.ignore_unset_values = False
+            if difference.changed():
+                log.trace('Virtual machine scsi device will be updated '
+                          'key={0} bus_number={1} type={2} '
+                          'bus_sharing={3}'.format(current_scsi['key'],
+                                                   current_scsi['bus_number'],
+                                                   next_scsi['type'],
+                                                   next_scsi['bus_sharing']))
+                # The sharedBus property is not optional
+                # The type can only be updated if we delete the original
+                # controller, create a new one with the properties and then
+                # attach the disk object to the newly created controller, even
+                # though the controller key stays the same the last step is
+                # mandatory
+                if next_scsi['type'] != current_scsi['type']:
+                    device_config_specs.append(
+                        _delete_device(current_scsi['object']))
+                    device_config_specs.append(_apply_scsi_controller(
+                        current_scsi['adapter'],
+                        next_scsi['type'],
+                        next_scsi['bus_sharing'],
+                        current_scsi['key'],
+                        current_scsi['bus_number'], 'add'))
+                    disks_to_update = []
+                    for disk_key in current_scsi['device']:
+                        disk_objects = \
+                            [disk['object'] for disk in current_disks]
+                        disks_to_update.append(
+                            _get_device_by_key(disk_objects, disk_key))
+                    for current_disk in disks_to_update:
+                        disk_spec = vim.vm.device.VirtualDeviceSpec()
+                        disk_spec.device = current_disk
+                        disk_spec.operation = 'edit'
+                        device_config_specs.append(disk_spec)
+                else:
+                    device_config_specs.append(_apply_scsi_controller(
+                        current_scsi['adapter'],
+                        current_scsi['type'],
+                        next_scsi['bus_sharing'],
+                        current_scsi['key'],
+                        current_scsi['bus_number'], 'edit'))
     return device_config_specs
 
 
@@ -8934,30 +8934,30 @@ def _update_network_adapters(interface_old_new, parent):
         Parent managed object reference
     '''
     network_changes = []
-    log.trace('Updating network interfaces {0}'.format(
-        [inter['old']['mac'] for inter in interface_old_new])) \
-        if interface_old_new else None
-    for item in interface_old_new:
-        current_interface = item['old']
-        next_interface = item['new']
-        difference = recursive_diff(current_interface, next_interface)
-        difference.ignore_unset_values = False
-        if difference.changed():
-            log.trace('Virtual machine network adapter will be updated '
-                      'switch_type={0} name={1} adapter_type={2} '
-                      'mac={3}'.format(next_interface['switch_type'],
-                                       next_interface['name'],
-                                       current_interface['adapter_type'],
-                                       current_interface['mac']))
-            device_config_spec = _apply_network_adapter_config(
-                current_interface['key'],
-                next_interface['name'],
-                current_interface['adapter_type'],
-                next_interface['switch_type'],
-                operation='edit',
-                mac=current_interface['mac'],
-                parent=parent)
-            network_changes.append(device_config_spec)
+    if interface_old_new:
+        devs = [inter['old']['mac'] for inter in interface_old_new]
+        log.trace('Updating network interfaces {0}'.format(devs))
+        for item in interface_old_new:
+            current_interface = item['old']
+            next_interface = item['new']
+            difference = recursive_diff(current_interface, next_interface)
+            difference.ignore_unset_values = False
+            if difference.changed():
+                log.trace('Virtual machine network adapter will be updated '
+                          'switch_type={0} name={1} adapter_type={2} '
+                          'mac={3}'.format(next_interface['switch_type'],
+                                           next_interface['name'],
+                                           current_interface['adapter_type'],
+                                           current_interface['mac']))
+                device_config_spec = _apply_network_adapter_config(
+                    current_interface['key'],
+                    next_interface['name'],
+                    current_interface['adapter_type'],
+                    next_interface['switch_type'],
+                    operation='edit',
+                    mac=current_interface['mac'],
+                    parent=parent)
+                network_changes.append(device_config_spec)
     return network_changes
 
 
@@ -8971,22 +8971,22 @@ def _update_serial_ports(serial_old_new):
           next config for a serial port device
     '''
     serial_changes = []
-    log.trace('Updating serial ports {0}'.format(
-        [serial['old']['adapter'] for serial in serial_old_new])) \
-        if serial_old_new else None
-    for item in serial_old_new:
-        current_serial = item['old']
-        next_serial = item['new']
-        difference = recursive_diff(current_serial, next_serial)
-        difference.ignore_unset_values = False
-        if difference.changed():
-            serial_changes.append(_apply_serial_port(next_serial,
-                                                     current_serial['key'],
-                                                     'edit'))
-    return serial_changes
+    if serial_old_new:
+        devs = [serial['old']['adapter'] for serial in serial_old_new]
+        log.trace('Updating serial ports {0}'.format(devs))
+        for item in serial_old_new:
+            current_serial = item['old']
+            next_serial = item['new']
+            difference = recursive_diff(current_serial, next_serial)
+            difference.ignore_unset_values = False
+            if difference.changed():
+                serial_changes.append(_apply_serial_port(next_serial,
+                                                         current_serial['key'],
+                                                         'edit'))
+        return serial_changes
 
 
-def _update_cd_drives(drives_old_new, controllers=[], parent=None):
+def _update_cd_drives(drives_old_new, controllers=None, parent=None):
     '''
     Returns a list of vim.vm.device.VirtualDeviceSpec specifying to edit a
     deployed cd drive configuration to the new given config
@@ -9002,30 +9002,30 @@ def _update_cd_drives(drives_old_new, controllers=[], parent=None):
         Managed object reference of the parent object
     '''
     cd_changes = []
-    log.trace('Updating cd/dvd drives {0}'.format(
-        [drive['old']['adapter'] for drive in drives_old_new])) \
-        if drives_old_new else None
-    for item in drives_old_new:
-        current_drive = item['old']
-        new_drive = item['new']
-        difference = recursive_diff(current_drive, new_drive)
-        difference.ignore_unset_values = False
-        if difference.changed():
-            if controllers:
-                controller = _get_device_by_label(controllers,
-                                                  new_drive['controller'])
-                controller_key = controller.key
-            else:
-                controller_key = current_drive['controller_key']
-            cd_changes.append(_apply_cd_drive(
-                current_drive['adapter'],
-                current_drive['key'],
-                new_drive['device_type'], 'edit',
-                client_device=new_drive['client_device'] if 'client_device' in new_drive else None,
-                datastore_iso_file=new_drive['datastore_iso_file'] if 'datastore_iso_file' in new_drive else None,
-                connectable=new_drive['connectable'],
-                controller_key=controller_key,
-                parent_ref=parent))
+    if drives_old_new:
+        devs = [drive['old']['adapter'] for drive in drives_old_new]
+        log.trace('Updating cd/dvd drives {0}'.format(devs))
+        for item in drives_old_new:
+            current_drive = item['old']
+            new_drive = item['new']
+            difference = recursive_diff(current_drive, new_drive)
+            difference.ignore_unset_values = False
+            if difference.changed():
+                if controllers:
+                    controller = _get_device_by_label(controllers,
+                                                      new_drive['controller'])
+                    controller_key = controller.key
+                else:
+                    controller_key = current_drive['controller_key']
+                cd_changes.append(_apply_cd_drive(
+                    current_drive['adapter'],
+                    current_drive['key'],
+                    new_drive['device_type'], 'edit',
+                    client_device=new_drive['client_device'] if 'client_device' in new_drive else None,
+                    datastore_iso_file=new_drive['datastore_iso_file'] if 'datastore_iso_file' in new_drive else None,
+                    connectable=new_drive['connectable'],
+                    controller_key=controller_key,
+                    parent_ref=parent))
     return cd_changes
 
 

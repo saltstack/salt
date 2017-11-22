@@ -416,12 +416,6 @@ class InvalidConfigError(CommandExecutionError):
     '''
 
 
-class ArgumentValueError(CommandExecutionError):
-    '''
-    Used when an invalid argument was passed to a command execution
-    '''
-
-
 class InvalidEntityError(CommandExecutionError):
     '''
     Used when an entity fails validation
@@ -452,12 +446,6 @@ class VMwareConnectionError(VMwareSaltError):
 class VMwareObjectRetrievalError(VMwareSaltError):
     '''
     Used when a VMware object cannot be retrieved
-    '''
-
-
-class VMwareObjectExistsError(VMwareSaltError):
-    '''
-    Used when a VMware object exists
     '''
 
 

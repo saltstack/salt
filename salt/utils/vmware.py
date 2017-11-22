@@ -108,6 +108,7 @@ try:
 except ImportError:
     HAS_GSSAPI = False
 
+
 # Get Logging Started
 log = logging.getLogger(__name__)
 
@@ -1371,6 +1372,52 @@ def remove_dvportgroup(portgroup_ref):
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     wait_for_task(task, pg_name, str(task.__class__))
+
+
+def get_networks(parent_ref, network_names=None, get_all_networks=False):
+    '''
+    Returns networks of standard switches.
+    The parent object can be a datacenter.
+
+    parent_ref
+        The parent object reference. A datacenter object.
+
+    network_names
+        The name of the standard switch networks. Default is None.
+
+    get_all_networks
+        Boolean indicates whether to return all networks in the parent.
+        Default is False.
+    '''
+
+    if not isinstance(parent_ref, vim.Datacenter):
+        raise salt.exceptions.ArgumentValueError(
+            'Parent has to be a datacenter.')
+    parent_name = get_managed_object_name(parent_ref)
+    log.trace('Retrieving network from {0} \'{1}\', network_names=\'{2}\', '
+              'get_all_networks={3}'.format(
+                  type(parent_ref).__name__, parent_name,
+                  ','.join(network_names) if network_names else None,
+                  get_all_networks))
+    properties = ['name']
+    service_instance = get_service_instance_from_managed_object(parent_ref)
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='networkFolder',
+        skip=True,
+        type=vim.Datacenter,
+        selectSet=[vmodl.query.PropertyCollector.TraversalSpec(
+            path='childEntity',
+            skip=False,
+            type=vim.Folder)])
+    items = [i['object'] for i in
+             get_mors_with_properties(service_instance,
+                                      vim.Network,
+                                      container_ref=parent_ref,
+                                      property_list=properties,
+                                      traversal_spec=traversal_spec)
+             if get_all_networks or
+             (network_names and i['name'] in network_names)]
+    return items
 
 
 def list_objects(service_instance, vim_object, properties=None):
@@ -3303,11 +3350,12 @@ def convert_to_kb(unit, size):
         Number which represents the size
     '''
     if unit.lower() == 'gb':
-        target_size = size * 1024L * 1024L
+        # vCenter needs long value
+        target_size = int(size * 1024 * 1024)
     elif unit.lower() == 'mb':
-        target_size = size * 1024L
+        target_size = int(size * 1024)
     elif unit.lower() == 'kb':
-        target_size = long(size)
+        target_size = int(size)
     else:
         raise salt.exceptions.ArgumentValueError('The unit is not specified')
     return {'size': target_size, 'unit': 'KB'}

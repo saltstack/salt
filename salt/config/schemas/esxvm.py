@@ -19,7 +19,6 @@ from salt.utils.schema import (DefinitionsSchema,
                                BooleanItem,
                                StringItem,
                                IPv4Item,
-                               SchemaItem,
                                AnyOfItem,
                                NullItem)
 
@@ -30,7 +29,7 @@ class ESXVirtualMachineSerialBackingItem(ComplexSchemaItem):
     '''
     title = 'ESX Virtual Machine Serial Port Backing'
     description = 'ESX virtual machine serial port backing'
-    required=True
+    required = True
 
     uri = StringItem()
     direction = StringItem(enum=('client', 'server'))
@@ -43,7 +42,7 @@ class ESXVirtualMachineDeviceConnectionItem(ComplexSchemaItem):
     '''
     title = 'ESX Virtual Machine Serial Port Connection'
     description = 'ESX virtual machine serial port connection'
-    required=True
+    required = True
 
     allow_guest_control = BooleanItem(default=True)
     start_connected = BooleanItem(default=True)
@@ -119,7 +118,7 @@ class ESXVirtualMachineSerialSchemaItem(ComplexSchemaItem):
                       required=True,
                       enum=('network', 'pipe', 'file', 'device'))
     adapter = StringItem(title='Virtual Machine Serial Port Name',
-                         description='Unique adapter name for virtual machine serial port' \
+                         description='Unique adapter name for virtual machine serial port'
                                      'for creation an arbitrary value should be specified',
                          required=True)
     backing = ESXVirtualMachineSerialBackingItem()
@@ -138,13 +137,13 @@ class ESXVirtualMachineScsiSchemaItem(ComplexSchemaItem):
     required = True
 
     adapter = StringItem(title='Virtual Machine SCSI Controller Name',
-                         description='Unique SCSI controller name' \
+                         description='Unique SCSI controller name'
                                      'for creation an arbitrary value should be specified',
                          required=True)
     type = StringItem(title='Virtual Machine SCSI type',
                       description='Type of the SCSI controller',
                       required=True,
-                      enum = ('lsilogic', 'lsilogic_sas', 'paravirtual', 'buslogic'))
+                      enum=('lsilogic', 'lsilogic_sas', 'paravirtual', 'buslogic'))
     bus_sharing = StringItem(title='Virtual Machine SCSI bus sharing',
                              description='Sharing type of the SCSI bus',
                              required=True,
@@ -162,7 +161,7 @@ class ESXVirtualMachineSataSchemaItem(ComplexSchemaItem):
     description = 'ESX virtual machine SATA controller properties'
     required = False
     adapter = StringItem(title='Virtual Machine SATA Controller Name',
-                         description='Unique SATA controller name' \
+                         description='Unique SATA controller name'
                                      'for creation an arbitrary value should be specified',
                          required=True)
     bus_number = NumberItem(title='Virtual Machine SATA bus number',
@@ -175,7 +174,7 @@ class ESXVirtualMachineDiskSchemaItem(ComplexSchemaItem):
     Configuration Schema Item for ESX Virtual Machine Disk
     '''
     title = 'ESX Virtual Machine Disk Configuration'
-    description= 'ESX virtual machine disk properties'
+    description = 'ESX virtual machine disk properties'
     required = True
 
     size = NumberItem(title='Disk size',
@@ -198,7 +197,7 @@ class ESXVirtualMachineDiskSchemaItem(ComplexSchemaItem):
                            required=True)
     address = StringItem(title='Virtual Machine SCSI Address',
                          description='Address of the SCSI adapter for the virtual machine',
-                         pattern='\d:\d')
+                         pattern=r'\d:\d')
     thin_provision = BooleanItem(title='Virtual Machine Disk Provision Type',
                                  description='Provision type of the disk',
                                  default=True,
@@ -236,7 +235,7 @@ class ESXVirtualMachineInterfaceSchemaItem(ComplexSchemaItem):
                       description='Specifies the port group name for the virtual machine connection',
                       required=True)
     adapter = StringItem(title='Virtual Machine Network Adapter',
-                         description='Unique name of the network adapter, ' \
+                         description='Unique name of the network adapter, '
                                      'for creation an arbitrary value should be specified',
                          required=True)
     adapter_type = StringItem(title='Virtual Machine Adapter Type',
@@ -388,6 +387,7 @@ class ESXVirtualMachineDeleteSchema(ESXVirtualMachineRemoveSchema):
     '''
     Deletion Schema for ESX Virtual Machines
     '''
+
 
 class ESXVirtualMachineUnregisterSchema(ESXVirtualMachineRemoveSchema):
     '''
