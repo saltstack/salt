@@ -24,7 +24,12 @@ import salt.exceptions
 from salt.ext import six
 import salt.state
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
+from salt.utils.decorators import state as statedecorators
 
+try:
+    import pytest
+except ImportError as err:
+    pytest = None
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -479,6 +484,8 @@ class TopFileMergeTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(merged_tops, expected_merge)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(pytest is None, 'PyTest is missing')
 class StateReturnsTestCase(TestCase):
     '''
     TestCase for code handling state returns.
