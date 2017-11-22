@@ -33,6 +33,7 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.args
 import salt.utils.crypt
+import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
@@ -1746,8 +1747,8 @@ class State(object):
                 'proc': proc}
         return ret
 
-    @state_output_check
-    @state_output_unificator
+    @salt.utils.decorators.state.state_output_check
+    @salt.utils.decorators.state.state_output_unificator
     def call(self, low, chunks=None, running=None, retries=1):
         '''
         Call a state directly with the low data structure, verify data
