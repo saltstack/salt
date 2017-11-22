@@ -533,6 +533,15 @@ class StateReturnsTestCase(TestCase):
             statedecorators.state_output_check(lambda: data)()
         assert ' The following keys were not present in the state return: name, result, comment' in str(err)
 
+    def test_state_output_unificator_comment_is_not_list(self):
+        '''
+        Test that changes key contains a dictionary.
+        :return:
+        '''
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'fantastic!'}
+        expected = {'comment': 'data\nin\nthe\nlist', 'changes': {}, 'name': None, 'result': True}
+        assert statedecorators.state_output_unificator(lambda: data)() == expected
+
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
