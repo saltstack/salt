@@ -90,7 +90,9 @@ Here is an example of a profile:
     profitbricks_staging
       provider: my-profitbricks-config
       size: Micro Instance
-      image: 2f98b678-6e7e-11e5-b680-52540066fee9
+      image_alias: 'ubuntu:latest'
+      #image or image_alias must be provided
+      #image: 2f98b678-6e7e-11e5-b680-52540066fee9
       cores: 2
       ram: 4096
       public_lan: 1
@@ -143,6 +145,12 @@ image
 .. code-block:: bash
 
     salt-cloud --list-images my-profitbricks
+
+image_alias
+   Can be one of the options listed in the output of the following command:
+
+.. code-block:: bash
+   salt-cloud -f list_images my-profitbricks
 
 disk_size
     This option allows you to override the size of the disk as defined by the
