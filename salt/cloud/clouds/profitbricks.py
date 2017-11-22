@@ -119,7 +119,7 @@ try:
         ProfitBricksService, Server,
         NIC, Volume, FirewallRule,
         Datacenter, LoadBalancer, LAN,
-        PBNotFoundError
+        PBNotFoundError, PBError
     )
     HAS_PROFITBRICKS = True
 except ImportError:
@@ -804,11 +804,20 @@ def create(vm_):
 
         _wait_for_completion(conn, data, get_wait_timeout(vm_),
                              'create_server')
-    except Exception as exc:  # pylint: disable=W0703
+    except PBError as exc:
         log.error(
             'Error creating {0} on ProfitBricks\n\n'
             'The following exception was thrown by the profitbricks library '
-            'when trying to run the initial deployment: \n{1}'.format(
+            'when trying to run the initial deployment: \n{1}:\n{2}'.format(
+                vm_['name'], exc, exc.content
+            ),
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return False
+    except Exception as exc:  # pylint: disable=W0703
+        log.error(
+            'Error creating {0} \n\n'
+            'Error: \n{1}'.format(
                 vm_['name'], exc
             ),
             exc_info_on_loglevel=logging.DEBUG
