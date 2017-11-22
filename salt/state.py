@@ -676,6 +676,39 @@ class Compiler(object):
         return high
 
 
+def state_output_check(func):
+    '''
+    Checks for specific types in the state output.
+    Raises an Exception in case particular rule is broken.
+
+    :param func:
+    :return:
+    '''
+    def _func(*args, **kwargs):
+        '''
+        Ruleset.
+        '''
+        err_msg = []
+        result = func(*args, **kwargs)
+        if not isinstance(result, dict):
+            err_msg.append('Malformed state return, return must be a dict.')
+        if not isinstance(result.get('changes'), dict):
+            err_msg.append("'Changes' should be a dictionary.")
+
+        missing = []
+        for val in ['name', 'result', 'changes', 'comment']:
+            if val not in result:
+                missing.append(val)
+        if missing:
+            err_msg.append('The following keys were not present in the state return: {0}.'.format(', '.join(missing)))
+
+        if err_msg:
+            raise SaltException(' '.join(err_msg))
+        return result
+
+    return _func
+
+
 def state_output_unificator(func):
     '''
     While comments as a list are allowed,
