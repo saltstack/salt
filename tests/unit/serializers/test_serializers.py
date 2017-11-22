@@ -18,6 +18,7 @@ import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
 import salt.serializers.msgpack as msgpack
 import salt.serializers.python as python
+import salt.serializers.toml as toml
 from salt.serializers.yaml import EncryptedString
 from salt.serializers import SerializationError
 from salt.utils.odict import OrderedDict
@@ -347,4 +348,15 @@ class TestSerializers(TestCase):
         assert serialized == "[foo]\nbar = baz", serialized
 
         deserialized = configparser.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+    @skipIf(not toml.available, SKIP_MESSAGE % 'toml')
+    def test_serialize_toml(self):
+        data = {
+            "foo": "bar"
+        }
+        serialized = toml.serialize(data)
+        assert serialized == 'foo = "bar"\n', serialized
+
+        deserialized = toml.deserialize(serialized)
         assert deserialized == data, deserialized
