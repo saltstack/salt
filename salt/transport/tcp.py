@@ -266,20 +266,14 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         resolver = kwargs.get('resolver')
 
         parse = urlparse.urlparse(self.opts['master_uri'])
-        netloc_parts = parse.netloc.rsplit(';', 1)
-        source_ip, source_port = (None, None)
-        if len(netloc_parts) == 1:
-            master_host, master_port = netloc_parts[0].rsplit(':', 1)
-            self.master_addr = (master_host, int(master_port))
-        elif len(netloc_parts) == 2:
-            source_ip, source_port = netloc_parts[0].rsplit(':', 1)
-            master_host, master_port = netloc_parts[1].rsplit(':', 1)
-            self.master_addr = (master_host, int(master_port))
+        master_host, master_port = parse.netloc.rsplit(':', 1)
+        self.master_addr = (master_host, int(master_port))
         self._closing = False
         self.message_client = SaltMessageClientPool(self.opts,
                                                     args=(self.opts, master_host, int(master_port),),
                                                     kwargs={'io_loop': self.io_loop, 'resolver': resolver,
-                                                            'source_ip': self.source_ip, 'source_port': self.source_port})
+                                                            'source_ip': self.opts.get('source_ip'),
+                                                            'source_port': self.opts.get('source_port')})
 
     def close(self):
         if self._closing:
