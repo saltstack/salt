@@ -1864,6 +1864,8 @@ class State(object):
                 'proc': proc}
         return ret
 
+    @state_output_check
+    @state_output_unificator
     def call(self, low, chunks=None, running=None, retries=1):
         '''
         Call a state directly with the low data structure, verify data
