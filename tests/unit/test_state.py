@@ -502,13 +502,6 @@ class StateReturnsTestCase(TestCase):
             'comment': ['comment 1', 'comment 2'],
             'changes': {},
         }
-        salt.state.State.verify_ret(ret)  # sanity check
-        with self.assertRaises(salt.exceptions.SaltException):
-            # Not suitable for export as is
-            salt.state.State.verify_ret_for_export(ret)
-        salt.state.State.munge_ret_for_export(ret)
-        self.assertIsInstance(ret['comment'], six.string_types)
-        salt.state.State.verify_ret_for_export(ret)
 
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
