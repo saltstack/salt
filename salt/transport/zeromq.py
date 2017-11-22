@@ -50,13 +50,6 @@ import tornado
 import tornado.gen
 import tornado.concurrent
 
-# pylint: disable=import-error,no-name-in-module
-if six.PY2:
-    import urlparse
-else:
-    import urllib.parse as urlparse
-# pylint: enable=import-error,no-name-in-module
-
 # Import third party libs
 from salt.ext import six
 try:
