@@ -536,7 +536,7 @@ class StateReturnsTestCase(TestCase):
 
     def test_state_output_unificator_result_converted_to_true(self):
         '''
-        Test for output is unified so the comment is converted to a multi-line string
+        Test for output is unified so the result is converted to True
         :return:
         '''
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'Fantastic'}
