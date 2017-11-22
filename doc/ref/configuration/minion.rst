@@ -326,6 +326,8 @@ option on the Salt master.
 ``source_interface_name``
 -------------------------
 
+.. versionadded:: Oxygen
+
 The name of the interface to use when establishing the connection to the Master.
 
 .. note::
@@ -363,6 +365,8 @@ Configuration example:
 ``source_address``
 ------------------
 
+.. versionadded:: Oxygen
+
 The source IP address or the domain name to be used when connecting the Minion
 to the Master.
 See :conf_minion:`ipv6` for IPv6 connections to the Master.
@@ -386,6 +390,8 @@ Configuration example:
 ``source_ret_port``
 -------------------
 
+.. versionadded:: Oxygen
+
 The source port to be used when connecting the Minion to the Master ret server.
 
 .. warning::
@@ -406,6 +412,8 @@ Configuration example:
 
 ``source_publish_port``
 -----------------------
+
+.. versionadded:: Oxygen
 
 The source port to be used when connecting the Minion to the Master publish
 server.
