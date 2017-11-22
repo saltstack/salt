@@ -240,7 +240,7 @@ def mock_proxy_napalm_wrap(func):
 
 
 import salt.utils.napalm as napalm_utils  # NOQA
-napalm_utils.proxy_napalm_wrap = mock_proxy_napalm_wrap  # NOQA
+napalm_utils.proxy_napalm_wrap = mock_proxy_napalm_wrap  # pylint: disable=E9502
 
 import salt.modules.napalm_network as napalm_network  # NOQA
 
