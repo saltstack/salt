@@ -1143,7 +1143,7 @@ def list_upgrades(bin_env=None,
 
     packages = {}
     for line in result['stdout'].splitlines():
-        match = re.search(r'(\S*)\s+\(.*Latest:\s+(.*)\)', line)
+        match = re.search(r'(\S*)\s+.*Latest:\s+(.*)', line)
         if match:
             name, version_ = match.groups()
         else:
