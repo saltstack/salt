@@ -214,48 +214,35 @@ def resolve_dns(opts, fallback=True):
                 u'Master ip address changed from %s to %s',
                 opts[u'master_ip'], ret[u'master_ip']
             )
-    if opts[u'source_interface'] or opts[u'source_address'] or opts[u'source_port']:
-        if opts[u'source_interface']:
-            log.trace('Custom source interface required: %s', opts[u'source_interface'])
-            interfaces = salt.utils.network.interfaces()
-            log.trace('The following interfaces are available on this Minion:')
-            log.trace(interfaces)
-            if opts[u'source_interface'] in interfaces:
-                if interfaces[opts[u'source_interface']]['up']:
-                    addrs = interfaces[opts[u'source_interface']]['inet'] if not opts[u'ipv6'] else\
-                            interfaces[opts[u'source_interface']]['inet6']
-                    ret[u'source_ip'] = addrs[0]['address']
-                    log.debug('Using %s as source IP address', ret[u'source_ip'])
-                else:
-                    # TODO: should we ignore and use 0.0.0.0, or try using what the user asked and fail?
-                    log.warning('The interface %s is down. Ignoring', opts[u'source_interface'])
+    if opts[u'source_interface_name']:
+        log.trace('Custom source interface required: %s', opts[u'source_interface_name'])
+        interfaces = salt.utils.network.interfaces()
+        log.trace('The following interfaces are available on this Minion:')
+        log.trace(interfaces)
+        if opts[u'source_interface_name'] in interfaces:
+            if interfaces[opts[u'source_interface_name']]['up']:
+                addrs = interfaces[opts[u'source_interface_name']]['inet'] if not opts[u'ipv6'] else\
+                        interfaces[opts[u'source_interface_name']]['inet6']
+                ret[u'source_ip'] = addrs[0]['address']
+                log.debug('Using %s as source IP address', ret[u'source_ip'])
             else:
-                 # TODO: should we ignore and use 0.0.0.0, or try using what the user asked and fail?
-                log.warning('%s is not a valid interface. Ignoring.', opts[u'source_interface'])
-        elif opts[u'source_address']:
-            ret[u'source_ip'] = salt.utils.network.dns_check(
-                opts[u'source_address'],
-                int(opts[u'source_port']),
-                True,
-                opts[u'ipv6'])
-        if opts[u'source_port']:
-            ret[u'source_port'] = int(opts[u'source_port'])
-    if 'source_ip' in ret or 'source_port' in ret:
-        if 'source_ip' in ret and 'source_port' in ret:
-            ret[u'master_uri'] = u'tcp://{source_ip}:{source_port};{ip}:{port}'.format(
-                    source_ip=ret[u'source_ip'], source_port=opts[u'source_port'],
-                    ip=ret[u'master_ip'], port=opts[u'master_port'])
-        elif 'source_ip' in ret and 'source_port' not in ret:
-            ret[u'master_uri'] = u'tcp://{source_ip};{ip}:{port}'.format(
-                    source_ip=ret[u'source_ip'],
-                    ip=ret[u'master_ip'], port=opts[u'master_port'])
-        elif 'source_ip' not in ret and 'source_port' in ret:
-            ret[u'master_uri'] = u'tcp://0.0.0.0:{source_port};{ip}:{port}'.format(
-                    source_port=ret[u'source_port'],
-                    ip=ret[u'master_ip'], port=opts[u'master_port'])
-    else:
-        ret[u'master_uri'] = u'tcp://{ip}:{port}'.format(
-            ip=ret[u'master_ip'], port=opts[u'master_port'])
+                log.warning('The interface %s is down so it cannot be used as source to connect to the Master',
+                            opts[u'source_interface_name'])
+        else:
+            log.warning('%s is not a valid interface. Ignoring.', opts[u'source_interface_name'])
+    elif opts[u'source_address']:
+        ret[u'source_ip'] = salt.utils.network.dns_check(
+            opts[u'source_address'],
+            int(opts[u'source_ret_port']),
+            True,
+            opts[u'ipv6'])
+        log.debug('Using %s as source IP address', ret[u'source_ip'])
+    if opts[u'source_ret_port']:
+        ret[u'source_ret_port'] = int(opts[u'source_ret_port'])
+    if opts[u'source_publish_port']:
+        ret[u'source_publish_port'] = int(opts[u'source_publish_port'])
+    ret[u'master_uri'] = u'tcp://{ip}:{port}'.format(
+        ip=ret[u'master_ip'], port=opts[u'master_port'])
     log.debug('Master URI: %s', ret[u'master_uri'])
 
     return ret
