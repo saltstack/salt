@@ -189,6 +189,10 @@ TEST_BGP_NEIGHBORS = {
     }
 }
 
+TEST_TERM_CONFIG = {
+    'already_configured': False
+}
+
 
 class MockNapalmDevice(object):
     '''Setup a mock device for our tests'''
