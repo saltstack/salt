@@ -542,6 +542,14 @@ class StateReturnsTestCase(TestCase):
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'Fantastic'}
         assert statedecorators.state_output_unificator(lambda: data)()['result'] is True
 
+    def test_state_output_unificator_result_converted_to_false(self):
+        '''
+        Test for output is unified so the result is converted to False
+        :return:
+        '''
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': ''}
+        assert statedecorators.state_output_unificator(lambda: data)()['result'] is False
+
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
