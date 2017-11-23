@@ -30,6 +30,7 @@ try:
 except ImportError as err:
     pytest = None
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
