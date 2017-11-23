@@ -21,7 +21,6 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
 import salt.exceptions
-from salt.ext import six
 import salt.state
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
 from salt.utils.decorators import state as statedecorators
