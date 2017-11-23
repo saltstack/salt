@@ -511,7 +511,7 @@ class StateReturnsTestCase(TestCase):
             statedecorators.state_output_check(lambda: data)()
         assert 'Malformed state return, return must be a dict' in str(err)
 
-    def test_state_output_check_return_is_dict(self):
+    def test_state_output_check_return_has_nrc(self):
         '''
         Test for name/result/comment keys are inside the return.
         :return:
