@@ -14,7 +14,7 @@ from __future__ import absolute_import
 try:
     import pytoml as toml
 except ImportError:
-    sys.exit('Could not import pytoml Python module.')
+    available = False
 
 # Import Salt libs
 from salt.serializers import DeserializationError, SerializationError
