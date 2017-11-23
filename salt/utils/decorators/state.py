@@ -5,6 +5,7 @@ Decorators for salt.state
 :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
 '''
 
+from __future__ import absolute_import
 from salt.exceptions import SaltException
 
 
