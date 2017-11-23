@@ -22,8 +22,6 @@ def state_output_check(func):
         Ruleset.
         '''
         result = func(*args, **kwargs)
-        print('is instance of dict:', isinstance(result, dict), 'result:', result)
-
         if not isinstance(result, dict):
             err_msg = 'Malformed state return, return must be a dict.'
         elif not isinstance(result.get('changes'), dict):
