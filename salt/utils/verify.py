@@ -30,6 +30,7 @@ import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.user
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -194,13 +195,32 @@ def verify_files(files, user):
     return True
 
 
-def verify_env(dirs, user, permissive=False, sensitive_dirs=None, skip_extra=False):
+def verify_env(
+        dirs,
+        user,
+        permissive=False,
+        pki_dir='',
+        skip_extra=False,
+        sensitive_dirs=None):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
+    if pki_dir:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'Use of \'pki_dir\' was detected: \'pki_dir\' has been deprecated '
+            'in favor of \'sensitive_dirs\'. Support for \'pki_dir\' will be '
+            'removed in Salt Neon.'
+        )
+        sensitive_dirs = sensitive_dirs or []
+        sensitive_dirs.append(list(pki_dir))
+
     if salt.utils.platform.is_windows():
-        return win_verify_env(dirs, permissive, sensitive_dirs, skip_extra)
+        return win_verify_env(dirs,
+                              permissive=permissive,
+                              skip_extra=skip_extra,
+                              sensitive_dirs=sensitive_dirs)
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
@@ -526,11 +546,26 @@ def verify_log(opts):
         log.warning('Insecure logging configuration detected! Sensitive data may be logged.')
 
 
-def win_verify_env(dirs, permissive=False, sensitive_dirs=None, skip_extra=False):
+def win_verify_env(
+        dirs,
+        permissive=False,
+        pki_dir='',
+        skip_extra=False,
+        sensitive_dirs=None):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
+    if pki_dir:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'Use of \'pki_dir\' was detected: \'pki_dir\' has been deprecated '
+            'in favor of \'sensitive_dirs\'. Support for \'pki_dir\' will be '
+            'removed in Salt Neon.'
+        )
+        sensitive_dirs = sensitive_dirs or []
+        sensitive_dirs.append(list(pki_dir))
+
     import salt.utils.win_functions
     import salt.utils.win_dacl
 
