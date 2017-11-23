@@ -3816,11 +3816,11 @@ def replace(name,
 
             If you need to match a literal string that contains regex special
             characters, you may want to use salt's custom Jinja filter,
-            ``escape_regex``.
+            ``regex_escape``.
 
             .. code-block:: jinja
 
-                {{ 'http://example.com?foo=bar%20baz' | escape_regex }}
+                {{ 'http://example.com?foo=bar%20baz' | regex_escape }}
 
     repl
         The replacement text
