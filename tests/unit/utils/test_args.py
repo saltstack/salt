@@ -133,3 +133,71 @@ class ArgsTestCase(TestCase):
         self.assertTrue(salt.utils.args.test_mode(test=True))
         self.assertTrue(salt.utils.args.test_mode(Test=True))
         self.assertTrue(salt.utils.args.test_mode(tEsT=True))
+
+    def test_parse_function_no_args(self):
+        fun, args, kwargs = salt.utils.args.parse_function('amod.afunc()')
+        self.assertEqual(fun, 'amod.afunc')
+        self.assertEqual(args, [])
+        self.assertEqual(kwargs, {})
+
+    def test_parse_function_args_only(self):
+        fun, args, kwargs = salt.utils.args.parse_function('amod.afunc(str1, str2)')
+        self.assertEqual(fun, 'amod.afunc')
+        self.assertEqual(args, ['str1', 'str2'])
+        self.assertEqual(kwargs, {})
+
+    def test_parse_function_kwargs_only(self):
+        fun, args, kwargs = salt.utils.args.parse_function('amod.afunc(kw1=val1, kw2=val2)')
+        self.assertEqual(fun, 'amod.afunc')
+        self.assertEqual(args, [])
+        self.assertEqual(kwargs, {'kw1': 'val1', 'kw2': 'val2'})
+
+    def test_parse_function_args_kwargs(self):
+        fun, args, kwargs = salt.utils.args.parse_function('amod.afunc(str1, str2, kw1=val1, kw2=val2)')
+        self.assertEqual(fun, 'amod.afunc')
+        self.assertEqual(args, ['str1', 'str2'])
+        self.assertEqual(kwargs, {'kw1': 'val1', 'kw2': 'val2'})
+
+    def test_parse_function_malformed_no_name(self):
+        fun, args, kwargs = salt.utils.args.parse_function('(str1, str2, kw1=val1, kw2=val2)')
+        self.assertIsNone(fun)
+        self.assertIsNone(args)
+        self.assertIsNone(kwargs)
+
+    def test_parse_function_malformed_not_fun_def(self):
+        fun, args, kwargs = salt.utils.args.parse_function('foo bar, some=text')
+        self.assertIsNone(fun)
+        self.assertIsNone(args)
+        self.assertIsNone(kwargs)
+
+    def test_parse_function_wrong_bracket_style(self):
+        fun, args, kwargs = salt.utils.args.parse_function('amod.afunc[str1, str2, kw1=val1, kw2=val2]')
+        self.assertIsNone(fun)
+        self.assertIsNone(args)
+        self.assertIsNone(kwargs)
+
+    def test_parse_function_brackets_unballanced(self):
+        fun, args, kwargs = salt.utils.args.parse_function('amod.afunc(str1, str2, kw1=val1, kw2=val2')
+        self.assertIsNone(fun)
+        self.assertIsNone(args)
+        self.assertIsNone(kwargs)
+        fun, args, kwargs = salt.utils.args.parse_function('amod.afunc(str1, str2, kw1=val1, kw2=val2]')
+        self.assertIsNone(fun)
+        self.assertIsNone(args)
+        self.assertIsNone(kwargs)
+        fun, args, kwargs = salt.utils.args.parse_function('amod.afunc(str1, str2, kw1=(val1[val2)], kw2=val2)')
+        self.assertIsNone(fun)
+        self.assertIsNone(args)
+        self.assertIsNone(kwargs)
+
+    def test_parse_function_brackets_in_quotes(self):
+        fun, args, kwargs = salt.utils.args.parse_function('amod.afunc(str1, str2, kw1="(val1[val2)]", kw2=val2)')
+        self.assertEqual(fun, 'amod.afunc')
+        self.assertEqual(args, ['str1', 'str2'])
+        self.assertEqual(kwargs, {'kw1': '(val1[val2)]', 'kw2': 'val2'})
+
+    def test_parse_function_quotes(self):
+        fun, args, kwargs = salt.utils.args.parse_function('amod.afunc("double \\" single \'", \'double " single \\\'\', kw1="equal=equal", kw2=val2)')
+        self.assertEqual(fun, 'amod.afunc')
+        self.assertEqual(args, ['double " single \'', 'double " single \''])
+        self.assertEqual(kwargs, {'kw1': 'equal=equal', 'kw2': 'val2'})

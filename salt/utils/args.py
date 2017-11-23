@@ -504,6 +504,17 @@ def format_call(fun,
 
 
 def parse_function(s):
+    '''
+    Parse a python-like function call syntax.
+
+    For example: module.function(arg, arg, kw=arg, kw=arg)
+
+    This function takes care only about the function name and arguments list carying on quoting
+    and bracketing. It doesn't perform identifiers and other syntax validity check.
+
+    Returns a tuple of three values: function name string, arguments list and keyword arguments
+    dictionary.
+    '''
     sh = shlex.shlex(s, posix=True)
     sh.escapedquotes = '"\''
     word = []
@@ -515,8 +526,11 @@ def parse_function(s):
         if token == '(':
             break
         word.append(token)
+    if not word or token != '(':
+        return None, None, None
     fname = ''.join(word)
     word = []
+    good = False
     for token in sh:
         if token in '[{(':
             word.append(token)
@@ -524,15 +538,16 @@ def parse_function(s):
         elif (token == ',' or token == ')') and not brackets:
             if key:
                 kwargs[key] = ''.join(word)
-            else:
+            elif word:
                 args.append(''.join(word))
             if token == ')':
+                good = True
                 break
             key = None
             word = []
         elif token in ']})':
             if not brackets or token != {'[': ']', '{': '}', '(': ')'}[brackets.pop()]:
-                raise TemplateError('Func spec syntax error. Wrong word is: {0}'.format(''.join(word)))
+                break
             word.append(token)
         elif token == '=' and not brackets:
             key = ''.join(word)
@@ -540,4 +555,7 @@ def parse_function(s):
             continue
         else:
             word.append(token)
-    return fname, args, kwargs
+    if good:
+        return fname, args, kwargs
+    else:
+        return None, None, None
