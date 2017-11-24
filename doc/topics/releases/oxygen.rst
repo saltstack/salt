@@ -273,7 +273,8 @@ Limitations
 
 This feature has a couple of _temporary_ limitations that are subject to change in nearest future:
 
-- Only one Master on the network is supported
+- Only one Master on the network is supported. Currently Minion cannot select which Master
+  out of few the same to choose. This will change to choosing Master that is least loaded.
 - Minions will accept _any_ master that matches connection criteria without any particular
   security applied (priv/pub key check, signature, fingerprint etc). That implies that administrator
   is expected to know his network and make sure it is clean.
