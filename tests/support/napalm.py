@@ -190,6 +190,7 @@ TEST_BGP_NEIGHBORS = {
 }
 
 TEST_TERM_CONFIG = {
+    'result': True,
     'already_configured': False
 }
 

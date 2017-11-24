@@ -111,7 +111,7 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
         assert ret['result']
 
     def test_load_template(self):
-        ret = napalm_network.load_template('set_ntp_peers', 
+        ret = napalm_network.load_template('set_ntp_peers',
                                            peers=['192.168.0.1'])
         assert ret['out'] is None
 
