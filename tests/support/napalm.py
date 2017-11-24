@@ -8,13 +8,31 @@ Base classes for napalm unit tests
 from functools import wraps
 
 
+TEST_INTERFACES = {
+    'Management1': {
+        'is_up': False,
+        'is_enabled': False,
+        'description': u'',
+        'last_flapped': -1,
+        'speed': 1000,
+        'mac_address': u'dead:beef:dead',
+    }
+}
+
 # Test data
 TEST_FACTS = {
     '__opts__': {},
     'OPTIONAL_ARGS': {},
     'uptime': 'Forever',
     'UP': True,
-    'HOSTNAME': 'test-device.com'
+    'HOSTNAME': 'test-device.com',
+    'hostname': 'test-device.com',
+    'username': 'admin',
+    'os_version': '1.2.3',
+    'model': 'test_model',
+    'serial_number': '123456',
+    'vendor': 'cisco',
+    'interface_list': TEST_INTERFACES
 }
 
 TEST_ENVIRONMENT = {
