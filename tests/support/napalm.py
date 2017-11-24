@@ -284,6 +284,82 @@ TEST_PROBES_RESULTS = {
     }
 }
 
+TEST_ROUTE = {
+    '172.16.0.0/25': [
+        {
+            'protocol': 'BGP',
+            'last_active': True,
+            'current_active': True,
+            'age': 1178693,
+            'routing_table': 'inet.0',
+            'next_hop': '192.168.0.11',
+            'outgoing_interface': 'xe-1/1/1.100',
+            'preference': 170,
+            'selected_next_hop': False,
+            'protocol_attributes': {
+                'remote_as': 65001,
+                'metric': 5,
+                'local_as': 13335,
+                'as_path': '',
+                'remote_address': '192.168.0.11',
+                'metric2': 0,
+                'local_preference': 0,
+                'communities': [
+                    '0:2',
+                    'no-export'
+                ],
+                'preference2': -1
+            },
+            'inactive_reason': ''
+        },
+        {
+            'protocol': 'BGP',
+            'last_active': False,
+            'current_active': False,
+            'age': 2359429,
+            'routing_table': 'inet.0',
+            'next_hop': '192.168.0.17',
+            'outgoing_interface': 'xe-1/1/1.100',
+            'preference': 170,
+            'selected_next_hop': True,
+            'protocol_attributes': {
+                'remote_as': 65001,
+                'metric': 5,
+                'local_as': 13335,
+                'as_path': '',
+                'remote_address': '192.168.0.17',
+                'metric2': 0,
+                'local_preference': 0,
+                'communities': [
+                    '0:3',
+                    'no-export'
+                ],
+                'preference2': -1
+            },
+            'inactive_reason': 'Not Best in its group - Router ID'
+        }
+    ]
+}
+
+TEST_SNMP_INFO = {
+    'test_': 'value'
+}
+
+TEST_USERS = {
+    'mircea': {
+        'level': 15,
+        'password': '$1$0P70xKPa$4jt5/10cBTckk6I/w/',
+        'sshkeys': [
+            'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4pFn+shPwTb2yELO4L7NtQrKOJXNeCl1je\
+            l9STXVaGnRAnuc2PXl35vnWmcUq6YbUEcgUTRzzXfmelJKuVJTJIlMXii7h2xkbQp0YZIEs4P\
+            8ipwnRBAxFfk/ZcDsdfsdfsdfsdN56ejk345jhk345jk345jk341p3A/9LIL7l6YewLBCwJj6\
+            D+fWSJ0/YW+7oH17Fk2HH+tw0L5PcWLHkwA4t60iXn16qDbIk/ze6jv2hDGdCdz7oYQeCE55C\
+            CHOHMJWYfN3jcL4s0qv8/u6Ka1FVkV7iMmro7ChThoV/5snI4Ljf2wKqgHH7TfNaCfpU0WvHA\
+            nTs8zhOrGScSrtb mircea@master-roshi'
+        ]
+    }
+}
+
 
 class MockNapalmDevice(object):
     '''Setup a mock device for our tests'''
@@ -377,6 +453,16 @@ class MockNapalmDevice(object):
     def get_probes_results(self, **kwargs):
         return TEST_PROBES_RESULTS
 
+    def get_route_to(self, destination, protocol=None, **kwargs):
+        assert destination == '1.2.3.4'
+        return TEST_ROUTE
+
+    def get_snmp_information(self, **kwargs):
+        return TEST_SNMP_INFO
+
+    def get_users(self, **kwargs):
+        return TEST_USERS
+
 
 def mock_proxy_napalm_wrap(func):
     '''
@@ -396,7 +482,6 @@ napalm_utils.proxy_napalm_wrap = mock_proxy_napalm_wrap  # NOQA
 
 
 def true(name):
-    assert name == 'set_ntp_peers'
     return True
 
 
