@@ -16,12 +16,37 @@ from tests.support.mock import (
 )
 
 import tests.support.napalm as napalm_test_support
-import salt.modules.napalm_users as napalm_users  # NOQA
+import salt.modules.napalm_yang_mod as napalm_yang_mod  # NOQA
 import salt.modules.napalm_network as napalm_network  # NOQA
 
 
+TEST_DIFF = {
+    'diff1': 'value'
+}
+
+
+class MockNapalmYangModel(object):
+    def Root(self):
+        return MagicMock()
+
+
+class MockNapalmYangModels(object):
+    openconfig_interfaces = MockNapalmYangModel()
+
+
+class MockUtils(object):
+    def diff(self, *args):
+        return TEST_DIFF
+
+
+class MockNapalmYangModule(object):
+    base = MockNapalmYangModel()
+    models = MockNapalmYangModels()
+    utils = MockUtils()
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NapalmUsersModuleTestCase(TestCase, LoaderModuleMockMixin):
+class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         module_globals = {
@@ -39,17 +64,12 @@ class NapalmUsersModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'net.load_template': napalm_network.load_template
             }
         }
+        module_globals['sys.modules'] = {'napalm_yang': MockNapalmYangModule()}
+        module_globals['napalm_yang'] = MockNapalmYangModule()
 
-        return {napalm_users: module_globals, napalm_network: module_globals}
+        return {napalm_yang_mod: module_globals, napalm_network: module_globals}
 
-    def test_config(self):
-        ret = napalm_users.config()
-        assert ret['out'] == napalm_test_support.TEST_USERS
+    def test_diff(self):
+        ret = napalm_yang_mod.diff({}, {'test': True}, 'models.openconfig_interfaces')
+        assert ret == TEST_DIFF
 
-    def test_set_users(self):
-        ret = napalm_users.set_users({'mircea': {}})
-        assert ret['result'] is False
-
-    def test_delete_users(self):
-        ret = napalm_users.delete_users({'mircea': {}})
-        assert ret['result'] is False
