@@ -200,6 +200,89 @@ TEST_NTP_PEERS = {
     '2400:cb00:6:1024::c71b:840a': 4
 }
 
+TEST_NTP_SERVERS = {
+    '192.168.0.1': 1,
+    '172.17.17.1': 2,
+    '172.17.17.2': 3,
+    '2400:cb00:6:1024::c71b:840a': 4
+}
+
+TEST_NTP_STATS = [
+    {
+        'remote': u'188.114.101.4',
+        'referenceid': u'188.114.100.1',
+        'synchronized': True,
+        'stratum': 4,
+        'type': u'-',
+        'when': u'107',
+        'hostpoll': 256,
+        'reachability': 377,
+        'delay': 164.228,
+        'offset': -13.866,
+        'jitter': 2.695
+    }
+]
+
+TEST_PROBES_CONFIG = {
+    'probe1': {
+        'test1': {
+            'probe_type': 'icmp-ping',
+            'target': '192.168.0.1',
+            'source': '192.168.0.2',
+            'probe_count': 13,
+            'test_interval': 3
+        },
+        'test2': {
+            'probe_type': 'http-ping',
+            'target': '172.17.17.1',
+            'source': '192.17.17.2',
+            'probe_count': 5,
+            'test_interval': 60
+        }
+    }
+}
+
+TEST_PROBES_RESULTS = {
+    'probe1':  {
+        'test1': {
+            'last_test_min_delay': 63.120,
+            'global_test_min_delay': 62.912,
+            'current_test_avg_delay': 63.190,
+            'global_test_max_delay': 177.349,
+            'current_test_max_delay': 63.302,
+            'global_test_avg_delay': 63.802,
+            'last_test_avg_delay': 63.438,
+            'last_test_max_delay': 65.356,
+            'probe_type': 'icmp-ping',
+            'rtt': 63.138,
+            'last_test_loss': 0,
+            'round_trip_jitter': -59.0,
+            'target': '192.168.0.1',
+            'source': '192.168.0.2'
+            'probe_count': 15,
+            'current_test_min_delay': 63.138
+        },
+        'test2': {
+            'last_test_min_delay': 176.384,
+            'global_test_min_delay': 169.226,
+            'current_test_avg_delay': 177.098,
+            'global_test_max_delay': 292.628,
+            'current_test_max_delay': 180.055,
+            'global_test_avg_delay': 177.959,
+            'last_test_avg_delay': 177.178,
+            'last_test_max_delay': 184.671,
+            'probe_type': 'icmp-ping',
+            'rtt': 176.449,
+            'last_test_loss': 0,
+            'round_trip_jitter': -34.0,
+            'target': '172.17.17.1',
+            'source': '172.17.17.2'
+            'probe_count': 15,
+            'current_test_min_delay': 176.402
+        }
+    }
+}
+
 
 class MockNapalmDevice(object):
     '''Setup a mock device for our tests'''
@@ -280,6 +363,18 @@ class MockNapalmDevice(object):
 
     def get_ntp_peers(self, **kwargs):
         return TEST_NTP_PEERS
+
+    def get_ntp_servers(self, **kwargs):
+        return TEST_NTP_SERVERS
+
+    def get_ntp_stats(self, **kwargs):
+        return TEST_NTP_STATS
+
+    def get_probes_config(self, **kwargs):
+        return TEST_PROBES_CONFIG
+
+    def get_probes_results(self, **kwargs):
+        return TEST_PROBES_RESULTS
 
 
 def mock_proxy_napalm_wrap(func):
