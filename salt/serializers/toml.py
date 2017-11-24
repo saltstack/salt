@@ -13,6 +13,7 @@ from __future__ import absolute_import
 # Import Salt libs
 try:
     import pytoml as toml
+    available = True
 except ImportError:
     available = False
 
@@ -23,8 +24,6 @@ from salt.serializers import DeserializationError, SerializationError
 from salt.ext import six
 
 __all__ = ['deserialize', 'serialize', 'available']
-
-available = True
 
 
 def deserialize(stream_or_string, **options):
