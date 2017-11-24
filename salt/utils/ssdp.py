@@ -19,7 +19,7 @@
 Salt Service Discovery Protocol.
 JSON-based service discovery protocol, used by minions to find running Master.
 '''
-
+from __future__ import absolute_import, print_function
 import datetime
 import time
 import logging
