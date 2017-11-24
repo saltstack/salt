@@ -127,7 +127,7 @@ def diff(candidate, running, *models):
 
 
 @proxy_napalm_wrap
-def parse(models, **kwargs):
+def parse(*models, **kwargs):
     '''
     Parse configuration from the device.
 
@@ -360,7 +360,7 @@ def parse(models, **kwargs):
 
 
 @proxy_napalm_wrap
-def get_config(data, models, **kwargs):
+def get_config(data, *models, **kwargs):
     '''
     Return the native config.
 
@@ -410,7 +410,7 @@ def get_config(data, models, **kwargs):
 
 
 @proxy_napalm_wrap
-def load_config(data, models, **kwargs):
+def load_config(data, *models, **kwargs):
     '''
     Generate and load the config on the device using the OpenConfig or IETF
     models and device profiles.
@@ -559,7 +559,7 @@ def load_config(data, models, **kwargs):
 
 
 @proxy_napalm_wrap
-def compliance_report(data, models, **kwargs):
+def compliance_report(data, *models, **kwargs):
     '''
     Return the compliance report using YANG objects.
 
