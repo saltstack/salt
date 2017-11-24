@@ -69,7 +69,7 @@ def _get_root_object(models):
 # -----------------------------------------------------------------------------
 
 
-def diff(candidate, running, models):
+def diff(candidate, running, *models):
     '''
     Returns the difference between two configuration entities structured
     according to the YANG model.
