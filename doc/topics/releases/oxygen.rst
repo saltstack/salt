@@ -222,6 +222,62 @@ The new grains added are:
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
 * ``swap_total``: Show the configured swap_total for Linux, *BSD, OS X and Solaris/SunOS
 
+Salt Minion Autodiscovery
+------------------------
+
+Salt Minion now no longer need to be configured against a specifig DNS name or IP address of a Master.
+
+For this feature Salt Master is now require port 4520 for UDP broadcast packet to be opened
+and Salt Minion is expected to be able to send to the same port UDP packets.
+
+Connection to a type instead of DNS
+===================================
+
+By now each Minion was connecting to a Master by DNS or IP address. From now on it is possible
+also to connect to a _type_ of a Master. For example, in the network there are three different
+Masters, each corresponds for a particular niche or environment or specific role etc. Minion
+supposed to connect only to one of those Masters that is described approriately.
+
+To achieve such effect, each `/etc/salt/master` configuration should have a `discovery` option,
+which should have `mapping` element with arbitrary key/value pairs. The same configuration shoul
+be on the Minion, so then when mapping matches, Minion recognises Master as its connection target.
+
+Example for Master configuration (`/etc/salt/master`):
+
+.. code-block:: yaml
+
+       discovery:
+         mapping:
+           description: SES 5.0
+           node: 1
+
+The example above describes a system that is running a particular product, where `description` is
+an arbitrary key and `SES 5.0` is just a string. In order to match exactly this Master, the
+following configuration at Minion should be present:
+
+.. code-block:: yaml
+
+       discovery:
+         match: all  # Can be "all" or "any"
+         mapping:
+           description: SES 5.0
+           node: 1
+
+Notice `match` criteria is set to `all`. This would mean that from all found Masters select only
+that, which `description` is set to `SES 5.0` _and_ `node` is set to `1`. All other Masters will
+be ignored.
+
+
+Limitations
+===========
+
+This feature has a couple of _temporary_ limitations that are subject to change in nearest future:
+
+- Only one Master on the network is supported
+- Minions will accept _any_ master that matches connection criteria without any particular
+  security applied (priv/pub key check, signature, fingerprint etc). That implies that administrator
+  is expected to know his network and make sure it is clean.
+
 Grains Changes
 --------------
 
