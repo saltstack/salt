@@ -119,6 +119,9 @@ def diff(candidate, running, *models):
             }
         }
     '''
+    if isinstance(models, tuple) and isinstance(models[0], list):
+        models = models[0]
+
     first = _get_root_object(models)
     first.load_dict(candidate)
     second = _get_root_object(models)
@@ -340,6 +343,8 @@ def parse(*models, **kwargs):
             }
         }
     '''
+    if isinstance(models, tuple) and isinstance(models[0], list):
+        models = models[0]
     config = kwargs.pop('config', False)
     state = kwargs.pop('state', False)
     profiles = kwargs.pop('profiles', [])
@@ -393,6 +398,8 @@ def get_config(data, *models, **kwargs):
             description Uplink2
             mtu 9000
     '''
+    if isinstance(models, tuple) and isinstance(models[0], list):
+        models = models[0]
     profiles = kwargs.pop('profiles', [])
     if not profiles and hasattr(napalm_device, 'profile'):  # pylint: disable=undefined-variable
         profiles = napalm_device.profile  # pylint: disable=undefined-variable
@@ -545,7 +552,9 @@ def load_config(data, *models, **kwargs):
             result:
                 True
     '''
-    config = get_config(data, models, **kwargs)
+    if isinstance(models, tuple) and isinstance(models[0], list):
+        models = models[0]
+    config = get_config(data, *models, **kwargs)
     test = kwargs.pop('test', False)
     debug = kwargs.pop('debug', False)
     commit = kwargs.pop('commit', True)
@@ -598,6 +607,8 @@ def compliance_report(data, *models, **kwargs):
           }
         }
     '''
+    if isinstance(models, tuple) and isinstance(models[0], list):
+        models = models[0]
     filepath = kwargs.pop('filepath', '')
     root = _get_root_object(models)
     root.load_dict(data)
