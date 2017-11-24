@@ -2476,7 +2476,7 @@ def _linux_iqn():
         with salt.utils.files.fopen(initiator, 'r') as _iscsi:
             for line in _iscsi.readlines():
                 if line.startswith('InitiatorName') and '=' in line:
-                    ret.extend([line.split('=', 1)[-1].strip()])
+                    ret.append(line.split('=', 1)[-1].strip())
     return ret
 
 
