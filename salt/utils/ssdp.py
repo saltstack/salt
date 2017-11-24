@@ -174,7 +174,7 @@ class SSDPFactory(SSDPBase):
             try:
                 timestamp = float(message[len(self.signature):])
             except TypeError:
-                self.log.debug('Received invalid timestamp in package from %s' % ("%s:%s" % addr))
+                self.log.debug('Received invalid timestamp in package from {}'.format("{}:{}".format(*addr)))
                 if self.disable_hidden:
                     self._sendto('{0}:E:{1}'.format(self.signature, 'Invalid timestamp'), addr)
                 return
@@ -182,17 +182,15 @@ class SSDPFactory(SSDPBase):
             if datetime.datetime.fromtimestamp(timestamp) < (datetime.datetime.now() - datetime.timedelta(seconds=20)):
                 if self.disable_hidden:
                     self._sendto('{0}:E:{1}'.format(self.signature, 'Timestamp is too old'), addr)
-                self.log.debug('Received outdated package from %s' % ("%s:%s" % addr))
+                self.log.debug('Received outdated package from {}'.format("{}:{}".format(*addr)))
                 return
 
-            self.log.debug('Received %r from %s' % (message, "%s:%s" % addr))
-            self._sendto('{0}:@:{1}'.format(self.signature,
-                                                      json.dumps(self.answer)), addr)
+            self.log.debug('Received "{}" from {}'.format(message, "{}:{}".format(*addr)))
+            self._sendto('{0}:@:{1}'.format(self.signature, json.dumps(self.answer)), addr)
         else:
             if self.disable_hidden:
-                self._sendto('{0}:E:{1}'.format(self.signature,
-                                                             'Invalid packet signature').encode(), addr)
-            self.log.debug('Received bad signature from %s:%s' % addr)
+                self._sendto('{0}:E:{1}'.format(self.signature, 'Invalid packet signature').encode(), addr)
+            self.log.debug('Received bad signature from {}:{}'.format(*addr))
 
 
 class SSDPDiscoveryServer(SSDPBase):
@@ -330,7 +328,7 @@ class SSDPDiscoveryClient(SSDPBase):
         Query the broadcast for defined services.
         :return:
         '''
-        query = "%s%s" % (self.signature, time.time())
+        query = "{}{}".format(self.signature, time.time())
         self._socket.sendto(query.encode(), ('<broadcast>', self.port))
 
         return query
@@ -374,7 +372,7 @@ class SSDPDiscoveryClient(SSDPBase):
                 msg = data.decode()
                 if msg.startswith(self.signature):
                     msg = msg.split(self.signature)[-1]
-                    self.log.debug("Service announcement at '{0}'. Response: '{1}'".format("%s:%s" % addr, msg))
+                    self.log.debug("Service announcement at '{0}'. Response: '{1}'".format("{}:{}".format(*addr), msg))
                     if ':E:' in msg:
                         err = msg.split(':E:')[-1]
                         self.log.error('Error response from the service publisher at {0}: {1}'.format(addr, err))
