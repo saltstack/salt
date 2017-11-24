@@ -258,7 +258,7 @@ TEST_PROBES_RESULTS = {
             'last_test_loss': 0,
             'round_trip_jitter': -59.0,
             'target': '192.168.0.1',
-            'source': '192.168.0.2'
+            'source': '192.168.0.2',
             'probe_count': 15,
             'current_test_min_delay': 63.138
         },
@@ -276,7 +276,7 @@ TEST_PROBES_RESULTS = {
             'last_test_loss': 0,
             'round_trip_jitter': -34.0,
             'target': '172.17.17.1',
-            'source': '172.17.17.2'
+            'source': '172.17.17.2',
             'probe_count': 15,
             'current_test_min_delay': 176.402
         }

@@ -40,8 +40,10 @@ class NapalmProbesModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_probes: module_globals}
 
-    def test_connected_pass(self):
+    def test_probes_config(self):
         ret = napalm_probes.config()
         assert ret['out'] == napalm_test_support.TEST_PROBES_CONFIG
-    
-    
+
+    def test_probes_results(self):
+        ret = napalm_probes.results()
+        assert ret['out'] == napalm_test_support.TEST_PROBES_RESULTS
