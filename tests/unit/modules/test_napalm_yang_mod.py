@@ -44,6 +44,17 @@ class MockNapalmYangModule(object):
     models = MockNapalmYangModels()
     utils = MockUtils()
 
+TEST_CONFIG = {
+    'comment': 'Configuration discarded.',
+    'already_configured': False,
+    'result': True,
+    'diff': '[edit interfaces xe-0/0/5]+   description "Adding a description";'
+}
+
+
+def mock_net_load_config(**kwargs):
+    return TEST_CONFIG
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
@@ -61,10 +72,10 @@ class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'file.join': napalm_test_support.join,
                 'file.get_managed': napalm_test_support.get_managed_file,
                 'random.hash': napalm_test_support.random_hash,
-                'net.load_template': napalm_network.load_template
+                'net.load_template': napalm_network.load_template,
+                'net.load_config': mock_net_load_config
             }
         }
-        module_globals['sys.modules'] = {'napalm_yang': MockNapalmYangModule()}
         module_globals['napalm_yang'] = MockNapalmYangModule()
 
         return {napalm_yang_mod: module_globals, napalm_network: module_globals}
@@ -73,3 +84,25 @@ class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
         ret = napalm_yang_mod.diff({}, {'test': True}, 'models.openconfig_interfaces')
         assert ret == TEST_DIFF
 
+    def test_diff_list(self):
+        '''
+        Test it with an actual list
+        '''
+        ret = napalm_yang_mod.diff({}, {'test': True}, ['models.openconfig_interfaces'])
+        assert ret == TEST_DIFF
+
+    def test_parse(self):
+        ret = napalm_yang_mod.parse('models.openconfig_interfaces')
+        assert ret is not None
+
+    def test_get_config(self):
+        ret = napalm_yang_mod.get_config({}, 'models.openconfig_interfaces')
+        assert ret is not None
+
+    def test_load_config(self):
+        ret = napalm_yang_mod.load_config({}, 'models.openconfig_interfaces')
+        assert ret is TEST_CONFIG
+
+    def test_compliance_report(self):
+        ret = napalm_yang_mod.compliance_report({}, 'models.openconfig_interfaces')
+        assert ret is not None

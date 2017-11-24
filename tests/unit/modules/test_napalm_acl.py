@@ -42,13 +42,13 @@ def mock_net_load_config(text, *args, **kwargs):
     return napalm_test_support.TEST_TERM_CONFIG
 
 
-def mock_capirca_get_filter_pillar(filter, *args, **kwargs):
-    assert filter == 'test_filter'
+def mock_capirca_get_filter_pillar(filter_, *args, **kwargs):
+    assert filter_ == 'test_filter'
     return {'test': 'value'}
 
 
-def mock_capirca_get_term_pillar(filter, term, *args, **kwargs):
-    assert filter == 'test_filter'
+def mock_capirca_get_term_pillar(filter_, term, *args, **kwargs):
+    assert filter_ == 'test_filter'
     assert term == 'test_term'
     return {'test': 'value'}
 
