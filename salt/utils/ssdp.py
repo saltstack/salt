@@ -335,6 +335,25 @@ class SSDPDiscoveryClient(SSDPBase):
 
         return query
 
+    def _collect_masters_map(self, response):
+        '''
+        Collect masters map from the network.
+        :return:
+        '''
+        while True:
+            try:
+                data, addr = self._socket.recvfrom(0x400)
+                if data:
+                    if addr not in response:
+                        response[addr] = []
+                    response[addr].append(data)
+                else:
+                    break
+            except socket.timeout:
+                break
+            except socket.error as err:
+                self.log.error('Error ocurred while discovering masters from the network: {0}'.format(err))
+
     def discover(self):
         '''
         Gather the information of currently declared servers.
