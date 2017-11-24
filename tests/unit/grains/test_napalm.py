@@ -12,19 +12,20 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     NO_MOCK,
-    NO_MOCK_REASON,
-    patch,
-    Mock
+    NO_MOCK_REASON
 )
 
 import tests.support.napalm as napalm_test_support
 import salt.grains.napalm as napalm_grains  # NOQA
 import salt.proxy.napalm as napalm_proxy  # NOQA
+napalm_grains.salt.utils.napalm.is_proxy = MagicMock(return_value=True)
 
 napalm_grains.DEVICE_CACHE = {
     'DRIVER': napalm_test_support.MockNapalmDevice(),
     'DRIVER_NAME': 'cisco',
-    'OS_VERSION': '1.2.3'
+    'OS_VERSION': '1.2.3',
+    'HOSTNAME': 'test-device.com',
+    'USERNAME': 'admin'
 }
 
 napalm_grains.GRAINS_CACHE = {
@@ -34,7 +35,6 @@ napalm_grains.GRAINS_CACHE = {
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.utils.napalm.is_proxy', Mock(return_value=True))
 class NapalmGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
