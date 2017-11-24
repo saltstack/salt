@@ -361,25 +361,27 @@ class SSDPDiscoveryClient(SSDPBase):
         :return:
         '''
         self.log.info("Looking for a server discovery")
+        response = {}
         try:
             self._query()
-            data, addr = self._socket.recvfrom(0x400)  # wait for a packet
+            self._collect_masters_map(response)
         except socket.timeout:
             msg = 'No master has been discovered.'
             self.log.info(msg)
-            raise TimeOutException(msg)
-        msg = data.decode()
-        if msg.startswith(self.signature):
-            msg = msg.split(self.signature)[-1]
-            self.log.debug("Service announcement at '{0}'. Response: '{1}'".format("%s:%s" % addr, msg))
-            if ':E:' in msg:
-                err = msg.split(':E:')[-1]
-                self.log.debug('Error response from the service publisher: {0}'.format(err))
-                if "timestamp" in err:
-                    raise TimeStampException(err)
-            else:
-                data, addr, attempt = json.loads(msg.split(':@:')[-1]), "%s:%s" % addr, True
-        else:
-            data, addr, attempt = {}, '', False
-
-        return data, addr, attempt
+        masters = {}
+        for addr, descriptions in response.items():
+            for data in descriptions:  # Several masters can run at the same machine.
+                msg = data.decode()
+                if msg.startswith(self.signature):
+                    msg = msg.split(self.signature)[-1]
+                    self.log.debug("Service announcement at '{0}'. Response: '{1}'".format("%s:%s" % addr, msg))
+                    if ':E:' in msg:
+                        err = msg.split(':E:')[-1]
+                        self.log.error('Error response from the service publisher at {0}: {1}'.format(addr, err))
+                        if "timestamp" in err:
+                            self.log.error('Publisher sent shifted timestamp from {0}'.format(addr))
+                    else:
+                        if addr not in masters:
+                            masters[addr] = []
+                        masters[addr].append(json.loads(msg.split(':@:')[-1]))
+        return masters
