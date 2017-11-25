@@ -24,7 +24,6 @@ def mock_net_load_template(template, *args, **kwargs):
         assert '1.2.3.4' in kwargs['peers']
     if template == 'set_ntp_servers' or template == 'delete_ntp_servers':
         assert '2.2.3.4' in kwargs['servers']
-    pass
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

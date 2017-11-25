@@ -60,7 +60,7 @@ class NapalmProxyTestCase(TestCase, LoaderModuleMockMixin):
     def test_alive(self):
         ret = napalm_proxy.alive(TEST_OPTS)
         assert ret is True
-    
+
     def test_ping(self):
         napalm_proxy.init(TEST_OPTS)
         ret = napalm_proxy.ping()
