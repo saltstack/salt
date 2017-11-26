@@ -19,7 +19,9 @@ from salt.utils.timeout import wait_for
 log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range
+
 # Import virtualbox libs
 HAS_LIBS = False
 try:
@@ -146,7 +148,7 @@ def vb_get_box():
     @rtype: IVirtualBox
     '''
     vb_get_manager()
-    vbox = _virtualboxManager.vbox
+    vbox = _virtualboxManager.getVirtualBox()
     return vbox
 
 
