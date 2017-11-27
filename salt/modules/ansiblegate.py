@@ -221,7 +221,7 @@ def __virtual__():
         global _caller
         _resolver = AnsibleModuleResolver(__opts__).resolve().install()
         _caller = AnsibleModuleCaller(_resolver)
-    _set_callables(list())
+        _set_callables(list())
 
     return ret, msg
 
