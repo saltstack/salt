@@ -2,6 +2,8 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os
+import shutil
 
 # Import Salt Testing Libs
 from tests.support.case import SSHCase
@@ -22,3 +24,11 @@ class SSHMineTest(SSHCase):
         '''
         ret = self.run_function('mine.get', ['localhost test.arg'], wipe=False)
         self.assertEqual(ret['localhost']['args'], ['itworked'])
+
+    def tearDown(self):
+        '''
+        make sure to clean up any old ssh directories
+        '''
+        salt_dir = self.run_function('config.get', ['thin_dir'], wipe=False)
+        if os.path.exists(salt_dir):
+            shutil.rmtree(salt_dir)
