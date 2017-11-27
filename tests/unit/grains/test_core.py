@@ -512,7 +512,7 @@ PATCHLEVEL = 3
 
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.1993-08.org.debian:01:d12f7aba36'])
-        
+
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
         '''
