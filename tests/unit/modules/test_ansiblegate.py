@@ -134,3 +134,18 @@ description:
         '''
         with patch('salt.modules.ansiblegate.ansible', None):
             assert ansible.__virtual__() == (False, 'Ansible is not installed on this system')
+
+    @patch('salt.modules.ansiblegate.ansible', MagicMock())
+    @patch('salt.modules.ansiblegate.list', MagicMock())
+    @patch('salt.modules.ansiblegate._set_callables', MagicMock())
+    @patch('salt.modules.ansiblegate.AnsibleModuleCaller', MagicMock())
+    def test_virtual_function_ansible_is_installed(self):
+        '''
+        Test Ansible module __virtual__ when ansible is installed on the minion.
+        :return:
+        '''
+        resolver = MagicMock()
+        resolver.resolve = MagicMock()
+        resolver.resolve.install = MagicMock()
+        with patch('salt.modules.ansiblegate.AnsibleModuleResolver', resolver):
+            assert ansible.__virtual__() == (True, None)
