@@ -8,6 +8,22 @@ Management of Docker Containers
 
 :depends: docker_ Python module
 
+.. _`create_container()`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_container
+.. _`create_host_config()`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_host_config
+.. _`connect_container_to_network()`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.network.NetworkApiMixin.connect_container_to_network
+.. _`create_network()`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.network.NetworkApiMixin.create_network
+.. _`logs()`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.logs
+.. _`IPAM pool`: http://docker-py.readthedocs.io/en/stable/api.html#docker.types.IPAMPool
+.. _docker: https://pypi.python.org/pypi/docker
+.. _docker-py: https://pypi.python.org/pypi/docker-py
+.. _lxc-attach: https://linuxcontainers.org/lxc/manpages/man1/lxc-attach.1.html
+.. _nsenter: http://man7.org/linux/man-pages/man1/nsenter.1.html
+.. _docker-exec: http://docs.docker.com/reference/commandline/cli/#exec
+.. _`low-level API`: http://docker-py.readthedocs.io/en/stable/api.html
+.. _timelib: https://pypi.python.org/pypi/timelib
+.. _`trusted builds`: https://blog.docker.com/2013/11/introducing-trusted-builds/
+.. _`Docker Engine API`: https://docs.docker.com/engine/api/v1.33/#operation/ContainerCreate
+
 .. note::
     Older releases of the Python bindings for Docker were called docker-py_ in
     PyPI. All releases of docker_, and releases of docker-py_ >= 1.6.0 are
@@ -25,9 +41,6 @@ Management of Docker Containers
 
         salt myminion pip.uninstall docker-py
         salt myminion pip.install docker
-
-.. _docker: https://pypi.python.org/pypi/docker
-.. _docker-py: https://pypi.python.org/pypi/docker-py
 
 .. _docker-authentication:
 
@@ -152,10 +165,6 @@ explicitly configured (as in the example above) to do so at this time.
 If possible, try to manually specify the execution driver, as it will save Salt
 a little work.
 
-.. _lxc-attach: https://linuxcontainers.org/lxc/manpages/man1/lxc-attach.1.html
-.. _nsenter: http://man7.org/linux/man-pages/man1/nsenter.1.html
-.. _docker-exec: http://docs.docker.com/reference/commandline/cli/#exec
-
 This execution module provides functions that shadow those from the :mod:`cmd
 <salt.modules.cmdmod>` module. They are as follows:
 
@@ -234,10 +243,15 @@ try:
     HAS_LZMA = True
 except ImportError:
     HAS_LZMA = False
+
+try:
+    import timelib
+    HAS_TIMELIB = True
+except ImportError:
+    HAS_TIMELIB = False
 # pylint: enable=import-error
 
 HAS_NSENTER = bool(salt.utils.path.which('nsenter'))
-HUB_PREFIX = 'docker.io/'
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -473,6 +487,20 @@ def _clear_context():
             pass
 
 
+def _pull_if_needed(image, client_timeout):
+    '''
+    Pull the desired image if not present, and return the image ID or name
+    '''
+    image_id = resolve_image_id(image)
+    if not image_id:
+        pull(image, client_timeout=client_timeout)
+        # Avoid another inspect and just use the passed image. docker-py
+        # will do the right thing and resolve the tag for us if we pass it
+        # a tagged image.
+        image_id = image
+    return image_id
+
+
 def _get_md5(name, path):
     '''
     Get the MD5 checksum of a file from a container
@@ -621,19 +649,7 @@ def _client_wrapper(attr, *args, **kwargs):
     except Exception as exc:
         err = exc.__str__()
     else:
-        if kwargs.get('stream', False):
-            api_events = []
-            try:
-                for event in ret:
-                    api_events.append(json.loads(salt.utils.stringutils.to_str(event)))
-            except Exception as exc:
-                raise CommandExecutionError(
-                    'Unable to interpret API event: \'{0}\''.format(event),
-                    info={'Error': exc.__str__()}
-                )
-            return api_events
-        else:
-            return ret
+        return ret
 
     # If we're here, it's because an exception was caught earlier, and the
     # API command failed.
@@ -771,31 +787,60 @@ def _error_detail(data, item):
 
 
 # Functions to handle docker-py client args
-def get_client_args():
+def get_client_args(limit=None):
     '''
     .. versionadded:: 2016.3.6,2016.11.4,2017.7.0
     .. versionchanged:: 2017.7.0
         Replaced the container config args with the ones from the API's
         ``create_container`` function.
+    .. versionchanged:: Oxygen
+        Added ability to limit the input to specific client functions
 
-    Returns the args for docker-py's `low-level API`_, organized by args for
-    container creation, host configuration, networking configuration, and IP
-    address management (IPAM) configuration.
+    Many functions in Salt have been written to support the full list of
+    arguments for a given function in docker-py's `low-level API`_. However,
+    depending on the version of docker-py installed on the minion, the
+    available arguments may differ. This function will get the arguments for
+    various functions in the installed version of docker-py, to be used as a
+    reference.
 
-    .. _`low-level API`: http://docker-py.readthedocs.io/en/stable/api.html
+    limit
+        An optional list of categories for which to limit the return. This is
+        useful if only a specific set of arguments is desired, and also keeps
+        other function's argspecs from needlessly being examined.
+
+    **AVAILABLE LIMITS**
+
+    - ``create_container`` - arguments accepted by `create_container()`_ (used
+      by :py:func:`docker.create <salt.modules.dockermod.create>`)
+    - ``host_config`` - arguments accepted by `create_host_config()`_ (used to
+      build the host config for :py:func:`docker.create
+      <salt.modules.dockermod.create>`)
+    - ``connect_container_to_network`` - arguments used by
+      `connect_container_to_network()`_ to construct an endpoint config when
+      connecting to a network (used by
+      :py:func:`docker.connect_container_to_network
+      <salt.modules.dockermod.connect_container_to_network>`)
+    - ``create_network`` - arguments accepted by `create_network()`_ (used by
+      :py:func:`docker.create_network <salt.modules.dockermod.create_network>`)
+    - ``ipam_config`` - arguments used to create an `IPAM pool`_ (used by
+      :py:func:`docker.create_network <salt.modules.dockermod.create_network>`
+      in the process of constructing an IPAM config dictionary)
 
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion docker.get_client_args
+        salt myminion docker.get_client_args logs
+        salt myminion docker.get_client_args create_container,connect_container_to_network
     '''
-    return salt.utils.docker.get_client_args()
+    return salt.utils.docker.get_client_args(limit=limit)
 
 
 def _get_create_kwargs(skip_translate=None,
                        ignore_collisions=False,
                        validate_ip_addrs=True,
+                       client_args=None,
                        **kwargs):
     '''
     Take input kwargs and return a kwargs dict to pass to docker-py's
@@ -808,12 +853,14 @@ def _get_create_kwargs(skip_translate=None,
         validate_ip_addrs=validate_ip_addrs,
         **salt.utils.args.clean_kwargs(**kwargs))
 
-    try:
-        client_args = get_client_args()
-    except CommandExecutionError as exc:
-        log.error('docker.create: Error getting client args: \'%s\'',
-                  exc.__str__(), exc_info=True)
-        raise CommandExecutionError('Failed to get client args: {0}'.format(exc))
+    if client_args is None:
+        try:
+            client_args = get_client_args(['create_container', 'host_config'])
+        except CommandExecutionError as exc:
+            log.error('docker.create: Error getting client args: \'%s\'',
+                      exc.__str__(), exc_info=True)
+            raise CommandExecutionError(
+                'Failed to get client args: {0}'.format(exc))
 
     full_host_config = {}
     host_kwargs = {}
@@ -1925,21 +1972,85 @@ def resolve_tag(name, tags=None, **kwargs):
     return [inspect_result['Id']] if all_ else inspect_result['Id']
 
 
-def logs(name):
+def logs(name, **kwargs):
     '''
-    Returns the logs for the container. Equivalent to running the ``docker
-    logs`` Docker CLI command.
+    .. versionchanged:: Oxygen
+        Support for all of docker-py's `logs()`_ function's arguments, with the
+        exception of ``stream``.
+
+    Returns the logs for the container. An interface to docker-py's `logs()`_
+    function.
 
     name
         Container name or ID
 
-    CLI Example:
+    stdout : True
+        Return stdout lines
+
+    stderr : True
+        Return stdout lines
+
+    timestamps : False
+        Show timestamps
+
+    tail : all
+        Output specified number of lines at the end of logs. Either an integer
+        number of lines or the string ``all``.
+
+    since
+        Show logs since the specified time, passed as a UNIX epoch timestamp.
+        Optionally, if timelib_ is installed on the minion the timestamp can be
+        passed as a string which will be resolved to a date using
+        ``timelib.strtodatetime()``.
+
+    follow : False
+        If ``True``, this function will block until the container exits and
+        return the logs when it does. The default behavior is to return what is
+        in the log at the time this function is executed.
+
+        .. note:
+            Since it blocks, this option should be used with caution.
+
+
+    CLI Examples:
 
     .. code-block:: bash
 
+        # All logs
         salt myminion docker.logs mycontainer
+        # Last 100 lines of log
+        salt myminion docker.logs mycontainer tail=100
+        # Just stderr
+        salt myminion docker.logs mycontainer stdout=False
+        # Logs since a specific UNIX timestamp
+        salt myminion docker.logs mycontainer since=1511688459
+        # Flexible format for "since" argument (requires timelib)
+        salt myminion docker.logs mycontainer since='1 hour ago'
+        salt myminion docker.logs mycontainer since='1 week ago'
+        salt myminion docker.logs mycontainer since='1 fortnight ago'
     '''
-    return _client_wrapper('logs', name)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    if 'stream' in kwargs:
+        raise SaltInvocationError('The \'stream\' argument is not supported')
+
+    try:
+        kwargs['since'] = int(kwargs['since'])
+    except KeyError:
+        pass
+    except (ValueError, TypeError):
+        # Try to resolve down to a datetime.datetime object using timelib. If
+        # it's not installed, pass the value as-is and let docker-py throw an
+        # APIError.
+        if HAS_TIMELIB:
+            try:
+                kwargs['since'] = timelib.strtodatetime(kwargs['since'])
+            except Exception as exc:
+                log.warning(
+                    'docker.logs: Failed to parse \'%s\' using timelib: %s',
+                    kwargs['since'], exc
+                )
+
+    return _client_wrapper('logs', name, **kwargs)
 
 
 def pid(name):
@@ -2136,9 +2247,6 @@ def search(name, official=False, trusted=False):
     trusted : False
         Limit results to `trusted builds`_
 
-    .. _`trusted builds`: https://blog.docker.com/2013/11/introducing-trusted-builds/
-
-
     **RETURN DATA**
 
     A dictionary with each key being the name of an image, and the following
@@ -2311,10 +2419,6 @@ def create(image,
 
         - `docker-py Low-level API`_
         - `Docker Engine API`_
-
-    .. _docker-py: https://pypi.python.org/pypi/docker
-    .. _`docker-py Low-level API`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_container
-    .. _`Docker Engine API`: https://docs.docker.com/engine/api/v1.33/#operation/ContainerCreate
 
     ignore_collisions : False
         Since many of docker-py's arguments differ in name from their CLI
@@ -2993,15 +3097,8 @@ def create(image,
         # Create a CentOS 7 container that will stay running once started
         salt myminion docker.create centos:7 name=mycent7 interactive=True tty=True command=bash
     '''
-    image_id = image
-    if kwargs.pop('inspect', True):
-        image_id = resolve_image_id(image)
-        if not image_id:
-            pull(image, client_timeout=client_timeout)
-            # Avoid another inspect and just use the passed image. docker-py
-            # will do the right thing and resolve the tag for us if we pass it
-            # a tagged image.
-            image_id = image
+    image_id = image if not kwargs.pop('inspect', True) \
+        else _pull_if_needed(image, client_timeout)
 
     kwargs, unused_kwargs = _get_create_kwargs(
         skip_translate=skip_translate,
@@ -3045,6 +3142,244 @@ def create(image,
             response['Started'] = True
 
     return response
+
+
+@_refresh_mine_cache
+def run_container(image,
+                  name=None,
+                  skip_translate=None,
+                  ignore_collisions=False,
+                  validate_ip_addrs=True,
+                  client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+                  bg=False,
+                  replace=False,
+                  force=False,
+                  networks=None,
+                  **kwargs):
+    '''
+    .. versionadded:: Oxygen
+
+    Equivalent to ``docker run`` on the Docker CLI. Runs the container, waits
+    for it to exit, and returns the container's logs when complete.
+
+    .. note::
+        Not to be confused with :py:func:`docker.run
+        <salt.modules.dockermod.run>`, which provides a :py:func:`cmd.run
+        <salt.modules.cmdmod.run>`-like interface for executing commands in a
+        running container.
+
+    This function accepts the same arguments as :py:func:`docker.create
+    <salt.modules.dockermod.create>`, with the exception of ``start``. In
+    addition, it accepts the arguments from :py:func:`docker.logs
+    <salt.modules.dockermod.logs>`, with the exception of ``follow``, to
+    control how logs are returned. Finally, the ``bg`` argument described below
+    can be used to optionally run the container in the background (the default
+    behavior is to block until the container exits).
+
+    bg : False
+        If ``True``, this function will not wait for the container to exit and
+        will not return its logs. It will however return the container's name
+        and ID, allowing for :py:func:`docker.logs
+        <salt.modules.dockermod.logs>` to be used to view the logs.
+
+        .. note::
+            The logs will be inaccessible once the container exits if
+            ``auto_remove`` is set to ``True``, so keep this in mind.
+
+    replace : False
+        If ``True``, and if the named container already exists, this will
+        remove the existing container. The default behavior is to return a
+        ``False`` result when the container already exists.
+
+    force : False
+        If ``True``, and the named container already exists, *and* ``replace``
+        is also set to ``True``, then the container will be forcibly removed.
+        Otherwise, the state will not proceed and will return a ``False``
+        result.
+
+    networks
+        Networks to which the container should be connected. If automatic IP
+        configuration is being used, the networks can be a simple list of
+        network names. If custom IP configuration is being used, then this
+        argument must be passed as a dictionary.
+
+    CLI Examples:
+
+    .. code-block:: bash
+        salt myminion docker.run_container myuser/myimage command=/usr/local/bin/myscript.sh
+        # Run container in the background
+        salt myminion docker.run_container myuser/myimage command=/usr/local/bin/myscript.sh bg=True
+        # Connecting to two networks using automatic IP configuration
+        salt myminion docker.run_container myuser/myimage command='perl /scripts/sync.py' networks=net1,net2
+        # net1 using automatic IP, net2 using static IPv4 address
+        salt myminion docker.run_container myuser/myimage command='perl /scripts/sync.py' networks='{"net1": {}, "net2": {"ipv4_address": "192.168.27.12"}}'
+    '''
+    image_id = image if not kwargs.pop('inspect', True) \
+        else _pull_if_needed(image, client_timeout)
+
+    removed_ids = None
+    if name is not None:
+        try:
+            pre_state = __salt__['docker.state'](name)
+        except CommandExecutionError:
+            pass
+        else:
+            if pre_state == 'running' and not (replace and force):
+                raise CommandExecutionError(
+                    'Container \'{0}\' exists and is running. Run with '
+                    'replace=True and force=True to force removal of the '
+                    'existing container.'.format(name)
+                )
+            elif not replace:
+                raise CommandExecutionError(
+                    'Container \'{0}\' exists. Run with replace=True to '
+                    'remove the existing container'.format(name)
+                )
+            else:
+                # We don't have to try/except this, we want it to raise a
+                # CommandExecutionError if we fail to remove the existing
+                # container so that we gracefully abort before attempting to go
+                # any further.
+                removed_ids = rm_(name, force=force)
+
+    log_kwargs = {}
+    for argname in get_client_args('logs')['logs']:
+        try:
+            log_kwargs[argname] = kwargs.pop(argname)
+        except KeyError:
+            pass
+    # Ignore the stream argument if passed
+    log_kwargs.pop('stream', None)
+
+    kwargs, unused_kwargs = _get_create_kwargs(
+        skip_translate=skip_translate,
+        ignore_collisions=ignore_collisions,
+        validate_ip_addrs=validate_ip_addrs,
+        **kwargs)
+
+    # _get_create_kwargs() will have processed auto_remove and put it into the
+    # host_config, so check the host_config to see whether or not auto_remove
+    # was enabled.
+    auto_remove = kwargs.get('host_config', {}).get('AutoRemove', False)
+
+    if unused_kwargs:
+        log.warning(
+            'The following arguments were ignored because they are not '
+            'recognized by docker-py: %s', sorted(unused_kwargs)
+        )
+
+    if networks:
+        if isinstance(networks, six.string_types):
+            networks = {x: {} for x in networks.split(',')}
+        if not isinstance(networks, dict) \
+                or not all(isinstance(x, dict)
+                           for x in six.itervalues(networks)):
+            raise SaltInvocationError('Invalid format for networks argument')
+
+    log.debug(
+        'docker.create: creating container %susing the following '
+        'arguments: %s',
+        'with name \'{0}\' '.format(name) if name is not None else '',
+        kwargs
+    )
+
+    time_started = time.time()
+    # Create the container
+    ret = _client_wrapper('create_container', image_id, name=name, **kwargs)
+
+    if removed_ids:
+        ret['Replaces'] = removed_ids
+
+    if name is None:
+        name = inspect_container(ret['Id'])['Name'].lstrip('/')
+    ret['Name'] = name
+
+    def _append_warning(ret, msg):
+        warnings = ret.pop('Warnings', None)
+        if warnings is None:
+            warnings = [msg]
+        elif isinstance(ret, list):
+            warnings.append(msg)
+        else:
+            warnings = [warnings, msg]
+        ret['Warnings'] = warnings
+
+    exc_info = {'return': ret}
+    try:
+        if networks:
+            try:
+                for net_name, net_conf in six.iteritems(networks):
+                    __salt__['docker.connect_container_to_network'](
+                        ret['Id'],
+                        net_name,
+                        **net_conf)
+            except CommandExecutionError as exc:
+                # Make an effort to remove the container if auto_remove was enabled
+                if auto_remove:
+                    try:
+                        rm_(name)
+                    except CommandExecutionError as rm_exc:
+                        exc_info.setdefault('other_errors', []).append(
+                            'Failed to auto_remove container: {0}'.format(rm_exc)
+                        )
+                # Raise original exception with additonal info
+                raise CommandExecutionError(exc.__str__(), info=exc_info)
+
+        # Start the container
+        output = []
+        start_(ret['Id'])
+        if not bg:
+            # Can't use logs() here because we've disabled "stream" in that
+            # function.  Also, note that if you want to troubleshoot this for loop
+            # in a debugger like pdb or pudb, you'll want to use auto_remove=False
+            # when running the function, since the container will likely exit
+            # before you finish stepping through with a debugger. If the container
+            # exits during iteration, the next iteration of the generator will
+            # raise an exception since the container will no longer exist.
+            try:
+                for line in _client_wrapper('logs',
+                                            ret['Id'],
+                                            stream=True,
+                                            timestamps=False):
+                    output.append(line)
+            except CommandExecutionError:
+                msg = (
+                    'Failed to get logs from container. This may be because '
+                    'the container exited before Salt was able to attach to '
+                    'it to retrieve the logs. Consider setting auto_remove '
+                    'to False.'
+                )
+                _append_warning(ret, msg)
+        # Container has exited, note the elapsed time
+        ret['Time_Elapsed'] = time.time() - time_started
+        _clear_context()
+
+        if not bg:
+            ret['Logs'] = ''.join(output)
+            if not auto_remove:
+                try:
+                    cinfo = inspect_container(ret['Id'])
+                except CommandExecutionError:
+                    _append_warning(
+                        ret, 'Failed to inspect container after running')
+                else:
+                    cstate = cinfo.get('State', {})
+                    cstatus = cstate.get('Status')
+                    if cstatus != 'exited':
+                        _append_warning(ret, 'Container state is not \'exited\'')
+                    ret['ExitCode'] = cstate.get('ExitCode')
+
+    except CommandExecutionError as exc:
+        try:
+            exc_info.update(exc.info)
+        except (TypeError, ValueError):
+            # In the event exc.info wasn't a dict (extremely unlikely), append
+            # it to other_errors as a fallback.
+            exc_info.setdefault('other_errors', []).append(exc.info)
+        # Re-raise with all of the available additional info
+        raise CommandExecutionError(exc.__str__(), info=exc_info)
+
+    return ret
 
 
 def copy_from(name, source, dest, overwrite=False, makedirs=False):
@@ -4099,6 +4434,11 @@ def pull(image,
          api_response=False,
          client_timeout=salt.utils.docker.CLIENT_TIMEOUT):
     '''
+    .. versionchanged:: Oxygen
+        If no tag is specified in the ``image`` argument, all tags for the
+        image will be pulled. For this reason is it recommended to pass
+        ``image`` using the ``repo:tag`` notation.
+
     Pulls an image from a Docker registry
 
     image
@@ -4164,27 +4504,26 @@ def pull(image,
 
     errors = []
     # Iterate through API response and collect information
-    for item in response:
+    for event in response:
+        log.debug('pull event: %s', event)
         try:
-            item_type = next(iter(item))
+            event = json.loads(salt.utils.stringutils.to_str(event))
+        except Exception as exc:
+            raise CommandExecutionError(
+                'Unable to interpret API event: \'{0}\''.format(event),
+                info={'Error': exc.__str__()}
+            )
+        try:
+            event_type = next(iter(event))
         except StopIteration:
             continue
-        if item_type == 'status':
-            _pull_status(ret, item)
-        elif item_type == 'errorDetail':
-            _error_detail(errors, item)
+        if event_type == 'status':
+            _pull_status(ret, event)
+        elif event_type == 'errorDetail':
+            _error_detail(errors, event)
 
-    try:
-        inspect_image(image)
-    except Exception:
-        # API returned information, but the image can't be found
-        msg = 'Pull failed for {0}'.format(image)
-        if errors:
-            msg += '. Error(s) follow:\n\n{0}'.format(
-                '\n\n'.join(errors)
-            )
-        raise CommandExecutionError(msg)
-
+    if errors:
+        ret['Errors'] = errors
     return ret
 
 
@@ -4260,15 +4599,22 @@ def push(image,
 
     errors = []
     # Iterate through API response and collect information
-    for item in response:
+    for event in response:
         try:
-            item_type = next(iter(item))
+            event = json.loads(salt.utils.stringutils.to_str(event))
+        except Exception as exc:
+            raise CommandExecutionError(
+                'Unable to interpret API event: \'{0}\''.format(event),
+                info={'Error': exc.__str__()}
+            )
+        try:
+            event_type = next(iter(event))
         except StopIteration:
             continue
-        if item_type == 'status':
-            _push_status(ret, item)
-        elif item_type == 'errorDetail':
-            _error_detail(errors, item)
+        if event_type == 'status':
+            _push_status(ret, event)
+        elif event_type == 'errorDetail':
+            _error_detail(errors, event)
 
     if errors:
         ret['Errors'] = errors
@@ -4703,7 +5049,7 @@ def create_network(name,
         other issues to be more easily worked around. See the following links
         for more information:
 
-        - `docker-py Low-level API`_
+        - docker-py `low-level API`_
         - `Docker Engine API`_
 
         .. versionadded:: Oxygen
@@ -4895,7 +5241,7 @@ def create_network(name,
         ipam_kwargs = {}
         for key in [
                 x for x in ['ipam_driver', 'ipam_opts']
-                    + get_client_args()['ipam_config']
+                    + get_client_args('ipam_config')['ipam_config']
                 if x in kwargs]:
             ipam_kwargs[key] = kwargs.pop(key)
         ipam_pools = kwargs.pop('ipam_pools', ())
@@ -4952,26 +5298,23 @@ def inspect_network(network_id):
     return response
 
 
-def connect_container_to_network(container, network_id, **kwargs):
+def connect_container_to_network(container, net_id, **kwargs):
     '''
     .. versionadded:: 2015.8.3
     .. versionchanged:: 2017.7.0
         Support for ``ipv4_address`` argument added
     .. versionchanged:: Oxygen
-        All arguments aside from the container and network name/ID are now
-        passed through to
-        `docker.client.APIClient.connect_container_to_network()`_, allowing for
-        new arguments to be supported automagically.
+        All arguments are now passed through to
+        `connect_container_to_network()`_, allowing for any new arguments added
+        to this function to be supported automagically.
 
-    Connect container to network. See here__ for documentation on supported
-    arguments.
-
-    .. __: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.network.NetworkApiMixin.connect_container_to_network
+    Connect container to network. See the `connect_container_to_network()`_
+    docs for information on supported arguments.
 
     container
         Container name or ID
 
-    network_id
+    net_id
         Network name or ID
 
     CLI Examples:
@@ -4979,16 +5322,26 @@ def connect_container_to_network(container, network_id, **kwargs):
     .. code-block:: bash
 
         salt myminion docker.connect_container_to_network web-1 mynet
+        salt myminion docker.connect_container_to_network web-1 mynet ipv4_address=10.20.0.10
         salt myminion docker.connect_container_to_network web-1 1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    network_id = kwargs.pop('network_id', None)
+    if network_id is not None:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'network_id\' argument to docker.build has been deprecated, '
+            'please use \'net_id\' instead.'
+        )
+        net_id = network_id
+
     log.debug(
         'Connecting container \'%s\' to network \'%s\' with the following '
-        'configuration: %s', container, network_id, kwargs
+        'configuration: %s', container, net_id, kwargs
     )
     response = _client_wrapper('connect_container_to_network',
                                container,
-                               network_id,
+                               net_id,
                                **kwargs)
     log.debug(
         'Successfully connected container \'%s\' to network \'%s\'',

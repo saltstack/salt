@@ -50,105 +50,123 @@ SHUTDOWN_TIMEOUT = 10
 log = logging.getLogger(__name__)
 
 
-def get_client_args():
+def get_client_args(limit=None):
     if not HAS_DOCKER_PY:
         raise CommandExecutionError('docker Python module not imported')
 
-    try:
-        create_args = _argspec(docker.APIClient.create_container).args
-    except AttributeError:
-        try:
-            create_args = _argspec(docker.Client.create_container).args
-        except AttributeError:
-            raise CommandExecutionError(
-                'Coult not get create_container argspec'
-            )
+    limit = salt.utils.args.split_input(limit or [])
+    ret = {}
 
-    try:
-        host_config_args = \
-            _argspec(docker.types.HostConfig.__init__).args
-    except AttributeError:
+    if not limit or any(x in limit for x in
+            ('create_container', 'host_config', 'connect_container_to_network')):
         try:
-            host_config_args = _argspec(docker.utils.create_host_config).args
-        except AttributeError:
-            raise CommandExecutionError(
-                'Could not get create_host_config argspec'
-            )
-
-    try:
-        func_ref = docker.api.network.NetworkApiMixin.create_network
-        if six.PY2:
-            try:
-                # create_network is decorated, so we have to dig into the closure
-                # created by functools.wraps
-                network_config_args = \
-                    _argspec(func_ref.__func__.__closure__[0].cell_contents).args
-            except (AttributeError, IndexError):
-                # functools.wraps changed (unlikely), bail out
-                network_config_args = []
-        else:
-            try:
-                # functools.wraps makes things a little easier in Python 3
-                network_config_args = _argspec(func_ref.__wrapped__).args
-            except AttributeError:
-                # functools.wraps changed (unlikely), bail out
-                network_config_args = []
-    except AttributeError:
-        # Function moved, bail out
-        network_config_args = []
-
-    try:
-        endpoint_config_args = \
-            _argspec(docker.types.EndpointConfig.__init__).args
-    except AttributeError:
-        try:
-            endpoint_config_args = \
-                _argspec(docker.utils.utils.create_endpoint_config).args
+            ret['create_container'] = \
+                _argspec(docker.APIClient.create_container).args
         except AttributeError:
             try:
-                endpoint_config_args = \
-                    _argspec(docker.utils.create_endpoint_config).args
+                ret['create_container'] = \
+                    _argspec(docker.Client.create_container).args
             except AttributeError:
                 raise CommandExecutionError(
-                    'Could not get create_endpoint_config argspec'
+                    'Coult not get create_container argspec'
                 )
 
-    try:
-        ipam_args = _argspec(docker.types.IPAMPool.__init__).args
-    except AttributeError:
         try:
-            ipam_args = _argspec(docker.utils.create_ipam_pool).args
+            ret['host_config'] = \
+                _argspec(docker.types.HostConfig.__init__).args
         except AttributeError:
-            raise CommandExecutionError('Could not get ipam args')
+            try:
+                ret['host_config'] = \
+                    _argspec(docker.utils.create_host_config).args
+            except AttributeError:
+                raise CommandExecutionError(
+                    'Could not get create_host_config argspec'
+                )
 
-    for arglist in (create_args, host_config_args, network_config_args,
-                    endpoint_config_args, ipam_args):
+        try:
+            ret['connect_container_to_network'] = \
+                _argspec(docker.types.EndpointConfig.__init__).args
+        except AttributeError:
+            try:
+                ret['connect_container_to_network'] = \
+                    _argspec(docker.utils.utils.create_endpoint_config).args
+            except AttributeError:
+                try:
+                    ret['connect_container_to_network'] = \
+                        _argspec(docker.utils.create_endpoint_config).args
+                except AttributeError:
+                    raise CommandExecutionError(
+                        'Could not get connect_container_to_network argspec'
+                    )
+
+    for key, wrapped_func in (
+            ('logs', docker.api.container.ContainerApiMixin.logs),
+            ('create_network', docker.api.network.NetworkApiMixin.create_network)):
+        if not limit or key in limit:
+            try:
+                func_ref = wrapped_func
+                if six.PY2:
+                    try:
+                        # create_network is decorated, so we have to dig into the
+                        # closure created by functools.wraps
+                        ret[key] = \
+                            _argspec(func_ref.__func__.__closure__[0].cell_contents).args
+                    except (AttributeError, IndexError):
+                        # functools.wraps changed (unlikely), bail out
+                        ret[key] = []
+                else:
+                    try:
+                        # functools.wraps makes things a little easier in Python 3
+                        ret[key] = _argspec(func_ref.__wrapped__).args
+                    except AttributeError:
+                        # functools.wraps changed (unlikely), bail out
+                        ret[key] = []
+            except AttributeError:
+                # Function moved, bail out
+                ret[key] = []
+
+    if not limit or 'ipam_config' in limit:
+        try:
+            ret['ipam_config'] = _argspec(docker.types.IPAMPool.__init__).args
+        except AttributeError:
+            try:
+                ret['ipam_config'] = _argspec(docker.utils.create_ipam_pool).args
+            except AttributeError:
+                raise CommandExecutionError('Could not get ipam args')
+
+    for item in ret:
         # The API version is passed automagically by the API code that imports
         # these classes/functions and is not an arg that we will be passing, so
         # remove it if present. Similarly, don't include "self" if it shows up
         # in the arglist.
         for argname in ('version', 'self'):
             try:
-                arglist.remove(argname)
+                ret[item].remove(argname)
             except ValueError:
                 pass
 
-    # Remove any args in host or networking config from the main config dict.
-    # This keeps us from accidentally allowing args that docker-py has moved
-    # from the container config to the host config.
-    for arglist in (host_config_args, endpoint_config_args):
-        for item in arglist:
+    # Remove any args in host or endpoint config from the create_container
+    # arglist. This keeps us from accidentally allowing args that docker-py has
+    # moved from the create_container function to the either the host or
+    # endpoint config.
+    for item in ('host_config', 'connect_container_to_network'):
+        for val in ret.get(item, []):
             try:
-                create_args.remove(item)
+                ret['create_container'].remove(val)
             except ValueError:
-                # Arg is not in create_args
+                # Arg is not in create_container arglist
                 pass
 
-    return {'create_container': create_args,
-            'host_config': host_config_args,
-            'endpoint_config': endpoint_config_args,
-            'network_config': network_config_args,
-            'ipam_config': ipam_args}
+    for item in ('create_container', 'host_config', 'connect_container_to_network'):
+        if limit and item not in limit:
+            ret.pop(item, None)
+
+    try:
+        ret['logs'].remove('container')
+    except (KeyError, ValueError, TypeError):
+        pass
+
+    return ret
 
 
 def translate_input(translator,

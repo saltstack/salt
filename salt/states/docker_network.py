@@ -585,7 +585,8 @@ def present(name,
     # Separate out the IPAM config options and build the IPAM config dict
     ipam_kwargs = {}
     ipam_kwarg_names = ['ipam', 'ipam_driver', 'ipam_opts', 'ipam_pools']
-    ipam_kwarg_names.extend(salt.utils.docker.get_client_args()['ipam_config'])
+    ipam_kwarg_names.extend(
+        __salt__['docker.get_client_args']('ipam_config')['ipam_config'])
     for key in ipam_kwarg_names:
         try:
             ipam_kwargs[key] = kwargs.pop(key)
