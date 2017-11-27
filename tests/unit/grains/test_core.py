@@ -625,7 +625,7 @@ class CoreGrainsUtilityFunctionsTestCase(TestCase):
     grains.core has helper utilities. This is test class for them
     '''
     def test_linux_iqn_iscsi_initiator(self):
-        data='''##
+        data = '''##
 ## /etc/iscsi/iscsi.initiatorname
 ##
 ## Default iSCSI Initiatorname.
