@@ -84,6 +84,16 @@ class ProfitBricksTest(ShellCase):
             [i.strip() for i in list_images]
         )
 
+    def test_list_image_alias(self):
+        '''
+        Tests the return of running the -f list_images  command for ProfitBricks
+        '''
+        list_images = self.run_cloud('-f list_images {0}'.format(PROVIDER_NAME))
+        self.assertIn(
+            '- ubuntu:latest',
+            [i.strip() for i in list_images]
+        )
+
     def test_list_sizes(self):
         '''
         Tests the return of running the --list_sizes command for ProfitBricks
@@ -96,7 +106,7 @@ class ProfitBricksTest(ShellCase):
 
     def test_list_datacenters(self):
         '''
-        Tests the return of running the --list_datacenters command for ProfitBricks
+        Tests the return of running the -f list_datacenters command for ProfitBricks
         '''
         list_datacenters = self.run_cloud('-f list_datacenters {0}'.format(PROVIDER_NAME))
         self.assertIn(
@@ -104,9 +114,41 @@ class ProfitBricksTest(ShellCase):
             [i.strip() for i in list_datacenters]
         )
 
+    def test_list_nodes(self):
+        '''
+        Tests the return of running the -f list_nodes command for ProfitBricks
+        '''
+        list_nodes = self.run_cloud('-f list_nodes {0}'.format(PROVIDER_NAME))
+        self.assertIn(
+            'state:',
+            [i.strip() for i in list_nodes]
+        )
+
+        self.assertIn(
+            'name:',
+            [i.strip() for i in list_nodes]
+        )
+
+    def test_list_nodes_full(self):
+        '''
+        Tests the return of running the -f list_nodes_full command for ProfitBricks
+        '''
+        list_nodes = self.run_cloud('-f list_nodes_full {0}'.format(PROVIDER_NAME))
+        
+        self.assertIn(
+            'state:',
+            [i.strip() for i in list_nodes]
+        )
+
+        self.assertIn(
+            'name:',
+            [i.strip() for i in list_nodes]
+        )
+    
+
     def test_list_location(self):
         '''
-        Tests the return of running the --list_locations command for ProfitBricks
+        Tests the return of running the --list-locations command for ProfitBricks
         '''
         list_locations = self.run_cloud('--list-locations {0}'.format(PROVIDER_NAME))
        
@@ -128,7 +170,7 @@ class ProfitBricksTest(ShellCase):
         self.assertIn(
             'us/ewr',
             [i.strip() for i in list_locations]
-        )
+        )    
 
     def test_instance(self):
         '''
