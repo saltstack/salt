@@ -1136,7 +1136,6 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertTrue(ret)
 
-
     def test_is_installed_false(self):
         eggs = [
             'M2Crypto==0.21.1',
@@ -1163,7 +1162,6 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     use_vt=False,
                 )
                 self.assertFalse(ret)
-
 
     def test_install_pre_argument_in_resulting_command(self):
         pkg = 'pep8'
