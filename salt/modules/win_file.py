@@ -1877,8 +1877,18 @@ def check_perms(path,
     # If reset=True, which users will be removed as a result
     if reset:
         for user_name in cur_perms:
-            if not any(user_name in perms for perms in (grant_perms, deny_perms)):
-                ret['changes']['remove_perms'].update({user_name: cur_perms[user_name]})
+            if user_name not in grant_perms:
+                if 'grant' in cur_perms[user_name] and not cur_perms[user_name]['grant']['inherited']:
+                    if 'remove_perms' not in ret['changes']:
+                        ret['changes']['remove_perms'] = {}
+                    salt.utils.win_dacl.rm_permissions(obj_name=path, principal=user_name, ace_type='grant')
+                    ret['changes']['remove_perms'].update({user_name: cur_perms[user_name]})
+            if user_name not in deny_perms:
+                if 'deny' in cur_perms[user_name] and not cur_perms[user_name]['deny']['inherited']:
+                    if 'remove_perms' not in ret['changes']:
+                        ret['changes']['remove_perms'] = {}
+                    salt.utils.win_dacl.rm_permissions(obj_name=path, principal=user_name, ace_type='deny')
+                    ret['changes']['remove_perms'].update({user_name: cur_perms[user_name]})
 
     # Re-add the Original Comment if defined
     if isinstance(orig_comment, six.string_types):

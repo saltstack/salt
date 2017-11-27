@@ -873,8 +873,16 @@ def _check_directory_win(name,
         # Check reset
         if win_perms_reset:
             for user_name in perms:
-                if not any(user_name in perms for perms in (win_perms, win_deny_perms)):
-                    changes['remove_perms'].update({user_name: perms[user_name]})
+                if user_name not in win_perms:
+                    if 'grant' in perms[user_name] and not perms[user_name]['grant']['inherited']:
+                        if 'remove_perms' not in changes:
+                            changes['remove_perms'] = {}
+                        changes['remove_perms'].update({user_name: perms[user_name]})
+                if user_name not in win_deny_perms:
+                    if 'deny' in perms[user_name] and not perms[user_name]['deny']['inherited']:
+                        if 'remove_perms' not in changes:
+                            changes['remove_perms'] = {}
+                        changes['remove_perms'].update({user_name: perms[user_name]})
 
     if changes:
         return None, 'The directory "{0}" will be changed'.format(name), changes
@@ -2302,7 +2310,7 @@ def managed(name,
         # Check and set the permissions if necessary
         if salt.utils.is_windows():
             ret = __salt__['file.check_perms'](
-                name=name,
+                path=name,
                 ret=ret,
                 owner=win_owner,
                 grant_perms=win_perms,
@@ -2348,7 +2356,7 @@ def managed(name,
 
                 if salt.utils.is_windows():
                     ret = __salt__['file.check_perms'](
-                        name=name,
+                        path=name,
                         ret=ret,
                         owner=win_owner,
                         grant_perms=win_perms,
@@ -3071,7 +3079,8 @@ def directory(name,
         if children_only:
             ret['comment'] = 'Directory {0}/* updated'.format(name)
         else:
-            ret['comment'] = 'Directory {0} updated'.format(name)
+            if ret['changes']:
+                ret['comment'] = 'Directory {0} updated'.format(name)
 
     if __opts__['test']:
         ret['comment'] = 'Directory {0} not updated'.format(name)

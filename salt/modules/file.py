@@ -4922,7 +4922,7 @@ def manage_file(name,
             # on Windows. The local function will be overridden
             # pylint: disable=E1121
             ret = check_perms(
-                name=name,
+                path=name,
                 ret=ret,
                 owner=kwargs.get('win_owner'),
                 grant_perms=kwargs.get('win_perms'),
