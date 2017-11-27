@@ -1217,41 +1217,54 @@ def mkdir(path,
           owner=None,
           grant_perms=None,
           deny_perms=None,
-          inheritance=True):
+          inheritance=True,
+          reset=False):
     '''
     Ensure that the directory is available and permissions are set.
 
     Args:
 
-        path (str): The full path to the directory.
+        path (str):
+            The full path to the directory.
 
-        owner (str): The owner of the directory. If not passed, it will be the
-        account that created the directory, likely SYSTEM
+        owner (str):
+            The owner of the directory. If not passed, it will be the account
+            that created the directory, likely SYSTEM
 
-        grant_perms (dict): A dictionary containing the user/group and the basic
-        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
-        You can also set the ``applies_to`` setting here. The default is
-        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
-        like this:
+        grant_perms (dict):
+            A dictionary containing the user/group and the basic permissions to
+            grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
+            set the ``applies_to`` setting here. The default is
+            ``this_folder_subfolders_files``. Specify another ``applies_to``
+            setting like this:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+                {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
 
-        To set advanced permissions use a list for the ``perms`` parameter, ie:
+            To set advanced permissions use a list for the ``perms`` parameter, ie:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
+                {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
 
-        deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny along with the ``applies_to`` setting. Use the same
-        format used for the ``grant_perms`` parameter. Remember, deny
-        permissions supersede grant permissions.
+        deny_perms (dict):
+            A dictionary containing the user/group and permissions to deny along
+            with the ``applies_to`` setting. Use the same format used for the
+            ``grant_perms`` parameter. Remember, deny permissions supersede
+            grant permissions.
 
-        inheritance (bool): If True the object will inherit permissions from the
-        parent, if False, inheritance will be disabled. Inheritance setting will
-        not apply to parent directories if they must be created
+        inheritance (bool):
+            If ``True`` the object will inherit permissions from the parent, if
+            ``False``, inheritance will be disabled. Inheritance setting will
+            not apply to parent directories if they must be created
+
+        reset (bool):
+            If ``True`` the existing DACL will be cleared and replaced with the
+            settings defined in this function. If ``False``, new entries will be
+            appended to the existing DACL. Default is ``False``.
+
+            .. versionadded:: 2017.7.3
 
     Returns:
         bool: True if successful
@@ -1288,10 +1301,16 @@ def mkdir(path,
 
             # Set owner
             if owner:
-                salt.utils.win_dacl.set_owner(path, owner)
+                salt.utils.win_dacl.set_owner(obj_name=path, principal=owner)
 
             # Set permissions
-            set_perms(path, grant_perms, deny_perms, inheritance)
+            set_perms(
+                path=path,
+                grant_perms=grant_perms,
+                deny_perms=deny_perms,
+                inheritance=inheritance,
+                reset=reset)
+
         except WindowsError as exc:
             raise CommandExecutionError(exc)
 
@@ -1302,49 +1321,62 @@ def makedirs_(path,
               owner=None,
               grant_perms=None,
               deny_perms=None,
-              inheritance=True):
+              inheritance=True,
+              reset=False):
     '''
     Ensure that the parent directory containing this path is available.
 
     Args:
 
-        path (str): The full path to the directory.
+        path (str):
+            The full path to the directory.
 
-        owner (str): The owner of the directory. If not passed, it will be the
-        account that created the directly, likely SYSTEM
+            .. note::
 
-        grant_perms (dict): A dictionary containing the user/group and the basic
-        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
-        You can also set the ``applies_to`` setting here. The default is
-        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
-        like this:
+                The path must end with a trailing slash otherwise the directory(s) will
+                be created up to the parent directory. For example if path is
+                ``C:\\temp\\test``, then it would be treated as ``C:\\temp\\`` but if
+                the path ends with a trailing slash like ``C:\\temp\\test\\``, then it
+                would be treated as ``C:\\temp\\test\\``.
 
-        .. code-block:: yaml
+        owner (str):
+            The owner of the directory. If not passed, it will be the account
+            that created the directly, likely SYSTEM
 
-            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+        grant_perms (dict):
+            A dictionary containing the user/group and the basic permissions to
+            grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
+            set the ``applies_to`` setting here. The default is
+            ``this_folder_subfolders_files``. Specify another ``applies_to``
+            setting like this:
 
-        To set advanced permissions use a list for the ``perms`` parameter, ie:
+            .. code-block:: yaml
 
-        .. code-block:: yaml
+                {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
 
-            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
+            To set advanced permissions use a list for the ``perms`` parameter, ie:
 
-        deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny along with the ``applies_to`` setting. Use the same
-        format used for the ``grant_perms`` parameter. Remember, deny
-        permissions supersede grant permissions.
+            .. code-block:: yaml
 
-        inheritance (bool): If True the object will inherit permissions from the
-        parent, if False, inheritance will be disabled. Inheritance setting will
-        not apply to parent directories if they must be created
+                {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
 
-    .. note::
+        deny_perms (dict):
+            A dictionary containing the user/group and permissions to deny along
+            with the ``applies_to`` setting. Use the same format used for the
+            ``grant_perms`` parameter. Remember, deny permissions supersede
+            grant permissions.
 
-        The path must end with a trailing slash otherwise the directory(s) will
-        be created up to the parent directory. For example if path is
-        ``C:\\temp\\test``, then it would be treated as ``C:\\temp\\`` but if
-        the path ends with a trailing slash like ``C:\\temp\\test\\``, then it
-        would be treated as ``C:\\temp\\test\\``.
+        inheritance (bool):
+            If True the object will inherit permissions from the parent, if
+            False, inheritance will be disabled. Inheritance setting will not
+            apply to parent directories if they must be created
+
+        reset (bool):
+            If ``True`` the existing DACL will be cleared and replaced with the
+            settings defined in this function. If ``False``, new entries will be
+            appended to the existing DACL. Default is ``False``.
+
+            .. versionadded:: 2017.7.3
 
     Returns:
         bool: True if successful
@@ -1404,7 +1436,13 @@ def makedirs_(path,
     for directory_to_create in directories_to_create:
         # all directories have the user, group and mode set!!
         log.debug('Creating directory: %s', directory_to_create)
-        mkdir(directory_to_create, owner, grant_perms, deny_perms, inheritance)
+        mkdir(
+            path=directory_to_create,
+            owner=owner,
+            grant_perms=grant_perms,
+            deny_perms=deny_perms,
+            inheritance=inheritance,
+            reset=reset)
 
     return True
 
@@ -1413,41 +1451,54 @@ def makedirs_perms(path,
                    owner=None,
                    grant_perms=None,
                    deny_perms=None,
-                   inheritance=True):
+                   inheritance=True,
+                   reset=True):
     '''
     Set owner and permissions for each directory created.
 
     Args:
 
-        path (str): The full path to the directory.
+        path (str):
+            The full path to the directory.
 
-        owner (str): The owner of the directory. If not passed, it will be the
-        account that created the directory, likely SYSTEM
+        owner (str):
+            The owner of the directory. If not passed, it will be the account
+            that created the directory, likely SYSTEM
 
-        grant_perms (dict): A dictionary containing the user/group and the basic
-        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
-        You can also set the ``applies_to`` setting here. The default is
-        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
-        like this:
+        grant_perms (dict):
+            A dictionary containing the user/group and the basic permissions to
+            grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
+            set the ``applies_to`` setting here. The default is
+            ``this_folder_subfolders_files``. Specify another ``applies_to``
+            setting like this:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+                {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
 
-        To set advanced permissions use a list for the ``perms`` parameter, ie:
+            To set advanced permissions use a list for the ``perms`` parameter, ie:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
+                {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
 
-        deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny along with the ``applies_to`` setting. Use the same
-        format used for the ``grant_perms`` parameter. Remember, deny
-        permissions supersede grant permissions.
+        deny_perms (dict):
+            A dictionary containing the user/group and permissions to deny along
+            with the ``applies_to`` setting. Use the same format used for the
+            ``grant_perms`` parameter. Remember, deny permissions supersede
+            grant permissions.
 
-        inheritance (bool): If True the object will inherit permissions from the
-        parent, if False, inheritance will be disabled. Inheritance setting will
-        not apply to parent directories if they must be created
+        inheritance (bool):
+            If ``True`` the object will inherit permissions from the parent, if
+            ``False``, inheritance will be disabled. Inheritance setting will
+            not apply to parent directories if they must be created.
+
+        reset (bool):
+            If ``True`` the existing DACL will be cleared and replaced with the
+            settings defined in this function. If ``False``, new entries will be
+            appended to the existing DACL. Default is ``False``.
+
+            .. versionadded:: 2017.7.3
 
     Returns:
         bool: True if successful, otherwise raise an error
@@ -1491,7 +1542,13 @@ def makedirs_perms(path,
             return {}
 
     # Make the directory
-    mkdir(path, owner, grant_perms, deny_perms, inheritance)
+    mkdir(
+        path=path,
+        owner=owner,
+        grant_perms=grant_perms,
+        deny_perms=deny_perms,
+        inheritance=inheritance,
+        reset=reset)
 
     return True
 
@@ -1501,60 +1558,58 @@ def check_perms(path,
                 owner=None,
                 grant_perms=None,
                 deny_perms=None,
-                inheritance=True):
+                inheritance=True,
+                reset=False):
     '''
-    Set owner and permissions for each directory created.
+    Check owner and permissions for the passed directory.
 
     Args:
 
-        path (str): The full path to the directory.
+        path (str):
+            The full path to the directory.
 
-        ret (dict): A dictionary to append changes to and return. If not passed,
-        will create a new dictionary to return.
+        ret (dict):
+            A dictionary to append changes to and return. If not passed, will
+            create a new dictionary to return. Default is ``None``.
 
-        owner (str): The owner of the directory. If not passed, it will be the
-        account that created the directory, likely SYSTEM
+        owner (str):
+            The owner of the directory to check.
 
-        grant_perms (dict): A dictionary containing the user/group and the basic
-        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
-        You can also set the ``applies_to`` setting here. The default is
-        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
-        like this:
+        grant_perms (dict):
+            A dictionary containing the user/group and the grant permissions to
+            check, ie: ``{'user': {'perms': 'basic_permission'}}``. Default is
+            ``None``.
 
-        .. code-block:: yaml
+        deny_perms (dict):
+            A dictionary containing the user/group and the deny permissions to
+            check. Default is ``None``.
 
-            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+        inheritance (bool):
+            ``True`` will check if inheritance is enabled. ``False`` will
+            check if inheritance is disabled.
 
-        To set advanced permissions use a list for the ``perms`` parameter, ie:
+        reset (bool):
+            ``True`` will show what permissions will be removed by resetting the
+            DACL. ``False`` will do nothing. Default is ``False``.
 
-        .. code-block:: yaml
-
-            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
-
-        deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny along with the ``applies_to`` setting. Use the same
-        format used for the ``grant_perms`` parameter. Remember, deny
-        permissions supersede grant permissions.
-
-        inheritance (bool): If True the object will inherit permissions from the
-        parent, if False, inheritance will be disabled. Inheritance setting will
-        not apply to parent directories if they must be created
+            .. versionadded:: 2017.7.3
 
     Returns:
-        bool: True if successful, otherwise raise an error
+        dict: A dictionary of changes that would be made if the defined settings
+            are used in the ``set_perms`` function
 
     CLI Example:
 
     .. code-block:: bash
 
-        # To grant the 'Users' group 'read & execute' permissions.
-        salt '*' file.check_perms C:\\Temp\\ Administrators "{'Users': {'perms': 'read_execute'}}"
+        # To see changes to ``C:\\Temp`` if the 'Users' group is given 'read & execute' permissions:
+        salt '*' file.check_perms C:\\Temp\\ ret_dict Administrators "{'Users': {'perms': 'read_execute'}}"
 
         # Locally using salt call
-        salt-call file.check_perms C:\\Temp\\ Administrators "{'Users': {'perms': 'read_execute', 'applies_to': 'this_folder_only'}}"
+        salt-call file.check_perms C:\\Temp\\ ret_dict Administrators "{'Users': {'perms': 'read_execute', 'applies_to': 'this_folder_only'}}"
 
         # Specify advanced attributes with a list
-        salt '*' file.check_perms C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
+        salt '*' file.check_perms C:\\Temp\\ ret_dict Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
     '''
     path = os.path.expanduser(path)
 
@@ -1818,6 +1873,13 @@ def check_perms(path,
                         'Failed to set inheritance for "{0}" to '
                         '{1}'.format(path, inheritance))
 
+    # Check reset
+    # If reset=True, which users will be removed as a result
+    if reset:
+        for user_name in cur_perms:
+            if not any(user_name in perms for perms in (grant_perms, deny_perms)):
+                ret['changes']['remove_perms'].update({user_name: cur_perms[user_name]})
+
     # Re-add the Original Comment if defined
     if isinstance(orig_comment, six.string_types):
         if orig_comment:
@@ -1835,7 +1897,11 @@ def check_perms(path,
     return ret
 
 
-def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
+def set_perms(path,
+              grant_perms=None,
+              deny_perms=None,
+              inheritance=True,
+              reset=False):
     '''
     Set permissions for the given path
 
@@ -1846,8 +1912,8 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
         grant_perms (dict):
             A dictionary containing the user/group and the basic permissions to
             grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
-            set the ``applies_to`` setting here. The default is
-            ``this_folder_subfolders_files``. Specify another ``applies_to``
+            set the ``applies_to`` setting here. The default for ``applies_to``
+             is ``this_folder_subfolders_files``. Specify another ``applies_to``
             setting like this:
 
             .. code-block:: yaml
@@ -1862,7 +1928,10 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
                 {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
 
             To see a list of available attributes and applies to settings see
-            the documentation for salt.utils.win_dacl
+            the documentation for salt.utils.win_dacl.
+
+            A value of ``None`` will make no changes to the ``grant`` portion of
+            the DACL. Default is ``None``.
 
         deny_perms (dict):
             A dictionary containing the user/group and permissions to deny along
@@ -1870,13 +1939,27 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
             ``grant_perms`` parameter. Remember, deny permissions supersede
             grant permissions.
 
+            A value of ``None`` will make no changes to the ``deny`` portion of
+            the DACL. Default is ``None``.
+
         inheritance (bool):
-            If True the object will inherit permissions from the parent, if
-            False, inheritance will be disabled. Inheritance setting will not
-            apply to parent directories if they must be created
+            If ``True`` the object will inherit permissions from the parent, if
+            ``False``, inheritance will be disabled. The inheritance setting
+            will not apply to parent directories if they must be created.
+            Default is ``False``.
+
+        reset (bool):
+            If ``True`` the existing DACL will be cleared and replaced with the
+            settings defined in this function. If ``False``, new entries will be
+            appended to the existing DACL. Default is ``False``.
+
+            .. versionadded:: 2017.7.3
 
     Returns:
-        bool: True if successful, otherwise raise an error
+        bool: True if successful
+
+    Raises:
+        CommandExecutionError: If unsuccessful
 
     CLI Example:
 
@@ -1893,11 +1976,19 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
     '''
     ret = {}
 
-    # Get the DACL for the directory
-    dacl = salt.utils.win_dacl.dacl(path)
+    if reset:
+        # Get an empty DACL
+        dacl = salt.utils.win_dacl.dacl()
 
-    # Get current file/folder permissions
-    cur_perms = salt.utils.win_dacl.get_permissions(path)
+        # Get an empty perms dict
+        cur_perms = {}
+
+    else:
+        # Get the DACL for the directory
+        dacl = salt.utils.win_dacl.dacl(path)
+
+        # Get current file/folder permissions
+        cur_perms = salt.utils.win_dacl.get_permissions(path)
 
     # Set 'deny' perms if any
     if deny_perms is not None:
