@@ -173,7 +173,7 @@ def create(vm_info):
                 vm_info['key_filename'] = key_filename
                 vm_info['ssh_host'] = ip
 
-                res = __utils__['cloud.bootstrap'](vm_info)
+                res = __utils__['cloud.bootstrap'](vm_info, __opts__)
                 vm_result.update(res)
 
     __utils__['cloud.fire_event'](
