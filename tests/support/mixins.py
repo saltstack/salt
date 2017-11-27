@@ -111,7 +111,9 @@ class AdaptedConfigurationTestCaseMixin(object):
                     rdict['sock_dir'],
                     conf_dir
                    ],
-                   RUNTIME_VARS.RUNNING_TESTS_USER)
+                   RUNTIME_VARS.RUNNING_TESTS_USER,
+                   root_dir=rdict['root_dir'],
+                   )
 
         rdict['config_dir'] = conf_dir
         rdict['conf_file'] = os.path.join(conf_dir, config_for)
