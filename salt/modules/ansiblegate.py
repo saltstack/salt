@@ -215,7 +215,7 @@ def __virtual__():
     ret = ansible is not None
     msg = not ret and "Ansible is not installed on this system" or None
     if msg:
-        log.warning(msg)
+        log.debug(msg)
     else:
         global _resolver
         global _caller
