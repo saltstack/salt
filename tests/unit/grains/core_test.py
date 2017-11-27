@@ -5,6 +5,7 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import logging
 import os
 import platform
 
@@ -28,6 +29,8 @@ from salt.grains import core
 
 # Globals
 core.__salt__ = {}
+core.__opts__ = {}
+log = logging.getLogger(__name__)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -458,6 +461,27 @@ PATCHLEVEL = 3
         self.assertEqual(os_grains.get('osrelease'), os_release_map['osrelease'])
         self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
         self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
+
+    def test_docker_virtual(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        '''
+        with patch.object(os.path, 'isdir', MagicMock(return_value=False)), \
+                patch.object(os.path,
+                             'isfile',
+                             MagicMock(side_effect=lambda x: True
+                                       if x == '/proc/1/cgroup' else False)):
+            for cgroup_substr in (':/system.slice/docker', ':/docker/',
+                                   ':/docker-ce/'):
+                cgroup_data = \
+                    '10:memory{0}a_long_sha256sum'.format(cgroup_substr)
+                log.debug(
+                    'Testing Docker cgroup substring \'%s\'', cgroup_substr)
+                with patch('salt.utils.fopen', mock_open(read_data=cgroup_data)):
+                    self.assertEqual(
+                        core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                        'Docker'
+                    )
 
 
 if __name__ == '__main__':
