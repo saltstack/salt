@@ -126,3 +126,11 @@ description:
             patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
             with pytest.raises(LoaderError) as loader_error:
                 self.resolver.load_module('something.strange')
+
+    def test_virtual_function_no_ansible_installed(self):
+        '''
+        Test Ansible module __virtual__ when ansible is not installed on the minion.
+        :return:
+        '''
+        with patch('salt.modules.ansiblegate.ansible', None):
+            assert ansible.__virtual__() == (False, 'Ansible is not installed on this system')
