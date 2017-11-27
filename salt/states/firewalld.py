@@ -82,8 +82,9 @@ import logging
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-import salt.utils.path
 from salt.output import nested
+import salt.utils.path
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -231,8 +232,10 @@ def present(name,
     # if prune_services == None, set to True and log a deprecation warning
     if prune_services is None:
         prune_services = True
-        salt.utils.warn_until('Neon',
-                'The \'prune_services\' argument default is currently True, but will be changed to True in future releases.')
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'prune_services\' argument default is currently True, '
+            'but will be changed to True in future releases.')
 
     ret = _present(name, block_icmp, prune_block_icmp, default, masquerade, ports, prune_ports,
             port_fwd, prune_port_fwd, services, prune_services, interfaces, prune_interfaces,

@@ -986,7 +986,9 @@ class TestDaemon(object):
                     RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
                     TMP,
                     ],
-                   RUNTIME_VARS.RUNNING_TESTS_USER)
+                   RUNTIME_VARS.RUNNING_TESTS_USER,
+                   root_dir=master_opts['root_dir'],
+                   )
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts

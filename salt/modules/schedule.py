@@ -771,7 +771,7 @@ def disable(**kwargs):
                     return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
-            ret['comment'] = 'Event module not available. Schedule enable job failed.'
+            ret['comment'] = 'Event module not available. Schedule disable job failed.'
     return ret
 
 

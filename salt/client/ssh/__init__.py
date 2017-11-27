@@ -1026,6 +1026,8 @@ class Single(object):
             opts_pkg[u'__master_opts__'] = self.context[u'master_opts']
             if u'_caller_cachedir' in self.opts:
                 opts_pkg[u'_caller_cachedir'] = self.opts[u'_caller_cachedir']
+            if u'known_hosts_file' in self.opts:
+                opts_pkg[u'known_hosts_file'] = self.opts[u'known_hosts_file']
             else:
                 opts_pkg[u'_caller_cachedir'] = self.opts[u'cachedir']
             # Use the ID defined in the roster file
