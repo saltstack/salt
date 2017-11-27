@@ -310,25 +310,25 @@ class PillarCache(object):
         return fresh_pillar.compile_pillar()
 
     def compile_pillar(self, *args, **kwargs):  # Will likely just be pillar_dirs
-        log.debug('Scanning pillar cache for information about minion {0} and saltenv {1}'.format(self.minion_id, self.saltenv))
+        log.debug('Scanning pillar cache for information about minion {0} and pillarenv {1}'.format(self.minion_id, self.pillarenv))
         log.debug('Scanning cache: {0}'.format(self.cache._dict))
         # Check the cache!
         if self.minion_id in self.cache:  # Keyed by minion_id
             # TODO Compare grains, etc?
-            if self.saltenv in self.cache[self.minion_id]:
+            if self.pillarenv in self.cache[self.minion_id]:
                 # We have a cache hit! Send it back.
-                log.debug('Pillar cache hit for minion {0} and saltenv {1}'.format(self.minion_id, self.saltenv))
-                return self.cache[self.minion_id][self.saltenv]
+                log.debug('Pillar cache hit for minion {0} and pillarenv {1}'.format(self.minion_id, self.pillarenv))
+                return self.cache[self.minion_id][self.pillarenv]
             else:
                 # We found the minion but not the env. Store it.
                 fresh_pillar = self.fetch_pillar()
-                self.cache[self.minion_id][self.saltenv] = fresh_pillar
-                log.debug('Pillar cache miss for saltenv {0} for minion {1}'.format(self.saltenv, self.minion_id))
+                self.cache[self.minion_id][self.pillarenv] = fresh_pillar
+                log.debug('Pillar cache miss for pillarenv {0} for minion {1}'.format(self.pillarenv, self.minion_id))
                 return fresh_pillar
         else:
             # We haven't seen this minion yet in the cache. Store it.
             fresh_pillar = self.fetch_pillar()
-            self.cache[self.minion_id] = {self.saltenv: fresh_pillar}
+            self.cache[self.minion_id] = {self.pillarenv: fresh_pillar}
             log.debug('Pillar cache miss for minion {0}'.format(self.minion_id))
             log.debug('Current pillar cache: {0}'.format(self.cache._dict))  # FIXME hack!
             return fresh_pillar

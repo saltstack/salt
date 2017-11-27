@@ -293,7 +293,7 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
                     kwargs['set_name'],
                     family)
             else:
-                command = __salt__['ipset.delete'](kwargs['set_name'], _entry, family, **kwargs)
+                command = __salt__['ipset.delete'](kwargs['set_name'], entry, family, **kwargs)
                 if 'Error' not in command:
                     ret['changes'] = {'locale': name}
                     ret['result'] = True
