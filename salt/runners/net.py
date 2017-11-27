@@ -75,6 +75,7 @@ from __future__ import unicode_literals
 
 # Import salt lib
 import salt.output
+import salt.utils.network
 from salt.ext import six
 from salt.ext.six.moves import map
 
@@ -812,7 +813,25 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     ip = ''  # pylint: disable=invalid-name
     ipnet = None
 
-    results = {}
+    results = {
+        'int_net': [],
+        'int_descr': [],
+        'int_name': [],
+        'int_ip': [],
+        'int_mac': [],
+        'int_device': [],
+        'lldp_descr': [],
+        'lldp_int': [],
+        'lldp_device': [],
+        'lldp_mac': [],
+        'lldp_device_int': [],
+        'mac_device': [],
+        'mac_int': [],
+        'arp_device': [],
+        'arp_int': [],
+        'arp_mac': [],
+        'arp_ip': []
+    }
 
     if isinstance(addr, int):
         results['mac'] = findmac(vlan=addr, display=display)
@@ -826,6 +845,8 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     except IndexError:
         # no problem, let's keep searching
         pass
+    if salt.utils.network.is_ipv6(addr):
+        mac = False
     if not mac:
         try:
             ip = napalm_helpers.convert(napalm_helpers.ip, addr)  # pylint: disable=invalid-name
