@@ -80,7 +80,7 @@ same way as in the above example, only without a top-level ``grains:`` key:
 
 .. note::
 
-    The content of ``/etc/salt/grains`` is ignored if you specify grains in the minion config.
+    Grains in ``/etc/salt/grains`` are ignored if you specify the same grains in the minion config.
 
 .. note::
 
