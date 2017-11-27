@@ -76,6 +76,7 @@ def _client(user=None, password=None, host=None, port=None, **client_args):
                                    password=password,
                                    **client_args)
 
+
 def list_dbs(**client_args):
     '''
     List all InfluxDB databases.
