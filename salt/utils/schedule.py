@@ -746,6 +746,46 @@ class Schedule(object):
         evt.fire_event({'complete': True},
                        tag='/salt/minion/minion_schedule_saved')
 
+    def postpone_job(self, name, data):
+        '''
+        Disable a job in the scheduler. Ignores jobs from pillar
+        '''
+        time = data['time']
+        new_time = data['new_time']
+
+        # ensure job exists, then disable it
+        if name in self.opts['schedule']:
+            if 'skip_explicit' not in self.opts['schedule'][name]:
+                self.opts['schedule'][name]['skip_explicit'] = []
+            self.opts['schedule'][name]['skip_explicit'].append(time)
+
+            if 'run_explicit' not in self.opts['schedule'][name]:
+                self.opts['schedule'][name]['run_explicit'] = []
+            self.opts['schedule'][name]['run_explicit'].append(new_time)
+
+        elif name in self._get_schedule(include_opts=False):
+            log.warning('Cannot modify job {0}, '
+                        'it`s in the pillar!'.format(name))
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
+                       tag='/salt/minion/minion_schedule_postpone_job_complete')
+
+    def get_next_fire_time(self, name):
+        '''
+        Disable a job in the scheduler. Ignores jobs from pillar
+        '''
+
+        schedule = self._get_schedule()
+        if schedule:
+            _next_fire_time = schedule[name]['_next_fire_time']
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        evt.fire_event({'complete': True, 'next_fire_time': _next_fire_time},
+                       tag='/salt/minion/minion_schedule_next_fire_time_complete')
+
     def handle_func(self, multiprocessing_enabled, func, data):
         '''
         Execute this method in a multiprocess or thread
@@ -1071,6 +1111,23 @@ class Schedule(object):
                                   '", "'.join(scheduling_elements)))
                 continue
 
+            if 'run_explicit' in data:
+                _run_explicit = data['run_explicit']
+
+                if isinstance(_run_explicit, six.string_types):
+                    _run_explicit = [_run_explicit]
+
+                # Copy the list so we can loop through it
+                for i in copy.deepcopy(_run_explicit):
+                    if len(_run_explicit) > 1:
+                        if i < now - self.opts['loop_interval']:
+                            _run_explicit.remove(i)
+
+                if _run_explicit:
+                    if _run_explicit[0] <= now <= (_run_explicit[0] + self.opts['loop_interval']):
+                        run = True
+                        data['_next_fire_time'] = _run_explicit[0]
+
             if True in [True for item in time_elements if item in data]:
                 if '_seconds' not in data:
                     interval = int(data.get('seconds', 0))
@@ -1375,9 +1432,8 @@ class Schedule(object):
 
                     # Copy the list so we can loop through it
                     for i in copy.deepcopy(_skip_explicit):
-                        if len(_skip_explicit) > 1:
-                            if i < now - self.opts['loop_interval']:
-                                _skip_explicit.remove(i)
+                        if i < now - self.opts['loop_interval']:
+                            _skip_explicit.remove(i)
 
                     if _skip_explicit:
                         if _skip_explicit[0] <= now <= (_skip_explicit[0] + self.opts['loop_interval']):
