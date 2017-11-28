@@ -26,7 +26,6 @@ except ImportError:
     HAS_SHADE = False
 
 log = logging.getLogger(__name__)
-
 __virtualname__ = 'openstack'
 
 
@@ -36,10 +35,8 @@ def __virtual__():
     '''
     if get_configured_provider() is False:
         return False
-
     if get_dependencies() is False:
         return False
-
     return __virtualname__
 
 
@@ -48,13 +45,10 @@ def get_configured_provider():
     Return the first configured instance.
     '''
     return config.is_provider_configured(
-        __opts__,
-        __active_provider_name__ or __virtualname__,
-        ('auth', 'region_name'),
-        log_message=False,
+        __opts__, __active_provider_name__ or __virtualname__,
+        ('auth', 'region_name'), log_message=False,
     ) or config.is_provider_configured(
-        __opts__,
-        __active_provider_name__ or __virtualname__,
+        __opts__, __active_provider_name__ or __virtualname__,
         ('cloud', 'region_name')
     )
 
@@ -90,7 +84,6 @@ def preferred_ip(vm_, ips):
             return ip
         except Exception:
             continue
-
     return False
 
 
@@ -99,10 +92,7 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return config.get_cloud_config_value(
-        'ssh_interface', vm_, __opts__, default='public_ips',
-        search_global=False
-    )
+    return config.get_cloud_config_value('ssh_interface', vm_, __opts__, default='public_ips', search_global=False)
 
 
 def get_conn():
@@ -413,13 +403,11 @@ def create(vm_):
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
         data = request_instance(kwargs=vm_)
-
     log.debug('VM is now running')
 
     def __query_node_ip(vm_):
-	data = show_instance(vm_['name'], conn=conn, call='action')
+        data = show_instance(vm_['name'], conn=conn, call='action')
         return preferred_ip(vm_, data[ssh_interface(vm_)])
-
     try:
         ip_address = __utils__['cloud.wait_for_ip'](
             __query_node_ip,
@@ -433,21 +421,11 @@ def create(vm_):
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))
-
     log.debug('Using IP address {0}'.format(ip_address))
 
-    if __utils__['cloud.get_salt_interface'](vm_, __opts__) == 'private_ips':
-        salt_ip_address = preferred_ip(vm_, data['private_ips'])
-        log.info('Salt interface set to: {0}'.format(salt_ip_address))
-    elif __utils__['cloud.get_salt_interface'](vm_, __opts__) == 'fixed_ips':
-        salt_ip_address = preferred_ip(vm_, data['fixed_ips'])
-        log.info('Salt interface set to: {0}'.format(salt_ip_address))
-    elif __utils__['cloud.get_salt_interface'](vm_, __opts__) == 'floating_ips':
-        salt_ip_address = preferred_ip(vm_, data['floating_ips'])
-        log.info('Salt interface set to: {0}'.format(salt_ip_address))
-    else:
-        salt_ip_address = preferred_ip(vm_, data['public_ips'])
-        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+    salt_interface = __utils__['cloud.get_salt_interface'](vm_, __opts__)
+    salt_ip_address = preferred_ip(vm_, data[salt_interface])
+    log.debug('Salt interface set to: {0}'.format(salt_ip_address))
 
     if not ip_address:
         raise SaltCloudSystemExit('A valid IP address was not found')
@@ -456,7 +434,6 @@ def create(vm_):
     vm_['salt_host'] = salt_ip_address
 
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
-
     ret.update(data)
 
     log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
