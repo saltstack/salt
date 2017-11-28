@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Functions which implement running reactor jobs
+'''
+
 
 # Import python libs
 from __future__ import absolute_import
@@ -10,16 +14,18 @@ import logging
 import salt.client
 import salt.runner
 import salt.state
-import salt.utils
+import salt.utils.args
 import salt.utils.cache
+import salt.utils.data
 import salt.utils.event
+import salt.utils.files
 import salt.utils.process
 import salt.wheel
 import salt.defaults.exitcodes
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +110,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         reactors = []
         if isinstance(self.opts['reactor'], six.string_types):
             try:
-                with salt.utils.fopen(self.opts['reactor']) as fp_:
+                with salt.utils.files.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
             except (OSError, IOError):
                 log.error(
@@ -141,7 +147,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         if isinstance(self.minion.opts['reactor'], six.string_types):
             log.debug('Reading reactors from yaml {0}'.format(self.opts['reactor']))
             try:
-                with salt.utils.fopen(self.opts['reactor']) as fp_:
+                with salt.utils.files.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
             except (OSError, IOError):
                 log.error(
@@ -230,7 +236,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         '''
         Enter into the server loop
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
 
         # instantiate some classes inside our new process
         self.event = salt.utils.event.get_event(
@@ -336,7 +342,7 @@ class ReactWrap(object):
             )
 
         try:
-            wrap_call = salt.utils.format_call(l_fun, low)
+            wrap_call = salt.utils.args.format_call(l_fun, low)
             args = wrap_call.get('args', ())
             kwargs = wrap_call.get('kwargs', {})
             # TODO: Setting user doesn't seem to work for actual remote pubs
@@ -363,7 +369,7 @@ class ReactWrap(object):
                         )
                 if low['state'] == 'caller' \
                         and isinstance(reactor_args, list) \
-                        and not salt.utils.is_dictlist(reactor_args):
+                        and not salt.utils.data.is_dictlist(reactor_args):
                     # Legacy 'caller' reactors were already using the 'args'
                     # param, but only supported a list of positional arguments.
                     # If low['args'] is a list but is *not* a dictlist, then
@@ -376,7 +382,7 @@ class ReactWrap(object):
                     kwargs['arg'] = ()
                     kwargs['kwarg'] = reactor_args
                 if not isinstance(kwargs['kwarg'], dict):
-                    kwargs['kwarg'] = salt.utils.repack_dictlist(kwargs['kwarg'])
+                    kwargs['kwarg'] = salt.utils.data.repack_dictlist(kwargs['kwarg'])
                     if not kwargs['kwarg']:
                         log.error(
                             'Reactor \'%s\' failed to execute %s \'%s\': '
@@ -401,7 +407,7 @@ class ReactWrap(object):
                             )
                             return
 
-                        react_call = salt.utils.format_call(
+                        react_call = salt.utils.args.format_call(
                             react_fun,
                             low,
                             expected_extra_kws=REACTOR_INTERNAL_KEYWORDS

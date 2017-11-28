@@ -40,6 +40,8 @@ import logging
 
 # Import salt libs
 import salt.utils.docker
+import salt.utils.args
+from salt.ext.six.moves import zip
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -206,10 +208,19 @@ def present(name,
             return ret
 
     if build:
+        # get the functions default value and args
+        argspec = salt.utils.args.get_function_argspec(__salt__['docker.build'])
+        # Map any if existing args from kwargs into the build_args dictionary
+        build_args = dict(list(zip(argspec.args, argspec.defaults)))
+        for k, v in build_args.items():
+            if k in kwargs.get('kwargs', {}):
+                build_args[k] = kwargs.get('kwargs', {}).get(k)
         try:
-            image_update = __salt__['docker.build'](path=build,
-                                                    image=image,
-                                                    dockerfile=dockerfile)
+            # map values passed from the state to the build args
+            build_args['path'] = build
+            build_args['image'] = image
+            build_args['dockerfile'] = dockerfile
+            image_update = __salt__['docker.build'](**build_args)
         except Exception as exc:
             ret['comment'] = (
                 'Encountered error building {0} as {1}: {2}'

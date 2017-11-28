@@ -23,6 +23,9 @@ import salt.loader
 import salt.payload
 from salt.exceptions import SaltRenderError
 
+# Import 3rd-party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 
@@ -130,7 +133,7 @@ class ThorState(salt.state.HighState):
         matches = self.matches_whitelist(matches, whitelist)
         high, errors = self.render_highstate(matches)
         if exclude:
-            if isinstance(exclude, str):
+            if isinstance(exclude, six.string_types):
                 exclude = exclude.split(',')
             if '__exclude__' in high:
                 high['__exclude__'].extend(exclude)

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import shutil
 import tempfile
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -14,8 +15,9 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 # Import 3rd-party libs
 import yaml
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -36,7 +38,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         try:
             add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
             add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
-                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+                                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD))
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_call('user.list_users')
@@ -55,6 +57,36 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         for user in user_list:
             if USERA in user:
                 self.run_call('user.delete {0} remove=True'.format(USERA))
+
+    def test_remove_key(self):
+        '''
+        test salt-key -d usage
+        '''
+        min_name = 'minibar'
+        pki_dir = self.master_opts['pki_dir']
+        key = os.path.join(pki_dir, 'minions', min_name)
+
+        with salt.utils.files.fopen(key, 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     -----BEGIN PUBLIC KEY-----
+                     MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoqIZDtcQtqUNs0wC7qQz
+                     JwFhXAVNT5C8M8zhI+pFtF/63KoN5k1WwAqP2j3LquTG68WpxcBwLtKfd7FVA/Kr
+                     OF3kXDWFnDi+HDchW2lJObgfzLckWNRFaF8SBvFM2dys3CGSgCV0S/qxnRAjrJQb
+                     B3uQwtZ64ncJAlkYpArv3GwsfRJ5UUQnYPDEJwGzMskZ0pHd60WwM1gMlfYmNX5O
+                     RBEjybyNpYDzpda6e6Ypsn6ePGLkP/tuwUf+q9wpbRE3ZwqERC2XRPux+HX2rGP+
+                     mkzpmuHkyi2wV33A9pDfMgRHdln2CLX0KgfRGixUQhW1o+Kmfv2rq4sGwpCgLbTh
+                     NwIDAQAB
+                     -----END PUBLIC KEY-----
+                     '''))
+
+        check_key = self.run_key('-p {0}'.format(min_name))
+        self.assertIn('Accepted Keys:', check_key)
+        self.assertIn('minibar:  -----BEGIN PUBLIC KEY-----', check_key)
+
+        remove_key = self.run_key('-d {0} -y'.format(min_name))
+
+        check_key = self.run_key('-p {0}'.format(min_name))
+        self.assertEqual([], check_key)
 
     def test_list_accepted_args(self):
         '''
@@ -255,10 +287,10 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
             config = yaml.load(fhr.read())
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 fhw.write(
                     yaml.dump(config, default_flow_style=False)
                 )

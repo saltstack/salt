@@ -14,7 +14,7 @@ from tests.support.case import ModuleCase
 from tests.support.paths import TMP_PILLAR_TREE
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
 
 
 class SaltUtilModuleTest(ModuleCase):
@@ -175,18 +175,18 @@ class SaltUtilSyncPillarTest(ModuleCase):
         pre_pillar = self.run_function('pillar.raw')
         self.assertNotIn(pillar_key, pre_pillar.get(pillar_key, 'didnotwork'))
 
-        with salt.utils.fopen(os.path.join(TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
             fp.write('{0}: itworked'.format(pillar_key))
 
-        with salt.utils.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
             fp.write(textwrap.dedent('''\
                      base:
                        '*':
                          - add_pillar
                      '''))
 
-        pillar_refresh = self.run_function('saltutil.refresh_pillar')
-        wait = self.run_function('test.sleep', [1])
+        self.run_function('saltutil.refresh_pillar')
+        self.run_function('test.sleep', [5])
 
         post_pillar = self.run_function('pillar.raw')
         self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))

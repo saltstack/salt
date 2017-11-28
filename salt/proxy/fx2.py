@@ -175,8 +175,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import salt.utils
 import salt.utils.http
+import salt.utils.path
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['fx2']
@@ -195,10 +195,8 @@ def __virtual__():
     '''
     Only return if all the modules are available
     '''
-    if not salt.utils.which('racadm'):
-        log.critical('fx2 proxy minion needs "racadm" to be installed.')
-        return False
-
+    if not salt.utils.path.which('racadm'):
+        return False, 'fx2 proxy minion needs "racadm" to be installed.'
     return True
 
 

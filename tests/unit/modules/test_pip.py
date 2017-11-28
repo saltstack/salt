@@ -10,7 +10,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-import salt.utils
+import salt.utils.platform
 import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
 
@@ -297,7 +297,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             mock_path.join = join
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     venv_path = 'c:\\test_env'
                     bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe').encode('string-escape')
                 else:
@@ -1109,6 +1109,60 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     }
                 )
 
+    def test_is_installed_true(self):
+        eggs = [
+            'M2Crypto==0.21.1',
+            '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+            'bbfreeze==1.1.0',
+            'bbfreeze-loader==1.1.0',
+            'pycrypto==2.6'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.is_installed(pkgname='bbfreeze')
+                mock.assert_called_with(
+                    ['pip', 'freeze'],
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
+                )
+                self.assertTrue(ret)
+
+    def test_is_installed_false(self):
+        eggs = [
+            'M2Crypto==0.21.1',
+            '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+            'bbfreeze==1.1.0',
+            'bbfreeze-loader==1.1.0',
+            'pycrypto==2.6'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.is_installed(pkgname='notexist')
+                mock.assert_called_with(
+                    ['pip', 'freeze'],
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
+                )
+                self.assertFalse(ret)
+
     def test_install_pre_argument_in_resulting_command(self):
         pkg = 'pep8'
         # Lower than 1.4 versions don't end-up with `--pre` in the resulting
@@ -1131,7 +1185,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_run = MagicMock(return_value='pip 1.4.1 /path/to/site-packages/pip')
         mock_run_all = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run': mock_run,
+        with patch.dict(pip.__salt__, {'cmd.run_stdout': mock_run,
                                        'cmd.run_all': mock_run_all}):
             with patch('salt.modules.pip._get_pip_bin',
                        MagicMock(return_value='pip')):

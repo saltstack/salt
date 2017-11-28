@@ -39,7 +39,7 @@ A more involved example involves pulling from a custom repository.
         - keyserver: keyserver.ubuntu.com
 
     logstash:
-      pkg.installed
+      pkg.installed:
         - fromrepo: ppa:wolfnet/logstash
 
 Multiple packages can also be installed with the use of the pkgs
@@ -80,11 +80,12 @@ import logging
 import os
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.pkg
+import salt.utils.platform
+import salt.utils.versions
 from salt.output import nested
-from salt.utils import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -92,12 +93,12 @@ from salt.exceptions import (
 from salt.modules.pkg_resource import _repack_pkgs
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # pylint: disable=invalid-name
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     # pylint: disable=import-error,no-name-in-module,unused-import
     from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
     from salt.exceptions import SaltRenderError
@@ -159,16 +160,7 @@ def _get_comparison_spec(pkgver):
     comparison operator was passed, the comparison is assumed to be an "equals"
     comparison, and "==" will be the operator returned.
     '''
-    match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
-    if not match:
-        raise CommandExecutionError(
-            'Invalid version specification \'{0}\'.'.format(pkgver)
-        )
-    gt_lt, eq, verstr = match.groups()
-    oper = gt_lt or ''
-    oper += eq or ''
-    # A comparison operator of "=" is redundant, but possible.
-    # Change it to "==" so that the version comparison works
+    oper, verstr = salt.utils.pkg.split_comparison(pkgver)
     if oper in ('=', ''):
         oper = '=='
     return oper, verstr
@@ -182,12 +174,12 @@ def _fulfills_version_spec(versions, oper, desired_version,
     '''
     cmp_func = __salt__.get('pkg.version_cmp')
     # stripping "with_origin" dict wrapper
-    if salt.utils.is_freebsd():
+    if salt.utils.platform.is_freebsd():
         if isinstance(versions, dict) and 'version' in versions:
             versions = versions['version']
     for ver in versions:
         if (oper == '==' and fnmatch.fnmatch(ver, desired_version)) \
-                or salt.utils.compare_versions(ver1=ver,
+                or salt.utils.versions.compare(ver1=ver,
                                                oper=oper,
                                                ver2=desired_version,
                                                cmp_func=cmp_func,
@@ -511,7 +503,7 @@ def _find_install_targets(name=None,
     if __grains__['os'] == 'FreeBSD':
         kwargs['with_origin'] = True
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # Windows requires a refresh to establish a pkg db if refresh=True, so
         # add it to the kwargs.
         kwargs['refresh'] = refresh
@@ -524,7 +516,7 @@ def _find_install_targets(name=None,
                 'result': False,
                 'comment': exc.strerror}
 
-    if salt.utils.is_windows() and kwargs.pop('refresh', False):
+    if salt.utils.platform.is_windows() and kwargs.pop('refresh', False):
         # We already refreshed when we called pkg.list_pkgs
         was_refreshed = True
         refresh = False
@@ -548,7 +540,7 @@ def _find_install_targets(name=None,
                                                     else 'sources')}
         to_unpurge = _find_unpurge_targets(desired)
     else:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             pkginfo = _get_package_info(name, saltenv=kwargs['saltenv'])
             if not pkginfo:
                 return {'name': name,
@@ -914,6 +906,7 @@ def installed(
         for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
+        :mod:`pkgin <salt.modules.pkgin>`,
         :mod:`win_pkg <salt.modules.win_pkg>`,
         :mod:`yumpkg <salt.modules.yumpkg>`, and
         :mod:`zypper <salt.modules.zypper>`. The version number includes the
@@ -1281,9 +1274,11 @@ def installed(
                   - baz
 
         Additionally, :mod:`ebuild <salt.modules.ebuild>`, :mod:`pacman
-        <salt.modules.pacman>` and :mod:`zypper <salt.modules.zypper>` support
-        the ``<``, ``<=``, ``>=``, and ``>`` operators for more control over
-        what versions will be installed. For example:
+        <salt.modules.pacman>`, :mod:`zypper <salt.modules.zypper>`,
+        :mod:`yum/dnf <salt.modules.yumpkg>`, and :mod:`apt
+        <salt.modules.aptpkg>` support the ``<``, ``<=``, ``>=``, and ``>``
+        operators for more control over what versions will be installed. For
+        example:
 
         .. code-block:: yaml
 
@@ -1614,7 +1609,7 @@ def installed(
     failed_hold = None
     if targets or to_reinstall:
         force = False
-        if salt.utils.is_freebsd():
+        if salt.utils.platform.is_freebsd():
             force = True    # Downgrades need to be forced.
         try:
             pkg_ret = __salt__['pkg.install'](name=None,
@@ -1628,6 +1623,7 @@ def installed(
                                               reinstall=bool(to_reinstall),
                                               normalize=normalize,
                                               update_holds=update_holds,
+                                              ignore_epoch=ignore_epoch,
                                               **kwargs)
         except CommandExecutionError as exc:
             ret = {'name': name, 'result': False}
@@ -2797,6 +2793,9 @@ def purged(name,
 def uptodate(name, refresh=False, pkgs=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
+    .. versionchanged:: Oxygen
+
+        Added support for the ``pkgin`` provider.
 
     Verify that the system is completely up to date.
 
@@ -3075,7 +3074,7 @@ def mod_aggregate(low, chunks, running):
     if low.get('fun') not in agg_enabled:
         return low
     for chunk in chunks:
-        tag = salt.utils.gen_state_tag(chunk)
+        tag = __utils__['state.gen_tag'](chunk)
         if tag in running:
             # Already ran the pkg state, skip aggregation
             continue

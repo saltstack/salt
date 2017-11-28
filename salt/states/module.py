@@ -176,7 +176,8 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.loader
-import salt.utils
+import salt.utils.args
+import salt.utils.functools
 import salt.utils.jid
 from salt.ext import six
 from salt.ext.six.moves import range
@@ -213,7 +214,7 @@ def wait(name, **kwargs):
             'comment': ''}
 
 # Alias module.watch to module.wait
-watch = salt.utils.alias_function(wait, 'watch')
+watch = salt.utils.functools.alias_function(wait, 'watch')
 
 
 @with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
@@ -358,7 +359,7 @@ def _call_function(name, returner=None, **kwargs):
         returners = salt.loader.returners(__opts__, __salt__)
         if returner in returners:
             returners[returner]({'id': __opts__['id'], 'ret': mret,
-                                 'fun': name, 'jid': salt.utils.jid.gen_jid()})
+                                 'fun': name, 'jid': salt.utils.jid.gen_jid(__opts__)})
 
     return mret
 
@@ -505,7 +506,7 @@ def _run(name, **kwargs):
                 'id': __opts__['id'],
                 'ret': mret,
                 'fun': name,
-                'jid': salt.utils.jid.gen_jid()}
+                'jid': salt.utils.jid.gen_jid(__opts__)}
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)
@@ -533,4 +534,4 @@ def _get_result(func_ret, changes):
 
     return res
 
-mod_watch = salt.utils.alias_function(run, 'mod_watch')
+mod_watch = salt.utils.functools.alias_function(run, 'mod_watch')

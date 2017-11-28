@@ -14,7 +14,7 @@ import copy
 import salt.client.ssh
 
 
-def get(tgt, fun, tgt_type='glob', roster='flat'):
+def get(tgt, fun, tgt_type=u'glob', roster=u'flat'):
     '''
     Get data from the mine based on the target, function and tgt_type
 
@@ -36,15 +36,15 @@ def get(tgt, fun, tgt_type='glob', roster='flat'):
         salt-ssh '*' mine.get '192.168.5.0' network.ipaddrs roster=scan
     '''
     # Set up opts for the SSH object
-    opts = copy.deepcopy(__context__['master_opts'])
+    opts = copy.deepcopy(__context__[u'master_opts'])
     minopts = copy.deepcopy(__opts__)
     opts.update(minopts)
     if roster:
-        opts['roster'] = roster
-    opts['argv'] = [fun]
-    opts['selected_target_option'] = tgt_type
-    opts['tgt'] = tgt
-    opts['arg'] = []
+        opts[u'roster'] = roster
+    opts[u'argv'] = [fun]
+    opts[u'selected_target_option'] = tgt_type
+    opts[u'tgt'] = tgt
+    opts[u'arg'] = []
 
     # Create the SSH object to handle the actual call
     ssh = salt.client.ssh.SSH(opts)
@@ -56,8 +56,8 @@ def get(tgt, fun, tgt_type='glob', roster='flat'):
 
     cret = {}
     for host in rets:
-        if 'return' in rets[host]:
-            cret[host] = rets[host]['return']
+        if u'return' in rets[host]:
+            cret[host] = rets[host][u'return']
         else:
             cret[host] = rets[host]
     return cret

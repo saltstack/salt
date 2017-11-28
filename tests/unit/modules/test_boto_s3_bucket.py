@@ -23,7 +23,7 @@ import salt.modules.boto_s3_bucket as boto_s3_bucket
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,unused-import

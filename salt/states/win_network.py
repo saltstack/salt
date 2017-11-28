@@ -61,11 +61,12 @@ default gateway using the ``gateway`` parameter:
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.data
+import salt.utils.platform
 import salt.utils.validate.net
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
@@ -84,7 +85,7 @@ def __virtual__():
     Confine this module to Windows systems with the required execution module
     available.
     '''
-    if salt.utils.is_windows() and 'ip.get_interface' in __salt__:
+    if salt.utils.platform.is_windows() and 'ip.get_interface' in __salt__:
         return __virtualname__
     return False
 
@@ -385,7 +386,7 @@ def managed(name,
                     )
 
         new = __salt__['ip.get_interface'](name)
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        ret['changes'] = salt.utils.data.compare_dicts(old, new)
         if _changes(new, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             ret['result'] = False
             ret['comment'] = ('Failed to set desired configuration settings '
