@@ -57,7 +57,7 @@ class SSHStateTest(SSHCase):
         test state.show_top with salt-ssh
         '''
         ret = self.run_function('state.show_top')
-        self.assertEqual(ret, {u'base': [u'master_tops_test', u'core']})
+        self.assertEqual(ret, {u'base': [u'core', u'master_tops_test']})
 
     def test_state_single(self):
         '''
