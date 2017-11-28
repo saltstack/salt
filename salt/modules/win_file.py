@@ -1561,7 +1561,8 @@ def check_perms(path,
                 inheritance=True,
                 reset=False):
     '''
-    Check owner and permissions for the passed directory.
+    Check owner and permissions for the passed directory. This function checks
+    the permissions and sets them, returning the changes made.
 
     Args:
 
@@ -1595,8 +1596,7 @@ def check_perms(path,
             .. versionadded:: 2017.7.3
 
     Returns:
-        dict: A dictionary of changes that would be made if the defined settings
-            are used in the ``set_perms`` function
+        dict: A dictionary of changes that have been made
 
     CLI Example:
 
@@ -1625,14 +1625,16 @@ def check_perms(path,
 
     # Check owner
     if owner:
-        owner = salt.utils.win_dacl.get_name(owner)
-        current_owner = salt.utils.win_dacl.get_owner(path)
+        owner = salt.utils.win_dacl.get_name(principal=owner)
+        current_owner = salt.utils.win_dacl.get_owner(obj_name=path)
         if owner != current_owner:
             if __opts__['test'] is True:
                 ret['pchanges']['owner'] = owner
             else:
                 try:
-                    salt.utils.win_dacl.set_owner(path, owner)
+                    salt.utils.win_dacl.set_owner(
+                        obj_name=path,
+                        principal=owner)
                     ret['changes']['owner'] = owner
                 except CommandExecutionError:
                     ret['result'] = False
@@ -1640,7 +1642,7 @@ def check_perms(path,
                         'Failed to change owner to "{0}"'.format(owner))
 
     # Check permissions
-    cur_perms = salt.utils.win_dacl.get_permissions(path)
+    cur_perms = salt.utils.win_dacl.get_permissions(obj_name=path)
 
     # Verify Deny Permissions
     changes = {}
@@ -1648,7 +1650,7 @@ def check_perms(path,
         for user in deny_perms:
             # Check that user exists:
             try:
-                user_name = salt.utils.win_dacl.get_name(user)
+                user_name = salt.utils.win_dacl.get_name(principal=user)
             except CommandExecutionError:
                 ret['comment'].append(
                     'Deny Perms: User "{0}" missing from Target System'.format(user))
@@ -1673,12 +1675,19 @@ def check_perms(path,
                 # Check Perms
                 if isinstance(deny_perms[user]['perms'], six.string_types):
                     if not salt.utils.win_dacl.has_permission(
-                            path, user, deny_perms[user]['perms'], 'deny'):
+                            obj_name=path,
+                            principal=user,
+                            permission=deny_perms[user]['perms'],
+                            access_mode='deny'):
                         changes[user] = {'perms': deny_perms[user]['perms']}
                 else:
                     for perm in deny_perms[user]['perms']:
                         if not salt.utils.win_dacl.has_permission(
-                                path, user, perm, 'deny', exact=False):
+                                obj_name=path,
+                                principal=user,
+                                permission=perm,
+                                access_mode='deny',
+                                exact=False):
                             if user not in changes:
                                 changes[user] = {'perms': []}
                             changes[user]['perms'].append(deny_perms[user]['perms'])
@@ -1696,7 +1705,7 @@ def check_perms(path,
     if changes:
         ret['changes']['deny_perms'] = {}
         for user in changes:
-            user_name = salt.utils.win_dacl.get_name(user)
+            user_name = salt.utils.win_dacl.get_name(principal=user)
 
             if __opts__['test'] is True:
                 ret['pchanges']['deny_perms'][user] = changes[user]
@@ -1743,7 +1752,11 @@ def check_perms(path,
 
                 try:
                     salt.utils.win_dacl.set_permissions(
-                        path, user, perms, 'deny', applies_to)
+                        obj_name=path,
+                        principal=user,
+                        permissions=perms,
+                        access_mode='deny',
+                        applies_to=applies_to)
                     ret['changes']['deny_perms'][user] = changes[user]
                 except CommandExecutionError:
                     ret['result'] = False
@@ -1757,7 +1770,7 @@ def check_perms(path,
         for user in grant_perms:
             # Check that user exists:
             try:
-                user_name = salt.utils.win_dacl.get_name(user)
+                user_name = salt.utils.win_dacl.get_name(principal=user)
             except CommandExecutionError:
                 ret['comment'].append(
                     'Grant Perms: User "{0}" missing from Target System'.format(user))
@@ -1783,12 +1796,19 @@ def check_perms(path,
                 # Check Perms
                 if isinstance(grant_perms[user]['perms'], six.string_types):
                     if not salt.utils.win_dacl.has_permission(
-                            path, user, grant_perms[user]['perms']):
+                            obj_name=path,
+                            principal=user,
+                            permission=grant_perms[user]['perms'],
+                            access_mode='grant'):
                         changes[user] = {'perms': grant_perms[user]['perms']}
                 else:
                     for perm in grant_perms[user]['perms']:
                         if not salt.utils.win_dacl.has_permission(
-                                path, user, perm, exact=False):
+                                obj_name=path,
+                                principal=user,
+                                permission=perm,
+                                access_mode='grant',
+                                exact=False):
                             if user not in changes:
                                 changes[user] = {'perms': []}
                             changes[user]['perms'].append(grant_perms[user]['perms'])
@@ -1806,9 +1826,9 @@ def check_perms(path,
     if changes:
         ret['changes']['grant_perms'] = {}
         for user in changes:
-            user_name = salt.utils.win_dacl.get_name(user)
+            user_name = salt.utils.win_dacl.get_name(principal=user)
             if __opts__['test'] is True:
-                ret['changes']['grant_perms'][user] = changes[user]
+                ret['pchanges']['grant_perms'][user] = changes[user]
             else:
                 applies_to = None
                 if 'applies_to' not in changes[user]:
@@ -1850,7 +1870,11 @@ def check_perms(path,
 
                 try:
                     salt.utils.win_dacl.set_permissions(
-                        path, user, perms, 'grant', applies_to)
+                        obj_name=path,
+                        principal=user,
+                        permissions=perms,
+                        access_mode='grant',
+                        applies_to=applies_to)
                     ret['changes']['grant_perms'][user] = changes[user]
                 except CommandExecutionError:
                     ret['result'] = False
@@ -1860,12 +1884,14 @@ def check_perms(path,
 
     # Check inheritance
     if inheritance is not None:
-        if not inheritance == salt.utils.win_dacl.get_inheritance(path):
+        if not inheritance == salt.utils.win_dacl.get_inheritance(obj_name=path):
             if __opts__['test'] is True:
-                ret['changes']['inheritance'] = inheritance
+                ret['pchanges']['inheritance'] = inheritance
             else:
                 try:
-                    salt.utils.win_dacl.set_inheritance(path, inheritance)
+                    salt.utils.win_dacl.set_inheritance(
+                        obj_name=path,
+                        enabled=inheritance)
                     ret['changes']['inheritance'] = inheritance
                 except CommandExecutionError:
                     ret['result'] = False
@@ -1879,16 +1905,26 @@ def check_perms(path,
         for user_name in cur_perms:
             if user_name not in grant_perms:
                 if 'grant' in cur_perms[user_name] and not cur_perms[user_name]['grant']['inherited']:
-                    if 'remove_perms' not in ret['changes']:
-                        ret['changes']['remove_perms'] = {}
-                    salt.utils.win_dacl.rm_permissions(obj_name=path, principal=user_name, ace_type='grant')
-                    ret['changes']['remove_perms'].update({user_name: cur_perms[user_name]})
+                    if __opts__['test'] is True:
+                        if 'remove_perms' not in ret['pchanges']:
+                            ret['pchanges']['remove_perms'] = {}
+                        ret['pchanges']['remove_perms'].update({user_name: cur_perms[user_name]})
+                    else:
+                        if 'remove_perms' not in ret['changes']:
+                            ret['changes']['remove_perms'] = {}
+                        salt.utils.win_dacl.rm_permissions(obj_name=path, principal=user_name, ace_type='grant')
+                        ret['changes']['remove_perms'].update({user_name: cur_perms[user_name]})
             if user_name not in deny_perms:
                 if 'deny' in cur_perms[user_name] and not cur_perms[user_name]['deny']['inherited']:
-                    if 'remove_perms' not in ret['changes']:
-                        ret['changes']['remove_perms'] = {}
-                    salt.utils.win_dacl.rm_permissions(obj_name=path, principal=user_name, ace_type='deny')
-                    ret['changes']['remove_perms'].update({user_name: cur_perms[user_name]})
+                    if __opts__['test'] is True:
+                        if 'remove_perms' not in ret['pchanges']:
+                            ret['pchanges']['remove_perms'] = {}
+                        ret['pchanges']['remove_perms'].update({user_name: cur_perms[user_name]})
+                    else:
+                        if 'remove_perms' not in ret['changes']:
+                            ret['changes']['remove_perms'] = {}
+                        salt.utils.win_dacl.rm_permissions(obj_name=path, principal=user_name, ace_type='deny')
+                        ret['changes']['remove_perms'].update({user_name: cur_perms[user_name]})
 
     # Re-add the Original Comment if defined
     if isinstance(orig_comment, six.string_types):
@@ -1901,8 +1937,8 @@ def check_perms(path,
     ret['comment'] = '\n'.join(ret['comment'])
 
     # Set result for test = True
-    if __opts__['test'] is True and ret['changes']:
-        ret['result'] = None
+    if __opts__['test'] is True and ret['pchanges']:
+        ret['result'] = True
 
     return ret
 

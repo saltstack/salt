@@ -2869,13 +2869,23 @@ def directory(name,
         elif force:
             # Remove whatever is in the way
             if os.path.isfile(name):
-                os.remove(name)
-                ret['changes']['forced'] = 'File was forcibly replaced'
+                if __opts__['test']:
+                    ret['pchanges']['forced'] = 'File was forcibly replaced'
+                else:
+                    os.remove(name)
+                    ret['changes']['forced'] = 'File was forcibly replaced'
             elif __salt__['file.is_link'](name):
-                __salt__['file.remove'](name)
-                ret['changes']['forced'] = 'Symlink was forcibly replaced'
+                if __opts__['test']:
+                    ret['pchanges']['forced'] = 'Symlink was forcibly replaced'
+                else:
+                    __salt__['file.remove'](name)
+                    ret['changes']['forced'] = 'Symlink was forcibly replaced'
             else:
-                __salt__['file.remove'](name)
+                if __opts__['test']:
+                    ret['pchanges']['forced'] = 'Directory was forcibly replaced'
+                else:
+                    __salt__['file.remove'](name)
+                    ret['changes']['forced'] = 'Directory was forcibly replaced'
         else:
             if os.path.isfile(name):
                 return _error(
@@ -2888,7 +2898,7 @@ def directory(name,
 
     # Check directory?
     if salt.utils.is_windows():
-        presult, pcomment, ret['pchanges'] = _check_directory_win(
+        presult, pcomment, pchanges = _check_directory_win(
             name=name,
             win_owner=win_owner,
             win_perms=win_perms,
@@ -2896,14 +2906,18 @@ def directory(name,
             win_inheritance=win_inheritance,
             win_perms_reset=win_perms_reset)
     else:
-        presult, pcomment, ret['pchanges'] = _check_directory(
+        presult, pcomment, pchanges = _check_directory(
             name, user, group, recurse or [], dir_mode, clean, require,
             exclude_pat, max_depth, follow_symlinks)
 
-    if __opts__['test']:
+    if pchanges:
+        ret['pchanges'].update(pchanges)
+
+    # Don't run through the rest of the function if there are no changes to be
+    # made
+    if not ret['pchanges'] or __opts__['test']:
         ret['result'] = presult
         ret['comment'] = pcomment
-        ret['changes'] = ret['pchanges']
         return ret
 
     if not os.path.isdir(name):
