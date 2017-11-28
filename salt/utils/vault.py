@@ -103,6 +103,20 @@ def _get_vault_connection():
     if 'vault' in __opts__ and not __opts__.get('__role', 'minion') == 'master':
         log.debug('Using Vault connection details from local config')
         try:
+            if __opts__['vault']['auth']['method'] == 'approle':
+                verify = __opts__['vault'].get('verify', None)
+                if _selftoken_expired():
+                    log.debug('Vault token expired. Recreating one')
+                    # Requesting a short ttl token
+                    url = '{0}/v1/auth/approle/login'.format(__opts__['vault']['url'])
+                    payload = {'role_id': __opts__['vault']['auth']['role_id']}
+                    if 'secret_id' in __opts__['vault']['auth']:
+                        payload['secret_id'] = __opts__['vault']['auth']['secret_id']
+                    response = requests.post(url, json=payload, verify=verify)
+                    if response.status_code != 200:
+                        errmsg = 'An error occured while getting a token from approle'
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+                    __opts__['vault']['auth']['token'] = response.json()['auth']['client_token']
             return {
                 'url': __opts__['vault']['url'],
                 'token': __opts__['vault']['auth']['token'],
@@ -162,3 +176,23 @@ def make_request_with_profile(method, resource, profile, **args):
     response = requests.request(method, url, headers=headers, **args)
 
     return response
+
+
+def _selftoken_expired():
+    '''
+    Validate the current token exists and is still valid
+    '''
+    try:
+        verify = __opts__['vault'].get('verify', None)
+        url = '{0}/v1/auth/token/lookup-self'.format(__opts__['vault']['url'])
+        if 'token' not in __opts__['vault']['auth']:
+            return True
+        headers = {'X-Vault-Token': __opts__['vault']['auth']['token']}
+        response = requests.get(url, headers=headers, verify=verify)
+        if response.status_code != 200:
+            return True
+        return False
+    except Exception as e:
+        raise salt.exceptions.CommandExecutionError(
+            'Error while looking up self token : {0}'.format(str(e))
+            )
