@@ -24,7 +24,6 @@ import logging
 import errno
 import random
 import yaml
-import copy
 
 # Import Salt libs
 import salt.config
