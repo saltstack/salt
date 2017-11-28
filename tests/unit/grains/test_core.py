@@ -618,3 +618,28 @@ SwapTotal:       4789244 kB'''
 
         self.assertEqual(os_grains.get('mem_total'), 2023)
         self.assertEqual(os_grains.get('swap_total'), 400)
+
+
+class CoreGrainsUtilityFunctionsTestCase(TestCase):
+    '''
+    grains.core has helper utilities. This is test class for them
+    '''
+    def test_linux_iqn_iscsi_initiator(self):
+        data = '''##
+## /etc/iscsi/iscsi.initiatorname
+##
+## Default iSCSI Initiatorname.
+##
+## DO NOT EDIT OR REMOVE THIS FILE!
+## If you remove this file, the iSCSI daemon will not start.
+## If you change the InitiatorName, existing access control lists
+## may reject this initiator.  The InitiatorName must be unique
+## for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.
+InitiatorName=iqn.1996-04.de.suse:01:56f083eae28
+'''
+        with patch('os.path.isfile', MagicMock(return_value=True)):
+            with patch('salt.utils.files.fopen', mock_open(read_data=data)):
+                iqn = core._linux_iqn()
+                assert type(iqn) == list
+                assert len(iqn) == 1
+                assert iqn[0] == 'iqn.1996-04.de.suse:01:56f083eae28'
