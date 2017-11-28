@@ -2,7 +2,7 @@
 '''
 Tests for the archive state
 '''
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import errno
 import logging
@@ -14,16 +14,16 @@ from tests.support.helpers import skip_if_not_root, Webserver
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.paths import FILES
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
 
 # Setup logging
 log = logging.getLogger(__name__)
 
-if salt.utils.is_windows():
-    ARCHIVE_DIR = os.path.join('c:/', 'tmp')
-else:
-    ARCHIVE_DIR = '/tmp/archive'
+ARCHIVE_DIR = os.path.join('c:/', 'tmp') \
+    if salt.utils.platform.is_windows() \
+    else '/tmp/archive'
 
 ARCHIVE_NAME = 'custom.tar.gz'
 ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/{1}'.format(9999, ARCHIVE_NAME)
@@ -56,7 +56,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     @staticmethod
     def _clear_archive_dir():
         try:
-            salt.utils.rm_rf(ARCHIVE_DIR)
+            salt.utils.files.rm_rf(ARCHIVE_DIR)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise
@@ -105,7 +105,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         test archive.extracted with user and group set to "root"
         '''
         r_group = 'root'
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             r_group = 'wheel'
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
                              source=self.archive_tar_source, archive_format='tar',

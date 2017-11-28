@@ -10,9 +10,12 @@ import sys
 import xml.etree.ElementTree as ET
 
 # Import salt libs
-import salt.utils
-import salt.utils.cloud as suc
+import salt.utils.cloud
+import salt.utils.path
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +24,7 @@ def __virtual__():
     '''
     Only load this module if the gluster command exists
     '''
-    if salt.utils.which('gluster'):
+    if salt.utils.path.which('gluster'):
         return True
     return (False, 'glusterfs server is not installed')
 
@@ -201,7 +204,7 @@ def peer(name):
 
 
     '''
-    if suc.check_name(name, 'a-zA-Z0-9._-'):
+    if salt.utils.cloud.check_name(name, 'a-zA-Z0-9._-'):
         raise SaltInvocationError(
             'Invalid characters in peer name "{0}"'.format(name))
 
@@ -254,7 +257,7 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
         "gluster2:/export/vol2/brick"]' replica=2 start=True
     '''
     # If single brick given as a string, accept it
-    if isinstance(bricks, str):
+    if isinstance(bricks, six.string_types):
         bricks = [bricks]
 
     # Error for block devices with multiple bricks
@@ -531,7 +534,7 @@ def add_volume_bricks(name, bricks):
 
     cmd = 'volume add-brick {0}'.format(name)
 
-    if isinstance(bricks, str):
+    if isinstance(bricks, six.string_types):
         bricks = [bricks]
 
     volume_bricks = [x['path'] for x in volinfo[name]['bricks'].values()]
