@@ -69,10 +69,39 @@ Additionally, the ``tag`` argument must now be explicitly passed to the
 :py:func:`docker_image.present <salt.states.docker_image.present>` state,
 unless the image is being pulled from a docker registry.
 
-`start` Argument Added to :py:func:`docker.create <salt.modules.dockermod.create>` Function
--------------------------------------------------------------------------------------------
+State and Execution Module Support for ``docker run`` Functionality
+===================================================================
 
-This allows for ``docker run``-like functionality. For example:
+The :py:func:`docker_container.running <salt.states.docker_container.running>`
+state is good for containers which run services, but it is not as useful for
+cases in which the container only needs to run once. The ``start`` argument to
+:py:func:`docker_container.running <salt.states.docker_container.running>` can
+be set to ``False`` to prevent the container from being started again on a
+subsequent run, but for many use cases this is not sufficient. Therefore, the
+:py:func:`docker.run_container <salt.modules.dockermod.run_container>`
+remote-execution function was added. When used on the Salt CLI, it will return
+information about the container, such as its name, ID, exit code, and any
+output it produces.
+
+State support has also been added via the :py:func:`docker_container.run
+<salt.states.docker_container.run>` state. This state is modeled after the
+:py:func:`cmd.run <salt.states.cmd.run>` state, and includes arguments like
+``onlyif``, ``unless``, and ``creates`` to control whether or not the container
+is run.
+
+Full API Support for :py:func:`docker.logs <salt.modules.dockermod.logs>`
+=========================================================================
+
+This function now supports all of the functions that it's Docker API
+counterpart does, allowing you to do things like include timestamps, suppress
+stdout/stderr, etc. in the return.
+
+`start` Argument Added to :py:func:`docker.create <salt.modules.dockermod.create>` Function
+===========================================================================================
+
+This removes the need to run :py:func:`docker.start
+<salt.modules.dockermod.start_>` separately when creating containers on the
+Salt CLI.
 
 .. code-block:: bash
 
