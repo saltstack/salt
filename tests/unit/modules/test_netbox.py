@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 try:
-    import pynetbox
+    import pynetbox  # pylint: disable=unused-import
     HAS_PYNETBOX = True
 except ImportError:
     HAS_PYNETBOX = False
