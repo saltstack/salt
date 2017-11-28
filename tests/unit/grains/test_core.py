@@ -526,7 +526,8 @@ PATCHLEVEL = 3
             '/proc/meminfo': True
         }
         _cmd_run_map = {
-            'dpkg --print-architecture': 'amd64'
+            'dpkg --print-architecture': 'amd64',
+            'rpm --eval %{_host_cpu}': 'x86_64'
         }
 
         path_exists_mock = MagicMock(side_effect=lambda x: _path_exists_map[x])
