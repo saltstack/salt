@@ -178,7 +178,7 @@ def atrm(*args):
             ret = {'jobs': {'removed': opts, 'tag': None}}
     else:
         opts = list(list(map(str, [i['job'] for i in atq()['jobs']
-            if i['job'] in args])))
+            if str(i['job']) in args])))
         ret = {'jobs': {'removed': opts, 'tag': None}}
 
     # Shim to produce output similar to what __virtual__() should do
