@@ -814,5 +814,3 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='',
         log.error('Hosted zone {0} not synced after 600 seconds.'.format(domain_name))
         return None
     return r
-  
-  
