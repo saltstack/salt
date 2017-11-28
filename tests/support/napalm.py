@@ -5,7 +5,8 @@ Base classes for napalm unit tests
 :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 '''
 
-from functools import wraps  # NOQA
+from __future__ import absolute_import
+from functools import wraps
 
 
 TEST_INTERFACES = {
