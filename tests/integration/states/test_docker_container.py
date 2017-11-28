@@ -753,3 +753,319 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(not IPV6_ENABLED, 'IPv6 not enabled')
     def test_running_mixed_ipv4_and_ipv6(self, container_name, *nets):
         self._test_running(container_name, *nets)
+
+    @container_name
+    def test_run_with_onlyif(self, name):
+        '''
+        Test docker_container.run with onlyif. The container should not run
+        (and the state should return a True result) if the onlyif has a nonzero
+        return code, but if the onlyif has a zero return code the container
+        should run.
+        '''
+        for cmd in ('/bin/false', ['/bin/true', '/bin/false']):
+            log.debug('Trying %s', cmd)
+            ret = self.run_state(
+                'docker_container.run',
+                name=name,
+                image=self.image,
+                command='whoami',
+                auto_remove=True,
+                onlyif=cmd)
+            self.assertSaltTrueReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertFalse(ret['changes'])
+            self.assertTrue(
+                ret['comment'].startswith(
+                    'onlyif command /bin/false returned exit code of'
+                )
+            )
+
+        for cmd in ('/bin/true', ['/bin/true', 'ls /']):
+            log.debug('Trying %s', cmd)
+            ret = self.run_state(
+                'docker_container.run',
+                name=name,
+                image=self.image,
+                command='whoami',
+                auto_remove=True,
+                onlyif=cmd)
+            self.assertSaltTrueReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertEqual(ret['changes']['Logs'], 'root\n')
+            self.assertEqual(
+                ret['comment'],
+                'Container ran and exited with a return code of 0'
+            )
+
+    @container_name
+    def test_run_with_unless(self, name):
+        '''
+        Test docker_container.run with unless. The container should not run
+        (and the state should return a True result) if the unless has a zero
+        return code, but if the unless has a nonzero return code the container
+        should run.
+        '''
+        for cmd in ('/bin/true', ['/bin/false', '/bin/true']):
+            log.debug('Trying %s', cmd)
+            ret = self.run_state(
+                'docker_container.run',
+                name=name,
+                image=self.image,
+                command='whoami',
+                auto_remove=True,
+                unless=cmd)
+            self.assertSaltTrueReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertFalse(ret['changes'])
+            self.assertEqual(
+                ret['comment'],
+                'unless command /bin/true returned exit code of 0'
+            )
+
+        for cmd in ('/bin/false', ['/bin/false', 'ls /paththatdoesnotexist']):
+            log.debug('Trying %s', cmd)
+            ret = self.run_state(
+                'docker_container.run',
+                name=name,
+                image=self.image,
+                command='whoami',
+                auto_remove=True,
+                unless=cmd)
+            self.assertSaltTrueReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertEqual(ret['changes']['Logs'], 'root\n')
+            self.assertEqual(
+                ret['comment'],
+                'Container ran and exited with a return code of 0'
+            )
+
+    @container_name
+    def test_run_with_creates(self, name):
+        '''
+        Test docker_container.run with creates. The container should not run
+        (and the state should return a True result) if all of the files exist,
+        but if if any of the files do not exist the container should run.
+        '''
+        def _mkstemp():
+            fd, ret = tempfile.mkstemp()
+            try:
+                os.close(fd)
+            except OSError as exc:
+                if exc.errno != errno.EBADF:
+                    raise exc
+            else:
+                self.addCleanup(os.remove, ret)
+                return ret
+
+        bad_file = '/tmp/filethatdoesnotexist'
+        good_file1 = _mkstemp()
+        good_file2 = _mkstemp()
+
+        for path in (good_file1, [good_file1, good_file2]):
+            log.debug('Trying %s', path)
+            ret = self.run_state(
+                'docker_container.run',
+                name=name,
+                image=self.image,
+                command='whoami',
+                auto_remove=True,
+                creates=path)
+            self.assertSaltTrueReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertFalse(ret['changes'])
+            self.assertEqual(
+                ret['comment'],
+                'All specified paths in \'creates\' argument exist'
+            )
+
+        for path in (bad_file, [good_file1, bad_file]):
+            log.debug('Trying %s', path)
+            ret = self.run_state(
+                'docker_container.run',
+                name=name,
+                image=self.image,
+                command='whoami',
+                auto_remove=True,
+                creates=path)
+            self.assertSaltTrueReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertEqual(ret['changes']['Logs'], 'root\n')
+            self.assertEqual(
+                ret['comment'],
+                'Container ran and exited with a return code of 0'
+            )
+
+    @container_name
+    def test_run_replace(self, name):
+        '''
+        Test the replace and force arguments to make sure they work properly
+        '''
+        # Run once to create the container
+        ret = self.run_state(
+            'docker_container.run',
+            name=name,
+            image=self.image,
+            command='whoami',
+            auto_remove=False)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['changes']['Logs'], 'root\n')
+        self.assertEqual(
+            ret['comment'],
+            'Container ran and exited with a return code of 0'
+        )
+
+        # Run again with replace=False, this should fail
+        ret = self.run_state(
+            'docker_container.run',
+            name=name,
+            image=self.image,
+            command='whoami',
+            auto_remove=False,
+            replace=False)
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertFalse(ret['changes'])
+        self.assertEqual(
+            ret['comment'],
+            'Encountered error running container: Container \'{0}\' exists. '
+            'Run with replace=True to remove the existing container'.format(name)
+        )
+
+        # Run again with replace=True, this should proceed and there should be
+        # a "Replaces" key in the changes dict to show that a container was
+        # replaced.
+        ret = self.run_state(
+            'docker_container.run',
+            name=name,
+            image=self.image,
+            command='whoami',
+            auto_remove=False,
+            replace=True)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['changes']['Logs'], 'root\n')
+        self.assertTrue('Replaces' in ret['changes'])
+        self.assertEqual(
+            ret['comment'],
+            'Container ran and exited with a return code of 0'
+        )
+
+    @container_name
+    def test_run_force(self, name):
+        '''
+        Test the replace and force arguments to make sure they work properly
+        '''
+        # Start up a container that will stay running
+        ret = self.run_state(
+            'docker_container.running',
+            name=name,
+            image=self.image,
+            auto_remove=False)
+        self.assertSaltTrueReturn(ret)
+
+        # Run again with replace=True, this should fail because the container
+        # is still running
+        ret = self.run_state(
+            'docker_container.run',
+            name=name,
+            image=self.image,
+            command='whoami',
+            auto_remove=False,
+            replace=True,
+            force=False)
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertFalse(ret['changes'])
+        self.assertEqual(
+            ret['comment'],
+            'Encountered error running container: Container \'{0}\' exists '
+            'and is running. Run with replace=True and force=True to force '
+            'removal of the existing container.'.format(name)
+        )
+
+        # Run again with replace=True and force=True, this should proceed and
+        # there should be a "Replaces" key in the changes dict to show that a
+        # container was replaced.
+        ret = self.run_state(
+            'docker_container.run',
+            name=name,
+            image=self.image,
+            command='whoami',
+            auto_remove=False,
+            replace=True,
+            force=True)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['changes']['Logs'], 'root\n')
+        self.assertTrue('Replaces' in ret['changes'])
+        self.assertEqual(
+            ret['comment'],
+            'Container ran and exited with a return code of 0'
+        )
+
+    @container_name
+    def test_run_failhard(self, name):
+        '''
+        Test to make sure that we fail a state when the container exits with
+        nonzero status if failhard is set to True, and that we don't when it is
+        set to False.
+        '''
+        ret = self.run_state(
+            'docker_container.run',
+            name=name,
+            image=self.image,
+            command='/bin/false',
+            auto_remove=True,
+            failhard=True)
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['changes']['Logs'], '')
+        self.assertTrue(
+            ret['comment'].startswith(
+                'Container ran and exited with a return code of'
+            )
+        )
+
+        ret = self.run_state(
+            'docker_container.run',
+            name=name,
+            image=self.image,
+            command='/bin/false',
+            auto_remove=True,
+            failhard=False)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['changes']['Logs'], '')
+        self.assertTrue(
+            ret['comment'].startswith(
+                'Container ran and exited with a return code of'
+            )
+        )
+
+    @container_name
+    def test_run_bg(self, name):
+        '''
+        Test to make sure that if the container is run in the background, we do
+        not include an ExitCode or Logs key in the return. Then check the logs
+        for the container to ensure that it ran as expected.
+        '''
+        ret = self.run_state(
+            'docker_container.run',
+            name=name,
+            image=self.image,
+            command='sh -c "sleep 5 && whoami"',
+            auto_remove=True,
+            bg=True)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertTrue('Logs' not in ret['changes'])
+        self.assertTrue('ExitCode' not in ret['changes'])
+        self.assertEqual(ret['comment'], 'Container was run in the background')
+
+        # Now check the logs. The expectation is that the above asserts
+        # completed during the 5-second sleep.
+        self.assertEqual(
+            self.run_function('docker.logs', [name], follow=True),
+            'root\n'
+        )
