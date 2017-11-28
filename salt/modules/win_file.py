@@ -1452,7 +1452,7 @@ def makedirs_perms(path,
                    grant_perms=None,
                    deny_perms=None,
                    inheritance=True,
-                   reset=True):
+                   reset=False):
     '''
     Set owner and permissions for each directory created.
 
