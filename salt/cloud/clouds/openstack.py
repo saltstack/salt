@@ -364,19 +364,9 @@ def request_instance(conn=None, call=None, kwargs=None):
                 'Failed to read userdata from %s: %s', userdata_file, exc)
     kwargs['flavor'] = kwargs.pop('size')
     kwargs['wait'] = True
-    node = conn.create_server(**_clean_kwargs(**kwargs))
+    conn.create_server(**_clean_kwargs(**kwargs))
 
-    ret = dict(node)
-    ret['id'] = node.id
-    ret['name'] = node.name
-    ret['size'] = conn.get_flavor(node.flavor.id).name
-    ret['state'] = node.status
-    ret['private_ips'] = _get_ips(node, 'private')
-    ret['public_ips'] = _get_ips(node, 'public')
-    ret['floating_ips'] = _get_ips(node, 'floating')
-    ret['fixed_ips'] = _get_ips(node, 'fixed')
-    ret['image'] = conn.get_image(node.image.id).name
-    return ret, vm_
+    return show_instance(vm_['name'], conn=conn, call='action')
 
 
 def create(vm_):
@@ -422,21 +412,28 @@ def create(vm_):
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
-        data, vm_ = request_instance(kwargs=vm_)
-
-        # Pull the instance ID, valid for both spot and normal instances
-        vm_['instance_id'] = data['id']
+        data = request_instance(kwargs=vm_)
 
     log.debug('VM is now running')
 
-    if ssh_interface(vm_) == 'private_ips':
-        ip_address = preferred_ip(vm_, data['private_ips'])
-    elif ssh_interface(vm_) == 'fixed_ips':
-        ip_address = preferred_ip(vm_, data['fixed_ips'])
-    elif ssh_interface(vm_) == 'floating_ips':
-        ip_address = preferred_ip(vm_, data['floating_ips'])
-    else:
-        ip_address = preferred_ip(vm_, data['public_ips'])
+    def __query_node_ip(vm_):
+	data = show_instance(vm_['name'], conn=conn, call='action')
+        return preferred_ip(vm_, data[ssh_interface(vm_)])
+
+    try:
+        ip_address = __utils__['cloud.wait_for_ip'](
+            __query_node_ip,
+            update_args=(vm_,)
+        )
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+        try:
+            # It might be already up, let's destroy it!
+            destroy(vm_['name'])
+        except SaltCloudSystemExit:
+            pass
+        finally:
+            raise SaltCloudSystemExit(str(exc))
+
     log.debug('Using IP address {0}'.format(ip_address))
 
     if __utils__['cloud.get_salt_interface'](vm_, __opts__) == 'private_ips':
@@ -473,7 +470,7 @@ def create(vm_):
         'name': vm_['name'],
         'profile': vm_['profile'],
         'provider': vm_['driver'],
-        'instance_id': vm_['instance_id'],
+        'instance_id': data['id'],
         'floating_ips': data['floating_ips'],
         'fixed_ips': data['fixed_ips'],
         'private_ips': data['private_ips'],
