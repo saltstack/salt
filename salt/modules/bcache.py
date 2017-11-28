@@ -25,7 +25,7 @@ import re
 from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -44,14 +44,14 @@ __func_alias__ = {
     'super_': 'super',
 }
 
-HAS_BLKDISCARD = salt.utils.which('blkdiscard') is not None
+HAS_BLKDISCARD = salt.utils.path.which('blkdiscard') is not None
 
 
 def __virtual__():
     '''
     Only work when make-bcache is installed
     '''
-    return salt.utils.which('make-bcache') is not None
+    return salt.utils.path.which('make-bcache') is not None
 
 
 def uuid(dev=None):
