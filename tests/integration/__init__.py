@@ -805,6 +805,12 @@ class TestDaemon(object):
                 os.path.join(FILES, 'pillar', 'base'),
             ]
         }
+        minion_opts['pillar_roots'] = {
+            'base': [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(FILES, 'pillar', 'base'),
+            ]
+        }
         master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
             'base': [
                 os.path.join(FILES, 'file', 'base'),
