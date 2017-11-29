@@ -875,16 +875,16 @@ def get_local_admins():
     '''
     admin_list = get_users_config()
     response = []
-    
+
     if 'users' not in admin_list['result']:
         return response
-        
+
     if isinstance(admin_list['result']['users']['entry'], list):
         for entry in admin_list['result']['users']['entry']:
             response.append(entry['name'])
     else:
         response.append(admin_list['result']['users']['entry']['name'])
-    
+
     return response
 
 
