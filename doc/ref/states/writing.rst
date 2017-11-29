@@ -111,6 +111,8 @@ This code will call the `managed` function in the :mod:`file
 <salt.states.file>` state module and pass the arguments ``name`` and ``source``
 to it.
 
+.. _state-return-data:
+
 Return Data
 ===========
 
