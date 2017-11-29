@@ -994,6 +994,8 @@ class Schedule(object):
         Evaluate and execute the schedule
         '''
 
+        log.trace('==== evaluating schedule =====')
+
         def _splay(splaytime):
             '''
             Calculate splaytime
@@ -1216,10 +1218,11 @@ class Schedule(object):
 
                     # Copy the list so we can loop through it
                     for i in copy.deepcopy(_when):
-                        if i < now and len(_when) > 1:
-                            # Remove all missed schedules except the latest one.
-                            # We need it to detect if it was triggered previously.
-                            _when.remove(i)
+                        if len(_when) > 1:
+                            if i < now - self.opts['loop_interval']:
+                                # Remove all missed schedules except the latest one.
+                                # We need it to detect if it was triggered previously.
+                                _when.remove(i)
 
                     if _when:
                         # Grab the first element, which is the next run time or
@@ -1321,19 +1324,21 @@ class Schedule(object):
             seconds = data['_next_fire_time'] - now
             if data['_splay']:
                 seconds = data['_splay'] - now
-            if seconds <= 0:
-                if '_seconds' in data:
+            if '_seconds' in data:
+                if seconds <= 0:
                     run = True
-                elif 'when' in data and data['_run']:
+            elif 'when' in data and data['_run']:
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + self.opts['loop_interval']):
                     data['_run'] = False
                     run = True
-                elif 'cron' in data:
-                    # Reset next scheduled time because it is in the past now,
-                    # and we should trigger the job run, then wait for the next one.
+            elif 'cron' in data:
+                # Reset next scheduled time because it is in the past now,
+                # and we should trigger the job run, then wait for the next one.
+                if seconds <= 0:
                     data['_next_fire_time'] = None
                     run = True
-                elif seconds == 0:
-                    run = True
+            elif seconds == 0:
+                run = True
 
             if '_run_on_start' in data and data['_run_on_start']:
                 run = True
@@ -1497,6 +1502,7 @@ class Schedule(object):
             finally:
                 if '_seconds' in data:
                     data['_next_fire_time'] = now + data['_seconds']
+                data['_last_run'] = now
                 data['_splay'] = None
             if salt.utils.platform.is_windows():
                 # Restore our function references.
