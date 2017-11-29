@@ -24,6 +24,7 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.decorators as decorators
 from salt.utils.locales import sdecode as _sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -520,7 +521,45 @@ def get_auto_login():
     return False if ret['retcode'] else ret['stdout']
 
 
-def enable_auto_login(name):
+def _kcpassword(password):
+    '''
+    Internal function for obfuscating the password used for AutoLogin
+    This is later written to the ``/etc/kcpassword`` file
+
+    .. versionadded:: 2017.7.3
+
+    Adapted from:
+    https://github.com/timsutton/osx-vm-templates/blob/master/scripts/support/set_kcpassword.py
+
+    Args:
+
+        password(str):
+            The password to obfuscate
+
+    Returns:
+        str: The obfuscated password
+    '''
+    # The magic 11 bytes - these are just repeated
+    # 0x7D 0x89 0x52 0x23 0xD2 0xBC 0xDD 0xEA 0xA3 0xB9 0x1F
+    key = [125, 137, 82, 35, 210, 188, 221, 234, 163, 185, 31]
+    key_len = len(key)
+
+    password = [ord(x) for x in list(password)]
+    # pad password length out to an even multiple of key length
+    r = len(password) % key_len
+    if (r > 0):
+        password = password + [0] * (key_len - r)
+
+    for n in range(0, len(password), len(key)):
+        ki = 0
+        for j in range(n, min(n+len(key), len(password))):
+            password[j] = password[j] ^ key[ki]
+            ki += 1
+
+    password = [chr(x) for x in password]
+    return "".join(password)
+
+def enable_auto_login(name, password):
     '''
     .. versionadded:: 2016.3.0
 
@@ -537,6 +576,7 @@ def enable_auto_login(name):
 
         salt '*' user.enable_auto_login stevej
     '''
+    # Make the entry into the defaults file
     cmd = ['defaults',
            'write',
            '/Library/Preferences/com.apple.loginwindow.plist',
@@ -544,6 +584,13 @@ def enable_auto_login(name):
            name]
     __salt__['cmd.run'](cmd)
     current = get_auto_login()
+
+    # Create/Update the kcpassword file with an obfuscated password
+    o_password = _kcpassword(password=password)
+    with salt.utils.files.set_umask(0o077):
+        with salt.utils.fopen('/etc/kcpassword', 'w') as fd:
+            fd.write(o_password)
+
     return current if isinstance(current, bool) else current.lower() == name.lower()
 
 
@@ -562,6 +609,11 @@ def disable_auto_login():
 
         salt '*' user.disable_auto_login
     '''
+    # Remove the kcpassword file
+    cmd = 'rm -f /etc/kcpassword'
+    __salt__['cmd.run'](cmd)
+
+    # Remove the entry from the defaults file
     cmd = ['defaults',
            'delete',
            '/Library/Preferences/com.apple.loginwindow.plist',
