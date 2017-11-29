@@ -4927,8 +4927,8 @@ def manage_file(name,
                 owner=kwargs.get('win_owner'),
                 grant_perms=kwargs.get('win_perms'),
                 deny_perms=kwargs.get('win_deny_perms'),
-                inheritance=kwargs.get('win_inheritance'),
-                reset=kwargs.get('win_perms_reset'))
+                inheritance=kwargs.get('win_inheritance', True),
+                reset=kwargs.get('win_perms_reset', False))
             # pylint: enable=E1121
         else:
             ret, _ = check_perms(name, ret, user, group, mode, follow_symlinks)
@@ -4974,8 +4974,8 @@ def manage_file(name,
                     owner=kwargs.get('win_owner'),
                     grant_perms=kwargs.get('win_perms'),
                     deny_perms=kwargs.get('win_deny_perms'),
-                    inheritance=kwargs.get('win_inheritance'),
-                    reset=kwargs.get('win_perms_reset'))
+                    inheritance=kwargs.get('win_inheritance', True),
+                    reset=kwargs.get('win_perms_reset', False))
                 # pylint: enable=E1121
             else:
                 makedirs_(name, user=user, group=group, mode=dir_mode)
@@ -5098,8 +5098,8 @@ def manage_file(name,
                 owner=kwargs.get('win_owner'),
                 grant_perms=kwargs.get('win_perms'),
                 deny_perms=kwargs.get('win_deny_perms'),
-                inheritance=kwargs.get('win_inheritance'),
-                reset=kwargs.get('win_perms_reset'))
+                inheritance=kwargs.get('win_inheritance', True),
+                reset=kwargs.get('win_perms_reset', False))
             # pylint: enable=E1121
         else:
             ret, _ = check_perms(name, ret, user, group, mode)
