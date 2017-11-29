@@ -162,12 +162,18 @@ def atrm(*args):
         salt '*' at.atrm all [tag]
     '''
 
+    import logging
+    log = logging.getLogger(__name__)
+    log.debug('args {}'.format(args))
     # Need to do this here also since we use atq()
     if not salt.utils.which('at'):
         return '\'at.atrm\' is not available.'
 
     if not args:
         return {'jobs': {'removed': [], 'tag': None}}
+
+    # Convert all to strings
+    args = [str(arg) for arg in args]
 
     if args[0] == 'all':
         if len(args) > 1:
