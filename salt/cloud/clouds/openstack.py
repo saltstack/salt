@@ -15,6 +15,7 @@ from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure,
+    SaltCloudConfigError,
 )
 
 # Import 3rd-Party Libs
