@@ -1204,7 +1204,7 @@ def load_config(filename=None,
         - ``s3://``
         - ``swift://``
 
-        .. versionchanged:: 2017.7.3
+        .. versionchanged:: Oxygen
 
     text
         String containing the desired configuration.
@@ -1231,7 +1231,7 @@ def load_config(filename=None,
     saltenv: ``base``
         Specifies the Salt environment name.
 
-        .. versionadded:: 2017.7.3
+        .. versionadded:: Oxygen
 
     :return: a dictionary having the following keys:
 
