@@ -686,7 +686,7 @@ class State(object):
             except AttributeError:
                 pillar_enc = str(pillar_enc).lower()
         self._pillar_enc = pillar_enc
-        if initial_pillar is not None:
+        if initial_pillar:
             self.opts['pillar'] = initial_pillar
             if self._pillar_override:
                 self.opts['pillar'] = salt.utils.dictupdate.merge(
