@@ -954,17 +954,19 @@ def copy(name, target, **kwargs):
     return ret
 
 
-def postpone_job(name, time, new_time, **kwargs):
+def postpone_job(name, current_time, new_time, **kwargs):
     '''
     Postpone a job in the minion's schedule
 
     Current time and new time should be specified as Unix timestamps
 
+    .. versionadded:: Oxygen
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' schedule.postpone_job current_time new_time
+        salt '*' schedule.postpone_job job current_time new_time
     '''
 
     ret = {'comment': [],
@@ -974,18 +976,26 @@ def postpone_job(name, time, new_time, **kwargs):
         ret['comment'] = 'Job name is required.'
         ret['result'] = False
 
+    if not current_time:
+        ret['comment'] = 'Job current time is required.'
+        ret['result'] = False
+
+    if not new_time:
+        ret['comment'] = 'Job new_time is required.'
+        ret['result'] = False
+
     if 'test' in __opts__ and __opts__['test']:
         ret['comment'] = 'Job: {0} would be postponed in schedule.'.format(name)
     else:
 
         if name in list_(show_all=True, where='opts', return_yaml=False):
             event_data = {'name': name,
-                          'time': time,
+                          'time': current_time,
                           'new_time': new_time,
                           'func': 'postpone_job'}
         elif name in list_(show_all=True, where='pillar', return_yaml=False):
             event_data = {'name': name,
-                          'time': time,
+                          'time': current_time,
                           'new_time': new_time,
                           'where': 'pillar',
                           'func': 'postpone_job'}
@@ -1015,9 +1025,76 @@ def postpone_job(name, time, new_time, **kwargs):
     return ret
 
 
+def skip_job(name, time, **kwargs):
+    '''
+    Skip a job in the minion's schedule at specified time.
+
+    Time to skip should be specified as Unix timestamps
+
+    .. versionadded:: Oxygen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.skip_job job time
+    '''
+
+    ret = {'comment': [],
+           'result': True}
+
+    if not name:
+        ret['comment'] = 'Job name is required.'
+        ret['result'] = False
+
+    if not time:
+        ret['comment'] = 'Job time is required.'
+        ret['result'] = False
+
+    if 'test' in __opts__ and __opts__['test']:
+        ret['comment'] = 'Job: {0} would be skipped in schedule.'.format(name)
+    else:
+
+        if name in list_(show_all=True, where='opts', return_yaml=False):
+            event_data = {'name': name,
+                          'time': time,
+                          'func': 'skip_job'}
+        elif name in list_(show_all=True, where='pillar', return_yaml=False):
+            event_data = {'name': name,
+                          'time': time,
+                          'where': 'pillar',
+                          'func': 'skip_job'}
+        else:
+            ret['comment'] = 'Job {0} does not exist.'.format(name)
+            ret['result'] = False
+            return ret
+
+        try:
+            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            res = __salt__['event.fire'](event_data, 'manage_schedule')
+            if res:
+                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_skip_job_complete', wait=30)
+                if event_ret and event_ret['complete']:
+                    schedule = event_ret['schedule']
+                    # check item exists in schedule and is enabled
+                    if name in schedule and schedule[name]['enabled']:
+                        ret['result'] = True
+                        ret['comment'] = 'Added Skip Job {0} in schedule.'.format(name)
+                    else:
+                        ret['result'] = False
+                        ret['comment'] = 'Failed to skip job {0} in schedule.'.format(name)
+                    return ret
+        except KeyError:
+            # Effectively a no-op, since we can't really return without an event system
+            ret['comment'] = 'Event module not available. Schedule skip job failed.'
+    return ret
+
+
 def show_next_fire_time(name, **kwargs):
     '''
     Show the next fire time for scheduled job
+
+    .. versionadded:: Oxygen
 
     CLI Example:
 

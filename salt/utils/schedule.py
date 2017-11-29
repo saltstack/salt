@@ -94,6 +94,28 @@ Monday, Wednesday and Friday, and 3:00 PM on Tuesday and Thursday.
     schedule:
       job1:
         function: state.sls
+        args:
+          - httpd
+        kwargs:
+          test: True
+        when:
+          - 'tea time'
+
+.. code-block:: yaml
+
+    whens:
+      tea time: 1:40pm
+      deployment time: Friday 5:00pm
+
+The Salt scheduler also allows custom phrases to be used for the `when`
+parameter.  These `whens` can be stored as either pillar values or
+grain values.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
         seconds: 3600
         args:
           - httpd
@@ -333,7 +355,6 @@ import logging
 import errno
 import random
 import yaml
-import copy
 
 # Import Salt libs
 import salt.config
@@ -748,7 +769,8 @@ class Schedule(object):
 
     def postpone_job(self, name, data):
         '''
-        Disable a job in the scheduler. Ignores jobs from pillar
+        Postpone a job in the scheduler.
+        Ignores jobs from pillar
         '''
         time = data['time']
         new_time = data['new_time']
@@ -771,6 +793,28 @@ class Schedule(object):
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
                        tag='/salt/minion/minion_schedule_postpone_job_complete')
+
+    def skip_job(self, name, data):
+        '''
+        Skip a job at a specific time in the scheduler.
+        Ignores jobs from pillar
+        '''
+        time = data['time']
+
+        # ensure job exists, then disable it
+        if name in self.opts['schedule']:
+            if 'skip_explicit' not in self.opts['schedule'][name]:
+                self.opts['schedule'][name]['skip_explicit'] = []
+            self.opts['schedule'][name]['skip_explicit'].append(time)
+
+        elif name in self._get_schedule(include_opts=False):
+            log.warning('Cannot modify job {0}, '
+                        'it`s in the pillar!'.format(name))
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
+                       tag='/salt/minion/minion_schedule_skip_job_complete')
 
     def get_next_fire_time(self, name):
         '''
@@ -1248,16 +1292,19 @@ class Schedule(object):
                 else:
                     if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
                             data['when'] in self.opts['pillar']['whens']):
+                        log.debug('=== whens found in pillar ===')
                         if not isinstance(self.opts['pillar']['whens'], dict):
                             log.error('Pillar item "whens" must be dict.'
                                       'Ignoring')
                             continue
                         _when = self.opts['pillar']['whens'][data['when']]
+                        log.debug('=== _when {} ==='.format(_when))
                         try:
                             when__ = dateutil_parser.parse(_when)
                         except ValueError:
                             log.error('Invalid date string. Ignoring')
                             continue
+                        log.debug('=== __when {} ==='.format(__when))
                     elif ('whens' in self.opts['grains'] and
                           data['when'] in self.opts['grains']['whens']):
                         if not isinstance(self.opts['grains']['whens'], dict):
