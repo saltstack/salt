@@ -36,7 +36,7 @@ def inet_pton(address_family, ip_string):
     # This will catch IP Addresses such as 10.1.2
     if address_family == socket.AF_INET:
         try:
-            ipaddress.ip_address(ip_string.decode())
+            ipaddress.ip_address(ip_string.encode().decode())
         except ValueError:
             raise socket.error('illegal IP address string passed to inet_pton')
         return socket.inet_aton(ip_string)
