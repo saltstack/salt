@@ -841,6 +841,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                  ret)
 
                         recurse = ['ignore_files', 'ignore_dirs']
+                        ret.update({'comment': 'Must not specify "recurse" '
+                                               'options "ignore_files" and '
+                                               '"ignore_dirs" at the same '
+                                               'time.',
+                                    'pchanges': {}})
                         with patch.object(os.path, 'isdir', mock_t):
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user,
