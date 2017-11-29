@@ -20,6 +20,7 @@ from salt.exceptions import (
 # Import 3rd-Party Libs
 try:
     import shade.openstackcloud
+    import shade.exc
     import os_client_config
     HAS_SHADE = True
 except ImportError:
@@ -354,7 +355,12 @@ def request_instance(conn=None, call=None, kwargs=None):
                 'Failed to read userdata from %s: %s', userdata_file, exc)
     kwargs['flavor'] = kwargs.pop('size')
     kwargs['wait'] = True
-    conn.create_server(**_clean_kwargs(**kwargs))
+    try:
+        conn.create_server(**_clean_kwargs(**kwargs))
+    except shade.exc.OpenStackCloudException as exc:
+        log.error('Error creating server %s: %s', vm_['name'], exc)
+        destroy(vm_['name'], conn=conn, call='action')
+        raise SaltCloudSystemExit(str(exc))
 
     return show_instance(vm_['name'], conn=conn, call='action')
 
