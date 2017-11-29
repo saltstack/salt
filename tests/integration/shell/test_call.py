@@ -488,6 +488,21 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             stdout=stdout, stderr=stderr
         )
 
+    def test_masterless_highstate(self):
+        '''
+        test state.highstate in masterless mode
+        '''
+        ret = self.run_call('state.highstate', local=True)
+
+        destpath = os.path.join(TMP, 'testfile')
+        exp_out = ['    Function: file.managed', '      Result: True',
+                   '          ID: {0}'.format(destpath)]
+
+        for out in exp_out:
+            self.assertIn(out, ret)
+
+        self.assertTrue(os.path.exists(destpath))
+
     def test_exit_status_correct_usage(self):
         '''
         Ensure correct exit status when salt-call starts correctly.

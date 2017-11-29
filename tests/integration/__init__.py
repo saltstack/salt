@@ -824,6 +824,19 @@ class TestDaemon(object):
                 RUNTIME_VARS.TMP_PRODENV_STATE_TREE
             ]
         }
+        minion_opts['file_roots'] = {
+            'base': [
+                os.path.join(FILES, 'file', 'base'),
+                # Let's support runtime created files that can be used like:
+                #   salt://my-temp-file.txt
+                RUNTIME_VARS.TMP_STATE_TREE
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(FILES, 'file', 'prod'),
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE
+            ]
+        }
         master_opts.setdefault('reactor', []).append(
             {
                 'salt/minion/*/start': [
