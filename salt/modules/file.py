@@ -4920,7 +4920,7 @@ def manage_file(name,
         if salt.utils.is_windows():
             # This function resides in win_file.py and will be available
             # on Windows. The local function will be overridden
-            # pylint: disable=E1121
+            # pylint: disable=E1120,E1121,E1123
             ret = check_perms(
                 path=name,
                 ret=ret,
@@ -4929,7 +4929,7 @@ def manage_file(name,
                 deny_perms=kwargs.get('win_deny_perms'),
                 inheritance=kwargs.get('win_inheritance', True),
                 reset=kwargs.get('win_perms_reset', False))
-            # pylint: enable=E1121
+            # pylint: enable=E1120,E1121,E1123
         else:
             ret, _ = check_perms(name, ret, user, group, mode, follow_symlinks)
 
@@ -4968,7 +4968,7 @@ def manage_file(name,
             if salt.utils.is_windows():
                 # This function resides in win_file.py and will be available
                 # on Windows. The local function will be overridden
-                # pylint: disable=E1121
+                # pylint: disable=E1120,E1121,E1123
                 makedirs_(
                     path=name,
                     owner=kwargs.get('win_owner'),
@@ -4976,7 +4976,7 @@ def manage_file(name,
                     deny_perms=kwargs.get('win_deny_perms'),
                     inheritance=kwargs.get('win_inheritance', True),
                     reset=kwargs.get('win_perms_reset', False))
-                # pylint: enable=E1121
+                # pylint: enable=E1120,E1121,E1123
             else:
                 makedirs_(name, user=user, group=group, mode=dir_mode)
 
@@ -5091,7 +5091,7 @@ def manage_file(name,
         if salt.utils.is_windows():
             # This function resides in win_file.py and will be available
             # on Windows. The local function will be overridden
-            # pylint: disable=E1121
+            # pylint: disable=E1120,E1121,E1123
             ret = check_perms(
                 path=name,
                 ret=ret,
@@ -5100,7 +5100,7 @@ def manage_file(name,
                 deny_perms=kwargs.get('win_deny_perms'),
                 inheritance=kwargs.get('win_inheritance', True),
                 reset=kwargs.get('win_perms_reset', False))
-            # pylint: enable=E1121
+            # pylint: enable=E1120,E1121,E1123
         else:
             ret, _ = check_perms(name, ret, user, group, mode)
 
