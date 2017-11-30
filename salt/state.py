@@ -1918,6 +1918,8 @@ class State(object):
                 if self.mocked:
                     ret = mock_ret(cdata)
                 else:
+                    # Check if this low chunk is paused
+                    self.check_pause(low)
                     # Execute the state function
                     if not low.get(u'__prereq__') and low.get(u'parallel'):
                         # run the state call in parallel, but only if not in a prereq
@@ -2126,6 +2128,29 @@ class State(object):
                 return False
             return not running[tag][u'result']
         return False
+
+    def check_pause(self, low):
+        '''
+        Check to see if this low chunk has been paused
+        '''
+        pause_path = os.path.join(self.opts[u'cachedir'], 'state_pause', self.jid)
+        if os.path.isfile(pause_path):
+            try:
+                while True:
+                    with salt.utils.files.fopen(pause_path, 'b') as fp_:
+                        pdat = msgpack.loads(fp_.read())
+                        id_ = low[u'__id__']
+                        if id_ in pdat:
+                            if u'duration' in pdat[id_]:
+                                start = pdat[id_]['start']
+                                now = time.time()
+                                if now - start > pdat[id_][u'duration']:
+                                    return
+                        else:
+                            return
+            except Exception as exc:
+                log.error('Failed to read in pause data for file located at: %s', pause_path)
+                return
 
     def reconcile_procs(self, running):
         '''

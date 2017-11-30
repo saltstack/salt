@@ -165,6 +165,56 @@ def _snapper_post(opts, jid, pre_num):
         log.error('Failed to create snapper pre snapshot for jid: {0}'.format(jid))
 
 
+def set_pause(jid, state_id, duration=None):
+    '''
+    Set up a state id pause, this instructs a running state to pause at a given
+    state id. This needs to pass in the jid of the running state and can
+    optionally pass in a duration in seconds.
+    '''
+    pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
+    pause_path = os.path.join(pause_dir, jid)
+    if not os.path.exists(pause_dir):
+        try:
+            os.makedirs(pause_path)
+        except OSError:
+            # File created in the gap
+            pass
+    data = {}
+    if os.path.exists(pause_path):
+        with salt.utils.files.fopen(pause_path, 'rb') as fp_:
+            data = msgpack.loads(fp_.read())
+    if state_id not in data:
+        data[state_id] = {}
+    if duration:
+        data[state_id]['duration'] = int(duration)
+    with salt.utils.files.fopen(pause_path, 'wb') as fp_:
+        fp_.write(msgpack.dumps(data))
+
+
+def rm_pause(jid, state_id):
+    '''
+    Remove a pause from a jid, allowing it to continue
+    '''
+    pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
+    pause_path = os.path.join(pause_dir, jid)
+    if not os.path.exists(pause_dir):
+        try:
+            os.makedirs(pause_path)
+        except OSError:
+            # File created in the gap
+            pass
+    data = {}
+    if os.path.exists(pause_path):
+        with salt.utils.files.fopen(pause_path, 'rb') as fp_:
+            data = msgpack.loads(fp_.read())
+    else:
+        return True
+    if state_id in data:
+        data.pop(state_id)
+    with salt.utils.files.fopen(pause_path, 'wb') as fp_:
+        fp_.write(msgpack.dumps(data))
+
+
 def orchestrate(mods,
                 saltenv='base',
                 test=None,
