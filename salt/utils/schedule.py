@@ -1244,8 +1244,27 @@ class Schedule(object):
 
             run = False
             seconds = data['_next_fire_time'] - now
-            if data['_splay']:
-                seconds = data['_splay'] - now
+
+            if 'splay' in data:
+                # Got "splay" configured, make decision to run a job based on that
+                if not data['_splay']:
+                    # Try to add "splay" time only if next job fire time is
+                    # still in the future. We should trigger job run
+                    # immediately otherwise.
+                    splay = _splay(data['splay'])
+                    if now < data['_next_fire_time'] + splay:
+                        log.debug('schedule.handle_func: Adding splay of '
+                                  '{0} seconds to next run.'.format(splay))
+                        data['_splay'] = data['_next_fire_time'] + splay
+                        if 'when' in data:
+                            data['_run'] = True
+                    else:
+                        run = True
+
+                if data['_splay']:
+                    # The "splay" configuration has been already processed, just use it
+                    seconds = data['_splay'] - now
+
             if seconds <= 0:
                 if '_seconds' in data:
                     run = True
@@ -1264,16 +1283,6 @@ class Schedule(object):
                 run = True
                 data['_run_on_start'] = False
             elif run:
-                if 'splay' in data and not data['_splay']:
-                    splay = _splay(data['splay'])
-                    if now < data['_next_fire_time'] + splay:
-                        log.debug('schedule.handle_func: Adding splay of '
-                                  '{0} seconds to next run.'.format(splay))
-                        run = False
-                        data['_splay'] = data['_next_fire_time'] + splay
-                        if 'when' in data:
-                            data['_run'] = True
-
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
