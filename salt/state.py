@@ -763,7 +763,7 @@ class State(object):
                 self.opts,
                 self.opts[u'grains'],
                 self.opts[u'id'],
-                self.opts[u'environment'],
+                self.opts[u'saltenv'],
                 pillar_override=self._pillar_override,
                 pillarenv=self.opts.get(u'pillarenv'))
         return pillar.compile_pillar()
@@ -2900,32 +2900,32 @@ class BaseHighState(object):
         found = 0  # did we find any contents in the top files?
         # Gather initial top files
         merging_strategy = self.opts[u'top_file_merging_strategy']
-        if merging_strategy == u'same' and not self.opts[u'environment']:
+        if merging_strategy == u'same' and not self.opts[u'saltenv']:
             if not self.opts[u'default_top']:
                 raise SaltRenderError(
                     u'top_file_merging_strategy set to \'same\', but no '
                     u'default_top configuration option was set'
                 )
 
-        if self.opts[u'environment']:
+        if self.opts[u'saltenv']:
             contents = self.client.cache_file(
                 self.opts[u'state_top'],
-                self.opts[u'environment']
+                self.opts[u'saltenv']
             )
             if contents:
                 found = 1
-                tops[self.opts[u'environment']] = [
+                tops[self.opts[u'saltenv']] = [
                     compile_template(
                         contents,
                         self.state.rend,
                         self.state.opts[u'renderer'],
                         self.state.opts[u'renderer_blacklist'],
                         self.state.opts[u'renderer_whitelist'],
-                        saltenv=self.opts[u'environment']
+                        saltenv=self.opts[u'saltenv']
                     )
                 ]
             else:
-                tops[self.opts[u'environment']] = [{}]
+                tops[self.opts[u'saltenv']] = [{}]
 
         else:
             found = 0
@@ -3257,8 +3257,8 @@ class BaseHighState(object):
         matches = DefaultOrderedDict(OrderedDict)
         # pylint: disable=cell-var-from-loop
         for saltenv, body in six.iteritems(top):
-            if self.opts[u'environment']:
-                if saltenv != self.opts[u'environment']:
+            if self.opts[u'saltenv']:
+                if saltenv != self.opts[u'saltenv']:
                     continue
             for match, data in six.iteritems(body):
                 def _filter_matches(_match, _data, _opts):

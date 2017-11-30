@@ -271,9 +271,9 @@ def _get_opts(**kwargs):
     if 'saltenv' in kwargs:
         saltenv = kwargs['saltenv']
         if saltenv is not None and not isinstance(saltenv, six.string_types):
-            opts['environment'] = str(kwargs['saltenv'])
+            opts['saltenv'] = str(kwargs['saltenv'])
         else:
-            opts['environment'] = kwargs['saltenv']
+            opts['saltenv'] = kwargs['saltenv']
 
     if 'pillarenv' in kwargs or opts.get('pillarenv_from_saltenv', False):
         pillarenv = kwargs.get('pillarenv') or kwargs.get('saltenv')
@@ -840,7 +840,7 @@ def highstate(test=None, queue=False, **kwargs):
         kwargs.pop('env')
 
     if 'saltenv' in kwargs:
-        opts['environment'] = kwargs['saltenv']
+        opts['saltenv'] = kwargs['saltenv']
 
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
@@ -1032,8 +1032,8 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
 
     # Since this is running a specific SLS file (or files), fall back to the
     # 'base' saltenv if none is configured and none was passed.
-    if opts['environment'] is None:
-        opts['environment'] = 'base'
+    if opts['saltenv'] is None:
+        opts['saltenv'] = 'base'
 
     pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
@@ -1089,7 +1089,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     st_.push_active()
     ret = {}
     try:
-        high_, errors = st_.render_highstate({opts['environment']: mods})
+        high_, errors = st_.render_highstate({opts['saltenv']: mods})
 
         if errors:
             __context__['retcode'] = 1
@@ -1411,8 +1411,8 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
 
     # Since this is running a specific ID within a specific SLS file, fall back
     # to the 'base' saltenv if none is configured and none was passed.
-    if opts['environment'] is None:
-        opts['environment'] = 'base'
+    if opts['saltenv'] is None:
+        opts['saltenv'] = 'base'
 
     pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
@@ -1446,7 +1446,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         split_mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({opts['environment']: split_mods})
+        high_, errors = st_.render_highstate({opts['saltenv']: split_mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1472,7 +1472,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     if not ret:
         raise SaltInvocationError(
             'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
-            '\'{2}\''.format(id_, mods, opts['environment'])
+            '\'{2}\''.format(id_, mods, opts['saltenv'])
         )
     return ret
 
@@ -1523,8 +1523,8 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
 
     # Since this is dealing with a specific SLS file (or files), fall back to
     # the 'base' saltenv if none is configured and none was passed.
-    if opts['environment'] is None:
-        opts['environment'] = 'base'
+    if opts['saltenv'] is None:
+        opts['saltenv'] = 'base'
 
     pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
@@ -1555,7 +1555,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({opts['environment']: mods})
+        high_, errors = st_.render_highstate({opts['saltenv']: mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1610,8 +1610,8 @@ def show_sls(mods, test=None, queue=False, **kwargs):
 
     # Since this is dealing with a specific SLS file (or files), fall back to
     # the 'base' saltenv if none is configured and none was passed.
-    if opts['environment'] is None:
-        opts['environment'] = 'base'
+    if opts['saltenv'] is None:
+        opts['saltenv'] = 'base'
 
     pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
@@ -1644,7 +1644,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
         mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({opts['environment']: mods})
+        high_, errors = st_.render_highstate({opts['saltenv']: mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
