@@ -229,20 +229,44 @@ def setvals(grains, destructive=False):
         raise SaltException('setvals grains must be a dictionary.')
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
-        gfn = os.path.join(
-            os.path.dirname(__opts__['conf_file']),
-            'grains'
-        )
+        if salt.utils.is_proxy():
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'proxy.d',
+                __opts__['id'],
+                'grains'
+            )
+        else:
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'grains'
+            )
     elif os.path.isdir(__opts__['conf_file']):
-        gfn = os.path.join(
-            __opts__['conf_file'],
-            'grains'
-        )
+        if salt.utils.is_proxy():
+            gfn = os.path.join(
+                __opts__['conf_file'],
+                'proxy.d',
+                __opts__['id'],
+                'grains'
+            )
+        else:
+            gfn = os.path.join(
+                __opts__['conf_file'],
+                'grains'
+            )
     else:
-        gfn = os.path.join(
-            os.path.dirname(__opts__['conf_file']),
-            'grains'
-        )
+        if salt.utils.is_proxy():
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'proxy.d',
+                __opts__['id'],
+                'grains'
+            )
+        else:
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'grains'
+            )
 
     if os.path.isfile(gfn):
         with salt.utils.fopen(gfn, 'rb') as fp_:
