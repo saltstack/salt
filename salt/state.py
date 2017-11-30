@@ -2138,6 +2138,7 @@ class State(object):
         if os.path.isfile(pause_path):
             try:
                 while True:
+                    tries = 0
                     with salt.utils.files.fopen(pause_path, 'rb') as fp_:
                         try:
                             pdat = msgpack.loads(fp_.read())

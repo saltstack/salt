@@ -185,7 +185,7 @@ def set_pause(jid, state_id=None, duration=None):
     CLI Examples:
 
     .. code-block:: bash
-        
+
         salt '*' state.set_pause 20171130110407769519 vim
         salt '*' state.set_pause 20171130110407769519 vim 20
     '''
@@ -229,7 +229,7 @@ def rm_pause(jid, state_id=None):
     CLI Examples:
 
     .. code-block:: bash
-        
+
         salt '*' state.rm_pause 20171130110407769519 vim
     '''
     jid = str(jid)
