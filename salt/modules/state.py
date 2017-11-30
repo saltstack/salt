@@ -166,11 +166,12 @@ def _snapper_post(opts, jid, pre_num):
         log.error('Failed to create snapper pre snapshot for jid: {0}'.format(jid))
 
 
-def set_pause(jid, state_id=None, duration=None):
+def pause(jid, state_id=None, duration=None):
     '''
     Set up a state id pause, this instructs a running state to pause at a given
     state id. This needs to pass in the jid of the running state and can
-    optionally pass in a duration in seconds.
+    optionally pass in a duration in seconds. If a state_id is not passed then
+    the jid referenced will be paused at the begining of the next state run.
 
     The given state id is the id got a given state execution, so given a state
     that looks like this:
@@ -180,14 +181,15 @@ def set_pause(jid, state_id=None, duration=None):
         vim:
           pkg.installed: []
 
-    The state_id to pass to `set_pause` is `vim`
+    The state_id to pass to `pause` is `vim`
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' state.set_pause 20171130110407769519 vim
-        salt '*' state.set_pause 20171130110407769519 vim 20
+        salt '*' state.pause 20171130110407769519
+        salt '*' state.pause 20171130110407769519 vim
+        salt '*' state.pause 20171130110407769519 vim 20
     '''
     jid = str(jid)
     if state_id is None:
@@ -212,9 +214,10 @@ def set_pause(jid, state_id=None, duration=None):
         fp_.write(msgpack.dumps(data))
 
 
-def rm_pause(jid, state_id=None):
+def resume(jid, state_id=None):
     '''
-    Remove a pause from a jid, allowing it to continue
+    Remove a pause from a jid, allowing it to continue. If the state_id is
+    not specified then the a general pause will be resumed.
 
     The given state_id is the id got a given state execution, so given a state
     that looks like this:
@@ -230,7 +233,8 @@ def rm_pause(jid, state_id=None):
 
     .. code-block:: bash
 
-        salt '*' state.rm_pause 20171130110407769519 vim
+        salt '*' state.resume 20171130110407769519
+        salt '*' state.resume 20171130110407769519 vim
     '''
     jid = str(jid)
     if state_id is None:
