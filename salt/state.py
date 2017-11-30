@@ -2133,6 +2133,9 @@ class State(object):
         '''
         Check to see if this low chunk has been paused
         '''
+        if not self.jid:
+            # Can't pause on salt-ssh since we can't track continuous state
+            return
         pause_path = os.path.join(self.opts[u'cachedir'], 'state_pause', self.jid)
         start = time.time()
         if os.path.isfile(pause_path):
