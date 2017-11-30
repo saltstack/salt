@@ -998,7 +998,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests lock_saltenv in each function which accepts saltenv on the CLI
         '''
-        lock_msg = 'saltenv is locked and cannot be changed'
+        lock_msg = 'lock_saltenv is enabled, saltenv cannot be changed'
         empty_list_mock = MagicMock(return_value=[])
         with patch.dict(state.__opts__, {'lock_saltenv': True}), \
                 patch.dict(state.__salt__, {'grains.get': empty_list_mock}), \

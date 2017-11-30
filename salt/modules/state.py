@@ -275,7 +275,7 @@ def _get_opts(**kwargs):
                 saltenv = six.text_type(saltenv)
             if opts['lock_saltenv'] and saltenv != opts['saltenv']:
                 raise CommandExecutionError(
-                    'saltenv is locked and cannot be changed'
+                    'lock_saltenv is enabled, saltenv cannot be changed'
                 )
             opts['saltenv'] = kwargs['saltenv']
 
