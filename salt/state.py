@@ -2153,16 +2153,13 @@ class State(object):
                         if id_ in pdat:
                             if u'duration' in pdat[id_]:
                                 now = time.time()
-                                log.error('Duration: %s', pdat[id_][u'duration'])
                                 if now - start > pdat[id_][u'duration']:
-                                    log.error('now: %s start: %s', now, start)
                                     return
                         else:
                             return
                         time.sleep(1)
             except Exception as exc:
                 log.error('Failed to read in pause data for file located at: %s', pause_path)
-                raise
                 return
 
     def reconcile_procs(self, running):
