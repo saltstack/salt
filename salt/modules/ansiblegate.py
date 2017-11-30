@@ -45,8 +45,10 @@ try:
     import ansible
     import ansible.constants
     import ansible.modules
+    HAS_ANSIBLE = True
 except ImportError:
     ansible = None
+    HAS_ANSIBLE = False
 
 __virtualname__ = 'ansible'
 log = logging.getLogger(__name__)
@@ -212,18 +214,14 @@ def __virtual__():
     Ansible module caller.
     :return:
     '''
-    ret = ansible is not None
-    msg = not ret and "Ansible is not installed on this system" or None
-    if msg:
-        log.warning(msg)
-    else:
-        global _resolver
-        global _caller
-        _resolver = AnsibleModuleResolver(__opts__).resolve().install()
-        _caller = AnsibleModuleCaller(_resolver)
+    if not HAS_ANSIBLE:
+        return False, 'Ansible is not installed on this system'
+    global _resolver
+    global _caller
+    _resolver = AnsibleModuleResolver(__opts__).resolve().install()
+    _caller = AnsibleModuleCaller(_resolver)
     _set_callables(list())
-
-    return ret, msg
+    return True
 
 
 def help(module=None, *args):
