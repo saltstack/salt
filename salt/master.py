@@ -890,9 +890,9 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         end = time.time()
         duration = end - start
         self.stats[cmd][u'mean'] = (self.stats[cmd][u'mean'] * (self.stats[cmd][u'runs'] - 1) + duration) / self.stats[cmd][u'runs']
-        if end - self.stat_clock < self.opts[u'master_stats_event_iter']:
+        if end - self.stat_clock > self.opts[u'master_stats_event_iter']:
             # Fire the event with the stats and wipe the tracker
-            self.aes_funcs.event.fire_event({u'time': end - self.stat_clock, u'worker': self.name, u'stats': self.stats}, tagify(u'stats', u'refresh', u'minion'))
+            self.aes_funcs.event.fire_event({u'time': end - self.stat_clock, u'worker': self.name, u'stats': self.stats}, tagify(self.name, u'stats'))
             self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
             self.stat_clock = end
 

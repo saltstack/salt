@@ -168,7 +168,7 @@ VALID_OPTS = {
     # Enable master stats eveents to be fired, these events will contain information about
     # what commands the master is processing and what the rates are of the executions
     'master_stats': bool,
-    'master_stats_event_iter': int
+    'master_stats_event_iter': int,
     # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
     # intended master
     'syndic_finger': str,
