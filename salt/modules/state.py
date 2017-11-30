@@ -166,7 +166,7 @@ def _snapper_post(opts, jid, pre_num):
         log.error('Failed to create snapper pre snapshot for jid: {0}'.format(jid))
 
 
-def set_pause(jid, state_id, duration=None):
+def set_pause(jid, state_id=None, duration=None):
     '''
     Set up a state id pause, this instructs a running state to pause at a given
     state id. This needs to pass in the jid of the running state and can
@@ -190,6 +190,8 @@ def set_pause(jid, state_id, duration=None):
         salt '*' state.set_pause 20171130110407769519 vim 20
     '''
     jid = str(jid)
+    if state_id is None:
+        state_id = '__all__'
     pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
     pause_path = os.path.join(pause_dir, jid)
     if not os.path.exists(pause_dir):
@@ -210,7 +212,7 @@ def set_pause(jid, state_id, duration=None):
         fp_.write(msgpack.dumps(data))
 
 
-def rm_pause(jid, state_id):
+def rm_pause(jid, state_id=None):
     '''
     Remove a pause from a jid, allowing it to continue
 
@@ -231,6 +233,8 @@ def rm_pause(jid, state_id):
         salt '*' state.rm_pause 20171130110407769519 vim
     '''
     jid = str(jid)
+    if state_id is None:
+        state_id = '__all__'
     pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
     pause_path = os.path.join(pause_dir, jid)
     if not os.path.exists(pause_dir):

@@ -2150,10 +2150,15 @@ class State(object):
                             time.sleep(1)
                             continue
                         id_ = low[u'__id__']
+                        key = u''
                         if id_ in pdat:
-                            if u'duration' in pdat[id_]:
+                            key = id_
+                        elif u'__all__' in pdat:
+                            key = u'__all__'
+                        if key:
+                            if u'duration' in pdat[key]:
                                 now = time.time()
-                                if now - start > pdat[id_][u'duration']:
+                                if now - start > pdat[key][u'duration']:
                                     return
                         else:
                             return
