@@ -59,6 +59,14 @@ Like some other Salt subsystems, Thorium uses its own directory structure. The
 default location for this structure is ``/srv/thorium/``, but it can be changed
 using the ``thorium_roots`` setting in the ``master`` configuration file.
 
+Example ``thorium_roots`` configuration:
+
+.. code-block:: yaml
+
+    thorium_roots:
+      base:
+        - /etc/salt/thorium
+
 
 The Thorium top.sls File
 ------------------------
