@@ -52,6 +52,7 @@ def sync_all(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     ret['runners'] = sync_runners(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['wheel'] = sync_wheel(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['engines'] = sync_engines(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['thorium'] = sync_thorium(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['queues'] = sync_queues(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['pillar'] = sync_pillar(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['utils'] = sync_utils(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
@@ -300,6 +301,32 @@ def sync_engines(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
         salt-run saltutil.sync_engines
     '''
     return salt.utils.extmods.sync(__opts__, 'engines', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                   extmod_blacklist=extmod_blacklist)[0]
+
+
+def sync_thorium(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Sync Thorium from ``salt://_thorium`` to the master
+
+    saltenv: ``base``
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    extmod_whitelist
+        comma-seperated list of modules to sync
+
+    extmod_blacklist
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_thorium
+    '''
+    return salt.utils.extmods.sync(__opts__, 'thorium', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
                                    extmod_blacklist=extmod_blacklist)[0]
 
 
