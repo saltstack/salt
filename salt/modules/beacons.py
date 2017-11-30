@@ -82,6 +82,47 @@ def list_(return_yaml=True,
         return {'beacons': {}}
 
 
+def list_available(return_yaml=True):
+    '''
+    List the beacons currently available on the minion
+
+    :param return_yaml:     Whether to return YAML formatted output, default True
+    :return:                List of currently configured Beacons.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' beacons.list_available
+
+    '''
+    beacons = None
+
+    try:
+        eventer = salt.utils.event.get_event('minion', opts=__opts__)
+        res = __salt__['event.fire']({'func': 'list_available'}, 'manage_beacons')
+        if res:
+            event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_list_available_complete', wait=30)
+            if event_ret and event_ret['complete']:
+                beacons = event_ret['beacons']
+    except KeyError:
+        # Effectively a no-op, since we can't really return without an event system
+        ret = {}
+        ret['result'] = False
+        ret['comment'] = 'Event module not available. Beacon add failed.'
+        return ret
+
+    if beacons:
+        if return_yaml:
+            tmp = {'beacons': beacons}
+            yaml_out = yaml.safe_dump(tmp, default_flow_style=False)
+            return yaml_out
+        else:
+            return beacons
+    else:
+        return {'beacons': {}}
+
+
 def add(name, beacon_data, **kwargs):
     '''
     Add a beacon on the minion
