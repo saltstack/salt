@@ -975,14 +975,27 @@ def postpone_job(name, current_time, new_time, **kwargs):
     if not name:
         ret['comment'] = 'Job name is required.'
         ret['result'] = False
+        return ret
 
     if not current_time:
         ret['comment'] = 'Job current time is required.'
         ret['result'] = False
+        return ret
+    else:
+        if not isinstance(current_time, six.integer_types):
+            ret['comment'] = 'Job current time must be an integer.'
+            ret['result'] = False
+            return ret
 
     if not new_time:
         ret['comment'] = 'Job new_time is required.'
         ret['result'] = False
+        return ret
+    else:
+        if not isinstance(new_time, six.integer_types):
+            ret['comment'] = 'Job new time must be an integer.'
+            ret['result'] = False
+            return ret
 
     if 'test' in __opts__ and __opts__['test']:
         ret['comment'] = 'Job: {0} would be postponed in schedule.'.format(name)

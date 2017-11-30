@@ -1036,6 +1036,9 @@ class Schedule(object):
     def eval(self, now=None):
         '''
         Evaluate and execute the schedule
+
+        :param int now: Override current time with a Unix timestamp``
+
         '''
 
         log.trace('==== evaluating schedule =====')
@@ -1292,19 +1295,16 @@ class Schedule(object):
                 else:
                     if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
                             data['when'] in self.opts['pillar']['whens']):
-                        log.debug('=== whens found in pillar ===')
                         if not isinstance(self.opts['pillar']['whens'], dict):
                             log.error('Pillar item "whens" must be dict.'
                                       'Ignoring')
                             continue
                         _when = self.opts['pillar']['whens'][data['when']]
-                        log.debug('=== _when {} ==='.format(_when))
                         try:
                             when__ = dateutil_parser.parse(_when)
                         except ValueError:
                             log.error('Invalid date string. Ignoring')
                             continue
-                        log.debug('=== __when {} ==='.format(__when))
                     elif ('whens' in self.opts['grains'] and
                           data['when'] in self.opts['grains']['whens']):
                         if not isinstance(self.opts['grains']['whens'], dict):
