@@ -1892,20 +1892,27 @@ class State(object):
                     (u'onlyif' in low and u'{0[state]}.mod_run_check'.format(low) not in self.states):
                 ret.update(self._run_check(low))
 
-            if u'saltenv' in low:
-                inject_globals[u'__env__'] = six.text_type(low[u'saltenv'])
-            elif isinstance(cdata[u'kwargs'].get(u'env', None), six.string_types):
-                # User is using a deprecated env setting which was parsed by
-                # format_call.
-                # We check for a string type since module functions which
-                # allow setting the OS environ also make use of the "env"
-                # keyword argument, which is not a string
-                inject_globals[u'__env__'] = six.text_type(cdata[u'kwargs'][u'env'])
-            elif u'__env__' in low:
-                # The user is passing an alternative environment using __env__
-                # which is also not the appropriate choice, still, handle it
-                inject_globals[u'__env__'] = six.text_type(low[u'__env__'])
-            else:
+            if not self.opts.get(u'lock_saltenv', False):
+                # NOTE: Overriding the saltenv when lock_saltenv is blocked in
+                # salt/modules/state.py, before we ever get here, but this
+                # additional check keeps use of the State class outside of the
+                # salt/modules/state.py from getting around this setting.
+                if u'saltenv' in low:
+                    inject_globals[u'__env__'] = six.text_type(low[u'saltenv'])
+                elif isinstance(cdata[u'kwargs'].get(u'env', None), six.string_types):
+                    # User is using a deprecated env setting which was parsed by
+                    # format_call.
+                    # We check for a string type since module functions which
+                    # allow setting the OS environ also make use of the "env"
+                    # keyword argument, which is not a string
+                    inject_globals[u'__env__'] = six.text_type(cdata[u'kwargs'][u'env'])
+                elif u'__env__' in low:
+                    # The user is passing an alternative environment using
+                    # __env__ which is also not the appropriate choice, still,
+                    # handle it
+                    inject_globals[u'__env__'] = six.text_type(low[u'__env__'])
+
+            if u'__env__' not in inject_globals:
                 # Let's use the default environment
                 inject_globals[u'__env__'] = u'base'
 

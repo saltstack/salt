@@ -270,9 +270,13 @@ def _get_opts(**kwargs):
 
     if 'saltenv' in kwargs:
         saltenv = kwargs['saltenv']
-        if saltenv is not None and not isinstance(saltenv, six.string_types):
-            opts['saltenv'] = str(kwargs['saltenv'])
-        else:
+        if saltenv is not None:
+            if not isinstance(saltenv, six.string_types):
+                saltenv = six.text_type(saltenv)
+            if opts['lock_saltenv'] and saltenv != opts['saltenv']:
+                raise CommandExecutionError(
+                    'saltenv is locked and cannot be changed'
+                )
             opts['saltenv'] = kwargs['saltenv']
 
     if 'pillarenv' in kwargs or opts.get('pillarenv_from_saltenv', False):
