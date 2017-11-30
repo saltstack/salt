@@ -883,6 +883,19 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
                u'clear': self._handle_clear}[key](load)
         raise tornado.gen.Return(ret)
 
+    def _post_stats(self, start, cmd):
+        '''
+        Calculate the master stats and fire events with stat info
+        '''
+        end = time.time()
+        duration = end - start
+        self.stats[cmd][u'mean'] = (self.stats[cmd][u'mean'] * (self.stats[cmd][u'runs'] - 1) + duration) / self.stats[cmd][u'runs']
+        if end - self.stat_clock < self.opts[u'master_stats_event_iter']:
+            # Fire the event with the stats and wipe the tracker
+            self.aes_funcs.event.fire_event({u'time': end - self.stat_clock, u'worker': self.name, u'stats': self.stats}, tagify(u'stats', u'refresh', u'minion'))
+            self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
+            self.stat_clock = end
+
     def _handle_clear(self, load):
         '''
         Process a cleartext command
@@ -892,9 +905,16 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
                  the command specified in the load's 'cmd' key.
         '''
         log.trace(u'Clear payload received with command %s', load[u'cmd'])
-        if load[u'cmd'].startswith(u'__'):
+        cmd = load[u'cmd']
+        if cmd.startswith(u'__'):
             return False
-        return getattr(self.clear_funcs, load[u'cmd'])(load), {u'fun': u'send_clear'}
+        if self.opts[u'master_stats']:
+            start = time.time()
+            self.stats[cmd][u'runs'] += 1
+        ret = getattr(self.clear_funcs, cmd)(load), {u'fun': u'send_clear'}
+        if self.opts[u'master_stats']:
+            self._post_stats(start, cmd)
+        return ret
 
     def _handle_aes(self, data):
         '''
@@ -916,14 +936,7 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.stats[cmd][u'runs'] += 1
         ret = self.aes_funcs.run_func(data[u'cmd'], data)
         if self.opts[u'master_stats']:
-            end = time.time()
-            duration = end - start
-            self.stats[cmd][u'mean'] = (self.stats[cmd][u'mean'] * (self.stats[cmd][u'runs'] - 1) + duration) / self.stats[cmd][u'runs']
-            if end - self.stat_clock < self.opts[u'master_stats_event_time']:
-                # Fire the event with the stats and wipe the tracker
-                self.aes_funcs.event.fire_event({u'time': end - self.stat_clock, u'worker': self.name, u'stats': self.stats}, tagify(u'stats', u'refresh', u'minion'))
-                self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
-                self.stat_clock = end
+            self._post_stats(start, cmd)
         return ret
 
     def run(self):
