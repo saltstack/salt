@@ -1476,6 +1476,9 @@ def os_data():
                         grains['init'] = 'supervisord'
                     elif init_cmdline == ['runit']:
                         grains['init'] = 'runit'
+                    elif '/sbin/my_init' in init_cmdline:
+                        #Phusion Base docker container use runit for srv mgmt, but my_init as pid1
+                        grains['init'] = 'runit'
                     else:
                         log.info(
                             'Could not determine init system from command line: ({0})'
