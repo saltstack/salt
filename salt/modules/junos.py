@@ -1388,15 +1388,16 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
                                      Loader=yamlordereddictloader.Loader)
             globals().update(FactoryLoader().load(ret['table']))
         except IOError as err:
-            ret['message'] = 'Unable to find file: {0}'.format(file_name)
+            ret['message'] = 'Uncaught exception during YAML Load - please ' \
+                             'report: {0}'.format(str(err))
             ret['out'] = False
             return ret
         try:
             data = globals()[table](conn)
             data.get(**get_kvargs)
-        except KeyError:
-            ret['message'] = 'Unable to find Table %s in provided yaml file %s'\
-                             % (table, file_name)
+        except KeyError as err:
+            ret['message'] = 'Uncaught exception during get API call - please ' \
+                             'report: {0}'.format(str(err))
             ret['out'] = False
             return ret
         if data.__class__.__bases__[0] == OpTable:
