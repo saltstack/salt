@@ -196,25 +196,24 @@ class FileModuleTest(ModuleCase):
         self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
 
     def test_source_list_for_list_returns_existing_local_file_slash(self):
-        ret = filemod.source_list([self.myfile + '-foo',
-                                   self.myfile],
-                                  'filehash', 'base')
+        ret = self.run_function('file.source_list', [self.myfile + '-foo',
+                                                     self.myfile,
+                                                     'filehash', 'base'])
         self.assertEqual(list(ret), [self.myfile, 'filehash'])
 
     def test_source_list_for_list_returns_existing_local_file_proto(self):
-        ret = filemod.source_list(['file://' + self.myfile + '-foo',
-                                   'file://' + self.myfile],
-                                  'filehash', 'base')
+        ret = self.run_function('file.source_list', ['file://' + self.myfile + '-foo',
+                                                     'file://' + self.myfile,
+                                                     'filehash', 'base'])
         self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
 
     def test_source_list_for_list_returns_local_file_slash_from_dict(self):
-        ret = filemod.source_list(
-            [{self.myfile: ''}], 'filehash', 'base')
+        ret = self.run_function('file.source_list', [{self.myfile: ''}, 'filehash', 'base'])
         self.assertEqual(list(ret), [self.myfile, 'filehash'])
 
     def test_source_list_for_list_returns_local_file_proto_from_dict(self):
-        ret = filemod.source_list(
-            [{'file://' + self.myfile: ''}], 'filehash', 'base')
+        ret = self.run_function('file.source_list', [{'file://' + self.myfile: ''},
+                                                     'filehash', 'base'])
         self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
 
     def test_file_line_changes_format(self):
