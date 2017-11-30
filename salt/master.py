@@ -1965,6 +1965,7 @@ class ClearFuncs(object):
             ssh_minions = ssh._prep_ssh(**clear_load).targets.keys()
             if ssh_minions:
                 minions.extend(ssh_minions)
+
                 def wrap_ssh(**kwargs):
                     salt.utils.process.daemonize(False)
                     ssh.cmd(**kwargs)
