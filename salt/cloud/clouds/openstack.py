@@ -3,6 +3,7 @@
 '''
 
 # Import Python Libs
+import json
 import logging
 import os
 import pprint
@@ -548,6 +549,11 @@ def call(conn=None, call=None, kwargs=None):  # pylint: disable=unused-argument
         conn = get_conn()
 
     func = kwargs.pop('func')
+    for key, value in kwargs.items():
+        try:
+            kwargs[key] = json.loads(value)
+        except ValueError:
+            continue
     try:
         return getattr(conn, func)(**kwargs)
     except shade.exc.OpenStackCloudException as exc:
