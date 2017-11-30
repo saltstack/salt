@@ -2134,22 +2134,35 @@ class State(object):
         Check to see if this low chunk has been paused
         '''
         pause_path = os.path.join(self.opts[u'cachedir'], 'state_pause', self.jid)
+        start = time.time()
         if os.path.isfile(pause_path):
             try:
                 while True:
-                    with salt.utils.files.fopen(pause_path, 'b') as fp_:
-                        pdat = msgpack.loads(fp_.read())
+                    with salt.utils.files.fopen(pause_path, 'rb') as fp_:
+                        try:
+                            pdat = msgpack.loads(fp_.read())
+                        except msgpack.UnpackValueError:
+                            # Reading race condition
+                            if tries > 10:
+                                # Break out if there are a ton of read errors
+                                return
+                            tries += 1
+                            time.sleep(1)
+                            continue
                         id_ = low[u'__id__']
                         if id_ in pdat:
                             if u'duration' in pdat[id_]:
-                                start = pdat[id_]['start']
                                 now = time.time()
+                                log.error('Duration: %s', pdat[id_][u'duration'])
                                 if now - start > pdat[id_][u'duration']:
+                                    log.error('now: %s start: %s', now, start)
                                     return
                         else:
                             return
+                        time.sleep(1)
             except Exception as exc:
                 log.error('Failed to read in pause data for file located at: %s', pause_path)
+                raise
                 return
 
     def reconcile_procs(self, running):
@@ -2707,6 +2720,13 @@ class State(object):
             except OSError:
                 log.debug(u'File %s does not exist, no need to cleanup', accum_data_path)
         _cleanup_accumulator_data()
+        pause_path = os.path.join(self.opts[u'cachedir'], 'state_pause', self.jid)
+        if os.path.isfile(pause_path):
+            try:
+                os.remove(pause_path)
+            except OSError:
+                # File is not present, all is well
+                pass
 
         return ret
 

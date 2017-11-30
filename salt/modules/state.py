@@ -43,6 +43,7 @@ from salt.runners.state import orchestrate as _orchestrate
 
 # Import 3rd-party libs
 from salt.ext import six
+import msgpack
 
 __proxyenabled__ = ['*']
 
@@ -171,11 +172,12 @@ def set_pause(jid, state_id, duration=None):
     state id. This needs to pass in the jid of the running state and can
     optionally pass in a duration in seconds.
     '''
+    jid = str(jid)
     pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
     pause_path = os.path.join(pause_dir, jid)
     if not os.path.exists(pause_dir):
         try:
-            os.makedirs(pause_path)
+            os.makedirs(pause_dir)
         except OSError:
             # File created in the gap
             pass
@@ -195,11 +197,12 @@ def rm_pause(jid, state_id):
     '''
     Remove a pause from a jid, allowing it to continue
     '''
+    jid = str(jid)
     pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
     pause_path = os.path.join(pause_dir, jid)
     if not os.path.exists(pause_dir):
         try:
-            os.makedirs(pause_path)
+            os.makedirs(pause_dir)
         except OSError:
             # File created in the gap
             pass
