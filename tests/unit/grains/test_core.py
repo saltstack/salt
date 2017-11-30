@@ -26,8 +26,6 @@ import salt.grains.core as core
 import salt.ext.six as six
 
 # Globals
-core.__salt__ = {}
-core.__opts__ = {}
 IPv4Address = salt.ext.ipaddress.IPv4Address
 IPv6Address = salt.ext.ipaddress.IPv6Address
 IP4_LOCAL = '127.0.0.1'
@@ -598,4 +596,3 @@ PATCHLEVEL = 3
                                   MagicMock(return_value=resolv_mock)):
                     get_dns = core.dns()
                     self.assertEqual(get_dns, ret)
-
