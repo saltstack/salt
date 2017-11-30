@@ -601,7 +601,6 @@ def _run(cmd,
             log.error('UnicodeDecodeError while decoding error of cmd {0}'.format(cmd))
             err = proc.stderr.decode(__salt_system_encoding__, 'replace')
 
-
         if rstrip:
             if out is not None:
                 out = out.rstrip()
