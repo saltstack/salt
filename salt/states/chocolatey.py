@@ -286,43 +286,43 @@ def upgraded(name,
         version (str):
             Install a specific version of the package. Defaults to latest
             version. If the version is greater than the one installed then the
-            specified version will be installed. Default is None.
+            specified version will be installed. Default is ``None``.
 
         source (str):
             Chocolatey repository (directory, share or remote URL, feed).
-            Defaults to the official Chocolatey feed. Default is None.
+            Defaults to the official Chocolatey feed. Default is ``None``.
 
         force (bool):
-            Reinstall the current version of an existing package. Do not use
-            with ``allow_multiple``. Default is False.
+            ``True`` will reinstall an existing package with the same version.
+            Default is ``False``.
 
         pre_versions (bool):
-            Include pre-release packages. Default is False.
+            ``True`` will nclude pre-release packages. Default is ``False``.
 
         install_args (str):
             Install arguments you want to pass to the installation process, i.e
-            product key or feature list. Default is None.
+            product key or feature list. Default is ``None``.
 
         override_args (bool):
-            Set to True if you want to override the original install arguments
-            (for the native installer) in the package and use your own. When
-            this is set to False install_args will be appended to the end of the
-            default arguments. Default is False.
+            ``True`` will override the original install arguments (for the
+            native installer) in the package and use those specified in
+            ``install_args``. ``False`` will append install_args to the end of
+            the default arguments. Default is ``False``.
 
         force_x86 (bool):
-            Force x86 (32bit) installation on 64 bit systems. Default is False.
+            ``True`` forces 32bit installation on 64 bit systems. Default is
+            ``False``.
 
         package_args (str):
-            Arguments you want to pass to the package. Default is None.
+            Arguments you want to pass to the package. Default is ``None``.
 
     .. code-block:: yaml
 
-        Installsomepackage:
-          chocolatey.installed:
+        upgrade_some_package:
+          chocolatey.upgraded:
             - name: packagename
             - version: '12.04'
             - source: 'mychocolatey/source'
-            - force: True
     '''
     ret = {'name': name,
            'result': True,
@@ -339,8 +339,10 @@ def upgraded(name,
         if version:
             ret['pchanges'] = {name: 'Version {0} will be installed'
                                      ''.format(version)}
+            ret['comment'] = 'Install version {0}'.format(version)
         else:
             ret['pchanges'] = {name: 'Latest version will be installed'}
+            ret['comment'] = 'Install latest version'
 
     # Package installed
     else:
@@ -360,7 +362,6 @@ def upgraded(name,
                 version = version_info[full_name]['available'][0]
 
         if version:
-
             # If installed version and new version are the same
             if salt.utils.compare_versions(
                     ver1=installed_version,
@@ -373,7 +374,7 @@ def upgraded(name,
                                      ''.format(full_name, version)
                 else:
                     ret['comment'] = '{0} {1} is already installed' \
-                                     ''.format(name, version)
+                                     ''.format(name, installed_version)
             else:
                 # If installed version is older than new version
                 if salt.utils.compare_versions(
@@ -385,21 +386,20 @@ def upgraded(name,
                                      ''.format(full_name, installed_version, version)
                 # If installed version is newer than new version
                 else:
-                    ret['comment'] = '{0} {1} is already installed (newer)' \
-                                     ''.format(name, version)
-
+                    ret['comment'] = '{0} {1} (newer) is already installed' \
+                                     ''.format(name, installed_version)
         # Catch all for a condition where version is not passed and there is no
         # available version
         else:
             ret['comment'] = 'No version found to install'
 
-    # Return if there are no changes to be made
-    if not ret['pchanges']:
-        ret['result'] = True
-        return ret
-
     # Return if `test=True`
     if __opts__['test']:
+        ret['result'] = None
+        return ret
+
+    # Return if there are no changes to be made
+    if not ret['pchanges']:
         return ret
 
     # Install the package
