@@ -48,7 +48,7 @@ def _load_state():
         pck = open(FILENAME, 'r')  # pylint: disable=W8470
         DETAILS = pickle.load(pck)
         pck.close()
-    except IOError:
+    except EOFError:
         DETAILS = {}
         DETAILS['initialized'] = False
         _save_state(DETAILS)
