@@ -7,8 +7,13 @@ import shutil
 
 # Import Salt Testing Libs
 from tests.support.case import SSHCase
+from tests.support.paths import TMP
+
+# Import Salt Libs
+from salt.ext import six
 
 SSH_SLS = 'ssh_state_tests'
+SSH_SLS_FILE = '/tmp/test'
 
 
 class SSHStateTest(SSHCase):
@@ -37,6 +42,87 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function('file.file_exists', ['/tmp/test'])
         self.assertTrue(check_file)
 
+    def test_state_show_sls(self):
+        '''
+        test state.show_sls with salt-ssh
+        '''
+        ret = self.run_function('state.show_sls', [SSH_SLS])
+        self._check_dict_ret(ret=ret, val='__sls__', exp_ret=SSH_SLS)
+
+        check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
+        self.assertFalse(check_file)
+
+    def test_state_show_top(self):
+        '''
+        test state.show_top with salt-ssh
+        '''
+        ret = self.run_function('state.show_top')
+        self.assertEqual(ret, {u'base': [u'core', u'master_tops_test']})
+
+    def test_state_single(self):
+        '''
+        state.single with salt-ssh
+        '''
+        ret_out = {'name': 'itworked',
+                   'result': True,
+                   'comment': 'Success!'}
+
+        single = self.run_function('state.single',
+                                   ['test.succeed_with_changes name=itworked'])
+
+        for key, value in six.iteritems(single):
+            self.assertEqual(value['name'], ret_out['name'])
+            self.assertEqual(value['result'], ret_out['result'])
+            self.assertEqual(value['comment'], ret_out['comment'])
+
+    def test_show_highstate(self):
+        '''
+        state.show_highstate with salt-ssh
+        '''
+        high = self.run_function('state.show_highstate')
+        destpath = os.path.join(TMP, 'testfile')
+        self.assertTrue(isinstance(high, dict))
+        self.assertTrue(destpath in high)
+        self.assertEqual(high[destpath]['__env__'], 'base')
+
+    def test_state_high(self):
+        '''
+        state.high with salt-ssh
+        '''
+        ret_out = {'name': 'itworked',
+                   'result': True,
+                   'comment': 'Success!'}
+
+        high = self.run_function('state.high', ['"{"itworked": {"test": ["succeed_with_changes"]}}"'])
+
+        for key, value in six.iteritems(high):
+            self.assertEqual(value['name'], ret_out['name'])
+            self.assertEqual(value['result'], ret_out['result'])
+            self.assertEqual(value['comment'], ret_out['comment'])
+
+    def test_show_lowstate(self):
+        '''
+        state.show_lowstate with salt-ssh
+        '''
+        low = self.run_function('state.show_lowstate')
+        self.assertTrue(isinstance(low, list))
+        self.assertTrue(isinstance(low[0], dict))
+
+    def test_state_low(self):
+        '''
+        state.low with salt-ssh
+        '''
+        ret_out = {'name': 'itworked',
+                   'result': True,
+                   'comment': 'Success!'}
+
+        low = self.run_function('state.low', ['"{"state": "test", "fun": "succeed_with_changes", "name": "itworked"}"'])
+
+        for key, value in six.iteritems(low):
+            self.assertEqual(value['name'], ret_out['name'])
+            self.assertEqual(value['result'], ret_out['result'])
+            self.assertEqual(value['comment'], ret_out['comment'])
+
     def test_state_request_check_clear(self):
         '''
         test state.request system with salt-ssh
@@ -60,7 +146,7 @@ class SSHStateTest(SSHCase):
 
         run = self.run_function('state.run_request', wipe=False)
 
-        check_file = self.run_function('file.file_exists', ['/tmp/test'], wipe=False)
+        check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
     def tearDown(self):
@@ -70,3 +156,6 @@ class SSHStateTest(SSHCase):
         salt_dir = self.run_function('config.get', ['thin_dir'], wipe=False)
         if os.path.exists(salt_dir):
             shutil.rmtree(salt_dir)
+
+        if os.path.exists(SSH_SLS_FILE):
+            os.remove(SSH_SLS_FILE)
