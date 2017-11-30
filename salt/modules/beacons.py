@@ -27,12 +27,22 @@ __func_alias__ = {
 }
 
 
-def list_(return_yaml=True):
+def list_(return_yaml=True,
+          include_pillar=True,
+          include_opts=True):
     '''
     List the beacons currently configured on the minion
 
-    :param return_yaml:     Whether to return YAML formatted output, default True
-    :return:                List of currently configured Beacons.
+    :param return_yaml:    Whether to return YAML formatted output,
+                           default True
+
+    :param include_pillar: Whether to include beacons that are
+                           configured in pillar, default is True.
+
+    :param include_opts:   Whether to include beacons that are
+                           configured in opts, default is True.
+
+    :return:               List of currently configured Beacons.
 
     CLI Example:
 
@@ -45,7 +55,10 @@ def list_(return_yaml=True):
 
     try:
         eventer = salt.utils.event.get_event('minion', opts=__opts__)
-        res = __salt__['event.fire']({'func': 'list'}, 'manage_beacons')
+        res = __salt__['event.fire']({'func': 'list',
+                                      'include_pillar': include_pillar,
+                                      'include_opts': include_opts},
+                                     'manage_beacons')
         if res:
             event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_list_complete', wait=30)
             log.debug('event_ret {0}'.format(event_ret))
@@ -91,6 +104,10 @@ def add(name, beacon_data, **kwargs):
         ret['comment'] = 'Beacon {0} is already configured.'.format(name)
         return ret
 
+    if name not in list_available(return_yaml=False):
+        ret['comment'] = 'Beacon "{0}" is not available.'.format(name)
+        return ret
+
     if 'test' in kwargs and kwargs['test']:
         ret['result'] = True
         ret['comment'] = 'Beacon: {0} would be added.'.format(name)
@@ -130,7 +147,10 @@ def add(name, beacon_data, **kwargs):
                     if name in beacons and beacons[name] == beacon_data:
                         ret['result'] = True
                         ret['comment'] = 'Added beacon: {0}.'.format(name)
-                        return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon add failed.'
@@ -215,7 +235,10 @@ def modify(name, beacon_data, **kwargs):
                     if name in beacons and beacons[name] == beacon_data:
                         ret['result'] = True
                         ret['comment'] = 'Modified beacon: {0}.'.format(name)
-                        return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon add failed.'
@@ -257,6 +280,9 @@ def delete(name, **kwargs):
                         ret['result'] = True
                         ret['comment'] = 'Deleted beacon: {0}.'.format(name)
                         return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon add failed.'
@@ -279,7 +305,7 @@ def save():
     ret = {'comment': [],
            'result': True}
 
-    beacons = list_(return_yaml=False)
+    beacons = list_(return_yaml=False, include_pillar=False)
 
     # move this file into an configurable opt
     sfn = '{0}/{1}/beacons.conf'.format(__opts__['config_dir'],
@@ -332,7 +358,7 @@ def enable(**kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enable beacons on minion.'
-                    return ret
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacons enable job failed.'
@@ -372,7 +398,7 @@ def disable(**kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to disable beacons on minion.'
-                    return ret
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacons enable job failed.'
@@ -435,7 +461,10 @@ def enable_beacon(name, **kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enable beacon {0} on minion.'.format(name)
-                    return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon enable job failed.'
@@ -488,7 +517,10 @@ def disable_beacon(name, **kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to disable beacon on minion.'
-                    return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon disable job failed.'
