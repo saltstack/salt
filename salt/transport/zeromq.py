@@ -207,10 +207,12 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
     @property
     def master_uri(self):
-        return _get_master_uri(self.opts['master_ip'],
-                               self.opts['master_port'],
-                               source_ip=self.opts.get('source_ip'),
-                               source_port=self.opts.get('source_ret_port'))
+        if 'master_ip' in self.opts:
+            return _get_master_uri(self.opts['master_ip'],
+                                   self.opts['master_port'],
+                                   source_ip=self.opts.get('source_ip'),
+                                   source_port=self.opts.get('source_ret_port'))
+        return self.opts['master_uri']
 
     def _package_load(self, load):
         return {
