@@ -1598,7 +1598,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' state.show_sls core,edit.vim dev
+        salt '*' state.show_sls core,edit.vim saltenv=dev
     '''
     if 'env' in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -1814,6 +1814,7 @@ def pkg(pkg_path,
         salt '*' state.pkg /tmp/salt_state.tgz 760a9353810e36f6d81416366fc426dc md5
     '''
     # TODO - Add ability to download from salt master or other source
+    popts = _get_opts(**kwargs)
     if not os.path.isfile(pkg_path):
         return {}
     if not salt.utils.hashutils.get_hash(pkg_path, hash_type) == pkg_sum:
@@ -1848,7 +1849,6 @@ def pkg(pkg_path,
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
             roster_grains = json.load(fp_, object_hook=salt.utils.data.decode_dict)
 
-    popts = _get_opts(**kwargs)
     if os.path.isfile(roster_grains_json):
         popts['grains'] = roster_grains
     popts['fileclient'] = 'local'
