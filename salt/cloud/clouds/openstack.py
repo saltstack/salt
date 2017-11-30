@@ -23,6 +23,7 @@ try:
     import shade.openstackcloud
     import shade.exc
     import os_client_config
+    import munch
     HAS_SHADE = True
 except ImportError:
     HAS_SHADE = False
@@ -517,3 +518,38 @@ def destroy(name, conn=None, call=None):
 
     log.error('Failed to Destroy VM: {0}'.format(name))
     return False
+
+
+def call(conn=None, call=None, kwargs=None):  # pylint: disable=unused-argument
+    '''
+    Call function from shade.
+
+    fun
+
+        function to call from shade.openstackcloud library
+
+    .. code-block::
+
+    	salt-cloud -f call myopenstack fun=list_images
+    	salt-cloud -f call myopenstack fun=create_network name=mysubnet
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The call function must be called with '
+            '-f or --function.'
+        )
+    
+    if 'func' not in kwargs:
+        raise SaltCloudSystemExit(
+            'No `func` argument passed'
+        )
+
+    if conn is None:
+        conn = get_conn()
+
+    func = kwargs.pop('func')
+    try:
+        return getattr(conn, func)(**kwargs)
+    except shade.exc.OpenStackCloudException as exc:
+        log.error('Error running %s: %s', func, exc)
+        raise SaltCloudSystemExit(str(exc))
