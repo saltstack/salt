@@ -171,6 +171,23 @@ def set_pause(jid, state_id, duration=None):
     Set up a state id pause, this instructs a running state to pause at a given
     state id. This needs to pass in the jid of the running state and can
     optionally pass in a duration in seconds.
+
+    The given state id is the id got a given state execution, so given a state
+    that looks like this:
+
+    .. code-block:: yaml
+
+        vim:
+          pkg.installed: []
+
+    The state_id to pass to `set_pause` is `vim`
+
+    CLI Examples:
+
+    .. code-block:: bash
+        
+        salt '*' state.set_pause 20171130110407769519 vim
+        salt '*' state.set_pause 20171130110407769519 vim 20
     '''
     jid = str(jid)
     pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
@@ -196,6 +213,22 @@ def set_pause(jid, state_id, duration=None):
 def rm_pause(jid, state_id):
     '''
     Remove a pause from a jid, allowing it to continue
+
+    The given state_id is the id got a given state execution, so given a state
+    that looks like this:
+
+    .. code-block:: yaml
+
+        vim:
+          pkg.installed: []
+
+    The state_id to pass to `rm_pause` is `vim`
+
+    CLI Examples:
+
+    .. code-block:: bash
+        
+        salt '*' state.rm_pause 20171130110407769519 vim
     '''
     jid = str(jid)
     pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
