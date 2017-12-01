@@ -211,4 +211,3 @@ class FileModuleTest(ModuleCase):
         with salt.utils.fopen(self.myfile, 'r') as fp:
             content = fp.read()
         self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
-

@@ -165,4 +165,3 @@ class OutputReturnTest(ShellCase):
         expected = ['minion:', '    True']
         ret = self.run_salt('"minion" test.ping --static')
         self.assertEqual(ret, expected)
-
