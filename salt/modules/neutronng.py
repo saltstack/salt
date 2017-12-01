@@ -60,6 +60,7 @@ def compare_changes(obj, **kwargs):
                 changes[key] = kwargs[key]
     return changes
 
+
 def _clean_kwargs(keep_name=False, **kwargs):
     '''
     Sanatize the the arguments for use with shade
@@ -142,6 +143,7 @@ def network_create(auth=None, **kwargs):
     kwargs = _clean_kwargs(keep_name=True, **kwargs)
     return cloud.create_network(**kwargs)
 
+
 def network_delete(auth=None, **kwargs):
     '''
     Delete a network
@@ -161,6 +163,7 @@ def network_delete(auth=None, **kwargs):
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.delete_network(**kwargs)
+
 
 def list_networks(auth=None, **kwargs):
     '''
@@ -184,6 +187,7 @@ def list_networks(auth=None, **kwargs):
     kwargs = _clean_kwargs(**kwargs)
     return cloud.list_networks(**kwargs)
 
+
 def network_get(auth=None, **kwargs):
     '''
     Get a single network
@@ -203,6 +207,7 @@ def network_get(auth=None, **kwargs):
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.get_network(**kwargs)
+
 
 def subnet_create(auth=None, **kwargs):
     '''
@@ -242,6 +247,7 @@ def subnet_create(auth=None, **kwargs):
     kwargs = _clean_kwargs(**kwargs)
     return cloud.create_subnet(**kwargs)
 
+
 def subnet_update(auth=None, **kwargs):
     '''
     Update a subnet
@@ -265,6 +271,7 @@ def subnet_update(auth=None, **kwargs):
     kwargs = _clean_kwargs(**kwargs)
     return cloud.update_subnet(**kwargs)
 
+
 def subnet_delete(auth=None, **kwargs):
     '''
     Delete a subnet
@@ -284,6 +291,7 @@ def subnet_delete(auth=None, **kwargs):
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.delete_subnet(**kwargs)
+
 
 def list_subnets(auth=None, **kwargs):
     '''
@@ -307,6 +315,7 @@ def list_subnets(auth=None, **kwargs):
     kwargs = _clean_kwargs(**kwargs)
     return cloud.list_subnets(**kwargs)
 
+
 def subnet_get(auth=None, **kwargs):
     '''
     Get a single subnet
@@ -326,6 +335,7 @@ def subnet_get(auth=None, **kwargs):
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.get_subnet(**kwargs)
+
 
 def security_group_create(auth=None, **kwargs):
     '''
@@ -348,6 +358,7 @@ def security_group_create(auth=None, **kwargs):
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(keep_name=True, **kwargs)
     return cloud.create_security_group(**kwargs)
+
 
 def security_group_update(secgroup=None, auth=None, **kwargs):
     '''
@@ -372,6 +383,7 @@ def security_group_update(secgroup=None, auth=None, **kwargs):
     kwargs = _clean_kwargs(keep_name=True, **kwargs)
     return cloud.update_security_group(secgroup, **kwargs)
 
+
 def security_group_delete(auth=None, **kwargs):
     '''
     Delete a security group
@@ -389,6 +401,7 @@ def security_group_delete(auth=None, **kwargs):
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.delete_security_group(**kwargs)
+
 
 def security_group_get(auth=None, **kwargs):
     '''
@@ -414,6 +427,7 @@ def security_group_get(auth=None, **kwargs):
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.get_security_group(**kwargs)
+
 
 def security_group_rule_create(auth=None, **kwargs):
     '''
@@ -449,6 +463,7 @@ def security_group_rule_create(auth=None, **kwargs):
     kwargs = _clean_kwargs(**kwargs)
     return cloud.create_security_group_rule(**kwargs)
 
+
 def security_group_rule_delete(auth=None, **kwargs):
     '''
     Delete a security group
@@ -467,4 +482,3 @@ def security_group_rule_delete(auth=None, **kwargs):
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.delete_security_group_rule(**kwargs)
-

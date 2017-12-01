@@ -40,6 +40,7 @@ def __virtual__():
     return (False, 'The neutronng execution module failed to load:\
                     shade python module is not available')
 
+
 def _rule_compare(rule1, rule2):
     '''
     Compare the common keys between security group rules against eachother
@@ -50,6 +51,7 @@ def _rule_compare(rule1, rule2):
         if rule1[key] != rule2[key]:
             return False
     return True
+
 
 def present(name, auth=None, **kwargs):
     '''
@@ -89,8 +91,10 @@ def present(name, auth=None, **kwargs):
         ret['comment'] = "Project does not exist"
         return ret
 
-    secgroup = __salt__['neutronng.security_group_get'](name=name,\
-        filters={'tenant_id': project.id})
+    secgroup = __salt__['neutronng.security_group_get'](
+        name=name,
+        filters={'tenant_id': project.id}
+    )
 
     if secgroup is None:
         ret['result'] = False
@@ -112,7 +116,7 @@ def present(name, auth=None, **kwargs):
             ret['comment'] = 'Security Group rule will be created.'
             return ret
 
-        #the variable differences are a little clumsy right now
+        # The variable differences are a little clumsy right now
         kwargs['secgroup_name_or_id'] = secgroup
 
         new_rule = __salt__['neutronng.security_group_rule_create'](**kwargs)
@@ -144,8 +148,10 @@ def absent(name, auth=None, **kwargs):
 
     __salt__['neutronng.setup_clouds'](auth)
 
-    secgroup = __salt__['neutronng.security_group_get'](name=name,\
-        filters={'tenant_id': kwargs['project_id']})
+    secgroup = __salt__['neutronng.security_group_get'](
+        name=name,
+        filters={'tenant_id': kwargs['project_id']}
+    )
 
     # no need to delete a rule if the security group doesn't exist
     if secgroup is None:
