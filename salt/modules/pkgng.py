@@ -1872,6 +1872,194 @@ def updating(name,
     )
 
 
+def locked(name, **kwargs):
+    '''
+    Query the package database to determine if the named package
+    is locked against reinstallation, modification or deletion.
+
+    Returns True if the named package is locked, False otherwise.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.locked <package name>
+
+    jail
+        Test if a package is locked within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.locked <package name> jail=<jail name or id>
+
+    chroot
+        Test if a package is locked within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.locked <package name> chroot=/path/to/chroot
+
+    root
+        Test if a package is locked within the specified root (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.locked <package name> root=/path/to/chroot
+
+    '''
+    if name in _lockcmd('lock', name=None, **kwargs):
+        return True
+
+    return False
+
+
+def lock(name, **kwargs):
+    '''
+    Lock the named package against reinstallation, modification or deletion.
+
+    Returns True if the named package was successfully locked.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.lock <package name>
+
+    jail
+        Lock packages within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.lock <package name> jail=<jail name or id>
+
+    chroot
+        Lock packages within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.lock <package name> chroot=/path/to/chroot
+
+    root
+        Lock packages within the specified root (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.lock <package name> root=/path/to/chroot
+
+    '''
+    if name in _lockcmd('lock', name, **kwargs):
+        return True
+
+    return False
+
+
+def unlock(name, **kwargs):
+    '''
+    Unlock the named package against reinstallation, modification or deletion.
+
+    Returns True if the named package was successfully unlocked.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.unlock <package name>
+
+    jail
+        Unlock packages within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unlock <package name> jail=<jail name or id>
+
+    chroot
+        Unlock packages within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unlock <package name> chroot=/path/to/chroot
+
+    root
+        Unlock packages within the specified root (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unlock <package name> root=/path/to/chroot
+
+    '''
+    if name in _lockcmd('unlock', name, **kwargs):
+        return False
+
+    return True
+
+
+def _lockcmd(subcmd, pkgname=None, **kwargs):
+    '''
+    Helper function for lock and unlock commands, because their syntax is identical.
+
+    Run the lock/unlock command, and return a list of locked packages
+    '''
+
+    jail = kwargs.pop('jail', None)
+    chroot = kwargs.pop('chroot', None)
+    root = kwargs.pop('root', None)
+
+    locked_pkgs = []
+
+    cmd = _pkg(jail, chroot, root)
+    cmd.append(subcmd)
+    cmd.append('-y')
+    cmd.append('--quiet')
+    cmd.append('--show-locked')
+
+    if pkgname:
+        cmd.append(pkgname)
+
+    out = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
+
+    if out['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered {0}ing packages'.format(subcmd),
+            info={'result': out}
+        )
+
+    for line in salt.utils.itertools.split(out['stdout'], '\n'):
+        if not line:
+            continue
+        try:
+            pkgname = line.rsplit('-', 1)[0]
+        except ValueError:
+            continue
+        locked_pkgs.append(pkgname)
+
+    log.debug("Locked packages: {0}".format(locked_pkgs))
+    return locked_pkgs
+
+
 def version_cmp(pkg1, pkg2, ignore_epoch=False):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
