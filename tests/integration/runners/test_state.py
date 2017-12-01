@@ -106,6 +106,35 @@ class StateRunnerTest(ShellCase):
             for item in out:
                 self.assertIn(item, ret)
 
+    def test_orchestrate_retcode(self):
+        '''
+        Test orchestration with nonzero retcode set in __context__
+        '''
+        self.run_run('saltutil.sync_runners')
+        self.run_run('saltutil.sync_wheel')
+        ret = '\n'.join(self.run_run('state.orchestrate orch.retcode'))
+
+        for result in ('          ID: test_runner_success\n'
+                       '    Function: salt.runner\n'
+                       '        Name: runtests_helpers.success\n'
+                       '      Result: True',
+
+                       '          ID: test_runner_failure\n'
+                       '    Function: salt.runner\n'
+                       '        Name: runtests_helpers.failure\n'
+                       '      Result: False',
+
+                       '          ID: test_wheel_success\n'
+                       '    Function: salt.wheel\n'
+                       '        Name: runtests_helpers.success\n'
+                       '      Result: True',
+
+                       '          ID: test_wheel_failure\n'
+                       '    Function: salt.wheel\n'
+                       '        Name: runtests_helpers.failure\n'
+                       '      Result: False'):
+            self.assertIn(result, ret)
+
     def test_orchestrate_target_doesnt_exists(self):
         '''
         test orchestration when target doesnt exist
