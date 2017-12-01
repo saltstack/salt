@@ -258,6 +258,7 @@ To execute with pillar data.
     salt-run state.orch orch.deploy pillar='{"servers": "newsystem1",
     "master": "mymaster"}'
 
+.. _orchestrate-runner-return-codes-runner-wheel:
 
 Return Codes in Runner/Wheel Jobs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -591,9 +592,10 @@ loadable and parsable format:
 
 
 The Oxygen release includes a couple fixes to make parsing this data easier and
-more accurate. The first is the ability to set a return code in a custom runner
-or wheel function, as noted above. The second is a change to how failures are
-included in the return data. Prior to the Oxygen release, minions that failed a
+more accurate. The first is the ability to set a :ref:`return code
+<orchestrate-runner-return-codes-runner-wheel>` in a custom runner or wheel
+function, as noted above. The second is a change to how failures are included
+in the return data. Prior to the Oxygen release, minions that failed a
 ``salt.state`` orchestration job would show up in the ``comment`` field of the
 return data, in a human-readable string that was not easily parsed. They are
 now included in the ``changes`` dictionary alongside the minions that
