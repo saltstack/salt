@@ -40,9 +40,14 @@ def cmd(
            'result': True}
     if func is None:
         func = name
-    client = salt.runner.RunnerClient(__opts__)
-    low = {'fun': func,
-           'arg': arg,
-           'kwarg': kwargs}
-    client.cmd_async(low)
+    local_opts = {}
+    local_opts.update(__opts__)
+    local_opts['async'] = True  # ensure this will be run async
+    local_opts.update({
+        'fun': func,
+        'arg': arg,
+        'kwarg': kwargs
+    })
+    runner = salt.runner.Runner(local_opts)
+    runner.run()
     return ret
