@@ -830,6 +830,14 @@ class Schedule(object):
         evt.fire_event({'complete': True, 'next_fire_time': _next_fire_time},
                        tag='/salt/minion/minion_schedule_next_fire_time_complete')
 
+    def job_status(self, name):
+        '''
+        Disable a job in the scheduler. Ignores jobs from pillar
+        '''
+
+        schedule = self._get_schedule()
+        return schedule[name]
+
     def handle_func(self, multiprocessing_enabled, func, data):
         '''
         Execute this method in a multiprocess or thread
@@ -1067,6 +1075,8 @@ class Schedule(object):
         if 'skip_function' in schedule:
             self.skip_function = schedule['skip_function']
         for job, data in six.iteritems(schedule):
+            run = False
+
             if job == 'enabled' or not data:
                 continue
             if job == 'skip_function' or not data:
@@ -1326,6 +1336,7 @@ class Schedule(object):
 
                     if when < now and \
                             not data.get('_run', False) and \
+                            not run and \
                             not data['_splay']:
                         data['_next_fire_time'] = None
                         continue
@@ -1367,7 +1378,6 @@ class Schedule(object):
             else:
                 continue
 
-            run = False
             seconds = data['_next_fire_time'] - now
             if data['_splay']:
                 seconds = data['_splay'] - now
