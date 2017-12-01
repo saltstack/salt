@@ -544,10 +544,10 @@ def _kcpassword(password):
     key = [125, 137, 82, 35, 210, 188, 221, 234, 163, 185, 31]
     key_len = len(key)
 
-    password = [ord(x) for x in list(password)]
+    password = list(map(ord, password))
     # pad password length out to an even multiple of key length
     r = len(password) % key_len
-    if (r > 0):
+    if r > 0:
         password = password + [0] * (key_len - r)
 
     for n in range(0, len(password), len(key)):
@@ -556,8 +556,9 @@ def _kcpassword(password):
             password[j] = password[j] ^ key[ki]
             ki += 1
 
-    password = [chr(x) for x in password]
+    password = list(map(chr, password))
     return "".join(password)
+
 
 def enable_auto_login(name, password):
     '''
