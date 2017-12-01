@@ -1918,6 +1918,8 @@ class State(object):
                 if self.mocked:
                     ret = mock_ret(cdata)
                 else:
+                    # Check if this low chunk is paused
+                    self.check_pause(low)
                     # Execute the state function
                     if not low.get(u'__prereq__') and low.get(u'parallel'):
                         # run the state call in parallel, but only if not in a prereq
@@ -2126,6 +2128,48 @@ class State(object):
                 return False
             return not running[tag][u'result']
         return False
+
+    def check_pause(self, low):
+        '''
+        Check to see if this low chunk has been paused
+        '''
+        if not self.jid:
+            # Can't pause on salt-ssh since we can't track continuous state
+            return
+        pause_path = os.path.join(self.opts[u'cachedir'], 'state_pause', self.jid)
+        start = time.time()
+        if os.path.isfile(pause_path):
+            try:
+                while True:
+                    tries = 0
+                    with salt.utils.files.fopen(pause_path, 'rb') as fp_:
+                        try:
+                            pdat = msgpack.loads(fp_.read())
+                        except msgpack.UnpackValueError:
+                            # Reading race condition
+                            if tries > 10:
+                                # Break out if there are a ton of read errors
+                                return
+                            tries += 1
+                            time.sleep(1)
+                            continue
+                        id_ = low[u'__id__']
+                        key = u''
+                        if id_ in pdat:
+                            key = id_
+                        elif u'__all__' in pdat:
+                            key = u'__all__'
+                        if key:
+                            if u'duration' in pdat[key]:
+                                now = time.time()
+                                if now - start > pdat[key][u'duration']:
+                                    return
+                        else:
+                            return
+                        time.sleep(1)
+            except Exception as exc:
+                log.error('Failed to read in pause data for file located at: %s', pause_path)
+                return
 
     def reconcile_procs(self, running):
         '''
@@ -2682,6 +2726,14 @@ class State(object):
             except OSError:
                 log.debug(u'File %s does not exist, no need to cleanup', accum_data_path)
         _cleanup_accumulator_data()
+        if self.jid is not None:
+            pause_path = os.path.join(self.opts[u'cachedir'], u'state_pause', self.jid)
+            if os.path.isfile(pause_path):
+                try:
+                    os.remove(pause_path)
+                except OSError:
+                    # File is not present, all is well
+                    pass
 
         return ret
 
