@@ -29,6 +29,7 @@ def die(func):
     def wrapper(self):
         # Strip off the "test_" from the function name
         name = func.__name__[5:]
+
         def _die():
             salt.utils.appendproctitle('test_{0}'.format(name))
         setattr(self, 'die_' + name, _die)
@@ -44,6 +45,7 @@ def incr(func):
     def wrapper(self):
         # Strip off the "test_" from the function name
         name = func.__name__[5:]
+
         def _incr(counter, num):
             salt.utils.appendproctitle('test_{0}'.format(name))
             for _ in range(0, num):
@@ -61,6 +63,7 @@ def spin(func):
     def wrapper(self):
         # Strip off the "test_" from the function name
         name = func.__name__[5:]
+
         def _spin():
             salt.utils.appendproctitle('test_{0}'.format(name))
             while True:
