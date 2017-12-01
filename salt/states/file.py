@@ -751,7 +751,8 @@ def _check_directory_win(name,
                          win_owner,
                          win_perms=None,
                          win_deny_perms=None,
-                         win_inheritance=None):
+                         win_inheritance=None,
+                         win_perms_reset=None):
     '''
     Check what changes need to be made on a directory
     '''
@@ -868,6 +869,20 @@ def _check_directory_win(name,
         if win_inheritance is not None:
             if not win_inheritance == salt.utils.win_dacl.get_inheritance(name):
                 changes['inheritance'] = win_inheritance
+
+        # Check reset
+        if win_perms_reset:
+            for user_name in perms:
+                if user_name not in win_perms:
+                    if 'grant' in perms[user_name] and not perms[user_name]['grant']['inherited']:
+                        if 'remove_perms' not in changes:
+                            changes['remove_perms'] = {}
+                        changes['remove_perms'].update({user_name: perms[user_name]})
+                if user_name not in win_deny_perms:
+                    if 'deny' in perms[user_name] and not perms[user_name]['deny']['inherited']:
+                        if 'remove_perms' not in changes:
+                            changes['remove_perms'] = {}
+                        changes['remove_perms'].update({user_name: perms[user_name]})
 
     if changes:
         return None, 'The directory "{0}" will be changed'.format(name), changes
@@ -1549,6 +1564,7 @@ def managed(name,
             win_perms=None,
             win_deny_perms=None,
             win_inheritance=True,
+            win_perms_reset=False,
             **kwargs):
     r'''
     Manage a given file, this function allows for a file to be downloaded from
@@ -2043,6 +2059,13 @@ def managed(name,
 
         .. versionadded:: 2017.7.0
 
+    win_perms_reset : False
+        If ``True`` the existing DACL will be cleared and replaced with the
+        settings defined in this function. If ``False``, new entries will be
+        appended to the existing DACL. Default is ``False``.
+
+        .. versionadded:: 2017.7.3
+
     Here's an example using the above ``win_*`` parameters:
 
     .. code-block:: yaml
@@ -2287,8 +2310,13 @@ def managed(name,
         # Check and set the permissions if necessary
         if salt.utils.is_windows():
             ret = __salt__['file.check_perms'](
-                name, ret, win_owner, win_perms, win_deny_perms,
-                win_inheritance)
+                path=name,
+                ret=ret,
+                owner=win_owner,
+                grant_perms=win_perms,
+                deny_perms=win_deny_perms,
+                inheritance=win_inheritance,
+                reset=win_perms_reset)
         else:
             ret, _ = __salt__['file.check_perms'](
                 name, ret, user, group, mode, follow_symlinks)
@@ -2328,8 +2356,13 @@ def managed(name,
 
                 if salt.utils.is_windows():
                     ret = __salt__['file.check_perms'](
-                        name, ret, win_owner, win_perms, win_deny_perms,
-                        win_inheritance)
+                        path=name,
+                        ret=ret,
+                        owner=win_owner,
+                        grant_perms=win_perms,
+                        deny_perms=win_deny_perms,
+                        inheritance=win_inheritance,
+                        reset=win_perms_reset)
 
             if isinstance(ret['pchanges'], tuple):
                 ret['result'], ret['comment'] = ret['pchanges']
@@ -2420,6 +2453,7 @@ def managed(name,
                 win_perms=win_perms,
                 win_deny_perms=win_deny_perms,
                 win_inheritance=win_inheritance,
+                win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
                 **kwargs)
@@ -2488,6 +2522,7 @@ def managed(name,
                 win_perms=win_perms,
                 win_deny_perms=win_deny_perms,
                 win_inheritance=win_inheritance,
+                win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
                 **kwargs)
@@ -2561,6 +2596,7 @@ def directory(name,
               win_perms=None,
               win_deny_perms=None,
               win_inheritance=True,
+              win_perms_reset=False,
               **kwargs):
     r'''
     Ensure that a named directory is present and has the right perms
@@ -2722,6 +2758,13 @@ def directory(name,
 
         .. versionadded:: 2017.7.0
 
+    win_perms_reset : False
+        If ``True`` the existing DACL will be cleared and replaced with the
+        settings defined in this function. If ``False``, new entries will be
+        appended to the existing DACL. Default is ``False``.
+
+        .. versionadded:: 2017.7.3
+
     Here's an example using the above ``win_*`` parameters:
 
     .. code-block:: yaml
@@ -2826,13 +2869,23 @@ def directory(name,
         elif force:
             # Remove whatever is in the way
             if os.path.isfile(name):
-                os.remove(name)
-                ret['changes']['forced'] = 'File was forcibly replaced'
+                if __opts__['test']:
+                    ret['pchanges']['forced'] = 'File was forcibly replaced'
+                else:
+                    os.remove(name)
+                    ret['changes']['forced'] = 'File was forcibly replaced'
             elif __salt__['file.is_link'](name):
-                __salt__['file.remove'](name)
-                ret['changes']['forced'] = 'Symlink was forcibly replaced'
+                if __opts__['test']:
+                    ret['pchanges']['forced'] = 'Symlink was forcibly replaced'
+                else:
+                    __salt__['file.remove'](name)
+                    ret['changes']['forced'] = 'Symlink was forcibly replaced'
             else:
-                __salt__['file.remove'](name)
+                if __opts__['test']:
+                    ret['pchanges']['forced'] = 'Directory was forcibly replaced'
+                else:
+                    __salt__['file.remove'](name)
+                    ret['changes']['forced'] = 'Directory was forcibly replaced'
         else:
             if os.path.isfile(name):
                 return _error(
@@ -2845,17 +2898,26 @@ def directory(name,
 
     # Check directory?
     if salt.utils.is_windows():
-        presult, pcomment, ret['pchanges'] = _check_directory_win(
-            name, win_owner, win_perms, win_deny_perms, win_inheritance)
+        presult, pcomment, pchanges = _check_directory_win(
+            name=name,
+            win_owner=win_owner,
+            win_perms=win_perms,
+            win_deny_perms=win_deny_perms,
+            win_inheritance=win_inheritance,
+            win_perms_reset=win_perms_reset)
     else:
-        presult, pcomment, ret['pchanges'] = _check_directory(
+        presult, pcomment, pchanges = _check_directory(
             name, user, group, recurse or [], dir_mode, clean, require,
             exclude_pat, max_depth, follow_symlinks)
 
-    if __opts__['test']:
+    if pchanges:
+        ret['pchanges'].update(pchanges)
+
+    # Don't run through the rest of the function if there are no changes to be
+    # made
+    if not ret['pchanges'] or __opts__['test']:
         ret['result'] = presult
         ret['comment'] = pcomment
-        ret['changes'] = ret['pchanges']
         return ret
 
     if not os.path.isdir(name):
@@ -2871,8 +2933,13 @@ def directory(name,
                     if not os.path.isdir(drive):
                         return _error(
                             ret, 'Drive {0} is not mapped'.format(drive))
-                    __salt__['file.makedirs'](name, win_owner, win_perms,
-                                              win_deny_perms, win_inheritance)
+                    __salt__['file.makedirs'](
+                        path=name,
+                        owner=win_owner,
+                        grant_perms=win_perms,
+                        deny_perms=win_deny_perms,
+                        inheritance=win_inheritance,
+                        reset=win_perms_reset)
                 else:
                     __salt__['file.makedirs'](name, user=user, group=group,
                                               mode=dir_mode)
@@ -2881,8 +2948,13 @@ def directory(name,
                     ret, 'No directory to create {0} in'.format(name))
 
         if salt.utils.is_windows():
-            __salt__['file.mkdir'](name, win_owner, win_perms, win_deny_perms,
-                                   win_inheritance)
+            __salt__['file.mkdir'](
+                path=name,
+                owner=win_owner,
+                grant_perms=win_perms,
+                deny_perms=win_deny_perms,
+                inheritance=win_inheritance,
+                reset=win_perms_reset)
         else:
             __salt__['file.mkdir'](name, user=user, group=group, mode=dir_mode)
 
@@ -2896,7 +2968,13 @@ def directory(name,
     if not children_only:
         if salt.utils.is_windows():
             ret = __salt__['file.check_perms'](
-                name, ret, win_owner, win_perms, win_deny_perms, win_inheritance)
+                path=name,
+                ret=ret,
+                owner=win_owner,
+                grant_perms=win_perms,
+                deny_perms=win_deny_perms,
+                inheritance=win_inheritance,
+                reset=win_perms_reset)
         else:
             ret, perms = __salt__['file.check_perms'](
                 name, ret, user, group, dir_mode, follow_symlinks)
@@ -2967,8 +3045,13 @@ def directory(name,
                     try:
                         if salt.utils.is_windows():
                             ret = __salt__['file.check_perms'](
-                                full, ret, win_owner, win_perms, win_deny_perms,
-                                win_inheritance)
+                                path=full,
+                                ret=ret,
+                                owner=win_owner,
+                                grant_perms=win_perms,
+                                deny_perms=win_deny_perms,
+                                inheritance=win_inheritance,
+                                reset=win_perms_reset)
                         else:
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, file_mode, follow_symlinks)
@@ -2982,8 +3065,13 @@ def directory(name,
                     try:
                         if salt.utils.is_windows():
                             ret = __salt__['file.check_perms'](
-                                full, ret, win_owner, win_perms, win_deny_perms,
-                                win_inheritance)
+                                path=full,
+                                ret=ret,
+                                owner=win_owner,
+                                grant_perms=win_perms,
+                                deny_perms=win_deny_perms,
+                                inheritance=win_inheritance,
+                                reset=win_perms_reset)
                         else:
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, dir_mode, follow_symlinks)
@@ -3005,7 +3093,8 @@ def directory(name,
         if children_only:
             ret['comment'] = 'Directory {0}/* updated'.format(name)
         else:
-            ret['comment'] = 'Directory {0} updated'.format(name)
+            if ret['changes']:
+                ret['comment'] = 'Directory {0} updated'.format(name)
 
     if __opts__['test']:
         ret['comment'] = 'Directory {0} not updated'.format(name)
