@@ -2067,12 +2067,16 @@ class Minion(MinionBase):
             self.schedule.run_job(name)
         elif func == u'disable_job':
             self.schedule.disable_job(name, persist)
+        elif func == u'postpone_job':
+            self.schedule.postpone_job(name, data)
         elif func == u'reload':
             self.schedule.reload(schedule)
         elif func == u'list':
             self.schedule.list(where)
         elif func == u'save_schedule':
             self.schedule.save_schedule()
+        elif func == u'get_next_fire_time':
+            self.schedule.get_next_fire_time(name)
 
     def manage_beacons(self, tag, data):
         '''
