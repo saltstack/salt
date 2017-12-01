@@ -1173,7 +1173,7 @@ class Schedule(object):
                             _run_explicit.remove(i)
 
                 if _run_explicit:
-                    if _run_explicit[0] <= now <= (_run_explicit[0] + self.opts['loop_interval']):
+                    if _run_explicit[0] <= now < (_run_explicit[0] + self.opts['loop_interval']):
                         run = True
                         data['_next_fire_time'] = _run_explicit[0]
 
