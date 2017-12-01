@@ -84,6 +84,18 @@ If set to ``True``, this option will prevent a minion from allowing the
 ``saltenv`` argument to override the value set in :conf_minion:`saltenv` when
 running states.
 
+Failed Minions for State/Function Orchestration Jobs Added to Changes Dictionary
+--------------------------------------------------------------------------------
+
+For orchestration jobs which run states (or run remote execution functions and
+also use a :ref:`fail function <orchestrate-runner-fail-functions>` to indicate
+success or failure), minions which have ``False`` results were previously
+included as a formatted string in the comment field of the return for that
+orchestration job. This made the failed returns difficult to :ref:`parse
+programatically <orchestrate-runner-parsing-results-programatically>`. The
+failed returns in these cases are now included in the changes dictionary,
+making for much easier parsing.
+
 New Grains
 ----------
 
