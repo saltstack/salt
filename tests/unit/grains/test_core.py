@@ -596,4 +596,3 @@ PATCHLEVEL = 3
                                   MagicMock(return_value=resolv_mock)):
                     get_dns = core.dns()
                     self.assertEqual(get_dns, ret)
-
