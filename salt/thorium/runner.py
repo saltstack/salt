@@ -10,7 +10,7 @@ import salt.runner
 
 def cmd(
         name,
-        fun=None,
+        func=None,
         arg=(),
         **kwargs):
     '''
@@ -22,14 +22,14 @@ def cmd(
 
         run_cloud:
           runner.cmd:
-            - fun: cloud.create
+            - func: cloud.create
             - arg:
                 - my-ec2-config
                 - myinstance
 
         run_cloud:
           runner.cmd:
-            - fun: cloud.create
+            - func: cloud.create
             - kwargs:
                 provider: my-ec2-config
                 instances: myinstance
@@ -38,11 +38,11 @@ def cmd(
            'changes': {},
            'comment': '',
            'result': True}
-    if fun is None:
-        fun = name
+    if func is None:
+        func = name
     client = salt.runner.RunnerClient(__opts__)
-    low = {'fun': fun,
-            'arg': arg,
-            'kwargs': kwargs}
+    low = {'fun': func,
+           'arg': arg,
+           'kwarg': kwargs}
     client.cmd_async(low)
     return ret
