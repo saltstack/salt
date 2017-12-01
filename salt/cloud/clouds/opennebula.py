@@ -4572,7 +4572,8 @@ def _list_nodes(full=False):
                 pass
 
         vms[name]['id'] = vm.find('ID').text
-        vms[name]['image'] = vm.find('TEMPLATE').find('TEMPLATE_ID').text
+        if vm.find('TEMPLATE').find('TEMPLATE_ID'):
+            vms[name]['image'] = vm.find('TEMPLATE').find('TEMPLATE_ID').text
         vms[name]['name'] = name
         vms[name]['size'] = {'cpu': cpu_size, 'memory': memory_size}
         vms[name]['state'] = vm.find('STATE').text
