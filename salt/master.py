@@ -16,6 +16,7 @@ import errno
 import signal
 import stat
 import logging
+import collections
 import multiprocessing
 import salt.serializers.msgpack
 
@@ -486,11 +487,11 @@ class Master(SMaster):
                     for repo in git_pillars:
                         new_opts[u'ext_pillar'] = [repo]
                         try:
-                            git_pillar = salt.utils.gitfs.GitPillar(new_opts)
-                            git_pillar.init_remotes(
+                            git_pillar = salt.utils.gitfs.GitPillar(
+                                new_opts,
                                 repo[u'git'],
-                                salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                                per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+                                per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
                         except FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
@@ -797,6 +798,7 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         :return: Master worker
         '''
         kwargs[u'name'] = name
+        self.name = name
         super(MWorker, self).__init__(**kwargs)
         self.opts = opts
         self.req_channels = req_channels
@@ -804,6 +806,8 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
+        self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
+        self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -879,6 +883,19 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
                u'clear': self._handle_clear}[key](load)
         raise tornado.gen.Return(ret)
 
+    def _post_stats(self, start, cmd):
+        '''
+        Calculate the master stats and fire events with stat info
+        '''
+        end = time.time()
+        duration = end - start
+        self.stats[cmd][u'mean'] = (self.stats[cmd][u'mean'] * (self.stats[cmd][u'runs'] - 1) + duration) / self.stats[cmd][u'runs']
+        if end - self.stat_clock > self.opts[u'master_stats_event_iter']:
+            # Fire the event with the stats and wipe the tracker
+            self.aes_funcs.event.fire_event({u'time': end - self.stat_clock, u'worker': self.name, u'stats': self.stats}, tagify(self.name, u'stats'))
+            self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
+            self.stat_clock = end
+
     def _handle_clear(self, load):
         '''
         Process a cleartext command
@@ -888,9 +905,16 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
                  the command specified in the load's 'cmd' key.
         '''
         log.trace(u'Clear payload received with command %s', load[u'cmd'])
-        if load[u'cmd'].startswith(u'__'):
+        cmd = load[u'cmd']
+        if cmd.startswith(u'__'):
             return False
-        return getattr(self.clear_funcs, load[u'cmd'])(load), {u'fun': u'send_clear'}
+        if self.opts[u'master_stats']:
+            start = time.time()
+            self.stats[cmd][u'runs'] += 1
+        ret = getattr(self.clear_funcs, cmd)(load), {u'fun': u'send_clear'}
+        if self.opts[u'master_stats']:
+            self._post_stats(start, cmd)
+        return ret
 
     def _handle_aes(self, data):
         '''
@@ -903,10 +927,17 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if u'cmd' not in data:
             log.error(u'Received malformed command %s', data)
             return {}
+        cmd = data[u'cmd']
         log.trace(u'AES payload received with command %s', data[u'cmd'])
-        if data[u'cmd'].startswith(u'__'):
+        if cmd.startswith(u'__'):
             return False
-        return self.aes_funcs.run_func(data[u'cmd'], data)
+        if self.opts[u'master_stats']:
+            start = time.time()
+            self.stats[cmd][u'runs'] += 1
+        ret = self.aes_funcs.run_func(data[u'cmd'], data)
+        if self.opts[u'master_stats']:
+            self._post_stats(start, cmd)
+        return ret
 
     def run(self):
         '''
@@ -1150,6 +1181,8 @@ class AESFuncs(object):
         mopts[u'state_auto_order'] = self.opts[u'state_auto_order']
         mopts[u'state_events'] = self.opts[u'state_events']
         mopts[u'state_aggregate'] = self.opts[u'state_aggregate']
+        mopts[u'jinja_env'] = self.opts[u'jinja_env']
+        mopts[u'jinja_sls_env'] = self.opts[u'jinja_sls_env']
         mopts[u'jinja_lstrip_blocks'] = self.opts[u'jinja_lstrip_blocks']
         mopts[u'jinja_trim_blocks'] = self.opts[u'jinja_trim_blocks']
         return mopts
@@ -1840,89 +1873,52 @@ class ClearFuncs(object):
             clear_load.get(u'tgt_type', u'glob'),
             delimiter
         )
-        minions = _res.get('minions', list())
-        missing = _res.get('missing', list())
+        minions = _res.get(u'minions', list())
+        missing = _res.get(u'missing', list())
 
-        # Check for external auth calls
-        if extra.get(u'token', False):
-            # Authenticate.
-            token = self.loadauth.authenticate_token(extra)
-            if not token:
-                return u''
-
-            # Get acl
-            auth_list = self.loadauth.get_auth_list(extra, token)
-
-            # Authorize the request
-            if not self.ckminions.auth_check(
-                    auth_list,
-                    clear_load[u'fun'],
-                    clear_load[u'arg'],
-                    clear_load[u'tgt'],
-                    clear_load.get(u'tgt_type', u'glob'),
-                    minions=minions,
-                    # always accept find_job
-                    whitelist=[u'saltutil.find_job'],
-                    ):
-                log.warning(u'Authentication failure of type "token" occurred.')
-                return u''
-            clear_load[u'user'] = token[u'name']
-            log.debug(u'Minion tokenized user = "%s"', clear_load[u'user'])
-        elif u'eauth' in extra:
-            # Authenticate.
-            if not self.loadauth.authenticate_eauth(extra):
-                return u''
-
-            # Get acl from eauth module.
-            auth_list = self.loadauth.get_auth_list(extra)
-
-            # Authorize the request
-            if not self.ckminions.auth_check(
-                    auth_list,
-                    clear_load[u'fun'],
-                    clear_load[u'arg'],
-                    clear_load[u'tgt'],
-                    clear_load.get(u'tgt_type', u'glob'),
-                    minions=minions,
-                    # always accept find_job
-                    whitelist=[u'saltutil.find_job'],
-                    ):
-                log.warning(u'Authentication failure of type "eauth" occurred.')
-                return u''
-            clear_load[u'user'] = self.loadauth.load_name(extra)  # The username we are attempting to auth with
-        # Verify that the caller has root on master
+        # Check for external auth calls and authenticate
+        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(extra)
+        if auth_type == 'user':
+            auth_check = self.loadauth.check_authentication(clear_load, auth_type, key=key)
         else:
-            auth_ret = self.loadauth.authenticate_key(clear_load, self.key)
-            if auth_ret is False:
+            auth_check = self.loadauth.check_authentication(extra, auth_type)
+
+        # Setup authorization list variable and error information
+        auth_list = auth_check.get(u'auth_list', [])
+        err_msg = u'Authentication failure of type "{0}" occurred.'.format(auth_type)
+
+        if auth_check.get(u'error'):
+            # Authentication error occurred: do not continue.
+            log.warning(err_msg)
+            return u''
+
+        # All Token, Eauth, and non-root users must pass the authorization check
+        if auth_type != u'user' or (auth_type == u'user' and auth_list):
+            # Authorize the request
+            authorized = self.ckminions.auth_check(
+                auth_list,
+                clear_load[u'fun'],
+                clear_load[u'arg'],
+                clear_load[u'tgt'],
+                clear_load.get(u'tgt_type', u'glob'),
+                minions=minions,
+                # always accept find_job
+                whitelist=[u'saltutil.find_job'],
+            )
+
+            if not authorized:
+                # Authorization error occurred. Do not continue.
+                log.warning(err_msg)
                 return u''
 
-            if auth_ret is not True:
-                if salt.auth.AuthUser(clear_load[u'user']).is_sudo():
-                    if not self.opts[u'sudo_acl'] or not self.opts[u'publisher_acl']:
-                        auth_ret = True
-
-            if auth_ret is not True:
-                auth_list = salt.utils.master.get_values_of_matching_keys(
-                        self.opts[u'publisher_acl'],
-                        auth_ret)
-                if not auth_list:
-                    log.warning(
-                        u'Authentication failure of type "user" occurred.'
-                    )
-                    return u''
-
-                if not self.ckminions.auth_check(
-                        auth_list,
-                        clear_load[u'fun'],
-                        clear_load[u'arg'],
-                        clear_load[u'tgt'],
-                        clear_load.get(u'tgt_type', u'glob'),
-                        minions=minions,
-                        # always accept find_job
-                        whitelist=[u'saltutil.find_job'],
-                        ):
-                    log.warning(u'Authentication failure of type "user" occurred.')
-                    return u''
+            # Perform some specific auth_type tasks after the authorization check
+            if auth_type == u'token':
+                username = auth_check.get(u'username')
+                clear_load[u'user'] = username
+                log.debug(u'Minion tokenized user = "%s"', username)
+            elif auth_type == u'eauth':
+                # The username we are attempting to auth with
+                clear_load[u'user'] = self.loadauth.load_name(extra)
 
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found

@@ -4,7 +4,7 @@
 Getting Started With Saltify
 ============================
 
-The Saltify driver is a new, experimental driver for installing Salt on existing
+The Saltify driver is a driver for installing Salt on existing
 machines (virtual or bare metal).
 
 
@@ -33,19 +33,28 @@ the salt-master:
 
 However, if you wish to use the more advanced capabilities of salt-cloud, such as
 rebooting, listing, and disconnecting machines, then the salt master must fill
-the role usually performed by a vendor's cloud management system. In order to do
-that, you must configure your salt master as a salt-api server, and supply credentials
-to use it. (See ``salt-api setup`` below.)
+the role usually performed by a vendor's cloud management system. The salt master
+must be running on the salt-cloud machine, and created nodes must be connected to the
+master.
 
+Additional information about which configuration options apply to which actions
+can be studied in the
+:ref:`Saltify Module documentation <saltify-module>`
+and the
+:ref:`Miscellaneous Salt Cloud Options <misc-salt-cloud-options>`
+document.
 
 Profiles
 ========
 
-Saltify requires a profile to be configured for each machine that needs Salt
-installed. The initial profile can be set up at ``/etc/salt/cloud.profiles``
+Saltify requires a separate profile to be configured for each machine that
+needs Salt installed [#]_. The initial profile can be set up at
+``/etc/salt/cloud.profiles``
 or in the ``/etc/salt/cloud.profiles.d/`` directory. Each profile requires
 both an ``ssh_host`` and an ``ssh_username`` key parameter as well as either
 an ``key_filename`` or a ``password``.
+
+.. [#] Unless you are using a map file to provide the unique parameters.
 
 Profile configuration example:
 
@@ -68,39 +77,77 @@ The machine can now be "Salted" with the following command:
 This will install salt on the machine specified by the cloud profile,
 ``salt-this-machine``, and will give the machine the minion id of
 ``my-machine``. If the command was executed on the salt-master, its Salt
-key will automatically be signed on the master.
+key will automatically be accepted by the master.
 
 Once a salt-minion has been successfully installed on the instance, connectivity
 to it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt my-machine test.ping
-
+    salt my-machine test.version
 
 Destroy Options
 ---------------
 
+.. versionadded:: Oxygen
+
 For obvious reasons, the ``destroy`` action does not actually vaporize hardware.
-If the salt  master is connected using salt-api, it can tear down parts of
-the client machines.  It will remove the client's key from the salt master,
-and will attempt the following options:
+If the salt  master is connected, it can tear down parts of the client machines.
+It will remove the client's key from the salt master,
+and can execute the following options:
 
 .. code-block:: yaml
 
   - remove_config_on_destroy: true
     # default: true
     # Deactivate salt-minion on reboot and
-    # delete the minion config and key files from its ``/etc/salt`` directory,
-    #   NOTE: If deactivation is unsuccessful (older Ubuntu machines) then when
+    # delete the minion config and key files from its "/etc/salt" directory,
+    #   NOTE: If deactivation was unsuccessful (older Ubuntu machines) then when
     #   salt-minion restarts it will automatically create a new, unwanted, set
-    #   of key files. The ``force_minion_config`` option must be used in that case.
+    #   of key files. Use the "force_minion_config" option to replace them.
 
   - shutdown_on_destroy: false
     # default: false
-    # send a ``shutdown`` command to the client.
+    # last of all, send a "shutdown" command to the client.
+
+Wake On LAN
+-----------
 
 .. versionadded:: Oxygen
+
+In addition to connecting a hardware machine to a Salt master,
+you have the option of sending a wake-on-LAN
+`magic packet`_
+to start that machine running.
+
+.. _magic packet: https://en.wikipedia.org/wiki/Wake-on-LAN
+
+The "magic packet" must be sent by an existing salt minion which is on
+the same network segment as the target machine. (Or your router
+must be set up especially to route WoL packets.) Your target machine
+must be set up to listen for WoL and to respond appropriatly.
+
+You must provide the Salt node id of the machine which will send
+the WoL packet \(parameter ``wol_sender_node``\), and
+the hardware MAC address of the machine you intend to wake,
+\(parameter ``wake_on_lan_mac``\). If both parameters are defined,
+the WoL will be sent. The cloud master will then sleep a while
+\(parameter ``wol_boot_wait``) to give the target machine time to
+boot up before we start probing its SSH port to begin deploying
+Salt to it. The default sleep time is 30 seconds.
+
+.. code-block:: yaml
+
+    # /etc/salt/cloud.profiles.d/saltify.conf
+
+    salt-this-machine:
+      ssh_host: 12.34.56.78
+      ssh_username: root
+      key_filename: '/etc/salt/mysshkey.pem'
+      provider: my-saltify-config
+      wake_on_lan_mac: '00:e0:4c:70:2a:b2'  # found with ifconfig
+      wol_sender_node: bevymaster  # its on this network segment
+      wol_boot_wait: 45  # seconds to sleep
 
 Using Map Files
 ---------------
@@ -165,67 +212,3 @@ Return values:
   - ``True``: Credential verification succeeded
   - ``False``: Credential verification succeeded
   - ``None``: Credential verification was not attempted.
-
-Provisioning salt-api
-=====================
-
-In order to query or control minions it created, saltify needs to send commands
-to the salt master.  It does that using the network interface to salt-api.
-
-The salt-api is not enabled by default. The following example will provide a
-simple installation.
-
-.. code-block:: yaml
-
-    # file /etc/salt/cloud.profiles.d/my_saltify_profiles.conf
-    hw_41:  # a theoretical example hardware machine
-      ssh_host: 10.100.9.41  # the hard address of your target
-      ssh_username: vagrant  # a user name which has passwordless sudo
-      password: vagrant      # on your target machine
-      provider: my_saltify_provider
-
-
-.. code-block:: yaml
-
-    # file /etc/salt/cloud.providers.d/saltify_provider.conf
-    my_saltify_provider:
-      driver: saltify
-      eauth: pam
-      username: vagrant  # supply some sudo-group-member's name
-      password: vagrant  # and password on the salt master
-      minion:
-        master: 10.100.9.5  # the hard address of the master
-
-
-.. code-block:: yaml
-
-    # file /etc/salt/master.d/auth.conf
-    #  using salt-api ... members of the 'sudo' group can do anything ...
-    external_auth:
-      pam:
-        sudo%:
-          - .*
-          - '@wheel'
-          - '@runner'
-          - '@jobs'
-
-
-.. code-block:: yaml
-
-    # file /etc/salt/master.d/api.conf
-    # see https://docs.saltstack.com/en/latest/ref/netapi/all/salt.netapi.rest_cherrypy.html
-    rest_cherrypy:
-      host: localhost
-      port: 8000
-      ssl_crt: /etc/pki/tls/certs/localhost.crt
-      ssl_key: /etc/pki/tls/certs/localhost.key
-      thread_pool: 30
-      socket_queue_size: 10
-
-
-Start your target machine as a Salt minion named "node41" by:
-
-.. code-block:: bash
-
-    $ sudo salt-cloud -p hw_41 node41
-

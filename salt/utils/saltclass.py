@@ -104,11 +104,12 @@ def dict_search_and_replace(d, old, new, expanded):
 def find_value_to_expand(x, v):
     a = x
     for i in v[2:-1].split(':'):
+        if a is None:
+            return v
         if i in a:
             a = a.get(i)
         else:
-            a = v
-            return a
+            return v
     return a
 
 

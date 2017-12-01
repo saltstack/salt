@@ -634,6 +634,9 @@ class AsyncAuth(object):
                 raise tornado.gen.Return(u'retry')
             else:
                 raise SaltClientError(u'Attempt to authenticate with the salt master failed with timeout error')
+        if not isinstance(payload, dict):
+            log.error(u'Sign-in attempt failed: %s', payload)
+            raise tornado.gen.Return(False)
         if u'load' in payload:
             if u'ret' in payload[u'load']:
                 if not payload[u'load'][u'ret']:

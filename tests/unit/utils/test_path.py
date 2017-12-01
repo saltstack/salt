@@ -169,3 +169,11 @@ class PathTestCase(TestCase):
 
         with patch('salt.utils.path.which', return_value=False):
             self.assertRaises(CommandNotFoundError, salt.utils.path.check_or_die, 'FAKE COMMAND')
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_join(self):
+        with patch('salt.utils.platform.is_windows', return_value=False) as is_windows_mock:
+            self.assertFalse(is_windows_mock.return_value)
+            expected_path = os.path.join(os.sep + 'a', 'b', 'c', 'd')
+            ret = salt.utils.path.join('/a/b/c', 'd')
+            self.assertEqual(ret, expected_path)

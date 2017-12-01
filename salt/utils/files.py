@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for working with files
+'''
 
 from __future__ import absolute_import
 
@@ -56,7 +59,9 @@ def guess_archive_type(name):
     Guess an archive type (tar, zip, or rar) by its file extension
     '''
     name = name.lower()
-    for ending in ('tar', 'tar.gz', 'tar.bz2', 'tar.xz', 'tgz', 'tbz2', 'txz',
+    for ending in ('tar', 'tar.gz', 'tgz',
+                   'tar.bz2', 'tbz2', 'tbz',
+                   'tar.xz', 'txz',
                    'tar.lzma', 'tlz'):
         if name.endswith('.' + ending):
             return 'tar'
@@ -315,10 +320,14 @@ def fopen(*args, **kwargs):
         if len(args) > 1:
             args = list(args)
             if 'b' not in args[1]:
-                args[1] += 'b'
-        elif kwargs.get('mode', None):
+                args[1] = args[1].replace('t', 'b')
+                if 'b' not in args[1]:
+                    args[1] += 'b'
+        elif kwargs.get('mode'):
             if 'b' not in kwargs['mode']:
-                kwargs['mode'] += 'b'
+                kwargs['mode'] = kwargs['mode'].replace('t', 'b')
+                if 'b' not in kwargs['mode']:
+                    kwargs['mode'] += 'b'
         else:
             # the default is to read
             kwargs['mode'] = 'rb'

@@ -2364,10 +2364,8 @@ def managed(name,
             elif ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = u'The file {0} is set to be changed'.format(name)
-                if show_changes and 'diff' in ret['pchanges']:
-                    ret['changes']['diff'] = ret['pchanges']['diff']
-                if not show_changes:
-                    ret['changes']['diff'] = '<show_changes=False>'
+                if 'diff' in ret['pchanges'] and not show_changes:
+                    ret['pchanges']['diff'] = '<show_changes=False>'
             else:
                 ret['result'] = True
                 ret['comment'] = u'The file {0} is in the correct state'.format(name)
@@ -2886,6 +2884,7 @@ def directory(name,
     if __opts__['test']:
         ret['result'] = presult
         ret['comment'] = pcomment
+        ret['changes'] = ret['pchanges']
         return ret
 
     if not os.path.isdir(name):
@@ -3674,20 +3673,20 @@ def line(name, content=None, match=None, mode=None, location=None,
 
     .. versionadded:: 2015.8.0
 
-    name
+    :param name:
         Filesystem path to the file to be edited.
 
-    content
+    :param content:
         Content of the line. Allowed to be empty if mode=delete.
 
-    match
+    :param match:
         Match the target line for an action by
         a fragment of a string or regular expression.
 
         If neither ``before`` nor ``after`` are provided, and ``match``
         is also ``None``, match becomes the ``content`` value.
 
-    mode
+    :param mode:
         Defines how to edit a line. One of the following options is
         required:
 
@@ -3707,7 +3706,7 @@ def line(name, content=None, match=None, mode=None, location=None,
             ``after``. If ``location`` is used, it takes precedence
             over the other two options.
 
-    location
+    :param location:
         Defines where to place content in the line. Note this option is only
         used when ``mode=insert`` is specified. If a location is passed in, it
         takes precedence over both the ``before`` and ``after`` kwargs. Valid
@@ -3718,17 +3717,17 @@ def line(name, content=None, match=None, mode=None, location=None,
         - end
             Place the content at the end of the file.
 
-    before
+    :param before:
         Regular expression or an exact case-sensitive fragment of the string.
         This option is only used when either the ``ensure`` or ``insert`` mode
         is defined.
 
-    after
+    :param after:
         Regular expression or an exact case-sensitive fragment of the string.
         This option is only used when either the ``ensure`` or ``insert`` mode
         is defined.
 
-    show_changes
+    :param show_changes:
         Output a unified diff of the old file and the new file.
         If ``False`` return a boolean if any changes were made.
         Default is ``True``
@@ -3737,15 +3736,15 @@ def line(name, content=None, match=None, mode=None, location=None,
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the diff.
 
-    backup
+    :param backup:
         Create a backup of the original file with the extension:
         "Year-Month-Day-Hour-Minutes-Seconds".
 
-    quiet
+    :param quiet:
         Do not raise any exceptions. E.g. ignore the fact that the file that is
         tried to be edited does not exist and nothing really happened.
 
-    indent
+    :param indent:
         Keep indentation with the previous line. This option is not considered when
         the ``delete`` mode is specified.
 
@@ -6551,7 +6550,8 @@ def cached(name,
             and parsed.scheme in salt.utils.files.REMOTE_PROTOS:
         ret['comment'] = (
             'Unable to verify upstream hash of source file {0}, please set '
-            'source_hash or set skip_verify to True'.format(name)
+            'source_hash or set skip_verify to True'.format(
+                salt.utils.url.redact_http_basic_auth(name))
         )
         return ret
 
@@ -6682,13 +6682,14 @@ def cached(name,
                 saltenv=saltenv,
                 source_hash=source_sum.get('hsum'))
         except Exception as exc:
-            ret['comment'] = exc.__str__()
+            ret['comment'] = salt.utils.url.redact_http_basic_auth(exc.__str__())
             return ret
 
     if not local_copy:
         ret['comment'] = (
             'Failed to cache {0}, check minion log for more '
-            'information'.format(name)
+            'information'.format(
+                salt.utils.url.redact_http_basic_auth(name))
         )
         return ret
 

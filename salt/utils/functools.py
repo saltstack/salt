@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Utility functions to modify other functions
+'''
 
 from __future__ import absolute_import
 

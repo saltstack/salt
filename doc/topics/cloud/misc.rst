@@ -1,3 +1,5 @@
+.. _misc-salt-cloud-options:
+
 ================================
 Miscellaneous Salt Cloud Options
 ================================
