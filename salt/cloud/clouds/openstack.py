@@ -173,7 +173,7 @@ def _get_ips(node, addr_type='public'):
                 ret.append(addr['addr'])
     return ret
 
-def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
+def list_nodes_full(conn=None, call=None):
     '''
     Return a list of VMs with all the information about them
 
@@ -205,7 +205,7 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
     return ret
 
 
-def list_nodes_select(conn=None, call=None):  # pylint: disable=unused-argument
+def list_nodes_select(conn=None, call=None):
     '''
     Return a list of VMs with the fields from `query.selection`
 
@@ -261,7 +261,7 @@ def show_instance(name, conn=None, call=None):
     return ret
 
 
-def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
+def avail_images(conn=None, call=None):
     '''
     List available images for OpenStack
 
@@ -283,7 +283,7 @@ def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
     return conn.list_images()
 
 
-def avail_sizes(conn=None, call=None):  # pylint: disable=unused-argument
+def avail_sizes(conn=None, call=None):
     '''
     List available sizes for OpenStack
 
@@ -305,7 +305,7 @@ def avail_sizes(conn=None, call=None):  # pylint: disable=unused-argument
     return conn.list_flavors()
 
 
-def list_networks(conn=None, call=None):  # pylint: disable=unused-argument
+def list_networks(conn=None, call=None):
     '''
     List networks for OpenStack
 
@@ -326,7 +326,7 @@ def list_networks(conn=None, call=None):  # pylint: disable=unused-argument
     return conn.list_networks()
 
 
-def list_subnets(conn=None, call=None, kwargs=None):  # pylint: disable=unused-argument
+def list_subnets(conn=None, call=None, kwargs=None):
     '''
     List subnets in a virtual network
 
@@ -565,7 +565,7 @@ def destroy(name, conn=None, call=None):
     )
 
     if not conn:
-        conn = get_conn()   # pylint: disable=E0602
+        conn = get_conn()
     node = show_instance(name, conn=conn, call='action')
     log.info('Destroying VM: {0}'.format(name))
     ret = conn.delete_server(name)
@@ -591,7 +591,7 @@ def destroy(name, conn=None, call=None):
     return False
 
 
-def call(conn=None, call=None, kwargs=None):  # pylint: disable=unused-argument
+def call(conn=None, call=None, kwargs=None):
     '''
     Call function from shade.
 
