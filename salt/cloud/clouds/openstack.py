@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
+Openstack Cloud Driver
+======================
+
+:depends: [shade](https://pypi.python.org/pypi/shade)
 '''
+from __future__ import absolute_import
 
 # Import Python Libs
 import copy
@@ -120,11 +125,11 @@ def list_nodes(conn=None, call=None):
     '''
     Return a list of VMs
 
-    CLI Example 
+    CLI Example
 
     .. code-block:: bash
 
-    	salt-cloud -f list_nodes myopenstack
+        salt-cloud -f list_nodes myopenstack
 
     '''
     if call == 'action':
@@ -143,11 +148,11 @@ def list_nodes_min(conn=None, call=None):
     '''
     Return a list of VMs with minimal information
 
-    CLI Example 
+    CLI Example
 
     .. code-block:: bash
 
-    	salt-cloud -f list_nodes_min myopenstack
+        salt-cloud -f list_nodes_min myopenstack
 
     '''
     if call == 'action':
@@ -161,6 +166,7 @@ def list_nodes_min(conn=None, call=None):
         ret[node.name] = {'id': node.id, 'state': node.status}
     return ret
 
+
 def _get_ips(node, addr_type='public'):
     ret = []
     for _, interface in node.addresses.items():
@@ -173,15 +179,16 @@ def _get_ips(node, addr_type='public'):
                 ret.append(addr['addr'])
     return ret
 
+
 def list_nodes_full(conn=None, call=None):
     '''
     Return a list of VMs with all the information about them
 
-    CLI Example 
+    CLI Example
 
     .. code-block:: bash
 
-    	salt-cloud -f list_nodes_full myopenstack
+        salt-cloud -f list_nodes_full myopenstack
 
     '''
     if call == 'action':
@@ -209,11 +216,11 @@ def list_nodes_select(conn=None, call=None):
     '''
     Return a list of VMs with the fields from `query.selection`
 
-    CLI Example 
+    CLI Example
 
     .. code-block:: bash
 
-    	salt-cloud -f list_nodes_full myopenstack
+        salt-cloud -f list_nodes_full myopenstack
 
     '''
     if call == 'action':
@@ -233,11 +240,11 @@ def show_instance(name, conn=None, call=None):
 
         name of the instance
 
-    CLI Example 
+    CLI Example
 
     .. code-block:: bash
 
-    	salt-cloud -a show_instance myserver
+        salt-cloud -a show_instance myserver
 
     '''
     if call != 'action':
@@ -265,7 +272,7 @@ def avail_images(conn=None, call=None):
     '''
     List available images for OpenStack
 
-    CLI Example 
+    CLI Example
 
     .. code-block:: bash
 
@@ -287,7 +294,7 @@ def avail_sizes(conn=None, call=None):
     '''
     List available sizes for OpenStack
 
-    CLI Example 
+    CLI Example
 
     .. code-block:: bash
 
@@ -309,7 +316,7 @@ def list_networks(conn=None, call=None):
     '''
     List networks for OpenStack
 
-    CLI Example 
+    CLI Example
 
     .. code-block:: bash
 
@@ -331,11 +338,11 @@ def list_subnets(conn=None, call=None, kwargs=None):
     List subnets in a virtual network
 
     network
-    	network to list subnets of
+        network to list subnets of
 
     .. code-block::
 
-    	salt-cloud -f list_subnets myopenstack network=salt-net
+        salt-cloud -f list_subnets myopenstack network=salt-net
 
     '''
     if call == 'action':
@@ -599,19 +606,19 @@ def call(conn=None, call=None, kwargs=None):
 
         function to call from shade.openstackcloud library
 
-    CLI Example 
+    CLI Example
 
     .. code-block:: bash
 
-    	salt-cloud -f call myopenstack func=list_images
-    	salt-cloud -f call myopenstack func=create_network name=mysubnet
+        salt-cloud -f call myopenstack func=list_images
+        t sujksalt-cloud -f call myopenstack func=create_network name=mysubnet
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
             'The call function must be called with '
             '-f or --function.'
         )
-    
+
     if 'func' not in kwargs:
         raise SaltCloudSystemExit(
             'No `func` argument passed'
