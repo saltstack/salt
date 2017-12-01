@@ -139,7 +139,9 @@ def absent(name, auth=None, **kwargs):
         name=kwargs['project_name'])
 
     secgroup = __salt__['neutronng.security_group_get'](
-        name=name, filters={'project_id':kwargs['project_id']})
+        name=name,
+        filters={'project_id': kwargs['project_id']}
+    )
 
     if secgroup:
         if __opts__['test'] is True:
