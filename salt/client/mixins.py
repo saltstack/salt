@@ -237,7 +237,7 @@ class SyncClientMixin(object):
 
     def low(self, fun, low, print_event=True, full_return=False):
         '''
-        Check for deprecated usage and allow until Salt Oxygen.
+        Check for deprecated usage and allow until Salt Fluorine.
         '''
         msg = []
         if 'args' in low:
@@ -248,7 +248,7 @@ class SyncClientMixin(object):
             low['kwarg'] = low.pop('kwargs')
 
         if msg:
-            salt.utils.warn_until('Oxygen', ' '.join(msg))
+            salt.utils.warn_until('Fluorine', ' '.join(msg))
 
         return self._low(fun, low, print_event=print_event, full_return=full_return)
 
