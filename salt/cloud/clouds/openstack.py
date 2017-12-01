@@ -3,6 +3,7 @@
 '''
 
 # Import Python Libs
+import copy
 import json
 import logging
 import os
@@ -35,7 +36,7 @@ __virtualname__ = 'openstack'
 
 def __virtual__():
     '''
-    Check for Openstack dependencies
+    Check for OpenStack dependencies
     '''
     if get_configured_provider() is False:
         return False
@@ -117,7 +118,14 @@ def get_conn():
 
 def list_nodes(conn=None, call=None):
     '''
-    List VMs on this Openstack account
+    Return a list of VMs
+
+    CLI Example 
+
+    .. code-block:: bash
+
+    	salt-cloud -f list_nodes myopenstack
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -133,7 +141,14 @@ def list_nodes(conn=None, call=None):
 
 def list_nodes_min(conn=None, call=None):
     '''
-    List VMs on this Openstack account
+    Return a list of VMs with minimal information
+
+    CLI Example 
+
+    .. code-block:: bash
+
+    	salt-cloud -f list_nodes_min myopenstack
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -160,7 +175,14 @@ def _get_ips(node, addr_type='public'):
 
 def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
     '''
-    List VMs on this Openstack account
+    Return a list of VMs with all the information about them
+
+    CLI Example 
+
+    .. code-block:: bash
+
+    	salt-cloud -f list_nodes_full myopenstack
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -185,7 +207,14 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
 
 def list_nodes_select(conn=None, call=None):  # pylint: disable=unused-argument
     '''
-    Return a list of the VMs that are on the provider, with select fields
+    Return a list of VMs with the fields from `query.selection`
+
+    CLI Example 
+
+    .. code-block:: bash
+
+    	salt-cloud -f list_nodes_full myopenstack
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -198,7 +227,18 @@ def list_nodes_select(conn=None, call=None):  # pylint: disable=unused-argument
 
 def show_instance(name, conn=None, call=None):
     '''
-    Get VM on this Openstack account
+    Get VM on this OpenStack account
+
+    name
+
+        name of the instance
+
+    CLI Example 
+
+    .. code-block:: bash
+
+    	salt-cloud -a show_instance myserver
+
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -223,7 +263,15 @@ def show_instance(name, conn=None, call=None):
 
 def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
     '''
-    List available images for Openstack
+    List available images for OpenStack
+
+    CLI Example 
+
+    .. code-block:: bash
+
+        salt-cloud -f avail_images myopenstack
+        salt-cloud --list-images myopenstack
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -237,7 +285,15 @@ def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
 
 def avail_sizes(conn=None, call=None):  # pylint: disable=unused-argument
     '''
-    List available sizes for Openstack
+    List available sizes for OpenStack
+
+    CLI Example 
+
+    .. code-block:: bash
+
+        salt-cloud -f avail_sizes myopenstack
+        salt-cloud --list-sizes myopenstack
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -251,7 +307,14 @@ def avail_sizes(conn=None, call=None):  # pylint: disable=unused-argument
 
 def list_networks(conn=None, call=None):  # pylint: disable=unused-argument
     '''
-    List virtual networks
+    List networks for OpenStack
+
+    CLI Example 
+
+    .. code-block:: bash
+
+        salt-cloud -f list_networks myopenstack
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -272,7 +335,8 @@ def list_subnets(conn=None, call=None, kwargs=None):  # pylint: disable=unused-a
 
     .. code-block::
 
-    	salt-cloud -f list_subnets network=salt-net
+    	salt-cloud -f list_subnets myopenstack network=salt-net
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -288,7 +352,10 @@ def list_subnets(conn=None, call=None, kwargs=None):  # pylint: disable=unused-a
     return conn.list_subnets(filters={'network': kwargs['network']})
 
 
-def _clean_kwargs(**kwargs):
+def _clean_create_kwargs(**kwargs):
+    '''
+    Sanatize kwargs to be sent to create_server
+    '''
     VALID_OPTS = {
         'name': six.string_types,
         'image': six.string_types,
@@ -332,14 +399,17 @@ def _clean_kwargs(**kwargs):
     return __utils__['dictupdate.update'](kwargs, extra)
 
 
-def request_instance(conn=None, call=None, kwargs=None):
+def request_instance(vm_):
+    '''
+    Request an instance to be built
+    '''
     if call == 'function':
         # Technically this function may be called other ways too, but it
         # definitely cannot be called with --function.
         raise SaltCloudSystemExit(
             'The request_instance action must be called with -a or --action.'
         )
-    vm_ = kwargs.copy()
+    kwargs = copy.deepcopy(vm_)
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     __utils__['cloud.check_name'](vm_['name'], 'a-zA-Z0-9._-')
     if conn is None:
@@ -359,7 +429,7 @@ def request_instance(conn=None, call=None, kwargs=None):
     kwargs['flavor'] = kwargs.pop('size')
     kwargs['wait'] = True
     try:
-        conn.create_server(**_clean_kwargs(**kwargs))
+        conn.create_server(**_clean_create_kwargs(**kwargs))
     except shade.exc.OpenStackCloudException as exc:
         log.error('Error creating server %s: %s', vm_['name'], exc)
         destroy(vm_['name'], conn=conn, call='action')
@@ -525,14 +595,16 @@ def call(conn=None, call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     Call function from shade.
 
-    fun
+    func
 
         function to call from shade.openstackcloud library
 
-    .. code-block::
+    CLI Example 
 
-    	salt-cloud -f call myopenstack fun=list_images
-    	salt-cloud -f call myopenstack fun=create_network name=mysubnet
+    .. code-block:: bash
+
+    	salt-cloud -f call myopenstack func=list_images
+    	salt-cloud -f call myopenstack func=create_network name=mysubnet
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
