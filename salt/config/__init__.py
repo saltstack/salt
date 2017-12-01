@@ -174,6 +174,10 @@ VALID_OPTS = {
     # The master_pubkey_signature must also be set for this.
     'master_use_pubkey_signature': bool,
 
+    # Enable master stats eveents to be fired, these events will contain information about
+    # what commands the master is processing and what the rates are of the executions
+    'master_stats': bool,
+    'master_stats_event_iter': int,
     # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
     # intended master
     'syndic_finger': str,
@@ -1528,6 +1532,8 @@ DEFAULT_MASTER_OPTS = {
     'svnfs_saltenv_whitelist': [],
     'svnfs_saltenv_blacklist': [],
     'max_event_size': 1048576,
+    'master_stats': False,
+    'master_stats_event_iter': 60,
     'minionfs_env': 'base',
     'minionfs_mountpoint': '',
     'minionfs_whitelist': [],

@@ -6,8 +6,7 @@ or for problem solving if your minion is having problems.
 
 .. versionadded:: 0.12.0
 
-:depends:   - pythoncom
-            - wmi
+:depends:  - wmi
 '''
 
 # Import Python Libs
