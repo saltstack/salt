@@ -331,6 +331,7 @@ def upgraded(name,
            'comment': ''}
 
     # Get list of currently installed packages
+    # This should be relatively fast as it's local only
     pre_install = __salt__['chocolatey.list'](local_only=True)
 
     # Determine if there are changes
@@ -403,6 +404,7 @@ def upgraded(name,
         return ret
 
     # Install the package
+    # This could take a while
     result = __salt__['chocolatey.upgrade'](name=name,
                                             version=version,
                                             source=source,
@@ -421,6 +423,7 @@ def upgraded(name,
         ret['result'] = False
 
     # Get list of installed packages after 'chocolatey.install'
+    # This should be relatively fast as it's local only
     post_install = __salt__['chocolatey.list'](local_only=True)
 
     ret['changes'] = salt.utils.compare_dicts(pre_install, post_install)
