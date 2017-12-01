@@ -2726,13 +2726,14 @@ class State(object):
             except OSError:
                 log.debug(u'File %s does not exist, no need to cleanup', accum_data_path)
         _cleanup_accumulator_data()
-        pause_path = os.path.join(self.opts[u'cachedir'], 'state_pause', self.jid)
-        if os.path.isfile(pause_path):
-            try:
-                os.remove(pause_path)
-            except OSError:
-                # File is not present, all is well
-                pass
+        if self.jid is not None:
+            pause_path = os.path.join(self.opts[u'cachedir'], u'state_pause', self.jid)
+            if os.path.isfile(pause_path):
+                try:
+                    os.remove(pause_path)
+                except OSError:
+                    # File is not present, all is well
+                    pass
 
         return ret
 
