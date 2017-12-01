@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-:depends: kazoo
-:configuration: See :py:mod:`salt.modules.zookeeper` for setup instructions.
-
 Concurrency controls in zookeeper
 =========================================================================
+
+:depends: kazoo
+:configuration: See :py:mod:`salt.modules.zookeeper` for setup instructions.
 
 This module allows you to acquire and release a slot. This is primarily useful
 for ensureing that no more than N hosts take a specific action at once. This can
