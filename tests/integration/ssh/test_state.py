@@ -42,6 +42,16 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function('file.file_exists', ['/tmp/test'])
         self.assertTrue(check_file)
 
+    def test_state_sls_id(self):
+        '''
+        test state.sls_id with salt-ssh
+        '''
+        ret = self.run_function('state.sls_id', ['ssh-file-test', SSH_SLS])
+        self._check_dict_ret(ret=ret, val='__sls__', exp_ret=SSH_SLS)
+
+        check_file = self.run_function('file.file_exists', ['/tmp/test'])
+        self.assertTrue(check_file)
+
     def test_state_show_sls(self):
         '''
         test state.show_sls with salt-ssh
@@ -57,7 +67,7 @@ class SSHStateTest(SSHCase):
         test state.show_top with salt-ssh
         '''
         ret = self.run_function('state.show_top')
-        self.assertEqual(ret, {u'base': [u'master_tops_test', u'core']})
+        self.assertEqual(ret, {u'base': list(set([u'master_tops_test']).union([u'core']))})
 
     def test_state_single(self):
         '''
