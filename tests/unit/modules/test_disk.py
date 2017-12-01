@@ -8,12 +8,11 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.modules.disk as disk
-import salt.utils
 
 STUB_DISK_USAGE = {
                    '/': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000},
@@ -141,15 +140,14 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(len(args[0].split()), 6)
                 self.assertEqual(kwargs, {'python_shell': False})
 
-    @skipIf(not salt.utils.which('sync'), 'sync not found')
-    @skipIf(not salt.utils.which('mkfs'), 'mkfs not found')
     def test_format(self):
         '''
         unit tests for disk.format
         '''
         device = '/dev/sdX1'
         mock = MagicMock(return_value=0)
-        with patch.dict(disk.__salt__, {'cmd.retcode': mock}):
+        with patch.dict(disk.__salt__, {'cmd.retcode': mock}),\
+               patch('salt.utils.which', MagicMock(return_value=True)):
             self.assertEqual(disk.format_(device), True)
 
     def test_fstype(self):
@@ -159,17 +157,18 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         device = '/dev/sdX1'
         fs_type = 'ext4'
         mock = MagicMock(return_value='FSTYPE\n{0}'.format(fs_type))
-        with patch.dict(disk.__grains__, {'kernel': 'Linux'}):
-            with patch.dict(disk.__salt__, {'cmd.run': mock}):
-                self.assertEqual(disk.fstype(device), fs_type)
+        with patch.dict(disk.__grains__, {'kernel': 'Linux'}), \
+                patch.dict(disk.__salt__, {'cmd.run': mock}), \
+                patch('salt.utils.which', MagicMock(return_value=True)):
+            self.assertEqual(disk.fstype(device), fs_type)
 
-    @skipIf(not salt.utils.which('resize2fs'), 'resize2fs not found')
     def test_resize2fs(self):
         '''
         unit tests for disk.resize2fs
         '''
         device = '/dev/sdX1'
         mock = MagicMock()
-        with patch.dict(disk.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(disk.__salt__, {'cmd.run_all': mock}), \
+                patch('salt.utils.which', MagicMock(return_value=True)):
             disk.resize2fs(device)
             mock.assert_called_once_with('resize2fs {0}'.format(device), python_shell=False)
