@@ -34,6 +34,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
+import salt.utils.yamldumper
 import salt.utils.yamlloader as yamlloader
 import salt.utils.zeromq
 import salt.syspaths
@@ -2076,6 +2077,54 @@ def _absolute_path(path, relative_to=None):
     return path
 
 
+def _get_liquid_opts(opts):
+    '''
+    Returns further opts fetched using the Liquid subsystem.
+    '''
+    if 'liquid' not in opts:
+        return opts
+    role = opts['__role']
+    if os.path.isdir(opts['conf_file']):
+        liquid_filename = os.path.join(
+            opts['conf_file'],
+            '{}.d'.format(role),
+            '_liquid.conf')
+    else:
+        liquid_filename = os.path.join(
+            os.path.dirname(opts['conf_file']),
+            '{}.d'.format(role),
+            '_liquid.conf'
+        )
+    # TODO: add the liquid_always_refresh opt on both minion and master
+    if os.path.isfile(liquid_filename):
+        # If the liquid file already exists,
+        # try loadign the config from there
+        liquid_opts = None
+        with salt.utils.files.fopen(liquid_filename, 'r') as liquid_fh:
+            try:
+                liquid_opts = yamlloader.load(
+                    liquid_fh.read(),
+                    Loader=yamlloader.SaltYamlSafeLoader,
+                ) or {}
+            except yaml.YAMLError as err:
+                message = 'Error reading the liquid config file: {0} - {1}'.format(liquid_filename, err)
+                log.error(message)
+        if liquid_opts is not None:
+            return liquid_opts
+    # Otherwise, read the conf options from the remote DB
+    log.error('Reading the liquid opts for the first time')
+    ### TODO: do the shit here
+    liquid_opts = {
+        'liquid_testing': True
+    }
+    # Save the file for next fetches
+    # TODO: when not liquid_always_fetch
+    with salt.utils.files.fopen(liquid_filename, 'w+') as liquid_fh:
+        salt.utils.yamldumper.safe_dump(liquid_opts,
+                                  stream=liquid_fh)
+    return liquid_opts
+
+
 def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
     '''
     Returns configuration dict from parsing either the file described by
@@ -2136,6 +2185,9 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
     else:
         log.debug('Missing configuration file: {0}'.format(path))
+
+    log.error('Read opts from %s', path)
+    log.error(opts)
 
     return opts
 
@@ -3593,6 +3645,23 @@ def apply_minion_config(overrides=None,
     opts = defaults.copy()
     opts['__role'] = 'minion'
     _adjust_log_file_override(overrides, defaults['log_file'])
+
+    if overrides and 'conf_file' in overrides:
+        opts['conf_file'] = overrides['conf_file']
+
+    ### Testing
+    ### TODO revisit this
+    opts['liquid'] = {
+        'refresh_interval': 1000
+    }
+    log.error('Trying to load from the Liquid system')
+    liquid_opts = _get_liquid_opts(opts)
+    if liquid_opts:
+        opts.update(liquid_opts)
+    log.error('Final opts')
+    log.error(opts)
+
+    ###
     if overrides:
         opts.update(overrides)
 
@@ -3745,6 +3814,23 @@ def apply_master_config(overrides=None, defaults=None):
     opts = defaults.copy()
     opts['__role'] = 'master'
     _adjust_log_file_override(overrides, defaults['log_file'])
+
+    if overrides and 'conf_file' in overrides:
+        opts['conf_file'] = overrides['conf_file']
+
+    ### Testing
+    ### TODO revisit this
+    opts['liquid'] = {
+        'refresh_interval': 1000
+    }
+    log.error('Trying to load from the Liquid system')
+    liquid_opts = _get_liquid_opts(opts)
+    if liquid_opts:
+        opts.update(liquid_opts)
+    log.error('Final opts')
+    log.error(opts)
+
+    ###
     if overrides:
         opts.update(overrides)
 
