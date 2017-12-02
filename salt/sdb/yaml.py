@@ -59,7 +59,7 @@ __func_alias__ = {
 
 def __virtual__():
     # Pack magic dunders into GPG renderer
-    setattr(salt.renderers.gpg, '__salt__', {})
+    setattr(salt.renderers.gpg, '__salt__', __salt__)
     setattr(salt.renderers.gpg, '__opts__', __opts__)
     return True
 
