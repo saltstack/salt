@@ -88,11 +88,13 @@ def _zfs_pool_data():
 
     # collect zpool data
     zpool_cmd = salt.utils.path.which('zpool')
-    for zpool in __salt__['cmd.run']('{zpool} list -H -o name,size'.format(zpool=zpool_cmd)).splitlines():
+    for zpool in __salt__['cmd.run']('{zpool} list -H -p -o name,size'.format(zpool=zpool_cmd)).splitlines():
         if 'zpool' not in grains:
             grains['zpool'] = {}
         zpool = zpool.split()
-        grains['zpool'][zpool[0]] = zpool[1]
+        grains['zpool'][zpool[0]] = float(zpool[1])
+        if int(grains['zpool'][zpool[0]]) == grains['zpool'][zpool[0]]:
+            grains['zpool'][zpool[0]] = int(grains['zpool'][zpool[0]])
 
     # return grain data
     return grains
