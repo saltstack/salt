@@ -77,10 +77,25 @@ def serialize(obj, **options):
         raise SerializationError(error)
 
 
+class EncryptedString(str):
+
+    yaml_tag = u'!encrypted'
+
+    @staticmethod
+    def yaml_constructor(loader, tag, node):
+        return EncryptedString(loader.construct_scalar(node))
+
+    @staticmethod
+    def yaml_dumper(dumper, data):
+        return dumper.represent_scalar(EncryptedString.yaml_tag, data.__str__())
+
+
 class Loader(BaseLoader):  # pylint: disable=W0232
     '''Overwrites Loader as not for pollute legacy Loader'''
     pass
 
+
+Loader.add_multi_constructor(EncryptedString.yaml_tag, EncryptedString.yaml_constructor)
 Loader.add_multi_constructor('tag:yaml.org,2002:null', Loader.construct_yaml_null)
 Loader.add_multi_constructor('tag:yaml.org,2002:bool', Loader.construct_yaml_bool)
 Loader.add_multi_constructor('tag:yaml.org,2002:int', Loader.construct_yaml_int)
@@ -100,6 +115,7 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
     '''Overwrites Dumper as not for pollute legacy Dumper'''
     pass
 
+Dumper.add_multi_representer(EncryptedString, EncryptedString.yaml_dumper)
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 Dumper.add_multi_representer(str, Dumper.represent_str)
 if six.PY2:

@@ -98,8 +98,10 @@ from __future__ import absolute_import
 # Python
 import logging
 import re
+import copy
 
 # Salt libs
+import salt.utils.data
 import salt.utils.minions
 import salt.utils.versions
 import salt.cache
@@ -157,7 +159,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         except LookupError:
             continue
 
-        minion_res = __opts__.get('roster_defaults', {}).copy()
+        minion_res = copy.deepcopy(__opts__.get('roster_defaults', {}))
         for param, order in roster_order.items():
             if not isinstance(order, (list, tuple)):
                 order = [order]
@@ -208,7 +210,7 @@ def _data_lookup(ref, lookup):
 
     res = []
     for data_key in lookup:
-        data = salt.utils.traverse_dict_and_list(ref, data_key, None)
+        data = salt.utils.data.traverse_dict_and_list(ref, data_key, None)
         # log.debug('Fetched {0} in {1}: {2}'.format(data_key, ref, data))
         if data:
             res.append(data)

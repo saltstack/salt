@@ -28,6 +28,11 @@ def update(branch=None, repo=None):
         fetched, and ``False`` if there were errors or no new commits were
         fetched.
 
+    .. versionchanged:: Oxygen
+        The return for a given git_pillar remote will now be ``None`` when no
+        changes were fetched. ``False`` now is reserved only for instances in
+        which there were errors.
+
     Fetch one or all configured git_pillar remotes.
 
     .. note::
@@ -61,10 +66,11 @@ def update(branch=None, repo=None):
         if pillar_type != 'git':
             continue
         pillar_conf = ext_pillar[pillar_type]
-        pillar = salt.utils.gitfs.GitPillar(__opts__)
-        pillar.init_remotes(pillar_conf,
-                            salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                            salt.pillar.git_pillar.PER_REMOTE_ONLY)
+        pillar = salt.utils.gitfs.GitPillar(
+            __opts__,
+            pillar_conf,
+            per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+            per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
         for remote in pillar.remotes:
             # Skip this remote if it doesn't match the search criteria
             if branch is not None:
