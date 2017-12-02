@@ -58,9 +58,6 @@ __func_alias__ = {
 
 
 def __virtual__():
-    # Pack magic dunders into GPG renderer
-    setattr(salt.renderers.gpg, '__salt__', __salt__)
-    setattr(salt.renderers.gpg, '__opts__', __opts__)
     return True
 
 
@@ -76,10 +73,11 @@ def get(key, profile=None):  # pylint: disable=W0613
     Get a value from the dictionary
     '''
     data = _get_values(profile)
+    gpgrender = salt.loader.render(__opts__, __salt__)['gpg']
 
     # Decrypt SDB data if specified in the profile
     if profile and profile.get('gpg', False):
-        return salt.utils.data.traverse_dict_and_list(salt.renderers.gpg.render(data), key, None)
+        return salt.utils.data.traverse_dict_and_list(gpgrender(data), key, None)
 
     return salt.utils.traverse_dict_and_list(data, key, None)
 
