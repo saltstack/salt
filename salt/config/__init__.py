@@ -2185,9 +2185,6 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
     else:
         log.debug('Missing configuration file: {0}'.format(path))
 
-    log.error('Read opts from %s', path)
-    log.error(opts)
-
     return opts
 
 
@@ -3644,23 +3641,11 @@ def apply_minion_config(overrides=None,
     opts = defaults.copy()
     opts['__role'] = 'minion'
     _adjust_log_file_override(overrides, defaults['log_file'])
-
     if overrides and 'conf_file' in overrides:
         opts['conf_file'] = overrides['conf_file']
-
-    ### Testing
-    ### TODO revisit this
-    opts['liquid'] = {
-        'refresh_interval': 1000
-    }
-    log.error('Trying to load from the Liquid system')
     liquid_opts = _get_liquid_opts(opts)
     if liquid_opts:
         opts.update(liquid_opts)
-    log.error('Final opts')
-    log.error(opts)
-
-    ###
     if overrides:
         opts.update(overrides)
 
@@ -3813,23 +3798,12 @@ def apply_master_config(overrides=None, defaults=None):
     opts = defaults.copy()
     opts['__role'] = 'master'
     _adjust_log_file_override(overrides, defaults['log_file'])
-
     if overrides and 'conf_file' in overrides:
         opts['conf_file'] = overrides['conf_file']
-
-    ### Testing
-    ### TODO revisit this
-    opts['liquid'] = {
-        'refresh_interval': 1000
-    }
     log.error('Trying to load from the Liquid system')
     liquid_opts = _get_liquid_opts(opts)
     if liquid_opts:
         opts.update(liquid_opts)
-    log.error('Final opts')
-    log.error(opts)
-
-    ###
     if overrides:
         opts.update(overrides)
 
