@@ -184,6 +184,20 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict([('mypool', OrderedDict([('size', 1992864825344)]))])
             self.assertEqual(res, ret)
 
+    def test_get_whitespace(self):
+        '''
+        Tests successful return of get function with a string with whitespaces
+        '''
+        ret = {}
+        ret['stdout'] = "comment\tmy testing pool\t-\n"
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+            ret = zpool.get('mypool', 'comment')
+            res = OrderedDict([('mypool', OrderedDict([('comment', "'my testing pool'")]))])
+            self.assertEqual(res, ret)
+
     def test_scrub_start(self):
         '''
         Tests start of scrub

@@ -16,7 +16,7 @@ import salt.utils.decorators
 import salt.utils.decorators.path
 import salt.utils.path
 from salt.utils.odict import OrderedDict
-from salt.utils.stringutils import to_num as _conform_value
+from salt.utils.stringutils import to_num as str_to_num
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +68,26 @@ def _check_mkfile():
     Looks to see if mkfile is present on the system
     '''
     return salt.utils.path.which('mkfile')
+
+
+def _conform_value(value):
+    '''
+    Ensure value always conform to what zpool expects
+    '''
+    if isinstance(value, bool):  # NOTE: salt breaks the on/off/yes/no properties
+        return 'on' if value else 'off'
+
+    if isinstance(value, str) and ' ' in value:  # NOTE: handle whitespaces
+        # NOTE: quoting the string may be better
+        #       but it is hard to know if we already quoted it before
+        #       this can be improved in the future
+        return "'{0}'".format(value.strip("'"))
+
+    if isinstance(value, str):  # NOTE: convert to numeric if needed
+        return str_to_num(value)
+
+    # NOTE: passthrough
+    return value
 
 
 def healthy():
@@ -458,10 +478,9 @@ def set(zpool, prop, value):
     '''
     ret = {}
     ret[zpool] = {}
-    if isinstance(value, bool):
-        value = 'on' if value else 'off'
-    elif ' ' in value:
-        value = "'{0}'".format(value)
+
+    # make sure value is what zfs expects
+    value = _conform_value(value)
 
     # get zpool list data
     zpool_cmd = _check_zpool()
@@ -686,34 +705,30 @@ def create(zpool, *vdevs, **kwargs):
     if properties and 'bootsize' in properties:
         createboot = True
 
+    # make sure values are in the format zfs expects
+    if properties:
+        for prop in properties:
+            properties[prop] = _conform_value(properties[prop])
+
+    if filesystem_properties:
+        for prop in filesystem_properties:
+            filesystem_properties[prop] = _conform_value(filesystem_properties[prop])
+
     # apply extra arguments from kwargs
     if force:  # force creation
         cmd = '{0} -f'.format(cmd)
     if createboot:  # create boot paritition
         cmd = '{0} -B'.format(cmd)
     if properties:  # create "-o property=value" pairs
-        optlist = []
+        proplist = []
         for prop in properties:
-            if isinstance(properties[prop], bool):
-                value = 'on' if properties[prop] else 'off'
-            else:
-                if ' ' in properties[prop]:
-                    value = "'{0}'".format(properties[prop])
-                else:
-                    value = properties[prop]
-            optlist.append('-o {0}={1}'.format(prop, value))
-        opts = ' '.join(optlist)
-        cmd = '{0} {1}'.format(cmd, opts)
+            proplist.append('-o {0}={1}'.format(prop, properties[prop]))
+        cmd = '{0} {1}'.format(cmd, ' '.join(proplist))
     if filesystem_properties:  # create "-O property=value" pairs
-        optlist = []
+        fsproplist = []
         for prop in filesystem_properties:
-            if ' ' in filesystem_properties[prop]:
-                value = "'{0}'".format(filesystem_properties[prop])
-            else:
-                value = filesystem_properties[prop]
-            optlist.append('-O {0}={1}'.format(prop, value))
-        opts = ' '.join(optlist)
-        cmd = '{0} {1}'.format(cmd, opts)
+            fsproplist.append('-O {0}={1}'.format(prop, filesystem_properties[prop]))
+        cmd = '{0} {1}'.format(cmd, ' '.join(fsproplist))
     if mountpoint:  # set mountpoint
         cmd = '{0} -m {1}'.format(cmd, mountpoint)
     if altroot:  # set altroot
