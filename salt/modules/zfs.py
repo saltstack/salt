@@ -292,7 +292,7 @@ def rename(name, new_name, **kwargs):
 def list_(name=None, **kwargs):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: 2016.3.0
+    .. versionchanged:: Oxygen
 
     Return a list of all datasets or a specified dataset on the system and the
     values of their used, available, referenced, and mountpoint properties.
@@ -312,6 +312,9 @@ def list_(name=None, **kwargs):
         property to sort on (default = name)
     order : string [ascending|descending]
         sort order (default = ascending)
+    parsable : boolean
+        display numbers in parsable (exact) values
+        .. versionadded:: Oxygen
 
     CLI Example:
 
@@ -329,7 +332,12 @@ def list_(name=None, **kwargs):
     sort = kwargs.get('sort', None)
     ltype = kwargs.get('type', None)
     order = kwargs.get('order', 'ascending')
+    parsable = kwargs.get('parsable', False)
     cmd = '{0} list -H'.format(zfs)
+
+    # parsable output
+    if parsable:
+        cmd = '{0} -p'.format(cmd)
 
     # filter on type
     if ltype:
@@ -1164,6 +1172,7 @@ def set(*dataset, **kwargs):
 def get(*dataset, **kwargs):
     '''
     .. versionadded:: 2016.3.0
+    .. versionchanged:: Oxygen
 
     Displays properties for the given datasets.
 
@@ -1183,6 +1192,9 @@ def get(*dataset, **kwargs):
     source : string
         comma-separated list of sources to display. Must be one of the following:
         local, default, inherited, temporary, and none. The default value is all sources.
+    parsable : boolean
+        display numbers in parsable (exact) values
+        .. versionadded:: Oxygen
 
     .. note::
 
@@ -1206,7 +1218,12 @@ def get(*dataset, **kwargs):
     fields = kwargs.get('fields', 'value,source')
     ltype = kwargs.get('type', None)
     source = kwargs.get('source', None)
+    parsable = kwargs.get('parsable', False)
     cmd = '{0} get -H'.format(zfs)
+
+    # parsable output
+    if parsable:
+        cmd = '{0} -p'.format(cmd)
 
     # recursively get
     if depth:
