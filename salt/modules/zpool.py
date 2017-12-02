@@ -307,10 +307,10 @@ def iostat(zpool=None, sample_time=0):
     return ret
 
 
-def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
+def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=False):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: 2016.3.0
+    .. versionchanged:: Oxygen
 
     Return information about (all) storage pools
 
@@ -318,6 +318,9 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
         optional name of storage pool
     properties : string
         comma-separated list of properties to list
+    parsable : boolean
+        display numbers in parsable (exact) values
+        .. versionadded:: Oxygen
 
     .. note::
         the 'name' property will always be included, the 'frag' property will get removed if not available
@@ -333,6 +336,9 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
     .. code-block:: bash
 
         salt '*' zpool.list
+        salt '*' zpool.list zpool=tank
+        salt '*' zpool.list 'size,free'
+        salt '*' zpool.list 'size,free' tank
     '''
     ret = OrderedDict()
 
@@ -346,9 +352,10 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
 
     # get zpool list data
     zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} list -H -o {properties}{zpool}'.format(
+    cmd = '{zpool_cmd} list -H -o {properties}{parsable}{zpool}'.format(
         zpool_cmd=zpool_cmd,
         properties=','.join(properties),
+        parsable=' -p' if parsable else '',
         zpool=' {0}'.format(zpool) if zpool else ''
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -370,9 +377,10 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
     return ret
 
 
-def get(zpool, prop=None, show_source=False):
+def get(zpool, prop=None, show_source=False, parsable=False):
     '''
     .. versionadded:: 2016.3.0
+    .. versionchanged: Oxygen
 
     Retrieves the given list of properties
 
@@ -382,6 +390,9 @@ def get(zpool, prop=None, show_source=False):
         optional name of property to retrieve
     show_source : boolean
         show source of property
+    parsable : boolean
+        display numbers in parsable (exact) values
+        .. versionadded:: Oxygen
 
     CLI Example:
 
@@ -396,9 +407,10 @@ def get(zpool, prop=None, show_source=False):
 
     # get zpool list data
     zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} get -H -o {properties} {prop} {zpool}'.format(
+    cmd = '{zpool_cmd} get -H -o {properties}{parsable} {prop} {zpool}'.format(
         zpool_cmd=zpool_cmd,
         properties=','.join(properties),
+        parsable=' -p' if parsable else '',
         prop=prop if prop else 'all',
         zpool=zpool
     )
