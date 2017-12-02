@@ -3800,7 +3800,6 @@ def apply_master_config(overrides=None, defaults=None):
     _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides and 'conf_file' in overrides:
         opts['conf_file'] = overrides['conf_file']
-    log.error('Trying to load from the Liquid system')
     liquid_opts = _get_liquid_opts(opts)
     if liquid_opts:
         opts.update(liquid_opts)
