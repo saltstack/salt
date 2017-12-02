@@ -8,12 +8,13 @@ from __future__ import absolute_import
 import salt.loader
 
 
-def fetch(name, opts, utils=None, **kwargs):
+def fetch(opts, utils=None, **kwargs):
     '''
     Fetch the configuration options using the liquid module.
     '''
     if utils is None:
         utils = {}
-    fun = '{0}.get'.format(name)
+    driver = 'yaml'  # TODO: get the driver name from the opts
+    fun = '{0}.get'.format(driver)
     loaded_lq = salt.loader.liquid(opts, fun, utils=utils)
-    return loaded_lq[fun](**kwargs)
+    return loaded_lq[fun](driver, **kwargs)
