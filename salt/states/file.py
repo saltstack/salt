@@ -1605,9 +1605,13 @@ def managed(name,
            'name': name,
            'result': True}
 
+    if not name:
+        return _error(ret, 'Destination file name is required')
+
     if mode is not None and salt.utils.is_windows():
         return _error(ret, 'The \'mode\' option is not supported on Windows')
 
+    #import pudb; pu.db
     try:
         keep_mode = mode.lower() == 'keep'
         if keep_mode:
@@ -1755,8 +1759,6 @@ def managed(name,
                     ret['comment'] = 'Error while applying template on contents'
                 return ret
 
-    if not name:
-        return _error(ret, 'Must provide name to file.exists')
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
         if group is not None:
