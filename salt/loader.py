@@ -372,15 +372,18 @@ def tops(opts):
     return FilterDictWrapper(ret, u'.top')
 
 
-def wheels(opts, whitelist=None):
+def wheels(opts, whitelist=None, context=None):
     '''
     Returns the wheels modules
     '''
+    if context is None:
+        context = {}
     return LazyLoader(
         _module_dirs(opts, u'wheel'),
         opts,
         tag=u'wheel',
         whitelist=whitelist,
+        pack={u'__context__': context},
     )
 
 
@@ -836,17 +839,19 @@ def call(fun, **kwargs):
     return funcs[fun](*args)
 
 
-def runner(opts, utils=None):
+def runner(opts, utils=None, context=None):
     '''
     Directly call a function inside a loader directory
     '''
     if utils is None:
         utils = {}
+    if context is None:
+        context = {}
     ret = LazyLoader(
         _module_dirs(opts, u'runners', u'runner', ext_type_dirs=u'runner_dirs'),
         opts,
         tag=u'runners',
-        pack={u'__utils__': utils},
+        pack={u'__utils__': utils, u'__context__': context},
     )
     # TODO: change from __salt__ to something else, we overload __salt__ too much
     ret.pack[u'__salt__'] = ret

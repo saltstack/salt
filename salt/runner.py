@@ -43,6 +43,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
     def __init__(self, opts):
         self.opts = opts
+        self.context = {}
 
     @property
     def functions(self):
@@ -51,11 +52,13 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 self.utils = salt.loader.utils(self.opts)
             # Must be self.functions for mixin to work correctly :-/
             try:
-                self._functions = salt.loader.runner(self.opts, utils=self.utils)
+                self._functions = salt.loader.runner(
+                    self.opts, utils=self.utils, context=self.context)
             except AttributeError:
                 # Just in case self.utils is still not present (perhaps due to
                 # problems with the loader), load the runner funcs without them
-                self._functions = salt.loader.runner(self.opts)
+                self._functions = salt.loader.runner(
+                    self.opts, context=self.context)
 
         return self._functions
 
@@ -205,7 +208,7 @@ class Runner(RunnerClient):
                 if self.opts.get(u'eauth'):
                     if u'token' in self.opts:
                         try:
-                            with salt.utils.files.fopen(os.path.join(self.opts[u'cachedir'], u'.root_key'), u'r') as fp_:
+                            with salt.utils.files.fopen(os.path.join(self.opts[u'key_dir'], u'.root_key'), u'r') as fp_:
                                 low[u'key'] = fp_.readline()
                         except IOError:
                             low[u'token'] = self.opts[u'token']

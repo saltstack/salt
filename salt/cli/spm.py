@@ -32,7 +32,10 @@ class SPM(parsers.SPMParser):
         v_dirs = [
             self.config['cachedir'],
         ]
-        verify_env(v_dirs, self.config['user'],)
+        verify_env(v_dirs,
+                   self.config['user'],
+                   root_dir=self.config['root_dir'],
+                   )
         verify_log(self.config)
         client = salt.spm.SPMClient(ui, self.config)
         client.run(self.args)

@@ -5,10 +5,10 @@ Orchestrate Runner
 ==================
 
 Executing states or highstate on a minion is perfect when you want to ensure that
-minion configured and running the way you want. Sometimes however you want to 
+minion configured and running the way you want. Sometimes however you want to
 configure a set of minions all at once.
 
-For example, if you want to set up a load balancer in front of a cluster of web 
+For example, if you want to set up a load balancer in front of a cluster of web
 servers you can ensure the load balancer is set up first, and then the same
 matching configuration is applied consistently across the whole cluster.
 
@@ -202,7 +202,7 @@ this.
 
     # /srv/salt/orch/deploy.sls
     {% set servers = salt['pillar.get']('servers', 'test') %}
-    {% set master = salt['pillat.get']('master', 'salt') %}
+    {% set master = salt['pillar.get']('master', 'salt') %}
     create_instance:
       salt.runner:
         - name: cloud.profile
@@ -220,6 +220,34 @@ To execute with pillar data.
 
     salt-run state.orch orch.deploy pillar='{"servers": "newsystem1",
     "master": "mymaster"}'
+
+
+Return Codes in Runner/Wheel Jobs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: Oxygen
+
+State (``salt.state``) jobs are able to report failure via the :ref:`state
+return dictionary <state-return-data>`. Remote execution (``salt.function``)
+jobs are able to report failure by setting a ``retcode`` key in the
+``__context__`` dictionary. However, runner (``salt.runner``) and wheel
+(``salt.wheel``) jobs would only report a ``False`` result when the
+runner/wheel function raised an exception. As of the Oxygen release, it is now
+possible to set a retcode in runner and wheel functions just as you can do in
+remote execution functions. Here is some example pseudocode:
+
+.. code-block:: python
+
+    def myrunner():
+        ...
+        do stuff
+        ...
+        if some_error_condition:
+            __context__['retcode'] = 1
+        return result
+
+This allows a custom runner/wheel function to report its failure so that
+requisites can accurately tell that a job has failed.
 
 
 More Complex Orchestration

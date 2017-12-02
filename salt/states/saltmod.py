@@ -787,28 +787,15 @@ def runner(name, **kwargs):
     runner_return = out.get('return')
     if isinstance(runner_return, dict) and 'Error' in runner_return:
         out['success'] = False
-    if not out.get('success', True):
-        cmt = "Runner function '{0}' failed{1}.".format(
-            name,
-            ' with return {0}'.format(runner_return) if runner_return else '',
-        )
-        ret = {
-            'name': name,
-            'result': False,
-            'changes': {},
-            'comment': cmt,
-        }
-    else:
-        cmt = "Runner function '{0}' executed{1}.".format(
-            name,
-            ' with return {0}'.format(runner_return) if runner_return else '',
-        )
-        ret = {
-            'name': name,
-            'result': True,
-            'changes': {},
-            'comment': cmt,
-        }
+
+    success = out.get('success', True)
+    ret = {'name': name,
+           'changes': {'return': runner_return},
+           'result': success}
+    ret['comment'] = "Runner function '{0}' {1}.".format(
+        name,
+        'executed' if success else 'failed',
+    )
 
     ret['__orchestration__'] = True
     if 'jid' in out:
@@ -1039,15 +1026,21 @@ def wheel(name, **kwargs):
                                      __env__=__env__,
                                      **kwargs)
 
-    ret['result'] = True
+    wheel_return = out.get('return')
+    if isinstance(wheel_return, dict) and 'Error' in wheel_return:
+        out['success'] = False
+
+    success = out.get('success', True)
+    ret = {'name': name,
+           'changes': {'return': wheel_return},
+           'result': success}
+    ret['comment'] = "Wheel function '{0}' {1}.".format(
+        name,
+        'executed' if success else 'failed',
+    )
+
     ret['__orchestration__'] = True
     if 'jid' in out:
         ret['__jid__'] = out['jid']
-
-    runner_return = out.get('return')
-    ret['comment'] = "Wheel function '{0}' executed{1}.".format(
-        name,
-        ' with return {0}'.format(runner_return) if runner_return else '',
-    )
 
     return ret
