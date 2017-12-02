@@ -201,11 +201,13 @@ import subprocess
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
-import salt.utils
 import salt.utils.args
 import salt.utils.decorators
 import salt.utils.docker
 import salt.utils.files
+import salt.utils.functools
+import salt.utils.hashutils
+import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.thin
@@ -913,8 +915,8 @@ def compare_container(first, second, ignore=None):
                     ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
             else:
                 if item == 'Links':
-                    val1 = _scrub_links(val1, first)
-                    val2 = _scrub_links(val2, second)
+                    val1 = sorted(_scrub_links(val1, first))
+                    val2 = sorted(_scrub_links(val2, second))
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
@@ -936,8 +938,8 @@ def compare_container(first, second, ignore=None):
                     ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
             else:
                 if item == 'Links':
-                    val1 = _scrub_links(val1, first)
-                    val2 = _scrub_links(val2, second)
+                    val1 = sorted(_scrub_links(val1, first))
+                    val2 = sorted(_scrub_links(val2, second))
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
@@ -2744,7 +2746,7 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
 
 
 # Docker cp gets a file from the container, alias this to copy_from
-cp = salt.utils.alias_function(copy_from, 'cp')
+cp = salt.utils.functools.alias_function(copy_from, 'cp')
 
 
 @_ensure_exists
@@ -4392,7 +4394,7 @@ def pause(name):
                             .format(name))}
     return _change_state(name, 'pause', 'paused')
 
-freeze = salt.utils.alias_function(pause, 'freeze')
+freeze = salt.utils.functools.alias_function(pause, 'freeze')
 
 
 @_ensure_exists
@@ -4599,7 +4601,7 @@ def unpause(name):
                             .format(name))}
     return _change_state(name, 'unpause', 'running')
 
-unfreeze = salt.utils.alias_function(unpause, 'unfreeze')
+unfreeze = salt.utils.functools.alias_function(unpause, 'unfreeze')
 
 
 def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
@@ -5369,7 +5371,7 @@ def call(name, function, *args, **kwargs):
 
         # process "real" result in stdout
         try:
-            data = salt.utils.find_json(ret['stdout'])
+            data = salt.utils.json.find_json(ret['stdout'])
             local = data.get('local', data)
             if isinstance(local, dict):
                 if 'retcode' in local:
@@ -5431,7 +5433,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
 
     ret = None
     try:
-        trans_tar_sha256 = salt.utils.get_hash(trans_tar, 'sha256')
+        trans_tar_sha256 = salt.utils.hashutils.get_hash(trans_tar, 'sha256')
         copy_to(name,
                 trans_tar,
                 os.path.join(trans_dest_path, 'salt_state.tgz'),
