@@ -34,6 +34,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
+import salt.utils.liquid
 import salt.utils.yamldumper
 import salt.utils.yamlloader as yamlloader
 import salt.utils.zeromq
@@ -2114,9 +2115,7 @@ def _get_liquid_opts(opts):
     # Otherwise, read the conf options from the remote DB
     log.error('Reading the liquid opts for the first time')
     ### TODO: do the shit here
-    liquid_opts = {
-        'liquid_testing': True
-    }
+    liquid_opts = salt.utils.liquid.fetch(opts)
     # Save the file for next fetches
     # TODO: when not liquid_always_fetch
     with salt.utils.files.fopen(liquid_filename, 'w+') as liquid_fh:
