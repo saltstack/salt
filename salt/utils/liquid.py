@@ -18,6 +18,6 @@ def fetch(opts, utils=None, **kwargs):
     if utils is None:
         utils = {}
     driver = 'yaml'  # TODO: get the driver name from the opts
-    fun = '{0}.get'.format(driver)
+    fun = '{0}.fetch'.format(driver)
     loaded_lq = salt.loader.liquid(opts, fun, utils=utils)
     return loaded_lq[fun](**kwargs)
