@@ -8,6 +8,7 @@ Salt interface to ZFS commands
 from __future__ import absolute_import
 
 # Import Python libs
+import re
 import logging
 
 # Import Salt libs
@@ -19,6 +20,10 @@ from salt.utils.odict import OrderedDict
 
 __virtualname__ = 'zfs'
 log = logging.getLogger(__name__)
+
+
+# Precompiled regex for value transform
+re_zfs_numb = re.compile("^(\d+|\d+(?=\d*)\.\d+)$")
 
 # Function alias to set mapping.
 __func_alias__ = {
@@ -375,7 +380,10 @@ def list_(name=None, **kwargs):
             ds_data = {}
 
             for prop in properties:
-                ds_data[prop] = ds[properties.index(prop)]
+                prop_value = ds[properties.index(prop)]
+                if re_zfs_numb.match(prop_value):
+                    prop_value = float(prop_value) if '.' in prop_value else int(prop_value)
+                ds_data[prop] = prop_value
 
             ret[ds_data['name']] = ds_data
             del ret[ds_data['name']]['name']
@@ -1263,7 +1271,10 @@ def get(*dataset, **kwargs):
             ds_data = {}
 
             for field in fields:
-                ds_data[field] = ds[fields.index(field)]
+                prop_value = ds[fields.index(field)]
+                if re_zfs_numb.match(prop_value):
+                    prop_value = float(prop_value) if '.' in prop_value else int(prop_value)
+                ds_data[field] = prop_value
 
             ds_name = ds_data['name']
             ds_prop = ds_data['property']
