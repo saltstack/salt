@@ -8,7 +8,6 @@ Salt interface to ZFS commands
 from __future__ import absolute_import
 
 # Import Python libs
-import re
 import logging
 
 # Import Salt libs
@@ -17,13 +16,10 @@ import salt.utils.path
 import salt.modules.cmdmod
 import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
+from salt.utils.stringutils import to_num as _conform_value
 
 __virtualname__ = 'zfs'
 log = logging.getLogger(__name__)
-
-
-# Precompiled regex for value transform
-re_zfs_numb = re.compile(r'^(\d+|\d+(?=\d*)\.\d+)$')
 
 # Function alias to set mapping.
 __func_alias__ = {
@@ -65,21 +61,6 @@ def _check_features():
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     return res['retcode'] == 0
-
-
-def _conform_value(value):
-    '''
-    Ensure numeric value are actually numeric
-    '''
-    # NOTE: we are only interested in numbers
-    if not re_zfs_numb.match(value):
-        return value
-
-    # NOTE: figure out if we are a float or int
-    value = float(value)
-    if int(value) == value:
-        return int(value)
-    return value
 
 
 def exists(name, **kwargs):

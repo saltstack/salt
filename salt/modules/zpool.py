@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 # Import Python libs
 import os
-import re
 import stat
 import logging
 
@@ -17,11 +16,9 @@ import salt.utils.decorators
 import salt.utils.decorators.path
 import salt.utils.path
 from salt.utils.odict import OrderedDict
+from salt.utils.stringutils import to_num as _conform_value
 
 log = logging.getLogger(__name__)
-
-# Precompiled regex for value transform
-re_zfs_numb = re.compile(r'^(\d+|\d+(?=\d*)\.\d+)$')
 
 __virtualname__ = 'zpool'
 __func_alias__ = {
@@ -71,21 +68,6 @@ def _check_mkfile():
     Looks to see if mkfile is present on the system
     '''
     return salt.utils.path.which('mkfile')
-
-
-def _conform_value(value):
-    '''
-    Ensure numeric value are actually numeric
-    '''
-    # NOTE: we are only interested in numbers
-    if not re_zfs_numb.match(value):
-        return value
-
-    # NOTE: figure out if we are a float or int
-    value = float(value)
-    if int(value) == value:
-        return int(value)
-    return value
 
 
 def healthy():
