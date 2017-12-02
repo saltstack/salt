@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 
 
 # Precompiled regex for value transform
-re_zfs_numb = re.compile("^(\d+|\d+(?=\d*)\.\d+)$")
+re_zfs_numb = re.compile(r'^(\d+|\d+(?=\d*)\.\d+)$')
 
 # Function alias to set mapping.
 __func_alias__ = {

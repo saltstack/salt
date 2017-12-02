@@ -21,7 +21,7 @@ from salt.utils.odict import OrderedDict
 log = logging.getLogger(__name__)
 
 # Precompiled regex for value transform
-re_zfs_numb = re.compile("^(\d+|\d+(?=\d*)\.\d+)$")
+re_zfs_numb = re.compile(r'^(\d+|\d+(?=\d*)\.\d+)$')
 
 __virtualname__ = 'zpool'
 __func_alias__ = {
