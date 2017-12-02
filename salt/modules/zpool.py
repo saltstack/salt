@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import os
+import re
 import stat
 import logging
 
@@ -18,6 +19,9 @@ import salt.utils.path
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
+
+# Precompiled regex for value transform
+re_zfs_numb = re.compile("^(\d+|\d+(?=\d*)\.\d+)$")
 
 __virtualname__ = 'zpool'
 __func_alias__ = {
@@ -369,7 +373,10 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Fal
         zp_data = {}
 
         for prop in properties:
-            zp_data[prop] = zp[properties.index(prop)]
+            prop_value = zp[properties.index(prop)]
+            if re_zfs_numb.match(prop_value):
+                prop_value = float(prop_value) if '.' in prop_value else int(prop_value)
+            zp_data[prop] = prop_value
 
         ret[zp_data['name']] = zp_data
         del ret[zp_data['name']]['name']
@@ -425,7 +432,10 @@ def get(zpool, prop=None, show_source=False, parsable=False):
         zp_data = {}
 
         for prop in properties:
-            zp_data[prop] = zp[properties.index(prop)]
+            prop_value = zp[properties.index(prop)]
+            if re_zfs_numb.match(prop_value):
+                prop_value = float(prop_value) if '.' in prop_value else int(prop_value)
+            zp_data[prop] = prop_value
 
         if show_source:
             ret[zpool][zp_data['property']] = zp_data
