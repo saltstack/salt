@@ -32,15 +32,16 @@ import salt.cache
 import salt.payload
 import salt.transport
 import salt.loader
-import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
+import salt.utils.jid
 import salt.utils.minions
 import salt.utils.platform
+import salt.utils.user
 import salt.utils.verify
 import salt.utils.versions
-import salt.utils.jid
+import salt.utils.zeromq
 import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError,
@@ -157,7 +158,7 @@ class LocalClient(object):
                 )
             self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
-        self.salt_user = salt.utils.get_specific_user()
+        self.salt_user = salt.utils.user.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
         self.auto_reconnect = auto_reconnect
@@ -187,11 +188,11 @@ class LocalClient(object):
             # The username may contain '\' if it is in Windows
             # 'DOMAIN\username' format. Fix this for the keyfile path.
             key_user = key_user.replace(u'\\', u'_')
-        keyfile = os.path.join(self.opts[u'cachedir'],
+        keyfile = os.path.join(self.opts[u'key_dir'],
                                u'.{0}_key'.format(key_user))
         try:
             # Make sure all key parent directories are accessible
-            salt.utils.verify.check_path_traversal(self.opts[u'cachedir'],
+            salt.utils.verify.check_path_traversal(self.opts[u'key_dir'],
                                                    key_user,
                                                    self.skip_perm_errors)
             with salt.utils.files.fopen(keyfile, u'r') as key:
@@ -843,6 +844,10 @@ class LocalClient(object):
 
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
+
+        Normally :py:meth:`cmd_iter` does not yield results for minions that
+        are not connected. If you want it to return results for disconnected
+        minions set `expect_minions=True` in `kwargs`.
 
         :return: A generator yielding the individual minion returns
 
@@ -1590,7 +1595,10 @@ class LocalClient(object):
                                          timeout=timeout,
                                          tgt=tgt,
                                          tgt_type=tgt_type,
-                                         expect_minions=(verbose or show_timeout),
+                                         # (gtmanfred) expect_minions is popped here incase it is passed from a client
+                                         # call. If this is not popped, then it would be passed twice to
+                                         # get_iter_returns.
+                                         expect_minions=(kwargs.pop('expect_minions', False) or verbose or show_timeout),
                                          **kwargs
                                          ):
             log.debug(u'return event: %s', ret)
@@ -1786,7 +1794,7 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        master_uri = u'tcp://' + salt.utils.ip_bracket(self.opts[u'interface']) + \
+        master_uri = u'tcp://' + salt.utils.zeromq.ip_bracket(self.opts[u'interface']) + \
                      u':' + str(self.opts[u'ret_port'])
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt=u'clear',
@@ -1894,7 +1902,7 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        master_uri = u'tcp://' + salt.utils.ip_bracket(self.opts[u'interface']) + \
+        master_uri = u'tcp://' + salt.utils.zeromq.ip_bracket(self.opts[u'interface']) + \
                      u':' + str(self.opts[u'ret_port'])
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
                                                                 io_loop=io_loop,

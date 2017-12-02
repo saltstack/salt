@@ -444,7 +444,7 @@ under the API Access tab.
 .. code-block:: yaml
 
     my-digitalocean-config:
-      driver: digital_ocean
+      driver: digitalocean
       personal_access_token: xxx
       location: New York 1
 
@@ -539,6 +539,17 @@ machine, virtual or bare metal, using SSH. This driver is useful for provisionin
 machines which are already installed, but not Salted. For more information about using
 this driver and for configuration examples, please see the
 :ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
+
+.. _config_vagrant:
+
+Vagrant
+-------
+
+The Vagrant driver is a new, experimental driver for controlling a VagrantBox
+virtual machine, and installing Salt on it. The target host machine must be a
+working salt minion, which is controlled via the salt master using salt-api.
+For more information, see
+:ref:`Getting Started With Vagrant <getting-started-with-vagrant>`.
 
 
 Extending Profiles and Cloud Providers Configuration

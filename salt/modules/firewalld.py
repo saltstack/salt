@@ -13,6 +13,7 @@ import re
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 import salt.utils.path
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -617,7 +618,8 @@ def remove_masquerade(zone=None, permanent=True):
     return __firewall_cmd(cmd)
 
 
-def add_port(zone, port, permanent=True):
+# TODO: remove force_masquerade parameter in future release
+def add_port(zone, port, permanent=True, force_masquerade=None):
     '''
     Allow specific ports in a zone.
 
@@ -629,7 +631,19 @@ def add_port(zone, port, permanent=True):
 
         salt '*' firewalld.add_port internal 443/tcp
     '''
-    if not get_masquerade(zone):
+
+    # Previously, masquerading was always enabled here
+    # This will be deprecated in a future release
+    if force_masquerade is None:
+        force_masquerade = True
+        salt.utils.versions.warn_until(
+            'Neon',
+            'add_port function will no longer force enable masquerading '
+            'in future releases. Use add_masquerade to enable masquerading.')
+
+    # (DEPRECATED) Force enable masquerading
+    # TODO: remove in future release
+    if force_masquerade and not get_masquerade(zone):
         add_masquerade(zone)
 
     cmd = '--zone={0} --add-port={1}'.format(zone, port)
@@ -680,7 +694,8 @@ def list_ports(zone, permanent=True):
     return __firewall_cmd(cmd).split()
 
 
-def add_port_fwd(zone, src, dest, proto='tcp', dstaddr='', permanent=True):
+# TODO: remove force_masquerade parameter in future release
+def add_port_fwd(zone, src, dest, proto='tcp', dstaddr='', permanent=True, force_masquerade=None):
     '''
     Add port forwarding.
 
@@ -692,8 +707,20 @@ def add_port_fwd(zone, src, dest, proto='tcp', dstaddr='', permanent=True):
 
         salt '*' firewalld.add_port_fwd public 80 443 tcp
     '''
-    if not get_masquerade(zone):
-        add_masquerade(zone, permanent)
+
+    # Previously, masquerading was always enabled here
+    # This will be deprecated in a future release
+    if force_masquerade is None:
+        force_masquerade = True
+        salt.utils.versions.warn_until(
+            'Neon',
+            'add_port_fwd function will no longer force enable masquerading '
+            'in future releases. Use add_masquerade to enable masquerading.')
+
+    # (DEPRECATED) Force enable masquerading
+    # TODO: remove in future release
+    if force_masquerade and not get_masquerade(zone):
+        add_masquerade(zone)
 
     cmd = '--zone={0} --add-forward-port=port={1}:proto={2}:toport={3}:toaddr={4}'.format(
         zone,

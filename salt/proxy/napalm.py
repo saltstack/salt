@@ -16,9 +16,21 @@ Dependencies
 The ``napalm`` proxy module requires NAPALM_ library to be installed:  ``pip install napalm``
 Please check Installation_ for complete details.
 
-.. _NAPALM: https://napalm.readthedocs.io
-.. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
+.. _NAPALM: https://napalm-automation.net/
+.. _Installation: http://napalm.readthedocs.io/en/latest/installation/index.html
 
+.. note::
+
+    Beginning with Salt release 2017.7.3, it is recommended to use
+    ``napalm`` >= ``2.0.0``. The library has been unified into a monolithic
+    package, as in opposite to separate packages per driver. For more details
+    you can check `this document <https://napalm-automation.net/reunification/>`_.
+    While it will still work with the old packages, bear in mind that the NAPALM
+    core team will maintain only the main ``napalm`` package.
+
+    Moreover, for additional capabilities, the users can always define a
+    library that extends NAPALM's base capabilities and configure the
+    ``provider`` option (see below).
 
 Pillar
 ------
@@ -59,7 +71,7 @@ always_alive: ``True``
     .. versionadded:: 2017.7.0
 
 provider: ``napalm_base``
-    The module that provides the ``get_network_device`` function.
+    The library that provides the ``get_network_device`` function.
     This option is useful when the user has more specific needs and requires
     to extend the NAPALM capabilities using a private library implementation.
     The only constraint is that the alternative library needs to have the
@@ -129,17 +141,7 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__file__)
 
-# Import third party lib
-try:
-    # will try to import NAPALM
-    # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
-    import napalm_base
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
-
+# Import Salt modules
 from salt.ext import six
 import salt.utils.napalm
 
@@ -163,7 +165,7 @@ DETAILS = {}
 
 
 def __virtual__():
-    return HAS_NAPALM or (False, 'Please install the NAPALM library: `pip install napalm`!')
+    return salt.utils.napalm.virtual(__opts__, 'napalm', __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported

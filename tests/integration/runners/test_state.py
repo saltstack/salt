@@ -21,7 +21,6 @@ from tests.support.unit import skipIf
 from tests.support.paths import TMP
 
 # Import Salt Libs
-import salt.utils
 import salt.utils.platform
 import salt.utils.event
 import salt.utils.files
@@ -81,6 +80,86 @@ class StateRunnerTest(ShellCase):
 
         self.assertFalse(os.path.exists('/tmp/ewu-2016-12-13'))
         self.assertNotEqual(code, 0)
+
+    def test_orchestrate_target_exists(self):
+        '''
+        test orchestration when target exists
+        while using multiple states
+        '''
+        ret = self.run_run('state.orchestrate orch.target-exists')
+
+        first = ['          ID: core',
+                 '    Function: salt.state',
+                 '      Result: True']
+
+        second = ['          ID: test-state',
+                 '    Function: salt.state',
+                 '      Result: True']
+
+        third = ['          ID: cmd.run',
+                 '    Function: salt.function',
+                 '      Result: True']
+
+        ret_out = [first, second, third]
+
+        for out in ret_out:
+            for item in out:
+                self.assertIn(item, ret)
+
+    def test_orchestrate_retcode(self):
+        '''
+        Test orchestration with nonzero retcode set in __context__
+        '''
+        self.run_run('saltutil.sync_runners')
+        self.run_run('saltutil.sync_wheel')
+        ret = '\n'.join(self.run_run('state.orchestrate orch.retcode'))
+
+        for result in ('          ID: test_runner_success\n'
+                       '    Function: salt.runner\n'
+                       '        Name: runtests_helpers.success\n'
+                       '      Result: True',
+
+                       '          ID: test_runner_failure\n'
+                       '    Function: salt.runner\n'
+                       '        Name: runtests_helpers.failure\n'
+                       '      Result: False',
+
+                       '          ID: test_wheel_success\n'
+                       '    Function: salt.wheel\n'
+                       '        Name: runtests_helpers.success\n'
+                       '      Result: True',
+
+                       '          ID: test_wheel_failure\n'
+                       '    Function: salt.wheel\n'
+                       '        Name: runtests_helpers.failure\n'
+                       '      Result: False'):
+            self.assertIn(result, ret)
+
+    def test_orchestrate_target_doesnt_exists(self):
+        '''
+        test orchestration when target doesnt exist
+        while using multiple states
+        '''
+        ret = self.run_run('state.orchestrate orch.target-doesnt-exists')
+
+        first = ['No minions matched the target. No command was sent, no jid was assigned.',
+                 '          ID: core',
+                 '    Function: salt.state',
+                 '      Result: False']
+
+        second = ['          ID: test-state',
+                 '    Function: salt.state',
+                 '      Result: True']
+
+        third = ['          ID: cmd.run',
+                 '    Function: salt.function',
+                 '      Result: True']
+
+        ret_out = [first, second, third]
+
+        for out in ret_out:
+            for item in out:
+                self.assertIn(item, ret)
 
     def test_state_event(self):
         '''

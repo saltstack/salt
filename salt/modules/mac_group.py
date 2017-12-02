@@ -11,7 +11,7 @@ except ImportError:
     pass
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -26,8 +26,8 @@ def __virtual__():
     if (__grains__.get('kernel') != 'Darwin' or
             __grains__['osrelease_info'] < (10, 7)):
         return (False, 'The mac_group execution module cannot be loaded: only available on Darwin-based systems >= 10.7')
-    _dscl = salt.utils.namespaced_function(_dscl, globals())
-    _flush_dscl_cache = salt.utils.namespaced_function(
+    _dscl = salt.utils.functools.namespaced_function(_dscl, globals())
+    _flush_dscl_cache = salt.utils.functools.namespaced_function(
         _flush_dscl_cache, globals()
     )
     return __virtualname__

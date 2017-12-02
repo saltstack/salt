@@ -16,7 +16,6 @@ import copy as pycopy
 # Import Salt libs
 import salt.exceptions
 import salt.minion
-import salt.utils  # Can be removed once daemonize, get_specific_user, format_call are moved
 import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
@@ -27,6 +26,7 @@ import salt.utils.lazy
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.state
+import salt.utils.user
 import salt.utils.versions
 import salt.transport
 import salt.log.setup
@@ -96,7 +96,7 @@ class ClientFuncsDict(collections.MutableMapping):
 
             async_pub = self.client._gen_async_pub(pub_data.get(u'__pub_jid'))
 
-            user = salt.utils.get_specific_user()
+            user = salt.utils.user.get_specific_user()
             return self.client._proc_function(
                 key,
                 low,
@@ -364,29 +364,19 @@ class SyncClientMixin(object):
             # packed into the top level object. The plan is to move away from
             # that since the caller knows what is an arg vs a kwarg, but while
             # we make the transition we will load "kwargs" using format_call if
-            # there are no kwargs in the low object passed in
-            f_call = None
-            if u'arg' not in low:
-                f_call = salt.utils.format_call(
+            # there are no kwargs in the low object passed in.
+
+            if u'arg' in low and u'kwarg' in low:
+                args = low[u'arg']
+                kwargs = low[u'kwarg']
+            else:
+                f_call = salt.utils.args.format_call(
                     self.functions[fun],
                     low,
                     expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
                 )
                 args = f_call.get(u'args', ())
-            else:
-                args = low[u'arg']
-
-            if u'kwarg' not in low:
-                log.critical(
-                    u'kwargs must be passed inside the low data within the '
-                    u'\'kwarg\' key. See usage of '
-                    u'salt.utils.args.parse_input() and '
-                    u'salt.minion.load_args_and_kwargs() elsewhere in the '
-                    u'codebase.'
-                )
-                kwargs = {}
-            else:
-                kwargs = low[u'kwarg']
+                kwargs = f_call.get(u'kwargs', {})
 
             # Update the event data with loaded args and kwargs
             data[u'fun_args'] = list(args) + ([kwargs] if kwargs else [])
@@ -395,7 +385,11 @@ class SyncClientMixin(object):
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
                 data[u'return'] = self.functions[fun](*args, **kwargs)
-                data[u'success'] = True
+                try:
+                    data[u'success'] = self.context.get(u'retcode', 0) == 0
+                except AttributeError:
+                    # Assume a True result if no context attribute
+                    data[u'success'] = True
                 if isinstance(data[u'return'], dict) and u'data' in data[u'return']:
                     # some functions can return boolean values
                     data[u'success'] = salt.utils.state.check_result(data[u'return'][u'data'])
@@ -478,7 +472,7 @@ class AsyncClientMixin(object):
             # Shutdown the multiprocessing before daemonizing
             salt.log.setup.shutdown_multiprocessing_logging()
 
-            salt.utils.daemonize()
+            salt.utils.process.daemonize()
 
             # Reconfigure multiprocessing logging after daemonizing
             salt.log.setup.setup_multiprocessing_logging()

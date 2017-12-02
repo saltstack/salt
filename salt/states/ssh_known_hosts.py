@@ -12,6 +12,7 @@ Manage the information stored in the known_hosts files.
         - present
         - user: root
         - fingerprint: 16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48
+        - fingerprint_hash_type: md5
 
     example.com:
       ssh_known_hosts:
@@ -177,13 +178,13 @@ def present(
         return dict(ret, result=False, comment=result['error'])
     else:  # 'updated'
         if key:
-            new_key = result['new']['key']
+            new_key = result['new'][0]['key']
             return dict(ret,
                     changes={'old': result['old'], 'new': result['new']},
                     comment='{0}\'s key saved to {1} (key: {2})'.format(
                              name, config, new_key))
         else:
-            fingerprint = result['new']['fingerprint']
+            fingerprint = result['new'][0]['fingerprint']
             return dict(ret,
                     changes={'old': result['old'], 'new': result['new']},
                     comment='{0}\'s key saved to {1} (fingerprint: {2})'.format(
@@ -224,7 +225,7 @@ def absent(name, user=None, config=None):
         ret['result'] = False
         return dict(ret, comment=comment)
 
-    known_host = __salt__['ssh.get_known_host'](user=user, hostname=name, config=config)
+    known_host = __salt__['ssh.get_known_host_entries'](user=user, hostname=name, config=config)
     if not known_host:
         return dict(ret, comment='Host is already absent')
 

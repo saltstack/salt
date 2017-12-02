@@ -20,11 +20,10 @@ import fnmatch
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.decorators as decorators
-import salt.utils.files
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
 

@@ -44,6 +44,7 @@ execution modules
     boto_apigateway
     boto_asg
     boto_cfn
+    boto_cloudfront
     boto_cloudtrail
     boto_cloudwatch
     boto_cloudwatch_event
@@ -237,6 +238,7 @@ execution modules
     mac_user
     mac_xattr
     makeconf
+    mandrill
     marathon
     match
     mattermost
@@ -298,6 +300,7 @@ execution modules
     openstack_mng
     openvswitch
     opkg
+    opsgenie
     oracle
     osquery
     out
@@ -326,6 +329,7 @@ execution modules
     ps
     publish
     puppet
+    purefa
     pushbullet
     pushover_notify
     pw_group
@@ -403,6 +407,7 @@ execution modules
     supervisord
     suse_apache
     svn
+    swarm
     swift
     sysbench
     sysfs
@@ -412,6 +417,7 @@ execution modules
     system
     system_profiler
     systemd
+    telegram
     telemetry
     temp
     test
@@ -430,6 +436,7 @@ execution modules
     uptime
     useradd
     uwsgi
+    vagrant
     varnish
     vault
     vbox_guest

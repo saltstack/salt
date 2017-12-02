@@ -27,7 +27,6 @@ import time
 import random
 
 # Import salt libs
-import salt.utils
 import salt.loader
 import salt.minion
 import salt.pillar
@@ -38,10 +37,9 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
-import salt.utils.url
 import salt.utils.platform
 import salt.utils.process
-import salt.utils.files
+import salt.utils.url
 import salt.syspaths as syspaths
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
@@ -68,12 +66,16 @@ log = logging.getLogger(__name__)
 # by salt in this state module and not on the actual state module function
 STATE_REQUISITE_KEYWORDS = frozenset([
     u'onchanges',
+    u'onchanges_any',
     u'onfail',
+    u'onfail_any',
     u'onfail_stop',
     u'prereq',
     u'prerequired',
     u'watch',
+    u'watch_any',
     u'require',
+    u'require_any',
     u'listen',
     ])
 STATE_REQUISITE_IN_KEYWORDS = frozenset([
@@ -163,6 +165,18 @@ def _l_tag(name, id_):
            u'state': u'Listen_Error',
            u'fun': u'Listen_Error'}
     return _gen_tag(low)
+
+
+def get_accumulator_dir(cachedir):
+    '''
+    Return the directory that accumulator data is stored in, creating it if it
+    doesn't exist.
+    '''
+    fn_ = os.path.join(cachedir, 'accumulator')
+    if not os.path.isdir(fn_):
+        # accumulator_dir is not present, create it
+        os.makedirs(fn_)
+    return fn_
 
 
 def trim_req(req):
@@ -816,12 +830,12 @@ class State(object):
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug(u'Last command return code: %s', cmd)
                 if cmd != 0 and ret[u'result'] is False:
-                    ret.update({u'comment': u'onlyif execution failed',
+                    ret.update({u'comment': u'onlyif condition is false',
                                 u'skip_watch': True,
                                 u'result': True})
                     return ret
                 elif cmd == 0:
-                    ret.update({u'comment': u'onlyif execution succeeded', u'result': False})
+                    ret.update({u'comment': u'onlyif condition is true', u'result': False})
             return ret
 
         if u'unless' in low_data:
@@ -831,17 +845,17 @@ class State(object):
                 low_data_unless = low_data[u'unless']
             for entry in low_data_unless:
                 if not isinstance(entry, six.string_types):
-                    ret.update({u'comment': u'unless execution failed, bad type passed', u'result': False})
+                    ret.update({u'comment': u'unless condition is false, bad type passed', u'result': False})
                     return ret
                 cmd = self.functions[u'cmd.retcode'](
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug(u'Last command return code: %s', cmd)
                 if cmd == 0 and ret[u'result'] is False:
-                    ret.update({u'comment': u'unless execution succeeded',
+                    ret.update({u'comment': u'unless condition is true',
                                 u'skip_watch': True,
                                 u'result': True})
                 elif cmd != 0:
-                    ret.update({u'comment': u'unless execution failed', u'result': False})
+                    ret.update({u'comment': u'unless condition is false', u'result': False})
                     return ret
 
         # No reason to stop, return ret
@@ -1591,7 +1605,24 @@ class State(object):
                             for ind in items:
                                 if not isinstance(ind, dict):
                                     # Malformed req_in
-                                    continue
+                                    if ind in high:
+                                        _ind_high = [x for x
+                                                     in high[ind]
+                                                     if not x.startswith('__')]
+                                        ind = {_ind_high[0]: ind}
+                                    else:
+                                        found = False
+                                        for _id in iter(high):
+                                            for state in [state for state
+                                                          in iter(high[_id])
+                                                          if not state.startswith('__')]:
+                                                for j in iter(high[_id][state]):
+                                                    if isinstance(j, dict) and 'name' in j:
+                                                        if j['name'] == ind:
+                                                            ind = {state: _id}
+                                                            found = True
+                                        if not found:
+                                            continue
                                 if len(ind) < 1:
                                     continue
                                 pstate = next(iter(ind))
@@ -1825,7 +1856,7 @@ class State(object):
             self.load_modules(low)
 
         state_func_name = u'{0[state]}.{0[fun]}'.format(low)
-        cdata = salt.utils.format_call(
+        cdata = salt.utils.args.format_call(
             self.states[state_func_name],
             low,
             initial_ret={u'full': state_func_name},
@@ -1887,6 +1918,8 @@ class State(object):
                 if self.mocked:
                     ret = mock_ret(cdata)
                 else:
+                    # Check if this low chunk is paused
+                    self.check_pause(low)
                     # Execute the state function
                     if not low.get(u'__prereq__') and low.get(u'parallel'):
                         # run the state call in parallel, but only if not in a prereq
@@ -2096,6 +2129,48 @@ class State(object):
             return not running[tag][u'result']
         return False
 
+    def check_pause(self, low):
+        '''
+        Check to see if this low chunk has been paused
+        '''
+        if not self.jid:
+            # Can't pause on salt-ssh since we can't track continuous state
+            return
+        pause_path = os.path.join(self.opts[u'cachedir'], 'state_pause', self.jid)
+        start = time.time()
+        if os.path.isfile(pause_path):
+            try:
+                while True:
+                    tries = 0
+                    with salt.utils.files.fopen(pause_path, 'rb') as fp_:
+                        try:
+                            pdat = msgpack.loads(fp_.read())
+                        except msgpack.UnpackValueError:
+                            # Reading race condition
+                            if tries > 10:
+                                # Break out if there are a ton of read errors
+                                return
+                            tries += 1
+                            time.sleep(1)
+                            continue
+                        id_ = low[u'__id__']
+                        key = u''
+                        if id_ in pdat:
+                            key = id_
+                        elif u'__all__' in pdat:
+                            key = u'__all__'
+                        if key:
+                            if u'duration' in pdat[key]:
+                                now = time.time()
+                                if now - start > pdat[key][u'duration']:
+                                    return
+                        else:
+                            return
+                        time.sleep(1)
+            except Exception as exc:
+                log.error('Failed to read in pause data for file located at: %s', pause_path)
+                return
+
     def reconcile_procs(self, running):
         '''
         Check the running dict for processes and resolve them
@@ -2140,7 +2215,17 @@ class State(object):
                     low[u'require'] = low.pop(u'watch')
             else:
                 present = True
+        if u'watch_any' in low:
+            if u'{0}.mod_watch'.format(low[u'state']) not in self.states:
+                if u'require_any' in low:
+                    low[u'require_any'].extend(low.pop(u'watch_any'))
+                else:
+                    low[u'require_any'] = low.pop(u'watch_any')
+            else:
+                present = True
         if u'require' in low:
+            present = True
+        if u'require_any' in low:
             present = True
         if u'prerequired' in low:
             present = True
@@ -2148,17 +2233,25 @@ class State(object):
             present = True
         if u'onfail' in low:
             present = True
+        if u'onfail_any' in low:
+            present = True
         if u'onchanges' in low:
+            present = True
+        if u'onchanges_any' in low:
             present = True
         if not present:
             return u'met', ()
         self.reconcile_procs(running)
         reqs = {
                 u'require': [],
+                u'require_any': [],
                 u'watch': [],
+                u'watch_any': [],
                 u'prereq': [],
                 u'onfail': [],
-                u'onchanges': []}
+                u'onfail_any': [],
+                u'onchanges': [],
+                u'onchanges_any': []}
         if pre:
             reqs[u'prerequired'] = []
         for r_state in reqs:
@@ -2203,42 +2296,58 @@ class State(object):
                         return u'unmet', ()
         fun_stats = set()
         for r_state, chunks in six.iteritems(reqs):
-            if r_state == u'prereq':
+            req_stats = set()
+            if r_state.startswith(u'prereq') and not r_state.startswith(u'prerequired'):
                 run_dict = self.pre
             else:
                 run_dict = running
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 if tag not in run_dict:
-                    fun_stats.add(u'unmet')
+                    req_stats.add(u'unmet')
                     continue
                 if run_dict[tag].get(u'proc'):
                     # Run in parallel, first wait for a touch and then recheck
                     time.sleep(0.01)
                     return self.check_requisite(low, running, chunks, pre)
-                if r_state == u'onfail':
+                if r_state.startswith(u'onfail'):
                     if run_dict[tag][u'result'] is True:
-                        fun_stats.add(u'onfail')  # At least one state is OK
+                        req_stats.add(u'onfail')  # At least one state is OK
                         continue
                 else:
                     if run_dict[tag][u'result'] is False:
-                        fun_stats.add(u'fail')
+                        req_stats.add(u'fail')
                         continue
-                if r_state == u'onchanges':
+                if r_state.startswith(u'onchanges'):
                     if not run_dict[tag][u'changes']:
-                        fun_stats.add(u'onchanges')
+                        req_stats.add(u'onchanges')
                     else:
-                        fun_stats.add(u'onchangesmet')
+                        req_stats.add(u'onchangesmet')
                     continue
-                if r_state == u'watch' and run_dict[tag][u'changes']:
-                    fun_stats.add(u'change')
+                if r_state.startswith(u'watch') and run_dict[tag][u'changes']:
+                    req_stats.add(u'change')
                     continue
-                if r_state == u'prereq' and run_dict[tag][u'result'] is None:
-                    fun_stats.add(u'premet')
-                if r_state == u'prereq' and not run_dict[tag][u'result'] is None:
-                    fun_stats.add(u'pre')
+                if r_state.startswith(u'prereq') and run_dict[tag][u'result'] is None:
+                    if not r_state.startswith(u'prerequired'):
+                        req_stats.add(u'premet')
+                if r_state.startswith(u'prereq') and not run_dict[tag][u'result'] is None:
+                    if not r_state.startswith(u'prerequired'):
+                        req_stats.add(u'pre')
                 else:
-                    fun_stats.add(u'met')
+                    req_stats.add(u'met')
+            if r_state.endswith(u'_any'):
+                if u'met' in req_stats or u'change' in req_stats:
+                    if u'fail' in req_stats:
+                        req_stats.remove(u'fail')
+                if u'onchangesmet' in req_stats:
+                    if u'onchanges' in req_stats:
+                        req_stats.remove(u'onchanges')
+                    if u'fail' in req_stats:
+                        req_stats.remove(u'fail')
+                if u'onfail' in req_stats:
+                    if u'fail' in req_stats:
+                        req_stats.remove(u'onfail')
+            fun_stats.update(req_stats)
 
         if u'unmet' in fun_stats:
             status = u'unmet'
@@ -2309,7 +2418,15 @@ class State(object):
         tag = _gen_tag(low)
         if not low.get(u'prerequired'):
             self.active.add(tag)
-        requisites = [u'require', u'watch', u'prereq', u'onfail', u'onchanges']
+        requisites = [u'require',
+                      u'require_any',
+                      u'watch',
+                      u'watch_any',
+                      u'prereq',
+                      u'onfail',
+                      u'onfail_any',
+                      u'onchanges',
+                      u'onchanges_any']
         if not low.get(u'__prereq__'):
             requisites.append(u'prerequired')
             status, reqs = self.check_requisite(low, running, chunks, pre=True)
@@ -2523,7 +2640,14 @@ class State(object):
             for key, val in six.iteritems(l_dict):
                 for listen_to in val:
                     if not isinstance(listen_to, dict):
-                        continue
+                        found = False
+                        for chunk in chunks:
+                            if chunk['__id__'] == listen_to or \
+                               chunk['name'] == listen_to:
+                                listen_to = {chunk['state']: chunk['__id__']}
+                                found = True
+                        if not found:
+                            continue
                     for lkey, lval in six.iteritems(listen_to):
                         if (lkey, lval) not in crefs:
                             rerror = {_l_tag(lkey, lval):
@@ -2593,7 +2717,7 @@ class State(object):
 
         def _cleanup_accumulator_data():
             accum_data_path = os.path.join(
-                salt.utils.get_accumulator_dir(self.opts[u'cachedir']),
+                get_accumulator_dir(self.opts[u'cachedir']),
                 self.instance_id
             )
             try:
@@ -2602,6 +2726,14 @@ class State(object):
             except OSError:
                 log.debug(u'File %s does not exist, no need to cleanup', accum_data_path)
         _cleanup_accumulator_data()
+        if self.jid is not None:
+            pause_path = os.path.join(self.opts[u'cachedir'], u'state_pause', self.jid)
+            if os.path.isfile(pause_path):
+                try:
+                    os.remove(pause_path)
+                except OSError:
+                    # File is not present, all is well
+                    pass
 
         return ret
 
@@ -2782,6 +2914,8 @@ class BaseHighState(object):
             opts[u'default_top'] = mopts.get(u'default_top', opts.get(u'default_top'))
             opts[u'state_events'] = mopts.get(u'state_events')
             opts[u'state_aggregate'] = mopts.get(u'state_aggregate', opts.get(u'state_aggregate', False))
+            opts[u'jinja_env'] = mopts.get(u'jinja_env', {})
+            opts[u'jinja_sls_env'] = mopts.get(u'jinja_sls_env', {})
             opts[u'jinja_lstrip_blocks'] = mopts.get(u'jinja_lstrip_blocks', False)
             opts[u'jinja_trim_blocks'] = mopts.get(u'jinja_trim_blocks', False)
         return opts
@@ -3172,7 +3306,7 @@ class BaseHighState(object):
         Returns:
         {'saltenv': ['state1', 'state2', ...]}
         '''
-        matches = {}
+        matches = DefaultOrderedDict(OrderedDict)
         # pylint: disable=cell-var-from-loop
         for saltenv, body in six.iteritems(top):
             if self.opts[u'environment']:

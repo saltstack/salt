@@ -12,10 +12,10 @@ import logging
 import salt.exceptions
 import salt.loader
 import salt.minion
-import salt.utils  # Can be removed when get_specific_user is moved
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
+import salt.utils.user
 from salt.client import mixins
 from salt.output import display_output
 from salt.utils.lazy import verify_fun
@@ -43,6 +43,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
     def __init__(self, opts):
         self.opts = opts
+        self.context = {}
 
     @property
     def functions(self):
@@ -51,11 +52,13 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 self.utils = salt.loader.utils(self.opts)
             # Must be self.functions for mixin to work correctly :-/
             try:
-                self._functions = salt.loader.runner(self.opts, utils=self.utils)
+                self._functions = salt.loader.runner(
+                    self.opts, utils=self.utils, context=self.context)
             except AttributeError:
                 # Just in case self.utils is still not present (perhaps due to
                 # problems with the loader), load the runner funcs without them
-                self._functions = salt.loader.runner(self.opts)
+                self._functions = salt.loader.runner(
+                    self.opts, context=self.context)
 
         return self._functions
 
@@ -205,7 +208,7 @@ class Runner(RunnerClient):
                 if self.opts.get(u'eauth'):
                     if u'token' in self.opts:
                         try:
-                            with salt.utils.files.fopen(os.path.join(self.opts[u'cachedir'], u'.root_key'), u'r') as fp_:
+                            with salt.utils.files.fopen(os.path.join(self.opts[u'key_dir'], u'.root_key'), u'r') as fp_:
                                 low[u'key'] = fp_.readline()
                         except IOError:
                             low[u'token'] = self.opts[u'token']
@@ -230,7 +233,7 @@ class Runner(RunnerClient):
                         low.update(res)
                         low[u'eauth'] = self.opts[u'eauth']
                 else:
-                    user = salt.utils.get_specific_user()
+                    user = salt.utils.user.get_specific_user()
 
                 if low[u'fun'] == u'state.orchestrate':
                     low[u'kwarg'][u'orchestration_jid'] = async_pub[u'jid']

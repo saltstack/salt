@@ -7,9 +7,11 @@ Module to provide Palo Alto compatibility to Salt.
 :depends:    none
 :platform:   unix
 
+.. versionadded:: Oxygen
 
 Configuration
 =============
+
 This module accepts connection configuration details either as
 parameters, or as configuration settings in pillar as a Salt proxy.
 Options passed into opts will be ignored if options are passed into pillar.
@@ -19,6 +21,7 @@ Options passed into opts will be ignored if options are passed into pillar.
 
 About
 =====
+
 This execution module was designed to handle connections to a Palo Alto based
 firewall. This module adds support to send connections directly to the device
 through the XML API or through a brokered connection to Panorama.
@@ -31,8 +34,9 @@ import logging
 import time
 
 # Import Salt Libs
-import salt.utils.platform
+from salt.exceptions import CommandExecutionError
 import salt.proxy.panos
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -55,19 +59,19 @@ def __virtual__():
 
 def _get_job_results(query=None):
     '''
-    Executes a query that requires a job for completion. This funciton will wait for the job to complete
+    Executes a query that requires a job for completion. This function will wait for the job to complete
     and return the results.
     '''
     if not query:
-        raise salt.exception.CommandExecutionError("Query parameters cannot be empty.")
+        raise CommandExecutionError("Query parameters cannot be empty.")
 
     response = __proxy__['panos.call'](query)
 
     # If the response contains a job, we will wait for the results
-    if 'job' in response:
-        jid = response['job']
+    if 'result' in response and 'job' in response['result']:
+        jid = response['result']['job']
 
-        while get_job(jid)['job']['status'] != 'FIN':
+        while get_job(jid)['result']['job']['status'] != 'FIN':
             time.sleep(5)
 
         return get_job(jid)
@@ -241,10 +245,10 @@ def download_software_file(filename=None, synch=False):
 
     '''
     if not filename:
-        raise salt.exception.CommandExecutionError("Filename option must not be none.")
+        raise CommandExecutionError("Filename option must not be none.")
 
     if not isinstance(synch, bool):
-        raise salt.exception.CommandExecutionError("Synch option must be boolean..")
+        raise CommandExecutionError("Synch option must be boolean..")
 
     if synch is True:
         query = {'type': 'op',
@@ -276,10 +280,10 @@ def download_software_version(version=None, synch=False):
 
     '''
     if not version:
-        raise salt.exception.CommandExecutionError("Version option must not be none.")
+        raise CommandExecutionError("Version option must not be none.")
 
     if not isinstance(synch, bool):
-        raise salt.exception.CommandExecutionError("Synch option must be boolean..")
+        raise CommandExecutionError("Synch option must be boolean..")
 
     if synch is True:
         query = {'type': 'op',
@@ -313,6 +317,56 @@ def fetch_license(auth_code=None):
     else:
         query = {'type': 'op', 'cmd': '<request><license><fetch><auth-code>{0}</auth-code></fetch></license>'
                                       '</request>'.format(auth_code)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_address(address=None, vsys='1'):
+    '''
+    Get the candidate configuration for the specified get_address object. This will not return address objects that are
+    marked as pre-defined objects.
+
+    address(str): The name of the address object.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_address myhost
+        salt '*' panos.get_address myhost 3
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'address/entry[@name=\'{1}\']'.format(vsys, address)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_address_group(addressgroup=None, vsys='1'):
+    '''
+    Get the candidate configuration for the specified address group. This will not return address groups that are
+    marked as pre-defined objects.
+
+    addressgroup(str): The name of the address group.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_address_group foobar
+        salt '*' panos.get_address_group foobar 3
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'address-group/entry[@name=\'{1}\']'.format(vsys, addressgroup)}
 
     return __proxy__['panos.call'](query)
 
@@ -465,6 +519,22 @@ def get_domain_config():
     return __proxy__['panos.call'](query)
 
 
+def get_dos_blocks():
+    '''
+    Show the DoS block-ip table.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_dos_blocks
+
+    '''
+    query = {'type': 'op', 'cmd': '<show><dos-block-table><all></all></dos-block-table></show>'}
+
+    return __proxy__['panos.call'](query)
+
+
 def get_fqdn_cache():
     '''
     Print FQDNs used in rules and their IPs.
@@ -584,7 +654,7 @@ def get_hostname():
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/hostname'}
 
-    return __proxy__['panos.call'](query)['hostname']
+    return __proxy__['panos.call'](query)
 
 
 def get_interface_counters(name='all'):
@@ -644,7 +714,7 @@ def get_job(jid=None):
 
     '''
     if not jid:
-        raise salt.exception.CommandExecutionError("ID option must not be none.")
+        raise CommandExecutionError("ID option must not be none.")
 
     query = {'type': 'op', 'cmd': '<show><jobs><id>{0}</id></jobs></show>'.format(jid)}
 
@@ -675,7 +745,7 @@ def get_jobs(state='all'):
     elif state.lower() == 'processed':
         query = {'type': 'op', 'cmd': '<show><jobs><processed></processed></jobs></show>'}
     else:
-        raise salt.exception.CommandExecutionError("The state parameter must be all, pending, or processed.")
+        raise CommandExecutionError("The state parameter must be all, pending, or processed.")
 
     return __proxy__['panos.call'](query)
 
@@ -790,6 +860,32 @@ def get_lldp_neighbors():
     query = {'type': 'op', 'cmd': '<show><lldp><neighbors>all</neighbors></lldp></show>'}
 
     return __proxy__['panos.call'](query)
+
+
+def get_local_admins():
+    '''
+    Show all local administrator accounts.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_local_admins
+
+    '''
+    admin_list = get_users_config()
+    response = []
+
+    if 'users' not in admin_list['result']:
+        return response
+
+    if isinstance(admin_list['result']['users']['entry'], list):
+        for entry in admin_list['result']['users']['entry']:
+            response.append(entry['name'])
+    else:
+        response.append(admin_list['result']['users']['entry']['name'])
+
+    return response
 
 
 def get_logdb_quota():
@@ -926,6 +1022,101 @@ def get_platform():
     return __proxy__['panos.call'](query)
 
 
+def get_predefined_application(application=None):
+    '''
+    Get the configuration for the specified pre-defined application object. This will only return pre-defined
+    application objects.
+
+    application(str): The name of the pre-defined application object.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_predefined_application saltstack
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/predefined/application/entry[@name=\'{0}\']'.format(application)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_security_rule(rulename=None, vsys='1'):
+    '''
+    Get the candidate configuration for the specified security rule.
+
+    rulename(str): The name of the security rule.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_security_rule rule01
+        salt '*' panos.get_security_rule rule01 3
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'rulebase/security/rules/entry[@name=\'{1}\']'.format(vsys, rulename)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_service(service=None, vsys='1'):
+    '''
+    Get the candidate configuration for the specified service object. This will not return services that are marked
+    as pre-defined objects.
+
+    service(str): The name of the service object.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_service tcp-443
+        salt '*' panos.get_service tcp-443 3
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'service/entry[@name=\'{1}\']'.format(vsys, service)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_service_group(servicegroup=None, vsys='1'):
+    '''
+    Get the candidate configuration for the specified service group. This will not return service groups that are
+    marked as pre-defined objects.
+
+    servicegroup(str): The name of the service group.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_service_group foobar
+        salt '*' panos.get_service_group foobar 3
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'service-group/entry[@name=\'{1}\']'.format(vsys, servicegroup)}
+
+    return __proxy__['panos.call'](query)
+
+
 def get_session_info():
     '''
     Show device session statistics.
@@ -1041,11 +1232,11 @@ def get_system_services():
     return __proxy__['panos.call'](query)
 
 
-def get_system_state(filter=None):
+def get_system_state(mask=None):
     '''
     Show the system state variables.
 
-    filter
+    mask
         Filters by a subtree or a wildcard.
 
     CLI Example:
@@ -1053,13 +1244,13 @@ def get_system_state(filter=None):
     .. code-block:: bash
 
         salt '*' panos.get_system_state
-        salt '*' panos.get_system_state filter=cfg.ha.config.enabled
-        salt '*' panos.get_system_state filter=cfg.ha.*
+        salt '*' panos.get_system_state mask=cfg.ha.config.enabled
+        salt '*' panos.get_system_state mask=cfg.ha.*
 
     '''
-    if filter:
+    if mask:
         query = {'type': 'op',
-                 'cmd': '<show><system><state><filter>{0}</filter></state></system></show>'.format(filter)}
+                 'cmd': '<show><system><state><filter>{0}</filter></state></system></show>'.format(mask)}
     else:
         query = {'type': 'op', 'cmd': '<show><system><state></state></system></show>'}
 
@@ -1069,6 +1260,7 @@ def get_system_state(filter=None):
 def get_uncommitted_changes():
     '''
     Retrieve a list of all uncommitted changes on the device.
+    Requires PANOS version 8.0.0 or greater.
 
     CLI Example:
 
@@ -1077,6 +1269,10 @@ def get_uncommitted_changes():
         salt '*' panos.get_uncommitted_changes
 
     '''
+    _required_version = '8.0.0'
+    if not __proxy__['panos.is_required_version'](_required_version):
+        return False, 'The panos device requires version {0} or greater for this command.'.format(_required_version)
+
     query = {'type': 'op',
              'cmd': '<show><config><list><changes></changes></list></config></show>'}
 
@@ -1117,6 +1313,72 @@ def get_vlans():
     return __proxy__['panos.call'](query)
 
 
+def get_xpath(xpath=''):
+    '''
+    Retrieve a specified xpath from the candidate configuration.
+
+    xpath(str): The specified xpath in the candidate configuration.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_xpath /config/shared/service
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': xpath}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_zone(zone='', vsys='1'):
+    '''
+    Get the candidate configuration for the specified zone.
+
+    zone(str): The name of the zone.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_zone trust
+        salt '*' panos.get_zone trust 2
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'zone/entry[@name=\'{1}\']'.format(vsys, zone)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_zones(vsys='1'):
+    '''
+    Get all the zones in the candidate configuration.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_zones
+        salt '*' panos.get_zones 2
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'zone'.format(vsys)}
+
+    return __proxy__['panos.call'](query)
+
+
 def install_antivirus(version=None, latest=False, synch=False, skip_commit=False,):
     '''
     Install anti-virus packages.
@@ -1139,7 +1401,7 @@ def install_antivirus(version=None, latest=False, synch=False, skip_commit=False
 
     '''
     if not version and latest is False:
-        raise salt.exception.CommandExecutionError("Version option must not be none.")
+        raise CommandExecutionError("Version option must not be none.")
 
     if synch is True:
         s = "yes"
@@ -1196,7 +1458,7 @@ def install_software(version=None):
 
     '''
     if not version:
-        raise salt.exception.CommandExecutionError("Version option must not be none.")
+        raise CommandExecutionError("Version option must not be none.")
 
     query = {'type': 'op',
              'cmd': '<request><system><software><install>'
@@ -1237,7 +1499,7 @@ def refresh_fqdn_cache(force=False):
 
     '''
     if not isinstance(force, bool):
-        raise salt.exception.CommandExecutionError("Force option must be boolean.")
+        raise CommandExecutionError("Force option must be boolean.")
 
     if force:
         query = {'type': 'op',
@@ -1288,7 +1550,7 @@ def resolve_address(address=None, vsys=None):
         return False, 'The panos device requires version {0} or greater for this command.'.format(_required_version)
 
     if not address:
-        raise salt.exception.CommandExecutionError("FQDN to resolve must be provided as address.")
+        raise CommandExecutionError("FQDN to resolve must be provided as address.")
 
     if not vsys:
         query = {'type': 'op',
@@ -1316,7 +1578,7 @@ def save_device_config(filename=None):
 
     '''
     if not filename:
-        raise salt.exception.CommandExecutionError("Filename must not be empty.")
+        raise CommandExecutionError("Filename must not be empty.")
 
     query = {'type': 'op', 'cmd': '<save><config><to>{0}</to></config></save>'.format(filename)}
 
@@ -1358,7 +1620,7 @@ def set_authentication_profile(profile=None, deploy=False):
     '''
 
     if not profile:
-        salt.exception.CommandExecutionError("Profile name option must not be none.")
+        CommandExecutionError("Profile name option must not be none.")
 
     ret = {}
 
@@ -1395,7 +1657,7 @@ def set_hostname(hostname=None, deploy=False):
     '''
 
     if not hostname:
-        salt.exception.CommandExecutionError("Hostname option must not be none.")
+        CommandExecutionError("Hostname option must not be none.")
 
     ret = {}
 
@@ -1435,7 +1697,7 @@ def set_management_icmp(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1475,7 +1737,7 @@ def set_management_http(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1515,7 +1777,7 @@ def set_management_https(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1555,7 +1817,7 @@ def set_management_ocsp(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1595,7 +1857,7 @@ def set_management_snmp(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1635,7 +1897,7 @@ def set_management_ssh(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1675,7 +1937,7 @@ def set_management_telnet(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1868,7 +2130,7 @@ def set_permitted_ip(address=None, deploy=False):
     '''
 
     if not address:
-        salt.exception.CommandExecutionError("Address option must not be empty.")
+        CommandExecutionError("Address option must not be empty.")
 
     ret = {}
 
@@ -1904,7 +2166,7 @@ def set_timezone(tz=None, deploy=False):
     '''
 
     if not tz:
-        salt.exception.CommandExecutionError("Timezone name option must not be none.")
+        CommandExecutionError("Timezone name option must not be none.")
 
     ret = {}
 
@@ -1937,6 +2199,120 @@ def shutdown():
     return __proxy__['panos.call'](query)
 
 
+def test_fib_route(ip=None,
+                   vr='vr1'):
+    '''
+    Perform a route lookup within active route table (fib).
+
+    ip (str): The destination IP address to test.
+
+    vr (str): The name of the virtual router to test.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.test_fib_route 4.2.2.2
+        salt '*' panos.test_fib_route 4.2.2.2 my-vr
+
+    '''
+
+    xpath = "<test><routing><fib-lookup>"
+
+    if ip:
+        xpath += "<ip>{0}</ip>".format(ip)
+
+    if vr:
+        xpath += "<virtual-router>{0}</virtual-router>".format(vr)
+
+    xpath += "</fib-lookup></routing></test>"
+
+    query = {'type': 'op',
+             'cmd': xpath}
+
+    return __proxy__['panos.call'](query)
+
+
+def test_security_policy(sourcezone=None,
+                         destinationzone=None,
+                         source=None,
+                         destination=None,
+                         protocol=None,
+                         port=None,
+                         application=None,
+                         category=None,
+                         vsys='1',
+                         allrules=False):
+    '''
+    Checks which security policy as connection will match on the device.
+
+    sourcezone (str): The source zone matched against the connection.
+
+    destinationzone (str): The destination zone matched against the connection.
+
+    source (str): The source address. This must be a single IP address.
+
+    destination (str): The destination address. This must be a single IP address.
+
+    protocol (int): The protocol number for the connection. This is the numerical representation of the protocol.
+
+    port (int): The port number for the connection.
+
+    application (str): The application that should be matched.
+
+    category (str): The category that should be matched.
+
+    vsys (int): The numerical representation of the VSYS ID.
+
+    allrules (bool): Show all potential match rules until first allow rule.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.test_security_policy sourcezone=trust destinationzone=untrust protocol=6 port=22
+        salt '*' panos.test_security_policy sourcezone=trust destinationzone=untrust protocol=6 port=22 vsys=2
+
+    '''
+
+    xpath = "<test><security-policy-match>"
+
+    if sourcezone:
+        xpath += "<from>{0}</from>".format(sourcezone)
+
+    if destinationzone:
+        xpath += "<to>{0}</to>".format(destinationzone)
+
+    if source:
+        xpath += "<source>{0}</source>".format(source)
+
+    if destination:
+        xpath += "<destination>{0}</destination>".format(destination)
+
+    if protocol:
+        xpath += "<protocol>{0}</protocol>".format(protocol)
+
+    if port:
+        xpath += "<destination-port>{0}</destination-port>".format(port)
+
+    if application:
+        xpath += "<application>{0}</application>".format(application)
+
+    if category:
+        xpath += "<category>{0}</category>".format(category)
+
+    if allrules:
+        xpath += "<show-all>yes</show-all>"
+
+    xpath += "</security-policy-match></test>"
+
+    query = {'type': 'op',
+             'vsys': "vsys{0}".format(vsys),
+             'cmd': xpath}
+
+    return __proxy__['panos.call'](query)
+
+
 def unlock_admin(username=None):
     '''
     Unlocks a locked administrator account.
@@ -1952,7 +2328,7 @@ def unlock_admin(username=None):
 
     '''
     if not username:
-        raise salt.exception.CommandExecutionError("Username option must not be none.")
+        raise CommandExecutionError("Username option must not be none.")
 
     query = {'type': 'op',
              'cmd': '<set><management-server><unlock><admin>{0}</admin></unlock></management-server>'
