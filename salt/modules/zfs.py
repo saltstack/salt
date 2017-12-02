@@ -67,6 +67,21 @@ def _check_features():
     return res['retcode'] == 0
 
 
+def _conform_value(value):
+    '''
+    Ensure numeric value are actually numeric
+    '''
+    # NOTE: we are only interested in numbers
+    if not re_zfs_numb.match(value):
+        return value
+
+    # NOTE: figure out if we are a float or int
+    value = float(value)
+    if int(value) == value:
+        return int(value)
+    return value
+
+
 def exists(name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
@@ -380,10 +395,7 @@ def list_(name=None, **kwargs):
             ds_data = {}
 
             for prop in properties:
-                prop_value = ds[properties.index(prop)]
-                if re_zfs_numb.match(prop_value):
-                    prop_value = float(prop_value) if '.' in prop_value else int(prop_value)
-                ds_data[prop] = prop_value
+                ds_data[prop] = _conform_value(ds[properties.index(prop)])
 
             ret[ds_data['name']] = ds_data
             del ret[ds_data['name']]['name']
@@ -1271,10 +1283,7 @@ def get(*dataset, **kwargs):
             ds_data = {}
 
             for field in fields:
-                prop_value = ds[fields.index(field)]
-                if re_zfs_numb.match(prop_value):
-                    prop_value = float(prop_value) if '.' in prop_value else int(prop_value)
-                ds_data[field] = prop_value
+                ds_data[field] = _conform_value(ds[fields.index(field)])
 
             ds_name = ds_data['name']
             ds_prop = ds_data['property']

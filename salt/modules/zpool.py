@@ -73,6 +73,21 @@ def _check_mkfile():
     return salt.utils.path.which('mkfile')
 
 
+def _conform_value(value):
+    '''
+    Ensure numeric value are actually numeric
+    '''
+    # NOTE: we are only interested in numbers
+    if not re_zfs_numb.match(value):
+        return value
+
+    # NOTE: figure out if we are a float or int
+    value = float(value)
+    if int(value) == value:
+        return int(value)
+    return value
+
+
 def healthy():
     '''
     .. versionadded:: 2016.3.0
@@ -373,10 +388,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Fal
         zp_data = {}
 
         for prop in properties:
-            prop_value = zp[properties.index(prop)]
-            if re_zfs_numb.match(prop_value):
-                prop_value = float(prop_value) if '.' in prop_value else int(prop_value)
-            zp_data[prop] = prop_value
+            zp_data[prop] = _conform_value(zp[properties.index(prop)])
 
         ret[zp_data['name']] = zp_data
         del ret[zp_data['name']]['name']
@@ -432,10 +444,7 @@ def get(zpool, prop=None, show_source=False, parsable=False):
         zp_data = {}
 
         for prop in properties:
-            prop_value = zp[properties.index(prop)]
-            if re_zfs_numb.match(prop_value):
-                prop_value = float(prop_value) if '.' in prop_value else int(prop_value)
-            zp_data[prop] = prop_value
+            zp_data[prop] = _conform_value(zp[properties.index(prop)])
 
         if show_source:
             ret[zpool][zp_data['property']] = zp_data
