@@ -13,5 +13,5 @@ import salt.utils.liquid
 def fetch(**kwargs):
     '''
     '''
-    clean_kwargs = salt.utils.clean_kwargs(**kwargs)
+    clean_kwargs = salt.utils.args.clean_kwargs(**kwargs)
     return salt.utils.liquid.fetch(__opts__, utils=__utils__, **clean_kwargs)
