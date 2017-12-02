@@ -8,6 +8,8 @@ Salt interface to ZFS commands
 from __future__ import absolute_import
 
 # Import Python libs
+import re
+import math
 import logging
 
 # Import Salt libs
@@ -16,10 +18,13 @@ import salt.utils.path
 import salt.modules.cmdmod
 import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
-from salt.utils.stringutils import to_num as _conform_value
+from salt.utils.stringutils import to_num as str_to_num
 
 __virtualname__ = 'zfs'
 log = logging.getLogger(__name__)
+
+# Precompiled regex
+re_zfs_size = re.compile(r'^(\d+|\d+(?=\d*)\.\d+)([KkMmGgTtPpEeZz][Bb]?)$')
 
 # Function alias to set mapping.
 __func_alias__ = {
@@ -61,6 +66,35 @@ def _check_features():
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     return res['retcode'] == 0
+
+
+def _conform_value(value):
+    '''
+    Ensure value always conform to what zfs expects
+    '''
+    if isinstance(value, bool):  # NOTE: salt breaks the on/off/yes/no properties
+        return 'on' if value else 'off'
+
+    if isinstance(value, str) and ' ' in value:  # NOTE: handle whitespaces
+        # NOTE: quoting the string may be better
+        #       but it is hard to know if we already quoted it before
+        #       this can be improved in the future
+        return "'{0}'".format(value.strip("'"))
+
+    if isinstance(value, str):  # NOTE: handle ZFS size conversion
+        match_size = re_zfs_size.match(value)
+        if match_size:
+            v_size = float(match_size.group(1))
+            v_unit = match_size.group(2).upper()[0]
+            v_power = math.pow(1024, ['K', 'M', 'G', 'T', 'P', 'E', 'Z'].index(v_unit) + 1)
+            value = v_size * v_power
+            return int(v_size) if int(v_size) == v_size else v_size
+
+        # NOTE: convert to numeric if needed
+        return str_to_num(value)
+
+    # NOTE: passthrough
+    return value
 
 
 def exists(name, **kwargs):
@@ -146,14 +180,10 @@ def create(name, **kwargs):
     # if zpool properties specified, then
     # create "-o property=value" pairs
     if properties:
-        optlist = []
+        proplist = []
         for prop in properties:
-            if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
-                properties[prop] = 'on' if properties[prop] else 'off'
-
-            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
-        opts = ' '.join(optlist)
-        cmd = '{0} {1}'.format(cmd, opts)
+            proplist.append('-o {0}={1}'.format(prop, _conform_value(properties[prop])))
+        cmd = '{0} {1}'.format(cmd, ' '.join(proplist))
 
     if volume_size:
         cmd = '{0} -V {1}'.format(cmd, volume_size)
@@ -677,12 +707,10 @@ def clone(name_a, name_b, **kwargs):
     # if zpool properties specified, then
     # create "-o property=value" pairs
     if properties:
-        optlist = []
+        proplist = []
         for prop in properties:
-            if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
-                properties[prop] = 'on' if properties[prop] else 'off'
-            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
-        properties = ' '.join(optlist)
+            proplist.append('-o {0}={1}'.format(prop, properties[prop]))
+        properties = ' '.join(proplist)
 
     res = __salt__['cmd.run_all']('{zfs} clone {create_parent}{properties}{name_a} {name_b}'.format(
         zfs=zfs,
@@ -1055,12 +1083,10 @@ def snapshot(*snapshot, **kwargs):
     # if zpool properties specified, then
     # create "-o property=value" pairs
     if properties:
-        optlist = []
+        proplist = []
         for prop in properties:
-            if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
-                properties[prop] = 'on' if properties[prop] else 'off'
-            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
-        properties = ' '.join(optlist)
+            proplist.append('-o {0}={1}'.format(prop, _conform_value((properties[prop]))))
+        properties = ' '.join(proplist)
 
     for csnap in snapshot:
         if '@' not in csnap:
@@ -1147,14 +1173,10 @@ def set(*dataset, **kwargs):
     # for better error handling we don't do one big set command
     for ds in dataset:
         for prop in properties:
-
-            if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
-                properties[prop] = 'on' if properties[prop] else 'off'
-
             res = __salt__['cmd.run_all']('{zfs} set {prop}={value} {dataset}'.format(
                 zfs=zfs,
                 prop=prop,
-                value=properties[prop],
+                value=_conform_value(properties[prop]),
                 dataset=ds
             ))
             if ds not in ret:
