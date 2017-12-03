@@ -29,7 +29,7 @@ Management zfs datasets
       zfs.snapshot_present
 
     moka_origin:
-      zfs.hold_present
+      zfs.hold_present:
         - snapshot: test/shares/yuki@frozen
 
     test/shares/moka:
