@@ -643,6 +643,7 @@ class WinSoftware(object):
 
     """
     __sid_pattern = re.compile(r'^S-\d-\d-\d+$|^S-\d-\d-\d+-\d+-\d+-\d+-\d+$')
+    __whitespace_pattern = re.compile(r'^\s*$', flags=re.UNICODE)
     # items we copy out of the uninstall section of the registry without further processing
     __uninstall_search_list = [
       ('url', 'str', ['URLInfoAbout', 'HelpLink', 'MoreInfoUrl', 'UrlUpdateInfo']),
@@ -977,7 +978,7 @@ class WinSoftware(object):
         # Check if the registry entry is a valid.
         # a) Cannot manage software without at least a display name
         display_name = reg_soft_info.get_install_value('DisplayName', wanted_type='str')
-        if display_name is None:
+        if display_name is None or self.__whitespace_pattern.match(display_name):
             return
 
         # b) make sure its not an 'Hotfix', 'Update Rollup', 'Security Update', 'ServicePack'
@@ -1119,7 +1120,7 @@ class WinSoftware(object):
         #   'Inno Setup: Setup Version'
         if (windows_installer or
                 (uninstall_string and
-                    re.search(r'MsiExec.exe', uninstall_string, flags=re.IGNORECASE + re.UNICODE))):
+                    re.search(r'MsiExec.exe\s|MsiExec\s', uninstall_string, flags=re.IGNORECASE + re.UNICODE))):
             version_data.update({'win_installer_type': 'winmsi'})
         elif (re.match(r'InstallShield_', key_software, re.IGNORECASE) is not None or
                 (uninstall_string and (
@@ -1235,16 +1236,24 @@ class WinSoftware(object):
 
         for sid in sid_all:
             if self.__sid_pattern.match(sid) is not None:  # S-1-5-18 needs to be ignored?
-                handle = win32api.RegOpenKeyEx(  # pylint: disable=no-member
+                user_uninstall_path = '{0}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'.format(sid)
+                try:
+                    handle = win32api.RegOpenKeyEx(  # pylint: disable=no-member
                                 handle_sid,
-                                '{0}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'.format(sid),
+                                user_uninstall_path,
                                 0,
                                 win32con.KEY_READ)
+                except pywintypes.error as exc:  # pylint: disable=no-member
+                    if exc.winerror == winerror.ERROR_FILE_NOT_FOUND:
+                        # Not Found Uninstall under SID
+                        log.debug('Not Found {}'.format(user_uninstall_path))
+                        continue
+                    else:
+                        raise
                 try:
                     reg_key_all, _, _, _ = zip(*win32api.RegEnumKeyEx(handle))  # pylint: disable=no-member
                 except ValueError:
-                    log.warning(('Not Found {}\\Software\\Microsoft\\Windows\\'
-                                 'CurrentVersion\\Uninstall').format(sid))
+                    log.debug(('No Entries Found {}').format(user_uninstall_path))
                     reg_key_all = []
                 win32api.RegCloseKey(handle)  # pylint: disable=no-member
                 for reg_key in reg_key_all:
