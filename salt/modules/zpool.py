@@ -16,7 +16,7 @@ import salt.utils.decorators
 import salt.utils.decorators.path
 import salt.utils.path
 from salt.utils.odict import OrderedDict
-from salt.utils.stringutils import to_num as str_to_num
+from salt.modules.zfs import _conform_value
 
 log = logging.getLogger(__name__)
 
@@ -68,26 +68,6 @@ def _check_mkfile():
     Looks to see if mkfile is present on the system
     '''
     return salt.utils.path.which('mkfile')
-
-
-def _conform_value(value):
-    '''
-    Ensure value always conform to what zpool expects
-    '''
-    if isinstance(value, bool):  # NOTE: salt breaks the on/off/yes/no properties
-        return 'on' if value else 'off'
-
-    if isinstance(value, str) and ' ' in value:  # NOTE: handle whitespaces
-        # NOTE: quoting the string may be better
-        #       but it is hard to know if we already quoted it before
-        #       this can be improved in the future
-        return "'{0}'".format(value.strip("'"))
-
-    if isinstance(value, str):  # NOTE: convert to numeric if needed
-        return str_to_num(value)
-
-    # NOTE: passthrough
-    return value
 
 
 def healthy():
@@ -966,18 +946,10 @@ def split(zpool, newzpool, **kwargs):
 
     # apply extra arguments from kwargs
     if properties:  # create "-o property=value" pairs
-        optlist = []
+        proplist = []
         for prop in properties:
-            if isinstance(properties[prop], bool):
-                value = 'on' if properties[prop] else 'off'
-            else:
-                if ' ' in properties[prop]:
-                    value = "'{0}'".format(properties[prop])
-                else:
-                    value = properties[prop]
-            optlist.append('-o {0}={1}'.format(prop, value))
-        opts = ' '.join(optlist)
-        cmd = '{0} {1}'.format(cmd, opts)
+            proplist.append('-o {0}={1}'.format(prop, _conform_value(properties[prop])))
+        cmd = '{0} {1}'.format(cmd, ' '.join(proplist))
     if altroot:  # set altroot
         cmd = '{0} -R {1}'.format(cmd, altroot)
     cmd = '{0} {1} {2}'.format(cmd, zpool, newzpool)

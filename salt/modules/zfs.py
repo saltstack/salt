@@ -75,13 +75,16 @@ def _conform_value(value):
     if isinstance(value, bool):  # NOTE: salt breaks the on/off/yes/no properties
         return 'on' if value else 'off'
 
-    if isinstance(value, str) and ' ' in value:  # NOTE: handle whitespaces
-        # NOTE: quoting the string may be better
-        #       but it is hard to know if we already quoted it before
-        #       this can be improved in the future
-        return "'{0}'".format(value.strip("'"))
+    try:  # NOTE: handle whitespaces
+        if ' ' in value:
+            # NOTE: quoting the string may be better
+            #       but it is hard to know if we already quoted it before
+            #       this can be improved in the future
+            return "'{0}'".format(value.strip("'"))
+    except TypeError:
+        pass
 
-    if isinstance(value, str):  # NOTE: handle ZFS size conversion
+    try:  # NOTE: handle ZFS size conversion
         match_size = re_zfs_size.match(value)
         if match_size:
             v_size = float(match_size.group(1))
@@ -92,6 +95,8 @@ def _conform_value(value):
 
         # NOTE: convert to numeric if needed
         return str_to_num(value)
+    except TypeError:
+        pass
 
     # NOTE: passthrough
     return value
