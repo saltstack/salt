@@ -479,6 +479,7 @@ def volume_present(name, volume_size, sparse=False, create_parent=False, propert
     log.debug('zfs.volume_present::{0}::config::cloned_from = {1}'.format(name, cloned_from))
     log.debug('zfs.volume_present::{0}::config::properties = {1}'.format(name, properties))
 
+    volume_size = _conform_value(volume_size)
     for prop in properties:
         properties[prop] = _conform_value(properties[prop])
 
