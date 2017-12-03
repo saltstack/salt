@@ -19,6 +19,7 @@ import salt.modules.cmdmod
 import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
 from salt.utils.stringutils import to_num as str_to_num
+from salt.ext import six
 
 __virtualname__ = 'zfs'
 log = logging.getLogger(__name__)
@@ -68,35 +69,33 @@ def _check_features():
     return res['retcode'] == 0
 
 
-def _conform_value(value):
+def _conform_value(value, convert_size=False):
     '''
     Ensure value always conform to what zfs expects
     '''
-    if isinstance(value, bool):  # NOTE: salt breaks the on/off/yes/no properties
+    # NOTE: salt breaks the on/off/yes/no properties
+    if isinstance(value, bool):
         return 'on' if value else 'off'
 
-    try:  # NOTE: handle whitespaces
+    if isinstance(value, six.text_type) or isinstance(value, str):
+        # NOTE: handle whitespaces
         if ' ' in value:
             # NOTE: quoting the string may be better
             #       but it is hard to know if we already quoted it before
             #       this can be improved in the future
             return "'{0}'".format(value.strip("'"))
-    except TypeError:
-        pass
 
-    try:  # NOTE: handle ZFS size conversion
+        # NOTE: handle ZFS size conversion
         match_size = re_zfs_size.match(value)
-        if match_size:
+        if convert_size and match_size:
             v_size = float(match_size.group(1))
             v_unit = match_size.group(2).upper()[0]
             v_power = math.pow(1024, ['K', 'M', 'G', 'T', 'P', 'E', 'Z'].index(v_unit) + 1)
             value = v_size * v_power
-            return int(v_size) if int(v_size) == v_size else v_size
+            return int(value) if int(value) == value else value
 
         # NOTE: convert to numeric if needed
         return str_to_num(value)
-    except TypeError:
-        pass
 
     # NOTE: passthrough
     return value
