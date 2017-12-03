@@ -113,8 +113,7 @@ def _absent(name, dataset_type, force=False, recursive=False):
 
     # check if dataset exists
     if ret['result']:
-        dataset = name if '#' not in name else None  # work around bookmark oddities
-        if name in __salt__['zfs.list'](dataset, **{'type': dataset_type}):  # we need to destroy it
+        if __salt__['zfs.exists'](name, **{'type': dataset_type}):  # we need to destroy it
             result = {name: 'destroyed'}
             if not __opts__['test']:
                 result = __salt__['zfs.destroy'](name, **{'force': force, 'recursive': recursive})
@@ -371,18 +370,18 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
             ret['comment'] = '{0} is not a snapshot'.format(cloned_from)
             return ret
 
-        if cloned_from not in __salt__['zfs.list'](cloned_from, **{'type': 'snapshot'}):
+        if not __salt__['zfs.exists'](cloned_from, **{'type': 'snapshot'}):
             ret['result'] = False
             ret['comment'] = 'snapshot {0} does not exist'.format(cloned_from)
             return ret
 
         cloned_parent = cloned_from[:cloned_from.index('@')]
-        if cloned_parent not in __salt__['zfs.list'](cloned_parent, **{'type': 'filesystem'}):
+        if not __salt__['zfs.exists'](cloned_parent, **{'type': 'filesystem'}):
             ret['result'] = False
             ret['comment'] = 'snapshot {0} is not from a filesystem'.format(cloned_from)
             return ret
 
-    if name in __salt__['zfs.list'](name, **{'type': 'filesystem'}):  # update properties if needed
+    if __salt__['zfs.exists'](name, **{'type': 'filesystem'}):  # update properties if needed
         result = {}
         if len(properties) > 0:
             result = __salt__['zfs.get'](name, **{'properties': ','.join(properties.keys()), 'fields': 'value', 'depth': 1, 'parsable': True})
@@ -494,18 +493,18 @@ def volume_present(name, volume_size, sparse=False, create_parent=False, propert
             ret['comment'] = '{0} is not a snapshot'.format(cloned_from)
             return ret
 
-        if cloned_from not in __salt__['zfs.list'](cloned_from, **{'type': 'snapshot'}):
+        if not __salt__['zfs.exists'](cloned_from, **{'type': 'snapshot'}):
             ret['result'] = False
             ret['comment'] = 'snapshot {0} does not exist'.format(cloned_from)
             return ret
 
         cloned_parent = cloned_from[:cloned_from.index('@')]
-        if cloned_parent not in __salt__['zfs.list'](cloned_parent, **{'type': 'volume'}):
+        if not __salt__['zfs.exists'](cloned_parent, **{'type': 'volume'}):
             ret['result'] = False
             ret['comment'] = 'snapshot {0} is not from a volume'.format(cloned_from)
             return ret
 
-    if name in __salt__['zfs.list'](name, **{'type': 'volume'}):  # update properties if needed
+    if __salt__['zfs.exists'](name, **{'type': 'volume'}):  # update properties if needed
         properties['volsize'] = volume_size  # add volume_size to properties
         result = __salt__['zfs.get'](name, **{'properties': ','.join(properties.keys()), 'fields': 'value', 'depth': 1, 'parsable': True})
 
@@ -588,7 +587,7 @@ def bookmark_present(name, snapshot):
             ret['comment'] = '{0} is not a bookmark'.format(name)
             return ret
 
-    if name in __salt__['zfs.list'](**{'type': 'bookmark'}):
+    if __salt__['zfs.exists'](name, **{'type': 'bookmark'}):
         ret['comment'] = 'bookmark already exists'
     else:  # create bookmark
         result = {snapshot: 'bookmarked'}
@@ -639,7 +638,7 @@ def snapshot_present(name, recursive=False, properties=None):
         ret['comment'] = 'invalid snapshot name: {0}'.format(name)
         return ret
 
-    if name in __salt__['zfs.list'](name, **{'type': 'snapshot'}):  # we are all good
+    if __salt__['zfs.exists'](name, **{'type': 'snapshot'}):  # we are all good
         ret['comment'] = 'snapshot already exists'
     else:  # create snapshot
         result = {name: 'snapshotted'}
@@ -681,7 +680,7 @@ def promoted(name):
         ret['comment'] = 'invalid filesystem or volume name: {0}'.format(name)
         return ret
 
-    if name in __salt__['zfs.list'](name):
+    if __salt__['zfs.exists'](name):
         origin = '-'
         if not __opts__['test']:
             origin = __salt__['zfs.get'](name, **{'properties': 'origin', 'fields': 'value', 'parsable': True})[name]['origin']['value']
@@ -756,7 +755,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
             del state_schedule[hold]
     schedule.update(state_schedule)
     # check name
-    if name not in __salt__['zfs.list'](name, **{'type': 'filesystem'}) and name not in __salt__['zfs.list'](name, **{'type': 'volume'}):
+    if not __salt__['zfs.exists'](name, **{'type': 'filesystem'}) and not __salt__['zfs.exists'](name, **{'type': 'volume'}):
         ret['comment'] = '{0} is not a filesystem or a volume or does not exist'.format(name)
         ret['result'] = False
     # check prefix

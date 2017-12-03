@@ -496,7 +496,7 @@ def exists(zpool):
         zpool_cmd=zpool_cmd,
         zpool=zpool
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
     if res['retcode'] != 0:
         return False
     return True
