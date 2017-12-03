@@ -189,7 +189,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
     # ensure properties conform to the zfs parsable format
     for prop in properties:
-        properties[prop] = _conform_value(properties[prop])
+        properties[prop] = _conform_value(properties[prop], True)
 
     # ensure the pool is present
     ret['result'] = False
