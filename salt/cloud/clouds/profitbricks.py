@@ -6,7 +6,7 @@ ProfitBricks Cloud Module
 The ProfitBricks SaltStack cloud module allows a ProfitBricks server to
 be automatically deployed and bootstraped with Salt.
 
-:depends: profitbrick >= 3.1.0
+:depends: profitbrick >= 4.1.1
 
 The module requires ProfitBricks credentials to be supplied along with
 an existing virtual datacenter UUID where the server resources will
@@ -48,6 +48,9 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       availability_zone: ZONE_1
       # Name or UUID of the HDD image to use.
       image: <UUID>
+      # Image alias could be provided instead of image.
+      # Example 'ubuntu:latest'
+      #image_alias: <IMAGE_ALIAS>
       # Size of the node disk in GB (overrides server size).
       disk_size: 40
       # Type of disk (HDD or SSD).
@@ -116,7 +119,7 @@ try:
         ProfitBricksService, Server,
         NIC, Volume, FirewallRule,
         Datacenter, LoadBalancer, LAN,
-        PBNotFoundError
+        PBNotFoundError, PBError
     )
     HAS_PROFITBRICKS = True
 except ImportError:
@@ -183,6 +186,31 @@ def get_conn():
     )
 
 
+def avail_locations(call=None):
+    '''
+    Return a dict of all available VM locations on the cloud provider with
+    relevant data
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
+    ret = {}
+    conn = get_conn()
+
+    for item in conn.list_locations()['items']:
+        reg, loc = item['id'].split('/')
+        location = {'id': item['id']}
+
+        if reg not in ret:
+            ret[reg] = {}
+
+        ret[reg][loc] = location
+    return ret
+
+
 def avail_images(call=None):
     '''
     Return a list of the images that are on the provider
@@ -195,14 +223,45 @@ def avail_images(call=None):
 
     ret = {}
     conn = get_conn()
-    datacenter = get_datacenter(conn)
 
     for item in conn.list_images()['items']:
-        if (item['properties']['location'] ==
-           datacenter['properties']['location']):
-            image = {'id': item['id']}
-            image.update(item['properties'])
-            ret[image['name']] = image
+        image = {'id': item['id']}
+        image.update(item['properties'])
+        ret[image['name']] = image
+
+    return ret
+
+
+def list_images(call=None, kwargs=None):
+    '''
+    List all the images with alias by location
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_images my-profitbricks-config location=us/las
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_images function must be called with '
+            '-f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    ret = {}
+    conn = get_conn()
+
+    if kwargs.get('location') is None:
+        for item in conn.list_locations(depth=3)['items']:
+            loc = {'image_alias': item['properties']['imageAliases']}
+            ret[item['id']] = loc
+    else:
+        item = conn.get_location(kwargs.get('location'), depth=3)
+        loc = {'image_alias': item['properties']['imageAliases']}
+        ret[item['id']] = loc
 
     return ret
 
@@ -288,12 +347,23 @@ def get_datacenter_id():
     '''
     Return datacenter ID from provider configuration
     '''
-    return config.get_cloud_config_value(
+    datacenter_id = config.get_cloud_config_value(
         'datacenter_id',
         get_configured_provider(),
         __opts__,
         search_global=False
     )
+
+    conn = get_conn()
+
+    try:
+        conn.get_datacenter(datacenter_id= datacenter_id)
+    except PBNotFoundError:
+        log.error('Failed to get datacenter: {0}'.format(
+                datacenter_id))
+        raise
+        
+    return datacenter_id
 
 
 def list_loadbalancers(call=None):
@@ -492,6 +562,7 @@ def list_nodes(conn=None, call=None):
     for item in nodes['items']:
         node = {'id': item['id']}
         node.update(item['properties'])
+        node['state'] = node.pop('vmState')
         ret[node['name']] = node
 
     return ret
@@ -517,15 +588,17 @@ def list_nodes_full(conn=None, call=None):
     for item in nodes['items']:
         node = {'id': item['id']}
         node.update(item['properties'])
+        node['state'] = node.pop('vmState')
         node['public_ips'] = []
         node['private_ips'] = []
         if item['entities']['nics']['items'] > 0:
             for nic in item['entities']['nics']['items']:
-                ip_address = nic['properties']['ips'][0]
-                if salt.utils.cloud.is_public_ip(ip_address):
-                    node['public_ips'].append(ip_address)
-                else:
-                    node['private_ips'].append(ip_address)
+                if len(nic['properties']['ips']) > 0:
+                    ip_address = nic['properties']['ips'][0]
+                    if salt.utils.cloud.is_public_ip(ip_address):
+                        node['public_ips'].append(ip_address)
+                    else:
+                        node['private_ips'].append(ip_address)
 
         ret[node['name']] = node
 
@@ -680,14 +753,17 @@ def create(vm_):
     try:
         # Check for required profile parameters before sending any API calls.
         if (vm_['profile'] and
-           config.is_profile_configured(__opts__,
-                                        (__active_provider_name__ or
-                                         'profitbricks'),
-                                        vm_['profile']) is False):
+            config.is_profile_configured(__opts__,
+                                         (__active_provider_name__ or
+                                          'profitbricks'),
+                                         vm_['profile']) is False):
             return False
     except AttributeError:
         pass
 
+    if (not 'image' in vm_) and (not 'image_alias' in vm_):
+        log.error('The image or image_alias parameter is required.')
+        
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
@@ -728,11 +804,20 @@ def create(vm_):
 
         _wait_for_completion(conn, data, get_wait_timeout(vm_),
                              'create_server')
-    except Exception as exc:  # pylint: disable=W0703
+    except PBError as exc:
         log.error(
             'Error creating {0} on ProfitBricks\n\n'
             'The following exception was thrown by the profitbricks library '
-            'when trying to run the initial deployment: \n{1}'.format(
+            'when trying to run the initial deployment: \n{1}:\n{2}'.format(
+                vm_['name'], exc, exc.content
+            ),
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return False
+    except Exception as exc:  # pylint: disable=W0703
+        log.error(
+            'Error creating {0} \n\n'
+            'Error: \n{1}'.format(
                 vm_['name'], exc
             ),
             exc_info_on_loglevel=logging.DEBUG
@@ -754,7 +839,7 @@ def create(vm_):
                 'Loaded node data for {0}:\nname: {1}\nstate: {2}'.format(
                     vm_['name'],
                     pprint.pformat(data['name']),
-                    data['vmState']
+                    data['state']
                 )
             )
         except Exception as err:
@@ -768,7 +853,7 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = data['vmState'] == 'RUNNING'
+        running = data['state'] == 'RUNNING'
         if not running:
             # Still not running, trigger another iteration
             return
@@ -845,7 +930,7 @@ def destroy(name, call=None):
         raise SaltCloudSystemExit(
             'The destroy action must be called with -d, --destroy, '
             '-a or --action.'
-        )
+        )   
 
     __utils__['cloud.fire_event'](
         'event',
@@ -859,8 +944,26 @@ def destroy(name, call=None):
     datacenter_id = get_datacenter_id()
     conn = get_conn()
     node = get_node(conn, name)
-
+    attached_volumes = None
+ 
+    delete_volumes = config.get_cloud_config_value(
+        'delete_volumes',
+        get_configured_provider(),
+        __opts__,
+        search_global=False
+    )
+    #Get volumes before the server is deleted
+    if delete_volumes:
+        attached_volumes = conn.get_attached_volumes(datacenter_id=datacenter_id, server_id=node['id'])        
+   
     conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
+
+    #The server is deleted and now is safe to delete the volumes
+    if delete_volumes:        
+        for vol in attached_volumes['items']:        
+            log.debug('Deleting volume %s' % (vol['id']))
+            conn.delete_volume(datacenter_id=datacenter_id, volume_id=vol['id'])
+            log.debug('Deleted volume %s' % (vol['id']))
 
     __utils__['cloud.fire_event'](
         'event',
@@ -1010,14 +1113,19 @@ def _get_system_volume(vm_):
     volume = Volume(
         name='{0} Storage'.format(vm_['name']),
         size=disk_size,
-        image=get_image(vm_)['id'],
+        #image=get_image(vm_)['id'],
         disk_type=get_disk_type(vm_),
         ssh_keys=ssh_keys
     )
 
-    # Set volume availability zone if defined in the cloud profile
-    if 'disk_availability_zone' in vm_:
-        volume.availability_zone = vm_['disk_availability_zone']
+    if 'image_alias' in vm_.keys():
+        volume.image_alias = vm_['image_alias']
+        #volume.image = None
+    else:
+        volume.image=get_image(vm_)['id']
+        # Set volume availability zone if defined in the cloud profile
+        if 'disk_availability_zone' in vm_:
+            volume.availability_zone = vm_['disk_availability_zone']
 
     return volume
 
@@ -1109,4 +1217,4 @@ def _wait_for_completion(conn, promise, wait_timeout, msg):
     raise Exception(
         'Timed out waiting for async operation ' + msg + ' "' + str(
             promise['requestId']
-            ) + '" to complete.')
+        ) + '" to complete.')
