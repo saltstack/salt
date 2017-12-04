@@ -6,9 +6,10 @@ Module for sending messages to Mattermost
 
 :configuration: This module can be used by either passing an api_url and hook
     directly or by specifying both in a configuration profile in the salt
-    master/minion config.
-    For example:
+    master/minion config. For example:
+
     .. code-block:: yaml
+
         mattermost:
           hook: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
           api_url: https://example.com
@@ -35,6 +36,7 @@ __virtualname__ = 'mattermost'
 def __virtual__():
     '''
     Return virtual name of the module.
+
     :return: The virtual name of the module.
     '''
     return __virtualname__
@@ -43,6 +45,7 @@ def __virtual__():
 def _get_hook():
     '''
     Retrieves and return the Mattermost's configured hook
+
     :return:            String: the hook string
     '''
     hook = __salt__['config.get']('mattermost.hook') or \
@@ -56,6 +59,7 @@ def _get_hook():
 def _get_api_url():
     '''
     Retrieves and return the Mattermost's configured api url
+
     :return:            String: the api url string
     '''
     api_url = __salt__['config.get']('mattermost.api_url') or \
@@ -69,6 +73,7 @@ def _get_api_url():
 def _get_channel():
     '''
     Retrieves the Mattermost's configured channel
+
     :return:            String: the channel string
     '''
     channel = __salt__['config.get']('mattermost.channel') or \
@@ -80,6 +85,7 @@ def _get_channel():
 def _get_username():
     '''
     Retrieves the Mattermost's configured username
+
     :return:            String: the username string
     '''
     username = __salt__['config.get']('mattermost.username') or \
@@ -95,14 +101,18 @@ def post_message(message,
                  hook=None):
     '''
     Send a message to a Mattermost channel.
+
     :param channel:     The channel name, either will work.
     :param username:    The username of the poster.
     :param message:     The message to send to the Mattermost channel.
     :param api_url:     The Mattermost api url, if not specified in the configuration.
     :param hook:        The Mattermost hook, if not specified in the configuration.
     :return:            Boolean if message was sent successfully.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' mattermost.post_message message='Build is done"
     '''
     if not api_url:
