@@ -10,7 +10,7 @@ import socket
 import ctypes
 import os
 import ipaddress
-import six
+import salt.ext.six as six
 
 
 class sockaddr(ctypes.Structure):
