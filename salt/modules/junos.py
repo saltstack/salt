@@ -1403,7 +1403,6 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
         if data.__class__.__bases__[0] == OpTable:
             ret['reply'] = json.loads(data.to_json())
         else:
-            ret['reply'] = dict(data)
             if target is not None:
                 ret['table'][table]['target'] = data.TARGET
             if key is not None:
@@ -1413,6 +1412,9 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
             if args is not None:
                 ret['table'][table]['args'] = data.CMD_ARGS
                 ret['table'][table]['command'] = data.GET_CMD
+
+            ret['reply'] = _tuple_key_to_str(ret['table'][table],
+                                             dict(data))
     except Exception as err:
         ret['message'] = 'Uncaught exception - please report: {0}'.format(
             str(err))
@@ -1420,3 +1422,17 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
         ret['out'] = False
         return ret
     return ret
+
+
+def _tuple_key_to_str(table, data):
+    table_key = table.get('key')
+    if isinstance(table_key, (tuple, list)) and len(table_key)>1:
+        for key, val in data.items():
+            if isinstance(key, tuple):
+                data[str(key)] = data.pop(key)
+                if isinstance(val, dict) and table.get('fields') is not \
+                    None and key in table.get(
+                        'fields'):
+                    tbl = table.get('fields')
+                    _tuple_key_to_str(tbl, val)
+    return data
