@@ -105,11 +105,11 @@ def _check_pillar(kwargs, pillar=None):
     in the pillar and return the pillar errors
     '''
     if kwargs.get('force'):
-        return True
+        return True, None
     pillar_dict = pillar if pillar is not None else __pillar__
     if '_errors' in pillar_dict:
-        return False
-    return True
+        return False, pillar_dict['_errors']
+    return True, None
 
 
 def _wait(jid):
@@ -411,10 +411,11 @@ def template(tem, queue=False, **kwargs):
                                context=__context__,
                                initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    pillar_ok, errors = _check_pillar(kwargs, st_.opts['pillar'])
+    if not pillar_ok:
         __context__['retcode'] = 5
         raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+                                    info=errors)
 
     if not tem.endswith('.sls'):
         tem = '{sls}.sls'.format(sls=tem)
@@ -872,10 +873,11 @@ def highstate(test=None, queue=False, **kwargs):
                                    mocked=kwargs.get('mock', False),
                                    initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    pillar_ok, errors = _check_pillar(kwargs, st_.opts['pillar'])
+    if not pillar_ok:
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
+        err += errors
         return err
 
     st_.push_active()
@@ -1071,10 +1073,11 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
                                    mocked=kwargs.get('mock', False),
                                    initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    pillar_ok, errors = _check_pillar(kwargs, st_.opts['pillar'])
+    if not pillar_ok:
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
+        err += errors
         return err
 
     orchestration_jid = kwargs.get('orchestration_jid')
@@ -1197,10 +1200,12 @@ def top(topfn, test=None, queue=False, **kwargs):
                                pillar_enc=pillar_enc,
                                context=__context__,
                                initial_pillar=_get_initial_pillar(opts))
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+
+    pillar_ok, errors = _check_pillar(kwargs, st_.opts['pillar'])
+    if not pillar_ok:
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
+        err += errors
         return err
 
     st_.push_active()
@@ -1259,10 +1264,11 @@ def show_highstate(queue=False, **kwargs):
                                pillar_enc=pillar_enc,
                                initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    pillar_ok, errors = _check_pillar(kwargs, st_.opts['pillar'])
+    if not pillar_ok:
         __context__['retcode'] = 5
         raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+                                    info=errors)
 
     st_.push_active()
     try:
@@ -1293,10 +1299,11 @@ def show_lowstate(queue=False, **kwargs):
     st_ = salt.state.HighState(opts,
                                initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    pillar_ok, errors = _check_pillar(kwargs, st_.opts['pillar'])
+    if not pillar_ok:
         __context__['retcode'] = 5
         raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+                                    info=errors)
 
     st_.push_active()
     try:
@@ -1394,10 +1401,11 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         st_ = salt.state.HighState(opts,
                                    initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    pillar_ok, errors = _check_pillar(kwargs, st_.opts['pillar'])
+    if not pillar_ok:
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
+        err += errors
         return err
 
     if isinstance(mods, six.string_types):
@@ -1480,10 +1488,11 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
 
     st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    pillar_ok, errors = _check_pillar(kwargs, st_.opts['pillar'])
+    if not pillar_ok:
         __context__['retcode'] = 5
         raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+                                    info=errors)
 
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
@@ -1567,10 +1576,11 @@ def show_sls(mods, test=None, queue=False, **kwargs):
                                pillar_enc=pillar_enc,
                                initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    pillar_ok, errors = _check_pillar(kwargs, st_.opts['pillar'])
+    if not pillar_ok:
         __context__['retcode'] = 5
         raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+                                    info=errors)
 
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
@@ -1616,10 +1626,11 @@ def show_top(queue=False, **kwargs):
 
     st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
 
-    if not _check_pillar(kwargs, st_.opts['pillar']):
+    pillar_ok, errors = _check_pillar(kwargs, st_.opts['pillar'])
+    if not pillar_ok:
         __context__['retcode'] = 5
         raise CommandExecutionError('Pillar failed to render',
-                                    info=st_.opts['pillar']['_errors'])
+                                    info=errors)
 
     errors = []
     top_ = st_.get_top()
