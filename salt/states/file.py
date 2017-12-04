@@ -1611,7 +1611,6 @@ def managed(name,
     if mode is not None and salt.utils.is_windows():
         return _error(ret, 'The \'mode\' option is not supported on Windows')
 
-    #import pudb; pu.db
     try:
         keep_mode = mode.lower() == 'keep'
         if keep_mode:
