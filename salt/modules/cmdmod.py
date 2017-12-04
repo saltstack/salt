@@ -589,11 +589,17 @@ def _run(cmd,
             out = proc.stdout.decode(__salt_system_encoding__)
         except AttributeError:
             out = u''
+        except UnicodeDecodeError:
+            log.error('UnicodeDecodeError while decoding output of cmd {0}'.format(cmd))
+            out = proc.stdout.decode(__salt_system_encoding__, 'replace')
 
         try:
             err = proc.stderr.decode(__salt_system_encoding__)
         except AttributeError:
             err = u''
+        except UnicodeDecodeError:
+            log.error('UnicodeDecodeError while decoding error of cmd {0}'.format(cmd))
+            err = proc.stderr.decode(__salt_system_encoding__, 'replace')
 
         if rstrip:
             if out is not None:
