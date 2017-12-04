@@ -1438,6 +1438,9 @@ def version():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: Oxygen
+        Added support for OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
@@ -1454,10 +1457,17 @@ def version():
         except IOError:
             return {}
 
+    def bsd_version():
+        '''
+        bsd specific implementation of version
+        '''
+        return __salt__['cmd.run']('sysctl -n kern.version')
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_version,
-        'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
+        'FreeBSD': bsd_version,
+        'OpenBSD': bsd_version,
         'AIX': lambda: __salt__['cmd.run']('oslevel -s'),
     }
 
