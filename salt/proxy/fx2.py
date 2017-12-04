@@ -196,9 +196,7 @@ def __virtual__():
     Only return if all the modules are available
     '''
     if not salt.utils.path.which('racadm'):
-        log.critical('fx2 proxy minion needs "racadm" to be installed.')
-        return False
-
+        return False, 'fx2 proxy minion needs "racadm" to be installed.'
     return True
 
 

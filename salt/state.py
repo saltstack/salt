@@ -1605,7 +1605,24 @@ class State(object):
                             for ind in items:
                                 if not isinstance(ind, dict):
                                     # Malformed req_in
-                                    continue
+                                    if ind in high:
+                                        _ind_high = [x for x
+                                                     in high[ind]
+                                                     if not x.startswith('__')]
+                                        ind = {_ind_high[0]: ind}
+                                    else:
+                                        found = False
+                                        for _id in iter(high):
+                                            for state in [state for state
+                                                          in iter(high[_id])
+                                                          if not state.startswith('__')]:
+                                                for j in iter(high[_id][state]):
+                                                    if isinstance(j, dict) and 'name' in j:
+                                                        if j['name'] == ind:
+                                                            ind = {state: _id}
+                                                            found = True
+                                        if not found:
+                                            continue
                                 if len(ind) < 1:
                                     continue
                                 pstate = next(iter(ind))
@@ -1901,6 +1918,8 @@ class State(object):
                 if self.mocked:
                     ret = mock_ret(cdata)
                 else:
+                    # Check if this low chunk is paused
+                    self.check_pause(low)
                     # Execute the state function
                     if not low.get(u'__prereq__') and low.get(u'parallel'):
                         # run the state call in parallel, but only if not in a prereq
@@ -2109,6 +2128,48 @@ class State(object):
                 return False
             return not running[tag][u'result']
         return False
+
+    def check_pause(self, low):
+        '''
+        Check to see if this low chunk has been paused
+        '''
+        if not self.jid:
+            # Can't pause on salt-ssh since we can't track continuous state
+            return
+        pause_path = os.path.join(self.opts[u'cachedir'], 'state_pause', self.jid)
+        start = time.time()
+        if os.path.isfile(pause_path):
+            try:
+                while True:
+                    tries = 0
+                    with salt.utils.files.fopen(pause_path, 'rb') as fp_:
+                        try:
+                            pdat = msgpack.loads(fp_.read())
+                        except msgpack.UnpackValueError:
+                            # Reading race condition
+                            if tries > 10:
+                                # Break out if there are a ton of read errors
+                                return
+                            tries += 1
+                            time.sleep(1)
+                            continue
+                        id_ = low[u'__id__']
+                        key = u''
+                        if id_ in pdat:
+                            key = id_
+                        elif u'__all__' in pdat:
+                            key = u'__all__'
+                        if key:
+                            if u'duration' in pdat[key]:
+                                now = time.time()
+                                if now - start > pdat[key][u'duration']:
+                                    return
+                        else:
+                            return
+                        time.sleep(1)
+            except Exception as exc:
+                log.error('Failed to read in pause data for file located at: %s', pause_path)
+                return
 
     def reconcile_procs(self, running):
         '''
@@ -2579,7 +2640,14 @@ class State(object):
             for key, val in six.iteritems(l_dict):
                 for listen_to in val:
                     if not isinstance(listen_to, dict):
-                        continue
+                        found = False
+                        for chunk in chunks:
+                            if chunk['__id__'] == listen_to or \
+                               chunk['name'] == listen_to:
+                                listen_to = {chunk['state']: chunk['__id__']}
+                                found = True
+                        if not found:
+                            continue
                     for lkey, lval in six.iteritems(listen_to):
                         if (lkey, lval) not in crefs:
                             rerror = {_l_tag(lkey, lval):
@@ -2658,6 +2726,14 @@ class State(object):
             except OSError:
                 log.debug(u'File %s does not exist, no need to cleanup', accum_data_path)
         _cleanup_accumulator_data()
+        if self.jid is not None:
+            pause_path = os.path.join(self.opts[u'cachedir'], u'state_pause', self.jid)
+            if os.path.isfile(pause_path):
+                try:
+                    os.remove(pause_path)
+                except OSError:
+                    # File is not present, all is well
+                    pass
 
         return ret
 

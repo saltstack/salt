@@ -297,6 +297,11 @@
 #batch_safe_limit: 100
 #batch_safe_size: 8
 
+# Master stats enables stats events to be fired from the master at close
+# to the defined interval
+#master_stats: False
+#master_stats_event_iter: 60
+
 
 #####        Security settings       #####
 ##########################################

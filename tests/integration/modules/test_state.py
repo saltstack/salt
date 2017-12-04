@@ -964,6 +964,65 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         #ret = self.run_function('state.sls', mods='requisites.fullsls_prereq')
         #self.assertEqual(['sls command can only be used with require requisite'], ret)
 
+    def test_requisites_require_no_state_module(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-A_|-echo A fifth_|-run': {
+                '__run_num__': 4,
+                'comment': 'Command "echo A fifth" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-B_|-echo B second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo B second" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-C_|-echo C third_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo C third" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-D_|-echo D first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo D first" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-E_|-echo E fourth_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo E fourth" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-G_|-echo G_|-run': {
+                '__run_num__': 5,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   require:\n'
+                           + '                       id: Z\n',
+                'result': False,
+                'changes': False,
+            },
+            'cmd_|-H_|-echo H_|-run': {
+                '__run_num__': 6,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   require:\n'
+                           + '                       id: Z\n',
+                'result': False,
+                'changes': False,
+            }
+        }
+        ret = self.run_function('state.sls', mods='requisites.require_no_state_module')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
+
     def test_requisites_prereq_simple_ordering_and_errors(self):
         '''
         Call sls file containing several prereq_in and prereq.
@@ -998,6 +1057,30 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 'comment': 'The following requisites were not found:\n'
                            + '                   prereq:\n'
                            + '                       foobar: A\n',
+                'result': False,
+                'changes': False}
+        }
+        expected_result_simple_no_state_module = {
+            'cmd_|-A_|-echo A third_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo A third" run',
+                'result': True,
+                'changes': True},
+            'cmd_|-B_|-echo B first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo B first" run',
+                'result': True,
+                'changes': True},
+            'cmd_|-C_|-echo C second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo C second" run',
+                'result': True,
+                'changes': True},
+            'cmd_|-I_|-echo I_|-run': {
+                '__run_num__': 3,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   prereq:\n'
+                           + '                       id: Z\n',
                 'result': False,
                 'changes': False}
         }
@@ -1131,6 +1214,11 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         #    ret,
         #    ['A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID "B" ID "A"']
         #)
+
+        ret = self.run_function('state.sls', mods='requisites.prereq_simple_no_state_module')
+        result = self.normalize_ret(ret)
+        self.assertEqual(expected_result_simple_no_state_module, result)
+
     def test_infinite_recursion_sls_prereq(self):
         ret = self.run_function('state.sls', mods='requisites.prereq_sls_infinite_recursion')
         self.assertSaltTrueReturn(ret)
@@ -1166,6 +1254,16 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         #    'A recursive requisite was found, SLS "requisites.use_recursion"'
         #    + ' ID "A" ID "A"'
         #])
+
+    def test_requisites_use_no_state_module(self):
+        '''
+        Call sls file containing several use_in and use.
+
+        '''
+        ret = self.run_function('state.sls', mods='requisites.use_no_state_module')
+        self.assertReturnNonEmptySaltType(ret)
+        for item, descr in six.iteritems(ret):
+            self.assertEqual(descr['comment'], 'onlyif condition is false')
 
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(TMP, 'prod-cheese-file')
@@ -1244,6 +1342,16 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = 'State was not run because none of the onchanges reqs changed'
         self.assertIn(expected_result, test_data)
 
+    def test_onchanges_requisite_no_state_module(self):
+        '''
+        Tests a simple state using the onchanges requisite without state modules
+        '''
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_simple_no_state_module')
+        test_data = state_run['cmd_|-test_changing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
     # onfail tests
 
     def test_onfail_requisite(self):
@@ -1286,6 +1394,24 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Only run the state once and keep the return data
         state_run = self.run_function('state.sls', mods='requisites.onfail_in_simple')
+
+        # First, test the result of the state run when a failure is expected to happen
+        test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onfail req did not change'
+        self.assertIn(expected_result, test_data)
+
+    def test_onfail_requisite_no_state_module(self):
+        '''
+        Tests a simple state using the onfail requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_simple_no_state_module')
 
         # First, test the result of the state run when a failure is expected to happen
         test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
@@ -1357,6 +1483,21 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         listener_state = 'cmd_|-listener_test_listening_resolution_two_|-echo "Successful listen resolution"_|-mod_watch'
         self.assertIn(listener_state, state_run)
+
+    def test_listen_requisite_no_state_module(self):
+        '''
+        Tests a simple state using the listen requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_simple_no_state_module')
+        # First, test the result of the state run when a listener is expected to trigger
+        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+        # Then, test the result of the state run when a listener should not trigger
+        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        self.assertNotIn(absent_state, state_run)
 
     def test_issue_30820_requisite_in_match_by_name(self):
         '''
@@ -1477,3 +1618,23 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn(state_id, state_run)
         self.assertEqual(state_run[state_id]['comment'], 'Failure!')
         self.assertFalse(state_run[state_id]['result'])
+
+    def test_state_nonbase_environment(self):
+        '''
+        test state.sls with saltenv using a nonbase environment
+        with a salt source
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='non-base-env',
+            saltenv='prod'
+        )
+        state_id = 'file_|-test_file_|-/tmp/nonbase_env_|-managed'
+        self.assertEqual(state_run[state_id]['comment'], 'File /tmp/nonbase_env updated')
+        self.assertTrue(state_run['file_|-test_file_|-/tmp/nonbase_env_|-managed']['result'])
+        self.assertTrue(os.path.isfile('/tmp/nonbase_env'))
+
+    def tearDown(self):
+        nonbase_file = '/tmp/nonbase_env'
+        if os.path.isfile(nonbase_file):
+            os.remove(nonbase_file)
