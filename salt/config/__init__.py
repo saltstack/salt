@@ -2093,11 +2093,13 @@ def _get_liquid_opts(opts):
         log.error('Liquid not in opts, ignoring')
         return {}
     # TODO: detect startup and fetch!
-    startup = True
+    startup = '__liquid_loaded' not in opts
+    # ^^^ that is a very weak way, must find something smarter and more efficient
     if startup:
         # On startup will always fetch the Liquid opts and cache them.
         log.debug('Reading the liquid opts for the first time')
         liquid_opts = salt.utils.liquid.cache(opts)
+        opts['__liquid_loaded'] = True
     elif opts['liquid_always_fetch']:
         log.debug('Refetching from the liquid sources (liquid_always_fetch is enabled)')
         liquid_opts = salt.utils.liquid.fetch(opts)
@@ -2167,7 +2169,7 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
     else:
         log.debug('Missing configuration file: {0}'.format(path))
-    log.error('Read config from %s', path)
+
     return opts
 
 

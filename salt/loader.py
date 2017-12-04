@@ -845,7 +845,6 @@ def liquid(opts, functions=None, whitelist=None, utils=None):
     '''
     if utils is None:
         utils = {}
-
     return LazyLoader(
         _module_dirs(opts, u'liquid'),
         opts,

@@ -242,8 +242,8 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
 
             super(YourSubClass, self).prepare()
         '''
-        super(Minion, self).prepare()
 
+        super(Minion, self).prepare()
         try:
             if self.config['verify_env']:
                 confd = self.config.get('default_include')
