@@ -3,7 +3,7 @@
 Management of OpenStack Glance Images
 ========================================
 
-.. versionadded:: Nitrogen
+.. versionadded:: Oxygen
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.glanceng` for setup instructions
