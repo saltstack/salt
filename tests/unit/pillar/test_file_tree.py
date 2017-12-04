@@ -120,7 +120,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(PARENT_PILLAR_CONTENT, mypillar)
 
     def test_no_pillarenv(self):
-        'check if file trees are merged correctly across multiple environments'
+        'confirm that file_tree yells when pillarenv is missing for a relative path'
         with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
             with patch.dict(file_tree.__opts__, {'pillarenv': None}):
                 with TestsLoggingHandler() as handler:

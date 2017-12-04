@@ -29,7 +29,7 @@ will follow symbolic links to other directories.
     Be careful when using ``follow_dir_links``, as a recursive symlink chain
     will result in unexpected results.
 
-.. versionchanged:: develop
+.. versionchanged:: Oxygen
     If ``root_dir`` is a relative path, it will be treated as relative to the
     :conf_master:`pillar_roots` of the environment specified by
     :conf_minion:`pillarenv`. If an environment specifies multiple
@@ -195,9 +195,6 @@ import salt.template
 
 # Set up logging
 log = logging.getLogger(__name__)
-
-# The default option values
-__opts__ = {}
 
 
 def _on_walk_error(err):
