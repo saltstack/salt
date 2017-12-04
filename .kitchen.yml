@@ -5,7 +5,7 @@
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 
 <% if File.exists?(driverfile) %>
-<%= File.read(driverfile) %>
+<%= ERB.new(File.read(driverfile)).result %>
 <% else %>
 driver:
   name: docker
@@ -31,7 +31,7 @@ provisioner:
   log_level: info
   require_chef: false
   remote_states:
-    name: git://github.com/gtmanfred/salt-jenkins.git
+    name: git://github.com/saltstack/salt-jenkins.git
     branch: 2016.11
     repo: git
     testingdir: /testing
@@ -51,7 +51,7 @@ provisioner:
         - git.salt
         - kitchen
 <% if File.exists?(platformsfile) %>
-<%= File.read(platformsfile) %>
+<%= ERB.new(File.read(platformsfile)).result %>
 <% else %>
 platforms:
   - name: fedora
