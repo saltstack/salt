@@ -326,3 +326,24 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertNotEqual(ret, {})
                 if 'changes' in ret:
                     self.assertNotEqual(ret['changes'], {})
+
+    @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    def test_pkg_latest_version(self):
+        '''
+        check that pkg.latest_version returns the latest version of the uninstalled package (it does not install the package, just checking the version)
+        '''
+        grains = self.run_function('grains.items')
+        cmd_info = self.run_function('pkg.info_installed', ['htop'])
+        if cmd_info != '':
+            cmd_remove = self.run_function('pkg.remove', ['htop'])
+            if grains['os_family'] == 'RedHat':
+                cmd_htop = self.run_function('cmd.run', ['yum list htop'])
+            elif grains['os_family'] == 'Debian':
+                cmd_htop = self.run_function('cmd.run', ['apt list htop'])
+            elif grains['os_family'] == 'Arch':
+                cmd_htop = self.run_function('cmd.run', ['pacman -Si htop'])
+            elif grains['os_family'] == 'Suse':
+                cmd_htop = self.run_function('cmd.run', ['zypper info htop'])
+        pkg_latest = self.run_function('pkg.latest_version', ['htop'])
+        self.assertIn(pkg_latest, cmd_htop)
