@@ -77,7 +77,7 @@ class SchedulerTest(ModuleCase, SaltReturnAssertsMixin):
 
     def test_skip(self):
         '''
-        verify that scheduled job runs
+        verify that scheduled job is skipped at the specified time
         '''
         job = {
           'schedule': {
@@ -107,7 +107,7 @@ class SchedulerTest(ModuleCase, SaltReturnAssertsMixin):
 
     def test_postpone(self):
         '''
-        verify that scheduled job runs
+        verify that scheduled job is postponed until the specified time.
         '''
         job = {
           'schedule': {
@@ -148,7 +148,7 @@ class SchedulerTest(ModuleCase, SaltReturnAssertsMixin):
 
     def test_skip_during_range(self):
         '''
-        verify that scheduled job runs
+        verify that scheduled job is skipped during the specified range
         '''
         job = {
           'schedule': {

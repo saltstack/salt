@@ -818,12 +818,13 @@ class Schedule(object):
 
     def get_next_fire_time(self, name):
         '''
-        Disable a job in the scheduler. Ignores jobs from pillar
+        Return the  next fire time for the specified job
         '''
 
         schedule = self._get_schedule()
+        _next_fire_time = None
         if schedule:
-            _next_fire_time = schedule[name]['_next_fire_time']
+            _next_fire_time = schedule.get(name, {}).get('_next_fire_time', None)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -832,11 +833,11 @@ class Schedule(object):
 
     def job_status(self, name):
         '''
-        Disable a job in the scheduler. Ignores jobs from pillar
+        Return the specified schedule item
         '''
 
         schedule = self._get_schedule()
-        return schedule[name]
+        return schedule.get(name, {})
 
     def handle_func(self, multiprocessing_enabled, func, data):
         '''
