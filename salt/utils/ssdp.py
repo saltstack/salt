@@ -198,7 +198,13 @@ class SSDPDiscoveryServer(SSDPBase):
     Discovery service publisher.
 
     '''
-    is_available = SSDPBase._is_available
+    @staticmethod
+    def is_available():
+        '''
+        Return availability of the Server.
+        :return:
+        '''
+        return SSDPBase._is_available()
 
     def __init__(self, **config):
         '''
@@ -309,7 +315,13 @@ class SSDPDiscoveryClient(SSDPBase):
     '''
     Class to discover Salt Master via UDP broadcast.
     '''
-    is_available = SSDPBase._is_available
+    @staticmethod
+    def is_available():
+        '''
+        Return availability of the Client
+        :return:
+        '''
+        return SSDPBase._is_available()
 
     def __init__(self, **config):
         '''
