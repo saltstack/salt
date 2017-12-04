@@ -1054,6 +1054,9 @@ def netstats():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: Oxygen
+        Added support for OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
@@ -1091,15 +1094,18 @@ def netstats():
         return ret
 
     def freebsd_netstats():
+        return bsd_netstats()
+
+    def bsd_netstats():
         '''
-        freebsd specific netstats implementation
+        bsd specific netstats implementation
         '''
         ret = {}
         for line in __salt__['cmd.run']('netstat -s').splitlines():
             if line.startswith('\t\t'):
                 continue  # Skip, too detailed
             if not line.startswith('\t'):
-                key = line.split()[0]
+                key = line.split()[0].replace(':', '')
                 ret[key] = {}
             else:
                 comps = line.split()
@@ -1159,7 +1165,8 @@ def netstats():
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_netstats,
-        'FreeBSD': freebsd_netstats,
+        'FreeBSD': bsd_netstats,
+        'OpenBSD': bsd_netstats,
         'SunOS': sunos_netstats,
         'AIX': aix_netstats,
     }
