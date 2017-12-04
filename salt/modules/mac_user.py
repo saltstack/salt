@@ -19,7 +19,7 @@ import logging
 import time
 
 # Import 3rdp-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range, map  # pylint: disable=import-error,redefined-builtin
 from salt.ext.six import string_types
 
 # Import salt libs
@@ -524,7 +524,7 @@ def get_auto_login():
 def _kcpassword(password):
     '''
     Internal function for obfuscating the password used for AutoLogin
-    This is later written to the ``/etc/kcpassword`` file
+    This is later written as the contents of the ``/etc/kcpassword`` file
 
     .. versionadded:: 2017.7.3
 
@@ -544,20 +544,31 @@ def _kcpassword(password):
     key = [125, 137, 82, 35, 210, 188, 221, 234, 163, 185, 31]
     key_len = len(key)
 
+    # Convert each character to a byte
     password = list(map(ord, password))
+
     # pad password length out to an even multiple of key length
-    r = len(password) % key_len
-    if r > 0:
-        password = password + [0] * (key_len - r)
+    remainder = len(password) % key_len
+    if remainder > 0:
+        password = password + [0] * (key_len - remainder)
 
-    for n in range(0, len(password), len(key)):
-        ki = 0
-        for j in range(n, min(n+len(key), len(password))):
-            password[j] = password[j] ^ key[ki]
-            ki += 1
+    # Break the password into chunks the size of len(key) (11)
+    for chunk_index in range(0, len(password), len(key)):
+        # Reset the key_index to 0 for each iteration
+        key_index = 0
 
+        # Do an XOR on each character of that chunk of the password with the
+        # corresponding item in the key
+        # The length of the password, or the length of the key, whichever is
+        # smaller
+        for password_index in range(chunk_index,
+                                    min(chunk_index + len(key), len(password))):
+            password[password_index] = password[password_index] ^ key[key_index]
+            key_index += 1
+
+    # Convert each byte back to a character
     password = list(map(chr, password))
-    return "".join(password)
+    return ''.join(password)
 
 
 def enable_auto_login(name, password):
@@ -566,10 +577,16 @@ def enable_auto_login(name, password):
 
     Configures the machine to auto login with the specified user
 
-    :param str name: The user account use for auto login
+    Args:
 
-    :return: True if successful, False if not
-    :rtype: bool
+        name (str): The user account use for auto login
+
+        password (str): The password to user for auto login
+
+            .. versionadded:: 2017.7.3
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -601,8 +618,8 @@ def disable_auto_login():
 
     Disables auto login on the machine
 
-    :return: True if successful, False if not
-    :rtype: bool
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
