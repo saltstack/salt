@@ -233,7 +233,6 @@ def __write_docker_compose(path, docker_compose):
         file_path = os.path.join(dir_name, DEFAULT_DC_FILENAMES[0])
     if os.path.isdir(dir_name) is False:
         os.mkdir(dir_name)
-    print('WRITING ', file_path)
     f = salt.utils.files.fopen(file_path,
                                'w')  # pylint: disable=resource-leakage
     if f:
@@ -243,7 +242,6 @@ def __write_docker_compose(path, docker_compose):
         return __standardize_result(False,
                                     'Could not write {0}'.format(file_path),
                                     None, None)
-    print('LOADING ', file_path)
     project = __load_project_from_file_path(file_path)
     if isinstance(project, dict):
         os.remove(file_path)
