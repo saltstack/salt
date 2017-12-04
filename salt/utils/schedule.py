@@ -1294,6 +1294,7 @@ class Schedule(object):
                             data['_next_fire_time'] = when
 
                         if data['_next_fire_time'] < when and \
+                                not run and \
                                 not data['_run']:
                             data['_next_fire_time'] = when
                             data['_run'] = True
