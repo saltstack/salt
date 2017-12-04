@@ -474,7 +474,7 @@ def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None, extmod_bla
     '''
     .. versionadded:: 0.10.0
 
-    Sync beacons from ``salt://_returners`` to the minion
+    Sync returners from ``salt://_returners`` to the minion
 
     saltenv
         The fileserver environment from which to sync. To sync from more than
@@ -666,7 +666,7 @@ def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utility modules from ``salt://_cloud`` to the minion
+    Sync cloud modules from ``salt://_cloud`` to the minion
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
