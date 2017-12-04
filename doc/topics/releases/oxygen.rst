@@ -25,6 +25,25 @@ by any master tops matches that are not matched via a top file.
 To make master tops matches execute first, followed by top file matches, set
 the new :conf_minion:`master_tops_first` minion config option to ``True``.
 
+Return Codes for Runner/Wheel Functions
+---------------------------------------
+
+When using :ref:`orchestration <orchestrate-runner>`, runner and wheel
+functions used to report a ``True`` result if the function ran to completion
+without raising an exception. It is now possible to set a return code in the
+``__context__`` dictionary, allowing runner and wheel functions to report that
+they failed. Here's some example pseudocode:
+
+.. code-block:: python
+
+    def myrunner():
+        ...
+        do stuff
+        ...
+        if some_error_condition:
+            __context__['retcode'] = 1
+        return result
+
 LDAP via External Authentication Changes
 ----------------------------------------
 In this release of Salt, if LDAP Bind Credentials are supplied, then
