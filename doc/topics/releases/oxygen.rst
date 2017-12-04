@@ -65,6 +65,25 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+:conf_minion:`environment` config option renamed to :conf_minion:`saltenv`
+--------------------------------------------------------------------------
+
+The :conf_minion:`environment` config option predates referring to a salt
+fileserver environment as a **saltenv**. To pin a minion to a single
+environment for running states, one would use :conf_minion:`environment`, but
+overriding that environment would be done with the ``saltenv`` argument. For
+consistency, :conf_minion:`environment` is now simply referred to as
+:conf_minion:`saltenv`. There are no plans to deprecate or remove
+:conf_minion:`environment`, if used it will log a warning and its value will be
+used as :conf_minion:`saltenv`.
+
+:conf_minion:`lock_saltenv` config option added
+-----------------------------------------------
+
+If set to ``True``, this option will prevent a minion from allowing the
+``saltenv`` argument to override the value set in :conf_minion:`saltenv` when
+running states.
+
 New Grains
 ----------
 
