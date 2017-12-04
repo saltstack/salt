@@ -385,7 +385,11 @@ class SyncClientMixin(object):
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
                 data[u'return'] = self.functions[fun](*args, **kwargs)
-                data[u'success'] = True
+                try:
+                    data[u'success'] = self.context.get(u'retcode', 0) == 0
+                except AttributeError:
+                    # Assume a True result if no context attribute
+                    data[u'success'] = True
                 if isinstance(data[u'return'], dict) and u'data' in data[u'return']:
                     # some functions can return boolean values
                     data[u'success'] = salt.utils.state.check_result(data[u'return'][u'data'])

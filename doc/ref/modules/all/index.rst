@@ -417,6 +417,7 @@ execution modules
     system
     system_profiler
     systemd
+    telegram
     telemetry
     temp
     test
