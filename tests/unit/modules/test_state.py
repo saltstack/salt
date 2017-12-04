@@ -698,7 +698,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(state, '_check_queue', mock):
             self.assertEqual(state.top("reverse_top.sls"), "A")
 
-            mock = MagicMock(side_effect=[False, True, True])
+            mock = MagicMock(side_effect=[(False, "E"), (True, None), (True, None)])
             with patch.object(state, '_check_pillar', mock):
                 with patch.dict(state.__pillar__, {"_errors": "E"}):
                     self.assertListEqual(state.top("reverse_top.sls"), ret)
@@ -857,11 +857,11 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                True),
                                      ["A"])
 
-                mock = MagicMock(side_effect=[False,
-                                              True,
-                                              True,
-                                              True,
-                                              True])
+                mock = MagicMock(side_effect=[(False, "E1"),
+                                              (True, None),
+                                              (True, None),
+                                              (True, None),
+                                              (True, None)])
                 with patch.object(state, '_check_pillar', mock):
                     with patch.dict(state.__context__, {"retcode": 5}):
                         with patch.dict(state.__pillar__, {"_errors": "E1"}):
