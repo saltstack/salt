@@ -2,7 +2,7 @@
 '''
 Keystone module for interacting with OpenStack Keystone
 
-.. versionadded:: Nitrogen
+.. versionadded:: Oxygen
 
 :depends:shade
 
@@ -91,8 +91,8 @@ def _clean_kwargs(keep_name=False, **kwargs):
         kwargs['name_or_id'] = kwargs.pop('name')
 
     try:
-        clean_func = salt.utils.args.clean_kwargs
-    except AttributeError:
+        clean_func = __utils__['args.clean_kwargs']
+    except KeyError:
         clean_func = salt.utils.clean_kwargs
     return clean_func(**kwargs)
 
