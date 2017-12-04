@@ -3,6 +3,12 @@
 '''
 Manage Chocolatey package installs
 .. versionadded:: 2016.3.0
+
+.. note::
+    Chocolatey pulls data from the Chocolatey internet database to determine
+    current versions, find available versions, etc. This is normally a slow
+    operation and may be optimized by specifying a local, smaller chocolatey
+    repo.
 '''
 
 # Import Python libs
@@ -276,7 +282,7 @@ def upgraded(name,
     '''
     Upgrades a package. Will install the package if not installed.
 
-    .. versionadded: Oxygen
+    .. versionadded: 2017.7.3
 
     Args:
 
@@ -331,7 +337,6 @@ def upgraded(name,
            'comment': ''}
 
     # Get list of currently installed packages
-    # This should be relatively fast as it's local only
     pre_install = __salt__['chocolatey.list'](local_only=True)
 
     # Determine if there are changes
@@ -404,7 +409,6 @@ def upgraded(name,
         return ret
 
     # Install the package
-    # This could take a while
     result = __salt__['chocolatey.upgrade'](name=name,
                                             version=version,
                                             source=source,
@@ -423,7 +427,6 @@ def upgraded(name,
         ret['result'] = False
 
     # Get list of installed packages after 'chocolatey.install'
-    # This should be relatively fast as it's local only
     post_install = __salt__['chocolatey.list'](local_only=True)
 
     ret['changes'] = salt.utils.compare_dicts(pre_install, post_install)
