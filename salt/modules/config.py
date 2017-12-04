@@ -214,7 +214,8 @@ def merge(value,
     return ret
 
 
-def get(key, default='', delimiter=':', merge=None):
+def get(key, default='', delimiter=':', merge=None, omit_opts=False,
+        omit_pillar=False, omit_master=False, omit_grains=False):
     '''
     .. versionadded: 0.14.0
 
@@ -354,37 +355,41 @@ def get(key, default='', delimiter=':', merge=None):
         salt '*' config.get lxc.container_profile:centos merge=recurse
     '''
     if merge is None:
-        ret = salt.utils.data.traverse_dict_and_list(
-            __opts__,
-            key,
-            '_|-',
-            delimiter=delimiter)
-        if ret != '_|-':
-            return sdb.sdb_get(ret, __opts__)
+        if not omit_opts:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __opts__,
+                key,
+                '_|-',
+                delimiter=delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
 
-        ret = salt.utils.data.traverse_dict_and_list(
-            __grains__,
-            key,
-            '_|-',
-            delimiter)
-        if ret != '_|-':
-            return sdb.sdb_get(ret, __opts__)
+        if not omit_grains:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __grains__,
+                key,
+                '_|-',
+                delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
 
-        ret = salt.utils.data.traverse_dict_and_list(
-            __pillar__,
-            key,
-            '_|-',
-            delimiter=delimiter)
-        if ret != '_|-':
-            return sdb.sdb_get(ret, __opts__)
+        if not omit_pillar:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __pillar__,
+                key,
+                '_|-',
+                delimiter=delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
 
-        ret = salt.utils.data.traverse_dict_and_list(
-            __pillar__.get('master', {}),
-            key,
-            '_|-',
-            delimiter=delimiter)
-        if ret != '_|-':
-            return sdb.sdb_get(ret, __opts__)
+        if not omit_master:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __pillar__.get('master', {}),
+                key,
+                '_|-',
+                delimiter=delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
     else:
         if merge not in ('recurse', 'overwrite'):
             log.warning('Unsupported merge strategy \'{0}\'. Falling back '

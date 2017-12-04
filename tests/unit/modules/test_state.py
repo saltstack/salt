@@ -952,78 +952,61 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test _get_test_value when opts contains different values
         '''
-        # test when minion_state_test is True in __opts__
-        test_arg = 'minions_state_test'
-        with patch.dict(config.__opts__, {test_arg: True}):
-            with patch.dict(state.__salt__, {'config.option':
-                                             config.get(test_arg)}):
-                self.assertTrue(state._get_test_value(test=None),
-                                msg='Failure when {0} is True in __opts__'.format(test_arg))
+        test_arg = 'test'
+        with patch.dict(state.__opts__, {test_arg: True}):
+            self.assertTrue(state._get_test_value(test=None),
+                            msg='Failure when {0} is True in __opts__'.format(test_arg))
 
-        # test when minions_state_test is blah in __opts__
-        with patch.dict(config.__opts__, {test_arg: 'blah'}):
-            with patch.dict(state.__salt__, {'config.option':
-                                             config.get(test_arg)}):
-                self.assertFalse(state._get_test_value(test=None),
-                                msg='Failure when {0} is blah in __opts__'.format(test_arg))
+        with patch.dict(config.__pillar__, {test_arg: 'blah'}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} is blah in __opts__'.format(test_arg))
 
-        # test when minions_state_test is False in __opts__
+        with patch.dict(config.__pillar__, {test_arg: 'true'}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} is true in __opts__'.format(test_arg))
+
         with patch.dict(config.__opts__, {test_arg: False}):
-            with patch.dict(state.__salt__, {'config.option':
-                                             config.get(test_arg)}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} is False in __opts__'.format(test_arg))
+
+        with patch.dict(config.__opts__, {}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} does not exist in __opts__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {test_arg: None}):
+            self.assertEqual(state._get_test_value(test=None), None,
+                            msg='Failure when {0} is None in __opts__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {test_arg: True}):
+            self.assertTrue(state._get_test_value(test=None),
+                            msg='Failure when {0} is True in __pillar__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {'master': {test_arg: True}}):
+            self.assertTrue(state._get_test_value(test=None),
+                            msg='Failure when {0} is True in master __pillar__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {'master': {test_arg: False}}):
+            with patch.dict(config.__pillar__, {test_arg: True}):
+                self.assertTrue(state._get_test_value(test=None),
+                                msg='Failure when {0} is False in master __pillar__ and True in pillar'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {'master': {test_arg: True}}):
+            with patch.dict(config.__pillar__, {test_arg: False}):
                 self.assertFalse(state._get_test_value(test=None),
+                                 msg='Failure when {0} is True in master __pillar__ and False in pillar'.format(test_arg))
+
+        with patch.dict(state.__opts__, {'test': False}):
+            self.assertFalse(state._get_test_value(test=None),
+                             msg='Failure when {0} is False in __opts__'.format(test_arg))
+
+        with patch.dict(state.__opts__, {'test': False}):
+            with patch.dict(config.__pillar__, {'master': {test_arg: True}}):
+                self.assertTrue(state._get_test_value(test=None),
                                 msg='Failure when {0} is False in __opts__'.format(test_arg))
 
-        # test when minions_state_test does not exist in __opts__
-        with patch.dict(config.__opts__, {}):
-            with patch.dict(state.__salt__, {'config.option':
-                                             config.get(test_arg)}):
-                self.assertFalse(state._get_test_value(test=None),
-                                msg='Failure when {0} does not exist in __opts__'.format(test_arg))
-
-        # test when minions_state_test is None in __opts__
-        with patch.dict(config.__opts__, {test_arg: None}):
-            with patch.dict(state.__salt__, {'config.option':
-                                             config.get(test_arg)}):
-                self.assertEqual(state._get_test_value(test=None), None,
-                                msg='Failure when {0} is None in __opts__'.format(test_arg))
-
-        # test when minions_state_test is True in __pillar__
-        with patch.dict(config.__pillar__, {test_arg: True}):
-            with patch.dict(state.__salt__, {'config.option':
-                                             config.get(test_arg)}):
-                self.assertTrue(state._get_test_value(test=None),
-                                msg='Failure when {0} is True in __pillar__'.format(test_arg))
-
-        # test when minions_state_test is True in master __pillar__
-        with patch.dict(config.__pillar__, {'master': {test_arg: True}}):
-            with patch.dict(state.__salt__, {'config.option':
-                                             config.get(test_arg)}):
-                self.assertTrue(state._get_test_value(test=None),
-                                msg='Failure when {0} is True in master __pillar__'.format(test_arg))
-
-        # test when minions_state_test is True in __opts__
-        # and test is False in opts
-        with patch.dict(config.__opts__, {test_arg: True}):
-            with patch.dict(state.__opts__, {'test': False}):
-                with patch.dict(state.__salt__, {'config.option':
-                                                 config.get(test_arg)}):
-                    self.assertTrue(state._get_test_value(test=None),
-                                    msg='Failure when {0} is True in __opts__ and test is False in __opts__'.format(test_arg))
-
-        # test when test is True in __opts__
-        with patch.dict(state.__opts__, {'test': True}):
-            with patch.dict(state.__salt__, {'config.option':
-                                             config.get(test_arg)}):
-                self.assertTrue(state._get_test_value(test=None),
-                                msg='Failure when test is True in __opts__')
-
-        # test when __opts__ is empty and test=True is passed to method
         with patch.dict(state.__opts__, {}):
-            with patch.dict(state.__salt__, {'config.option':
-                                             config.get(test_arg)}):
-                self.assertTrue(state._get_test_value(test=True),
-                                msg='Failure when test is True as arg')
+            self.assertTrue(state._get_test_value(test=True),
+                            msg='Failure when test is True as arg')
 
     def sub_test_sls(self):
         '''

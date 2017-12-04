@@ -429,7 +429,7 @@ def _get_test_value(test=None, **kwargs):
     if test is None:
         if salt.utils.args.test_mode(test=test, **kwargs):
             ret = True
-        elif __salt__['config.get']('minions_state_test') is True:
+        elif __salt__['config.get']('test', omit_opts=True) is True:
             ret = True
         else:
             ret = __opts__.get('test', None)

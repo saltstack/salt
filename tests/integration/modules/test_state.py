@@ -1653,21 +1653,21 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_function('saltutil.refresh_pillar')
         self.run_function('test.sleep', [5])
 
-    def test_state_sls_id_minions_state_test(self):
+    def test_state_sls_id_test(self):
         '''
-        test state.sls_id when minions_state_test is set
+        test state.sls_id when test is set
         to true in pillar data
         '''
-        self._add_runtime_pillar(pillar={'minions_state_test': True})
+        self._add_runtime_pillar(pillar={'test': True})
         ret = self.run_function('state.sls', ['core'])
 
         for key, val in ret.items():
             self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is set to be changed')
             self.assertEqual(val['changes'], {})
 
-    def test_state_sls_id_minions_state_test_post_run(self):
+    def test_state_sls_id_test_state_test_post_run(self):
         '''
-        test state.sls_id when minions_state_test is set to
+        test state.sls_id when test is set to
         true post the state already being run previously
         '''
         ret = self.run_function('state.sls', ['core'])
@@ -1675,11 +1675,11 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(val['comment'], 'File /tmp/salt-tests-tmpdir/testfile updated')
             self.assertEqual(val['changes']['diff'], 'New file')
 
-        self._add_runtime_pillar(pillar={'minion_state_test': True})
+        self._add_runtime_pillar(pillar={'test': True})
         ret = self.run_function('state.sls', ['core'])
 
         for key, val in ret.items():
-            self.assertEqual(val['comment'], 'File /tmp/salt-tests-tmpdir/testfile is in the correct state')
+            self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is in the correct state')
             self.assertEqual(val['changes'], {})
 
     def test_state_sls_id_test_true(self):
@@ -1713,7 +1713,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         arg and minion_state_test is set to True. Should
         return test=False.
         '''
-        self._add_runtime_pillar(pillar={'minion_state_test': True})
+        self._add_runtime_pillar(pillar={'test': True})
         ret = self.run_function('state.sls', ['core'], test=False)
 
         for key, val in ret.items():
