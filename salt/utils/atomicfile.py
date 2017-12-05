@@ -120,6 +120,8 @@ class _AtomicWFile(object):
         self._fh.close()
         if os.path.isfile(self._filename):
             shutil.copymode(self._filename, self._tmp_filename)
+            st = os.stat(self._filename)
+            os.chown(self._tmp_filename, st.st_uid, st.st_gid)
         atomic_rename(self._tmp_filename, self._filename)
 
     def __exit__(self, exc_type, exc_value, traceback):
