@@ -26,8 +26,6 @@ Example configuration
 
 from __future__ import absolute_import
 
-import salt.utils
-
 HAS_SHADE = False
 try:
     import shade
@@ -68,11 +66,7 @@ def _clean_kwargs(keep_name=False, **kwargs):
     if 'name' in kwargs and not keep_name:
         kwargs['name_or_id'] = kwargs.pop('name')
 
-    try:
-        clean_func = __utils__['args.clean_kwargs']
-    except KeyError:
-        clean_func = salt.utils.clean_kwargs
-    return clean_func(**kwargs)
+    return __utils__['args.clean_kwargs'](**kwargs)
 
 
 def setup_clouds(auth=None):
