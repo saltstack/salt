@@ -1181,7 +1181,7 @@ The password used for HTTP proxy access.
 
     proxy_password: obolus
 
-Minion Module Management
+Minion Execution Module Management
 ========================
 
 .. conf_minion:: disable_modules
@@ -1189,11 +1189,12 @@ Minion Module Management
 ``disable_modules``
 -------------------
 
-Default: ``[]`` (all modules are enabled by default)
+Default: ``[]`` (all execution modules are enabled by default)
 
 The event may occur in which the administrator desires that a minion should not
-be able to execute a certain module. The ``sys`` module is built into the minion
-and cannot be disabled.
+be able to execute a certain module. 
+
+However, the ``sys`` module is built into the minion and cannot be disabled.
 
 This setting can also tune the minion. Because all modules are loaded into system
 memory, disabling modules will lower the minion's memory footprint.
@@ -1232,7 +1233,8 @@ Default: ``[]`` (Module whitelisting is disabled.  Adding anything to the config
 will cause only the listed modules to be enabled.  Modules not in the list will
 not be loaded.)
 
-This option is the reverse of disable_modules.
+This option is the reverse of disable_modules. If enabled, only execution modules in this
+list will be loaded and executed on the minion.
 
 Note that this is a very large hammer and it can be quite difficult to keep the minion working
 the way you think it should since Salt uses many modules internally itself.  At a bare minimum
@@ -1725,9 +1727,15 @@ enabled and can be disabled by changing this value to ``False``.
     If ``extmod_whitelist`` is specified, modules which are not whitelisted will also be cleaned here.
 
 .. conf_minion:: environment
+.. conf_minion:: saltenv
 
-``environment``
----------------
+``saltenv``
+-----------
+
+.. versionchanged:: Oxygen
+    Renamed from ``environment`` to ``saltenv``. If ``environment`` is used,
+    ``saltenv`` will take its value. If both are used, ``environment`` will be
+    ignored and ``saltenv`` will be used.
 
 Normally the minion is not isolated to any single environment on the master
 when running states, but the environment can be isolated on the minion side
@@ -1736,7 +1744,25 @@ environments is to isolate via the top file.
 
 .. code-block:: yaml
 
-    environment: dev
+    saltenv: dev
+
+.. conf_minion:: lock_saltenv
+
+``lock_saltenv``
+----------------
+
+.. versionadded:: Oxygen
+
+Default: ``False``
+
+For purposes of running states, this option prevents using the ``saltenv``
+argument to manually set the environment. This is useful to keep a minion which
+has the :conf_minion:`saltenv` option set to ``dev`` from running states from
+an environment other than ``dev``.
+
+.. code-block:: yaml
+
+    lock_saltenv: True
 
 .. conf_minion:: snapper_states
 

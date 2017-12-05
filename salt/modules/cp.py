@@ -49,7 +49,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
+        __opts__['saltenv'],
         pillar_override=pillar_override,
         pillarenv=pillarenv
     )

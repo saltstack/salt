@@ -13,6 +13,7 @@ import os
 import re
 import shlex
 import stat
+import string
 import tarfile
 from contextlib import closing
 
@@ -771,12 +772,24 @@ def extracted(name,
         return ret
 
     urlparsed_source = _urlparse(source_match)
-    source_hash_basename = urlparsed_source.path or urlparsed_source.netloc
+    urlparsed_scheme = urlparsed_source.scheme
+    urlparsed_path = os.path.join(
+        urlparsed_source.netloc,
+        urlparsed_source.path).rstrip(os.sep)
 
-    source_is_local = urlparsed_source.scheme in salt.utils.files.LOCAL_PROTOS
+    # urlparsed_scheme will be the drive letter if this is a Windows file path
+    # This checks for a drive letter as the scheme and changes it to file
+    if urlparsed_scheme and \
+            urlparsed_scheme.lower() in string.ascii_lowercase:
+        urlparsed_path = ':'.join([urlparsed_scheme, urlparsed_path])
+        urlparsed_scheme = 'file'
+
+    source_hash_basename = urlparsed_path or urlparsed_source.netloc
+
+    source_is_local = urlparsed_scheme in salt.utils.files.LOCAL_PROTOS
     if source_is_local:
         # Get rid of "file://" from start of source_match
-        source_match = os.path.realpath(os.path.expanduser(urlparsed_source.path))
+        source_match = os.path.realpath(os.path.expanduser(urlparsed_path))
         if not os.path.isfile(source_match):
             ret['comment'] = 'Source file \'{0}\' does not exist'.format(
                                 salt.utils.url.redact_http_basic_auth(source_match))
