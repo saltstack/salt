@@ -619,8 +619,8 @@ class _policy_info(object):
                         },
                     },
                     'RemoteRegistryExactPaths': {
-                        'Policy': 'Network access: Remotely accessible registry '
-                                  'paths',
+                        'Policy': 'Network access: Remotely accessible '
+                                  'registry paths',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -632,8 +632,8 @@ class _policy_info(object):
                         },
                     },
                     'RemoteRegistryPaths': {
-                        'Policy': 'Network access: Remotely accessible registry '
-                                  'paths and sub-paths',
+                        'Policy': 'Network access: Remotely accessible '
+                                  'registry paths and sub-paths',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -644,8 +644,8 @@ class _policy_info(object):
                         },
                     },
                     'RestrictNullSessAccess': {
-                        'Policy': 'Network access: Restrict anonymous access to '
-                                  'Named Pipes and Shares',
+                        'Policy': 'Network access: Restrict anonymous access '
+                                  'to Named Pipes and Shares',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'Registry': {
@@ -898,9 +898,9 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'CachedLogonsCount': {
-                        'Policy': 'Interactive logon: Number of previous logons '
-                                  'to cache (in case domain controller is not '
-                                  'available)',
+                        'Policy': 'Interactive logon: Number of previous '
+                                  'logons to cache (in case domain controller '
+                                  'is not available)',
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 50}
@@ -915,8 +915,9 @@ class _policy_info(object):
                         },
                     },
                     'ForceUnlockLogon': {
-                        'Policy': 'Interactive logon: Require Domain Controller '
-                                  'authentication to unlock workstation',
+                        'Policy': 'Interactive logon: Require Domain '
+                                  'Controller authentication to unlock '
+                                  'workstation',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -983,8 +984,8 @@ class _policy_info(object):
                     },
                     'EnableUIADesktopToggle': {
                         'Policy': 'User Account Control: Allow UIAccess '
-                                  'applications to prompt for elevation without '
-                                  'using the secure desktop',
+                                  'applications to prompt for elevation '
+                                  'without using the secure desktop',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -998,8 +999,8 @@ class _policy_info(object):
                     },
                     'ConsentPromptBehaviorAdmin': {
                         'Policy': 'User Account Control: Behavior of the '
-                                  'elevation prompt for administrators in Admin '
-                                  'Approval Mode',
+                                  'elevation prompt for administrators in '
+                                  'Admin Approval Mode',
                         'Settings': self.uac_admin_prompt_lookup.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1077,7 +1078,7 @@ class _policy_info(object):
                     },
                     'EnableSecureUIAPaths': {
                         'Policy': 'User Account Control: Only elevate UIAccess '
-                                  'applicaitons that are installed in secure '
+                                  'applications that are installed in secure '
                                   'locations',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
@@ -1091,8 +1092,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'EnableLUA': {
-                        'Policy': 'User Account Control: Run all administrators '
-                                  'in Admin Approval Mode',
+                        'Policy': 'User Account Control: Run all '
+                                  'administrators in Admin Approval Mode',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1354,8 +1355,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'EnableForcedLogoff': {
-                        'Policy': 'Microsoft network server: Disconnect clients '
-                                  'when logon hours expire',
+                        'Policy': 'Microsoft network server: Disconnect '
+                                  'clients when logon hours expire',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1422,7 +1423,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'UndockWithoutLogon': {
-                        'Policy': 'Devices: Allow undock without having to log on',
+                        'Policy': 'Devices: Allow undock without having to log '
+                                  'on',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1497,8 +1499,8 @@ class _policy_info(object):
                         },
                     },
                     'SubmitControl': {
-                        'Policy': 'Domain controller: Allow server operators to '
-                                  'schedule tasks',
+                        'Policy': 'Domain controller: Allow server operators '
+                                  'to schedule tasks',
                         'Settings': self.enabled_one_disabled_zero_strings.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1577,8 +1579,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_strings_transform,
                     },
                     'SignSecureChannel': {
-                        'Policy': 'Domain member: Digitally sign secure channel '
-                                  'data (when possible)',
+                        'Policy': 'Domain member: Digitally sign secure '
+                                  'channel data (when possible)',
                         'Settings': self.enabled_one_disabled_zero_strings.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -2301,7 +2303,7 @@ class _policy_info(object):
                     },
                     'RecoveryConsoleSecurityLevel': {
                         'Policy': 'Recovery console: Allow automatic '
-                                  'adminstrative logon',
+                                  'administrative logon',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
