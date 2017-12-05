@@ -737,7 +737,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                  'dst': (master.name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
-                'saltenv': self.opts.value['environment'],
+                'saltenv': self.opts.value['saltenv'],
                 'ver': '2',
                 'cmd': '_pillar'}
         self.road_stack.value.transmit({'route': route, 'load': load},

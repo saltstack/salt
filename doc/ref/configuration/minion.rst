@@ -1725,9 +1725,15 @@ enabled and can be disabled by changing this value to ``False``.
     If ``extmod_whitelist`` is specified, modules which are not whitelisted will also be cleaned here.
 
 .. conf_minion:: environment
+.. conf_minion:: saltenv
 
-``environment``
----------------
+``saltenv``
+-----------
+
+.. versionchanged:: Oxygen
+    Renamed from ``environment`` to ``saltenv``. If ``environment`` is used,
+    ``saltenv`` will take its value. If both are used, ``environment`` will be
+    ignored and ``saltenv`` will be used.
 
 Normally the minion is not isolated to any single environment on the master
 when running states, but the environment can be isolated on the minion side
@@ -1736,7 +1742,25 @@ environments is to isolate via the top file.
 
 .. code-block:: yaml
 
-    environment: dev
+    saltenv: dev
+
+.. conf_minion:: lock_saltenv
+
+``lock_saltenv``
+----------------
+
+.. versionadded:: Oxygen
+
+Default: ``False``
+
+For purposes of running states, this option prevents using the ``saltenv``
+argument to manually set the environment. This is useful to keep a minion which
+has the :conf_minion:`saltenv` option set to ``dev`` from running states from
+an environment other than ``dev``.
+
+.. code-block:: yaml
+
+    lock_saltenv: True
 
 .. conf_minion:: snapper_states
 

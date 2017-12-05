@@ -34,6 +34,8 @@ import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
+ROOT_DIR = 'c:\\salt' if salt.utils.platform.is_windows() else '/'
+
 
 def zmq_version():
     '''
@@ -201,6 +203,7 @@ def verify_env(
         permissive=False,
         pki_dir='',
         skip_extra=False,
+        root_dir=ROOT_DIR,
         sensitive_dirs=None):
     '''
     Verify that the named directories are in place and that the environment
@@ -217,7 +220,8 @@ def verify_env(
         sensitive_dirs.append(list(pki_dir))
 
     if salt.utils.platform.is_windows():
-        return win_verify_env(dirs,
+        return win_verify_env(root_dir,
+                              dirs,
                               permissive=permissive,
                               skip_extra=skip_extra,
                               sensitive_dirs=sensitive_dirs)
@@ -547,6 +551,7 @@ def verify_log(opts):
 
 
 def win_verify_env(
+        path,
         dirs,
         permissive=False,
         pki_dir='',
@@ -568,11 +573,14 @@ def win_verify_env(
 
     import salt.utils.win_functions
     import salt.utils.win_dacl
+    import salt.utils.path
 
-    # Get the root path directory where salt is installed
-    path = dirs[0]
-    while os.path.basename(path) not in ['salt', 'salt-tests-tmpdir']:
-        path, base = os.path.split(path)
+    # Make sure the file_roots is not set to something unsafe since permissions
+    # on that directory are reset
+    if not salt.utils.path.safe_path(path=path):
+        raise CommandExecutionError(
+            '`file_roots` set to a possibly unsafe location: {0}'.format(path)
+        )
 
     # Create the root path directory if missing
     if not os.path.isdir(path):

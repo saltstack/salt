@@ -165,6 +165,10 @@ VALID_OPTS = {
     # The master_pubkey_signature must also be set for this.
     'master_use_pubkey_signature': bool,
 
+    # Enable master stats eveents to be fired, these events will contain information about
+    # what commands the master is processing and what the rates are of the executions
+    'master_stats': bool,
+    'master_stats_event_iter': int,
     # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
     # intended master
     'syndic_finger': str,
@@ -242,7 +246,10 @@ VALID_OPTS = {
     'autoload_dynamic_modules': bool,
 
     # Force the minion into a single environment when it fetches files from the master
-    'environment': str,
+    'saltenv': str,
+
+    # Prevent saltenv from being overriden on the command line
+    'lock_saltenv': bool,
 
     # Force the minion into a single pillar root when it fetches pillar data from the master
     'pillarenv': str,
@@ -1177,7 +1184,8 @@ DEFAULT_MINION_OPTS = {
     'random_startup_delay': 0,
     'failhard': False,
     'autoload_dynamic_modules': True,
-    'environment': None,
+    'saltenv': None,
+    'lock_saltenv': False,
     'pillarenv': None,
     'pillarenv_from_saltenv': False,
     'pillar_opts': False,
@@ -1454,7 +1462,8 @@ DEFAULT_MASTER_OPTS = {
         },
     'top_file_merging_strategy': 'merge',
     'env_order': [],
-    'environment': None,
+    'saltenv': None,
+    'lock_saltenv': False,
     'default_top': 'base',
     'file_client': 'local',
     'git_pillar_base': 'master',
@@ -1515,6 +1524,8 @@ DEFAULT_MASTER_OPTS = {
     'svnfs_saltenv_whitelist': [],
     'svnfs_saltenv_blacklist': [],
     'max_event_size': 1048576,
+    'master_stats': False,
+    'master_stats_event_iter': 60,
     'minionfs_env': 'base',
     'minionfs_mountpoint': '',
     'minionfs_whitelist': [],
@@ -3590,6 +3601,24 @@ def apply_minion_config(overrides=None,
     if overrides:
         opts.update(overrides)
 
+    if u'environment' in opts:
+        if u'saltenv' in opts:
+            log.warning(
+                u'The \'saltenv\' and \'environment\' minion config options '
+                u'cannot both be used. Ignoring \'environment\' in favor of '
+                u'\'saltenv\'.',
+            )
+            # Set environment to saltenv in case someone's custom module is
+            # refrencing __opts__['environment']
+            opts[u'environment'] = opts[u'saltenv']
+        else:
+            log.warning(
+                u'The \'environment\' minion config option has been renamed '
+                u'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
+                opts[u'environment']
+            )
+            opts[u'saltenv'] = opts[u'environment']
+
     opts['__cli'] = os.path.basename(sys.argv[0])
 
     # No ID provided. Will getfqdn save us?
@@ -3741,6 +3770,24 @@ def apply_master_config(overrides=None, defaults=None):
     _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides:
         opts.update(overrides)
+
+    if u'environment' in opts:
+        if u'saltenv' in opts:
+            log.warning(
+                u'The \'saltenv\' and \'environment\' master config options '
+                u'cannot both be used. Ignoring \'environment\' in favor of '
+                u'\'saltenv\'.',
+            )
+            # Set environment to saltenv in case someone's custom runner is
+            # refrencing __opts__['environment']
+            opts[u'environment'] = opts[u'saltenv']
+        else:
+            log.warning(
+                u'The \'environment\' master config option has been renamed '
+                u'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
+                opts[u'environment']
+            )
+            opts[u'saltenv'] = opts[u'environment']
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
