@@ -45,6 +45,6 @@ class TestYamlRenderer(TestCase):
         Assume the content is plaintext if GPG is not configured
         '''
         plain = {'foo': 'bar'}
-        with patch('salt.renderers.gpg.render', MagicMock(return_value=plain)):
+        with patch('salt.sdb.yaml._decrypt', MagicMock(return_value=plain)):
             with patch('salt.sdb.yaml._get_values', MagicMock(return_value=None)):
                 self.assertEqual(sdb.get('foo', profile={'gpg': True}), 'bar')

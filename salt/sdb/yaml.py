@@ -73,13 +73,12 @@ def get(key, profile=None):  # pylint: disable=W0613
     Get a value from the dictionary
     '''
     data = _get_values(profile)
-    gpgrender = salt.loader.render(__opts__, __salt__)['gpg']
 
     # Decrypt SDB data if specified in the profile
     if profile and profile.get('gpg', False):
-        return salt.utils.data.traverse_dict_and_list(gpgrender(data), key, None)
+        return salt.utils.data.traverse_dict_and_list(_decrypt(data), key, None)
 
-    return salt.utils.traverse_dict_and_list(data, key, None)
+    return salt.utils.data.traverse_dict_and_list(data, key, None)
 
 
 def _get_values(profile=None):
@@ -101,3 +100,10 @@ def _get_values(profile=None):
         except TypeError:
             log.error("Error deserializing sdb file '{0}'".format(fname))
     return ret
+
+
+def _decrypt(data):
+    '''
+    Pass the dictionary through the GPG renderer to decrypt encrypted values.
+    '''
+    return salt.loader.render(__opts__, __salt__)['gpg'](data)
