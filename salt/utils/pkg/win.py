@@ -95,6 +95,7 @@ except ImportError:
 class RegSoftwareInfo(object):
     """
     Retrieve Registry data on a single installed software item or component.
+    .. versionadded:: Oxygen
 
     Attribute:
         None
@@ -635,6 +636,7 @@ class RegSoftwareInfo(object):
 class WinSoftware(object):
     """Point in time snapshot of the software and components installed on
     a system.
+    .. versionadded:: Oxygen
 
     Attributes:
         None
@@ -1183,8 +1185,6 @@ class WinSoftware(object):
         This searches the uninstall keys in the registry to find
         a match in the sub keys, it will return a dict with the
         display name as the key and the version as the value
-        .. sectionauthor:: Damon Atkins <https://github.com/damon-atkins>
-        .. versionadded:: Carbon
         '''
 
         # FUNCTION MAIN CODE #
