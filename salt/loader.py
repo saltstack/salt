@@ -372,15 +372,18 @@ def tops(opts):
     return FilterDictWrapper(ret, u'.top')
 
 
-def wheels(opts, whitelist=None):
+def wheels(opts, whitelist=None, context=None):
     '''
     Returns the wheels modules
     '''
+    if context is None:
+        context = {}
     return LazyLoader(
         _module_dirs(opts, u'wheel'),
         opts,
         tag=u'wheel',
         whitelist=whitelist,
+        pack={u'__context__': context},
     )
 
 
@@ -836,17 +839,19 @@ def call(fun, **kwargs):
     return funcs[fun](*args)
 
 
-def runner(opts, utils=None):
+def runner(opts, utils=None, context=None):
     '''
     Directly call a function inside a loader directory
     '''
     if utils is None:
         utils = {}
+    if context is None:
+        context = {}
     ret = LazyLoader(
         _module_dirs(opts, u'runners', u'runner', ext_type_dirs=u'runner_dirs'),
         opts,
         tag=u'runners',
-        pack={u'__utils__': utils},
+        pack={u'__utils__': utils, u'__context__': context},
     )
     # TODO: change from __salt__ to something else, we overload __salt__ too much
     ret.pack[u'__salt__'] = ret
@@ -879,6 +884,7 @@ def sdb(opts, functions=None, whitelist=None, utils=None):
             u'__sdb__': functions,
             u'__opts__': opts,
             u'__utils__': utils,
+            u'__salt__': minion_mods(opts, utils),
         },
         whitelist=whitelist,
     )
@@ -1588,8 +1594,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Load a single item if you have it
         '''
         # if the key doesn't have a '.' then it isn't valid for this mod dict
-        if not isinstance(key, six.string_types) or u'.' not in key:
-            raise KeyError
+        if not isinstance(key, six.string_types):
+            raise KeyError(u'The key must be a string.')
+        if u'.' not in key:
+            raise KeyError(u'The key \'%s\' should contain a \'.\'', key)
         mod_name, _ = key.split(u'.', 1)
         if mod_name in self.missing_modules:
             return True
