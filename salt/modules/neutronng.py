@@ -2,7 +2,7 @@
 '''
 Neutron module for interacting with OpenStack Neutron
 
-.. versionadded:: Nitrogen
+.. versionadded:: Oxygen
 
 :depends:shade
 
