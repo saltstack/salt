@@ -28,9 +28,9 @@ __all__ = ['deserialize', 'serialize', 'available']
 
 def deserialize(stream_or_string, **options):
     '''
-    Deserialize any string or stream like object into a Python data structure.
+    Deserialize from TOML into Python data structure.
 
-    :param stream_or_string: stream or string to deserialize.
+    :param stream_or_string: toml stream or string to deserialize.
     :param options: options given to lower pytoml module.
     '''
 
