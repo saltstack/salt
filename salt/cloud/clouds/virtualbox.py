@@ -88,8 +88,11 @@ def get_configured_provider():
     )
     return configured
 
-def map_clonemode(vm_info):
 
+def map_clonemode(vm_info):
+    """
+    Convert the virtualbox config file values for clone_mode into the integers the API requires
+    """
     mode_map = {
       'state': 0,
       'child': 1,
@@ -108,6 +111,7 @@ def map_clonemode(vm_info):
         raise SaltCloudSystemExit(
             "Illegal clonemode for virtualbox profile.  Legal values are: {}".format(','.join(mode_map.keys()))
         )
+
 
 def create(vm_info):
     """
@@ -160,7 +164,7 @@ def create(vm_info):
     )
     clone_mode = map_clonemode(vm_info)
     wait_for_pattern = vm_info['waitforpattern'] if 'waitforpattern' in vm_info.keys() else None
-    interface_index =  vm_info['interfaceindex'] if 'interfaceindex' in vm_info.keys() else 0
+    interface_index = vm_info['interfaceindex'] if 'interfaceindex' in vm_info.keys() else 0
 
     log.debug("Going to fire event: starting create")
     __utils__['cloud.fire_event'](
