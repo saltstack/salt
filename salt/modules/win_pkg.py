@@ -54,8 +54,8 @@ from salt.exceptions import (CommandExecutionError,
 import salt.utils  # Can be removed once is_true, get_hash, compare_dicts are moved
 import salt.utils.args
 import salt.utils.files
-import salt.utils.pkg
 import salt.utils.path
+import salt.utils.pkg
 import salt.utils.versions
 import salt.syspaths
 import salt.payload
@@ -195,6 +195,7 @@ def upgrade_available(name, **kwargs):
     # Refresh before looking for the latest version available,
     # same default as latest_version
     refresh = salt.utils.is_true(kwargs.get('refresh', True))
+
     # if latest_version returns blank, the latest version is already installed or
     # their is no package definition. This is a salt standard which could be improved.
     return latest_version(name, saltenv=saltenv, refresh=refresh) != ''
@@ -314,9 +315,8 @@ def version(*names, **kwargs):
         refresh (bool): Refresh package metadata. Default ``False``.
 
     Returns:
-        str: version string when a single packge is specified.
+        str: version string when a single package is specified.
         dict: The package name(s) with the installed versions.
-
 
     .. code-block:: cfg
         {['<version>', '<version>', ]} OR
@@ -331,13 +331,13 @@ def version(*names, **kwargs):
 
     '''
     # Standard is return empty string even if not a valid name
-    # TODO: Look at returning an error accross all platforms with
+    # TODO: Look at returning an error across all platforms with
     # CommandExecutionError(msg,info={'errors': errors })
     # available_pkgs = get_repo_data(saltenv).get('repo')
     # for name in names:
     #    if name in available_pkgs:
     #        ret[name] = installed_pkgs.get(name, '')
-    #
+
     saltenv = kwargs.get('saltenv', 'base')
     installed_pkgs = list_pkgs(saltenv=saltenv, refresh=kwargs.get('refresh', False))
 
@@ -355,7 +355,6 @@ def list_pkgs(versions_as_list=False, **kwargs):
     List the packages currently installed
 
     Args:
-        version_as_list (bool): Returns the versions as a list
 
     Kwargs:
         saltenv (str): The salt environment to use. Default ``base``.
@@ -1342,11 +1341,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     ret[pkg_name] = {'install status': 'failed'}
         else:
             # Launch the command
-            result = __salt__['cmd.run_all']('"{0}" /s /c "{1}"'.format(cmd_shell, arguments),
-                                             cache_path,
-                                             output_loglevel='trace',
-                                             python_shell=False,
-                                             redirect_stderr=True)
+            result = __salt__['cmd.run_all'](
+                '"{0}" /s /c "{1}"'.format(cmd_shell, arguments),
+                cache_path,
+                output_loglevel='trace',
+                python_shell=False,
+                redirect_stderr=True)
             if not result['retcode']:
                 ret[pkg_name] = {'install status': 'success'}
                 changed.append(pkg_name)
@@ -1594,6 +1594,10 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             cached_pkg = cached_pkg.replace('/', '\\')
             cache_path, _ = os.path.split(cached_pkg)
 
+            # Get parameters for cmd
+            expanded_cached_pkg = str(os.path.expandvars(cached_pkg))
+            expanded_cache_path = str(os.path.expandvars(cache_path))
+
             # Get uninstall flags
             uninstall_flags = pkginfo[target].get('uninstall_flags', '')
 
@@ -1604,13 +1608,13 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             # Compute msiexec string
             use_msiexec, msiexec = _get_msiexec(pkginfo[target].get('msiexec', False))
             cmd_shell = os.getenv('ComSpec', '{0}\\system32\\cmd.exe'.format(os.getenv('WINDIR')))
-            # Build Scheduled Task Parameters
+
+            # Build cmd and arguments
+            # cmd and arguments must be separated for use with the task scheduler
             if use_msiexec:
-                # Check if uninstaller is set to {guid}, if not we assume its a remote msi file.
-                # which has already been downloaded.
-                arguments = '"{0}" /X "{1}"'.format(msiexec, cached_pkg)
+                arguments = '"{0}" /X "{1}"'.format(msiexec, uninstaller if uninstaller else expanded_cached_pkg)
             else:
-                arguments = '"{0}"'.format(cached_pkg)
+                arguments = '"{0}"'.format(expanded_cached_pkg)
 
             if uninstall_flags:
                 arguments = '{0} {1}'.format(arguments, uninstall_flags)
@@ -1625,7 +1629,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                                              action_type='Execute',
                                              cmd=cmd_shell,
                                              arguments='/s /c "{0}"'.format(arguments),
-                                             start_in=cache_path,
+                                             start_in=expanded_cache_path,
                                              trigger_type='Once',
                                              start_date='1975-01-01',
                                              start_time='01:00',
@@ -1640,6 +1644,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 # Launch the command
                 result = __salt__['cmd.run_all'](
                         '"{0}" /s /c "{1}"'.format(cmd_shell, arguments),
+                        expanded_cache_path,
                         output_loglevel='trace',
                         python_shell=False,
                         redirect_stderr=True)
