@@ -13,6 +13,7 @@ import re
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 import salt.utils.path
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -635,8 +636,10 @@ def add_port(zone, port, permanent=True, force_masquerade=None):
     # This will be deprecated in a future release
     if force_masquerade is None:
         force_masquerade = True
-        salt.utils.warn_until('Neon',
-                'add_port function will no longer force enable masquerading in future releases. Use add_masquerade to enable masquerading.')
+        salt.utils.versions.warn_until(
+            'Neon',
+            'add_port function will no longer force enable masquerading '
+            'in future releases. Use add_masquerade to enable masquerading.')
 
     # (DEPRECATED) Force enable masquerading
     # TODO: remove in future release
@@ -709,8 +712,10 @@ def add_port_fwd(zone, src, dest, proto='tcp', dstaddr='', permanent=True, force
     # This will be deprecated in a future release
     if force_masquerade is None:
         force_masquerade = True
-        salt.utils.warn_until('Neon',
-                'add_port_fwd function will no longer force enable masquerading in future releases. Use add_masquerade to enable masquerading.')
+        salt.utils.versions.warn_until(
+            'Neon',
+            'add_port_fwd function will no longer force enable masquerading '
+            'in future releases. Use add_masquerade to enable masquerading.')
 
     # (DEPRECATED) Force enable masquerading
     # TODO: remove in future release

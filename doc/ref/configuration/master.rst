@@ -868,6 +868,29 @@ what you are doing! Transports are explained in :ref:`Salt Transports
         ret_port: 4606
       zeromq: []
 
+.. conf_master:: master_stats
+
+``master_stats``
+----------------
+
+Default: False
+
+Turning on the master stats enables runtime throughput and statistics events
+to be fired from the master event bus. These events will report on what
+functions have been run on the master and how long these runs have, on
+average, taken over a given period of time.
+
+.. conf_master:: master_stats_event_iter
+
+``master_stats_event_iter``
+---------------------------
+
+Default: 60
+
+The time in seconds to fire master_stats events. This will only fire in
+conjunction with receiving a request to the master, idle masters will not
+fire these events.
+
 .. conf_master:: sock_pool_size
 
 ``sock_pool_size``

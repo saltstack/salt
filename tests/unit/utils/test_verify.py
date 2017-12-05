@@ -112,7 +112,7 @@ class TestVerify(TestCase):
         root_dir = tempfile.mkdtemp(dir=TMP)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
         key_dir = os.path.join(root_dir, 'key_dir')
-        verify_env([var_dir, key_dir], getpass.getuser(), sensitive_dirs=[key_dir])
+        verify_env([var_dir, key_dir], getpass.getuser(), root_dir=root_dir, sensitive_dirs=[key_dir])
         self.assertTrue(os.path.exists(var_dir))
         self.assertTrue(os.path.exists(key_dir))
 

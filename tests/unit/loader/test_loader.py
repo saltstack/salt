@@ -278,6 +278,38 @@ class LazyLoaderWhitelistTest(TestCase):
         self.assertNotIn('grains.get', self.loader)
 
 
+class LazyLoaderSingleItem(TestCase):
+    '''
+    Test loading a single item via the _load() function
+    '''
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+
+    def setUp(self):
+        self.loader = LazyLoader(_module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
+                                 copy.deepcopy(self.opts),
+                                 tag='module')
+
+    def tearDown(self):
+        del self.loader
+
+    def test_single_item_no_dot(self):
+        '''
+        Checks that a KeyError is raised when the function key does not contain a '.'
+        '''
+        with self.assertRaises(KeyError) as err:
+            inspect.isfunction(self.loader['testing_no_dot'])
+
+        if six.PY2:
+            self.assertEqual(err.exception[0],
+                             'The key \'%s\' should contain a \'.\'')
+        else:
+            self.assertEqual(str(err.exception),
+                             str(("The key '%s' should contain a '.'", 'testing_no_dot')))
+
+
 module_template = '''
 __load__ = ['test', 'test_alias']
 __func_alias__ = dict(test_alias='working_alias')
