@@ -4242,9 +4242,8 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
         for adm_namespace in admtemplate_data:
             for adm_policy in admtemplate_data[adm_namespace]:
                 if str(admtemplate_data[adm_namespace][adm_policy]).lower() == 'not configured':
-                    if adm_policy in base_policy_settings.get(adm_namespace, {}):
+                    if base_policy_settings.get(adm_namespace, {}).pop(adm_policy, None) is not None:
                         log.debug('Policy "{0}" removed'.format(adm_policy))
-                        base_policy_settings[adm_namespace].pop(adm_policy)
                 else:
                     log.debug('adding {0} to base_policy_settings'.format(adm_policy))
                     if adm_namespace not in base_policy_settings:
