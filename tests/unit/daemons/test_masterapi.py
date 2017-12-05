@@ -59,7 +59,8 @@ class AutoKeyTest(TestCase):
     '''
 
     def setUp(self):
-        opts = {'user': 'test_user'}
+        opts = salt.config.master_config(None)
+        opts[u'user'] = u'test_user'
         self.auto_key = masterapi.AutoKey(opts)
         self.stats = {}
 
@@ -135,17 +136,6 @@ class AutoKeyTest(TestCase):
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', '', ''), 'gid': 0}
         self.assertTrue(self.auto_key.check_permissions('testfile'))
-
-
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-class AutoKeyTest(TestCase):
-    '''
-    Test for the salt.daemons.masterapi.AutoKey class
-    '''
-
-    def setUp(self):
-        opts = salt.config.master_config(None)
-        self.auto_key = masterapi.AutoKey(opts)
 
     def _test_check_autosign_grains(self,
                                     test_func,
