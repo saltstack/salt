@@ -464,6 +464,55 @@ PATCHLEVEL = 3
         self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
         self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
 
+    def test_windows_iscsi_iqn_grains(self):
+        cmd_run_mock = MagicMock(
+            return_value={'stdout': 'iSCSINodeName\niqn.1991-05.com.microsoft:simon-x1\n'}
+        )
+
+        with patch.object(salt.utils.platform, 'is_linux',
+                          MagicMock(return_value=False)):
+            with patch.object(salt.utils.platform, 'is_windows',
+                              MagicMock(return_value=True)):
+                with patch.dict(core.__salt__, {'run_all': cmd_run_mock}):
+                    with patch.object(salt.utils.path, 'which',
+                                      MagicMock(return_value=True)):
+                        with patch.dict(core.__salt__, {'cmd.run_all': cmd_run_mock}):
+                            _grains = core.iscsi_iqn()
+
+        self.assertEqual(_grains.get('iscsi_iqn'),
+                         ['iqn.1991-05.com.microsoft:simon-x1'])
+
+    def test_aix_iscsi_iqn_grains(self):
+        cmd_run_mock = MagicMock(
+            return_value='initiator_name iqn.localhost.hostid.7f000001'
+        )
+
+        with patch.object(salt.utils.platform, 'is_linux',
+                          MagicMock(return_value=False)):
+            with patch.object(salt.utils.platform, 'is_aix',
+                              MagicMock(return_value=True)):
+                with patch.dict(core.__salt__, {'cmd.run': cmd_run_mock}):
+                    _grains = core.iscsi_iqn()
+
+        self.assertEqual(_grains.get('iscsi_iqn'),
+                         ['iqn.localhost.hostid.7f000001'])
+
+    def test_linux_iscsi_iqn_grains(self):
+        _iscsi_file = '## DO NOT EDIT OR REMOVE THIS FILE!\n' \
+                      '## If you remove this file, the iSCSI daemon will not start.\n' \
+                      '## If you change the InitiatorName, existing access control lists\n' \
+                      '## may reject this initiator.  The InitiatorName must be unique\n' \
+                      '## for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.\n' \
+                      'InitiatorName=iqn.1993-08.org.debian:01:d12f7aba36\n'
+
+        with patch('os.path.isfile', MagicMock(return_value=True)):
+            with patch('salt.utils.files.fopen', mock_open()) as iscsi_initiator_file:
+                iscsi_initiator_file.return_value.__iter__.return_value = _iscsi_file.splitlines()
+                _grains = core.iscsi_iqn()
+
+        self.assertEqual(_grains.get('iscsi_iqn'),
+                         ['iqn.1993-08.org.debian:01:d12f7aba36'])
+
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
         '''
@@ -477,7 +526,8 @@ PATCHLEVEL = 3
             '/proc/meminfo': True
         }
         _cmd_run_map = {
-            'dpkg --print-architecture': 'amd64'
+            'dpkg --print-architecture': 'amd64',
+            'rpm --eval %{_host_cpu}': 'x86_64'
         }
 
         path_exists_mock = MagicMock(side_effect=lambda x: _path_exists_map[x])

@@ -42,6 +42,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
+import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
 from salt.exceptions import FileserverConfigError, SaltMasterError
@@ -534,7 +535,7 @@ class RemoteFuncs(object):
             return ret
         expr_form = load.get('expr_form')
         if expr_form is not None and 'tgt_type' not in load:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Neon',
                 u'_mine_get: minion {0} uses pre-Nitrogen API key '
                 u'"expr_form". Accepting for backwards compatibility '

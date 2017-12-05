@@ -763,7 +763,7 @@ class State(object):
                 self.opts,
                 self.opts[u'grains'],
                 self.opts[u'id'],
-                self.opts[u'environment'],
+                self.opts[u'saltenv'],
                 pillar_override=self._pillar_override,
                 pillarenv=self.opts.get(u'pillarenv'))
         return pillar.compile_pillar()
@@ -1892,20 +1892,27 @@ class State(object):
                     (u'onlyif' in low and u'{0[state]}.mod_run_check'.format(low) not in self.states):
                 ret.update(self._run_check(low))
 
-            if u'saltenv' in low:
-                inject_globals[u'__env__'] = six.text_type(low[u'saltenv'])
-            elif isinstance(cdata[u'kwargs'].get(u'env', None), six.string_types):
-                # User is using a deprecated env setting which was parsed by
-                # format_call.
-                # We check for a string type since module functions which
-                # allow setting the OS environ also make use of the "env"
-                # keyword argument, which is not a string
-                inject_globals[u'__env__'] = six.text_type(cdata[u'kwargs'][u'env'])
-            elif u'__env__' in low:
-                # The user is passing an alternative environment using __env__
-                # which is also not the appropriate choice, still, handle it
-                inject_globals[u'__env__'] = six.text_type(low[u'__env__'])
-            else:
+            if not self.opts.get(u'lock_saltenv', False):
+                # NOTE: Overriding the saltenv when lock_saltenv is blocked in
+                # salt/modules/state.py, before we ever get here, but this
+                # additional check keeps use of the State class outside of the
+                # salt/modules/state.py from getting around this setting.
+                if u'saltenv' in low:
+                    inject_globals[u'__env__'] = six.text_type(low[u'saltenv'])
+                elif isinstance(cdata[u'kwargs'].get(u'env', None), six.string_types):
+                    # User is using a deprecated env setting which was parsed by
+                    # format_call.
+                    # We check for a string type since module functions which
+                    # allow setting the OS environ also make use of the "env"
+                    # keyword argument, which is not a string
+                    inject_globals[u'__env__'] = six.text_type(cdata[u'kwargs'][u'env'])
+                elif u'__env__' in low:
+                    # The user is passing an alternative environment using
+                    # __env__ which is also not the appropriate choice, still,
+                    # handle it
+                    inject_globals[u'__env__'] = six.text_type(low[u'__env__'])
+
+            if u'__env__' not in inject_globals:
                 # Let's use the default environment
                 inject_globals[u'__env__'] = u'base'
 
@@ -1918,6 +1925,8 @@ class State(object):
                 if self.mocked:
                     ret = mock_ret(cdata)
                 else:
+                    # Check if this low chunk is paused
+                    self.check_pause(low)
                     # Execute the state function
                     if not low.get(u'__prereq__') and low.get(u'parallel'):
                         # run the state call in parallel, but only if not in a prereq
@@ -2126,6 +2135,48 @@ class State(object):
                 return False
             return not running[tag][u'result']
         return False
+
+    def check_pause(self, low):
+        '''
+        Check to see if this low chunk has been paused
+        '''
+        if not self.jid:
+            # Can't pause on salt-ssh since we can't track continuous state
+            return
+        pause_path = os.path.join(self.opts[u'cachedir'], 'state_pause', self.jid)
+        start = time.time()
+        if os.path.isfile(pause_path):
+            try:
+                while True:
+                    tries = 0
+                    with salt.utils.files.fopen(pause_path, 'rb') as fp_:
+                        try:
+                            pdat = msgpack.loads(fp_.read())
+                        except msgpack.UnpackValueError:
+                            # Reading race condition
+                            if tries > 10:
+                                # Break out if there are a ton of read errors
+                                return
+                            tries += 1
+                            time.sleep(1)
+                            continue
+                        id_ = low[u'__id__']
+                        key = u''
+                        if id_ in pdat:
+                            key = id_
+                        elif u'__all__' in pdat:
+                            key = u'__all__'
+                        if key:
+                            if u'duration' in pdat[key]:
+                                now = time.time()
+                                if now - start > pdat[key][u'duration']:
+                                    return
+                        else:
+                            return
+                        time.sleep(1)
+            except Exception as exc:
+                log.error('Failed to read in pause data for file located at: %s', pause_path)
+                return
 
     def reconcile_procs(self, running):
         '''
@@ -2682,6 +2733,14 @@ class State(object):
             except OSError:
                 log.debug(u'File %s does not exist, no need to cleanup', accum_data_path)
         _cleanup_accumulator_data()
+        if self.jid is not None:
+            pause_path = os.path.join(self.opts[u'cachedir'], u'state_pause', self.jid)
+            if os.path.isfile(pause_path):
+                try:
+                    os.remove(pause_path)
+                except OSError:
+                    # File is not present, all is well
+                    pass
 
         return ret
 
@@ -2900,32 +2959,32 @@ class BaseHighState(object):
         found = 0  # did we find any contents in the top files?
         # Gather initial top files
         merging_strategy = self.opts[u'top_file_merging_strategy']
-        if merging_strategy == u'same' and not self.opts[u'environment']:
+        if merging_strategy == u'same' and not self.opts[u'saltenv']:
             if not self.opts[u'default_top']:
                 raise SaltRenderError(
                     u'top_file_merging_strategy set to \'same\', but no '
                     u'default_top configuration option was set'
                 )
 
-        if self.opts[u'environment']:
+        if self.opts[u'saltenv']:
             contents = self.client.cache_file(
                 self.opts[u'state_top'],
-                self.opts[u'environment']
+                self.opts[u'saltenv']
             )
             if contents:
                 found = 1
-                tops[self.opts[u'environment']] = [
+                tops[self.opts[u'saltenv']] = [
                     compile_template(
                         contents,
                         self.state.rend,
                         self.state.opts[u'renderer'],
                         self.state.opts[u'renderer_blacklist'],
                         self.state.opts[u'renderer_whitelist'],
-                        saltenv=self.opts[u'environment']
+                        saltenv=self.opts[u'saltenv']
                     )
                 ]
             else:
-                tops[self.opts[u'environment']] = [{}]
+                tops[self.opts[u'saltenv']] = [{}]
 
         else:
             found = 0
@@ -3257,8 +3316,8 @@ class BaseHighState(object):
         matches = DefaultOrderedDict(OrderedDict)
         # pylint: disable=cell-var-from-loop
         for saltenv, body in six.iteritems(top):
-            if self.opts[u'environment']:
-                if saltenv != self.opts[u'environment']:
+            if self.opts[u'saltenv']:
+                if saltenv != self.opts[u'saltenv']:
                     continue
             for match, data in six.iteritems(body):
                 def _filter_matches(_match, _data, _opts):

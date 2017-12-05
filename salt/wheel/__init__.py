@@ -43,7 +43,8 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
 
     def __init__(self, opts=None):
         self.opts = opts
-        self.functions = salt.loader.wheels(opts)
+        self.context = {}
+        self.functions = salt.loader.wheels(opts, context=self.context)
 
     # TODO: remove/deprecate
     def call_func(self, fun, **kwargs):
