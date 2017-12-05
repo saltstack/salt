@@ -78,7 +78,7 @@ UNIX systems
 
 **BSD**:
 
-- OpenBSD (``pip`` installation)
+- OpenBSD
 - FreeBSD 9/10/11
 
 **SunOS**:
@@ -272,66 +272,118 @@ Here's a summary of the command line options:
 
     $ sh bootstrap-salt.sh -h
 
-      Usage :  bootstrap-salt.sh [options] <install-type> <install-type-args>
-
       Installation types:
-        - stable (default)
-        - stable [version] (ubuntu specific)
-        - daily  (ubuntu specific)
-        - testing (redhat specific)
-        - git
+        - stable              Install latest stable release. This is the default
+                              install type
+        - stable [branch]     Install latest version on a branch. Only supported
+                              for packages available at repo.saltstack.com
+        - stable [version]    Install a specific version. Only supported for
+                              packages available at repo.saltstack.com
+        - daily               Ubuntu specific: configure SaltStack Daily PPA
+        - testing             RHEL-family specific: configure EPEL testing repo
+        - git                 Install from the head of the develop branch
+        - git [ref]           Install from any git ref (such as a branch, tag, or
+                              commit)
 
       Examples:
         - bootstrap-salt.sh
         - bootstrap-salt.sh stable
-        - bootstrap-salt.sh stable 2014.7
+        - bootstrap-salt.sh stable 2017.7
+        - bootstrap-salt.sh stable 2017.7.2
         - bootstrap-salt.sh daily
         - bootstrap-salt.sh testing
         - bootstrap-salt.sh git
-        - bootstrap-salt.sh git develop
-        - bootstrap-salt.sh git v0.17.0
-        - bootstrap-salt.sh git 8c3fadf15ec183e5ce8c63739850d543617e4357
+        - bootstrap-salt.sh git 2017.7
+        - bootstrap-salt.sh git v2017.7.2
+        - bootstrap-salt.sh git 06f249901a2e2f1ed310d58ea3921a129f214358
 
       Options:
-      -h  Display this message
-      -v  Display script version
-      -n  No colours.
-      -D  Show debug output.
-      -c  Temporary configuration directory
-      -g  Salt repository URL. (default: git://github.com/saltstack/salt.git)
-      -G  Instead of cloning from git://github.com/saltstack/salt.git, clone from https://github.com/saltstack/salt.git (Usually necessary on systems which have the regular git protocol port blocked, where https usually is not)
-      -k  Temporary directory holding the minion keys which will pre-seed
-          the master.
-      -s  Sleep time used when waiting for daemons to start, restart and when checking
-          for the services running. Default: 3
-      -M  Also install salt-master
-      -S  Also install salt-syndic
-      -N  Do not install salt-minion
-      -X  Do not start daemons after installation
-      -C  Only run the configuration function. This option automatically
-          bypasses any installation.
-      -P  Allow pip based installations. On some distributions the required salt
-          packages or its dependencies are not available as a package for that
-          distribution. Using this flag allows the script to use pip as a last
-          resort method. NOTE: This only works for functions which actually
-          implement pip based installations.
-      -F  Allow copied files to overwrite existing(config, init.d, etc)
-      -U  If set, fully upgrade the system prior to bootstrapping salt
-      -K  If set, keep the temporary files in the temporary directories specified
-          with -c and -k.
-      -I  If set, allow insecure connections while downloading any files. For
-          example, pass '--no-check-certificate' to 'wget' or '--insecure' to 'curl'
-      -A  Pass the salt-master DNS name or IP. This will be stored under
-          ${BS_SALT_ETC_DIR}/minion.d/99-master-address.conf
-      -i  Pass the salt-minion id. This will be stored under
-          ${BS_SALT_ETC_DIR}/minion_id
-      -L  Install the Apache Libcloud package if possible(required for salt-cloud)
-      -p  Extra-package to install while installing salt dependencies. One package
-          per -p flag. You're responsible for providing the proper package name.
-      -d  Disable check_service functions. Setting this flag disables the
-          'install_<distro>_check_services' checks. You can also do this by
-          touching /tmp/disable_salt_checks on the target host. Defaults ${BS_FALSE}
-      -H  Use the specified http proxy for the installation
-      -Z  Enable external software source for newer ZeroMQ(Only available for RHEL/CentOS/Fedora/Ubuntu based distributions)
-      -b  Assume that dependencies are already installed and software sources are set up.
-          If git is selected, git tree is still checked out as dependency step.
+        -h  Display this message
+        -v  Display script version
+        -n  No colours
+        -D  Show debug output
+        -c  Temporary configuration directory
+        -g  Salt Git repository URL. Default: https://github.com/saltstack/salt.git
+        -w  Install packages from downstream package repository rather than
+            upstream, saltstack package repository. This is currently only
+            implemented for SUSE.
+        -k  Temporary directory holding the minion keys which will pre-seed
+            the master.
+        -s  Sleep time used when waiting for daemons to start, restart and when
+            checking for the services running. Default: 3
+        -L  Also install salt-cloud and required python-libcloud package
+        -M  Also install salt-master
+        -S  Also install salt-syndic
+        -N  Do not install salt-minion
+        -X  Do not start daemons after installation
+        -d  Disables checking if Salt services are enabled to start on system boot.
+            You can also do this by touching /tmp/disable_salt_checks on the target
+            host. Default: ${BS_FALSE}
+        -P  Allow pip based installations. On some distributions the required salt
+            packages or its dependencies are not available as a package for that
+            distribution. Using this flag allows the script to use pip as a last
+            resort method. NOTE: This only works for functions which actually
+            implement pip based installations.
+        -U  If set, fully upgrade the system prior to bootstrapping Salt
+        -I  If set, allow insecure connections while downloading any files. For
+            example, pass '--no-check-certificate' to 'wget' or '--insecure' to
+            'curl'. On Debian and Ubuntu, using this option with -U allows to obtain
+            GnuPG archive keys insecurely if distro has changed release signatures.
+        -F  Allow copied files to overwrite existing (config, init.d, etc)
+        -K  If set, keep the temporary files in the temporary directories specified
+            with -c and -k
+        -C  Only run the configuration function. Implies -F (forced overwrite).
+            To overwrite Master or Syndic configs, -M or -S, respectively, must
+            also be specified. Salt installation will be ommitted, but some of the
+            dependencies could be installed to write configuration with -j or -J.
+        -A  Pass the salt-master DNS name or IP. This will be stored under
+            ${BS_SALT_ETC_DIR}/minion.d/99-master-address.conf
+        -i  Pass the salt-minion id. This will be stored under
+            ${BS_SALT_ETC_DIR}/minion_id
+        -p  Extra-package to install while installing Salt dependencies. One package
+            per -p flag. You're responsible for providing the proper package name.
+        -H  Use the specified HTTP proxy for all download URLs (including https://).
+            For example: http://myproxy.example.com:3128
+        -Z  Enable additional package repository for newer ZeroMQ
+            (only available for RHEL/CentOS/Fedora/Ubuntu based distributions)
+        -b  Assume that dependencies are already installed and software sources are
+            set up. If git is selected, git tree is still checked out as dependency
+            step.
+        -f  Force shallow cloning for git installations.
+            This may result in an "n/a" in the version number.
+        -l  Disable ssl checks. When passed, switches "https" calls to "http" where
+            possible.
+        -V  Install Salt into virtualenv
+            (only available for Ubuntu based distributions)
+        -a  Pip install all Python pkg dependencies for Salt. Requires -V to install
+            all pip pkgs into the virtualenv.
+            (Only available for Ubuntu based distributions)
+        -r  Disable all repository configuration performed by this script. This
+            option assumes all necessary repository configuration is already present
+            on the system.
+        -R  Specify a custom repository URL. Assumes the custom repository URL
+            points to a repository that mirrors Salt packages located at
+            repo.saltstack.com. The option passed with -R replaces the
+            "repo.saltstack.com". If -R is passed, -r is also set. Currently only
+            works on CentOS/RHEL and Debian based distributions.
+        -J  Replace the Master config file with data passed in as a JSON string. If
+            a Master config file is found, a reasonable effort will be made to save
+            the file with a ".bak" extension. If used in conjunction with -C or -F,
+            no ".bak" file will be created as either of those options will force
+            a complete overwrite of the file.
+        -j  Replace the Minion config file with data passed in as a JSON string. If
+            a Minion config file is found, a reasonable effort will be made to save
+            the file with a ".bak" extension. If used in conjunction with -C or -F,
+            no ".bak" file will be created as either of those options will force
+            a complete overwrite of the file.
+        -q  Quiet salt installation from git (setup.py install -q)
+        -x  Changes the python version used to install a git version of salt. Currently
+            this is considered experimental and has only been tested on Centos 6. This
+            only works for git installations.
+        -y  Installs a different python version on host. Currently this has only been
+            tested with Centos 6 and is considered experimental. This will install the
+            ius repo on the box if disable repo is false. This must be used in conjunction
+            with -x <pythonversion>.  For example:
+                sh bootstrap.sh -P -y -x python2.7 git v2016.11.3
+            The above will install python27 and install the git version of salt using the
+            python2.7 executable. This only works for git and pip installations.
