@@ -143,6 +143,17 @@ def get_printout(out, opts=None, **kwargs):
         # See Issue #29796 for more information.
         out = opts['output']
 
+    # Handle setting the output when --static is passed.
+    if not out and opts.get('static'):
+        if opts.get('output'):
+            out = opts['output']
+        elif opts.get('fun', '').split('.')[0] == 'state':
+            # --static doesn't have an output set at this point, but if we're
+            # running a state function and "out" hasn't already been set, we
+            # should set the out variable to "highstate". Otherwise state runs
+            # are set to "nested" below. See Issue #44556 for more information.
+            out = 'highstate'
+
     if out == 'text':
         out = 'txt'
     elif out is None or out == '':
