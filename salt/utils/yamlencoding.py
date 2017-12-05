@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for adding yaml encoding to the jinja context
+'''
 
 # Import Python libs
 from __future__ import absolute_import
@@ -6,9 +9,13 @@ import io
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
+
+# Import salt libs
+from salt.utils.decorators.jinja import jinja_filter
 
 
+@jinja_filter()
 def yaml_dquote(text):
     '''
     Make text into a double-quoted YAML string with correct escaping
@@ -21,6 +28,7 @@ def yaml_dquote(text):
         return ostream.getvalue()
 
 
+@jinja_filter()
 def yaml_squote(text):
     '''
     Make text into a single-quoted YAML string with correct escaping
@@ -33,6 +41,7 @@ def yaml_squote(text):
         return ostream.getvalue()
 
 
+@jinja_filter()
 def yaml_encode(data):
     '''
     A simple YAML encode that can take a single-element datatype and return

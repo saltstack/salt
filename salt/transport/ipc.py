@@ -24,7 +24,7 @@ from tornado.iostream import IOStream
 # Import Salt libs
 import salt.transport.client
 import salt.transport.frame
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

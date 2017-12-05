@@ -14,9 +14,10 @@ import traceback
 # Import salt libs
 import salt.crypt
 import salt.utils.event
+import salt.utils.zeromq
 import salt.payload
 import salt.transport
-import salt.ext.six as six
+from salt.ext import six
 
 __proxyenabled__ = ['*']
 log = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ def fire_master(data, tag, preload=None):
         # slower because it has to independently authenticate)
         if 'master_uri' not in __opts__:
             __opts__['master_uri'] = 'tcp://{ip}:{port}'.format(
-                    ip=salt.utils.ip_bracket(__opts__['interface']),
+                    ip=salt.utils.zeromq.ip_bracket(__opts__['interface']),
                     port=__opts__.get('ret_port', '4506')  # TODO, no fallback
                     )
         masters = list()
@@ -224,7 +225,7 @@ def send(tag,
             data_dict['pillar'] = __pillar__
 
     if with_env_opts:
-        data_dict['saltenv'] = __opts__.get('environment', 'base')
+        data_dict['saltenv'] = __opts__.get('saltenv', 'base')
         data_dict['pillarenv'] = __opts__.get('pillarenv')
 
     if kwargs:

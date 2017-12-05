@@ -8,8 +8,8 @@ import os
 import textwrap
 import yaml
 
-import salt.utils
 import salt.loader
+import salt.utils.data
 import salt.utils.reactor as reactor
 
 from tests.support.unit import TestCase, skipIf
@@ -393,7 +393,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
         reactor_config = yaml.safe_load(REACTOR_CONFIG)
         cls.opts.update(reactor_config)
         cls.reactor = reactor.Reactor(cls.opts)
-        cls.reaction_map = salt.utils.repack_dictlist(reactor_config['reactor'])
+        cls.reaction_map = salt.utils.data.repack_dictlist(reactor_config['reactor'])
         renderers = salt.loader.render(cls.opts, {})
         cls.render_pipe = [(renderers[x], '') for x in ('jinja', 'yaml')]
 

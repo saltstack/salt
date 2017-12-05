@@ -1,13 +1,14 @@
+# -*- coding: utf-8 -*-
+'''
+This is a module used in unit.utils.cache to test the context wrapper functions
+'''
+
 import salt.utils.cache
 
-'''
-This is a module used in
-unit.utils.cache to test
-the context wrapper functions.
-'''
 
 def __virtual__():
     return True
+
 
 @salt.utils.cache.context_cache
 def test_context_module():

@@ -20,15 +20,15 @@ from __future__ import absolute_import
 import json
 import logging
 
-import salt.utils
 import salt.utils.http
+import salt.utils.path
 from salt.utils.decorators import memoize
 
 LOG = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'kapacitor' if salt.utils.which('kapacitor') else False
+    return 'kapacitor' if salt.utils.path.which('kapacitor') else False
 
 
 @memoize
