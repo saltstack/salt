@@ -9,16 +9,9 @@ import os
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.helpers import (
-    destructiveTest,
-    requires_network,
-    requires_salt_modules,
-)
-from tests.support.unit import skipIf
 
 # Import Salt Testing Libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import MagicMock, patch
 import tests.integration as integration
 
 # Import Salt libs
