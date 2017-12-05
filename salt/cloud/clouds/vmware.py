@@ -3690,6 +3690,49 @@ def remove_all_snapshots(name, kwargs=None, call=None):
     return 'removed all snapshots'
 
 
+def convert_to_template(name, kwargs=None, call=None):
+    '''
+    Convert the specified virtual machine to template.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a convert_to_template vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The convert_to_template action must be called with '
+            '-a or --action.'
+        )
+
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
+
+    if vm_ref.config.template:
+        raise SaltCloudSystemExit(
+            '{0} already a template'.format(
+                name
+            )
+        )
+
+    try:
+        vm_ref.MarkAsTemplate()
+    except Exception as exc:
+        log.error(
+            'Error while converting VM to template {0}: {1}'.format(
+                name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return 'failed to convert to teamplate'
+
+    return '{0} converted to template'.format(
+        name
+    )
+
+
 def add_host(kwargs=None, call=None):
     '''
     Add a host system to the specified cluster or datacenter in this VMware environment

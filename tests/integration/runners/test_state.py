@@ -6,6 +6,7 @@ Tests for the state runner
 # Import Python Libs
 from __future__ import absolute_import
 import errno
+import json
 import os
 import shutil
 import signal
@@ -81,6 +82,58 @@ class StateRunnerTest(ShellCase):
         self.assertFalse(os.path.exists('/tmp/ewu-2016-12-13'))
         self.assertNotEqual(code, 0)
 
+    def test_orchestrate_state_and_function_failure(self):
+        '''
+        Ensure that returns from failed minions are in the changes dict where
+        they belong, so they can be programatically analyzed.
+
+        See https://github.com/saltstack/salt/issues/43204
+        '''
+        self.run_run('saltutil.sync_modules')
+        ret = json.loads(
+            '\n'.join(
+                self.run_run(u'state.orchestrate orch.issue43204 --out=json')
+            )
+        )
+        # Drill down to the changes dict
+        state_ret = ret[u'data'][u'master'][u'salt_|-Step01_|-Step01_|-state'][u'changes']
+        func_ret = ret[u'data'][u'master'][u'salt_|-Step02_|-runtests_helpers.nonzero_retcode_return_false_|-function'][u'changes']
+
+        # Remove duration and start time from the results, since they would
+        # vary with each run and that would make it impossible to test.
+        for item in ('duration', 'start_time'):
+            state_ret['ret']['minion']['test_|-test fail with changes_|-test fail with changes_|-fail_with_changes'].pop(item)
+
+        self.assertEqual(
+            state_ret,
+            {
+                u'out': u'highstate',
+                u'ret': {
+                    u'minion': {
+                        u'test_|-test fail with changes_|-test fail with changes_|-fail_with_changes': {
+                            u'__id__': u'test fail with changes',
+                            u'__run_num__': 0,
+                            u'__sls__': u'orch.issue43204.fail_with_changes',
+                            u'changes': {
+                                u'testing': {
+                                    u'new': u'Something pretended to change',
+                                    u'old': u'Unchanged'
+                                }
+                            },
+                            u'comment': u'Failure!',
+                            u'name': u'test fail with changes',
+                            u'result': False,
+                        }
+                    }
+                }
+            }
+        )
+
+        self.assertEqual(
+            func_ret,
+            {u'out': u'highstate', u'ret': {u'minion': False}}
+        )
+
     def test_orchestrate_target_exists(self):
         '''
         test orchestration when target exists
@@ -105,6 +158,35 @@ class StateRunnerTest(ShellCase):
         for out in ret_out:
             for item in out:
                 self.assertIn(item, ret)
+
+    def test_orchestrate_retcode(self):
+        '''
+        Test orchestration with nonzero retcode set in __context__
+        '''
+        self.run_run('saltutil.sync_runners')
+        self.run_run('saltutil.sync_wheel')
+        ret = '\n'.join(self.run_run('state.orchestrate orch.retcode'))
+
+        for result in ('          ID: test_runner_success\n'
+                       '    Function: salt.runner\n'
+                       '        Name: runtests_helpers.success\n'
+                       '      Result: True',
+
+                       '          ID: test_runner_failure\n'
+                       '    Function: salt.runner\n'
+                       '        Name: runtests_helpers.failure\n'
+                       '      Result: False',
+
+                       '          ID: test_wheel_success\n'
+                       '    Function: salt.wheel\n'
+                       '        Name: runtests_helpers.success\n'
+                       '      Result: True',
+
+                       '          ID: test_wheel_failure\n'
+                       '    Function: salt.wheel\n'
+                       '        Name: runtests_helpers.failure\n'
+                       '      Result: False'):
+            self.assertIn(result, ret)
 
     def test_orchestrate_target_doesnt_exists(self):
         '''
