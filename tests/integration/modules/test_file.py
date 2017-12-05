@@ -3,11 +3,22 @@
 # Import python libs
 from __future__ import absolute_import
 import getpass
-import grp
-import pwd
 import os
 import shutil
 import sys
+
+# Posix only
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
+
+# Windows only
+try:
+    import win32file
+except ImportError:
+    pass
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -18,6 +29,16 @@ from tests.support.paths import FILES, TMP
 import salt.utils
 
 
+def symlink(source, link_name):
+    '''
+    Handle symlinks on Windows with Python < 3.2
+    '''
+    if salt.utils.is_windows():
+        win32file.CreateSymbolicLink(link_name, source)
+    else:
+        os.symlink(source, link_name)
+
+
 class FileModuleTest(ModuleCase):
     '''
     Validate the file module
@@ -25,27 +46,27 @@ class FileModuleTest(ModuleCase):
     def setUp(self):
         self.myfile = os.path.join(TMP, 'myfile')
         with salt.utils.fopen(self.myfile, 'w+') as fp:
-            fp.write('Hello\n')
+            fp.write('Hello' + os.linesep)
         self.mydir = os.path.join(TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
             os.makedirs(self.mydir)
         self.mysymlink = os.path.join(TMP, 'mysymlink')
-        if os.path.islink(self.mysymlink):
+        if os.path.islink(self.mysymlink) or os.path.isfile(self.mysymlink):
             os.remove(self.mysymlink)
-        os.symlink(self.myfile, self.mysymlink)
+        symlink(self.myfile, self.mysymlink)
         self.mybadsymlink = os.path.join(TMP, 'mybadsymlink')
-        if os.path.islink(self.mybadsymlink):
+        if os.path.islink(self.mybadsymlink) or os.path.isfile(self.mybadsymlink):
             os.remove(self.mybadsymlink)
-        os.symlink('/nonexistentpath', self.mybadsymlink)
+        symlink('/nonexistentpath', self.mybadsymlink)
         super(FileModuleTest, self).setUp()
 
     def tearDown(self):
         if os.path.isfile(self.myfile):
             os.remove(self.myfile)
-        if os.path.islink(self.mysymlink):
+        if os.path.islink(self.mysymlink) or os.path.isfile(self.mysymlink):
             os.remove(self.mysymlink)
-        if os.path.islink(self.mybadsymlink):
+        if os.path.islink(self.mybadsymlink) or os.path.isfile(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         shutil.rmtree(self.mydir, ignore_errors=True)
         super(FileModuleTest, self).tearDown()
@@ -173,3 +194,20 @@ class FileModuleTest(ModuleCase):
         ret = self.run_function('file.source_list', ['file://' + self.myfile,
                                                      'filehash', 'base'])
         self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
+
+    def test_file_line_changes_format(self):
+        '''
+        Test file.line changes output formatting.
+
+        Issue #41474
+        '''
+        ret = self.minion_run('file.line', self.myfile, 'Goodbye',
+                              mode='insert', after='Hello')
+        self.assertIn('Hello' + os.linesep + '+Goodbye', ret)
+
+    def test_file_line_content(self):
+        self.minion_run('file.line', self.myfile, 'Goodbye',
+                        mode='insert', after='Hello')
+        with salt.utils.fopen(self.myfile, 'r') as fp:
+            content = fp.read()
+        self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
