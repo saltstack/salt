@@ -474,7 +474,7 @@ def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None, extmod_bla
     '''
     .. versionadded:: 0.10.0
 
-    Sync beacons from ``salt://_returners`` to the minion
+    Sync returners from ``salt://_returners`` to the minion
 
     saltenv
         The fileserver environment from which to sync. To sync from more than
@@ -585,6 +585,44 @@ def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blac
     return ret
 
 
+def sync_thorium(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Sync Thorium modules from ``salt://_thorium`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for engines to sync. If no top files are
+        found, then the ``base`` environment will be synced.
+
+    refresh: ``True``
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new Thorium modules are synced.
+        Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist
+        comma-seperated list of modules to sync
+
+    extmod_blacklist
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_thorium
+        salt '*' saltutil.sync_thorium saltenv=base,dev
+    '''
+    ret = _sync('thorium', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     Sync outputters from ``salt://_output`` to the minion
@@ -628,7 +666,7 @@ def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utility modules from ``salt://_cloud`` to the minion
+    Sync cloud modules from ``salt://_cloud`` to the minion
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -864,6 +902,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     ret['log_handlers'] = sync_log_handlers(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['engines'] = sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['thorium'] = sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
     if __opts__['file_client'] == 'local':
         ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:

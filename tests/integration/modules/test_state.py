@@ -1618,3 +1618,23 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn(state_id, state_run)
         self.assertEqual(state_run[state_id]['comment'], 'Failure!')
         self.assertFalse(state_run[state_id]['result'])
+
+    def test_state_nonbase_environment(self):
+        '''
+        test state.sls with saltenv using a nonbase environment
+        with a salt source
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='non-base-env',
+            saltenv='prod'
+        )
+        state_id = 'file_|-test_file_|-/tmp/nonbase_env_|-managed'
+        self.assertEqual(state_run[state_id]['comment'], 'File /tmp/nonbase_env updated')
+        self.assertTrue(state_run['file_|-test_file_|-/tmp/nonbase_env_|-managed']['result'])
+        self.assertTrue(os.path.isfile('/tmp/nonbase_env'))
+
+    def tearDown(self):
+        nonbase_file = '/tmp/nonbase_env'
+        if os.path.isfile(nonbase_file):
+            os.remove(nonbase_file)

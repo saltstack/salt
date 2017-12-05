@@ -1109,6 +1109,60 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     }
                 )
 
+    def test_is_installed_true(self):
+        eggs = [
+            'M2Crypto==0.21.1',
+            '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+            'bbfreeze==1.1.0',
+            'bbfreeze-loader==1.1.0',
+            'pycrypto==2.6'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.is_installed(pkgname='bbfreeze')
+                mock.assert_called_with(
+                    ['pip', 'freeze'],
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
+                )
+                self.assertTrue(ret)
+
+    def test_is_installed_false(self):
+        eggs = [
+            'M2Crypto==0.21.1',
+            '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+            'bbfreeze==1.1.0',
+            'bbfreeze-loader==1.1.0',
+            'pycrypto==2.6'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.is_installed(pkgname='notexist')
+                mock.assert_called_with(
+                    ['pip', 'freeze'],
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
+                )
+                self.assertFalse(ret)
+
     def test_install_pre_argument_in_resulting_command(self):
         pkg = 'pep8'
         # Lower than 1.4 versions don't end-up with `--pre` in the resulting
