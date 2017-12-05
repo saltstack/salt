@@ -138,7 +138,7 @@ class AsyncRemotePillar(RemotePillarMixin):
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
                  pillar_override=None, pillarenv=None, extra_minion_data=None):
         self.opts = opts
-        self.opts['environment'] = saltenv
+        self.opts['saltenv'] = saltenv
         self.ext = ext
         self.grains = grains
         self.minion_id = minion_id
@@ -165,7 +165,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         '''
         load = {'id': self.minion_id,
                 'grains': self.grains,
-                'saltenv': self.opts['environment'],
+                'saltenv': self.opts['saltenv'],
                 'pillarenv': self.opts['pillarenv'],
                 'pillar_override': self.pillar_override,
                 'extra_minion_data': self.extra_minion_data,
@@ -198,7 +198,7 @@ class RemotePillar(RemotePillarMixin):
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
                  pillar_override=None, pillarenv=None, extra_minion_data=None):
         self.opts = opts
-        self.opts['environment'] = saltenv
+        self.opts['saltenv'] = saltenv
         self.ext = ext
         self.grains = grains
         self.minion_id = minion_id
@@ -224,7 +224,7 @@ class RemotePillar(RemotePillarMixin):
         '''
         load = {'id': self.minion_id,
                 'grains': self.grains,
-                'saltenv': self.opts['environment'],
+                'saltenv': self.opts['saltenv'],
                 'pillarenv': self.opts['pillarenv'],
                 'pillar_override': self.pillar_override,
                 'extra_minion_data': self.extra_minion_data,
@@ -445,9 +445,9 @@ class Pillar(object):
         else:
             opts['grains'] = grains
         # Allow minion/CLI saltenv/pillarenv to take precedence over master
-        opts['environment'] = saltenv \
+        opts['saltenv'] = saltenv \
             if saltenv is not None \
-            else opts.get('environment')
+            else opts.get('saltenv')
         opts['pillarenv'] = pillarenv \
             if pillarenv is not None \
             else opts.get('pillarenv')

@@ -364,10 +364,14 @@ def _get_opts(**kwargs):
 
     if 'saltenv' in kwargs:
         saltenv = kwargs['saltenv']
-        if saltenv is not None and not isinstance(saltenv, six.string_types):
-            opts['environment'] = str(kwargs['saltenv'])
-        else:
-            opts['environment'] = kwargs['saltenv']
+        if saltenv is not None:
+            if not isinstance(saltenv, six.string_types):
+                saltenv = six.text_type(saltenv)
+            if opts['lock_saltenv'] and saltenv != opts['saltenv']:
+                raise CommandExecutionError(
+                    'lock_saltenv is enabled, saltenv cannot be changed'
+                )
+            opts['saltenv'] = kwargs['saltenv']
 
     if 'pillarenv' in kwargs or opts.get('pillarenv_from_saltenv', False):
         pillarenv = kwargs.get('pillarenv') or kwargs.get('saltenv')
@@ -934,7 +938,7 @@ def highstate(test=None, queue=False, **kwargs):
         kwargs.pop('env')
 
     if 'saltenv' in kwargs:
-        opts['environment'] = kwargs['saltenv']
+        opts['saltenv'] = kwargs['saltenv']
 
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
@@ -1126,8 +1130,8 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
 
     # Since this is running a specific SLS file (or files), fall back to the
     # 'base' saltenv if none is configured and none was passed.
-    if opts['environment'] is None:
-        opts['environment'] = 'base'
+    if opts['saltenv'] is None:
+        opts['saltenv'] = 'base'
 
     pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
@@ -1183,7 +1187,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     st_.push_active()
     ret = {}
     try:
-        high_, errors = st_.render_highstate({opts['environment']: mods})
+        high_, errors = st_.render_highstate({opts['saltenv']: mods})
 
         if errors:
             __context__['retcode'] = 1
@@ -1505,8 +1509,8 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
 
     # Since this is running a specific ID within a specific SLS file, fall back
     # to the 'base' saltenv if none is configured and none was passed.
-    if opts['environment'] is None:
-        opts['environment'] = 'base'
+    if opts['saltenv'] is None:
+        opts['saltenv'] = 'base'
 
     pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
@@ -1540,7 +1544,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         split_mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({opts['environment']: split_mods})
+        high_, errors = st_.render_highstate({opts['saltenv']: split_mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1566,7 +1570,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     if not ret:
         raise SaltInvocationError(
             'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
-            '\'{2}\''.format(id_, mods, opts['environment'])
+            '\'{2}\''.format(id_, mods, opts['saltenv'])
         )
     return ret
 
@@ -1617,8 +1621,8 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
 
     # Since this is dealing with a specific SLS file (or files), fall back to
     # the 'base' saltenv if none is configured and none was passed.
-    if opts['environment'] is None:
-        opts['environment'] = 'base'
+    if opts['saltenv'] is None:
+        opts['saltenv'] = 'base'
 
     pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
@@ -1649,7 +1653,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({opts['environment']: mods})
+        high_, errors = st_.render_highstate({opts['saltenv']: mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1688,7 +1692,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' state.show_sls core,edit.vim dev
+        salt '*' state.show_sls core,edit.vim saltenv=dev
     '''
     if 'env' in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -1704,8 +1708,8 @@ def show_sls(mods, test=None, queue=False, **kwargs):
 
     # Since this is dealing with a specific SLS file (or files), fall back to
     # the 'base' saltenv if none is configured and none was passed.
-    if opts['environment'] is None:
-        opts['environment'] = 'base'
+    if opts['saltenv'] is None:
+        opts['saltenv'] = 'base'
 
     pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
@@ -1738,7 +1742,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
         mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({opts['environment']: mods})
+        high_, errors = st_.render_highstate({opts['saltenv']: mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1904,6 +1908,7 @@ def pkg(pkg_path,
         salt '*' state.pkg /tmp/salt_state.tgz 760a9353810e36f6d81416366fc426dc md5
     '''
     # TODO - Add ability to download from salt master or other source
+    popts = _get_opts(**kwargs)
     if not os.path.isfile(pkg_path):
         return {}
     if not salt.utils.hashutils.get_hash(pkg_path, hash_type) == pkg_sum:
@@ -1938,7 +1943,6 @@ def pkg(pkg_path,
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
             roster_grains = json.load(fp_, object_hook=salt.utils.data.decode_dict)
 
-    popts = _get_opts(**kwargs)
     if os.path.isfile(roster_grains_json):
         popts['grains'] = roster_grains
     popts['fileclient'] = 'local'
