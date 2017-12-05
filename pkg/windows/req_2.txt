@@ -1,4 +1,4 @@
 -r req_base.txt
 
-lxml==3.6.0
+lxml==4.1.1
 pypiwin32==219

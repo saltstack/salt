@@ -1,5 +1,5 @@
 -r req_base.txt
 
-lxml==3.7.3
+lxml==4.1.1
 pycrypto==2.6.1
 PyYAML==3.12
