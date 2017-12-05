@@ -2473,7 +2473,12 @@ def create(vm_):
     # Either a datacenter or a folder can be optionally specified when cloning, required when creating.
     # If not specified when cloning, the existing VM/template\'s parent folder is used.
     if folder:
-        folder_ref = salt.utils.vmware.get_mor_by_property(si, vim.Folder, folder, container_ref=container_ref)
+        folder_parts = folder.split('/')
+        search_reference = container_ref
+        for folder_part in folder_parts:
+            if folder_part:
+                folder_ref = salt.utils.vmware.get_mor_by_property(si, vim.Folder, folder_part, container_ref=search_reference)
+                search_reference = folder_ref
         if not folder_ref:
             log.error("Specified folder: '{0}' does not exist".format(folder))
             log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
@@ -3688,6 +3693,49 @@ def remove_all_snapshots(name, kwargs=None, call=None):
         return 'failed to remove snapshots'
 
     return 'removed all snapshots'
+
+
+def convert_to_template(name, kwargs=None, call=None):
+    '''
+    Convert the specified virtual machine to template.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a convert_to_template vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The convert_to_template action must be called with '
+            '-a or --action.'
+        )
+
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
+
+    if vm_ref.config.template:
+        raise SaltCloudSystemExit(
+            '{0} already a template'.format(
+                name
+            )
+        )
+
+    try:
+        vm_ref.MarkAsTemplate()
+    except Exception as exc:
+        log.error(
+            'Error while converting VM to template {0}: {1}'.format(
+                name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return 'failed to convert to teamplate'
+
+    return '{0} converted to template'.format(
+        name
+    )
 
 
 def add_host(kwargs=None, call=None):
