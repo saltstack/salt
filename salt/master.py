@@ -16,6 +16,7 @@ import errno
 import signal
 import stat
 import logging
+import collections
 import multiprocessing
 import salt.serializers.msgpack
 
@@ -797,6 +798,7 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         :return: Master worker
         '''
         kwargs[u'name'] = name
+        self.name = name
         super(MWorker, self).__init__(**kwargs)
         self.opts = opts
         self.req_channels = req_channels
@@ -804,6 +806,8 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
+        self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
+        self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -879,6 +883,19 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
                u'clear': self._handle_clear}[key](load)
         raise tornado.gen.Return(ret)
 
+    def _post_stats(self, start, cmd):
+        '''
+        Calculate the master stats and fire events with stat info
+        '''
+        end = time.time()
+        duration = end - start
+        self.stats[cmd][u'mean'] = (self.stats[cmd][u'mean'] * (self.stats[cmd][u'runs'] - 1) + duration) / self.stats[cmd][u'runs']
+        if end - self.stat_clock > self.opts[u'master_stats_event_iter']:
+            # Fire the event with the stats and wipe the tracker
+            self.aes_funcs.event.fire_event({u'time': end - self.stat_clock, u'worker': self.name, u'stats': self.stats}, tagify(self.name, u'stats'))
+            self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
+            self.stat_clock = end
+
     def _handle_clear(self, load):
         '''
         Process a cleartext command
@@ -888,9 +905,16 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
                  the command specified in the load's 'cmd' key.
         '''
         log.trace(u'Clear payload received with command %s', load[u'cmd'])
-        if load[u'cmd'].startswith(u'__'):
+        cmd = load[u'cmd']
+        if cmd.startswith(u'__'):
             return False
-        return getattr(self.clear_funcs, load[u'cmd'])(load), {u'fun': u'send_clear'}
+        if self.opts[u'master_stats']:
+            start = time.time()
+            self.stats[cmd][u'runs'] += 1
+        ret = getattr(self.clear_funcs, cmd)(load), {u'fun': u'send_clear'}
+        if self.opts[u'master_stats']:
+            self._post_stats(start, cmd)
+        return ret
 
     def _handle_aes(self, data):
         '''
@@ -903,10 +927,17 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if u'cmd' not in data:
             log.error(u'Received malformed command %s', data)
             return {}
+        cmd = data[u'cmd']
         log.trace(u'AES payload received with command %s', data[u'cmd'])
-        if data[u'cmd'].startswith(u'__'):
+        if cmd.startswith(u'__'):
             return False
-        return self.aes_funcs.run_func(data[u'cmd'], data)
+        if self.opts[u'master_stats']:
+            start = time.time()
+            self.stats[cmd][u'runs'] += 1
+        ret = self.aes_funcs.run_func(data[u'cmd'], data)
+        if self.opts[u'master_stats']:
+            self._post_stats(start, cmd)
+        return ret
 
     def run(self):
         '''

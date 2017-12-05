@@ -404,6 +404,22 @@ The above example will force the minion to use the :py:mod:`systemd
 
 .. __: https://github.com/saltstack/salt/issues/new
 
+Logging Restrictions
+--------------------
+
+As a rule, logging should not be done anywhere in a Salt module before it is
+loaded. This rule apples to all code that would run before the ``__virtual__()``
+function, as well as the code within the ``__virtual__()`` function itself.
+
+If logging statements are made before the virtual function determines if
+the module should be loaded, then those logging statements will be called
+repeatedly. This clutters up log files unnecessarily.
+
+Exceptions may be considered for logging statements made at the ``trace`` level.
+However, it is better to provide the necessary information by another means.
+One method is to :ref:`return error information <modules-error-info>` in the
+``__virtual__()`` function.
+
 .. _modules-virtual-name:
 
 ``__virtualname__``
