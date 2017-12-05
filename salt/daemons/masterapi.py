@@ -252,8 +252,8 @@ def access_keys(opts):
 
 def fileserver_update(fileserver):
     '''
-    Update the fileserver backends, requires that a built fileserver object
-    be passed in
+    Update the fileserver backends, requires that a salt.fileserver.Fileserver
+    object be passed in
     '''
     try:
         if not fileserver.servers:
