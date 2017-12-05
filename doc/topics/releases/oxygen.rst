@@ -227,19 +227,19 @@ Salt Minion Autodiscovery
 
 Salt Minion now no longer need to be configured against a specifig DNS name or IP address of a Master.
 
-For this feature Salt Master is now require port 4520 for UDP broadcast packet to be opened
-and Salt Minion is expected to be able to send to the same port UDP packets.
+For this feature Salt Master now requires port 4520 for UDP broadcast packets to be opened
+and the Salt Minion be able to send UDP packets to the same port.
 
 Connection to a type instead of DNS
 ===================================
 
 By now each Minion was connecting to a Master by DNS or IP address. From now on it is possible
-also to connect to a _type_ of a Master. For example, in the network there are three different
-Masters, each corresponds for a particular niche or environment or specific role etc. Minion
-supposed to connect only to one of those Masters that is described approriately.
+also to connect to a _type_ of a Master. For example, in a network there are three different
+Masters, each corresponds for a particular niche or environment or specific role etc. The Minion
+is supposed to connect only to one of those Masters that is described approriately.
 
-To achieve such effect, each `/etc/salt/master` configuration should have a `discovery` option,
-which should have `mapping` element with arbitrary key/value pairs. The same configuration shoul
+To achieve such an effect, each `/etc/salt/master` configuration should have a `discovery` option,
+which should have a `mapping` element with arbitrary key/value pairs. The same configuration shoul
 be on the Minion, so then when mapping matches, Minion recognises Master as its connection target.
 
 Example for Master configuration (`/etc/salt/master`):
@@ -271,10 +271,10 @@ be ignored.
 Limitations
 ===========
 
-This feature has a couple of _temporary_ limitations that are subject to change in nearest future:
+This feature has a couple of _temporary_ limitations that are subject to change in the future:
 
-- Only one Master on the network is supported. Currently Minion cannot select which Master
-  out of few the same to choose. This will change to choosing Master that is least loaded.
+- Only one Master on the network is supported. Currently the Minion cannot select which Master
+  out of few the same to choose. This will change to choosing the Master that is least loaded.
 - Minions will accept _any_ master that matches connection criteria without any particular
   security applied (priv/pub key check, signature, fingerprint etc). That implies that administrator
   is expected to know his network and make sure it is clean.
