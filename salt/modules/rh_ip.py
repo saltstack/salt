@@ -643,12 +643,18 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 result[opt] = opts[opt]
 
     if iface_type not in ['bond', 'vlan', 'bridge', 'ipip']:
+        auto_addr = False
         if 'addr' in opts:
             if salt.utils.validate.net.mac(opts['addr']):
                 result['addr'] = opts['addr']
-            else:
-                _raise_error_iface(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF'])
+            elif opts['addr'] == 'auto':
+                auto_addr = True
+            elif opts['addr'] != 'none':
+                _raise_error_iface(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF', 'auto', 'none'])
         else:
+            auto_addr = True
+
+        if auto_addr:
             # If interface type is slave for bond, not setting hwaddr
             if iface_type != 'slave':
                 ifaces = __salt__['network.interfaces']()

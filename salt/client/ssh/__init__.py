@@ -1050,7 +1050,7 @@ class Single(object):
                     popts,
                     opts_pkg[u'grains'],
                     opts_pkg[u'id'],
-                    opts_pkg.get(u'environment', u'base')
+                    opts_pkg.get(u'saltenv', u'base')
                     )
             pillar_data = pillar.compile_pillar()
 

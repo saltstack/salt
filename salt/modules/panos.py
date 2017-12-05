@@ -519,6 +519,22 @@ def get_domain_config():
     return __proxy__['panos.call'](query)
 
 
+def get_dos_blocks():
+    '''
+    Show the DoS block-ip table.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_dos_blocks
+
+    '''
+    query = {'type': 'op', 'cmd': '<show><dos-block-table><all></all></dos-block-table></show>'}
+
+    return __proxy__['panos.call'](query)
+
+
 def get_fqdn_cache():
     '''
     Print FQDNs used in rules and their IPs.
@@ -844,6 +860,32 @@ def get_lldp_neighbors():
     query = {'type': 'op', 'cmd': '<show><lldp><neighbors>all</neighbors></lldp></show>'}
 
     return __proxy__['panos.call'](query)
+
+
+def get_local_admins():
+    '''
+    Show all local administrator accounts.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_local_admins
+
+    '''
+    admin_list = get_users_config()
+    response = []
+
+    if 'users' not in admin_list['result']:
+        return response
+
+    if isinstance(admin_list['result']['users']['entry'], list):
+        for entry in admin_list['result']['users']['entry']:
+            response.append(entry['name'])
+    else:
+        response.append(admin_list['result']['users']['entry']['name'])
+
+    return response
 
 
 def get_logdb_quota():
@@ -2153,6 +2195,120 @@ def shutdown():
 
     '''
     query = {'type': 'op', 'cmd': '<request><shutdown><system></system></shutdown></request>'}
+
+    return __proxy__['panos.call'](query)
+
+
+def test_fib_route(ip=None,
+                   vr='vr1'):
+    '''
+    Perform a route lookup within active route table (fib).
+
+    ip (str): The destination IP address to test.
+
+    vr (str): The name of the virtual router to test.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.test_fib_route 4.2.2.2
+        salt '*' panos.test_fib_route 4.2.2.2 my-vr
+
+    '''
+
+    xpath = "<test><routing><fib-lookup>"
+
+    if ip:
+        xpath += "<ip>{0}</ip>".format(ip)
+
+    if vr:
+        xpath += "<virtual-router>{0}</virtual-router>".format(vr)
+
+    xpath += "</fib-lookup></routing></test>"
+
+    query = {'type': 'op',
+             'cmd': xpath}
+
+    return __proxy__['panos.call'](query)
+
+
+def test_security_policy(sourcezone=None,
+                         destinationzone=None,
+                         source=None,
+                         destination=None,
+                         protocol=None,
+                         port=None,
+                         application=None,
+                         category=None,
+                         vsys='1',
+                         allrules=False):
+    '''
+    Checks which security policy as connection will match on the device.
+
+    sourcezone (str): The source zone matched against the connection.
+
+    destinationzone (str): The destination zone matched against the connection.
+
+    source (str): The source address. This must be a single IP address.
+
+    destination (str): The destination address. This must be a single IP address.
+
+    protocol (int): The protocol number for the connection. This is the numerical representation of the protocol.
+
+    port (int): The port number for the connection.
+
+    application (str): The application that should be matched.
+
+    category (str): The category that should be matched.
+
+    vsys (int): The numerical representation of the VSYS ID.
+
+    allrules (bool): Show all potential match rules until first allow rule.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.test_security_policy sourcezone=trust destinationzone=untrust protocol=6 port=22
+        salt '*' panos.test_security_policy sourcezone=trust destinationzone=untrust protocol=6 port=22 vsys=2
+
+    '''
+
+    xpath = "<test><security-policy-match>"
+
+    if sourcezone:
+        xpath += "<from>{0}</from>".format(sourcezone)
+
+    if destinationzone:
+        xpath += "<to>{0}</to>".format(destinationzone)
+
+    if source:
+        xpath += "<source>{0}</source>".format(source)
+
+    if destination:
+        xpath += "<destination>{0}</destination>".format(destination)
+
+    if protocol:
+        xpath += "<protocol>{0}</protocol>".format(protocol)
+
+    if port:
+        xpath += "<destination-port>{0}</destination-port>".format(port)
+
+    if application:
+        xpath += "<application>{0}</application>".format(application)
+
+    if category:
+        xpath += "<category>{0}</category>".format(category)
+
+    if allrules:
+        xpath += "<show-all>yes</show-all>"
+
+    xpath += "</security-policy-match></test>"
+
+    query = {'type': 'op',
+             'vsys': "vsys{0}".format(vsys),
+             'cmd': xpath}
 
     return __proxy__['panos.call'](query)
 

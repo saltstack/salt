@@ -55,7 +55,7 @@ class PillarTestCase(TestCase):
                 'os': 'Ubuntu',
             }
             pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'dev')
-            self.assertEqual(pillar.opts['environment'], 'dev')
+            self.assertEqual(pillar.opts['saltenv'], 'dev')
             self.assertEqual(pillar.opts['pillarenv'], 'dev')
 
     def test_ext_pillar_no_extra_minion_data_val_dict(self):
@@ -416,7 +416,7 @@ class PillarTestCase(TestCase):
                 'state_top': '',
                 'pillar_roots': [],
                 'extension_modules': '',
-                'environment': 'base',
+                'saltenv': 'base',
                 'file_roots': [],
             }
             grains = {
@@ -584,7 +584,7 @@ class RemotePillarTestCase(TestCase):
 
             salt.pillar.RemotePillar({}, self.grains, 'mocked-minion', 'dev')
         mock_get_extra_minion_data.assert_called_once_with(
-            {'environment': 'dev'})
+            {'saltenv': 'dev'})
 
     def test_multiple_keys_in_opts_added_to_pillar(self):
         opts = {
@@ -702,7 +702,7 @@ class AsyncRemotePillarTestCase(TestCase):
 
             salt.pillar.RemotePillar({}, self.grains, 'mocked-minion', 'dev')
         mock_get_extra_minion_data.assert_called_once_with(
-            {'environment': 'dev'})
+            {'saltenv': 'dev'})
 
     def test_pillar_send_extra_minion_data_from_config(self):
         opts = {
