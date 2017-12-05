@@ -3,7 +3,7 @@
 Openstack Cloud Driver
 ======================
 
-:depends: [shade](https://pypi.python.org/pypi/shade)
+:depends: `shade <https://pypi.python.org/pypi/shade>`_
 
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
@@ -21,6 +21,7 @@ just let shade handle everything, and configure using os-client-config_ and
 setting up `/etc/openstack/clouds.yml`.
 
 .. code-block:: yaml
+
     clouds:
       democloud:
         region_name: RegionOne
@@ -101,90 +102,88 @@ This is the minimum setup required.
 
 Anything else from the create_server_ docs can be passed through here.
 
-    :param image: Image dict, name or ID to boot with. image is required
-                  unless boot_volume is given.
-    :param flavor: Flavor dict, name or ID to boot onto.
-    :param auto_ip: Whether to take actions to find a routable IP for
-                    the server. (defaults to True)
-    :param ips: List of IPs to attach to the server (defaults to None)
-    :param ip_pool: Name of the network or floating IP pool to get an
-                    address from. (defaults to None)
-    :param root_volume: Name or ID of a volume to boot from
-                        (defaults to None - deprecated, use boot_volume)
-    :param boot_volume: Name or ID of a volume to boot from
-                        (defaults to None)
-    :param terminate_volume: If booting from a volume, whether it should
-                             be deleted when the server is destroyed.
-                             (defaults to False)
-    :param volumes: (optional) A list of volumes to attach to the server
-    :param meta: (optional) A dict of arbitrary key/value metadata to
-                 store for this server. Both keys and values must be
-                 <=255 characters.
-    :param files: (optional, deprecated) A dict of files to overwrite
-                  on the server upon boot. Keys are file names (i.e.
-                  ``/etc/passwd``) and values
-                  are the file contents (either as a string or as a
-                  file-like object). A maximum of five entries is allowed,
-                  and each file must be 10k or less.
-    :param reservation_id: a UUID for the set of servers being requested.
-    :param min_count: (optional extension) The minimum number of
-                      servers to launch.
-    :param max_count: (optional extension) The maximum number of
-                      servers to launch.
-    :param security_groups: A list of security group names
-    :param userdata: user data to pass to be exposed by the metadata
-                  server this can be a file type object as well or a
-                  string.
-    :param key_name: (optional extension) name of previously created
-                  keypair to inject into the instance.
-    :param availability_zone: Name of the availability zone for instance
-                              placement.
-    :param block_device_mapping: (optional) A dict of block
-                  device mappings for this server.
-    :param block_device_mapping_v2: (optional) A dict of block
-                  device mappings for this server.
-    :param nics:  (optional extension) an ordered list of nics to be
-                  added to this server, with information about
-                  connected networks, fixed IPs, port etc.
-    :param scheduler_hints: (optional extension) arbitrary key-value pairs
-                        specified by the client to help boot an instance
-    :param config_drive: (optional extension) value for config drive
-                        either boolean, or volume-id
-    :param disk_config: (optional extension) control how the disk is
-                        partitioned when the server is created.  possible
-                        values are 'AUTO' or 'MANUAL'.
-    :param admin_pass: (optional extension) add a user supplied admin
-                       password.
-    :param timeout: (optional) Seconds to wait, defaults to 60.
-                    See the ``wait`` parameter.
-    :param reuse_ips: (optional) Whether to attempt to reuse pre-existing
-                                 floating ips should a floating IP be
-                                 needed (defaults to True)
-    :param network: (optional) Network dict or name or ID to attach the
-                    server to.  Mutually exclusive with the nics parameter.
-                    Can also be be a list of network names or IDs or
-                    network dicts.
-    :param boot_from_volume: Whether to boot from volume. 'boot_volume'
-                             implies True, but boot_from_volume=True with
-                             no boot_volume is valid and will create a
-                             volume from the image and use that.
-    :param volume_size: When booting an image from volume, how big should
-                        the created volume be? Defaults to 50.
-    :param nat_destination: Which network should a created floating IP
-                            be attached to, if it's not possible to
-                            infer from the cloud's configuration.
-                            (Optional, defaults to None)
-    :param group: ServerGroup dict, name or id to boot the server in.
-                  If a group is provided in both scheduler_hints and in
-                  the group param, the group param will win.
-                  (Optional, defaults to None)
-
+- **image**: Image dict, name or ID to boot with. image is required
+            unless boot_volume is given.
+- **flavor**: Flavor dict, name or ID to boot onto.
+- **auto_ip**: Whether to take actions to find a routable IP for
+              the server. (defaults to True)
+- **ips**: List of IPs to attach to the server (defaults to None)
+- **ip_pool**: Name of the network or floating IP pool to get an
+              address from. (defaults to None)
+- **root_volume**: Name or ID of a volume to boot from
+                  (defaults to None - deprecated, use boot_volume)
+- **boot_volume**: Name or ID of a volume to boot from
+                  (defaults to None)
+- **terminate_volume**: If booting from a volume, whether it should
+                       be deleted when the server is destroyed.
+                       (defaults to False)
+- **volumes**: (optional) A list of volumes to attach to the server
+- **meta**: (optional) A dict of arbitrary key/value metadata to
+           store for this server. Both keys and values must be
+           <=255 characters.
+- **files**: (optional, deprecated) A dict of files to overwrite
+            on the server upon boot. Keys are file names (i.e.
+            ``/etc/passwd``) and values
+            are the file contents (either as a string or as a
+            file-like object). A maximum of five entries is allowed,
+            and each file must be 10k or less.
+- **reservation_id**: a UUID for the set of servers being requested.
+- **min_count**: (optional extension) The minimum number of
+                servers to launch.
+- **max_count**: (optional extension) The maximum number of
+                servers to launch.
+- **security_groups**: A list of security group names
+- **userdata**: user data to pass to be exposed by the metadata
+            server this can be a file type object as well or a
+            string.
+- **key_name**: (optional extension) name of previously created
+            keypair to inject into the instance.
+- **availability_zone**: Name of the availability zone for instance
+                        placement.
+- **block_device_mapping**: (optional) A dict of block
+            device mappings for this server.
+- **block_device_mapping_v2**: (optional) A dict of block
+            device mappings for this server.
+- **nics**:  (optional extension) an ordered list of nics to be
+            added to this server, with information about
+            connected networks, fixed IPs, port etc.
+- **scheduler_hints**: (optional extension) arbitrary key-value pairs
+                  specified by the client to help boot an instance
+- **config_drive**: (optional extension) value for config drive
+                  either boolean, or volume-id
+- **disk_config**: (optional extension) control how the disk is
+                  partitioned when the server is created.  possible
+                  values are 'AUTO' or 'MANUAL'.
+- **admin_pass**: (optional extension) add a user supplied admin
+                 password.
+- **timeout**: (optional) Seconds to wait, defaults to 60.
+              See the ``wait`` parameter.
+- **reuse_ips**: (optional) Whether to attempt to reuse pre-existing
+                           floating ips should a floating IP be
+                           needed (defaults to True)
+- **network**: (optional) Network dict or name or ID to attach the
+              server to.  Mutually exclusive with the nics parameter.
+              Can also be be a list of network names or IDs or
+              network dicts.
+- **boot_from_volume**: Whether to boot from volume. 'boot_volume'
+                       implies True, but boot_from_volume=True with
+                       no boot_volume is valid and will create a
+                       volume from the image and use that.
+- **volume_size**: When booting an image from volume, how big should
+                  the created volume be? Defaults to 50.
+- **nat_destination**: Which network should a created floating IP
+                      be attached to, if it's not possible to
+                      infer from the cloud's configuration.
+                      (Optional, defaults to None)
+- **group**: ServerGroup dict, name or id to boot the server in.
+            If a group is provided in both scheduler_hints and in
+            the group param, the group param will win.
+            (Optional, defaults to None)
 
 .. note::
 
     If there is anything added, that is not in this list, it can be added to an `extras`
     dictionary for the profile, and that will be to the create_server function.
-
 
 .. _create_server: https://docs.openstack.org/shade/latest/user/usage.html#shade.OpenStackCloud.create_server
 .. _vendor: https://docs.openstack.org/os-client-config/latest/user/vendor-support.html
