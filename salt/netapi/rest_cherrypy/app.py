@@ -3,18 +3,14 @@
 A REST API for Salt
 ===================
 
-.. versionadded:: 2014.7.0
-
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
 :depends:
-    - CherryPy Python module. Version 3.2.3 is currently recommended when
-      SSL is enabled, since this version worked the best with SSL in
-      internal testing. Versions 3.2.3 - 4.x can be used if SSL is not enabled.
-      Be aware that there is a known
-      `SSL error <https://github.com/cherrypy/cherrypy/issues/1298>`_
-      introduced in version 3.2.5. The issue was reportedly resolved with
-      CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
+    - CherryPy Python module.
+
+      Note: there is a `known SSL traceback for CherryPy versions 3.2.5 through
+      3.7.x <https://github.com/cherrypy/cherrypy/issues/1298>`_. Please use
+      version 3.2.3 or the latest 10.x version instead.
 :optdepends:    - ws4py Python module for websockets support.
 :client_libraries:
     - Java: https://github.com/SUSE/salt-netapi-client
@@ -75,12 +71,12 @@ A REST API for Salt
     log_access_file
         Path to a file to write HTTP access logs.
 
-        .. versionaddedd:: 2016.11.0
+        .. versionadded:: 2016.11.0
 
     log_error_file
         Path to a file to write HTTP error logs.
 
-        .. versionaddedd:: 2016.11.0
+        .. versionadded:: 2016.11.0
 
     ssl_crt
         The path to a SSL certificate. (See below)
@@ -106,12 +102,23 @@ A REST API for Salt
     expire_responses : True
         Whether to check for and kill HTTP responses that have exceeded the
         default timeout.
+
+        .. deprecated:: 2016.11.9, 2017.7.3, Oxygen
+
+            The "expire_responses" configuration setting, which corresponds
+            to the ``timeout_monitor`` setting in CherryPy, is no longer
+            supported in CherryPy versions >= 12.0.0.
+
     max_request_body_size : ``1048576``
         Maximum size for the HTTP request body.
     collect_stats : False
         Collect and report statistics about the CherryPy server
 
         Reports are available via the :py:class:`Stats` URL.
+    stats_disable_auth : False
+        Do not require authentication to access the ``/stats`` endpoint.
+
+        .. versionadded:: Oxygen
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``
@@ -455,6 +462,107 @@ Here is an example of sending urlencoded data:
         --data-urlencode password='1234+' \\
         -d eauth='pam'
 
+Performance Expectations and Recommended Usage
+==============================================
+
+This module provides a thin wrapper around :ref:`Salt's Python API
+<python-api>`. Executing a Salt command via rest_cherrypy is directly analogous
+to executing a Salt command via Salt's CLI (which also uses the Python API) --
+they share the same semantics, performance characteristics, and 98% of the same
+code. As a rule-of-thumb: if you wouldn't do it at the CLI don't do it via this
+API.
+
+Long-Running HTTP Connections
+-----------------------------
+
+The CherryPy server is a production-ready, threading HTTP server written in
+Python. Because it makes use of a thread pool to process HTTP requests it is
+not ideally suited to maintaining large numbers of concurrent, synchronous
+connections. On moderate hardware with default settings it should top-out at
+around 30 to 50 concurrent connections.
+
+That number of long-running, synchronous Salt processes is also not ideal. Like
+at the CLI, each Salt command run will start a process that instantiates its
+own ``LocalClient``, which instantiates its own listener to the Salt event bus,
+and sends out its own periodic ``saltutil.find_job`` queries to determine if a
+Minion is still running the command. Not exactly a lightweight operation.
+
+Timeouts
+--------
+
+In addition to the above resource overhead for long-running connections, there
+are the usual HTTP timeout semantics for the CherryPy server, any HTTP client
+being used, as well as any hardware in between such as proxies, gateways, or
+load balancers. rest_cherrypy can be configured not to time-out long responses
+via the ``expire_responses`` setting, and both :py:class:`LocalClient
+<salt.client.LocalClient>` and :py:class:`RunnerClient
+<salt.runner.RunnerClient>` have their own timeout parameters that may be
+passed as top-level keywords:
+
+.. code-block:: bash
+
+    curl -b /tmp/cookies.txt -sSi localhost:8000 \
+        -H 'Content-type: application/json' \
+        -d '
+    [
+        {
+            "client": "local",
+            "tgt": "*",
+            "fun": "test.sleep",
+            "kwarg": {"length": 30},
+            "timeout": 60
+        },
+        {
+            "client": "runner",
+            "fun": "test.sleep",
+            "kwarg": {"s_time": 30},
+            "timeout": 60
+        }
+    ]
+    '
+
+Best Practices
+--------------
+
+Given the performance overhead and HTTP timeouts for long-running operations
+described above, the most effective and most scalable way to use both Salt and
+salt-api is to run commands asynchronously using the ``local_async``,
+``runner_async``, and ``wheel_async`` clients.
+
+Running async jobs results in being able to process 3x more commands per second
+for ``LocalClient`` and 17x more commands per second for ``RunnerClient``, in
+addition to much less network traffic and memory requirements. Job returns can
+be fetched from Salt's job cache via the ``/jobs/<jid>`` endpoint, or they can
+be collected into a data store using Salt's :ref:`Returner system <returners>`.
+
+The ``/events`` endpoint is specifically designed to handle long-running HTTP
+connections and it exposes Salt's event bus which includes job returns.
+Watching this endpoint first, then executing asynchronous Salt commands second,
+is the most lightweight and scalable way to use ``rest_cherrypy`` while still
+receiving job returns in real-time. But this requires clients that can properly
+handle the inherent asynchronicity of that workflow.
+
+Performance Tuning
+------------------
+
+The ``thread_pool`` and ``socket_queue_size`` settings can be used to increase
+the capacity of rest_cherrypy to handle incoming requests. Keep an eye on RAM
+usage as well as available file handles while testing changes to these
+settings. As salt-api is a thin wrapper around Salt's Python API, also keep an
+eye on the performance of Salt when testing.
+
+Future Plans
+------------
+
+Now that Salt uses the Tornado concurrency library internally, we plan to
+improve performance in the API by taking advantage of existing processes and
+event listeners and to use lightweight coroutines to facilitate more
+simultaneous HTTP connections and better support for synchronous operations.
+That effort can be tracked in `issue 26505`__, but until that issue is closed
+rest_cherrypy will remain the officially recommended REST API.
+
+.. __: https://github.com/saltstack/salt/issues/26505
+
 .. |req_token| replace:: a session token from :py:class:`~Login`.
 .. |req_accept| replace:: the desired response format.
 .. |req_ct| replace:: the format of the request body.
@@ -500,14 +608,16 @@ except ImportError:
     logger.warn('Import of cherrypy.cpstats failed.')
 
 import yaml
-import salt.ext.six as six
 # pylint: enable=import-error, 3rd-party-module-not-gated
 
 # Import Salt libs
 import salt
 import salt.auth
-import salt.utils
+import salt.exceptions
 import salt.utils.event
+import salt.utils.stringutils
+import salt.utils.versions
+from salt.ext import six
 
 # Import salt-api libs
 import salt.netapi
@@ -753,11 +863,18 @@ def hypermedia_handler(*args, **kwargs):
     except (salt.exceptions.SaltDaemonNotRunning,
             salt.exceptions.SaltReqTimeoutError) as exc:
         raise cherrypy.HTTPError(503, exc.strerror)
-    except (cherrypy.TimeoutError, salt.exceptions.SaltClientTimeout):
+    except salt.exceptions.SaltClientTimeout:
         raise cherrypy.HTTPError(504)
     except cherrypy.CherryPyException:
         raise
     except Exception as exc:
+        # The TimeoutError exception class was removed in CherryPy in 12.0.0, but
+        # Still check existence of TimeoutError and handle in CherryPy < 12.
+        # The check was moved down from the SaltClientTimeout error line because
+        # A one-line if statement throws a BaseException inheritance TypeError.
+        if hasattr(cherrypy, 'TimeoutError') and isinstance(exc, cherrypy.TimeoutError):
+            raise cherrypy.HTTPError(504)
+
         import traceback
 
         logger.debug("Error while processing request for: %s",
@@ -781,7 +898,7 @@ def hypermedia_handler(*args, **kwargs):
     try:
         response = out(ret)
         if six.PY3:
-            response = salt.utils.to_bytes(response)
+            response = salt.utils.stringutils.to_bytes(response)
         return response
     except Exception:
         msg = 'Could not serialize the return data from Salt.'
@@ -839,7 +956,7 @@ def urlencoded_processor(entity):
         entity.fp.read(fp_out=contents)
         contents.seek(0)
         body_str = contents.read()
-        body_bytes = salt.utils.to_bytes(body_str)
+        body_bytes = salt.utils.stringutils.to_bytes(body_str)
         body_bytes = six.BytesIO(body_bytes)
         body_bytes.seek(0)
         # Patch fp
@@ -1440,6 +1557,9 @@ class Keys(LowDataAdapter):
         .. http:get:: /keys/(mid)
 
             List all keys or show a specific key
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
 
             :status 200: |200|
             :status 401: |401|
@@ -2151,8 +2271,8 @@ class Events(object):
         very fast. If a job is created using a regular POST request, it is
         possible that the job return will be available on the SSE stream before
         the response for the POST request arrives. It is important to take that
-        asynchronity into account when designing an application. Below are some
-        general guidelines.
+        asynchronicity into account when designing an application. Below are
+        some general guidelines.
 
         * Subscribe to the SSE stream _before_ creating any events.
         * Process SSE events directly as they arrive and don't wait for any
@@ -2610,6 +2730,10 @@ class Stats(object):
         'tools.salt_auth.on': True,
     })
 
+    def __init__(self):
+        if cherrypy.config['apiopts'].get('stats_disable_auth'):
+            self._cp_config['tools.salt_auth.on'] = False
+
     def GET(self):
         '''
         Return a dump of statistics collected from the CherryPy server
@@ -2731,8 +2855,6 @@ class API(object):
                 'server.socket_port': self.apiopts.get('port', 8000),
                 'server.thread_pool': self.apiopts.get('thread_pool', 100),
                 'server.socket_queue_size': self.apiopts.get('queue_size', 30),
-                'engine.timeout_monitor.on': self.apiopts.get(
-                    'expire_responses', True),
                 'max_request_body_size': self.apiopts.get(
                     'max_request_body_size', 1048576),
                 'debug': self.apiopts.get('debug', False),
@@ -2749,6 +2871,14 @@ class API(object):
                 'tools.cors_tool.on': True,
             },
         }
+
+        if salt.utils.versions.version_cmp(cherrypy.__version__, '12.0.0') < 0:
+            # CherryPy >= 12.0 no longer supports "timeout_monitor", only set
+            # this config option when using an older version of CherryPy.
+            # See Issue #44601 for more information.
+            conf['global']['engine.timeout_monitor.on'] = self.apiopts.get(
+                'expire_responses', True
+            )
 
         if cpstats and self.apiopts.get('collect_stats', False):
             conf['/']['tools.cpstats.on'] = True

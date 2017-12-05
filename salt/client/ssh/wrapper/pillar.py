@@ -9,11 +9,12 @@ import collections
 
 # Import salt libs
 import salt.pillar
-import salt.utils
+import salt.utils.data
+import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 
 
-def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
+def get(key, default=u'', merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.14
 
@@ -51,15 +52,16 @@ def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
         salt '*' pillar.get pkg:apache
     '''
     if merge:
-        ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
+        ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
             return salt.utils.dictupdate.update(default, ret)
 
-    return salt.utils.traverse_dict_and_list(__pillar__,
-                                             key,
-                                             default,
-                                             delimiter)
+    return salt.utils.data.traverse_dict_and_list(
+        __pillar__,
+        key,
+        default,
+        delimiter)
 
 
 def item(*args):
@@ -126,14 +128,14 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
 
         salt '*' pillar.keys web:sites
     '''
-    ret = salt.utils.traverse_dict_and_list(
+    ret = salt.utils.data.traverse_dict_and_list(
         __pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {0}".format(key))
+        raise KeyError(u"Pillar key not found: {0}".format(key))
 
     if not isinstance(ret, dict):
-        raise ValueError("Pillar value in key {0} is not a dict".format(key))
+        raise ValueError(u"Pillar value in key {0} is not a dict".format(key))
 
     return ret.keys()
 

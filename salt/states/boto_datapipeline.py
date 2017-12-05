@@ -57,7 +57,7 @@ import difflib
 import json
 
 # Import Salt lobs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip
 
 

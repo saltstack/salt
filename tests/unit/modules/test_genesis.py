@@ -93,7 +93,7 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
                                                'file.directory_exists': MagicMock(),
                                                'cmd.run': MagicMock(),
                                                'disk.blkid': MagicMock(return_value={})}):
-                with patch('salt.modules.genesis.salt.utils.which', return_value=True):
+                with patch('salt.modules.genesis.salt.utils.path.which', return_value=True):
                     with patch('salt.modules.genesis.salt.utils.validate.path.is_executable',
                                return_value=True):
                         param_set['params'].update(common_parms)
@@ -112,7 +112,7 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Return which platforms are available
         '''
-        with patch('salt.utils.which', MagicMock(return_value=False)):
+        with patch('salt.utils.path.which', MagicMock(return_value=False)):
             self.assertFalse(genesis.avail_platforms()['deb'])
 
     def test_pack(self):

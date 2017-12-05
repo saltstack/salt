@@ -42,7 +42,7 @@ import time
 from functools import cmp_to_key
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
@@ -50,8 +50,14 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.exceptions import (CommandExecutionError,
                              SaltInvocationError,
                              SaltRenderError)
-import salt.utils
+import salt.utils.args
+import salt.utils.data
+import salt.utils.files
+import salt.utils.hashutils
+import salt.utils.path
 import salt.utils.pkg
+import salt.utils.platform
+import salt.utils.versions
 import salt.syspaths
 import salt.payload
 from salt.exceptions import MinionError
@@ -67,7 +73,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return __virtualname__
     return (False, "Module win_pkg: module only works on Windows systems")
 
@@ -108,7 +114,7 @@ def latest_version(*names, **kwargs):
 
     saltenv = kwargs.get('saltenv', 'base')
     # Refresh before looking for the latest version available
-    refresh = salt.utils.is_true(kwargs.get('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.get('refresh', True))
 
     # no need to call _refresh_db_conditional as list_pkgs will do it
     installed_pkgs = list_pkgs(
@@ -146,7 +152,7 @@ def latest_version(*names, **kwargs):
 
             # check, whether latest available version
             # is newer than latest installed version
-            if salt.utils.compare_versions(ver1=str(latest_available),
+            if salt.utils.versions.compare(ver1=str(latest_available),
                                            oper='>',
                                            ver2=str(latest_installed)):
                 log.debug('Upgrade of {0} from {1} to {2} '
@@ -185,7 +191,7 @@ def upgrade_available(name, **kwargs):
     saltenv = kwargs.get('saltenv', 'base')
     # Refresh before looking for the latest version available,
     # same default as latest_version
-    refresh = salt.utils.is_true(kwargs.get('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.get('refresh', True))
 
     current = version(name, saltenv=saltenv, refresh=refresh).get(name)
     latest = latest_version(name, saltenv=saltenv, refresh=False)
@@ -213,7 +219,7 @@ def list_upgrades(refresh=True, **kwargs):
         salt '*' pkg.list_upgrades
     '''
     saltenv = kwargs.get('saltenv', 'base')
-    refresh = salt.utils.is_true(refresh)
+    refresh = salt.utils.data.is_true(refresh)
     _refresh_db_conditional(saltenv, force=refresh)
 
     installed_pkgs = list_pkgs(refresh=False, saltenv=saltenv)
@@ -263,9 +269,9 @@ def list_available(*names, **kwargs):
         return ''
 
     saltenv = kwargs.get('saltenv', 'base')
-    refresh = salt.utils.is_true(kwargs.get('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.get('refresh', True))
     return_dict_always = \
-        salt.utils.is_true(kwargs.get('return_dict_always', False))
+        salt.utils.data.is_true(kwargs.get('return_dict_always', False))
 
     _refresh_db_conditional(saltenv, force=refresh)
     if len(names) == 1 and not return_dict_always:
@@ -355,13 +361,13 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
     saltenv = kwargs.get('saltenv', 'base')
-    refresh = salt.utils.is_true(kwargs.get('refresh', False))
+    refresh = salt.utils.data.is_true(kwargs.get('refresh', False))
     _refresh_db_conditional(saltenv, force=refresh)
 
     ret = {}
@@ -483,8 +489,8 @@ def _refresh_db_conditional(saltenv, **kwargs):
 
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
-    force = salt.utils.is_true(kwargs.pop('force', False))
-    failhard = salt.utils.is_true(kwargs.pop('failhard', False))
+    force = salt.utils.data.is_true(kwargs.pop('force', False))
+    failhard = salt.utils.data.is_true(kwargs.pop('failhard', False))
     expired_max = __opts__['winrepo_cache_expire_max']
     expired_min = __opts__['winrepo_cache_expire_min']
 
@@ -565,8 +571,8 @@ def refresh_db(**kwargs):
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     saltenv = kwargs.pop('saltenv', 'base')
-    verbose = salt.utils.is_true(kwargs.pop('verbose', False))
-    failhard = salt.utils.is_true(kwargs.pop('failhard', True))
+    verbose = salt.utils.data.is_true(kwargs.pop('verbose', False))
+    failhard = salt.utils.data.is_true(kwargs.pop('failhard', True))
     __context__.pop('winrepo.data', None)
     repo_details = _get_repo_details(saltenv)
 
@@ -641,33 +647,10 @@ def _get_repo_details(saltenv):
         # Do some safety checks on the repo_path as its contents can be removed,
         # this includes check for bad coding
         system_root = os.environ.get('SystemRoot', r'C:\Windows')
-        deny_paths = (
-            r'[a-z]\:\\$',  # C:\, D:\, etc
-            r'\\$',  # \
-            re.escape(system_root)  # C:\Windows
-        )
+        if not salt.utils.path.safe_path(
+                path=local_dest,
+                allow_path='\\'.join([system_root, 'TEMP'])):
 
-        # Since the above checks anything in C:\Windows, there are some
-        # directories we may want to make exceptions for
-        allow_paths = (
-            re.escape('\\'.join([system_root, 'TEMP'])),  # C:\Windows\TEMP
-        )
-
-        # Check the local_dest to make sure it's not one of the bad paths
-        good_path = True
-        for d_path in deny_paths:
-            if re.match(d_path, local_dest, flags=re.IGNORECASE) is not None:
-                # Found deny path
-                good_path = False
-
-        # If local_dest is one of the bad paths, check for exceptions
-        if not good_path:
-            for a_path in allow_paths:
-                if re.match(a_path, local_dest, flags=re.IGNORECASE) is not None:
-                    # Found exception
-                    good_path = True
-
-        if not good_path:
             raise CommandExecutionError(
                 'Attempting to delete files from a possibly unsafe location: '
                 '{0}'.format(local_dest)
@@ -737,8 +720,8 @@ def genrepo(**kwargs):
         salt -G 'os:windows' pkg.genrepo saltenv=base
     '''
     saltenv = kwargs.pop('saltenv', 'base')
-    verbose = salt.utils.is_true(kwargs.pop('verbose', False))
-    failhard = salt.utils.is_true(kwargs.pop('failhard', True))
+    verbose = salt.utils.data.is_true(kwargs.pop('verbose', False))
+    failhard = salt.utils.data.is_true(kwargs.pop('failhard', True))
 
     ret = {}
     successful_verbose = {}
@@ -762,7 +745,7 @@ def genrepo(**kwargs):
                     )
     serial = salt.payload.Serial(__opts__)
     mode = 'w+' if six.PY2 else 'wb+'
-    with salt.utils.fopen(repo_details.winrepo_file, mode) as repo_cache:
+    with salt.utils.files.fopen(repo_details.winrepo_file, mode) as repo_cache:
         repo_cache.write(serial.dumps(ret))
     # save reading it back again. ! this breaks due to utf8 issues
     #__context__['winrepo.data'] = ret
@@ -1074,7 +1057,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     ret = {}
     saltenv = kwargs.pop('saltenv', 'base')
 
-    refresh = salt.utils.is_true(refresh)
+    refresh = salt.utils.data.is_true(refresh)
     # no need to call _refresh_db_conditional as list_pkgs will do it
 
     # Make sure name or pkgs is passed
@@ -1246,8 +1229,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             log.debug('Source {0} hash: {1}'.format(source_sum['hash_type'],
                                                     source_sum['hsum']))
 
-            cached_pkg_sum = salt.utils.get_hash(cached_pkg,
-                                                 source_sum['hash_type'])
+            cached_pkg_sum = salt.utils.hashutils.get_hash(cached_pkg,
+                                                           source_sum['hash_type'])
             log.debug('Package {0} hash: {1}'.format(source_sum['hash_type'],
                                                      cached_pkg_sum))
 
@@ -1276,14 +1259,25 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             arguments = ['/i', cached_pkg]
             if pkginfo[version_num].get('allusers', True):
                 arguments.append('ALLUSERS="1"')
-            arguments.extend(salt.utils.shlex_split(install_flags, posix=False))
+            arguments.extend(salt.utils.args.shlex_split(install_flags, posix=False))
         else:
             cmd = cached_pkg
-            arguments = salt.utils.shlex_split(install_flags, posix=False)
+            arguments = salt.utils.args.shlex_split(install_flags, posix=False)
 
         # Install the software
         # Check Use Scheduler Option
         if pkginfo[version_num].get('use_scheduler', False):
+
+            # Build Scheduled Task Parameters
+            if use_msiexec:
+                cmd = msiexec
+                arguments = ['/i', cached_pkg]
+                if pkginfo['version_num'].get('allusers', True):
+                    arguments.append('ALLUSERS="1"')
+                arguments.extend(salt.utils.args.shlex_split(install_flags))
+            else:
+                cmd = cached_pkg
+                arguments = salt.utils.args.shlex_split(install_flags)
 
             # Create Scheduled Task
             __salt__['task.create_task'](name='update-salt-software',
@@ -1373,7 +1367,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 ret[pkg_name] = {'current': new[pkg_name]}
 
     # Check for changes in the registry
-    difference = salt.utils.compare_dicts(old, new)
+    difference = salt.utils.data.compare_dicts(old, new)
 
     # Compare the software list before and after
     # Add the difference to ret
@@ -1403,11 +1397,11 @@ def upgrade(**kwargs):
         salt '*' pkg.upgrade
     '''
     log.warning('pkg.upgrade not implemented on Windows yet')
-    refresh = salt.utils.is_true(kwargs.get('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.get('refresh', True))
     saltenv = kwargs.get('saltenv', 'base')
     # Uncomment the below once pkg.upgrade has been implemented
 
-    # if salt.utils.is_true(refresh):
+    # if salt.utils.data.is_true(refresh):
     #    refresh_db()
     return {}
 
@@ -1456,7 +1450,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
     saltenv = kwargs.get('saltenv', 'base')
-    refresh = salt.utils.is_true(kwargs.get('refresh', False))
+    refresh = salt.utils.data.is_true(kwargs.get('refresh', False))
     # no need to call _refresh_db_conditional as list_pkgs will do it
     ret = {}
 
@@ -1604,15 +1598,14 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             if use_msiexec:
                 cmd = msiexec
                 arguments = ['/x']
-                arguments.extend(salt.utils.shlex_split(uninstall_flags, posix=False))
+                arguments.extend(salt.utils.args.shlex_split(uninstall_flags, posix=False))
             else:
                 cmd = expanded_cached_pkg
-                arguments = salt.utils.shlex_split(uninstall_flags, posix=False)
+                arguments = salt.utils.args.shlex_split(uninstall_flags, posix=False)
 
             # Uninstall the software
             # Check Use Scheduler Option
             if pkginfo[target].get('use_scheduler', False):
-
                 # Create Scheduled Task
                 __salt__['task.create_task'](name='update-salt-software',
                                              user_name='System',
@@ -1657,11 +1650,11 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
     # preparation for the comparison below.
     __salt__['pkg_resource.stringify'](old)
 
-    difference = salt.utils.compare_dicts(old, new)
+    difference = salt.utils.data.compare_dicts(old, new)
     tries = 0
     while not all(name in difference for name in changed) and tries <= 1000:
         new = list_pkgs(saltenv=saltenv)
-        difference = salt.utils.compare_dicts(old, new)
+        difference = salt.utils.data.compare_dicts(old, new)
         tries += 1
         if tries == 1000:
             ret['_comment'] = 'Registry not updated.'
@@ -1748,7 +1741,7 @@ def get_repo_data(saltenv='base'):
 
     try:
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(repo_details.winrepo_file, 'rb') as repofile:
+        with salt.utils.files.fopen(repo_details.winrepo_file, 'rb') as repofile:
             try:
                 repodata = serial.loads(repofile.read()) or {}
                 __context__['winrepo.data'] = repodata
@@ -1822,4 +1815,4 @@ def compare_versions(ver1='', oper='==', ver2=''):
 
         salt '*' pkg.compare_versions 1.2 >= 1.3
     '''
-    return salt.utils.compare_versions(ver1, oper, ver2)
+    return salt.utils.versions.compare(ver1, oper, ver2)

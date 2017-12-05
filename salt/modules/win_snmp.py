@@ -3,14 +3,13 @@
 Module for managing SNMP service settings on Windows servers.
 The Windows feature 'SNMP-Service' must be installed.
 '''
-
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import logging
 
-# Import salt libs
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError
-import salt.utils
 
 # Import 3rd party libs
 from salt.ext import six
@@ -42,7 +41,7 @@ def __virtual__():
     '''
     Only works on Windows systems.
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module win_snmp: Requires Windows'
 
     if not __salt__['reg.read_value'](_HKEY, _SNMP_KEY)['success']:

@@ -14,7 +14,7 @@ Manage ini files
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 __virtualname__ = 'ini'
 

@@ -36,7 +36,7 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTe
 from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
@@ -84,9 +84,9 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             log.debug('Generating {0}'.format(script_path))
 
             # Late import
-            import salt.utils
+            import salt.utils.files
 
-            with salt.utils.fopen(script_path, 'w') as sfh:
+            with salt.utils.files.fopen(script_path, 'w') as sfh:
                 script_template = SCRIPT_TEMPLATES.get(script_name, None)
                 if script_template is None:
                     script_template = SCRIPT_TEMPLATES.get('common', None)
@@ -125,12 +125,13 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_ssh(self, arg_str, with_retcode=False, timeout=25,
-                catch_stderr=False, wipe=False):
+                catch_stderr=False, wipe=False, raw=False):
         '''
         Execute salt-ssh
         '''
-        arg_str = '{0} -c {1} -i --priv {2} --roster-file {3} localhost {4} --out=json'.format(
+        arg_str = '{0} {1} -c {2} -i --priv {3} --roster-file {4} localhost {5} --out=json'.format(
             ' -W' if wipe else '',
+            ' -r' if raw else '',
             self.get_config_dir(),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
@@ -374,7 +375,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 try:
                     if os.path.exists(tmp_file.name):
-                        if isinstance(tmp_file.name, str):
+                        if isinstance(tmp_file.name, six.string_types):
                             # tmp_file.name is an int when using SpooledTemporaryFiles
                             # int types cannot be used with os.remove() in Python 3
                             os.remove(tmp_file.name)
@@ -406,7 +407,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             try:
                 if os.path.exists(tmp_file.name):
-                    if isinstance(tmp_file.name, str):
+                    if isinstance(tmp_file.name, six.string_types):
                         # tmp_file.name is an int when using SpooledTemporaryFiles
                         # int types cannot be used with os.remove() in Python 3
                         os.remove(tmp_file.name)
@@ -456,12 +457,13 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                timeout=timeout)
 
     def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,
-                timeout=60, wipe=True):  # pylint: disable=W0221
+                timeout=60, wipe=True, raw=False):  # pylint: disable=W0221
         '''
         Execute salt-ssh
         '''
-        arg_str = '-ldebug{0} -c {1} -i --priv {2} --roster-file {3} --out=json localhost {4}'.format(
+        arg_str = '{0} -ldebug{1} -c {2} -i --priv {3} --roster-file {4} --out=json localhost {5}'.format(
             ' -W' if wipe else '',
+            ' -r' if raw else '',
             self.get_config_dir(),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
@@ -603,16 +605,17 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
         for f_dir in dirs:
             os.makedirs(f_dir)
 
-        import salt.utils
+        # Late import
+        import salt.utils.files
 
-        with salt.utils.fopen(self.formula_sls, 'w') as fp:
+        with salt.utils.files.fopen(self.formula_sls, 'w') as fp:
             fp.write(textwrap.dedent('''\
                      install-apache:
                        pkg.installed:
                          - name: apache2
                      '''))
 
-        with salt.utils.fopen(self.formula_file, 'w') as fp:
+        with salt.utils.files.fopen(self.formula_file, 'w') as fp:
             fp.write(textwrap.dedent('''\
                      name: apache
                      os: RedHat, Debian, Ubuntu, Suse, FreeBSD
@@ -659,9 +662,10 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
         repo_conf_dir = self.config['spm_repos_config'] + '.d'
         os.makedirs(repo_conf_dir)
 
-        import salt.utils
+        # Late import
+        import salt.utils.files
 
-        with salt.utils.fopen(os.path.join(repo_conf_dir, 'spm.repo'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(repo_conf_dir, 'spm.repo'), 'w') as fp:
             fp.write(textwrap.dedent('''\
                      local_repo:
                        url: file://{0}
@@ -699,7 +703,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         behavior of the raw function call
         '''
         know_to_return_none = (
-            'file.chown', 'file.chgrp', 'ssh.recv_known_host'
+            'file.chown', 'file.chgrp', 'ssh.recv_known_host_entries'
         )
         if 'f_arg' in kwargs:
             kwargs['arg'] = kwargs.pop('f_arg')
@@ -801,12 +805,12 @@ class SSHCase(ShellCase):
     def _arg_str(self, function, arg):
         return '{0} {1}'.format(function, ' '.join(arg))
 
-    def run_function(self, function, arg=(), timeout=90, wipe=True, **kwargs):
+    def run_function(self, function, arg=(), timeout=90, wipe=True, raw=False, **kwargs):
         '''
         We use a 90s timeout here, which some slower systems do end up needing
         '''
         ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout,
-                           wipe=wipe)
+                           wipe=wipe, raw=raw)
         try:
             return json.loads(ret)['localhost']
         except Exception:

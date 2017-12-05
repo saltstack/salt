@@ -37,8 +37,7 @@ Current known limitations
   - struct
   - salt.modules.reg
 '''
-
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 from __future__ import unicode_literals
 import io
@@ -49,14 +48,15 @@ import locale
 import ctypes
 import time
 
-# Import salt libs
-import salt.utils
-from salt.exceptions import CommandExecutionError
-from salt.exceptions import SaltInvocationError
+# Import Salt libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.dictupdate as dictupdate
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.stringutils
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -2666,7 +2666,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows() and HAS_WINDOWS_MODULES:
+    if salt.utils.platform.is_windows() and HAS_WINDOWS_MODULES:
         return __virtualname__
     return False
 
@@ -2713,7 +2713,7 @@ def _remove_unicode_encoding(xml_file):
     as lxml does not support that on a windows node currently
     see issue #38100
     '''
-    with salt.utils.fopen(xml_file, 'rb') as f:
+    with salt.utils.files.fopen(xml_file, 'rb') as f:
         xml_content = f.read()
     modified_xml = re.sub(r' encoding=[\'"]+unicode[\'"]+', '', xml_content.decode('utf-16'), count=1)
     xmltree = lxml.etree.parse(six.StringIO(modified_xml))
@@ -4032,7 +4032,7 @@ def _read_regpol_file(reg_pol_path):
     '''
     returndata = None
     if os.path.exists(reg_pol_path):
-        with salt.utils.fopen(reg_pol_path, 'rb') as pol_file:
+        with salt.utils.files.fopen(reg_pol_path, 'rb') as pol_file:
             returndata = pol_file.read()
         returndata = returndata.decode('utf-16-le')
     return returndata
@@ -4079,15 +4079,15 @@ def _write_regpol_data(data_to_write,
         reg_pol_header = u'\u5250\u6765\x01\x00'
         if not os.path.exists(policy_file_path):
             ret = __salt__['file.makedirs'](policy_file_path)
-        with salt.utils.fopen(policy_file_path, 'wb') as pol_file:
+        with salt.utils.files.fopen(policy_file_path, 'wb') as pol_file:
             if not data_to_write.startswith(reg_pol_header):
                 pol_file.write(reg_pol_header.encode('utf-16-le'))
             pol_file.write(data_to_write.encode('utf-16-le'))
         try:
             gpt_ini_data = ''
             if os.path.exists(gpt_ini_path):
-                with salt.utils.fopen(gpt_ini_path, 'rb') as gpt_file:
-                    gpt_ini_data = salt.utils.to_str(gpt_file.read())
+                with salt.utils.files.fopen(gpt_ini_path, 'rb') as gpt_file:
+                    gpt_ini_data = salt.utils.stringutils.to_str(gpt_file.read())
             if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
                 gpt_ini_data = '[General]\r\n' + gpt_ini_data
             if _regexSearchRegPolData(r'{0}='.format(re.escape(gpt_extension)), gpt_ini_data):
@@ -4141,8 +4141,8 @@ def _write_regpol_data(data_to_write,
                         int("{0}{1}".format(str(version_nums[0]).zfill(4), str(version_nums[1]).zfill(4)), 16),
                         gpt_ini_data[general_location.end():])
             if gpt_ini_data:
-                with salt.utils.fopen(gpt_ini_path, 'wb') as gpt_file:
-                    gpt_file.write(salt.utils.to_bytes(gpt_ini_data))
+                with salt.utils.files.fopen(gpt_ini_path, 'wb') as gpt_file:
+                    gpt_file.write(salt.utils.stringutils.to_bytes(gpt_ini_data))
         except Exception as e:
             msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
                     gpt_ini_path, e)

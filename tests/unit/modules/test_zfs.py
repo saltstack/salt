@@ -340,7 +340,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests zfs bookmark success
         '''
-        with patch('salt.utils.which', MagicMock(return_value='/usr/bin/man')):
+        with patch('salt.utils.path.which', MagicMock(return_value='/usr/bin/man')):
             res = {'myzpool/mydataset@yesterday': 'bookmarked as myzpool/mydataset#important'}
             ret = {'pid': 20990, 'retcode': 0, 'stderr': '', 'stdout': ''}
             mock_cmd = MagicMock(return_value=ret)

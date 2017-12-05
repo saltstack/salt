@@ -82,11 +82,12 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-from salt.utils import namespaced_function
-import salt.ext.six as six
+from salt.utils.functools import namespaced_function
+from salt.ext import six
 import salt.utils.cloud
+import salt.utils.files
+import salt.utils.http
 import salt.config as config
-from salt.utils import http
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
     SaltCloudSystemExit,
@@ -2079,6 +2080,7 @@ def attach_disk(name=None, kwargs=None, call=None):
     disk_name = kwargs['disk_name']
     mode = kwargs.get('mode', 'READ_WRITE').upper()
     boot = kwargs.get('boot', False)
+    auto_delete = kwargs.get('auto_delete', False)
     if boot and boot.lower() in ['true', 'yes', 'enabled']:
         boot = True
     else:
@@ -2108,7 +2110,8 @@ def attach_disk(name=None, kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    result = conn.attach_volume(node, disk, ex_mode=mode, ex_boot=boot)
+    result = conn.attach_volume(node, disk, ex_mode=mode, ex_boot=boot,
+                                ex_auto_delete=auto_delete)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -2388,6 +2391,8 @@ def create_attach_volumes(name, kwargs, call=None):
     'type': The disk type, either pd-standard or pd-ssd. Optional, defaults to pd-standard.
     'image': An image to use for this new disk. Optional.
     'snapshot': A snapshot to use for this new disk. Optional.
+    'auto_delete': An option(bool) to keep or remove the disk upon
+                   instance deletion. Optional, defaults to False.
 
     Volumes are attached in the order in which they are given, thus on a new
     node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
@@ -2415,7 +2420,8 @@ def create_attach_volumes(name, kwargs, call=None):
           'size': volume['size'],
           'type': volume.get('type', 'pd-standard'),
           'image': volume.get('image', None),
-          'snapshot': volume.get('snapshot', None)
+          'snapshot': volume.get('snapshot', None),
+          'auto_delete': volume.get('auto_delete', False)
         }
 
         create_disk(volume_dict, 'function')
@@ -2618,12 +2624,12 @@ def update_pricing(kwargs=None, call=None):
     .. versionadded:: 2015.8.0
     '''
     url = 'https://cloudpricingcalculator.appspot.com/static/data/pricelist.json'
-    price_json = http.query(url, decode=True, decode_type='json')
+    price_json = salt.utils.http.query(url, decode=True, decode_type='json')
 
     outfile = os.path.join(
         __opts__['cachedir'], 'gce-pricing.p'
     )
-    with salt.utils.fopen(outfile, 'w') as fho:
+    with salt.utils.files.fopen(outfile, 'w') as fho:
         msgpack.dump(price_json['dict'], fho)
 
     return True
@@ -2646,7 +2652,7 @@ def show_pricing(kwargs=None, call=None):
     if not profile:
         return {'Error': 'The requested profile was not found'}
 
-    # Make sure the profile belongs to Digital Ocean
+    # Make sure the profile belongs to DigitalOcean
     provider = profile.get('provider', '0:0')
     comps = provider.split(':')
     if len(comps) < 2 or comps[1] != 'gce':
@@ -2662,7 +2668,7 @@ def show_pricing(kwargs=None, call=None):
     if not os.path.exists(pricefile):
         update_pricing()
 
-    with salt.utils.fopen(pricefile, 'r') as fho:
+    with salt.utils.files.fopen(pricefile, 'r') as fho:
         sizes = msgpack.load(fho)
 
     per_hour = float(sizes['gcp_price_list'][size][region])

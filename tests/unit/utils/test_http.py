@@ -11,7 +11,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-from salt.utils import http
+import salt.utils.http as http
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

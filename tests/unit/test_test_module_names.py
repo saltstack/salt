@@ -6,6 +6,7 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import fnmatch
 import os
 
 # Import Salt Testing libs
@@ -22,6 +23,10 @@ EXCLUDED_DIRS = [
     os.path.join('tests', 'unit', 'templates', 'files'),
     os.path.join('tests', 'integration', 'files'),
     os.path.join('tests', 'integration', 'cloud', 'helpers'),
+    os.path.join('tests', 'kitchen', 'tests'),
+]
+INCLUDED_DIRS = [
+    os.path.join('tests', 'kitchen', 'tests', '*', 'tests', '*'),
 ]
 EXCLUDED_FILES = [
     os.path.join('tests', 'eventlisten.py'),
@@ -50,16 +55,20 @@ class BadTestModuleNamesTestCase(TestCase):
 
     maxDiff = None
 
+    def _match_dirs(self, reldir, matchdirs):
+        return any(fnmatch.fnmatchcase(reldir, mdir) for mdir in matchdirs)
+
     def test_module_name(self):
         '''
         Make sure all test modules conform to the test_*.py naming scheme
         '''
-        excluded_dirs = tuple(EXCLUDED_DIRS)
+        excluded_dirs, included_dirs = tuple(EXCLUDED_DIRS), tuple(INCLUDED_DIRS)
         tests_dir = os.path.join(CODE_DIR, 'tests')
         bad_names = []
         for root, dirs, files in os.walk(tests_dir):
             reldir = os.path.relpath(root, CODE_DIR)
-            if reldir.startswith(excluded_dirs) or reldir.endswith('__pycache__'):
+            if (reldir.startswith(excluded_dirs) and not self._match_dirs(reldir, included_dirs)) \
+                    or reldir.endswith('__pycache__'):
                 continue
             for fname in files:
                 if fname == '__init__.py' or not fname.endswith('.py'):

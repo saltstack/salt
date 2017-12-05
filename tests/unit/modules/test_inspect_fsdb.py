@@ -30,7 +30,7 @@ from salt.modules.inspectlib.fsdb import CsvDB
 from salt.modules.inspectlib.entities import CsvDBEntity
 from salt.utils.odict import OrderedDict
 
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO
 
 

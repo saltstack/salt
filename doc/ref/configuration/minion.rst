@@ -133,6 +133,24 @@ name) is set in the :conf_minion:`master` configuration setting.
 
     master_uri_format: ip_only
 
+.. conf_minion:: master_tops_first
+
+``master_tops_first``
+---------------------
+
+.. versionadded:: Oxygen
+
+Default: ``False``
+
+SLS targets defined using the :ref:`Master Tops <master-tops-system>` system
+are normally executed *after* any matches defined in the :ref:`Top File
+<states-top>`. Set this option to ``True`` to have the minion execute the
+:ref:`Master Tops <master-tops-system>` states first.
+
+.. code-block:: yaml
+
+    master_tops_first: True
+
 .. conf_minion:: master_type
 
 ``master_type``
@@ -447,6 +465,20 @@ FQDN (for instance, Solaris).
 .. code-block:: yaml
 
     append_domain: foo.org
+
+.. conf_minion:: minion_id_lowercase
+
+``minion_id_lowercase``
+-----------------------
+
+Default: ``False``
+
+Convert minion id to lowercase when it is being generated. Helpful when some hosts
+get the minion id in uppercase. Cached ids will remain the same and not converted.
+
+.. code-block:: yaml
+
+    minion_id_lowercase: True
 
 .. conf_minion:: cachedir
 
@@ -1632,14 +1664,18 @@ output for states that failed or states that have changes.
 
 Default: ``full``
 
-The state_output setting changes if the output is the full multi line
-output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.
+The state_output setting controls which results will be output full multi line:
+
+* ``full``, ``terse`` - each state will be full/terse
+* ``mixed`` - only states with errors will be full
+* ``changes`` - states with changes and errors will be full
+
+``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
+when set, the state ID will be used as name in the output.
 
 .. code-block:: yaml
 
     state_output: full
-
 
 .. conf_minion:: state_output_diff
 
@@ -1689,9 +1725,15 @@ enabled and can be disabled by changing this value to ``False``.
     If ``extmod_whitelist`` is specified, modules which are not whitelisted will also be cleaned here.
 
 .. conf_minion:: environment
+.. conf_minion:: saltenv
 
-``environment``
----------------
+``saltenv``
+-----------
+
+.. versionchanged:: Oxygen
+    Renamed from ``environment`` to ``saltenv``. If ``environment`` is used,
+    ``saltenv`` will take its value. If both are used, ``environment`` will be
+    ignored and ``saltenv`` will be used.
 
 Normally the minion is not isolated to any single environment on the master
 when running states, but the environment can be isolated on the minion side
@@ -1700,7 +1742,25 @@ environments is to isolate via the top file.
 
 .. code-block:: yaml
 
-    environment: dev
+    saltenv: dev
+
+.. conf_minion:: lock_saltenv
+
+``lock_saltenv``
+----------------
+
+.. versionadded:: Oxygen
+
+Default: ``False``
+
+For purposes of running states, this option prevents using the ``saltenv``
+argument to manually set the environment. This is useful to keep a minion which
+has the :conf_minion:`saltenv` option set to ``dev`` from running states from
+an environment other than ``dev``.
+
+.. code-block:: yaml
+
+    lock_saltenv: True
 
 .. conf_minion:: snapper_states
 
@@ -2081,6 +2141,41 @@ It will be interpreted as megabytes.
 
     file_recv_max_size: 100
 
+.. conf_minion:: pass_to_ext_pillars
+
+``pass_to_ext_pillars``
+-----------------------
+
+Specify a list of configuration keys whose values are to be passed to
+external pillar functions.
+
+Suboptions can be specified using the ':' notation (i.e. ``option:suboption``)
+
+The values are merged and included in the ``extra_minion_data`` optional
+parameter of the external pillar function.  The ``extra_minion_data`` parameter
+is passed only to the external pillar functions that have it explicitly
+specified in their definition.
+
+If the config contains
+
+.. code-block:: yaml
+
+    opt1: value1
+    opt2:
+      subopt1: value2
+      subopt2: value3
+
+    pass_to_ext_pillars:
+      - opt1
+      - opt2: subopt1
+
+the ``extra_minion_data`` parameter will be
+
+.. code-block:: python
+
+    {'opt1': 'value1',
+     'opt2': {'subopt1': 'value2'}}
+
 Security Settings
 =================
 
@@ -2316,6 +2411,7 @@ Default: ``10``
 The number of workers for the runner/wheel in the reactor.
 
 .. code-block:: yaml
+
     reactor_worker_threads: 10
 
 .. conf_minion:: reactor_worker_hwm
@@ -2352,6 +2448,23 @@ executed in a thread.
 
     multiprocessing: True
 
+.. conf_minion:: process_count_max
+
+``process_count_max``
+-------
+
+.. versionadded:: Oxygen
+
+Default: ``-1``
+
+Limit the maximum amount of processes or threads created by ``salt-minion``.
+This is useful to avoid resource exhaustion in case the minion receives more
+publications than it is able to handle, as it limits the number of spawned
+processes or threads. ``-1`` is the default and disables the limit.
+
+.. code-block:: yaml
+
+    process_count_max: -1
 
 .. _minion-logging-settings:
 

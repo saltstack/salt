@@ -21,13 +21,15 @@ import re
 import string
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.files
 import salt.utils.url
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -572,11 +574,11 @@ def latest(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not remote:
@@ -1621,7 +1623,7 @@ def latest(name,
                 for target_object in target_contents:
                     target_path = os.path.join(target, target_object)
                     try:
-                        salt.utils.rm_rf(target_path)
+                        salt.utils.files.rm_rf(target_path)
                     except OSError as exc:
                         if exc.errno != errno.ENOENT:
                             removal_errors[target_path] = exc
@@ -1974,7 +1976,7 @@ def present(name,
                 if os.path.islink(name):
                     os.unlink(name)
                 else:
-                    salt.utils.rm_rf(name)
+                    salt.utils.files.rm_rf(name)
             except OSError as exc:
                 return _fail(
                     ret,
@@ -2131,11 +2133,11 @@ def detached(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     ref = kwargs.pop('ref', None)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if ref is not None:
@@ -2145,7 +2147,7 @@ def detached(name,
             'consistency. Please update your SLS to reflect this.'
         )
         ret.setdefault('warnings', []).append(deprecation_msg)
-        salt.utils.warn_until('Fluorine', deprecation_msg)
+        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
 
     if not rev:
         return _fail(
@@ -2328,7 +2330,7 @@ def detached(name,
                     if os.path.islink(target):
                         os.unlink(target)
                     else:
-                        salt.utils.rm_rf(target)
+                        salt.utils.files.rm_rf(target)
                 except OSError as exc:
                     return _fail(
                         ret,
@@ -2625,13 +2627,13 @@ def config_unset(name,
     # allows us to accept 'global' as an argument to this function without
     # shadowing global(), while also not allowing unwanted arguments to be
     # passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     all_ = kwargs.pop('all', False)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not global_ and not repo:
@@ -2876,12 +2878,12 @@ def config_set(name,
     # allows us to accept 'global' as an argument to this function without
     # shadowing global(), while also not allowing unwanted arguments to be
     # passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not global_ and not repo:
@@ -3000,13 +3002,13 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     cmd_kwargs['python_shell'] = True
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            return {'comment': 'onlyif execution failed',
+            return {'comment': 'onlyif condition is false',
                     'skip_watch': True,
                     'result': True}
 
     if unless:
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless execution succeeded',
+            return {'comment': 'unless condition is true',
                     'skip_watch': True,
                     'result': True}
 

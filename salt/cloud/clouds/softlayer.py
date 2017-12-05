@@ -35,6 +35,9 @@ import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 
+# Import 3rd-party libs
+from salt.ext import six
+
 # Attempt to import softlayer lib
 try:
     import SoftLayer
@@ -297,7 +300,7 @@ def create(vm_):
 
         if isinstance(disks, int):
             disks = [str(disks)]
-        elif isinstance(disks, str):
+        elif isinstance(disks, six.string_types):
             disks = [size.strip() for size in disks.split(',')]
 
         count = 0
@@ -367,6 +370,12 @@ def create(vm_):
     )
     if post_uri:
         kwargs['postInstallScriptUri'] = post_uri
+
+    dedicated_host_id = config.get_cloud_config_value(
+        'dedicated_host_id', vm_, __opts__, default=None
+    )
+    if dedicated_host_id:
+        kwargs['dedicatedHost'] = {'id': dedicated_host_id}
 
     __utils__['cloud.fire_event'](
         'event',

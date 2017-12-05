@@ -29,8 +29,8 @@ overriding the one in ``roster_defaults``:
 
 .. code-block:: yaml
 
-roster_order:
-    host: id          # use the minion id as hostname
+    roster_order:
+        host: id          # use the minion id as hostname
 
 
 You can define lists of parameters as well, the first result from the list will become the value.
@@ -41,14 +41,14 @@ Selecting a host
 
 .. code-block:: yaml
 
-# default
-roster_order:
-    host:
-      - ipv6-private  # IPv6 addresses in private ranges
-      - ipv6-global   # IPv6 addresses in global ranges
-      - ipv4-private  # IPv4 addresses in private ranges
-      - ipv4-public   # IPv4 addresses in public ranges
-      - ipv4-local    # loopback addresses
+    # default
+    roster_order:
+        host:
+          - ipv6-private  # IPv6 addresses in private ranges
+          - ipv6-global   # IPv6 addresses in global ranges
+          - ipv4-private  # IPv4 addresses in private ranges
+          - ipv4-public   # IPv4 addresses in public ranges
+          - ipv4-local    # loopback addresses
 
 
 This is the default ``roster_order``.
@@ -59,10 +59,10 @@ Other address selection parameters are also possible:
 
 .. code-block:: yaml
 
-roster_order:
-  host:
-    - global|public|private|local    # Both IPv6 and IPv4 addresses in that range
-    - 2000::/3                       # CIDR networks, both IPv4 and IPv6 are supported
+    roster_order:
+      host:
+        - global|public|private|local    # Both IPv6 and IPv4 addresses in that range
+        - 2000::/3                       # CIDR networks, both IPv4 and IPv6 are supported
 
 
 Using cached data
@@ -76,21 +76,21 @@ This should be especially useful for the other roster keys:
 
 .. code-block:: yaml
 
-roster_order:
-  host:
-    - grain: fqdn_ip4                # Lookup this grain
-    - mine: network.ip_addrs         # Mine data lookup works the same
+    roster_order:
+      host:
+        - grain: fqdn_ip4                # Lookup this grain
+        - mine: network.ip_addrs         # Mine data lookup works the same
 
-  password: sdb://vault/ssh_pass     # Salt SDB URLs are also supported
+      password: sdb://vault/ssh_pass     # Salt SDB URLs are also supported
 
-  user:
-    - pillar: ssh:auth:user          # Lookup this pillar key
-    - sdb://osenv/USER               # Lookup this env var through sdb
+      user:
+        - pillar: ssh:auth:user          # Lookup this pillar key
+        - sdb://osenv/USER               # Lookup this env var through sdb
 
-  priv:
-    - pillar:                        # Lists are also supported
-        - salt:ssh:private_key
-        - ssh:auth:private_key
+      priv:
+        - pillar:                        # Lists are also supported
+            - salt:ssh:private_key
+            - ssh:auth:private_key
 
 '''
 from __future__ import absolute_import
@@ -101,10 +101,12 @@ import re
 import copy
 
 # Salt libs
+import salt.utils.data
 import salt.utils.minions
+import salt.utils.versions
 import salt.cache
 from salt._compat import ipaddress
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -117,7 +119,8 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     The resulting roster can be configured using ``roster_order`` and ``roster_default``.
     '''
     minions = salt.utils.minions.CkMinions(__opts__)
-    minions = minions.check_minions(tgt, tgt_type)
+    _res = minions.check_minions(tgt, tgt_type)
+    minions = _res['minions']
 
     ret = {}
     if not minions:
@@ -130,17 +133,21 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         'host': ('ipv6-private', 'ipv6-global', 'ipv4-private', 'ipv4-public')
     })
     if isinstance(roster_order, (tuple, list)):
-        salt.utils.warn_until('Fluorine',
-                              'Using legacy syntax for roster_order')
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Using legacy syntax for roster_order'
+        )
         roster_order = {
             'host': roster_order
         }
     for config_key, order in roster_order.items():
         for idx, key in enumerate(order):
             if key in ('public', 'private', 'local'):
-                salt.utils.warn_until('Fluorine',
-                                      'roster_order {0} will include IPv6 soon. '
-                                      'Set order to ipv4-{0} if needed.'.format(key))
+                salt.utils.versions.warn_until(
+                    'Fluorine',
+                    'roster_order {0} will include IPv6 soon. '
+                    'Set order to ipv4-{0} if needed.'.format(key)
+                )
                 order[idx] = 'ipv4-' + key
 
     # log.debug(roster_order)
@@ -203,7 +210,7 @@ def _data_lookup(ref, lookup):
 
     res = []
     for data_key in lookup:
-        data = salt.utils.traverse_dict_and_list(ref, data_key, None)
+        data = salt.utils.data.traverse_dict_and_list(ref, data_key, None)
         # log.debug('Fetched {0} in {1}: {2}'.format(data_key, ref, data))
         if data:
             res.append(data)

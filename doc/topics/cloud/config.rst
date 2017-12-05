@@ -56,6 +56,24 @@ settings can be placed in the provider or profile:
         sls_list:
           - web
 
+
+When salt cloud creates a new minon, it can automatically add grain information
+to the minion configuration file identifying the sources originally used
+to define it.
+
+The generated grain information will appear similar to:
+
+.. code-block:: yaml
+
+    grains:
+      salt-cloud:
+        driver: ec2
+        provider: my_ec2:ec2
+        profile: ec2-web
+
+The generation of the salt-cloud grain can be surpressed by the
+option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
+
 Cloud Configuration Syntax
 ==========================
 
@@ -426,7 +444,7 @@ under the API Access tab.
 .. code-block:: yaml
 
     my-digitalocean-config:
-      driver: digital_ocean
+      driver: digitalocean
       personal_access_token: xxx
       location: New York 1
 
@@ -521,6 +539,17 @@ machine, virtual or bare metal, using SSH. This driver is useful for provisionin
 machines which are already installed, but not Salted. For more information about using
 this driver and for configuration examples, please see the
 :ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
+
+.. _config_vagrant:
+
+Vagrant
+-------
+
+The Vagrant driver is a new, experimental driver for controlling a VagrantBox
+virtual machine, and installing Salt on it. The target host machine must be a
+working salt minion, which is controlled via the salt master using salt-api.
+For more information, see
+:ref:`Getting Started With Vagrant <getting-started-with-vagrant>`.
 
 
 Extending Profiles and Cloud Providers Configuration
