@@ -4,6 +4,191 @@ Openstack Cloud Driver
 ======================
 
 :depends: [shade](https://pypi.python.org/pypi/shade)
+
+OpenStack is an open source project that is in use by a number a cloud
+providers, each of which have their own ways of using it.
+
+This OpenStack driver uses a the shade python module which is managed by the
+OpenStack Infra team.  This module is written to handle all the different
+versions of different OpenStack tools for salt, so most commands are just passed
+over to the module to handle everything.
+
+Provider
+--------
+
+There are two ways to configure providers for this driver.  The first one is to
+just let shade handle everything, and configure using os-client-config_ and
+setting up `/etc/openstack/clouds.yml`.
+
+.. code-block:: yaml
+    clouds:
+      democloud:
+        region_name: RegionOne
+        auth:
+          username: 'demo'
+          password: secret
+          project_name: 'demo'
+          auth_url: 'http://openstack/identity'
+
+And then this can be referenced in the salt provider based on the `democloud`
+name.
+
+.. code-block:: yaml
+
+    myopenstack:
+      driver: openstack
+      cloud: democloud
+      region_name: RegionOne
+
+This allows for just using one configuration for salt-cloud and for any other
+openstack tools which are all using `/etc/openstack/clouds.yml`
+
+The other method allows for specifying everything in the provider config,
+instead of using the extra configuration file.  This will allow for passing
+salt-cloud configs only through pillars for minions without having to write a
+clouds.yml file on each minion.abs
+
+.. code-block:: yaml
+
+    myopenstack:
+      driver: openstack
+      region_name: RegionOne
+      auth:
+        username: 'demo'
+        password: secret
+        project_name: 'demo'
+        auth_url: 'http://openstack/identity'
+
+Or if you need to use a profile to setup some extra stuff, it can be passed as a
+`profile` to use any of the vendor_ config options.
+
+.. code-block:: yaml
+
+    myrackspace:
+      driver: openstack
+      profile: rackspace
+      auth:
+        username: rackusername
+        api_key: myapikey
+      region_name: ORD
+
+And this will pull in the profile for rackspace and setup all the correct
+options for the auth_url and different api versions for services.
+
+
+Profile
+-------
+
+Most of the options for building servers are just passed on to the
+create_server_ function from shade.
+
+The salt specific ones are:
+
+  - ssh_key_file: The path to the ssh key that should be used to login to the machine to bootstrap it
+  - userdata_template: The renderer to use if the userdata is a file that is templated. Default: False
+  - ssh_interface: The interface to use to login for bootstrapping: public_ips, private_ips, floating_ips, fixed_ips
+
+.. code-block:: yaml
+
+    centos:
+      provider: myopenstack
+      image: CentOS 7
+      size: ds1G
+      key_name: mykey
+      ssh_key_file: /root/.ssh/id_rsa
+
+This is the minimum setup required.
+
+Anything else from the create_server_ docs can be passed through here.
+
+    :param image: Image dict, name or ID to boot with. image is required
+                  unless boot_volume is given.
+    :param flavor: Flavor dict, name or ID to boot onto.
+    :param auto_ip: Whether to take actions to find a routable IP for
+                    the server. (defaults to True)
+    :param ips: List of IPs to attach to the server (defaults to None)
+    :param ip_pool: Name of the network or floating IP pool to get an
+                    address from. (defaults to None)
+    :param root_volume: Name or ID of a volume to boot from
+                        (defaults to None - deprecated, use boot_volume)
+    :param boot_volume: Name or ID of a volume to boot from
+                        (defaults to None)
+    :param terminate_volume: If booting from a volume, whether it should
+                             be deleted when the server is destroyed.
+                             (defaults to False)
+    :param volumes: (optional) A list of volumes to attach to the server
+    :param meta: (optional) A dict of arbitrary key/value metadata to
+                 store for this server. Both keys and values must be
+                 <=255 characters.
+    :param files: (optional, deprecated) A dict of files to overwrite
+                  on the server upon boot. Keys are file names (i.e.
+                  ``/etc/passwd``) and values
+                  are the file contents (either as a string or as a
+                  file-like object). A maximum of five entries is allowed,
+                  and each file must be 10k or less.
+    :param reservation_id: a UUID for the set of servers being requested.
+    :param min_count: (optional extension) The minimum number of
+                      servers to launch.
+    :param max_count: (optional extension) The maximum number of
+                      servers to launch.
+    :param security_groups: A list of security group names
+    :param userdata: user data to pass to be exposed by the metadata
+                  server this can be a file type object as well or a
+                  string.
+    :param key_name: (optional extension) name of previously created
+                  keypair to inject into the instance.
+    :param availability_zone: Name of the availability zone for instance
+                              placement.
+    :param block_device_mapping: (optional) A dict of block
+                  device mappings for this server.
+    :param block_device_mapping_v2: (optional) A dict of block
+                  device mappings for this server.
+    :param nics:  (optional extension) an ordered list of nics to be
+                  added to this server, with information about
+                  connected networks, fixed IPs, port etc.
+    :param scheduler_hints: (optional extension) arbitrary key-value pairs
+                        specified by the client to help boot an instance
+    :param config_drive: (optional extension) value for config drive
+                        either boolean, or volume-id
+    :param disk_config: (optional extension) control how the disk is
+                        partitioned when the server is created.  possible
+                        values are 'AUTO' or 'MANUAL'.
+    :param admin_pass: (optional extension) add a user supplied admin
+                       password.
+    :param timeout: (optional) Seconds to wait, defaults to 60.
+                    See the ``wait`` parameter.
+    :param reuse_ips: (optional) Whether to attempt to reuse pre-existing
+                                 floating ips should a floating IP be
+                                 needed (defaults to True)
+    :param network: (optional) Network dict or name or ID to attach the
+                    server to.  Mutually exclusive with the nics parameter.
+                    Can also be be a list of network names or IDs or
+                    network dicts.
+    :param boot_from_volume: Whether to boot from volume. 'boot_volume'
+                             implies True, but boot_from_volume=True with
+                             no boot_volume is valid and will create a
+                             volume from the image and use that.
+    :param volume_size: When booting an image from volume, how big should
+                        the created volume be? Defaults to 50.
+    :param nat_destination: Which network should a created floating IP
+                            be attached to, if it's not possible to
+                            infer from the cloud's configuration.
+                            (Optional, defaults to None)
+    :param group: ServerGroup dict, name or id to boot the server in.
+                  If a group is provided in both scheduler_hints and in
+                  the group param, the group param will win.
+                  (Optional, defaults to None)
+
+
+.. note::
+
+    If there is anything added, that is not in this list, it can be added to an `extras`
+    dictionary for the profile, and that will be to the create_server function.
+
+
+.. _create_server: https://docs.openstack.org/shade/latest/user/usage.html#shade.OpenStackCloud.create_server
+.. _vendor: https://docs.openstack.org/os-client-config/latest/user/vendor-support.html
+.. _os-client-config: https://docs.openstack.org/os-client-config/latest/user/configuration.html#config-files
 '''
 from __future__ import absolute_import
 
@@ -421,19 +606,20 @@ def request_instance(vm_):
     __utils__['cloud.check_name'](vm_['name'], 'a-zA-Z0-9._-')
     if conn is None:
         conn = get_conn()
-    userdata_file = config.get_cloud_config_value(
-        'userdata_file', vm_, __opts__, search_global=False, default=None
+    userdata = config.get_cloud_config_value(
+        'userdata', vm_, __opts__, search_global=False, default=None
     )
-    if userdata_file is not None:
+    if userdata is not None and os.path.isfile(userdata):
         try:
-            with __utils__['files.fopen'](userdata_file, 'r') as fp_:
+            with __utils__['files.fopen'](userdata, 'r') as fp_:
                 kwargs['userdata'] = __utils__['cloud.userdata_template'](
                     __opts__, vm_, fp_.read()
                 )
         except Exception as exc:
             log.exception(
                 'Failed to read userdata from %s: %s', userdata_file, exc)
-    kwargs['flavor'] = kwargs.pop('size')
+    if 'size' in kwargs:
+        kwargs['flavor'] = kwargs.pop('size')
     kwargs['wait'] = True
     try:
         conn.create_server(**_clean_create_kwargs(**kwargs))
