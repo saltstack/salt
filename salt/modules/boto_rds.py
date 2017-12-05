@@ -115,7 +115,7 @@ boto3_param_map = {
     'publicly_accessible': ('PubliclyAccessible', bool),
     'storage_encrypted': ('StorageEncrypted', bool),
     'storage_type': ('StorageType', str),
-    'taglist': ('Tags', list),
+    'tags': ('Tags', list),
     'tde_credential_arn': ('TdeCredentialArn', str),
     'tde_credential_password': ('TdeCredentialPassword', str),
     'vpc_security_group_ids': ('VpcSecurityGroupIds', list),
@@ -276,13 +276,13 @@ def create(name, allocated_storage, db_instance_class, engine,
         kwargs = {}
         boto_params = set(boto3_param_map.keys())
         keys = set(locals().keys())
+        tags = _tag_doc(tags)
+
         for param_key in keys.intersection(boto_params):
             val = locals()[param_key]
             if val is not None:
                 mapped = boto3_param_map[param_key]
                 kwargs[mapped[0]] = mapped[1](val)
-
-        taglist = _tag_doc(tags)
 
         # Validation doesn't want parameters that are None
         # https://github.com/boto/boto3/issues/400
