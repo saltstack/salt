@@ -56,14 +56,20 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
                     'metadata': audit_data
                   }
 
+        verify = config.get('verify', None)
+
         log.trace('Sending token creation request to Vault')
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(url, headers=headers, json=payload, verify=verify)
 
         if response.status_code != 200:
             return {'error': response.reason}
 
         authData = response.json()['auth']
-        return {'token': authData['client_token'], 'url': config['url']}
+        return {
+            'token': authData['client_token'],
+            'url': config['url'],
+            'verify': verify,
+        }
     except Exception as e:
         return {'error': str(e)}
 
