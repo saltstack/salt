@@ -279,11 +279,23 @@ def _get_extra_options(**kwargs):
     '''
     ret = []
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
+
+    # Remove already handled options from kwargs
+    fromrepo = kwargs.pop('fromrepo', '')
+    repo = kwargs.pop('repo', '')
+    disablerepo = kwargs.pop('disablerepo', '')
+    enablerepo = kwargs.pop('enablerepo', '')
+    disable_excludes = kwargs.pop('disableexcludes', '')
+    branch = kwargs.pop('branch', '')
+
     for key, value in six.iteritems(kwargs):
-        if isinstance(key, six.string_types):
+        if isinstance(value, six.string_types):
+            log.info('Adding extra option --%s=\'%s\'', key, value)
             ret.append('--{0}=\'{1}\''.format(key, value))
         elif value is True:
+            log.info('Adding extra option --%s', key)
             ret.append('--{0}'.format(key))
+    log.info('Adding extra options %s', ret)
     return ret
 
 

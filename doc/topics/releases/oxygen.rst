@@ -25,6 +25,25 @@ by any master tops matches that are not matched via a top file.
 To make master tops matches execute first, followed by top file matches, set
 the new :conf_minion:`master_tops_first` minion config option to ``True``.
 
+Return Codes for Runner/Wheel Functions
+---------------------------------------
+
+When using :ref:`orchestration <orchestrate-runner>`, runner and wheel
+functions used to report a ``True`` result if the function ran to completion
+without raising an exception. It is now possible to set a return code in the
+``__context__`` dictionary, allowing runner and wheel functions to report that
+they failed. Here's some example pseudocode:
+
+.. code-block:: python
+
+    def myrunner():
+        ...
+        do stuff
+        ...
+        if some_error_condition:
+            __context__['retcode'] = 1
+        return result
+
 LDAP via External Authentication Changes
 ----------------------------------------
 In this release of Salt, if LDAP Bind Credentials are supplied, then
@@ -45,6 +64,37 @@ Per Stormpath's announcement, their API will be shutting down on 8/17/2017 at
 noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
+
+:conf_minion:`environment` config option renamed to :conf_minion:`saltenv`
+--------------------------------------------------------------------------
+
+The :conf_minion:`environment` config option predates referring to a salt
+fileserver environment as a **saltenv**. To pin a minion to a single
+environment for running states, one would use :conf_minion:`environment`, but
+overriding that environment would be done with the ``saltenv`` argument. For
+consistency, :conf_minion:`environment` is now simply referred to as
+:conf_minion:`saltenv`. There are no plans to deprecate or remove
+:conf_minion:`environment`, if used it will log a warning and its value will be
+used as :conf_minion:`saltenv`.
+
+:conf_minion:`lock_saltenv` config option added
+-----------------------------------------------
+
+If set to ``True``, this option will prevent a minion from allowing the
+``saltenv`` argument to override the value set in :conf_minion:`saltenv` when
+running states.
+
+Failed Minions for State/Function Orchestration Jobs Added to Changes Dictionary
+--------------------------------------------------------------------------------
+
+For orchestration jobs which run states (or run remote execution functions and
+also use a :ref:`fail function <orchestrate-runner-fail-functions>` to indicate
+success or failure), minions which have ``False`` results were previously
+included as a formatted string in the comment field of the return for that
+orchestration job. This made the failed returns difficult to :ref:`parse
+programatically <orchestrate-runner-parsing-results-programatically>`. The
+failed returns in these cases are now included in the changes dictionary,
+making for much easier parsing.
 
 New Grains
 ----------
