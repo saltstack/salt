@@ -509,7 +509,7 @@ def destroy(zpool, force=False):
     '''
     ret = {}
     ret[zpool] = {}
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
     else:
         zpool_cmd = _check_zpool()
@@ -529,7 +529,7 @@ def destroy(zpool, force=False):
     return ret
 
 
-def scrub(zpool, stop=False):
+def scrub(zpool, stop=False, pause=False):
     '''
     .. versionchanged:: 2016.3.0
 
@@ -539,6 +539,13 @@ def scrub(zpool, stop=False):
         name of storage pool
     stop : boolean
         if true, cancel ongoing scrub
+    pause : boolean
+        if true, pause ongoing scrub
+        .. versionadded:: Oxygen
+
+        .. note::
+
+            If both pause and stop are true, stop will win.
 
     CLI Example:
 
@@ -548,11 +555,18 @@ def scrub(zpool, stop=False):
     '''
     ret = {}
     ret[zpool] = {}
-    if exists(zpool):
+    if __salt__['zpool.exists'](zpool):
         zpool_cmd = _check_zpool()
-        cmd = '{zpool_cmd} scrub {stop}{zpool}'.format(
+        if stop:
+            action = '-s '
+        elif pause:
+            # NOTE: https://github.com/openzfs/openzfs/pull/407
+            action = '-p '
+        else:
+            action = ''
+        cmd = '{zpool_cmd} scrub {action}{zpool}'.format(
             zpool_cmd=zpool_cmd,
-            stop='-s ' if stop else '',
+            action=action,
             zpool=zpool
         )
         res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -567,7 +581,12 @@ def scrub(zpool, stop=False):
             else:
                 ret[zpool]['error'] = res['stdout']
         else:
-            ret[zpool]['scrubbing'] = True if not stop else False
+            if stop:
+                ret[zpool]['scrubbing'] = False
+            elif pause:
+                ret[zpool]['scrubbing'] = False
+            else:
+                ret[zpool]['scrubbing'] = True
     else:
         ret[zpool] = 'storage pool does not exist'
 
@@ -595,6 +614,9 @@ def create(zpool, *vdevs, **kwargs):
         additional pool properties
     filesystem_properties : dict
         additional filesystem properties
+    createboot : boolean
+        ..versionadded:: Oxygen
+        create a boot partition
 
     CLI Example:
 
@@ -629,7 +651,7 @@ def create(zpool, *vdevs, **kwargs):
     ret = {}
 
     # Check if the pool_name is already being used
-    if exists(zpool):
+    if __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool already exists'
         return ret
 
@@ -641,14 +663,21 @@ def create(zpool, *vdevs, **kwargs):
     zpool_cmd = _check_zpool()
     force = kwargs.get('force', False)
     altroot = kwargs.get('altroot', None)
+    createboot = kwargs.get('createboot', False)
     mountpoint = kwargs.get('mountpoint', None)
     properties = kwargs.get('properties', None)
     filesystem_properties = kwargs.get('filesystem_properties', None)
     cmd = '{0} create'.format(zpool_cmd)
 
+    # bootsize implies createboot
+    if properties and 'bootsize' in properties:
+        createboot = True
+
     # apply extra arguments from kwargs
     if force:  # force creation
         cmd = '{0} -f'.format(cmd)
+    if createboot:  # create boot paritition
+        cmd = '{0} -B'.format(cmd)
     if properties:  # create "-o property=value" pairs
         optlist = []
         for prop in properties:
@@ -712,7 +741,7 @@ def add(zpool, *vdevs, **kwargs):
     ret = {}
 
     # check for pool
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -765,7 +794,7 @@ def attach(zpool, device, new_device, force=False):
     dlist = []
 
     # check for pool
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -827,7 +856,7 @@ def detach(zpool, device):
     dlist = []
 
     # check for pool
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -844,6 +873,95 @@ def detach(zpool, device):
     else:
         ret[zpool] = {}
         ret[zpool][device] = 'detached'
+
+    return ret
+
+
+def split(zpool, newzpool, **kwargs):
+    '''
+    .. versionadded:: Oxygen
+
+    Splits devices off pool creating newpool.
+
+    .. note::
+
+        All vdevs in pool must be mirrors.  At the time of the split,
+        newpool will be a replica of pool.
+
+    zpool : string
+        name of storage pool
+    newzpool : string
+        name of new storage pool
+    mountpoint : string
+        sets the mount point for the root dataset
+    altroot : string
+        sets altroot for newzpool
+    properties : dict
+        additional pool properties for newzpool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.split datamirror databackup
+        salt '*' zpool.split datamirror databackup altroot=/backup
+
+    .. note::
+
+        Zpool properties can be specified at the time of creation of the pool by
+        passing an additional argument called "properties" and specifying the properties
+        with their respective values in the form of a python dictionary::
+
+            properties="{'property1': 'value1', 'property2': 'value2'}"
+
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' zpool.split datamirror databackup properties="{'readonly': 'on'}"
+    '''
+    ret = {}
+
+    # Check if the pool_name is already being used
+    if __salt__['zpool.exists'](newzpool):
+        ret[newzpool] = 'storage pool already exists'
+        return ret
+
+    if not __salt__['zpool.exists'](zpool):
+        ret[zpool] = 'storage pool does not exists'
+        return ret
+
+    zpool_cmd = _check_zpool()
+    altroot = kwargs.get('altroot', None)
+    properties = kwargs.get('properties', None)
+    cmd = '{0} split'.format(zpool_cmd)
+
+    # apply extra arguments from kwargs
+    if properties:  # create "-o property=value" pairs
+        optlist = []
+        for prop in properties:
+            if isinstance(properties[prop], bool):
+                value = 'on' if properties[prop] else 'off'
+            else:
+                if ' ' in properties[prop]:
+                    value = "'{0}'".format(properties[prop])
+                else:
+                    value = properties[prop]
+            optlist.append('-o {0}={1}'.format(prop, value))
+        opts = ' '.join(optlist)
+        cmd = '{0} {1}'.format(cmd, opts)
+    if altroot:  # set altroot
+        cmd = '{0} -R {1}'.format(cmd, altroot)
+    cmd = '{0} {1} {2}'.format(cmd, zpool, newzpool)
+
+    # Create storage pool
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    # Check and see if the pools is available
+    if res['retcode'] != 0:
+        ret[newzpool] = res['stderr'] if 'stderr' in res else res['stdout']
+    else:
+        ret[newzpool] = 'split off from {}'.format(zpool)
 
     return ret
 
@@ -878,7 +996,7 @@ def replace(zpool, old_device, new_device=None, force=False):
     '''
     ret = {}
     # Make sure pool is there
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -991,7 +1109,7 @@ def export(*pools, **kwargs):
         return ret
 
     for pool in pools:
-        if not exists(pool):
+        if not __salt__['zpool.exists'](pool):
             ret[pool] = 'storage pool does not exist'
         else:
             pool_present.append(pool)
@@ -1106,7 +1224,7 @@ def import_(zpool=None, new_name=None, **kwargs):
             ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         if zpool:
-            ret[zpool if not new_name else new_name] = 'imported' if exists(zpool if not new_name else new_name) else 'not found'
+            ret[zpool if not new_name else new_name] = 'imported' if __salt__['zpool.exists'](zpool if not new_name else new_name) else 'not found'
         else:
             ret = True
     return ret
@@ -1141,7 +1259,7 @@ def online(zpool, *vdevs, **kwargs):
     dlist = []
 
     # Check if the pool_name exists
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -1197,7 +1315,7 @@ def offline(zpool, *vdevs, **kwargs):
     ret = {}
 
     # Check if the pool_name exists
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -1222,6 +1340,50 @@ def offline(zpool, *vdevs, **kwargs):
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[zpool] = 'offlined {0}'.format(devs)
+    return ret
+
+
+def labelclear(device, force=False):
+    '''
+    .. versionadded:: Oxygen
+
+    Removes ZFS label information from the specified device
+
+    .. warning::
+
+        The device must not be part of an active pool configuration.
+
+    device : string
+        device
+    force : boolean
+        treat exported or foreign devices as inactive
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.labelclear /path/to/dev
+    '''
+    ret = {}
+
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} labelclear {force}{device}'.format(
+        zpool_cmd=zpool_cmd,
+        force='-f ' if force else '',
+        device=device,
+    )
+    # Bring all specified devices offline
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ## NOTE: skip the "use '-f' hint"
+        res['stderr'] = res['stderr'].split("\n")
+        if len(res['stderr']) >= 1:
+            if res['stderr'][0].startswith("use '-f'"):
+                del res['stderr'][0]
+        res['stderr'] = "\n".join(res['stderr'])
+        ret[device] = res['stderr'] if 'stderr' in res and res['stderr'] else res['stdout']
+    else:
+        ret[device] = 'cleared'
     return ret
 
 
