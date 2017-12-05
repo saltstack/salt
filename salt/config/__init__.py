@@ -57,6 +57,7 @@ _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s'
 )
 _DFLT_REFSPECS = ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']
+DEFAULT_INTERVAL = 60
 
 if salt.utils.platform.is_windows():
     # Since an 'ipc_mode' of 'ipc' will never work on Windows due to lack of
@@ -643,6 +644,16 @@ VALID_OPTS = {
 
     # Frequency of the proxy_keep_alive, in minutes
     'proxy_keep_alive_interval': int,
+
+    # Update intervals
+    'roots_update_interval': int,
+    'azurefs_update_interval': int,
+    'gitfs_update_interval': int,
+    'hgfs_update_interval': int,
+    'minionfs_update_interval': int,
+    's3fs_update_interval': int,
+    'svnfs_update_interval': int,
+
     'git_pillar_base': six.string_types,
     'git_pillar_branch': six.string_types,
     'git_pillar_env': six.string_types,
@@ -1275,6 +1286,16 @@ DEFAULT_MINION_OPTS = {
     'decrypt_pillar_delimiter': ':',
     'decrypt_pillar_default': 'gpg',
     'decrypt_pillar_renderers': ['gpg'],
+
+    # Update intervals
+    'roots_update_interval': DEFAULT_INTERVAL,
+    'azurefs_update_interval': DEFAULT_INTERVAL,
+    'gitfs_update_interval': DEFAULT_INTERVAL,
+    'hgfs_update_interval': DEFAULT_INTERVAL,
+    'minionfs_update_interval': DEFAULT_INTERVAL,
+    's3fs_update_interval': DEFAULT_INTERVAL,
+    'svnfs_update_interval': DEFAULT_INTERVAL,
+
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
@@ -1525,6 +1546,16 @@ DEFAULT_MASTER_OPTS = {
     'pillarenv': None,
     'default_top': 'base',
     'file_client': 'local',
+
+    # Update intervals
+    'roots_update_interval': DEFAULT_INTERVAL,
+    'azurefs_update_interval': DEFAULT_INTERVAL,
+    'gitfs_update_interval': DEFAULT_INTERVAL,
+    'hgfs_update_interval': DEFAULT_INTERVAL,
+    'minionfs_update_interval': DEFAULT_INTERVAL,
+    's3fs_update_interval': DEFAULT_INTERVAL,
+    'svnfs_update_interval': DEFAULT_INTERVAL,
+
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
@@ -3677,6 +3708,15 @@ def apply_minion_config(overrides=None,
             )
             opts['saltenv'] = opts['environment']
 
+    for idx, val in enumerate(opts['fileserver_backend']):
+        if val in ('git', 'hg', 'svn', 'minion'):
+            new_val = val + 'fs'
+            log.debug(
+                'Changed %s to %s in minion opts\' fileserver_backend list',
+                val, new_val
+            )
+            opts['fileserver_backend'][idx] = new_val
+
     opts['__cli'] = os.path.basename(sys.argv[0])
 
     # No ID provided. Will getfqdn save us?
@@ -3842,6 +3882,15 @@ def apply_master_config(overrides=None, defaults=None):
                 opts['environment']
             )
             opts['saltenv'] = opts['environment']
+
+    for idx, val in enumerate(opts['fileserver_backend']):
+        if val in ('git', 'hg', 'svn', 'minion'):
+            new_val = val + 'fs'
+            log.debug(
+                'Changed %s to %s in master opts\' fileserver_backend list',
+                val, new_val
+            )
+            opts['fileserver_backend'][idx] = new_val
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
