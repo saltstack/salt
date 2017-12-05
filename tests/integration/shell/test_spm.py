@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from tests.support.case import ShellCase,SPMCase
+from tests.support.case import ShellCase, SPMCase
 
 
 class SPMTest(ShellCase, SPMCase):
