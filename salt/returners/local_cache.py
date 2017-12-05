@@ -294,9 +294,11 @@ def get_load(jid):
     if not os.path.exists(jid_dir) or not os.path.exists(load_fn):
         return {}
     serial = salt.payload.Serial(__opts__)
+    ret = {}
     with salt.utils.files.fopen(os.path.join(jid_dir, LOAD_P), 'rb') as rfh:
         ret = serial.load(rfh)
-
+    if ret is None:
+        ret = {}
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]
     minions_cache.extend(
         glob.glob(os.path.join(jid_dir, SYNDIC_MINIONS_P.format('*')))

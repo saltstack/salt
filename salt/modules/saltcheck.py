@@ -509,7 +509,7 @@ class SaltCheck(object):
         # state cache should be updated before running this method
         search_list = []
         cachedir = __opts__.get('cachedir', None)
-        environment = __opts__['environment']
+        environment = __opts__['saltenv']
         if environment:
             path = cachedir + os.sep + "files" + os.sep + environment
             search_list.append(path)
