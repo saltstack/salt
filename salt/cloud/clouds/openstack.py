@@ -86,6 +86,7 @@ create_server_ function from shade.
 The salt specific ones are:
 
   - ssh_key_file: The path to the ssh key that should be used to login to the machine to bootstrap it
+  - ssh_key_file: The name of the keypair in openstack
   - userdata_template: The renderer to use if the userdata is a file that is templated. Default: False
   - ssh_interface: The interface to use to login for bootstrapping: public_ips, private_ips, floating_ips, fixed_ips
 
@@ -95,7 +96,7 @@ The salt specific ones are:
       provider: myopenstack
       image: CentOS 7
       size: ds1G
-      key_name: mykey
+      ssh_key_name: mykey
       ssh_key_file: /root/.ssh/id_rsa
 
 This is the minimum setup required.
@@ -619,6 +620,9 @@ def request_instance(vm_):
                 'Failed to read userdata from %s: %s', userdata_file, exc)
     if 'size' in kwargs:
         kwargs['flavor'] = kwargs.pop('size')
+    kwargs['key_name'] = config.get_cloud_config_value(
+        'ssh_key_name', vm_, __opts__, search_global=False, default=None
+    )
     kwargs['wait'] = True
     try:
         conn.create_server(**_clean_create_kwargs(**kwargs))
