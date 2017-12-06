@@ -39,7 +39,7 @@ class NestDisplay(object):
     '''
     Manage the nested display contents
     '''
-    def __init__(self):
+    def __init__(self, retcode=0):
         self.__dict__.update(
             salt.utils.color.get_colors(
                 __opts__.get('color'),
@@ -47,6 +47,7 @@ class NestDisplay(object):
             )
         )
         self.strip_colors = __opts__.get('strip_colors', True)
+        self.retcode = retcode
 
     def ustring(self,
                 indent,
@@ -107,7 +108,7 @@ class NestDisplay(object):
                 first_line = False
         elif isinstance(ret, (list, tuple)):
             color = self.GREEN
-            if 'retcode' in __context__ and __context__['retcode']:
+            if self.retcode != 0:
                 color = self.RED
             for ind in ret:
                 if isinstance(ind, (list, tuple, dict)):
@@ -125,7 +126,7 @@ class NestDisplay(object):
         elif isinstance(ret, dict):
             if indent:
                 color = self.CYAN
-                if 'retcode' in __context__ and __context__['retcode']:
+                if self.retcode != 0:
                     color = self.RED
                 out.append(
                     self.ustring(
@@ -141,7 +142,7 @@ class NestDisplay(object):
             else:
                 keys = sorted(ret)
             color = self.CYAN
-            if 'retcode' in __context__ and __context__['retcode']:
+            if self.retcode != 0:
                 color = self.RED
             for key in keys:
                 val = ret[key]
@@ -163,7 +164,8 @@ def output(ret, **kwargs):
     Display ret data
     '''
     # Prefer kwargs before opts
+    retcode = kwargs.get('_retcode', 0)
     base_indent = kwargs.get('nested_indent', 0) \
         or __opts__.get('nested_indent', 0)
-    nest = NestDisplay()
+    nest = NestDisplay(retcode=retcode)
     return '\n'.join(nest.display(ret, base_indent, '', []))
