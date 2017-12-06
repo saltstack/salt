@@ -100,7 +100,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         arg, kwarg = salt.minion.load_args_and_kwargs(
             self.functions[fun],
             munged,
-            self.opts,
             ignore_invalid=True)
 
         return dict(fun=fun, kwarg={u'kwarg': kwarg, u'arg': arg},
@@ -199,9 +198,7 @@ class Runner(RunnerClient):
                 verify_fun(self.functions, low[u'fun'])
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     self.functions[low[u'fun']],
-                    fun_args,
-                    self.opts,
-                )
+                    fun_args)
                 low[u'arg'] = args
                 low[u'kwarg'] = kwargs
 
