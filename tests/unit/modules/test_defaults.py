@@ -83,7 +83,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         Test deep merging of dicts with merge_lists disabled.
         '''
 
-        src_dict = {
+        src = {
             'string_key': 'string_val_src',
             'list_key': [
                 'list_val_src',
@@ -93,7 +93,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-        dest_dict = {
+        dest = {
             'string_key': 'string_val_dest',
             'list_key': [
                 'list_val_dest',
@@ -103,7 +103,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-        merged_dict = {
+        merged = {
             'string_key': 'string_val_src',
             'list_key': [
                 'list_val_src'
@@ -114,5 +114,39 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-        defaults.merge(dest_dict, src_dict, merge_lists=False)
-        self.assertEqual(dest_dict, merged_dict)
+        defaults.merge(dest, src, merge_lists=False)
+        self.assertEqual(dest, merged)
+
+    def test_merge_not_in_place(self):
+        '''
+        Test deep merging of dicts not in place.
+        '''
+
+        src = {
+            'nested_dict': {
+                'A': 'A'
+            }
+        }
+
+        dest = {
+            'nested_dict': {
+                'B': 'B'
+            }
+        }
+
+        dest_orig = {
+            'nested_dict': {
+                'B': 'B'
+            }
+        }
+
+        merged = {
+            'nested_dict': {
+                'A': 'A',
+                'B': 'B'
+            }
+        }
+
+        final = defaults.merge(dest, src, in_place=False)
+        self.assertEqual(dest, dest_orig)
+        self.assertEqual(final, merged)
