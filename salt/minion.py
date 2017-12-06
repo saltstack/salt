@@ -739,7 +739,11 @@ class MasterMinion(object):
             matcher=True,
             whitelist=None,
             ignore_config_errors=True):
-        self.opts = salt.config.minion_config(opts['conf_file'], ignore_config_errors=ignore_config_errors)
+        self.opts = salt.config.minion_config(
+            opts['conf_file'],
+            ignore_config_errors=ignore_config_errors,
+            role='master'
+        )
         self.opts.update(opts)
         self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
