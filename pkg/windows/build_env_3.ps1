@@ -243,7 +243,7 @@ $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
 DownloadFileWithProgress $url $file
 
 # Install
-Start_Process_and_test_exitcode "$($ini['Settings']['Scripts3Dir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyWin32"
+Start_Process_and_test_exitcode "$($ini['Settings']['Scripts3Dir'])\pip.exe" "install $file " "pip install PyWin32"
 
 # Run the postinstall script
 Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "$($ini['Settings']['Python3Dir'])\pywin32_postinstall.py -install" "PyWin32 Post Install Script"

@@ -243,7 +243,7 @@ $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
 DownloadFileWithProgress $url $file
 
 # Install
-Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyWin32"
+Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install $file " "pip install PyWin32"
 
 # Run the postinstall script
 Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "$($ini['Settings']['Python2Dir'])\pywin32_postinstall.py -install" "PyWin32 Post Install Script"
@@ -263,21 +263,6 @@ Remove-Item "$($ini['Settings']['SitePkgs2Dir'])\pythonwin" -Force -Recurse
 # Remove PyWin32 PostInstall and testall Scripts
 Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
 Remove-Item "$($ini['Settings']['Scripts2Dir'])\pywin32_*" -Force -Recurse
-
-#==============================================================================
-# Install PyCrypto from wheel file
-#==============================================================================
-Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Installing PyCrypto . . ."
-Write-Output " ----------------------------------------------------------------"
-# Download
-$file = "$($ini[$bitPrograms]['PyCrypto2'])"
-$url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
-DownloadFileWithProgress $url $file
-
-# Install
-Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyCrypto"
 
 #==============================================================================
 # Copy DLLs to Python Directory
