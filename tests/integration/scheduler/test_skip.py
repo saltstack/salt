@@ -31,7 +31,7 @@ DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
 DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 
 
-class SchedulerTest(ModuleCase, SaltReturnAssertsMixin):
+class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the pkg module
     '''
@@ -39,34 +39,6 @@ class SchedulerTest(ModuleCase, SaltReturnAssertsMixin):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
             functions = {'test.ping': ping}
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
-
-    def test_eval(self):
-        '''
-        verify that scheduled job runs
-        '''
-        job = {
-          'schedule': {
-            'job1': {
-              'function': 'test.ping',
-              'when': '11/29/2017 4pm',
-            }
-          }
-        }
-        run_time1 = 1512000000 - 1
-        run_time2 = 1512000000
-
-        # Add the job to the scheduler
-        self.schedule.opts.update(job)
-
-        # Evaluate 1 second before the run time
-        self.schedule.eval(now=run_time1)
-        ret = self.schedule.job_status('job1')
-        self.assertNotIn('_last_run', ret)
-
-        # Evaluate 1 second at the run time
-        self.schedule.eval(now=run_time2)
-        ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time2)
 
     def test_skip(self):
         '''
@@ -97,47 +69,6 @@ class SchedulerTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
-
-    def test_postpone(self):
-        '''
-        verify that scheduled job is postponed until the specified time.
-        '''
-        job = {
-          'schedule': {
-            'job1': {
-              'function': 'test.ping',
-              'when': '11/29/2017 4pm',
-            }
-          }
-        }
-
-        # 11/29/2017 4pm
-        run_time = 1512000000
-
-        # 5 minute delay
-        delay = 300
-
-        # Add job to schedule
-        self.schedule.opts.update(job)
-
-        # Postpone the job by 5 minutes
-        self.schedule.postpone_job('job1', {'time': run_time,
-                                            'new_time': run_time + delay})
-
-        # Run at the original time
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status('job1')
-        self.assertNotIn('_last_run', ret)
-
-        # Run 5 minutes later
-        self.schedule.eval(now=run_time + delay)
-        ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time + delay)
-
-        # Run 6 minutes later
-        self.schedule.eval(now=run_time + delay + 1)
-        ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time + delay)
 
     def test_skip_during_range(self):
         '''
