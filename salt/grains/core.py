@@ -474,8 +474,14 @@ def _sunos_memdata():
             grains['mem_total'] = int(comps[2].strip())
 
     swap_cmd = salt.utils.path.which('swap')
-    swap_total = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()[1]
-    grains['swap_total'] = int(swap_total) // 1024
+    swap_data = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()
+    try:
+        swap_avail = int(swap_data[-2][:-1])
+        swap_used = int(swap_data[-4][:-1])
+        swap_total = (swap_avail + swap_used) // 1024
+    except ValueError:
+        swap_total = None
+    grains['swap_total'] = swap_total
     return grains
 
 
@@ -1475,6 +1481,9 @@ def os_data():
                     elif salt.utils.path.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
                     elif init_cmdline == ['runit']:
+                        grains['init'] = 'runit'
+                    elif '/sbin/my_init' in init_cmdline:
+                        #Phusion Base docker container use runit for srv mgmt, but my_init as pid1
                         grains['init'] = 'runit'
                     else:
                         log.info(
@@ -2531,10 +2540,9 @@ def _windows_iqn():
             wmic, namespace, mspath, get))
 
     for line in cmdret['stdout'].splitlines():
-        if line[0].isalpha():
-            continue
-        ret.append(line.rstrip())
-
+        if line.startswith('iqn.'):
+            line = line.rstrip()
+            ret.append(line.rstrip())
     return ret
 
 

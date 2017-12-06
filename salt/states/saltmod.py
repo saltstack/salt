@@ -351,7 +351,6 @@ def state(name,
 
     changes = {}
     fail = set()
-    failures = {}
     no_change = set()
 
     if fail_minions is None:
@@ -393,7 +392,7 @@ def state(name,
         if not m_state:
             if minion not in fail_minions:
                 fail.add(minion)
-            failures[minion] = m_ret or 'Minion did not respond'
+            changes[minion] = m_ret
             continue
         try:
             for state_item in six.itervalues(m_ret):
@@ -418,18 +417,6 @@ def state(name,
             state_ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
         if no_change:
             state_ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
-    if failures:
-        state_ret['comment'] += '\nFailures:\n'
-        for minion, failure in six.iteritems(failures):
-            state_ret['comment'] += '\n'.join(
-                    (' ' * 4 + l)
-                    for l in salt.output.out_format(
-                        {minion: failure},
-                        'highstate',
-                        __opts__,
-                        ).splitlines()
-                    )
-            state_ret['comment'] += '\n'
     if test or __opts__.get('test'):
         if state_ret['changes'] and state_ret['result'] is True:
             # Test mode with changes is the only case where result should ever be none
@@ -570,7 +557,6 @@ def function(
 
     changes = {}
     fail = set()
-    failures = {}
 
     if fail_minions is None:
         fail_minions = ()
@@ -598,7 +584,7 @@ def function(
         if not m_func:
             if minion not in fail_minions:
                 fail.add(minion)
-            failures[minion] = m_ret and m_ret or 'Minion did not respond'
+            changes[minion] = m_ret
             continue
         changes[minion] = m_ret
     if not cmd_ret:
@@ -614,18 +600,6 @@ def function(
             func_ret['comment'] = 'Function ran successfully.'
         if changes:
             func_ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
-        if failures:
-            func_ret['comment'] += '\nFailures:\n'
-            for minion, failure in six.iteritems(failures):
-                func_ret['comment'] += '\n'.join(
-                        (' ' * 4 + l)
-                        for l in salt.output.out_format(
-                            {minion: failure},
-                            'highstate',
-                            __opts__,
-                            ).splitlines()
-                        )
-                func_ret['comment'] += '\n'
     return func_ret
 
 
@@ -787,28 +761,15 @@ def runner(name, **kwargs):
     runner_return = out.get('return')
     if isinstance(runner_return, dict) and 'Error' in runner_return:
         out['success'] = False
-    if not out.get('success', True):
-        cmt = "Runner function '{0}' failed{1}.".format(
-            name,
-            ' with return {0}'.format(runner_return) if runner_return else '',
-        )
-        ret = {
-            'name': name,
-            'result': False,
-            'changes': {},
-            'comment': cmt,
-        }
-    else:
-        cmt = "Runner function '{0}' executed{1}.".format(
-            name,
-            ' with return {0}'.format(runner_return) if runner_return else '',
-        )
-        ret = {
-            'name': name,
-            'result': True,
-            'changes': {},
-            'comment': cmt,
-        }
+
+    success = out.get('success', True)
+    ret = {'name': name,
+           'changes': {'return': runner_return},
+           'result': success}
+    ret['comment'] = "Runner function '{0}' {1}.".format(
+        name,
+        'executed' if success else 'failed',
+    )
 
     ret['__orchestration__'] = True
     if 'jid' in out:
@@ -1039,15 +1000,21 @@ def wheel(name, **kwargs):
                                      __env__=__env__,
                                      **kwargs)
 
-    ret['result'] = True
+    wheel_return = out.get('return')
+    if isinstance(wheel_return, dict) and 'Error' in wheel_return:
+        out['success'] = False
+
+    success = out.get('success', True)
+    ret = {'name': name,
+           'changes': {'return': wheel_return},
+           'result': success}
+    ret['comment'] = "Wheel function '{0}' {1}.".format(
+        name,
+        'executed' if success else 'failed',
+    )
+
     ret['__orchestration__'] = True
     if 'jid' in out:
         ret['__jid__'] = out['jid']
-
-    runner_return = out.get('return')
-    ret['comment'] = "Wheel function '{0}' executed{1}.".format(
-        name,
-        ' with return {0}'.format(runner_return) if runner_return else '',
-    )
 
     return ret

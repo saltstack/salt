@@ -736,8 +736,8 @@ class SMinion(MinionBase):
             if not os.path.isdir(pdir):
                 os.makedirs(pdir, 0o700)
             ptop = os.path.join(pdir, u'top.sls')
-            if self.opts[u'environment'] is not None:
-                penv = self.opts[u'environment']
+            if self.opts[u'saltenv'] is not None:
+                penv = self.opts[u'saltenv']
             else:
                 penv = u'base'
             cache_top = {penv: {self.opts[u'id']: [u'cache']}}
@@ -773,7 +773,7 @@ class SMinion(MinionBase):
             self.opts,
             self.opts[u'grains'],
             self.opts[u'id'],
-            self.opts[u'environment'],
+            self.opts[u'saltenv'],
             pillarenv=self.opts.get(u'pillarenv'),
         ).compile_pillar()
 
@@ -1144,7 +1144,7 @@ class Minion(MinionBase):
                 self.opts,
                 self.opts[u'grains'],
                 self.opts[u'id'],
-                self.opts[u'environment'],
+                self.opts[u'saltenv'],
                 pillarenv=self.opts.get(u'pillarenv')
             ).compile_pillar()
 
@@ -2032,7 +2032,7 @@ class Minion(MinionBase):
                     self.opts,
                     self.opts[u'grains'],
                     self.opts[u'id'],
-                    self.opts[u'environment'],
+                    self.opts[u'saltenv'],
                     pillarenv=self.opts.get(u'pillarenv'),
                 ).compile_pillar()
             except SaltClientError:
@@ -2067,12 +2067,16 @@ class Minion(MinionBase):
             self.schedule.run_job(name)
         elif func == u'disable_job':
             self.schedule.disable_job(name, persist)
+        elif func == u'postpone_job':
+            self.schedule.postpone_job(name, data)
         elif func == u'reload':
             self.schedule.reload(schedule)
         elif func == u'list':
             self.schedule.list(where)
         elif func == u'save_schedule':
             self.schedule.save_schedule()
+        elif func == u'get_next_fire_time':
+            self.schedule.get_next_fire_time(name)
 
     def manage_beacons(self, tag, data):
         '''
@@ -3349,7 +3353,7 @@ class ProxyMinion(Minion):
                 self.opts,
                 self.opts[u'grains'],
                 self.opts[u'id'],
-                saltenv=self.opts[u'environment'],
+                saltenv=self.opts[u'saltenv'],
                 pillarenv=self.opts.get(u'pillarenv'),
             ).compile_pillar()
 
@@ -3391,7 +3395,7 @@ class ProxyMinion(Minion):
         # we can then sync any proxymodules down from the master
         # we do a sync_all here in case proxy code was installed by
         # SPM or was manually placed in /srv/salt/_modules etc.
-        self.functions[u'saltutil.sync_all'](saltenv=self.opts[u'environment'])
+        self.functions[u'saltutil.sync_all'](saltenv=self.opts[u'saltenv'])
 
         # Pull in the utils
         self.utils = salt.loader.utils(self.opts)
