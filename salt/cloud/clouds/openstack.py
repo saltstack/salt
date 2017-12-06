@@ -215,7 +215,6 @@ try:
     import shade.openstackcloud
     import shade.exc
     import os_client_config
-    import munch
     HAS_SHADE = True
 except ImportError:
     HAS_SHADE = False
@@ -591,7 +590,7 @@ def _clean_create_kwargs(**kwargs):
     return __utils__['dictupdate.update'](kwargs, extra)
 
 
-def request_instance(vm_):
+def request_instance(vm_, conn=None, call=None):
     '''
     Request an instance to be built
     '''
@@ -604,8 +603,7 @@ def request_instance(vm_):
     kwargs = copy.deepcopy(vm_)
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     __utils__['cloud.check_name'](vm_['name'], 'a-zA-Z0-9._-')
-    if conn is None:
-        conn = get_conn()
+    conn = get_conn()
     userdata = config.get_cloud_config_value(
         'userdata', vm_, __opts__, search_global=False, default=None
     )
@@ -617,7 +615,7 @@ def request_instance(vm_):
                 )
         except Exception as exc:
             log.exception(
-                'Failed to read userdata from %s: %s', userdata_file, exc)
+                'Failed to read userdata from %s: %s', userdata, exc)
     if 'size' in kwargs:
         kwargs['flavor'] = kwargs.pop('size')
     kwargs['key_name'] = config.get_cloud_config_value(
@@ -677,7 +675,7 @@ def create(vm_):
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
-        data = request_instance(kwargs=vm_)
+        data = request_instance(conn=conn, call='action', vm_=vm_)
     log.debug('VM is now running')
 
     def __query_node_ip(vm_):

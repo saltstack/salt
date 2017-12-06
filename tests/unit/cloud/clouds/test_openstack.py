@@ -26,7 +26,6 @@ class OpenstackTestCase(TestCase):
                                    'public_ips': [],
                                    'private_ips': PRIVATE_IPS}))
     @patch('salt.cloud.clouds.openstack.rackconnect', MagicMock(return_value=False))
-    @patch('salt.cloud.clouds.openstack.managedcloud', MagicMock(return_value=False))
     @patch('salt.cloud.clouds.openstack.preferred_ip', _preferred_ip(PRIVATE_IPS, ['0.0.0.0']))
     @patch('salt.cloud.clouds.openstack.ssh_interface', MagicMock(return_value=False))
     def test_query_node_data_filter_preferred_ip_addresses(self):
