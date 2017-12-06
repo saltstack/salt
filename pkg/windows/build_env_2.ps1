@@ -245,12 +245,12 @@ DownloadFileWithProgress $url $file
 # Install
 Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install $file " "pip install PyWin32"
 
-# Run the postinstall script
-Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "$($ini['Settings']['Scripts2Dir'])\pywin32_postinstall.py -install" "PyWin32 Post Install Script"
-
 # Move DLL's to Python Root
 Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
 Move-Item "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['SitePkgs2Dir'])\win32" -Force
+
+# Create gen_py directory
+New-Item -Path "$($ini['Settings']['SitePkgs2Dir'])\win32com\gen_py" -ItemType Directory -Force
 
 # Remove pywin32_system32 directory
 Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
