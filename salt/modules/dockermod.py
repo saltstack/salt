@@ -382,9 +382,12 @@ def _get_client(timeout=NOTSET, **kwargs):
                 'Docker machine {0} failed: {1}'.format(docker_machine, exc))
     try:
         # docker-py 2.0 renamed this client attribute
-        return docker.APIClient(**client_kwargs)
+        ret = docker.APIClient(**client_kwargs)
     except AttributeError:
-        return docker.Client(**client_kwargs)
+        ret = docker.Client(**client_kwargs)
+
+    log.debug('docker-py API version: %s', getattr(ret, 'api_version', None))
+    return ret
 
 
 def _get_state(inspect_results):
