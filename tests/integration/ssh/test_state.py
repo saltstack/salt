@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import shutil
+import time
 
 # Import Salt Testing Libs
 from tests.support.case import SSHCase
@@ -158,6 +159,22 @@ class SSHStateTest(SSHCase):
 
         check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
+
+    def test_state_running(self):
+        '''
+        test state.running with salt-ssh
+        '''
+        start_sls = self.run_function('state.sls', ['running', '&'],
+                                      wipe=False)
+        time.sleep(8)
+        get_sls = self.run_function('state.running', wipe=False)
+        ret = 'The function "state.pkg" is running as'
+        self.assertIn(ret, ' '.join(get_sls))
+
+        # make sure we wait until the earlier state is complete
+        while True:
+            if ret not in ' '.join(self.run_function('state.running', wipe=False)):
+                break
 
     def tearDown(self):
         '''
