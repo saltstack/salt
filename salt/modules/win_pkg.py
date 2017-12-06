@@ -1629,7 +1629,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             use_msiexec, msiexec = _get_msiexec(pkginfo[target].get('msiexec', False))
             cmd_shell = os.getenv('ComSpec', '{0}\\system32\\cmd.exe'.format(os.getenv('WINDIR')))
 
-            # Build cmd and arguments 
+            # Build cmd and arguments
             # cmd and arguments must be separated for use with the task scheduler
             if use_msiexec:
                 # Check if uninstaller is set to {guid}, if not we assume its a remote msi file.
