@@ -246,7 +246,7 @@ DownloadFileWithProgress $url $file
 Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install $file " "pip install PyWin32"
 
 # Run the postinstall script
-Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "$($ini['Settings']['Python2Dir'])\pywin32_postinstall.py -install" "PyWin32 Post Install Script"
+Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "$($ini['Settings']['Scripts2Dir'])\pywin32_postinstall.py -install" "PyWin32 Post Install Script"
 
 # Move DLL's to Python Root
 Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
