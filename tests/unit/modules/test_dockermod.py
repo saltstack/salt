@@ -16,6 +16,8 @@ from tests.support.mock import (
     NO_MOCK_REASON,
     patch
 )
+import logging
+log = logging.getLogger(__name__)
 
 # Import Salt Libs
 import salt.config
@@ -45,6 +47,9 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             salt.config.DEFAULT_MINION_OPTS,
             whitelist=['state']
         )
+        # Force the LazyDict to populate its references. Otherwise the lookup
+        # will fail inside the unit tests.
+        utils.keys()
         return {docker_mod: {'__context__': {'docker.docker_version': ''},
                              '__utils__': utils}}
 

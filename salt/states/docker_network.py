@@ -37,8 +37,6 @@ import random
 import string
 
 # Import Salt libs
-import salt.utils.args
-import salt.utils.data
 import salt.utils.docker.translate.network
 from salt.exceptions import CommandExecutionError
 
@@ -546,7 +544,7 @@ def present(name,
     to_connect = {}
     missing_containers = []
     stopped_containers = []
-    for cname in salt.utils.args.split_input(containers or []):
+    for cname in __utils__['args.split_input'](containers or []):
         try:
             cinfo = __salt__['docker.inspect_container'](cname)
         except CommandExecutionError:
@@ -581,12 +579,12 @@ def present(name,
     disconnected_containers = {}
 
     try:
-        kwargs = salt.utils.docker.translate_input(
+        kwargs = __utils__['docker.translate_input'](
             salt.utils.docker.translate.network,
             skip_translate=skip_translate,
             ignore_collisions=ignore_collisions,
             validate_ip_addrs=validate_ip_addrs,
-            **salt.utils.args.clean_kwargs(**kwargs))
+            **__utils__['args.clean_kwargs'](**kwargs))
     except Exception as exc:
         ret['comment'] = exc.__str__()
         return ret
@@ -612,7 +610,7 @@ def present(name,
     else:
         ipam_pools = ipam_kwargs.pop('ipam_pools', ())
         try:
-            ipam_config = salt.utils.docker.create_ipam_config(
+            ipam_config = __utils__['docker.create_ipam_config'](
                 *ipam_pools,
                 **ipam_kwargs)
         except Exception as exc:

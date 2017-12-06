@@ -209,18 +209,10 @@ import subprocess
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
-import salt.utils.args
-import salt.utils.decorators
 import salt.utils.docker.translate.container
 import salt.utils.docker.translate.network
-import salt.utils.files
 import salt.utils.functools
-import salt.utils.hashutils
-import salt.utils.json
 import salt.utils.path
-import salt.utils.stringutils
-import salt.utils.thin
-import salt.utils.versions
 import salt.pillar
 import salt.exceptions
 import salt.fileclient
@@ -365,7 +357,7 @@ def _get_client(timeout=NOTSET, **kwargs):
             python_shell=False)
         try:
             docker_machine_json = \
-                json.loads(salt.utils.stringutils.to_str(docker_machine_json))
+                json.loads(__utils__['stringutils.to_str'](docker_machine_json))
             docker_machine_tls = \
                 docker_machine_json['HostOptions']['AuthOptions']
             docker_machine_ip = docker_machine_json['Driver']['IPAddress']
@@ -414,7 +406,7 @@ def _docker_client(wrapped):
         '''
         Ensure that the client is present
         '''
-        kwargs = salt.utils.args.clean_kwargs(**kwargs)
+        kwargs = __utils__['args.clean_kwargs'](**kwargs)
         timeout = kwargs.pop('client_timeout', NOTSET)
         if 'docker.client' not in __context__ \
                 or not hasattr(__context__['docker.client'], 'timeout'):
@@ -442,7 +434,7 @@ def _refresh_mine_cache(wrapped):
         '''
         refresh salt mine on exit.
         '''
-        returned = wrapped(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        returned = wrapped(*args, **__utils__['args.clean_kwargs'](**kwargs))
         __salt__['mine.send']('docker.ps', verbose=True, all=True, host=True)
         return returned
     return wrapper
@@ -854,7 +846,7 @@ def _get_create_kwargs(skip_translate=None,
         skip_translate=skip_translate,
         ignore_collisions=ignore_collisions,
         validate_ip_addrs=validate_ip_addrs,
-        **salt.utils.args.clean_kwargs(**kwargs))
+        **__utils__['args.clean_kwargs'](**kwargs))
 
     if client_args is None:
         try:
@@ -917,7 +909,7 @@ def compare_containers(first, second, ignore=None):
         salt myminion docker.compare_containers foo bar
         salt myminion docker.compare_containers foo bar ignore=Hostname
     '''
-    ignore = salt.utils.args.split_input(ignore or [])
+    ignore = __utils__['args.split_input'](ignore or [])
     result1 = inspect_container(first)
     result2 = inspect_container(second)
     ret = {}
@@ -1232,7 +1224,7 @@ def compare_networks(first, second, ignore='Name,Id,Created,Containers'):
 
         salt myminion docker.compare_network foo bar
     '''
-    ignore = salt.utils.args.split_input(ignore or [])
+    ignore = __utils__['args.split_input'](ignore or [])
     net1 = inspect_network(first) if not isinstance(first, dict) else first
     net2 = inspect_network(second) if not isinstance(second, dict) else second
     ret = {}
@@ -1939,13 +1931,13 @@ def resolve_tag(name, tags=None, **kwargs):
         salt myminion docker.resolve_tag centos:7 all=True
         salt myminion docker.resolve_tag c9f378ac27d9
     '''
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
     all_ = kwargs.pop('all', False)
     if kwargs:
-        salt.utils.args.invalid_kwargs(kwargs)
+        __utils__['args.invalid_kwargs'](kwargs)
 
     if tags is not None:
-        salt.utils.versions.warn_until(
+        __utils__['versions.warn_until'](
             'Neon',
             'The \'tags\' argument to docker.resolve_tag is deprecated. It no '
             'longer is used, and will be removed in the Neon release.'
@@ -2032,7 +2024,7 @@ def logs(name, **kwargs):
         salt myminion docker.logs mycontainer since='1 week ago'
         salt myminion docker.logs mycontainer since='1 fortnight ago'
     '''
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
     if 'stream' in kwargs:
         raise SaltInvocationError('The \'stream\' argument is not supported')
 
@@ -3697,7 +3689,7 @@ def export(name,
             # open the filehandle. If not using gzip, we need to open the
             # filehandle here. We make sure to close it in the "finally" block
             # below.
-            out = salt.utils.files.fopen(path, 'wb')  # pylint: disable=resource-leakage
+            out = __utils__['files.fopen'](path, 'wb')  # pylint: disable=resource-leakage
         response = _client_wrapper('export', name)
         buf = None
         while buf != '':
@@ -3782,11 +3774,11 @@ def rm_(name, force=False, volumes=False, **kwargs):
         salt myminion docker.rm mycontainer
         salt myminion docker.rm mycontainer force=True
     '''
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
     stop_ = kwargs.pop('stop', False)
     timeout = kwargs.pop('timeout', None)
     if kwargs:
-        salt.utils.args.invalid_kwargs(kwargs)
+        __utils__['args.invalid_kwargs'](kwargs)
 
     if state(name) == 'running' and not (force or stop_):
         raise CommandExecutionError(
@@ -3928,7 +3920,7 @@ def build(path=None,
     _prep_pull()
 
     if image is not None:
-        salt.utils.versions.warn_until(
+        __utils__['versions.warn_until'](
             'Neon',
             'The \'image\' argument to docker.build has been deprecated, '
             'please use \'repository\' instead.'
@@ -3974,7 +3966,10 @@ def build(path=None,
     stream_data = []
     for line in response:
         stream_data.extend(
-            json.loads(salt.utils.stringutils.to_str(line), cls=DockerJSONDecoder)
+            json.loads(
+                __utils__['stringutils.to_str'](line),
+                cls=DockerJSONDecoder
+            )
         )
     errors = []
     # Iterate through API response and collect information
@@ -4072,7 +4067,7 @@ def commit(name,
         salt myminion docker.commit mycontainer myuser/myimage mytag
     '''
     if image is not None:
-        salt.utils.versions.warn_until(
+        __utils__['versions.warn_until'](
             'Neon',
             'The \'image\' argument to docker.commit has been deprecated, '
             'please use \'repository\' instead.'
@@ -4223,7 +4218,7 @@ def import_(source,
         salt myminion docker.import salt://dockerimages/cent7-minimal.tar.xz myuser/centos:7
     '''
     if image is not None:
-        salt.utils.versions.warn_until(
+        __utils__['versions.warn_until'](
             'Neon',
             'The \'image\' argument to docker.import has been deprecated, '
             'please use \'repository\' instead.'
@@ -4341,7 +4336,7 @@ def load(path, repository=None, tag=None, image=None):
         salt myminion docker.load salt://path/to/docker/saved/image.tar repository=myuser/myimage tag=mytag
     '''
     if image is not None:
-        salt.utils.versions.warn_until(
+        __utils__['versions.warn_until'](
             'Neon',
             'The \'image\' argument to docker.load has been deprecated, '
             'please use \'repository\' instead.'
@@ -4510,7 +4505,7 @@ def pull(image,
     for event in response:
         log.debug('pull event: %s', event)
         try:
-            event = json.loads(salt.utils.stringutils.to_str(event))
+            event = json.loads(__utils__['stringutils.to_str'](event))
         except Exception as exc:
             raise CommandExecutionError(
                 'Unable to interpret API event: \'{0}\''.format(event),
@@ -4604,7 +4599,7 @@ def push(image,
     # Iterate through API response and collect information
     for event in response:
         try:
-            event = json.loads(salt.utils.stringutils.to_str(event))
+            event = json.loads(__utils__['stringutils.to_str'](event))
         except Exception as exc:
             raise CommandExecutionError(
                 'Unable to interpret API event: \'{0}\''.format(event),
@@ -4822,7 +4817,7 @@ def save(name,
             )
 
     if compression:
-        saved_path = salt.utils.files.mkstemp()
+        saved_path = __utils__['files.mkstemp']()
     else:
         saved_path = path
     # use the image name if its valid if not use the image id
@@ -4850,12 +4845,12 @@ def save(name,
             compressor = lzma.LZMACompressor()
 
         try:
-            with salt.utils.files.fopen(saved_path, 'rb') as uncompressed:
+            with __utils__['files.fopen'](saved_path, 'rb') as uncompressed:
                 if compression != 'gzip':
                     # gzip doesn't use a Compressor object, it uses a .open()
                     # method to open the filehandle. If not using gzip, we need
                     # to open the filehandle here.
-                    out = salt.utils.files.fopen(path, 'wb')
+                    out = __utils__['files.fopen'](path, 'wb')
                 buf = None
                 while buf != '':
                     buf = uncompressed.read(4096)
@@ -4937,7 +4932,7 @@ def tag_(name, repository, tag='latest', force=False, image=None):
         salt myminion docker.tag 0123456789ab myrepo/mycontainer mytag
     '''
     if image is not None:
-        salt.utils.versions.warn_until(
+        __utils__['versions.warn_until'](
             'Neon',
             'The \'image\' argument to docker.tag has been deprecated, '
             'please use \'repository\' instead.'
@@ -4985,9 +4980,9 @@ def networks(names=None, ids=None):
         salt myminion docker.networks ids=1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
     '''
     if names is not None:
-        names = salt.utils.args.split_input(names)
+        names = __utils__['args.split_input'](names)
     if ids is not None:
-        ids = salt.utils.args.split_input(ids)
+        ids = __utils__['args.split_input'](ids)
 
     response = _client_wrapper('networks', names=names, ids=ids)
     # Work around https://github.com/docker/docker-py/issues/1775
@@ -5246,7 +5241,7 @@ def create_network(name,
         skip_translate=skip_translate,
         ignore_collisions=ignore_collisions,
         validate_ip_addrs=validate_ip_addrs,
-        **salt.utils.args.clean_kwargs(**kwargs))
+        **__utils__['args.clean_kwargs'](**kwargs))
 
     if 'ipam' not in kwargs:
         ipam_kwargs = {}
@@ -5336,10 +5331,10 @@ def connect_container_to_network(container, net_id, **kwargs):
         salt myminion docker.connect_container_to_network web-1 mynet ipv4_address=10.20.0.10
         salt myminion docker.connect_container_to_network web-1 1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
     '''
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
     network_id = kwargs.pop('network_id', None)
     if network_id is not None:
-        salt.utils.versions.warn_until(
+        __utils__['versions.warn_until'](
             'Neon',
             'The \'network_id\' argument to docker.build has been deprecated, '
             'please use \'net_id\' instead.'
@@ -5926,9 +5921,9 @@ def _script(name,
                 path, exc
             )
 
-    path = salt.utils.files.mkstemp(dir='/tmp',
-                                    prefix='salt',
-                                    suffix=os.path.splitext(source)[1])
+    path = __utils__['files.mkstemp'](dir='/tmp',
+                                      prefix='salt',
+                                      suffix=os.path.splitext(source)[1])
     if template:
         fn_ = __salt__['cp.get_template'](source, path, template, saltenv)
         if not fn_:
@@ -6525,9 +6520,11 @@ def call(name, function, *args, **kwargs):
         raise CommandExecutionError('Missing function parameter')
 
     # move salt into the container
-    thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'],
-                                         extra_mods=__salt__['config.option']("thin_extra_mods", ''),
-                                         so_mods=__salt__['config.option']("thin_so_mods", ''))
+    thin_path = __utils__['thin.gen_thin'](
+        __opts__['cachedir'],
+        extra_mods=__salt__['config.option']("thin_extra_mods", ''),
+        so_mods=__salt__['config.option']("thin_so_mods", '')
+    )
     ret = copy_to(name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path)))
 
     # untar archive
@@ -6560,7 +6557,7 @@ def call(name, function, *args, **kwargs):
 
         # process "real" result in stdout
         try:
-            data = salt.utils.json.find_json(ret['stdout'])
+            data = __utils__['json.find_json'](ret['stdout'])
             local = data.get('local', data)
             if isinstance(local, dict):
                 if 'retcode' in local:
@@ -6622,7 +6619,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
 
     ret = None
     try:
-        trans_tar_sha256 = salt.utils.hashutils.get_hash(trans_tar, 'sha256')
+        trans_tar_sha256 = __utils__['hashutils.get_hash'](trans_tar, 'sha256')
         copy_to(name,
                 trans_tar,
                 os.path.join(trans_dest_path, 'salt_state.tgz'),
@@ -6718,14 +6715,14 @@ def sls_build(repository,
     '''
     name = kwargs.pop('name', None)
     if name is not None:
-        salt.utils.versions.warn_until(
+        __utils__['versions.warn_until'](
             'Neon',
             'The \'name\' argument to docker.sls_build has been deprecated, '
             'please use \'repository\' instead.'
         )
         respository = name
 
-    create_kwargs = salt.utils.args.clean_kwargs(**copy.deepcopy(kwargs))
+    create_kwargs = __utils__['args.clean_kwargs'](**copy.deepcopy(kwargs))
     for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
         try:
             del create_kwargs[key]
