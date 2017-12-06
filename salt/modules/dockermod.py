@@ -837,7 +837,7 @@ def get_client_args(limit=None):
         salt myminion docker.get_client_args logs
         salt myminion docker.get_client_args create_container,connect_container_to_network
     '''
-    return salt.utils.docker.get_client_args(limit=limit)
+    return __utils__['docker.get_client_args'](limit=limit)
 
 
 def _get_create_kwargs(skip_translate=None,
@@ -849,7 +849,7 @@ def _get_create_kwargs(skip_translate=None,
     Take input kwargs and return a kwargs dict to pass to docker-py's
     create_container() function.
     '''
-    kwargs = salt.utils.docker.translate_input(
+    kwargs = __utils__['docker.translate_input'](
         salt.utils.docker.translate.container,
         skip_translate=skip_translate,
         ignore_collisions=ignore_collisions,
@@ -5241,7 +5241,7 @@ def create_network(name,
         # IPv4 and IPv6
         salt myminion docker.create_network mynet ipam_pools='[{"subnet": "10.0.0.0/24", "gateway": "10.0.0.1"}, {"subnet": "fe3f:2180:26:1::60/123", "gateway": "fe3f:2180:26:1::61"}]'
     '''
-    kwargs = salt.utils.docker.translate_input(
+    kwargs = __utils__['docker.translate_input'](
         salt.utils.docker.translate.network,
         skip_translate=skip_translate,
         ignore_collisions=ignore_collisions,
@@ -5261,7 +5261,7 @@ def create_network(name,
         # IPAM-specific configuration was passed. Just create the network
         # without specifying IPAM configuration.
         if ipam_pools or ipam_kwargs:
-            kwargs['ipam'] = salt.utils.docker.create_ipam_config(
+            kwargs['ipam'] = __utils__['docker.create_ipam_config'](
                 *ipam_pools,
                 **ipam_kwargs)
 
