@@ -107,10 +107,13 @@ def get(key, default=''):
         return defaults
 
 
-def merge(dest, upd):
+def merge(dest, upd, merge_lists=False):
     '''
     defaults.merge
         Allows deep merging of dicts in formulas.
+
+    merge_lists : False
+        If True, it will also merge lists instead of replace their items.
 
         CLI Example:
         .. code-block:: bash
@@ -120,4 +123,4 @@ def merge(dest, upd):
     It is more typical to use this in a templating language in formulas,
     instead of directly on the command-line.
     '''
-    return dictupdate.update(dest, upd)
+    return dictupdate.update(dest, upd, merge_lists=merge_lists)
