@@ -218,16 +218,16 @@ Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
 if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "$($ini['Settings']['Scripts3Dir'])\pip.exe" "--no-cache-dir install -r $($script_path)\req_3.txt" "pip install"
+    Start_Process_and_test_exitcode "$($ini['Settings']['Scripts3Dir'])\pip.exe" "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
 } else {
     if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
         # folder empty
-        Write-Output "    pip download from req_3.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_3.txt" "pip download"
+        Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
+        Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
     }
     Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
     Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_3.txt" "pip install"
+  Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
 }
 
 #==============================================================================
@@ -243,7 +243,10 @@ $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
 DownloadFileWithProgress $url $file
 
 # Install
-Start_Process_and_test_exitcode  "$($ini['Settings']['Scripts3Dir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyWin32"
+Start_Process_and_test_exitcode "$($ini['Settings']['Scripts3Dir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyWin32"
+
+# Run the postinstall script
+Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "$($ini['Settings']['Python3Dir'])\pywin32_postinstall.py -install" "PyWin32 Post Install Script"
 
 # Move DLL's to Python Root
 Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
