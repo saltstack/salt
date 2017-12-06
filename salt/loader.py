@@ -884,6 +884,7 @@ def sdb(opts, functions=None, whitelist=None, utils=None):
             u'__sdb__': functions,
             u'__opts__': opts,
             u'__utils__': utils,
+            u'__salt__': minion_mods(opts, utils),
         },
         whitelist=whitelist,
     )
