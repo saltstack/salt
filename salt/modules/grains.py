@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 Return/control aspects of the grains data
+
+Grains set or altered with this module are stored in the 'grains'
+file on the minions. By default, this file is located at: ``/etc/salt/grains``
+
+.. Note::
+
+   This does **NOT** override any grains set in the minion config file.
 '''
 
 # Import python libs
@@ -222,20 +229,44 @@ def setvals(grains, destructive=False):
         raise SaltException('setvals grains must be a dictionary.')
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
-        gfn = os.path.join(
-            os.path.dirname(__opts__['conf_file']),
-            'grains'
-        )
+        if salt.utils.is_proxy():
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'proxy.d',
+                __opts__['id'],
+                'grains'
+            )
+        else:
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'grains'
+            )
     elif os.path.isdir(__opts__['conf_file']):
-        gfn = os.path.join(
-            __opts__['conf_file'],
-            'grains'
-        )
+        if salt.utils.is_proxy():
+            gfn = os.path.join(
+                __opts__['conf_file'],
+                'proxy.d',
+                __opts__['id'],
+                'grains'
+            )
+        else:
+            gfn = os.path.join(
+                __opts__['conf_file'],
+                'grains'
+            )
     else:
-        gfn = os.path.join(
-            os.path.dirname(__opts__['conf_file']),
-            'grains'
-        )
+        if salt.utils.is_proxy():
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'proxy.d',
+                __opts__['id'],
+                'grains'
+            )
+        else:
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'grains'
+            )
 
     if os.path.isfile(gfn):
         with salt.utils.fopen(gfn, 'rb') as fp_:

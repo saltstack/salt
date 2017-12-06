@@ -3127,6 +3127,12 @@ def run_bg(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    .. note::
+
+        If the init system is systemd and the backgrounded task should run even if the salt-minion process
+        is restarted, prepend ``systemd-run --scope`` to the command.  This will reparent the process in its
+        own scope separate from salt-minion, and will not be affected by restarting the minion service.
+
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
     :param str cwd: The current working directory to execute the command in.
