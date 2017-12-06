@@ -56,7 +56,7 @@ class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(boto_dynamodb.present(name), ret)
 
             with patch.dict(boto_dynamodb.__opts__, {'test': True}):
-                comt = ('DynamoDB table {0} would be created.,\n'.format(name))
+                comt = ('DynamoDB table {0} would be created.'.format(name))
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_dynamodb.present(name), ret)
 
