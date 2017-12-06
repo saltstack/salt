@@ -5149,6 +5149,14 @@ def create_network(name,
 
         Example: ``attachable=True``
 
+        .. note::
+            While support for this option was added in API version 1.24, its
+            value was not added to the inpsect results until API version 1.26.
+            The version of Docker which is available for CentOS 7 runs API
+            version 1.24, meaning that while Salt can pass this argument to the
+            API, it has no way of knowing the value of this config option in an
+            existing Docker network.
+
     scope
         Specify the network's scope (``local``, ``global`` or ``swarm``)
 
