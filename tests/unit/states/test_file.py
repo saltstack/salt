@@ -533,6 +533,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             name = '/etc/grub.conf'
             user = 'salt'
             group = 'saltstack'
+            comt = ('Destination file name is required')
 
             ret = {'name': name,
                    'result': False,
