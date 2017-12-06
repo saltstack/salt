@@ -884,6 +884,7 @@ def sdb(opts, functions=None, whitelist=None, utils=None):
             u'__sdb__': functions,
             u'__opts__': opts,
             u'__utils__': utils,
+            u'__salt__': minion_mods(opts, utils),
         },
         whitelist=whitelist,
     )
@@ -1593,8 +1594,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Load a single item if you have it
         '''
         # if the key doesn't have a '.' then it isn't valid for this mod dict
-        if not isinstance(key, six.string_types) or u'.' not in key:
-            raise KeyError
+        if not isinstance(key, six.string_types):
+            raise KeyError(u'The key must be a string.')
+        if u'.' not in key:
+            raise KeyError(u'The key \'%s\' should contain a \'.\'', key)
         mod_name, _ = key.split(u'.', 1)
         if mod_name in self.missing_modules:
             return True
