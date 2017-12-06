@@ -124,6 +124,15 @@ VALID_OPTS = {
     # master address will not be split into IP and PORT.
     'master_uri_format': str,
 
+    # The following optiosn refer to the Minion only, and they specify
+    # the details of the source address / port to be used when connecting to
+    # the Master. This is useful when dealing withmachines where due to firewall
+    # rules you are restricted to use a certain IP/port combination only.
+    'source_interface_name': str,
+    'source_address': str,
+    'source_ret_port': (six.string_types, int),
+    'source_publish_port': (six.string_types, int),
+
     # The fingerprint of the master key may be specified to increase security. Generate
     # a master fingerprint with `salt-key -F master`
     'master_finger': str,
@@ -1152,6 +1161,10 @@ DEFAULT_MINION_OPTS = {
     'master': 'salt',
     'master_type': 'str',
     'master_uri_format': 'default',
+    'source_interface_name': '',
+    'source_address': '',
+    'source_ret_port': 0,
+    'source_publish_port': 0,
     'master_port': 4506,
     'master_finger': '',
     'master_shuffle': False,
