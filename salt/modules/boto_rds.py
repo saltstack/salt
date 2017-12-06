@@ -280,7 +280,6 @@ def create(name, allocated_storage, db_instance_class, engine,
         if not conn:
             return {'results': bool(conn)}
 
-        taglist = _tag_doc(tags)
         kwargs = {}
         boto_params = set(boto3_param_map.keys())
         keys = set(locals().keys())
