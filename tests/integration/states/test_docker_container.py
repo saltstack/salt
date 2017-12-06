@@ -769,7 +769,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 name=name,
                 image=self.image,
                 command='whoami',
-                auto_remove=True,
                 onlyif=cmd)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
@@ -779,6 +778,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                     'onlyif command /bin/false returned exit code of'
                 )
             )
+            self.run_function('docker.rm', [name], force=True)
 
         for cmd in ('/bin/true', ['/bin/true', 'ls /']):
             log.debug('Trying %s', cmd)
@@ -787,7 +787,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 name=name,
                 image=self.image,
                 command='whoami',
-                auto_remove=True,
                 onlyif=cmd)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
@@ -796,6 +795,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 ret['comment'],
                 'Container ran and exited with a return code of 0'
             )
+            self.run_function('docker.rm', [name], force=True)
 
     @container_name
     def test_run_with_unless(self, name):
@@ -812,7 +812,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 name=name,
                 image=self.image,
                 command='whoami',
-                auto_remove=True,
                 unless=cmd)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
@@ -821,6 +820,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 ret['comment'],
                 'unless command /bin/true returned exit code of 0'
             )
+            self.run_function('docker.rm', [name], force=True)
 
         for cmd in ('/bin/false', ['/bin/false', 'ls /paththatdoesnotexist']):
             log.debug('Trying %s', cmd)
@@ -829,7 +829,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 name=name,
                 image=self.image,
                 command='whoami',
-                auto_remove=True,
                 unless=cmd)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
@@ -838,6 +837,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 ret['comment'],
                 'Container ran and exited with a return code of 0'
             )
+            self.run_function('docker.rm', [name], force=True)
 
     @container_name
     def test_run_with_creates(self, name):
@@ -868,7 +868,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 name=name,
                 image=self.image,
                 command='whoami',
-                auto_remove=True,
                 creates=path)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
@@ -877,6 +876,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 ret['comment'],
                 'All specified paths in \'creates\' argument exist'
             )
+            self.run_function('docker.rm', [name], force=True)
 
         for path in (bad_file, [good_file1, bad_file]):
             log.debug('Trying %s', path)
@@ -885,7 +885,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 name=name,
                 image=self.image,
                 command='whoami',
-                auto_remove=True,
                 creates=path)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
@@ -894,6 +893,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 ret['comment'],
                 'Container ran and exited with a return code of 0'
             )
+            self.run_function('docker.rm', [name], force=True)
 
     @container_name
     def test_run_replace(self, name):
@@ -905,8 +905,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             'docker_container.run',
             name=name,
             image=self.image,
-            command='whoami',
-            auto_remove=False)
+            command='whoami')
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
         self.assertEqual(ret['changes']['Logs'], 'root\n')
@@ -921,7 +920,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             name=name,
             image=self.image,
             command='whoami',
-            auto_remove=False,
             replace=False)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -940,7 +938,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             name=name,
             image=self.image,
             command='whoami',
-            auto_remove=False,
             replace=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
@@ -960,8 +957,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'docker_container.running',
             name=name,
-            image=self.image,
-            auto_remove=False)
+            image=self.image)
         self.assertSaltTrueReturn(ret)
 
         # Run again with replace=True, this should fail because the container
@@ -971,7 +967,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             name=name,
             image=self.image,
             command='whoami',
-            auto_remove=False,
             replace=True,
             force=False)
         self.assertSaltFalseReturn(ret)
@@ -992,7 +987,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             name=name,
             image=self.image,
             command='whoami',
-            auto_remove=False,
             replace=True,
             force=True)
         self.assertSaltTrueReturn(ret)
@@ -1016,7 +1010,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             name=name,
             image=self.image,
             command='/bin/false',
-            auto_remove=True,
             failhard=True)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -1026,13 +1019,13 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 'Container ran and exited with a return code of'
             )
         )
+        self.run_function('docker.rm', [name], force=True)
 
         ret = self.run_state(
             'docker_container.run',
             name=name,
             image=self.image,
             command='/bin/false',
-            auto_remove=True,
             failhard=False)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
@@ -1042,6 +1035,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 'Container ran and exited with a return code of'
             )
         )
+        self.run_function('docker.rm', [name], force=True)
 
     @container_name
     def test_run_bg(self, name):
@@ -1055,7 +1049,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             name=name,
             image=self.image,
             command='sh -c "sleep 5 && whoami"',
-            auto_remove=True,
             bg=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
