@@ -43,6 +43,7 @@ from salt.runners.state import orchestrate as _orchestrate
 
 # Import 3rd-party libs
 from salt.ext import six
+import msgpack
 
 __proxyenabled__ = ['*']
 
@@ -163,6 +164,99 @@ def _snapper_post(opts, jid, pre_num):
                     __pub_jid=jid)
     except Exception:
         log.error('Failed to create snapper pre snapshot for jid: {0}'.format(jid))
+
+
+def pause(jid, state_id=None, duration=None):
+    '''
+    Set up a state id pause, this instructs a running state to pause at a given
+    state id. This needs to pass in the jid of the running state and can
+    optionally pass in a duration in seconds. If a state_id is not passed then
+    the jid referenced will be paused at the begining of the next state run.
+
+    The given state id is the id got a given state execution, so given a state
+    that looks like this:
+
+    .. code-block:: yaml
+
+        vim:
+          pkg.installed: []
+
+    The state_id to pass to `pause` is `vim`
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' state.pause 20171130110407769519
+        salt '*' state.pause 20171130110407769519 vim
+        salt '*' state.pause 20171130110407769519 vim 20
+    '''
+    jid = str(jid)
+    if state_id is None:
+        state_id = '__all__'
+    pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
+    pause_path = os.path.join(pause_dir, jid)
+    if not os.path.exists(pause_dir):
+        try:
+            os.makedirs(pause_dir)
+        except OSError:
+            # File created in the gap
+            pass
+    data = {}
+    if os.path.exists(pause_path):
+        with salt.utils.files.fopen(pause_path, 'rb') as fp_:
+            data = msgpack.loads(fp_.read())
+    if state_id not in data:
+        data[state_id] = {}
+    if duration:
+        data[state_id]['duration'] = int(duration)
+    with salt.utils.files.fopen(pause_path, 'wb') as fp_:
+        fp_.write(msgpack.dumps(data))
+
+
+def resume(jid, state_id=None):
+    '''
+    Remove a pause from a jid, allowing it to continue. If the state_id is
+    not specified then the a general pause will be resumed.
+
+    The given state_id is the id got a given state execution, so given a state
+    that looks like this:
+
+    .. code-block:: yaml
+
+        vim:
+          pkg.installed: []
+
+    The state_id to pass to `rm_pause` is `vim`
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' state.resume 20171130110407769519
+        salt '*' state.resume 20171130110407769519 vim
+    '''
+    jid = str(jid)
+    if state_id is None:
+        state_id = '__all__'
+    pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
+    pause_path = os.path.join(pause_dir, jid)
+    if not os.path.exists(pause_dir):
+        try:
+            os.makedirs(pause_dir)
+        except OSError:
+            # File created in the gap
+            pass
+    data = {}
+    if os.path.exists(pause_path):
+        with salt.utils.files.fopen(pause_path, 'rb') as fp_:
+            data = msgpack.loads(fp_.read())
+    else:
+        return True
+    if state_id in data:
+        data.pop(state_id)
+    with salt.utils.files.fopen(pause_path, 'wb') as fp_:
+        fp_.write(msgpack.dumps(data))
 
 
 def orchestrate(mods,
