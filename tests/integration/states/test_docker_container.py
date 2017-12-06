@@ -22,7 +22,8 @@ from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -49,8 +50,8 @@ def with_random_name(func):
 
 
 @destructiveTest
-@skipIf(not salt.utils.which('busybox'), 'Busybox not installed')
-@skipIf(not salt.utils.which('dockerd'), 'Docker not installed')
+@skipIf(not salt.utils.path.which('busybox'), 'Busybox not installed')
+@skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test docker_container states
@@ -80,7 +81,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             raise Exception('Failed to build image')
 
         try:
-            salt.utils.rm_rf(cls.image_build_rootdir)
+            salt.utils.files.rm_rf(cls.image_build_rootdir)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise
@@ -124,7 +125,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             if name in self.run_function('docker.list_containers', all=True):
                 self.run_function('docker.rm', [name], force=True)
             try:
-                salt.utils.rm_rf(bind_dir_host)
+                salt.utils.files.rm_rf(bind_dir_host)
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
                     raise

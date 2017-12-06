@@ -264,7 +264,7 @@ def call_hook(message,
 
     .. code-block:: bash
 
-        salt '*' slack.post_hook message='Hello, from SaltStack'
+        salt '*' slack.call_hook message='Hello, from SaltStack'
 
     '''
     base_url = 'https://hooks.slack.com/services/'

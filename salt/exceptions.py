@@ -11,7 +11,7 @@ import time
 
 # Import Salt libs
 import salt.defaults.exitcodes
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -31,14 +31,14 @@ def get_error_message(error):
     '''
     Get human readable message from Python Exception
     '''
-    return error.args[0] if error.args else ''
+    return error.args[0] if error.args else u''
 
 
 class SaltException(Exception):
     '''
     Base exception class; all Salt-specific exceptions should subclass this
     '''
-    def __init__(self, message=''):
+    def __init__(self, message=u''):
         super(SaltException, self).__init__(message)
         self.strerror = message
 
@@ -48,7 +48,8 @@ class SaltException(Exception):
         transport via msgpack
         '''
         if six.PY3:
-            return {'message': str(self), 'args': self.args}
+            # The message should be a str type, not a unicode
+            return {u'message': str(self), u'args': self.args}
         return dict(message=self.__unicode__(), args=self.args)
 
 
@@ -99,16 +100,16 @@ class CommandExecutionError(SaltException):
     Used when a module runs a command which returns an error and wants
     to show the user the output gracefully instead of dying
     '''
-    def __init__(self, message='', info=None):
+    def __init__(self, message=u'', info=None):
         self.error = exc_str_prefix = message
         self.info = info
         if self.info:
             if exc_str_prefix:
-                if exc_str_prefix[-1] not in '.?!':
-                    exc_str_prefix += '.'
-                exc_str_prefix += ' '
+                if exc_str_prefix[-1] not in u'.?!':
+                    exc_str_prefix += u'.'
+                exc_str_prefix += u' '
 
-            exc_str_prefix += 'Additional info follows:\n\n'
+            exc_str_prefix += u'Additional info follows:\n\n'
             # NOTE: exc_str will be passed to the parent class' constructor and
             # become self.strerror.
             exc_str = exc_str_prefix + _nested_output(self.info)
@@ -119,7 +120,7 @@ class CommandExecutionError(SaltException):
             # this information would be redundant).
             if isinstance(self.info, dict):
                 info_without_changes = copy.deepcopy(self.info)
-                info_without_changes.pop('changes', None)
+                info_without_changes.pop(u'changes', None)
                 if info_without_changes:
                     self.strerror_without_changes = \
                         exc_str_prefix + _nested_output(info_without_changes)
@@ -168,9 +169,9 @@ class FileLockError(SaltException):
         super(FileLockError, self).__init__(msg, *args, **kwargs)
         if time_start is None:
             log.warning(
-                'time_start should be provided when raising a FileLockError. '
-                'Defaulting to current time as a fallback, but this may '
-                'result in an inaccurate timeout.'
+                u'time_start should be provided when raising a FileLockError. '
+                u'Defaulting to current time as a fallback, but this may '
+                u'result in an inaccurate timeout.'
             )
             self.time_start = time.time()
         else:
@@ -223,29 +224,30 @@ class SaltRenderError(SaltException):
     def __init__(self,
                  message,
                  line_num=None,
-                 buf='',
-                 marker='    <======================',
+                 buf=u'',
+                 marker=u'    <======================',
                  trace=None):
         self.error = message
         exc_str = copy.deepcopy(message)
         self.line_num = line_num
         self.buffer = buf
-        self.context = ''
+        self.context = u''
         if trace:
-            exc_str += '\n{0}\n'.format(trace)
+            exc_str += u'\n{0}\n'.format(trace)
         if self.line_num and self.buffer:
-
-            import salt.utils
-            self.context = salt.utils.get_context(
+            # Avoid circular import
+            import salt.utils.stringutils
+            import salt.utils.templates
+            self.context = salt.utils.templates.get_context(
                 self.buffer,
                 self.line_num,
                 marker=marker
             )
-            exc_str += '; line {0}\n\n{1}'.format(
+            exc_str += '; line {0}\n\n{1}'.format(  # future lint: disable=non-unicode-string
                 self.line_num,
-                self.context
+                salt.utils.stringutils.to_str(self.context),
             )
-        SaltException.__init__(self, exc_str)
+        super(SaltRenderError, self).__init__(exc_str)
 
 
 class SaltClientTimeout(SaltException):
@@ -262,6 +264,12 @@ class SaltClientTimeout(SaltException):
 class SaltCacheError(SaltException):
     '''
     Thrown when a problem was encountered trying to read or write from the salt cache
+    '''
+
+
+class TimeoutError(SaltException):
+    '''
+    Thrown when an opration cannot be completet within a given time limit.
     '''
 
 
@@ -383,6 +391,37 @@ class NotImplemented(SaltException):
     '''
 
 
+class TemplateError(SaltException):
+    '''
+    Used when a custom error is triggered in a template
+    '''
+
+
+class ArgumentValueError(CommandExecutionError):
+    '''
+    Used when an invalid argument was passed to a command execution
+    '''
+
+
+class CheckError(CommandExecutionError):
+    '''
+    Used when a check fails
+    '''
+
+
+# Validation related exceptions
+class InvalidConfigError(CommandExecutionError):
+    '''
+    Used when the config is invalid
+    '''
+
+
+class InvalidEntityError(CommandExecutionError):
+    '''
+    Used when an entity fails validation
+    '''
+
+
 # VMware related exceptions
 class VMwareSaltError(CommandExecutionError):
     '''
@@ -410,13 +449,61 @@ class VMwareObjectRetrievalError(VMwareSaltError):
     '''
 
 
+class VMwareObjectNotFoundError(VMwareSaltError):
+    '''
+    Used when a VMware object was not found
+    '''
+
+
+class VMwareObjectExistsError(VMwareSaltError):
+    '''
+    Used when a VMware object already exists
+    '''
+
+
+class VMwareMultipleObjectsError(VMwareObjectRetrievalError):
+    '''
+    Used when multiple objects were retrieved (and one was expected)
+    '''
+
+
+class VMwareNotFoundError(VMwareSaltError):
+    '''
+    Used when a VMware object was not found
+    '''
+
+
 class VMwareApiError(VMwareSaltError):
     '''
     Used when representing a generic VMware API error
     '''
 
 
+class VMwareFileNotFoundError(VMwareApiError):
+    '''
+    Used when representing a generic VMware error if a file not found
+    '''
+
+
 class VMwareSystemError(VMwareSaltError):
     '''
     Used when representing a generic VMware system error
+    '''
+
+
+class VMwarePowerOnError(VMwareSaltError):
+    '''
+    Used when error occurred during power on
+    '''
+
+
+class VMwareVmRegisterError(VMwareSaltError):
+    '''
+    Used when a configuration parameter is incorrect
+    '''
+
+
+class VMwareVmCreationError(VMwareSaltError):
+    '''
+    Used when a configuration parameter is incorrect
     '''

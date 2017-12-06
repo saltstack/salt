@@ -10,9 +10,14 @@ import os
 import sys
 import stat
 import shutil
-import resource
 import tempfile
 import socket
+
+# Import third party libs
+if sys.platform.startswith('win'):
+    import win32file
+else:
+    import resource
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
@@ -29,7 +34,7 @@ from tests.support.mock import (
 )
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.utils.verify import (
     check_user,
     verify_env,
@@ -92,7 +97,10 @@ class TestVerify(TestCase):
         writer = FakeWriter()
         sys.stderr = writer
         # Now run the test
-        self.assertFalse(check_user('nouser'))
+        if sys.platform.startswith('win'):
+            self.assertTrue(check_user('nouser'))
+        else:
+            self.assertFalse(check_user('nouser'))
         # Restore sys.stderr
         sys.stderr = stderr
         if writer.output != 'CRITICAL: User not found: "nouser"\n':
@@ -103,13 +111,21 @@ class TestVerify(TestCase):
     def test_verify_env(self):
         root_dir = tempfile.mkdtemp(dir=TMP)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
-        verify_env([var_dir], getpass.getuser())
+        key_dir = os.path.join(root_dir, 'key_dir')
+        verify_env([var_dir, key_dir], getpass.getuser(), root_dir=root_dir, sensitive_dirs=[key_dir])
         self.assertTrue(os.path.exists(var_dir))
-        dir_stat = os.stat(var_dir)
-        self.assertEqual(dir_stat.st_uid, os.getuid())
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
+        self.assertTrue(os.path.exists(key_dir))
+
+        var_dir_stat = os.stat(var_dir)
+        self.assertEqual(var_dir_stat.st_uid, os.getuid())
+        self.assertEqual(var_dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
+        self.assertEqual(var_dir_stat.st_mode & stat.S_IRWXG, 40)
+        self.assertEqual(var_dir_stat.st_mode & stat.S_IRWXO, 5)
+
+        key_dir_stat = os.stat(key_dir)
+        self.assertEqual(key_dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
+        self.assertEqual(key_dir_stat.st_mode & stat.S_IRWXG, 0)
+        self.assertEqual(key_dir_stat.st_mode & stat.S_IRWXO, 0)
 
     @requires_network(only_local_network=True)
     def test_verify_socket(self):
@@ -128,7 +144,6 @@ class TestVerify(TestCase):
                 # not support IPv6.
                 pass
 
-    @skipIf(True, 'Skipping until we can find why Jenkins is bailing out')
     def test_max_open_files(self):
         with TestsLoggingHandler() as handler:
             logmsg_dbg = (
@@ -149,15 +164,31 @@ class TestVerify(TestCase):
                 'raise the salt\'s max_open_files setting. Please consider '
                 'raising this value.'
             )
+            if sys.platform.startswith('win'):
+                logmsg_crash = (
+                    '{0}:The number of accepted minion keys({1}) should be lower '
+                    'than 1/4 of the max open files soft setting({2}). '
+                    'salt-master will crash pretty soon! Please consider '
+                    'raising this value.'
+                )
 
-            mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if sys.platform.startswith('win'):
+                # Check the Windows API for more detail on this
+                # http://msdn.microsoft.com/en-us/library/xt874334(v=vs.71).aspx
+                # and the python binding http://timgolden.me.uk/pywin32-docs/win32file.html
+                mof_s = mof_h = win32file._getmaxstdio()
+            else:
+                mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
             tempdir = tempfile.mkdtemp(prefix='fake-keys')
             keys_dir = os.path.join(tempdir, 'minions')
             os.makedirs(keys_dir)
 
             mof_test = 256
 
-            resource.setrlimit(resource.RLIMIT_NOFILE, (mof_test, mof_h))
+            if sys.platform.startswith('win'):
+                win32file._setmaxstdio(mof_test)
+            else:
+                resource.setrlimit(resource.RLIMIT_NOFILE, (mof_test, mof_h))
 
             try:
                 prev = 0
@@ -166,7 +197,7 @@ class TestVerify(TestCase):
 
                     for n in range(prev, newmax):
                         kpath = os.path.join(keys_dir, str(n))
-                        with salt.utils.fopen(kpath, 'w') as fp_:
+                        with salt.utils.files.fopen(kpath, 'w') as fp_:
                             fp_.write(str(n))
 
                     opts = {
@@ -191,7 +222,7 @@ class TestVerify(TestCase):
                                 level,
                                 newmax,
                                 mof_test,
-                                mof_h - newmax,
+                                mof_test - newmax if sys.platform.startswith('win') else mof_h - newmax,
                             ),
                             handler.messages
                         )
@@ -201,7 +232,7 @@ class TestVerify(TestCase):
                 newmax = mof_test
                 for n in range(prev, newmax):
                     kpath = os.path.join(keys_dir, str(n))
-                    with salt.utils.fopen(kpath, 'w') as fp_:
+                    with salt.utils.files.fopen(kpath, 'w') as fp_:
                         fp_.write(str(n))
 
                 opts = {
@@ -216,7 +247,7 @@ class TestVerify(TestCase):
                         'CRITICAL',
                         newmax,
                         mof_test,
-                        mof_h - newmax,
+                        mof_test - newmax if sys.platform.startswith('win') else mof_h - newmax,
                     ),
                     handler.messages
                 )
@@ -227,8 +258,11 @@ class TestVerify(TestCase):
                     self.skipTest('We\'ve hit the max open files setting')
                 raise
             finally:
+                if sys.platform.startswith('win'):
+                    win32file._setmaxstdio(mof_h)
+                else:
+                    resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
                 shutil.rmtree(tempdir)
-                resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_verify_log(self):

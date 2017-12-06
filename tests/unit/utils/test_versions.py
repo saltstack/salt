@@ -10,15 +10,20 @@
 
 # Import python libs
 from __future__ import absolute_import
+import sys
+import warnings
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
+import salt.version
+import salt.utils.versions
 from salt.utils.versions import LooseVersion, StrictVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 if six.PY2:
     cmp_method = '__cmp__'
@@ -89,3 +94,162 @@ class VersionTestCase(TestCase):
             self.assertEqual(res, wanted,
                              'cmp(%s, %s) should be %s, got %s' %
                              (v1, v2, wanted, res))
+
+
+class VersionFuncsTestCase(TestCase):
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_compare(self):
+        ret = salt.utils.versions.compare('1.0', '==', '1.0')
+        self.assertTrue(ret)
+
+        ret = salt.utils.versions.compare('1.0', '!=', '1.0')
+        self.assertFalse(ret)
+
+        with patch.object(salt.utils.versions, 'log') as log_mock:
+            ret = salt.utils.versions.compare('1.0', 'HAH I AM NOT A COMP OPERATOR! I AM YOUR FATHER!', '1.0')
+            self.assertTrue(log_mock.error.called)
+
+    def test_kwargs_warn_until(self):
+        # Test invalid version arg
+        self.assertRaises(RuntimeError, salt.utils.versions.kwargs_warn_until, {}, [])
+
+    def test_warn_until_warning_raised(self):
+        # We *always* want *all* warnings thrown on this module
+        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
+
+        def raise_warning(_version_info_=(0, 16, 0)):
+            salt.utils.versions.warn_until(
+                (0, 17), 'Deprecation Message!',
+                _version_info_=_version_info_
+
+            )
+
+        def raise_named_version_warning(_version_info_=(0, 16, 0)):
+            salt.utils.versions.warn_until(
+                'Hydrogen', 'Deprecation Message!',
+                _version_info_=_version_info_
+            )
+
+        # raise_warning should show warning until version info is >= (0, 17)
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            raise_warning()
+            self.assertEqual(
+                'Deprecation Message!', str(recorded_warnings[0].message)
+            )
+
+        # raise_warning should show warning until version info is >= (0, 17)
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            raise_named_version_warning()
+            self.assertEqual(
+                'Deprecation Message!', str(recorded_warnings[0].message)
+            )
+
+        # the deprecation warning is not issued because we passed
+        # _dont_call_warning
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            salt.utils.versions.warn_until(
+                (0, 17), 'Foo', _dont_call_warnings=True,
+                _version_info_=(0, 16)
+            )
+            self.assertEqual(0, len(recorded_warnings))
+
+        # Let's set version info to (0, 17), a RuntimeError should be raised
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r'The warning triggered on filename \'(.*)test_versions.py\', '
+                r'line number ([\d]+), is supposed to be shown until version '
+                r'0.17.0 is released. Current version is now 0.17.0. '
+                r'Please remove the warning.'):
+            raise_warning(_version_info_=(0, 17, 0))
+
+        # Let's set version info to (0, 17), a RuntimeError should be raised
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r'The warning triggered on filename \'(.*)test_versions.py\', '
+                r'line number ([\d]+), is supposed to be shown until version '
+                r'(.*) is released. Current version is now '
+                r'([\d.]+). Please remove the warning.'):
+            raise_named_version_warning(_version_info_=(getattr(sys, 'maxint', None) or getattr(sys, 'maxsize'), 16, 0))
+
+        # Even though we're calling warn_until, we pass _dont_call_warnings
+        # because we're only after the RuntimeError
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r'The warning triggered on filename \'(.*)test_versions.py\', '
+                r'line number ([\d]+), is supposed to be shown until version '
+                r'0.17.0 is released. Current version is now '
+                r'(.*). Please remove the warning.'):
+            salt.utils.versions.warn_until(
+                (0, 17), 'Foo', _dont_call_warnings=True
+            )
+
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r'The warning triggered on filename \'(.*)test_versions.py\', '
+                r'line number ([\d]+), is supposed to be shown until version '
+                r'(.*) is released. Current version is now '
+                r'(.*). Please remove the warning.'):
+            salt.utils.versions.warn_until(
+                'Hydrogen', 'Foo', _dont_call_warnings=True,
+                _version_info_=(getattr(sys, 'maxint', None) or getattr(sys, 'maxsize'), 16, 0)
+            )
+
+        # version on the deprecation message gets properly formatted
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            vrs = salt.version.SaltStackVersion.from_name('Helium')
+            salt.utils.versions.warn_until(
+                'Helium', 'Deprecation Message until {version}!',
+                _version_info_=(vrs.major - 1, 0)
+            )
+            self.assertEqual(
+                'Deprecation Message until {0}!'.format(vrs.formatted_version),
+                str(recorded_warnings[0].message)
+            )
+
+    def test_kwargs_warn_until_warning_raised(self):
+        # We *always* want *all* warnings thrown on this module
+        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
+
+        def raise_warning(**kwargs):
+            _version_info_ = kwargs.pop('_version_info_', (0, 16, 0))
+            salt.utils.versions.kwargs_warn_until(
+                kwargs,
+                (0, 17),
+                _version_info_=_version_info_
+            )
+
+        # raise_warning({...}) should show warning until version info is >= (0, 17)
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            raise_warning(foo=42)  # with a kwarg
+            self.assertEqual(
+                'The following parameter(s) have been deprecated and '
+                'will be removed in \'0.17.0\': \'foo\'.',
+                str(recorded_warnings[0].message)
+            )
+        # With no **kwargs, should not show warning until version info is >= (0, 17)
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            salt.utils.versions.kwargs_warn_until(
+                {},  # no kwargs
+                (0, 17),
+                _version_info_=(0, 16, 0)
+            )
+            self.assertEqual(0, len(recorded_warnings))
+
+        # Let's set version info to (0, 17), a RuntimeError should be raised
+        # regardless of whether or not we pass any **kwargs.
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r'The warning triggered on filename \'(.*)test_versions.py\', '
+                r'line number ([\d]+), is supposed to be shown until version '
+                r'0.17.0 is released. Current version is now 0.17.0. '
+                r'Please remove the warning.'):
+            raise_warning(_version_info_=(0, 17))  # no kwargs
+
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r'The warning triggered on filename \'(.*)test_versions.py\', '
+                r'line number ([\d]+), is supposed to be shown until version '
+                r'0.17.0 is released. Current version is now 0.17.0. '
+                r'Please remove the warning.'):
+            raise_warning(bar='baz', qux='quux', _version_info_=(0, 17))  # some kwargs

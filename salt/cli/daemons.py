@@ -41,10 +41,11 @@ import salt.log.setup
 # the try block below bypasses an issue at build time so that modules don't
 # cause the build to fail
 from salt.utils import migrations
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 
 try:
-    from salt.utils import parsers, ip_bracket
+    from salt.utils.zeromq import ip_bracket
+    import salt.utils.parsers
     from salt.utils.verify import check_user, verify_env, verify_socket
 except ImportError as exc:
     if exc.args[0] != 'No module named _msgpack':
@@ -109,7 +110,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         self.shutdown(error)
 
 
-class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-init
+class Master(salt.utils.parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Creates a master server
     '''
@@ -146,6 +147,7 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
                         os.path.join(self.config['cachedir'], 'jobs'),
                         os.path.join(self.config['cachedir'], 'proc'),
                         self.config['sock_dir'],
+                        self.config['key_dir'],
                         self.config['token_dir'],
                         self.config['syndic_dir'],
                         self.config['sqlite_queue_dir'],
@@ -159,7 +161,8 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
-                    pki_dir=self.config['pki_dir'],
+                    root_dir=self.config['root_dir'],
+                    sensitive_dirs=[self.config['pki_dir'], self.config['key_dir']],
                 )
                 # Clear out syndics from cachedir
                 for syndic_file in os.listdir(self.config['syndic_dir']):
@@ -220,7 +223,7 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
         super(Master, self).shutdown(exitcode, exitmsg)
 
 
-class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
+class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
@@ -279,7 +282,8 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
-                    pki_dir=self.config['pki_dir'],
+                    root_dir=self.config['root_dir'],
+                    sensitive_dirs=[self.config['pki_dir']],
                 )
         except OSError as error:
             self.environment_failure(error)
@@ -398,7 +402,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
     # pylint: enable=no-member
 
 
-class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
+class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a proxy minion server
     '''
@@ -466,7 +470,8 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
                     v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
-                    pki_dir=self.config['pki_dir'],
+                    root_dir=self.config['root_dir'],
+                    sensitive_dirs=[self.config['pki_dir']],
                 )
         except OSError as error:
             self.environment_failure(error)
@@ -549,7 +554,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
     # pylint: enable=no-member
 
 
-class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-init
+class Syndic(salt.utils.parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a syndic server
     '''
@@ -574,7 +579,8 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     ],
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
-                    pki_dir=self.config['pki_dir'],
+                    root_dir=self.config['root_dir'],
+                    sensitive_dirs=[self.config['pki_dir']],
                 )
         except OSError as error:
             self.environment_failure(error)

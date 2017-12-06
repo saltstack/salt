@@ -18,9 +18,12 @@ from random import randint
 # Import Salt Libs
 import salt.auth
 import salt.crypt
-import salt.utils
-import salt.utils.verify
 import salt.utils.event
+import salt.utils.minions
+import salt.utils.process
+import salt.utils.stringutils
+import salt.utils.verify
+import salt.utils.zeromq
 import salt.payload
 import salt.transport.client
 import salt.transport.server
@@ -46,7 +49,7 @@ import tornado.gen
 import tornado.concurrent
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     from Cryptodome.Cipher import PKCS1_OAEP
 except ImportError:
@@ -174,7 +177,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     @tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         if not self.auth.authenticated:
-            # Return controle back to the caller, continue when authentication succeeds
+            # Return control back to the caller, continue when authentication succeeds
             yield self.auth.authenticate()
         # Return control to the caller. When send() completes, resume by populating ret with the Future.result
         ret = yield self.message_client.send(
@@ -304,7 +307,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         else:
             self._socket.setsockopt(zmq.SUBSCRIBE, b'')
 
-        self._socket.setsockopt(zmq.IDENTITY, salt.utils.to_bytes(self.opts['id']))
+        self._socket.setsockopt(zmq.IDENTITY, salt.utils.stringutils.to_bytes(self.opts['id']))
 
         # TODO: cleanup all the socket opts stuff
         if hasattr(zmq, 'TCP_KEEPALIVE'):
@@ -448,7 +451,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         Multiprocessing target for the zmq queue device
         '''
         self.__setup_signals()
-        salt.utils.appendproctitle('MWorkerQueue')
+        salt.utils.process.appendproctitle('MWorkerQueue')
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
@@ -566,7 +569,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
     @tornado.gen.coroutine
     def handle_message(self, stream, payload):
         '''
-        Handle incoming messages from underylying TCP streams
+        Handle incoming messages from underlying TCP streams
 
         :stream ZMQStream stream: A ZeroMQ stream.
         See http://zeromq.github.io/pyzmq/api/generated/zmq.eventloop.zmqstream.html
@@ -704,7 +707,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         Bind to the interface specified in the configuration file
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         # Set up the context
         context = zmq.Context(1)
         # Prepare minion publish socket
@@ -837,8 +840,9 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         match_targets = ["pcre", "glob", "list"]
         if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
             # Fetch a list of minions that match
-            match_ids = self.ckminions.check_minions(load['tgt'],
-                                                     tgt_type=load['tgt_type'])
+            _res = self.ckminions.check_minions(load['tgt'],
+                                                tgt_type=load['tgt_type'])
+            match_ids = _res['minions']
 
             log.debug("Publish Side Match: {0}".format(match_ids))
             # Send list of miions thru so zmq can target them
@@ -872,7 +876,7 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
 # TODO: unit tests!
 class AsyncReqMessageClient(object):
     '''
-    This class wraps the underylying zeromq REQ socket and gives a future-based
+    This class wraps the underlying zeromq REQ socket and gives a future-based
     interface to sending and recieving messages. This works around the primary
     limitation of serialized send/recv on the underlying socket by queueing the
     message sends in this class. In the future if we decide to attempt to multiplex

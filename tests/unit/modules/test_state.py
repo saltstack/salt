@@ -19,10 +19,14 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
+import salt.config
+import salt.loader
+import salt.utils.hashutils
 import salt.utils.odict
+import salt.utils.platform
 import salt.modules.state as state
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext import six
 
 
 class MockState(object):
@@ -131,6 +135,9 @@ class MockState(object):
             data = data
             ret = ret
             return True
+
+        def requisite_in(self, data):  # pylint: disable=unused-argument
+            return data, []
 
     class HighState(object):
         '''
@@ -279,7 +286,7 @@ class MockTarFile(object):
     '''
         Mock tarfile class
     '''
-    path = "/tmp"
+    path = os.sep + "tmp"
 
     def __init__(self):
         pass
@@ -344,6 +351,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
+        utils = salt.loader.utils(
+            salt.config.DEFAULT_MINION_OPTS,
+            whitelist=['state']
+        )
         patcher = patch('salt.modules.state.salt.state', MockState())
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -351,9 +362,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             state: {
                 '__opts__': {
                     'cachedir': '/D',
-                    'environment': None,
+                    'saltenv': None,
                     '__cli': 'salt',
                 },
+                '__utils__': utils,
             },
         }
 
@@ -620,7 +632,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(state.__opts__, {"test": "A"}):
                 mock = MagicMock(
                     return_value={'test': True,
-                                  'environment': None}
+                                  'saltenv': None}
                 )
                 with patch.object(state, '_get_opts', mock):
                     mock = MagicMock(return_value=True)
@@ -647,7 +659,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(state.__opts__, {"test": "A"}):
                 mock = MagicMock(
                     return_value={'test': True,
-                                  'environment': None}
+                                  'saltenv': None}
                 )
                 with patch.object(state, '_get_opts', mock):
                     MockState.State.flag = True
@@ -669,7 +681,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(state.__opts__, {"test": "A"}):
                 mock = MagicMock(
                     return_value={'test': True,
-                                  'environment': None}
+                                  'saltenv': None}
                 )
                 with patch.object(state, '_get_opts', mock):
                     mock = MagicMock(return_value=True)
@@ -801,10 +813,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.state.salt.payload', MockSerial):
             mock = MagicMock(side_effect=[True, True, False])
             with patch.object(os.path, 'isfile', mock):
-                with patch('salt.utils.fopen', mock_open()):
+                with patch('salt.utils.files.fopen', mock_open()):
                     self.assertDictEqual(state.check_request(), {'A': 'B'})
 
-                with patch('salt.utils.fopen', mock_open()):
+                with patch('salt.utils.files.fopen', mock_open()):
                     self.assertEqual(state.check_request("A"), 'B')
 
                 self.assertDictEqual(state.check_request(), {})
@@ -824,9 +836,9 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(state, 'check_request', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'umask', mock):
-                        with patch.object(salt.utils, 'is_windows', mock):
+                        with patch.object(salt.utils.platform, 'is_windows', mock):
                             with patch.dict(state.__salt__, {'cmd.run': mock}):
-                                with patch('salt.utils.fopen', mock_open()):
+                                with patch('salt.utils.files.fopen', mock_open()):
                                     mock = MagicMock(return_value=True)
                                     with patch.object(os, 'umask', mock):
                                         self.assertTrue(state.request("A"))
@@ -869,7 +881,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                     with patch.dict(state.__opts__, {"test": None}):
                         mock = MagicMock(return_value={"test": "",
-                                                       "environment": None})
+                                                       "saltenv": None})
                         with patch.object(state, '_get_opts', mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(salt.utils,
@@ -893,7 +905,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                       'isfile',
                                                       mock):
                                         with patch(
-                                                   'salt.utils.fopen',
+                                                   'salt.utils.files.fopen',
                                                    mock_open()):
                                             self.assertTrue(
                                                             state.sls(arg,
@@ -935,13 +947,13 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(os.path, 'join', mock):
             with patch.object(os, 'umask', mock):
                 mock = MagicMock(return_value=False)
-                with patch.object(salt.utils, 'is_windows', mock):
+                with patch.object(salt.utils.platform, 'is_windows', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'umask', mock):
                         with patch.object(state, '_set_retcode', mock):
                             with patch.dict(state.__opts__,
                                             {"test": True}):
-                                with patch('salt.utils.fopen', mock_open()):
+                                with patch('salt.utils.files.fopen', mock_open()):
                                     self.assertTrue(state.sls("core,edit"
                                                               ".vim dev",
                                                               None,
@@ -952,30 +964,111 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Test to execute a packaged state run
         '''
-        mock = MagicMock(side_effect=[False, True, True, True, True, True])
+        tar_file = os.sep + os.path.join('tmp', 'state_pkg.tgz')
+        mock = MagicMock(side_effect=[False, True, True, True, True, True, True, True])
         with patch.object(os.path, 'isfile', mock), \
                 patch('salt.modules.state.tarfile', MockTarFile), \
                 patch('salt.modules.state.json', MockJson()):
-            self.assertEqual(state.pkg("/tmp/state_pkg.tgz", "", "md5"), {})
+            self.assertEqual(state.pkg(tar_file, "", "md5"), {})
 
             mock = MagicMock(side_effect=[False, 0, 0, 0, 0])
-            with patch.object(salt.utils, 'get_hash', mock):
-                self.assertDictEqual(state.pkg("/tmp/state_pkg.tgz", "", "md5"),
-                                     {})
+            with patch.object(salt.utils.hashutils, 'get_hash', mock):
+                # Verify hash
+                self.assertDictEqual(state.pkg(tar_file, "", "md5"), {})
 
-                self.assertDictEqual(state.pkg("/tmp/state_pkg.tgz", 0, "md5"),
-                                     {})
+                # Verify file outside intended root
+                self.assertDictEqual(state.pkg(tar_file, 0, "md5"), {})
 
                 MockTarFile.path = ""
                 MockJson.flag = True
-                with patch('salt.utils.fopen', mock_open()):
-                    self.assertListEqual(state.pkg("/tmp/state_pkg.tgz",
-                                                   0,
-                                                   "md5"),
-                                         [True])
+                with patch('salt.utils.files.fopen', mock_open()):
+                    self.assertListEqual(state.pkg(tar_file, 0, "md5"), [True])
 
                 MockTarFile.path = ""
                 MockJson.flag = False
-                with patch('salt.utils.fopen', mock_open()):
-                    self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
-                                              0, "md5"))
+                if six.PY2:
+                    with patch('salt.utils.files.fopen', mock_open()), \
+                            patch.dict(state.__utils__, {'state.check_result': MagicMock(return_value=True)}):
+                        self.assertTrue(state.pkg(tar_file, 0, "md5"))
+                else:
+                    with patch('salt.utils.files.fopen', mock_open()):
+                        self.assertTrue(state.pkg(tar_file, 0, "md5"))
+
+    def test_lock_saltenv(self):
+        '''
+        Tests lock_saltenv in each function which accepts saltenv on the CLI
+        '''
+        lock_msg = 'lock_saltenv is enabled, saltenv cannot be changed'
+        empty_list_mock = MagicMock(return_value=[])
+        with patch.dict(state.__opts__, {'lock_saltenv': True}), \
+                patch.dict(state.__salt__, {'grains.get': empty_list_mock}), \
+                patch.object(state, 'running', empty_list_mock):
+
+            # Test high
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.high(
+                    [{"vim": {"pkg": ["installed"]}}], saltenv='base')
+
+            # Test template
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.template('foo', saltenv='base')
+
+            # Test template_str
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.template_str('foo', saltenv='base')
+
+            # Test apply_ with SLS
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.apply_('foo', saltenv='base')
+
+            # Test apply_ with Highstate
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.apply_(saltenv='base')
+
+            # Test highstate
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.highstate(saltenv='base')
+
+            # Test sls
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.sls('foo', saltenv='base')
+
+            # Test top
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.top('foo.sls', saltenv='base')
+
+            # Test show_highstate
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.show_highstate(saltenv='base')
+
+            # Test show_lowstate
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.show_lowstate(saltenv='base')
+
+            # Test sls_id
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.sls_id('foo', 'bar', saltenv='base')
+
+            # Test show_low_sls
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.show_low_sls('foo', saltenv='base')
+
+            # Test show_sls
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.show_sls('foo', saltenv='base')
+
+            # Test show_top
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.show_top(saltenv='base')
+
+            # Test single
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.single('foo.bar', name='baz', saltenv='base')
+
+            # Test pkg
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.pkg(
+                    '/tmp/salt_state.tgz',
+                    '760a9353810e36f6d81416366fc426dc',
+                    'md5',
+                    saltenv='base')

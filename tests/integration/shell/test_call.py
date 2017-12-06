@@ -29,8 +29,8 @@ from tests.support.helpers import destructiveTest
 from tests.integration.utils import testprogram
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils.files
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -174,7 +174,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
-        with salt.utils.fopen(self.get_config_file_path('master')) as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path('master')) as fhr:
             master_config = yaml.load(fhr.read())
 
         master_root_dir = master_config['root_dir']
@@ -204,7 +204,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             start = datetime.now()
             # Let's first test with a master running
 
-            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
                 fh_.write(
                     yaml.dump(minion_config, default_flow_style=False)
                 )
@@ -234,7 +234,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             # Now let's remove the master configuration
             minion_config.pop('master')
             minion_config.pop('master_port')
-            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
                 fh_.write(
                     yaml.dump(minion_config, default_flow_style=False)
                 )
@@ -282,7 +282,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
             # Should work with local file client
             minion_config['file_client'] = 'local'
-            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
                 fh_.write(
                     yaml.dump(minion_config, default_flow_style=False)
                 )
@@ -309,10 +309,10 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
         os.chdir(config_dir)
 
-        with salt.utils.fopen(self.get_config_file_path('minion'), 'r') as fh_:
+        with salt.utils.files.fopen(self.get_config_file_path('minion'), 'r') as fh_:
             minion_config = yaml.load(fh_.read())
             minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
+            with salt.utils.files.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
                 fh_.write(
                     yaml.dump(minion_config, default_flow_style=False)
                 )
@@ -353,7 +353,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 with_retcode=True
             )
 
-            with salt.utils.fopen(output_file_append) as ofa:
+            with salt.utils.files.fopen(output_file_append) as ofa:
                 output = ofa.read()
 
             self.run_script(
@@ -365,7 +365,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 catch_stderr=True,
                 with_retcode=True
             )
-            with salt.utils.fopen(output_file_append) as ofa:
+            with salt.utils.files.fopen(output_file_append) as ofa:
                 self.assertEqual(ofa.read(), output + output)
         finally:
             if os.path.exists(output_file_append):

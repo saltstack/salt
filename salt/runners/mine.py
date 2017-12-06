@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.minions
 
 log = logging.getLevelName(__name__)
