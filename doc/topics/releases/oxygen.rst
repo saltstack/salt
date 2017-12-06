@@ -35,7 +35,7 @@ Network Configuration in :py:func:`docker_container.running` States
 A long-requested feature has finally been added! It is now possible to
 configure static IPv4/IPv6 addresses, as well as links and labels. See
 :ref:`here <salt-states-docker-container-network-management>` for more
-informaion.
+information.
 
 .. note::
     While the ``containers`` argument to :py:func:`docker_network.present`
@@ -92,8 +92,8 @@ is run.
 Full API Support for :py:func:`docker.logs <salt.modules.dockermod.logs>`
 =========================================================================
 
-This function now supports all of the functions that it's Docker API
-counterpart does, allowing you to do things like include timestamps, suppress
+This function now supports all of the functions that its Docker API counterpart
+does, allowing you to do things like include timestamps, and also suppress
 stdout/stderr, etc. in the return.
 
 `start` Argument Added to :py:func:`docker.create <salt.modules.dockermod.create>` Function
