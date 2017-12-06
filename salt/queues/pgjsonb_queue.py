@@ -46,7 +46,7 @@ import json
 import sys
 
 # import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltInvocationError, SaltMasterError
 
 try:
@@ -235,7 +235,7 @@ def delete(queue, items):
     return True
 
 
-def pop(queue, quantity=1):
+def pop(queue, quantity=1, is_runner=False):
     '''
     Pop one or more or all items from the queue return them.
     '''

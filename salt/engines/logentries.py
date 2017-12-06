@@ -24,6 +24,9 @@ master config.
 :configuration:
 
     Example configuration
+
+    .. code-block:: yaml
+
         engines:
           - logentries:
             endpoint: data.logentries.com

@@ -20,7 +20,7 @@ import salt.client
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 
@@ -171,7 +171,7 @@ def _get_pool_results(*args, **kwargs):
 
     # hash minion return values as a string
     for minion in sorted(minions):
-        digest = hashlib.sha256(str(minions[minion])).hexdigest()
+        digest = hashlib.sha256(str(minions[minion]).encode(__salt_system_encoding__)).hexdigest()
         if digest not in ret:
             ret[digest] = {}
             ret[digest]['pool'] = []

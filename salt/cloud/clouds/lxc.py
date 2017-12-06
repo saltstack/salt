@@ -17,9 +17,6 @@ import copy
 import time
 from pprint import pformat
 
-# Import salt libs
-import salt.utils
-
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
@@ -30,7 +27,7 @@ import salt.runner
 
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -83,6 +80,7 @@ def _master_opts(cfg='master'):
     cfg = os.environ.get(
         'SALT_MASTER_CONFIG', os.path.join(default_dir, cfg))
     opts = config.master_config(cfg)
+    opts['output'] = 'quiet'
     return opts
 
 
@@ -562,9 +560,10 @@ def get_configured_provider(vm_=None):
     # in all cases, verify that the linked saltmaster is alive.
     if data:
         ret = _salt('test.ping', salt_target=data['target'])
-        if not ret:
-            raise SaltCloudSystemExit(
+        if ret:
+            return data
+        else:
+            log.error(
                 'Configured provider {0} minion: {1} is unreachable'.format(
                     __active_provider_name__, data['target']))
-        return data
     return False

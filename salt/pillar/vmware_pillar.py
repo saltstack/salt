@@ -147,11 +147,11 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 import salt.utils.vmware
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     from pyVmomi import vim
     from pyVim.connect import Disconnect

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
- Namecheap management
+Namecheap ssl management
 
  .. versionadded:: 2017.7.0
 
@@ -44,7 +44,7 @@
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 try:
     import salt.utils.namecheap
     CAN_USE_NAMECHEAP = True
@@ -52,7 +52,7 @@ except ImportError:
     CAN_USE_NAMECHEAP = False
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -110,7 +110,7 @@ def reissue(csr_file,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.reissue my-csr-file my-cert-id apachessl
     '''
@@ -164,7 +164,7 @@ def activate(csr_file,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.activate my-csr-file my-cert-id apachessl
     '''
@@ -224,7 +224,7 @@ def __get_certificates(command,
 
     opts = salt.utils.namecheap.get_opts(command)
 
-    with salt.utils.fopen(csr_file, 'rb') as csr_handle:
+    with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
         opts['csr'] = csr_handle.read()
 
     opts['CertificateID'] = certificate_id
@@ -298,7 +298,7 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.renew 1 my-cert-id RapidSSL
     '''
@@ -460,7 +460,7 @@ Symantec  Secure Site                      1                 25              24
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.create 2 RapidSSL
     '''
@@ -557,7 +557,7 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.parse_csr my-csr-file PremiumSSL
     '''
@@ -597,7 +597,7 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.parseCSR')
 
-    with salt.utils.fopen(csr_file, 'rb') as csr_handle:
+    with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
         opts['csr'] = csr_handle.read()
 
     opts['CertificateType'] = certificate_type
@@ -644,7 +644,7 @@ def get_list(**kwargs):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.get_list Processing
     '''
@@ -688,7 +688,7 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.get_info my-cert-id
     '''
