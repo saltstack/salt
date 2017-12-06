@@ -16,7 +16,7 @@ from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
 from tests.support.paths import FILES, TMP
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
@@ -344,8 +344,13 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         net_info = self.run_function('docker.inspect_network', [net1.name])
         self.assertIs(net_info['EnableIPv6'], True)
 
+    @requires_system_grains
     @with_network()
-    def test_present_attachable(self, net):
+    def test_present_attachable(self, net, grains):
+        if grains['os_family'] == 'RedHat' \
+                and grains.get('osmajorrelease', 0) <= 7:
+            self.skipTest('Cannot reliably manage attachable on RHEL <= 7')
+
         self.assertSaltTrueReturn(
             self.run_state(
                 'docker_network.present',
