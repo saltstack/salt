@@ -87,9 +87,9 @@ import time
 import random
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.compat
-import salt.utils
+import salt.utils.files
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range  # pylint: disable=import-error
@@ -201,7 +201,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 
 def _filedata(infile):
-    with salt.utils.fopen(infile, 'rb') as f:
+    with salt.utils.files.fopen(infile, 'rb') as f:
         return f.read()
 
 

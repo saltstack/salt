@@ -72,6 +72,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'getent' function tests: 2
 
+    @skipIf(HAS_PWD is False, 'The pwd module is not available')
     def test_getent(self):
         '''
         Test if user.getent already have a value
@@ -354,11 +355,12 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return a list of groups the named user belongs to
         '''
-        with patch('salt.utils.get_group_list', MagicMock(return_value='Salt')):
+        with patch('salt.utils.user.get_group_list', MagicMock(return_value='Salt')):
             self.assertEqual(useradd.list_groups('name'), 'Salt')
 
     # 'list_users' function tests: 1
 
+    @skipIf(HAS_PWD is False, 'The pwd module is not available')
     def test_list_users(self):
         '''
         Test if it returns a list of all users

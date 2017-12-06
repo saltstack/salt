@@ -31,11 +31,15 @@ import logging
 
 # Import salt libs
 import salt.fileserver
-import salt.utils
+import salt.utils.files
+import salt.utils.gzip_util
+import salt.utils.hashutils
+import salt.utils.stringutils
 import salt.utils.url
+import salt.utils.versions
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +61,7 @@ def _is_exposed(minion):
     '''
     Check if the minion is exposed, based on the whitelist and blacklist
     '''
-    return salt.utils.check_whitelist_blacklist(
+    return salt.utils.stringutils.check_whitelist_blacklist(
         minion,
         whitelist=__opts__['minionfs_whitelist'],
         blacklist=__opts__['minionfs_blacklist']
@@ -129,10 +133,10 @@ def serve_file(load, fnd):
     # AP
     # May I sleep here to slow down serving of big files?
     # How many threads are serving files?
-    with salt.utils.fopen(fpath, 'rb') as fp_:
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -162,12 +166,7 @@ def file_hash(load, fnd):
     ret = {}
 
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if load['saltenv'] not in envs():
@@ -191,7 +190,7 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'rb') as fp_:
+            with salt.utils.files.fopen(cache_path, 'rb') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
@@ -215,14 +214,14 @@ def file_hash(load, fnd):
             return ret
 
     # if we don't have a cache entry-- lets make one
-    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+    ret['hsum'] = salt.utils.hashutils.get_hash(path, __opts__['hash_type'])
     cache_dir = os.path.dirname(cache_path)
     # make cache directory if it doesn't exist
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
-    with salt.utils.flopen(cache_path, 'w') as fp_:
+    with salt.utils.files.flopen(cache_path, 'w') as fp_:
         fp_.write(cache_object)
     return ret
 
@@ -232,12 +231,7 @@ def file_list(load):
     Return a list of all files on the file server in a specified environment
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if load['saltenv'] not in envs():
@@ -316,12 +310,7 @@ def dir_list(load):
             - source-minion/absolute/path
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if load['saltenv'] not in envs():

@@ -10,8 +10,8 @@ import os
 import re
 
 # Import salt libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.files
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 import salt.utils.systemd
@@ -70,7 +70,7 @@ def show(config_file=False):
     ret = {}
     if config_file:
         try:
-            with salt.utils.fopen(config_file) as fp_:
+            with salt.utils.files.fopen(config_file) as fp_:
                 for line in fp_:
                     if not line.startswith('#') and '=' in line:
                         # search if we have some '=' instead of ' = ' separators
@@ -169,7 +169,7 @@ def persist(name, value, config=None):
         if not os.path.exists(sysctl_dir):
             os.makedirs(sysctl_dir)
         try:
-            with salt.utils.fopen(config, 'w+') as _fh:
+            with salt.utils.files.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
         except (IOError, OSError):
             msg = 'Could not write to file: {0}'
@@ -178,7 +178,7 @@ def persist(name, value, config=None):
     # Read the existing sysctl.conf
     nlines = []
     try:
-        with salt.utils.fopen(config, 'r') as _fh:
+        with salt.utils.files.fopen(config, 'r') as _fh:
             # Use readlines because this should be a small file
             # and it seems unnecessary to indent the below for
             # loop since it is a fairly large block of code.
@@ -230,7 +230,7 @@ def persist(name, value, config=None):
     if not edited:
         nlines.append('{0} = {1}\n'.format(name, value))
     try:
-        with salt.utils.fopen(config, 'w+') as _fh:
+        with salt.utils.files.fopen(config, 'w+') as _fh:
             _fh.writelines(nlines)
     except (IOError, OSError):
         msg = 'Could not write to file: {0}'

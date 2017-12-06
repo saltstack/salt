@@ -36,7 +36,7 @@ import logging
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.http
 
 # Import third party libs

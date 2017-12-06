@@ -84,7 +84,7 @@ def present(name, **kwargs):
                     for right in kwargs['rights']:
                         for key in right:
                             right[key] = str(right[key])
-                    if cmp(sorted(kwargs['rights']), sorted(usergroup['rights'])) != 0:
+                    if sorted(kwargs['rights']) != sorted(usergroup['rights']):
                         update_rights = True
                 else:
                     update_rights = True

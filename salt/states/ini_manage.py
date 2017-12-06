@@ -14,7 +14,7 @@ Manage ini files
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 __virtualname__ = 'ini'
 
@@ -93,7 +93,7 @@ def options_present(name, sections=None, separator='=', strict=False):
                     del changes[section_name]
         else:
             changes = __salt__['ini.set_option'](name, sections, separator)
-    except IOError as err:
+    except (IOError, KeyError) as err:
         ret['comment'] = "{0}".format(err)
         ret['result'] = False
         return ret
@@ -102,12 +102,10 @@ def options_present(name, sections=None, separator='=', strict=False):
         ret['comment'] = 'Errors encountered. {0}'.format(changes['error'])
         ret['changes'] = {}
     else:
-        if changes:
-            ret['changes'] = changes
-            ret['comment'] = 'Changes take effect'
-        else:
-            ret['changes'] = {}
-            ret['comment'] = 'No changes take effect'
+        for name, body in changes.items():
+            if body:
+                ret['comment'] = 'Changes take effect'
+                ret['changes'].update({name: changes[name]})
     return ret
 
 
@@ -206,7 +204,7 @@ def sections_present(name, sections=None, separator='='):
                 ret['result'] = False
                 ret['comment'] = "{0}".format(err)
                 return ret
-            if cmp(dict(sections[section]), cur_section) == 0:
+            if dict(sections[section]) == cur_section:
                 ret['comment'] += 'Section unchanged {0}.\n'.format(section)
                 continue
             elif cur_section:

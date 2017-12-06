@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Sync custom types to the Master
+The Saltutil runner is used to sync custom types to the Master. See the
+:mod:`saltutil module <salt.modules.saltutil>` for documentation on
+managing updates to minions.
 
 .. versionadded:: 2016.3.0
 '''
@@ -38,6 +40,7 @@ def sync_all(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     log.debug('Syncing all')
     ret = {}
+    ret['clouds'] = sync_clouds(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['modules'] = sync_modules(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['states'] = sync_states(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['grains'] = sync_grains(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
@@ -51,6 +54,7 @@ def sync_all(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     ret['runners'] = sync_runners(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['wheel'] = sync_wheel(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['engines'] = sync_engines(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['thorium'] = sync_thorium(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['queues'] = sync_queues(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['pillar'] = sync_pillar(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['utils'] = sync_utils(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
@@ -58,6 +62,7 @@ def sync_all(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     ret['cache'] = sync_cache(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['fileserver'] = sync_fileserver(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['tops'] = sync_tops(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['tokens'] = sync_eauth_tokens(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     return ret
 
 
@@ -301,6 +306,32 @@ def sync_engines(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
                                    extmod_blacklist=extmod_blacklist)[0]
 
 
+def sync_thorium(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Sync Thorium from ``salt://_thorium`` to the master
+
+    saltenv: ``base``
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    extmod_whitelist
+        comma-seperated list of modules to sync
+
+    extmod_blacklist
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_thorium
+    '''
+    return salt.utils.extmods.sync(__opts__, 'thorium', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                   extmod_blacklist=extmod_blacklist)[0]
+
+
 def sync_queues(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     Sync queue modules from ``salt://_queues`` to the master
@@ -379,7 +410,7 @@ def sync_sdb(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utils modules from ``salt://_sdb`` to the master
+    Sync sdb modules from ``salt://_sdb`` to the master
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -425,7 +456,7 @@ def sync_cache(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utils modules from ``salt://_cache`` to the master
+    Sync cache modules from ``salt://_cache`` to the master
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -451,7 +482,7 @@ def sync_fileserver(saltenv='base', extmod_whitelist=None, extmod_blacklist=None
     '''
     .. versionadded:: Oxygen
 
-    Sync utils modules from ``salt://_fileserver`` to the master
+    Sync fileserver modules from ``salt://_fileserver`` to the master
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -477,7 +508,7 @@ def sync_clouds(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utils modules from ``salt://_clouds`` to the master
+    Sync cloud modules from ``salt://_clouds`` to the master
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -503,7 +534,7 @@ def sync_roster(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utils modules from ``salt://_roster`` to the master
+    Sync roster modules from ``salt://_roster`` to the master
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -522,4 +553,30 @@ def sync_roster(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
         salt-run saltutil.sync_roster
     '''
     return salt.utils.extmods.sync(__opts__, 'roster', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                   extmod_blacklist=extmod_blacklist)[0]
+
+
+def sync_eauth_tokens(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Sync eauth token modules from ``salt://_tokens`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_eauth_tokens
+    '''
+    return salt.utils.extmods.sync(__opts__, 'tokens', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
                                    extmod_blacklist=extmod_blacklist)[0]

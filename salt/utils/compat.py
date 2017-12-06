@@ -46,3 +46,15 @@ def deepcopy_bound(name):
     finally:
         copy._deepcopy_dispatch = pre_dispatch
     return ret
+
+
+def cmp(x, y):
+    '''
+    Compatibility helper function to replace the ``cmp`` function from Python 2. The
+    ``cmp`` function is no longer available in Python 3.
+
+    cmp(x, y) -> integer
+
+    Return negative if x<y, zero if x==y, positive if x>y.
+    '''
+    return (x > y) - (x < y)

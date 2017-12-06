@@ -17,7 +17,6 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.payload
-import salt.utils
 import salt.cache
 
 

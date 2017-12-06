@@ -27,7 +27,6 @@ import pprint
 import logging
 
 # Import Salt libs
-import salt.utils
 from salt._compat import ElementTree as ET
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.error import URLError
@@ -50,6 +49,9 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -397,7 +399,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         args = {}
 
     kwargs = {'data': data}
-    if isinstance(data, str) and '<?xml' in data:
+    if isinstance(data, six.string_types) and '<?xml' in data:
         kwargs['headers'] = {
             'Content-type': 'application/xml',
         }

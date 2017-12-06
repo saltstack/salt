@@ -26,7 +26,7 @@ import salt.exceptions
 # Import 3rd-party libs
 import msgpack
 import zmq
-import salt.ext.six as six
+from salt.ext import six
 
 import logging
 

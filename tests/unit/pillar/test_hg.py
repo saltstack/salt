@@ -27,7 +27,7 @@ FILE_DATA = {
 }
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
 import salt.pillar.hg_pillar as hg_pillar
 HGLIB = hg_pillar.hglib
 
@@ -66,7 +66,7 @@ class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModule
         os.makedirs(hg_repo)
         subprocess.check_call(['hg', 'init', hg_repo])
         for filename in FILE_DATA:
-            with salt.utils.fopen(os.path.join(hg_repo, filename), 'w') as data_file:
+            with salt.utils.files.fopen(os.path.join(hg_repo, filename), 'w') as data_file:
                 yaml.dump(FILE_DATA[filename], data_file)
         subprocess.check_call(['hg', 'ci', '-A', '-R', hg_repo, '-m', 'first commit', '-u', COMMIT_USER_NAME])
         return hg_repo

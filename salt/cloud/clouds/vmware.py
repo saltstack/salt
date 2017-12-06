@@ -124,9 +124,9 @@ import os.path
 import subprocess
 
 # Import salt libs
-import salt.utils
 import salt.utils.cloud
 import salt.utils.network
+import salt.utils.stringutils
 import salt.utils.xmlutil
 import salt.utils.vmware
 from salt.exceptions import SaltCloudSystemExit
@@ -135,7 +135,7 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     # Attempt to import pyVmomi libs
     from pyVmomi import vim
@@ -272,7 +272,7 @@ def _edit_existing_hard_disk_helper(disk, size_kb=None, size_gb=None, mode=None)
     return disk_spec
 
 
-def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000, thin_provision=False, datastore=None, vm_name=None):
+def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000, thin_provision=False, eagerly_scrub=False, datastore=None, vm_name=None):
     random_key = randint(-2099, -2000)
     size_kb = int(size_gb * 1024.0 * 1024.0)
 
@@ -288,6 +288,7 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1
 
     disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
     disk_spec.device.backing.thinProvisioned = thin_provision
+    disk_spec.device.backing.eagerlyScrub = eagerly_scrub
     disk_spec.device.backing.diskMode = 'persistent'
 
     if datastore:
@@ -703,7 +704,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         network_name = devices['network'][device.deviceInfo.label]['name']
                         adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
                         switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
-                        network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type)
+                        network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type, container_ref)
                         adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
                         device_specs.append(network_spec)
                         nics_map.append(adapter_mapping)
@@ -796,8 +797,9 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
             # create the disk
             size_gb = float(devices['disk'][disk_label]['size'])
             thin_provision = bool(devices['disk'][disk_label]['thin_provision']) if 'thin_provision' in devices['disk'][disk_label] else False
+            eagerly_scrub = bool(devices['disk'][disk_label]['eagerly_scrub']) if 'eagerly_scrub' in devices['disk'][disk_label] else False
             datastore = devices['disk'][disk_label].get('datastore', None)
-            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number, thin_provision=thin_provision, datastore=datastore, vm_name=new_vm_name)
+            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number, thin_provision=thin_provision, eagerly_scrub=eagerly_scrub, datastore=datastore, vm_name=new_vm_name)
 
             # when creating both SCSI controller and Hard disk at the same time we need the randomly
             # assigned (temporary) key of the newly created SCSI controller
@@ -2471,7 +2473,12 @@ def create(vm_):
     # Either a datacenter or a folder can be optionally specified when cloning, required when creating.
     # If not specified when cloning, the existing VM/template\'s parent folder is used.
     if folder:
-        folder_ref = salt.utils.vmware.get_mor_by_property(si, vim.Folder, folder, container_ref=container_ref)
+        folder_parts = folder.split('/')
+        search_reference = container_ref
+        for folder_part in folder_parts:
+            if folder_part:
+                folder_ref = salt.utils.vmware.get_mor_by_property(si, vim.Folder, folder_part, container_ref=search_reference)
+                search_reference = folder_ref
         if not folder_ref:
             log.error("Specified folder: '{0}' does not exist".format(folder))
             log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
@@ -2576,7 +2583,7 @@ def create(vm_):
         config_spec.memoryMB = memory_mb
 
     if devices:
-        specs = _manage_devices(devices, vm=object_ref, new_vm_name=vm_name)
+        specs = _manage_devices(devices, vm=object_ref, container_ref=container_ref, new_vm_name=vm_name)
         config_spec.deviceChange = specs['device_specs']
 
     if extra_config:
@@ -3645,6 +3652,65 @@ def revert_to_snapshot(name, kwargs=None, call=None):
     return msg
 
 
+def remove_snapshot(name, kwargs=None, call=None):
+    '''
+    Remove a snapshot of the specified virtual machine in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a remove_snapshot vmname snapshot_name="mySnapshot"
+        salt-cloud -a remove_snapshot vmname snapshot_name="mySnapshot" [remove_children="True"]
+    '''
+
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The create_snapshot action must be called with '
+            '-a or --action.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
+    remove_children = _str_to_bool(kwargs.get('remove_children', False))
+
+    if not snapshot_name:
+        raise SaltCloudSystemExit(
+            'You must specify snapshot name for the snapshot to be deleted.'
+        )
+
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
+
+    if not _get_snapshot_ref_by_name(vm_ref, snapshot_name):
+        raise SaltCloudSystemExit(
+            'Сould not find the snapshot with the specified name.'
+        )
+
+    try:
+        snap_obj = _get_snapshot_ref_by_name(vm_ref, snapshot_name).snapshot
+        task = snap_obj.RemoveSnapshot_Task(remove_children)
+        salt.utils.vmware.wait_for_task(task, name, 'remove snapshot', 5, 'info')
+
+    except Exception as exc:
+        log.error(
+            'Error while removing snapshot of {0}: {1}'.format(
+                name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return 'failed to remove snapshot'
+
+    if vm_ref.snapshot:
+        return {'Snapshot removed successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
+                                                            vm_ref.snapshot.currentSnapshot)}
+    else:
+        return 'Snapshots removed successfully'
+
+
 def remove_all_snapshots(name, kwargs=None, call=None):
     '''
     Remove all the snapshots present for the specified virtual machine.
@@ -3686,6 +3752,49 @@ def remove_all_snapshots(name, kwargs=None, call=None):
         return 'failed to remove snapshots'
 
     return 'removed all snapshots'
+
+
+def convert_to_template(name, kwargs=None, call=None):
+    '''
+    Convert the specified virtual machine to template.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a convert_to_template vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The convert_to_template action must be called with '
+            '-a or --action.'
+        )
+
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
+
+    if vm_ref.config.template:
+        raise SaltCloudSystemExit(
+            '{0} already a template'.format(
+                name
+            )
+        )
+
+    try:
+        vm_ref.MarkAsTemplate()
+    except Exception as exc:
+        log.error(
+            'Error while converting VM to template {0}: {1}'.format(
+                name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return 'failed to convert to teamplate'
+
+    return '{0} converted to template'.format(
+        name
+    )
 
 
 def add_host(kwargs=None, call=None):
@@ -3800,7 +3909,7 @@ def add_host(kwargs=None, call=None):
             p1 = subprocess.Popen(('echo', '-n'), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p2 = subprocess.Popen(('openssl', 's_client', '-connect', '{0}:443'.format(host_name)), stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p3 = subprocess.Popen(('openssl', 'x509', '-noout', '-fingerprint', '-sha1'), stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out = salt.utils.to_str(p3.stdout.read())
+            out = salt.utils.stringutils.to_str(p3.stdout.read())
             ssl_thumbprint = out.split('=')[-1].strip()
             log.debug('SSL thumbprint received from the host system: {0}'.format(ssl_thumbprint))
             spec.sslThumbprint = ssl_thumbprint
