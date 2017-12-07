@@ -1026,6 +1026,8 @@ class Single(object):
             opts_pkg[u'__master_opts__'] = self.context[u'master_opts']
             if u'_caller_cachedir' in self.opts:
                 opts_pkg[u'_caller_cachedir'] = self.opts[u'_caller_cachedir']
+            if u'known_hosts_file' in self.opts:
+                opts_pkg[u'known_hosts_file'] = self.opts[u'known_hosts_file']
             else:
                 opts_pkg[u'_caller_cachedir'] = self.opts[u'cachedir']
             # Use the ID defined in the roster file
@@ -1048,7 +1050,7 @@ class Single(object):
                     popts,
                     opts_pkg[u'grains'],
                     opts_pkg[u'id'],
-                    opts_pkg.get(u'environment', u'base')
+                    opts_pkg.get(u'saltenv', u'base')
                     )
             pillar_data = pillar.compile_pillar()
 

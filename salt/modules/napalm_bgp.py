@@ -236,7 +236,7 @@ def neighbors(neighbor=None, **kwargs):
                         'local_address_configured'  : True,
                         'local_port'                : 179,
                         'remote_address'            : u'192.247.78.0',
-                        'router_id':                : u'192.168.0.1',
+                        'router_id'                 : u'192.168.0.1',
                         'remote_port'               : 58380,
                         'multihop'                  : False,
                         'import_policy'             : u'4-NTT-TRANSIT-IN',

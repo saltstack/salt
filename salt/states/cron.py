@@ -392,9 +392,9 @@ def absent(name,
         The special keyword used in the job (eg. @reboot, @hourly...).
         Quotes must be used, otherwise PyYAML will strip the '@' sign.
     '''
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
+    # NOTE: The keyword arguments in **kwargs are ignored in this state, but
+    #       cannot be removed from the function definition, otherwise the use
+    #       of unsupported arguments will result in a traceback.
 
     name = name.strip()
     if identifier is False:
@@ -566,6 +566,7 @@ def file(name,
                                              user,
                                              group,
                                              mode,
+                                             [],  # no special attrs for cron
                                              template,
                                              context,
                                              defaults,

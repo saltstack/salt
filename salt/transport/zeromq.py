@@ -28,6 +28,8 @@ import salt.payload
 import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
+from salt.ext import six
+from salt.ext.six.moves import map
 from salt.exceptions import SaltReqTimeoutError
 
 import zmq
@@ -56,6 +58,44 @@ except ImportError:
     from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
+
+
+def _get_master_uri(master_ip,
+                    master_port,
+                    source_ip=None,
+                    source_port=None):
+    '''
+    Return the ZeroMQ URI to connect the Minion to the Master.
+    It supports different source IP / port, given the ZeroMQ syntax:
+
+    // Connecting using a IP address and bind to an IP address
+    rc = zmq_connect(socket, "tcp://192.168.1.17:5555;192.168.1.1:5555"); assert (rc == 0);
+
+    Source: http://api.zeromq.org/4-1:zmq-tcp
+    '''
+    libzmq_version_tup = tuple(map(int, zmq.zmq_version().split('.')))
+    pyzmq_version_tup = tuple(map(int, zmq.pyzmq_version().split('.')))
+    if libzmq_version_tup >= (4, 1, 6) and pyzmq_version_tup >= (16, 0, 1):
+        # The source:port syntax for ZeroMQ has been added in libzmq 4.1.6
+        # which is included in the pyzmq wheels starting with 16.0.1.
+        if source_ip or source_port:
+            if source_ip and source_port:
+                return 'tcp://{source_ip}:{source_port};{master_ip}:{master_port}'.format(
+                        source_ip=source_ip, source_port=source_port,
+                        master_ip=master_ip, master_port=master_port)
+            elif source_ip and not source_port:
+                return 'tcp://{source_ip}:0;{master_ip}:{master_port}'.format(
+                        source_ip=source_ip,
+                        master_ip=master_ip, master_port=master_port)
+            elif not source_ip and source_port:
+                return 'tcp://0.0.0.0:{source_port};{master_ip}:{master_port}'.format(
+                        source_port=source_port,
+                        master_ip=master_ip, master_port=master_port)
+    if source_ip or source_port:
+        log.warning('Unable to connect to the Master using a specific source IP / port')
+        log.warning('Consider upgrading to pyzmq >= 16.0.1 and libzmq >= 4.1.6')
+    return 'tcp://{master_ip}:{master_port}'.format(
+                master_ip=master_ip, master_port=master_port)
 
 
 class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
@@ -150,6 +190,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
+        log.debug('Connecting the Minion to the Master URI (for the return server): %s', self.master_uri)
         self.message_client = AsyncReqMessageClientPool(self.opts,
                                                         args=(self.opts, self.master_uri,),
                                                         kwargs={'io_loop': self._io_loop})
@@ -166,6 +207,11 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
     @property
     def master_uri(self):
+        if 'master_ip' in self.opts:
+            return _get_master_uri(self.opts['master_ip'],
+                                   self.opts['master_port'],
+                                   source_ip=self.opts.get('source_ip'),
+                                   source_port=self.opts.get('source_ret_port'))
         return self.opts['master_uri']
 
     def _package_load(self, load):
@@ -379,6 +425,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if not self.auth.authenticated:
             yield self.auth.authenticate()
         self.publish_port = self.auth.creds['publish_port']
+        log.debug('Connecting the Minion to the Master publish port, using the URI: %s', self.master_pub)
         self._socket.connect(self.master_pub)
 
     @property
@@ -386,8 +433,10 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         '''
         Return the master publish port
         '''
-        return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
-                                          port=self.publish_port)
+        return _get_master_uri(self.opts['master_ip'],
+                               self.publish_port,
+                               source_ip=self.opts.get('source_ip'),
+                               source_port=self.opts.get('source_publish_port'))
 
     @tornado.gen.coroutine
     def _decode_messages(self, messages):
@@ -954,6 +1003,7 @@ class AsyncReqMessageClient(object):
             elif hasattr(zmq, 'IPV4ONLY'):
                 self.socket.setsockopt(zmq.IPV4ONLY, 0)
         self.socket.linger = self.linger
+        log.debug('Trying to connect to: %s', self.addr)
         self.socket.connect(self.addr)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self.socket, io_loop=self.io_loop)
 

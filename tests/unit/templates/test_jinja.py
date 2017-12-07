@@ -662,7 +662,6 @@ class TestCustomExtensions(TestCase):
             # type of the rendered variable (should be unicode, which is the same as
             # six.text_type). This should cover all use cases but also allow the test
             # to pass on CentOS 6 running Python 2.7.
-            self.assertIn('!!python/unicode', rendered)
             self.assertIn('str value', rendered)
             self.assertIsInstance(rendered, six.text_type)
 
