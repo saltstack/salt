@@ -2041,23 +2041,23 @@ class State(object):
         return ret
 
     def __eval_slot(self, slot):
-        log.debug(u'Evaluating slot: %s', slot)
-        fmt = slot.split(u':', 2)
+        log.debug('Evaluating slot: %s', slot)
+        fmt = slot.split(':', 2)
         if len(fmt) != 3:
-            log.warning(u'Malformed slot: %s', slot)
+            log.warning('Malformed slot: %s', slot)
             return slot
-        if fmt[1] != u'salt':
-            log.warning(u'Malformed slot: %s', slot)
-            log.warning(u'Only execution modules are currently supported in slots. This means slot '
-                        u'should start with "__slot__:salt:"')
+        if fmt[1] != 'salt':
+            log.warning('Malformed slot: %s', slot)
+            log.warning('Only execution modules are currently supported in slots. This means slot '
+                        'should start with "__slot__:salt:"')
             return slot
         fun, args, kwargs = salt.utils.args.parse_function(fmt[2])
         if not fun or fun not in self.functions:
-            log.warning(u'Malformed slot: %s', slot)
-            log.warning(u'Execution module should be specified in a function call format: '
-                        u'test.arg(\'arg\', kw=\'kwarg\')')
+            log.warning('Malformed slot: %s', slot)
+            log.warning('Execution module should be specified in a function call format: '
+                        'test.arg(\'arg\', kw=\'kwarg\')')
             return slot
-        log.debug(u'Calling slot: %s(%s, %s)', fun, args, kwargs)
+        log.debug('Calling slot: %s(%s, %s)', fun, args, kwargs)
         return self.functions[fun](*args, **kwargs)
 
     def format_slots(self, cdata):
@@ -2066,11 +2066,11 @@ class State(object):
         minute runtime call to gather relevant data for the specific routine
         '''
         # __slot__:salt.cmd.run(foo, bar, baz=qux)
-        ctx = ((u'args', enumerate(cdata[u'args'])),
-               (u'kwargs', cdata[u'kwargs'].items()))
+        ctx = (('args', enumerate(cdata['args'])),
+               ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
-                if not isinstance(arg, six.string_types) or not arg.startswith(u'__slot__:'):
+                if not isinstance(arg, six.string_types) or not arg.startswith('__slot__:'):
                     # Not a slot, skip it
                     continue
                 cdata[atype][ind] = self.__eval_slot(arg)
