@@ -4,7 +4,7 @@ certifi
 cffi==1.11.2
 cryptography==2.1.4
 enum34==1.1.6
-futures==3.2.0
+futures==3.1.1
 gitdb==0.6.4
 GitPython==2.1.7
 idna==2.6
