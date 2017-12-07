@@ -111,7 +111,7 @@ class TestVerify(TestCase):
     def test_verify_env(self):
         root_dir = tempfile.mkdtemp(dir=TMP)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
-        verify_env([var_dir], getpass.getuser())
+        verify_env([var_dir], getpass.getuser(), root_dir=root_dir)
         self.assertTrue(os.path.exists(var_dir))
         dir_stat = os.stat(var_dir)
         self.assertEqual(dir_stat.st_uid, os.getuid())

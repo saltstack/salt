@@ -686,7 +686,7 @@ class State(object):
             except AttributeError:
                 pillar_enc = str(pillar_enc).lower()
         self._pillar_enc = pillar_enc
-        if initial_pillar is not None:
+        if initial_pillar:
             self.opts['pillar'] = initial_pillar
             if self._pillar_override:
                 self.opts['pillar'] = salt.utils.dictupdate.merge(
@@ -1878,8 +1878,8 @@ class State(object):
                 sys.modules[self.states[cdata['full']].__module__].__opts__[
                     'test'] = test
 
-            self.state_con.pop('runas')
-            self.state_con.pop('runas_password')
+            self.state_con.pop('runas', None)
+            self.state_con.pop('runas_password', None)
 
         # If format_call got any warnings, let's show them to the user
         if 'warnings' in cdata:

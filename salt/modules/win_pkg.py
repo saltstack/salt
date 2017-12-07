@@ -39,10 +39,11 @@ import logging
 import os
 import re
 import time
+import sys
 from functools import cmp_to_key
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
@@ -50,8 +51,12 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.exceptions import (CommandExecutionError,
                              SaltInvocationError,
                              SaltRenderError)
-import salt.utils
+import salt.utils  # Can be removed once is_true, get_hash, compare_dicts are moved
+import salt.utils.args
+import salt.utils.files
+import salt.utils.path
 import salt.utils.pkg
+import salt.utils.versions
 import salt.syspaths
 import salt.payload
 from salt.exceptions import MinionError
@@ -98,7 +103,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    if len(names) == 0:
+    if not names:
         return ''
 
     # Initialize the return dict with empty strings
@@ -123,6 +128,8 @@ def latest_version(*names, **kwargs):
         if name in installed_pkgs:
             log.trace('Determining latest installed version of %s', name)
             try:
+                # installed_pkgs[name] Can be version number or 'Not Found'
+                # 'Not Found' occurs when version number is not found in the registry
                 latest_installed = sorted(
                     installed_pkgs[name],
                     key=cmp_to_key(_reverse_cmp_pkg_versions)
@@ -139,6 +146,8 @@ def latest_version(*names, **kwargs):
         # get latest available (from winrepo_dir) version of package
         pkg_info = _get_package_info(name, saltenv=saltenv)
         log.trace('Raw winrepo pkg_info for {0} is {1}'.format(name, pkg_info))
+
+        # latest_available can be version number or 'latest' or even 'Not Found'
         latest_available = _get_latest_pkg_version(pkg_info)
         if latest_available:
             log.debug('Latest available version '
@@ -146,9 +155,9 @@ def latest_version(*names, **kwargs):
 
             # check, whether latest available version
             # is newer than latest installed version
-            if salt.utils.compare_versions(ver1=str(latest_available),
-                                           oper='>',
-                                           ver2=str(latest_installed)):
+            if compare_versions(ver1=str(latest_available),
+                                oper='>',
+                                ver2=str(latest_installed)):
                 log.debug('Upgrade of {0} from {1} to {2} '
                           'is available'.format(name,
                                                 latest_installed,
@@ -187,10 +196,9 @@ def upgrade_available(name, **kwargs):
     # same default as latest_version
     refresh = salt.utils.is_true(kwargs.get('refresh', True))
 
-    current = version(name, saltenv=saltenv, refresh=refresh).get(name)
-    latest = latest_version(name, saltenv=saltenv, refresh=False)
-
-    return compare_versions(latest, '>', current)
+    # if latest_version returns blank, the latest version is already installed or
+    # their is no package definition. This is a salt standard which could be improved.
+    return latest_version(name, saltenv=saltenv, refresh=refresh) != ''
 
 
 def list_upgrades(refresh=True, **kwargs):
@@ -221,9 +229,13 @@ def list_upgrades(refresh=True, **kwargs):
     pkgs = {}
     for pkg in installed_pkgs:
         if pkg in available_pkgs:
+            # latest_version() will be blank if the latest version is installed.
+            # or the package name is wrong. Given we check available_pkgs, this
+            # should not be the case of wrong package name.
+            # Note: latest_version() is an expensive way to do this as it
+            # calls list_pkgs each time.
             latest_ver = latest_version(pkg, refresh=False, saltenv=saltenv)
-            install_ver = installed_pkgs[pkg]
-            if compare_versions(latest_ver, '>', install_ver):
+            if latest_ver:
                 pkgs[pkg] = latest_ver
 
     return pkgs
@@ -240,7 +252,7 @@ def list_available(*names, **kwargs):
 
         saltenv (str): The salt environment to use. Default ``base``.
 
-        refresh (bool): Refresh package metadata. Default ``True``.
+        refresh (bool): Refresh package metadata. Default ``False``.
 
         return_dict_always (bool):
             Default ``False`` dict when a single package name is queried.
@@ -263,7 +275,7 @@ def list_available(*names, **kwargs):
         return ''
 
     saltenv = kwargs.get('saltenv', 'base')
-    refresh = salt.utils.is_true(kwargs.get('refresh', True))
+    refresh = salt.utils.is_true(kwargs.get('refresh', False))
     return_dict_always = \
         salt.utils.is_true(kwargs.get('return_dict_always', False))
 
@@ -292,7 +304,9 @@ def list_available(*names, **kwargs):
 
 def version(*names, **kwargs):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     Args:
         name (str): One or more package names
@@ -302,10 +316,12 @@ def version(*names, **kwargs):
         refresh (bool): Refresh package metadata. Default ``False``.
 
     Returns:
+        str: version string when a single package is specified.
         dict: The package name(s) with the installed versions.
 
-    .. code-block:: cfg
 
+    .. code-block:: cfg
+        {['<version>', '<version>', ]} OR
         {'<package name>': ['<version>', '<version>', ]}
 
     CLI Example:
@@ -314,19 +330,25 @@ def version(*names, **kwargs):
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package name01> <package name02>
-    '''
-    saltenv = kwargs.get('saltenv', 'base')
 
-    installed_pkgs = list_pkgs(refresh=kwargs.get('refresh', False))
-    available_pkgs = get_repo_data(saltenv).get('repo')
+    '''
+    # Standard is return empty string even if not a valid name
+    # TODO: Look at returning an error across all platforms with
+    # CommandExecutionError(msg,info={'errors': errors })
+    # available_pkgs = get_repo_data(saltenv).get('repo')
+    # for name in names:
+    #    if name in available_pkgs:
+    #        ret[name] = installed_pkgs.get(name, '')
+
+    saltenv = kwargs.get('saltenv', 'base')
+    installed_pkgs = list_pkgs(saltenv=saltenv, refresh=kwargs.get('refresh', False))
+
+    if len(names) == 1:
+        return installed_pkgs.get(names[0], '')
 
     ret = {}
     for name in names:
-        if name in available_pkgs:
-            ret[name] = installed_pkgs.get(name, '')
-        else:
-            ret[name] = 'not available'
-
+        ret[name] = installed_pkgs.get(name, '')
     return ret
 
 
@@ -335,7 +357,6 @@ def list_pkgs(versions_as_list=False, **kwargs):
     List the packages currently installed
 
     Args:
-        version_as_list (bool): Returns the versions as a list
 
     Kwargs:
         saltenv (str): The salt environment to use. Default ``base``.
@@ -423,7 +444,7 @@ def _get_reg_software():
                    '(value not set)',
                    '',
                    None]
-    #encoding = locale.getpreferredencoding()
+
     reg_software = {}
 
     hive = 'HKLM'
@@ -461,7 +482,7 @@ def _get_reg_software():
 def _refresh_db_conditional(saltenv, **kwargs):
     '''
     Internal use only in this module, has a different set of defaults and
-    returns True or False. And supports check the age of the existing
+    returns True or False. And supports checking the age of the existing
     generated metadata db, as well as ensure metadata db exists to begin with
 
     Args:
@@ -475,8 +496,7 @@ def _refresh_db_conditional(saltenv, **kwargs):
 
         failhard (bool):
             If ``True``, an error will be raised if any repo SLS files failed to
-            process. If ``False``, no error will be raised, and a dictionary
-            containing the full results will be returned.
+            process.
 
     Returns:
         bool: True Fetched or Cache uptodate, False to indicate an issue
@@ -641,33 +661,10 @@ def _get_repo_details(saltenv):
         # Do some safety checks on the repo_path as its contents can be removed,
         # this includes check for bad coding
         system_root = os.environ.get('SystemRoot', r'C:\Windows')
-        deny_paths = (
-            r'[a-z]\:\\$',  # C:\, D:\, etc
-            r'\\$',  # \
-            re.escape(system_root)  # C:\Windows
-        )
+        if not salt.utils.path.safe_path(
+                path=local_dest,
+                allow_path='\\'.join([system_root, 'TEMP'])):
 
-        # Since the above checks anything in C:\Windows, there are some
-        # directories we may want to make exceptions for
-        allow_paths = (
-            re.escape('\\'.join([system_root, 'TEMP'])),  # C:\Windows\TEMP
-        )
-
-        # Check the local_dest to make sure it's not one of the bad paths
-        good_path = True
-        for d_path in deny_paths:
-            if re.match(d_path, local_dest, flags=re.IGNORECASE) is not None:
-                # Found deny path
-                good_path = False
-
-        # If local_dest is one of the bad paths, check for exceptions
-        if not good_path:
-            for a_path in allow_paths:
-                if re.match(a_path, local_dest, flags=re.IGNORECASE) is not None:
-                    # Found exception
-                    good_path = True
-
-        if not good_path:
             raise CommandExecutionError(
                 'Attempting to delete files from a possibly unsafe location: '
                 '{0}'.format(local_dest)
@@ -717,8 +714,8 @@ def genrepo(**kwargs):
 
         verbose (bool):
             Return verbose data structure which includes 'success_list', a list
-            of all sls files and the package names contained within. Default
-            'False'
+            of all sls files and the package names contained within.
+            Default ``False``.
 
         failhard (bool):
             If ``True``, an error will be raised if any repo SLS files failed
@@ -761,11 +758,13 @@ def genrepo(**kwargs):
                     successful_verbose
                     )
     serial = salt.payload.Serial(__opts__)
+    # TODO: 2016.11 has PY2 mode as 'w+b' develop has 'w+' ? PY3 is 'wb+'
+    # also the reading of this is 'rb' in get_repo_data()
     mode = 'w+' if six.PY2 else 'wb+'
+
     with salt.utils.fopen(repo_details.winrepo_file, mode) as repo_cache:
         repo_cache.write(serial.dumps(ret))
-    # save reading it back again. ! this breaks due to utf8 issues
-    #__context__['winrepo.data'] = ret
+    # For some reason we can not save ret into __context__['winrepo.data'] as this breaks due to utf8 issues
     successful_count = len(successful_verbose)
     error_count = len(ret['errors'])
     if verbose:
@@ -800,7 +799,7 @@ def genrepo(**kwargs):
         return results
 
 
-def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
+def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
     renderers = salt.loader.render(__opts__, __salt__)
 
     def _failed_compile(msg):
@@ -810,7 +809,7 @@ def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
 
     try:
         config = salt.template.compile_template(
-            file,
+            filename,
             renderers,
             __opts__['renderer'],
             __opts__.get('renderer_blacklist', ''),
@@ -825,7 +824,6 @@ def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
     if config:
         revmap = {}
         errors = []
-        pkgname_ok_list = []
         for pkgname, versions in six.iteritems(config):
             if pkgname in ret['repo']:
                 log.error(
@@ -834,12 +832,12 @@ def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
                 )
                 errors.append('package \'{0}\' already defined'.format(pkgname))
                 break
-            for version, repodata in six.iteritems(versions):
+            for version_str, repodata in six.iteritems(versions):
                 # Ensure version is a string/unicode
-                if not isinstance(version, six.string_types):
+                if not isinstance(version_str, six.string_types):
                     msg = (
                         'package \'{0}\'{{0}}, version number {1} '
-                        'is not a string'.format(pkgname, version)
+                        'is not a string'.format(pkgname, version_str)
                     )
                     log.error(
                         msg.format(' within \'{0}\''.format(short_path_name))
@@ -851,7 +849,7 @@ def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
                     msg = (
                         'package \'{0}\'{{0}}, repo data for '
                         'version number {1} is not defined as a dictionary '
-                        .format(pkgname, version)
+                        .format(pkgname, version_str)
                     )
                     log.error(
                         msg.format(' within \'{0}\''.format(short_path_name))
@@ -862,8 +860,6 @@ def _repo_process_pkg_sls(file, short_path_name, ret, successful_verbose):
         if errors:
             ret.setdefault('errors', {})[short_path_name] = errors
         else:
-            if pkgname not in pkgname_ok_list:
-                pkgname_ok_list.append(pkgname)
             ret.setdefault('repo', {}).update(config)
             ret.setdefault('name_map', {}).update(revmap)
             successful_verbose[short_path_name] = config.keys()
@@ -938,7 +934,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             to install. (no spaces after the commas)
 
         refresh (bool):
-            Boolean value representing whether or not to refresh the winrepo db
+            Boolean value representing whether or not to refresh the winrepo db.
+            Default ``False``.
 
         pkgs (list):
             A list of packages to install from a software repository. All
@@ -1094,7 +1091,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     for pkg in pkg_params:
         pkg_params[pkg] = {'version': pkg_params[pkg]}
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         log.error('No package definition found')
         return {}
 
@@ -1136,11 +1133,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 version_num = str(version_num)
 
         if not version_num:
+            # following can be version number or latest
             version_num = _get_latest_pkg_version(pkginfo)
 
         # Check if the version is already installed
         if version_num in old.get(pkg_name, '').split(',') \
-                or (old.get(pkg_name) == 'Not Found'):
+                or (old.get(pkg_name, '') == 'Not Found'):
             # Desired version number already installed
             ret[pkg_name] = {'current': version_num}
             continue
@@ -1266,32 +1264,32 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 options.get('extra_install_flags', '')
             )
 
-        #Compute msiexec string
+        # Compute msiexec string
         use_msiexec, msiexec = _get_msiexec(pkginfo[version_num].get('msiexec', False))
 
         # Build cmd and arguments
         # cmd and arguments must be separated for use with the task scheduler
+        cmd_shell = os.getenv('ComSpec', '{0}\\system32\\cmd.exe'.format(os.getenv('WINDIR')))
         if use_msiexec:
-            cmd = msiexec
-            arguments = ['/i', cached_pkg]
+            arguments = '"{0}" /I "{1}"'.format(msiexec, cached_pkg)
             if pkginfo[version_num].get('allusers', True):
-                arguments.append('ALLUSERS="1"')
-            arguments.extend(salt.utils.shlex_split(install_flags, posix=False))
+                arguments = '{0} ALLUSERS=1'.format(arguments)
         else:
-            cmd = cached_pkg
-            arguments = salt.utils.shlex_split(install_flags, posix=False)
+            arguments = '"{0}"'.format(cached_pkg)
+
+        if install_flags:
+            arguments = '{0} {1}'.format(arguments, install_flags)
 
         # Install the software
         # Check Use Scheduler Option
         if pkginfo[version_num].get('use_scheduler', False):
-
             # Create Scheduled Task
             __salt__['task.create_task'](name='update-salt-software',
                                          user_name='System',
                                          force=True,
                                          action_type='Execute',
-                                         cmd=cmd,
-                                         arguments=' '.join(arguments),
+                                         cmd=cmd_shell,
+                                         arguments='/s /c "{0}"'.format(arguments),
                                          start_in=cache_path,
                                          trigger_type='Once',
                                          start_date='1975-01-01',
@@ -1334,15 +1332,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     ret[pkg_name] = {'install status': 'failed'}
         else:
 
-            # Combine cmd and arguments
-            cmd = [cmd]
-            cmd.extend(arguments)
-
             # Launch the command
-            result = __salt__['cmd.run_all'](cmd,
-                                             cache_path,
-                                             python_shell=False,
-                                             redirect_stderr=True)
+            result = __salt__['cmd.run_all'](
+                '"{0}" /s /c "{1}"'.format(cmd_shell, arguments),
+                cache_path,
+                output_loglevel='trace',
+                python_shell=False,
+                redirect_stderr=True)
             if not result['retcode']:
                 ret[pkg_name] = {'install status': 'success'}
                 changed.append(pkg_name)
@@ -1419,14 +1415,17 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
     .. versionadded:: 0.16.0
 
     Args:
-        name (str): The name(s) of the package(s) to be uninstalled. Can be a
-            single package or a comma delimted list of packages, no spaces.
+        name (str):
+            The name(s) of the package(s) to be uninstalled. Can be a
+            single package or a comma delimited list of packages, no spaces.
+
         version (str):
             The version of the package to be uninstalled. If this option is
             used to to uninstall multiple packages, then this version will be
             applied to all targeted packages. Recommended using only when
             uninstalling a single package. If this parameter is omitted, the
             latest version will be uninstalled.
+
         pkgs (list):
             A list of packages to delete. Must be passed as a python list. The
             ``name`` parameter will be ignored if this option is passed.
@@ -1563,6 +1562,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
                 # Compare the hash of the cached installer to the source only if
                 # the file is hosted on salt:
+                # TODO cp.cache_file does cache and hash checking? So why do it again?
                 if uninstaller.startswith('salt:'):
                     if __salt__['cp.hash_file'](uninstaller, saltenv) != \
                             __salt__['cp.hash_file'](cached_pkg):
@@ -1588,6 +1588,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
             # Get parameters for cmd
             expanded_cached_pkg = str(os.path.expandvars(cached_pkg))
+            expanded_cache_path = str(os.path.expandvars(cache_path))
 
             # Get uninstall flags
             uninstall_flags = pkginfo[target].get('uninstall_flags', '')
@@ -1596,31 +1597,31 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 uninstall_flags = '{0} {1}'.format(
                     uninstall_flags, kwargs.get('extra_uninstall_flags', ''))
 
-            #Compute msiexec string
+            # Compute msiexec string
             use_msiexec, msiexec = _get_msiexec(pkginfo[target].get('msiexec', False))
+            cmd_shell = os.getenv('ComSpec', '{0}\\system32\\cmd.exe'.format(os.getenv('WINDIR')))
 
             # Build cmd and arguments
             # cmd and arguments must be separated for use with the task scheduler
             if use_msiexec:
-                cmd = msiexec
-                arguments = ['/x']
-                arguments.extend(salt.utils.shlex_split(uninstall_flags, posix=False))
+                arguments = '"{0}" /X "{1}"'.format(msiexec, uninstaller if uninstaller else expanded_cached_pkg)
             else:
-                cmd = expanded_cached_pkg
-                arguments = salt.utils.shlex_split(uninstall_flags, posix=False)
+                arguments = '"{0}"'.format(expanded_cached_pkg)
+
+            if uninstall_flags:
+                arguments = '{0} {1}'.format(arguments, uninstall_flags)
 
             # Uninstall the software
             # Check Use Scheduler Option
             if pkginfo[target].get('use_scheduler', False):
-
                 # Create Scheduled Task
                 __salt__['task.create_task'](name='update-salt-software',
                                              user_name='System',
                                              force=True,
                                              action_type='Execute',
-                                             cmd=cmd,
-                                             arguments=' '.join(arguments),
-                                             start_in=cache_path,
+                                             cmd=cmd_shell,
+                                             arguments='/s /c "{0}"'.format(arguments),
+                                             start_in=expanded_cache_path,
                                              trigger_type='Once',
                                              start_date='1975-01-01',
                                              start_time='01:00',
@@ -1632,13 +1633,11 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                     log.error('Scheduled Task failed to run')
                     ret[pkgname] = {'uninstall status': 'failed'}
             else:
-                # Build the install command
-                cmd = [cmd]
-                cmd.extend(arguments)
-
                 # Launch the command
                 result = __salt__['cmd.run_all'](
-                        cmd,
+                        '"{0}" /s /c "{1}"'.format(cmd_shell, arguments),
+                        expanded_cache_path,
+                        output_loglevel='trace',
                         python_shell=False,
                         redirect_stderr=True)
                 if not result['retcode']:
@@ -1684,11 +1683,13 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
 
         name (str): The name of the package to be deleted.
 
-        version (str): The version of the package to be deleted. If this option
-            is used in combination with the ``pkgs`` option below, then this
+        version (str):
+            The version of the package to be deleted. If this option is
+            used in combination with the ``pkgs`` option below, then this
             version will be applied to all targeted packages.
 
-        pkgs (list): A list of packages to delete. Must be passed as a python
+        pkgs (list):
+            A list of packages to delete. Must be passed as a python
             list. The ``name`` parameter will be ignored if this option is
             passed.
 
@@ -1822,4 +1823,20 @@ def compare_versions(ver1='', oper='==', ver2=''):
 
         salt '*' pkg.compare_versions 1.2 >= 1.3
     '''
-    return salt.utils.compare_versions(ver1, oper, ver2)
+    if not ver1:
+        raise SaltInvocationError('compare_version, ver1 is blank')
+    if not ver2:
+        raise SaltInvocationError('compare_version, ver2 is blank')
+
+    # Support version being the special meaning of 'latest'
+    if ver1 == 'latest':
+        ver1 = str(sys.maxsize)
+    if ver2 == 'latest':
+        ver2 = str(sys.maxsize)
+    # Support version being the special meaning of 'Not Found'
+    if ver1 == 'Not Found':
+        ver1 = '0.0.0.0.0'
+    if ver2 == 'Not Found':
+        ver2 = '0.0.0.0.0'
+
+    return salt.utils.compare_versions(ver1, oper, ver2, ignore_epoch=True)

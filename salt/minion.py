@@ -1914,6 +1914,8 @@ class Minion(MinionBase):
         func = data.get('func', None)
         name = data.get('name', None)
         beacon_data = data.get('beacon_data', None)
+        include_pillar = data.get(u'include_pillar', None)
+        include_opts = data.get(u'include_opts', None)
 
         if func == 'add':
             self.beacons.add_beacon(name, beacon_data)
@@ -1930,7 +1932,9 @@ class Minion(MinionBase):
         elif func == 'disable_beacon':
             self.beacons.disable_beacon(name)
         elif func == 'list':
-            self.beacons.list_beacons()
+            self.beacons.list_beacons(include_opts, include_pillar)
+        elif func == u'list_available':
+            self.beacons.list_available_beacons()
 
     def environ_setenv(self, tag, data):
         '''

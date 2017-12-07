@@ -31,6 +31,8 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+ROOT_DIR = 'c:\\salt' if salt.utils.is_windows() else '/'
+
 
 def zmq_version():
     '''
@@ -192,13 +194,13 @@ def verify_files(files, user):
     return True
 
 
-def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
+def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False, root_dir=ROOT_DIR):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
     if salt.utils.is_windows():
-        return win_verify_env(dirs, permissive, pki_dir, skip_extra)
+        return win_verify_env(root_dir, dirs, permissive, pki_dir, skip_extra)
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
@@ -523,18 +525,21 @@ def verify_log(opts):
         log.warning('Insecure logging configuration detected! Sensitive data may be logged.')
 
 
-def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
+def win_verify_env(path, dirs, permissive=False, pki_dir='', skip_extra=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
     import salt.utils.win_functions
     import salt.utils.win_dacl
+    import salt.utils.path
 
-    # Get the root path directory where salt is installed
-    path = dirs[0]
-    while os.path.basename(path) not in ['salt', 'salt-tests-tmpdir']:
-        path, base = os.path.split(path)
+    # Make sure the file_roots is not set to something unsafe since permissions
+    # on that directory are reset
+    if not salt.utils.path.safe_path(path=path):
+        raise CommandExecutionError(
+            '`file_roots` set to a possibly unsafe location: {0}'.format(path)
+        )
 
     # Create the root path directory if missing
     if not os.path.isdir(path):
