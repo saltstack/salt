@@ -812,20 +812,25 @@ def _alarms_present(name, min_size_equals_max_size, alarms, alarms_from_pillar, 
         if not results['result']:
             merged_return_value['result'] = False
         if results.get('changes', {}) != {}:
-            merged_return_value['changes'][info['name']] = results['changes']
+            merged_return_value['changes'].setdefault('alarms', {})
+            merged_return_value['changes']['alarms'][info['name']] = results['changes']
         if 'comment' in results:
             merged_return_value['comment'] += results['comment']
     return merged_return_value
 
 
 def absent(
-        name,
-        force=False,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None,
-        remove_lc=False):
+    name,
+    force=False,
+    alarms=None,
+    alarms_from_pillar='boto_asg_alarms',
+    recurse=False,
+    remove_lc=False,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
     '''
     Ensure the named autoscale group is deleted.
 
@@ -835,8 +840,30 @@ def absent(
     force
         Force deletion of autoscale group.
 
+    alarms:
+        A dictionary of name->boto_cloudwatch_alarm sections associated with this ASG.
+        All attributes should be specified except for dimension which will be
+        automatically set to this ASG.
+        See the boto_cloudwatch_alarm state for information about these attributes.
+
+        .. versionadded:: Oxygen
+
+    alarms_from_pillar:
+        Name of pillar dict that contains alarm settings.
+        Alarms defined for this specific state will override those from pillar.
+
+        .. versionadded:: Oxygen
+
+    recurse:
+        Whether or not to also remove associated sub-resources.
+
+        .. versionadded:: Oxygen
+
     remove_lc
-        Delete the launch config as well.
+        Delete the launch config currently attached to the ASG as well.
+        Deprecated in favor of recurse, which is more general.
+
+        .. deprecated:: Oxygen
 
     region
         The region to connect to.
@@ -851,41 +878,97 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'comment': [], 'changes': {}}
+
+    if remove_lc:
+        __utils__['versions.warn_until'](
+            'Neon',
+            'The \'remove_lc\' argument to \'boto_asg.absent\' has been '
+            'superseded by \'recurse\', which is more general. '
+            'Support for using \'remove_lc\' will be removed in Salt Neon.'
+        )
+
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
         ret['result'] = False
-        ret['comment'] = 'Failed to check autoscale group existence.'
-    elif asg:
-        if __opts__['test']:
-            ret['comment'] = 'Autoscale group set to be deleted.'
-            ret['result'] = None
-            if remove_lc:
-                msg = 'Launch configuration {0} is set to be deleted.'.format(asg['launch_config_name'])
-                ret['comment'] = ' '.join([ret['comment'], msg])
-            return ret
-        deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
-                                              profile)
-        if deleted:
-            if remove_lc:
-                lc_deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'],
-                                                                              region,
-                                                                              key,
-                                                                              keyid,
-                                                                              profile)
-                if lc_deleted:
-                    if 'launch_config' not in ret['changes']:
-                        ret['changes']['launch_config'] = {}
-                    ret['changes']['launch_config']['deleted'] = asg['launch_config_name']
-                else:
-                    ret['result'] = False
-                    ret['comment'] = ' '.join([ret['comment'], 'Failed to delete launch configuration.'])
-            ret['changes']['old'] = asg
-            ret['changes']['new'] = None
-            ret['comment'] = 'Deleted autoscale group.'
-        else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete autoscale group.'
+        ret['comment'].append(
+            'Failed to check autoscale group {0}.'.format(name)
+        )
+        return ret
+
+    if not asg:
+        ret['result'] = True
+        ret['comment'].append(
+            'Autoscale group {0} does not exist.'.format(name)
+        )
     else:
-        ret['comment'] = 'Autoscale group does not exist.'
+        changes = {'old': name, 'new': None}
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'].append(
+                'Autoscale group {0} set to be deleted.'.format(name)
+            )
+            ret['pchanges'] = {'asg': changes}
+        else:
+            deleted = __salt__['boto_asg.delete'](
+                name,
+                force=force,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
+            if not deleted:
+                ret['result'] = False
+                ret['comment'].append(
+                    'Failed to delete autoscale group {0}.'.format(name)
+                )
+                return ret
+
+            ret['result'] = True
+            ret['comment'].append('Deleted autoscale group {0}.'.format(name))
+            ret['changes']['asg'] = changes
+
+    # Note to maintainers:
+    # When remove_lc is removed in Neon, it will be subsumed by recurse.
+    # This block should be moved into the next if block.
+    # Make sure to continue gating the LC-related code
+    # behind an additional `if asg` check since we need that for the LC name.
+    # The alarms code can continue to be directly under the `if recurse` check.
+    if asg and (remove_lc or recurse):
+        # Need the asg object to figure out the LC name
+        _ret = __states__['boto_lc.absent'](
+            asg['launch_config_name'],
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        __utils__['state.merge_subreturn'](ret, _ret, subkey='launch_config')
+        if _ret['result'] is False:
+            return ret
+
+    if recurse:
+        combined_alarms = copy.deepcopy(
+            __salt__['config.option'](alarms_from_pillar, {})
+        )
+        if alarms:
+            __utils__['dictupdate.update'](combined_alarms, alarms)
+
+        if combined_alarms:
+            _ret = __states__['boto_cloudwatch_alarm.absent'](
+                '',
+                alarms=[
+                    '{0} {1}'.format(name, alarm['name'])
+                    for alarm in six.itervalues(combined_alarms)
+                ],
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
+            __utils__['state.merge_subreturn'](ret, _ret, subkey='alarms')
+            if _ret['result'] is False:
+                return ret
+
     return ret

@@ -175,15 +175,22 @@ def present(
 
 def absent(
         name,
+        alarms=None,
         region=None,
         key=None,
         keyid=None,
         profile=None):
     '''
-    Ensure the named cloudwatch alarm is deleted.
+    Ensure the named cloudwatch alarm(s) are deleted.
 
     name
         Name of the alarm.
+        This parameter is ignored if `alarms` is used.
+
+    alarms
+        A list of names of alarms.
+
+        .. versionadded:: Oxygen
 
     region
         Region to connect to.
@@ -198,25 +205,56 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'changes': {}}
+    if not alarms:
+        alarms = [name]
 
-    is_present = __salt__['boto_cloudwatch.get_alarm'](name, region, key,
-                                                       keyid, profile)
+    res = __salt__['boto_cloudwatch.get_alarms'](
+        alarms,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    if 'error' in res:
+        ret['result'] = False
+        ret['comment'] = 'Failed to check Cloudwatch alarms: {0}'.format(
+            res['error'],
+        )
+        return ret
 
-    if is_present:
-        if __opts__['test']:
-            ret['comment'] = 'alarm {0} is set to be removed.'.format(name)
-            ret['result'] = None
-            return ret
-        deleted = __salt__['boto_cloudwatch.delete_alarm'](name, region, key,
-                                                           keyid, profile)
-        if deleted:
-            ret['changes']['old'] = name
-            ret['changes']['new'] = None
-        else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete {0} alarm.'.format(name)
-    else:
-        ret['comment'] = '{0} does not exist in {1}.'.format(name, region)
+    existing_alarms = list(res['result'])
+    if not existing_alarms:
+        ret['result'] = True
+        ret['comment'] = 'Cloudwatch alarms are already absent.'
+        return ret
 
+    changes = {'old': existing_alarms, 'new': []}
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Cloudwatch alarms {0} are set to be removed.'.format(
+            ','.join(existing_alarms),
+        )
+        ret['pchanges'] = changes
+        return ret
+
+    res = __salt__['boto_cloudwatch.delete_alarms'](
+        existing_alarms,
+        region,
+        key,
+        keyid,
+        profile,
+    )
+    if 'error' in res:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete Cloudwatch alarms: {0}'.format(
+            res['error'],
+        )
+        return ret
+
+    ret['result'] = True
+    ret['comment'] = 'Deleted Cloudwatch alarms {0}.'.format(
+        ','.join(existing_alarms),
+    )
+    ret['changes'] = changes
     return ret
