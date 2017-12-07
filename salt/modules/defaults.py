@@ -133,3 +133,17 @@ def merge(dest, src, merge_lists=False, in_place=True):
     else:
       merged = copy.deepcopy(dest)
     return dictupdate.update(merged, src, merge_lists=merge_lists)
+
+
+def deepcopy(source):
+    '''
+    defaults.deepcopy
+        Allows deep copy of objects in formulas.
+
+        By default, Python does not copy objects,
+        it creates bindings between a target and an object.
+
+    It is more typical to use this in a templating language in formulas,
+    instead of directly on the command-line.
+    '''
+    return copy.deepcopy(source)

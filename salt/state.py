@@ -1925,8 +1925,6 @@ class State(object):
                 if self.mocked:
                     ret = mock_ret(cdata)
                 else:
-                    # Check if this low chunk is paused
-                    self.check_pause(low)
                     # Execute the state function
                     if not low.get(u'__prereq__') and low.get(u'parallel'):
                         # run the state call in parallel, but only if not in a prereq
@@ -2112,6 +2110,10 @@ class State(object):
                 return running
             tag = _gen_tag(low)
             if tag not in running:
+                # Check if this low chunk is paused
+                action = self.check_pause(low)
+                if action == u'kill':
+                    break
                 running = self.call_chunk(low, running, chunks)
                 if self.check_failhard(low, running):
                     return running
@@ -2170,13 +2172,16 @@ class State(object):
                             if u'duration' in pdat[key]:
                                 now = time.time()
                                 if now - start > pdat[key][u'duration']:
-                                    return
+                                    return u'run'
+                            if u'kill' in pdat[key]:
+                                return u'kill'
                         else:
-                            return
+                            return u'run'
                         time.sleep(1)
             except Exception as exc:
                 log.error('Failed to read in pause data for file located at: %s', pause_path)
-                return
+                return u'run'
+        return u'run'
 
     def reconcile_procs(self, running):
         '''

@@ -150,3 +150,25 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         final = defaults.merge(dest, src, in_place=False)
         self.assertEqual(dest, dest_orig)
         self.assertEqual(final, merged)
+
+    def test_deepcopy(self):
+        '''
+        Test a deep copy of object.
+        '''
+
+        src = {
+            'A': 'A',
+            'B': 'B'
+        }
+
+        dist = defaults.deepcopy(src)
+        dist.update({'C': 'C'})
+
+        result = {
+            'A': 'A',
+            'B': 'B',
+            'C': 'C'
+        }
+
+        self.assertFalse(src == dist)
+        self.assertTrue(dist == result)
