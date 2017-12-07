@@ -113,6 +113,17 @@ def servers(**kwargs):  # pylint: disable=unused-argument
     .. code-block:: bash
 
         salt '*' ntp.servers
+
+    Example output:
+
+    .. code-block:: python
+
+        [
+            '192.168.0.1',
+            '172.17.17.1',
+            '172.17.17.2',
+            '2400:cb00:6:1024::c71b:840a'
+        ]
     '''
 
     ntp_servers = salt.utils.napalm.call(
