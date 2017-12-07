@@ -3,7 +3,7 @@
 Management of OpenStack Keystone Domains
 ========================================
 
-.. versionadded:: Nitrogen
+.. versionadded:: Oxygen
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.keystoneng` for setup instructions
