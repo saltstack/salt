@@ -631,6 +631,18 @@ class VMwareTestCase(ExtendedTestCase):
             call='function'
         )
 
+    def test_convert_to_template_call(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when trying to call convert_to_template
+        with anything other than --action or -a.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.convert_to_template,
+            name=VM_NAME,
+            call='function'
+        )
+
     def test_avail_sizes(self):
         '''
         Tests that avail_sizes returns an empty dictionary.
