@@ -21,7 +21,7 @@ from salt.serializers import DeserializationError, SerializationError
 # Import 3rd-party libs
 from salt.ext import six
 
-__all__ = ['deserialize', 'serialize', 'available']
+__all__ = [u'deserialize', u'serialize', u'available']
 
 available = True
 
@@ -39,7 +39,7 @@ def deserialize(stream_or_string, **options):
             return json.load(stream_or_string, **options)
 
         if isinstance(stream_or_string, bytes):
-            stream_or_string = stream_or_string.decode('utf-8')
+            stream_or_string = stream_or_string.decode(u'utf-8')
 
         return json.loads(stream_or_string)
     except Exception as error:
@@ -55,7 +55,7 @@ def serialize(obj, **options):
     '''
 
     try:
-        if 'fp' in options:
+        if u'fp' in options:
             return json.dump(obj, **options)
         else:
             return json.dumps(obj, **options)

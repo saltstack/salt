@@ -54,8 +54,8 @@ except ImportError:
 
 from salt.exceptions import SaltCacheError
 
-_DEFAULT_DATABASE_NAME = "salt_cache"
-_DEFAULT_CACHE_TABLE_NAME = "cache"
+_DEFAULT_DATABASE_NAME = u"salt_cache"
+_DEFAULT_CACHE_TABLE_NAME = u"cache"
 _RECONNECT_INTERVAL_SEC = 0.050
 
 log = logging.getLogger(__name__)
@@ -65,8 +65,8 @@ _table_name = None
 
 # Module properties
 
-__virtualname__ = 'mysql'
-__func_alias__ = {'ls': 'list'}
+__virtualname__ = u'mysql'
+__func_alias__ = {u'ls': u'list'}
 
 
 def __virtual__():
@@ -74,8 +74,10 @@ def __virtual__():
     Confirm that python-mysql package is installed.
     '''
     if not HAS_MYSQL:
-        return (False, "Please install python-mysql package to use mysql data "
-                "cache driver")
+        return (
+            False,
+            u"Please install python-mysql package to use mysql data cache driver"
+        )
     return __virtualname__
 
 
@@ -96,16 +98,16 @@ def run_query(conn, query, retries=3):
         # reconnect creating new client
         sleep(_RECONNECT_INTERVAL_SEC)
         if conn is None:
-            log.debug("mysql_cache: creating db connection")
+            log.debug(u"mysql_cache: creating db connection")
         else:
-            log.info("mysql_cache: recreating db connection due to: %r", e)
+            log.info(u"mysql_cache: recreating db connection due to: %r", e)
         global client
         client = MySQLdb.connect(**_mysql_kwargs)
         return run_query(client, query, retries - 1)
     except Exception as e:
         if len(query) > 150:
-            query = query[:150] + "<...>"
-        raise SaltCacheError("Error running {0}: {1}".format(query, e))
+            query = query[:150] + u"<...>"
+        raise SaltCacheError(u"Error running {0}: {1}".format(query, e))
 
 
 def _create_table():
@@ -114,9 +116,9 @@ def _create_table():
     '''
     # Explicitely check if the table already exists as the library logs a
     # warning on CREATE TABLE
-    query = """SELECT COUNT(TABLE_NAME) FROM information_schema.tables
-        WHERE table_schema = '{0}' AND table_name = '{1}'""".format(
-            _mysql_kwargs['db'],
+    query = u"""SELECT COUNT(TABLE_NAME) FROM information_schema.tables
+        WHERE table_schema = u'{0}' AND table_name = '{1}'""".format(
+            _mysql_kwargs[u'db'],
             _table_name,
         )
     cur, _ = run_query(client, query)
@@ -125,43 +127,44 @@ def _create_table():
     if r[0] == 1:
         return
 
-    query = """CREATE TABLE IF NOT EXISTS {0} (
+    query = u"""CREATE TABLE IF NOT EXISTS {0} (
       bank CHAR(255),
       etcd_key CHAR(255),
       data MEDIUMBLOB,
       PRIMARY KEY(bank, etcd_key)
-    );""".format(_table_name)
-    log.info("mysql_cache: creating table %s", _table_name)
+    );u""".format(_table_name)
+    log.info(u"mysql_cache: creating table %s", _table_name)
     cur, _ = run_query(client, query)
     cur.close()
 
 
 def _init_client():
-    """Initialize connection and create table if needed
-    """
+    '''
+    Initialize connection and create table if needed
+    '''
     if client is not None:
         return
 
     global _mysql_kwargs, _table_name
     _mysql_kwargs = {
-        'host': __opts__.get('mysql.host', '127.0.0.1'),
-        'user': __opts__.get('mysql.user', None),
-        'passwd': __opts__.get('mysql.password', None),
-        'db': __opts__.get('mysql.database', _DEFAULT_DATABASE_NAME),
-        'port': __opts__.get('mysql.port', 3306),
-        'unix_socket': __opts__.get('mysql.unix_socket', None),
-        'connect_timeout': __opts__.get('mysql.connect_timeout', None),
-        'autocommit': True,
+        u'host': __opts__.get(u'mysql.host', u'127.0.0.1'),
+        u'user': __opts__.get(u'mysql.user', None),
+        u'passwd': __opts__.get(u'mysql.password', None),
+        u'db': __opts__.get(u'mysql.database', _DEFAULT_DATABASE_NAME),
+        u'port': __opts__.get(u'mysql.port', 3306),
+        u'unix_socket': __opts__.get(u'mysql.unix_socket', None),
+        u'connect_timeout': __opts__.get(u'mysql.connect_timeout', None),
+        u'autocommit': True,
     }
-    _table_name = __opts__.get('mysql.table_name', _table_name)
+    _table_name = __opts__.get(u'mysql.table_name', _table_name)
     # TODO: handle SSL connection parameters
 
     for k, v in _mysql_kwargs.items():
         if v is None:
             _mysql_kwargs.pop(k)
     kwargs_copy = _mysql_kwargs.copy()
-    kwargs_copy['passwd'] = "<hidden>"
-    log.info("mysql_cache: Setting up client with params: %r", kwargs_copy)
+    kwargs_copy[u'passwd'] = u'<hidden>'
+    log.info(u'mysql_cache: Setting up client with params: %r', kwargs_copy)
     # The MySQL client is created later on by run_query
     _create_table()
 
@@ -171,14 +174,14 @@ def store(bank, key, data):
     Store a key value.
     '''
     _init_client()
-    data = __context__['serial'].dumps(data)
-    query = "REPLACE INTO {0} (bank, etcd_key, data) values('{1}', '{2}', " \
-        "'{3}')".format(_table_name, bank, key, data)
+    data = __context__[u'serial'].dumps(data)
+    query = u"REPLACE INTO {0} (bank, etcd_key, data) values('{1}', '{2}', " \
+        u"'{3}')".format(_table_name, bank, key, data)
     cur, cnt = run_query(client, query)
     cur.close()
     if cnt not in (1, 2):
         raise SaltCacheError(
-            'Error storing {0} {1} returned {2}'.format(bank, key, cnt)
+            u'Error storing {0} {1} returned {2}'.format(bank, key, cnt)
         )
 
 
@@ -187,14 +190,14 @@ def fetch(bank, key):
     Fetch a key value.
     '''
     _init_client()
-    query = "SELECT data FROM {0} WHERE bank='{1}' AND etcd_key='{2}'".format(
+    query = u"SELECT data FROM {0} WHERE bank='{1}' AND etcd_key='{2}'".format(
         _table_name, bank, key)
     cur, _ = run_query(client, query)
     r = cur.fetchone()
     cur.close()
     if r is None:
         return {}
-    return __context__['serial'].loads(r[0])
+    return __context__[u'serial'].loads(r[0])
 
 
 def flush(bank, key=None):
@@ -202,9 +205,9 @@ def flush(bank, key=None):
     Remove the key from the cache bank with all the key content.
     '''
     _init_client()
-    query = "DELETE FROM {0} WHERE bank='{1}'".format(_table_name, bank)
+    query = u"DELETE FROM {0} WHERE bank='{1}'".format(_table_name, bank)
     if key is not None:
-        query += " AND etcd_key='{0}'".format(key)
+        query += u" AND etcd_key='{0}'".format(key)
 
     cur, _ = run_query(client, query)
     cur.close()
@@ -216,7 +219,7 @@ def ls(bank):
     bank.
     '''
     _init_client()
-    query = "SELECT etcd_key FROM {0} WHERE bank='{1}'".format(
+    query = u"SELECT etcd_key FROM {0} WHERE bank='{1}'".format(
         _table_name, bank)
     cur, _ = run_query(client, query)
     out = [row[0] for row in cur.fetchall()]
@@ -229,8 +232,8 @@ def contains(bank, key):
     Checks if the specified bank contains the specified key.
     '''
     _init_client()
-    query = "SELECT COUNT(data) FROM {0} WHERE bank='{1}' " \
-        "AND etcd_key='{2}'".format(_table_name, bank, key)
+    query = u"SELECT COUNT(data) FROM {0} WHERE bank='{1}' " \
+        u"AND etcd_key='{2}'".format(_table_name, bank, key)
     cur, _ = run_query(client, query)
     r = cur.fetchone()
     cur.close()

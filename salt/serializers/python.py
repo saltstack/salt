@@ -18,7 +18,7 @@ except ImportError:
 import pprint
 import salt.utils.data
 
-__all__ = ['serialize', 'available']
+__all__ = [u'serialize', u'available']
 
 available = True
 

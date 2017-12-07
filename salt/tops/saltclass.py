@@ -21,7 +21,7 @@ def __virtual__():
     '''
     Only run if properly configured
     '''
-    if __opts__['master_tops'].get('saltclass'):
+    if __opts__[u'master_tops'].get(u'saltclass'):
         return True
     return False
 
@@ -42,28 +42,28 @@ def top(**kwargs):
     If successfull the function will return a top dict for minion_id
     '''
     # If path has not been set, make a default
-    _opts = __opts__['master_tops']['saltclass']
-    if 'path' not in _opts:
-        path = '/srv/saltclass'
-        log.warning('path variable unset, using default: {0}'.format(path))
+    _opts = __opts__[u'master_tops'][u'saltclass']
+    if u'path' not in _opts:
+        path = u'/srv/saltclass'
+        log.warning(u'path variable unset, using default: %s', path)
     else:
-        path = _opts['path']
+        path = _opts[u'path']
 
     # Create a dict that will contain our salt objects
     # to send to get_tops function
-    if 'id' not in kwargs['opts']:
-        log.warning('Minion id not found - Returning empty dict')
+    if u'id' not in kwargs[u'opts']:
+        log.warning(u'Minion id not found - Returning empty dict')
         return {}
     else:
-        minion_id = kwargs['opts']['id']
+        minion_id = kwargs[u'opts'][u'id']
 
     salt_data = {
-        '__opts__': kwargs['opts'],
-        '__salt__': {},
-        '__grains__': kwargs['grains'],
-        '__pillar__': {},
-        'minion_id': minion_id,
-        'path': path
+        u'__opts__': kwargs[u'opts'],
+        u'__salt__': {},
+        u'__grains__': kwargs[u'grains'],
+        u'__pillar__': {},
+        u'minion_id': minion_id,
+        u'path': path
     }
 
     return sc.get_tops(minion_id, salt_data)

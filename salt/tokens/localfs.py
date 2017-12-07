@@ -15,7 +15,7 @@ import salt.payload
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'localfs'
+__virtualname__ = u'localfs'
 
 
 def mk_token(opts, tdata):
@@ -28,20 +28,21 @@ def mk_token(opts, tdata):
     :param tdata: Token data to be stored with 'token' attirbute of this dict set to the token.
     :returns: tdata with token if successful. Empty dict if failed.
     '''
-    hash_type = getattr(hashlib, opts.get('hash_type', 'md5'))
+    hash_type = getattr(hashlib, opts.get(u'hash_type', u'md5'))
     tok = str(hash_type(os.urandom(512)).hexdigest())
-    t_path = os.path.join(opts['token_dir'], tok)
+    t_path = os.path.join(opts[u'token_dir'], tok)
     while os.path.isfile(t_path):
         tok = str(hash_type(os.urandom(512)).hexdigest())
-        t_path = os.path.join(opts['token_dir'], tok)
-    tdata['token'] = tok
+        t_path = os.path.join(opts[u'token_dir'], tok)
+    tdata[u'token'] = tok
     serial = salt.payload.Serial(opts)
     try:
         with salt.utils.files.set_umask(0o177):
-            with salt.utils.files.fopen(t_path, 'w+b') as fp_:
+            with salt.utils.files.fopen(t_path, u'w+b') as fp_:
                 fp_.write(serial.dumps(tdata))
     except (IOError, OSError):
-        log.warning('Authentication failure: can not write token file "{0}".'.format(t_path))
+        log.warning(
+            u'Authentication failure: can not write token file "%s".', t_path)
         return {}
     return tdata
 
@@ -54,16 +55,17 @@ def get_token(opts, tok):
     :param tok: Token value to get
     :returns: Token data if successful. Empty dict if failed.
     '''
-    t_path = os.path.join(opts['token_dir'], tok)
+    t_path = os.path.join(opts[u'token_dir'], tok)
     if not os.path.isfile(t_path):
         return {}
     serial = salt.payload.Serial(opts)
     try:
-        with salt.utils.files.fopen(t_path, 'rb') as fp_:
+        with salt.utils.files.fopen(t_path, u'rb') as fp_:
             tdata = serial.loads(fp_.read())
             return tdata
     except (IOError, OSError):
-        log.warning('Authentication failure: can not read token file "{0}".'.format(t_path))
+        log.warning(
+            u'Authentication failure: can not read token file "%s".', t_path)
         return {}
 
 
@@ -75,12 +77,12 @@ def rm_token(opts, tok):
     :param tok: Token to remove
     :returns: Empty dict if successful. None if failed.
     '''
-    t_path = os.path.join(opts['token_dir'], tok)
+    t_path = os.path.join(opts[u'token_dir'], tok)
     try:
         os.remove(t_path)
         return {}
     except (IOError, OSError):
-        log.warning('Could not remove token {0}'.format(tok))
+        log.warning(u'Could not remove token %s', tok)
 
 
 def list_tokens(opts):
@@ -91,7 +93,7 @@ def list_tokens(opts):
     :returns: List of dicts (tokens)
     '''
     ret = []
-    for (dirpath, dirnames, filenames) in os.walk(opts['token_dir']):
+    for (dirpath, dirnames, filenames) in os.walk(opts[u'token_dir']):
         for token in filenames:
             ret.append(token)
     return ret

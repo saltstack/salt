@@ -16,7 +16,7 @@ from salt.ext import six
 import salt.ext.six.moves.configparser as configparser  # pylint: disable=E0611
 from salt.serializers import DeserializationError, SerializationError
 
-__all__ = ['deserialize', 'serialize', 'available']
+__all__ = [u'deserialize', u'serialize', u'available']
 
 available = True
 
@@ -67,8 +67,8 @@ def serialize(obj, **options):
 
     try:
         if not isinstance(obj, dict):
-            raise TypeError("configparser can only serialize dictionaries, not {0}".format(type(obj)))
-        fp = options.pop('fp', None)
+            raise TypeError(u"configparser can only serialize dictionaries, not {0}".format(type(obj)))
+        fp = options.pop(u'fp', None)
         if six.PY3:
             cp = configparser.ConfigParser(**options)
         else:

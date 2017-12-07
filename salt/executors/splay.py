@@ -28,7 +28,7 @@ def _get_hash():
     bitmask = 0xffffffff
     h = 0
 
-    for i in bytearray(__grains__['id']):
+    for i in bytearray(__grains__[u'id']):
         h = (h + i) & bitmask
         h = (h + (h << 10)) & bitmask
         h = (h ^ (h >> 6)) & bitmask
@@ -68,15 +68,15 @@ def execute(opts, data, func, args, kwargs):
         # With specified splaytime (5 minutes) and timeout with 10 second buffer
         salt -t 310 --module-executors='[slpay, direct_call]' --executor-opts='{splaytime: 300}' '*' pkg.version cowsay
     '''
-    if 'executor_opts' in data and 'splaytime' in data['executor_opts']:
-        splaytime = data['executor_opts']['splaytime']
+    if u'executor_opts' in data and u'splaytime' in data[u'executor_opts']:
+        splaytime = data[u'executor_opts'][u'splaytime']
     else:
-        splaytime = opts.get('splaytime', _DEFAULT_SPLAYTIME)
+        splaytime = opts.get(u'splaytime', _DEFAULT_SPLAYTIME)
     if splaytime <= 0:
-        raise ValueError('splaytime must be a positive integer')
-    fun_name = data.get('fun')
+        raise ValueError(u'splaytime must be a positive integer')
+    fun_name = data.get(u'fun')
     my_delay = _calc_splay(splaytime)
-    log.debug("Splay is sleeping {0} secs on {1}".format(my_delay, fun_name))
+    log.debug(u'Splay is sleeping %s secs on %s', my_delay, fun_name)
 
     time.sleep(my_delay)
     return None

@@ -7,4 +7,4 @@ as this may result in circular imports.
 '''
 
 # Default delimiter for multi-level traversal in targeting
-DEFAULT_TARGET_DELIM = ':'
+DEFAULT_TARGET_DELIM = u':'

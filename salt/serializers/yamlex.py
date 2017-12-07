@@ -121,7 +121,7 @@ from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
 from salt.ext import six
 
-__all__ = ['deserialize', 'serialize', 'available']
+__all__ = [u'deserialize', u'serialize', u'available']
 
 log = logging.getLogger(__name__)
 
@@ -129,12 +129,12 @@ available = True
 
 # prefer C bindings over python when available
 # CSafeDumper causes test failures under python3
-BaseLoader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
-BaseDumper = yaml.SafeDumper if six.PY3 else getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
+BaseLoader = getattr(yaml, u'CSafeLoader', yaml.SafeLoader)
+BaseDumper = yaml.SafeDumper if six.PY3 else getattr(yaml, u'CSafeDumper', yaml.SafeDumper)
 
 ERROR_MAP = {
-    ("found character '\\t' "
-     "that cannot start any token"): 'Illegal tab character'
+    (u"found character '\\t' "
+     u"that cannot start any token"): u'Illegal tab character'
 }
 
 
@@ -146,11 +146,11 @@ def deserialize(stream_or_string, **options):
     :param options: options given to lower yaml module.
     '''
 
-    options.setdefault('Loader', Loader)
+    options.setdefault(u'Loader', Loader)
     try:
         return yaml.load(stream_or_string, **options)
     except ScannerError as error:
-        err_type = ERROR_MAP.get(error.problem, 'Unknown yaml render error')
+        err_type = ERROR_MAP.get(error.problem, u'Unknown yaml render error')
         line_num = error.problem_mark.line + 1
         raise DeserializationError(err_type,
                                    line_num,
@@ -169,12 +169,12 @@ def serialize(obj, **options):
     :param options: options given to lower yaml module.
     '''
 
-    options.setdefault('Dumper', Dumper)
+    options.setdefault(u'Dumper', Dumper)
     try:
         response = yaml.dump(obj, **options)
-        if response.endswith('\n...\n'):
+        if response.endswith(u'\n...\n'):
             return response[:-5]
-        if response.endswith('\n'):
+        if response.endswith(u'\n'):
             return response[:-1]
         return response
     except Exception as error:
@@ -188,13 +188,13 @@ class Loader(BaseLoader):  # pylint: disable=W0232
     to make things like sls file more intuitive.
     '''
 
-    DEFAULT_SCALAR_TAG = 'tag:yaml.org,2002:str'
-    DEFAULT_SEQUENCE_TAG = 'tag:yaml.org,2002:seq'
-    DEFAULT_MAPPING_TAG = 'tag:yaml.org,2002:omap'
+    DEFAULT_SCALAR_TAG = u'tag:yaml.org,2002:str'
+    DEFAULT_SEQUENCE_TAG = u'tag:yaml.org,2002:seq'
+    DEFAULT_MAPPING_TAG = u'tag:yaml.org,2002:omap'
 
     def compose_document(self):
         node = BaseLoader.compose_document(self)
-        node.tag = '!aggregate'
+        node.tag = u'!aggregate'
         return node
 
     def construct_yaml_omap(self, node):
@@ -206,7 +206,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
             raise ConstructorError(
                 None,
                 None,
-                'expected a mapping node, but found {0}'.format(node.id),
+                u'expected a mapping node, but found {0}'.format(node.id),
                 node.start_mark)
 
         self.flatten_mapping(node)
@@ -220,7 +220,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
             # even if !aggregate tag apply only to values and not keys
             # it's a reason to act as a such nazi.
             if key_node.tag == u'!aggregate':
-                log.warning('!aggregate applies on values only, not on keys')
+                log.warning(u'!aggregate applies on values only, not on keys')
                 value_node.tag = key_node.tag
                 key_node.tag = self.resolve_sls_tag(key_node)[0]
 
@@ -228,8 +228,8 @@ class Loader(BaseLoader):  # pylint: disable=W0232
             try:
                 hash(key)
             except TypeError:
-                err = ('While constructing a mapping {0} found unacceptable '
-                       'key {1}').format(node.start_mark, key_node.start_mark)
+                err = (u'While constructing a mapping {0} found unacceptable '
+                       u'key {1}').format(node.start_mark, key_node.start_mark)
                 raise ConstructorError(err)
             value = self.construct_object(value_node, deep=False)
             if key in sls_map and not reset:
@@ -245,7 +245,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
         # Ensure obj is str, not py2 unicode or py3 bytes
         obj = self.construct_scalar(node)
         if six.PY2:
-            obj = obj.encode('utf-8')
+            obj = obj.encode(u'utf-8')
         return SLSString(obj)
 
     def construct_sls_int(self, node):
@@ -253,22 +253,22 @@ class Loader(BaseLoader):  # pylint: disable=W0232
         Verify integers and pass them in correctly is they are declared
         as octal
         '''
-        if node.value == '0':
+        if node.value == u'0':
             pass
-        elif node.value.startswith('0') \
-                and not node.value.startswith(('0b', '0x')):
-            node.value = node.value.lstrip('0')
+        elif node.value.startswith(u'0') \
+                and not node.value.startswith((u'0b', u'0x')):
+            node.value = node.value.lstrip(u'0')
             # If value was all zeros, node.value would have been reduced to
             # an empty string. Change it to '0'.
-            if node.value == '':
-                node.value = '0'
+            if node.value == u'':
+                node.value = u'0'
         return int(node.value)
 
     def construct_sls_aggregate(self, node):
         try:
             tag, deep = self.resolve_sls_tag(node)
         except:
-            raise ConstructorError('unable to build reset')
+            raise ConstructorError(u'unable to build reset')
 
         node = copy(node)
         node.tag = tag
@@ -285,7 +285,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
         try:
             tag, deep = self.resolve_sls_tag(node)
         except:
-            raise ConstructorError('unable to build reset')
+            raise ConstructorError(u'unable to build reset')
 
         node = copy(node)
         node.tag = tag
@@ -304,24 +304,24 @@ class Loader(BaseLoader):  # pylint: disable=W0232
             tag = self.DEFAULT_MAPPING_TAG
             deep = True
         else:
-            raise ConstructorError('unable to resolve tag')
+            raise ConstructorError(u'unable to resolve tag')
         return tag, deep
 
 
-Loader.add_constructor('!aggregate', Loader.construct_sls_aggregate)  # custom type
-Loader.add_constructor('!reset', Loader.construct_sls_reset)  # custom type
-Loader.add_constructor('tag:yaml.org,2002:omap', Loader.construct_yaml_omap)  # our overwrite
-Loader.add_constructor('tag:yaml.org,2002:str', Loader.construct_sls_str)  # our overwrite
-Loader.add_constructor('tag:yaml.org,2002:int', Loader.construct_sls_int)  # our overwrite
-Loader.add_multi_constructor('tag:yaml.org,2002:null', Loader.construct_yaml_null)
-Loader.add_multi_constructor('tag:yaml.org,2002:bool', Loader.construct_yaml_bool)
-Loader.add_multi_constructor('tag:yaml.org,2002:float', Loader.construct_yaml_float)
-Loader.add_multi_constructor('tag:yaml.org,2002:binary', Loader.construct_yaml_binary)
-Loader.add_multi_constructor('tag:yaml.org,2002:timestamp', Loader.construct_yaml_timestamp)
-Loader.add_multi_constructor('tag:yaml.org,2002:pairs', Loader.construct_yaml_pairs)
-Loader.add_multi_constructor('tag:yaml.org,2002:set', Loader.construct_yaml_set)
-Loader.add_multi_constructor('tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
-Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
+Loader.add_constructor(u'!aggregate', Loader.construct_sls_aggregate)  # custom type
+Loader.add_constructor(u'!reset', Loader.construct_sls_reset)  # custom type
+Loader.add_constructor(u'tag:yaml.org,2002:omap', Loader.construct_yaml_omap)  # our overwrite
+Loader.add_constructor(u'tag:yaml.org,2002:str', Loader.construct_sls_str)  # our overwrite
+Loader.add_constructor(u'tag:yaml.org,2002:int', Loader.construct_sls_int)  # our overwrite
+Loader.add_multi_constructor(u'tag:yaml.org,2002:null', Loader.construct_yaml_null)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:bool', Loader.construct_yaml_bool)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:float', Loader.construct_yaml_float)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:binary', Loader.construct_yaml_binary)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:timestamp', Loader.construct_yaml_timestamp)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:pairs', Loader.construct_yaml_pairs)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:set', Loader.construct_yaml_set)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:map', Loader.construct_yaml_map)
 Loader.add_multi_constructor(None, Loader.construct_undefined)
 
 
@@ -365,10 +365,10 @@ class SLSString(str):
     '''
 
     def __str__(self):
-        return serialize(self, default_style='"')
+        return serialize(self, default_style=u'"')
 
     def __repr__(self):
-        return serialize(self, default_style='"')
+        return serialize(self, default_style=u'"')
 
 
 class AggregatedMap(SLSMap, Map):
@@ -384,7 +384,7 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
     sls dumper.
     '''
     def represent_odict(self, data):
-        return self.represent_mapping('tag:yaml.org,2002:map', list(data.items()))
+        return self.represent_mapping(u'tag:yaml.org,2002:map', list(data.items()))
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 if six.PY2:

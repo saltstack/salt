@@ -38,8 +38,8 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
         opts = salt.config.master_config('/etc/salt/master')
         wheel = salt.wheel.WheelClient(opts)
     '''
-    client = 'wheel'
-    tag_prefix = 'wheel'
+    client = u'wheel'
+    tag_prefix = u'wheel'
 
     def __init__(self, opts=None):
         self.opts = opts
@@ -51,7 +51,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
         '''
         Backwards compatibility
         '''
-        return self.low(fun, kwargs, print_event=kwargs.get('print_event', True), full_return=kwargs.get('full_return', False))
+        return self.low(fun, kwargs, print_event=kwargs.get(u'print_event', True), full_return=kwargs.get(u'full_return', False))
 
     # TODO: Inconsistent with runner client-- the runner client's master_call gives
     # an async return, unlike this
@@ -60,20 +60,20 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
         Execute a wheel function through the master network interface (eauth).
         '''
         load = kwargs
-        load['cmd'] = 'wheel'
-        interface = self.opts['interface']
-        if interface == '0.0.0.0':
-            interface = '127.0.0.1'
-        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(interface) + \
-                                                      ':' + str(self.opts['ret_port'])
+        load[u'cmd'] = u'wheel'
+        interface = self.opts[u'interface']
+        if interface == u'0.0.0.0':
+            interface = u'127.0.0.1'
+        master_uri = u'tcp://' + salt.utils.zeromq.ip_bracket(interface) + \
+                                                      u':' + six.text_type(self.opts[u'ret_port'])
         channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
+                                                 crypt=u'clear',
                                                  master_uri=master_uri,
-                                                 usage='master_call')
+                                                 usage=u'master_call')
         ret = channel.send(load)
         if isinstance(ret, collections.Mapping):
-            if 'error' in ret:
-                salt.utils.error.raise_error(**ret['error'])
+            if u'error' in ret:
+                salt.utils.error.raise_error(**ret[u'error'])
         return ret
 
     def cmd_sync(self, low, timeout=None, full_return=False):
@@ -116,7 +116,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
             })
             {'jid': '20131219224744416681', 'tag': 'salt/wheel/20131219224744416681'}
         '''
-        fun = low.pop('fun')
+        fun = low.pop(u'fun')
         return self.async(fun, low)
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):

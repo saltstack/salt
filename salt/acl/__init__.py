@@ -31,13 +31,13 @@ class PublisherACL(object):
         Takes a username as a string and returns a boolean. True indicates that
         the provided user has been blacklisted
         '''
-        return not salt.utils.stringutils.check_whitelist_blacklist(user, blacklist=self.blacklist.get('users', []))
+        return not salt.utils.stringutils.check_whitelist_blacklist(user, blacklist=self.blacklist.get(u'users', []))
 
     def cmd_is_blacklisted(self, cmd):
         # If this is a regular command, it is a single function
         if isinstance(cmd, six.string_types):
             cmd = [cmd]
         for fun in cmd:
-            if not salt.utils.stringutils.check_whitelist_blacklist(fun, blacklist=self.blacklist.get('modules', [])):
+            if not salt.utils.stringutils.check_whitelist_blacklist(fun, blacklist=self.blacklist.get(u'modules', [])):
                 return True
         return False

@@ -23,7 +23,7 @@ def values():
     '''
     Return the raw values of the config file
     '''
-    data = salt.config.master_config(__opts__['conf_file'])
+    data = salt.config.master_config(__opts__[u'conf_file'])
     return data
 
 
@@ -35,12 +35,12 @@ def apply(key, value):
 
         This will strip comments from your config file
     '''
-    path = __opts__['conf_file']
+    path = __opts__[u'conf_file']
     if os.path.isdir(path):
-        path = os.path.join(path, 'master')
+        path = os.path.join(path, u'master')
     data = values()
     data[key] = value
-    with salt.utils.files.fopen(path, 'w+') as fp_:
+    with salt.utils.files.fopen(path, u'w+') as fp_:
         fp_.write(
             yaml.dump(
                 data,
@@ -77,20 +77,20 @@ def update_config(file_name, yaml_contents):
             'eauth': 'pam',
         }
     '''
-    file_name = '{0}{1}'.format(file_name, '.conf')
-    dir_path = os.path.join(__opts__['config_dir'],
-                            os.path.dirname(__opts__['default_include']))
+    file_name = u'{0}{1}'.format(file_name, u'.conf')
+    dir_path = os.path.join(__opts__[u'config_dir'],
+                            os.path.dirname(__opts__[u'default_include']))
     try:
         yaml_out = yaml.safe_dump(yaml_contents, default_flow_style=False)
 
         if not os.path.exists(dir_path):
-            log.debug('Creating directory {0}'.format(dir_path))
+            log.debug(u'Creating directory %s', dir_path)
             os.makedirs(dir_path, 0o755)
 
         file_path = os.path.join(dir_path, file_name)
-        with salt.utils.files.fopen(file_path, 'w') as fp_:
+        with salt.utils.files.fopen(file_path, u'w') as fp_:
             fp_.write(yaml_out)
 
-        return 'Wrote {0}'.format(file_name)
+        return u'Wrote {0}'.format(file_name)
     except (IOError, OSError, yaml.YAMLError, ValueError) as err:
         return str(err)

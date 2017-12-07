@@ -59,12 +59,12 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'varstack'
+__virtualname__ = u'varstack'
 
 
 def __virtual__():
     if not HAS_VARSTACK:
-        log.error("Can't find varstack master_top")
+        log.error(u"Can't find varstack master_top")
         return False
     return __virtualname__
 
@@ -74,9 +74,9 @@ def top(**kwargs):
     Query |varstack| for the top data (states of the minions).
     '''
 
-    conf = __opts__['master_tops']['varstack']
-    __grains__ = kwargs['grains']
+    conf = __opts__[u'master_tops'][u'varstack']
+    __grains__ = kwargs[u'grains']
 
     vs_ = varstack.Varstack(config_filename=conf)
     ret = vs_.evaluate(__grains__)
-    return {'base': ret['states']}
+    return {u'base': ret[u'states']}

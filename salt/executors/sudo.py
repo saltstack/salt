@@ -14,11 +14,11 @@ except ImportError:
 import salt.utils.path
 import salt.syspaths
 
-__virtualname__ = 'sudo'
+__virtualname__ = u'sudo'
 
 
 def __virtual__():
-    if salt.utils.path.which('sudo') and __opts__.get('sudo_user'):
+    if salt.utils.path.which(u'sudo') and __opts__.get(u'sudo_user'):
         return __virtualname__
     return False
 
@@ -52,29 +52,29 @@ def execute(opts, data, func, args, kwargs):
 
     being run on ``sudo_minion``.
     '''
-    cmd = ['sudo',
-           '-u', opts.get('sudo_user'),
-           'salt-call',
-           '--out', 'json',
-           '--metadata',
-           '-c', salt.syspaths.CONFIG_DIR,
-           '--',
-           data.get('fun')]
-    if data['fun'] in ('state.sls', 'state.highstate', 'state.apply'):
-        kwargs['concurrent'] = True
+    cmd = [u'sudo',
+           u'-u', opts.get(u'sudo_user'),
+           u'salt-call',
+           u'--out', u'json',
+           u'--metadata',
+           u'-c', salt.syspaths.CONFIG_DIR,
+           u'--',
+           data.get(u'fun')]
+    if data[u'fun'] in (u'state.sls', u'state.highstate', u'state.apply'):
+        kwargs[u'concurrent'] = True
     for arg in args:
         cmd.append(_cmd_quote(str(arg)))
     for key in kwargs:
-        cmd.append(_cmd_quote('{0}={1}'.format(key, kwargs[key])))
+        cmd.append(_cmd_quote(u'{0}={1}'.format(key, kwargs[key])))
 
-    cmd_ret = __salt__['cmd.run_all'](cmd, use_vt=True, python_shell=False)
+    cmd_ret = __salt__[u'cmd.run_all'](cmd, use_vt=True, python_shell=False)
 
-    if cmd_ret['retcode'] == 0:
-        cmd_meta = json.loads(cmd_ret['stdout'])['local']
-        ret = cmd_meta['return']
-        __context__['retcode'] = cmd_meta.get('retcode', 0)
+    if cmd_ret[u'retcode'] == 0:
+        cmd_meta = json.loads(cmd_ret[u'stdout'])[u'local']
+        ret = cmd_meta[u'return']
+        __context__[u'retcode'] = cmd_meta.get(u'retcode', 0)
     else:
-        ret = cmd_ret['stderr']
-        __context__['retcode'] = cmd_ret['retcode']
+        ret = cmd_ret[u'stderr']
+        __context__[u'retcode'] = cmd_ret[u'retcode']
 
     return ret
