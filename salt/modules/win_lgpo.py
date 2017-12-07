@@ -3504,7 +3504,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                     reg_key,
                                     reg_valuename,
                                     chr(registry.vtype[this_vtype]),
-                                    six.unichr(len(this_element_value.encode('utf-16-le'))),
+                                    six.unichr(len(this_element_value.encode('utf-16-le', '' if six.PY2 else 'surrogatepass'))),
                                     this_element_value)
     return expected_string
 
@@ -4244,8 +4244,8 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
         for adm_namespace in admtemplate_data:
             for adm_policy in admtemplate_data[adm_namespace]:
                 if str(admtemplate_data[adm_namespace][adm_policy]).lower() == 'not configured':
-                    if adm_policy in base_policy_settings[adm_namespace]:
-                        base_policy_settings[adm_namespace].pop(adm_policy)
+                    if base_policy_settings.get(adm_namespace, {}).pop(adm_policy, None) is not None:
+                        log.debug('Policy "{0}" removed'.format(adm_policy))
                 else:
                     log.debug('adding {0} to base_policy_settings'.format(adm_policy))
                     if adm_namespace not in base_policy_settings:
