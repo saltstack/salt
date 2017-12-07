@@ -106,7 +106,7 @@ def recursive_copy(source, dest):
 
     (identical to cp -r on a unix machine)
     '''
-    for root, _, files in os.walk(source):
+    for root, _, files in salt.utils.path.os_walk(source):
         path_from_source = root.replace(source, '').lstrip(os.sep)
         target_directory = os.path.join(dest, path_from_source)
         if not os.path.exists(target_directory):

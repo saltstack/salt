@@ -28,6 +28,7 @@ from salt.exceptions import SaltClientError, SaltSystemExit, \
     CommandExecutionError
 import salt.defaults.exitcodes
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 import salt.utils.versions
@@ -269,7 +270,7 @@ def verify_env(
                 fsubdir = os.path.join(dir_, subdir)
                 if '{0}jobs'.format(os.path.sep) in fsubdir:
                     continue
-                for root, dirs, files in os.walk(fsubdir):
+                for root, dirs, files in salt.utils.path.os_walk(fsubdir):
                     for name in files:
                         if name.startswith('.'):
                             continue

@@ -124,7 +124,7 @@ class Client(object):
 
         filelist = set()
 
-        for root, dirs, files in os.walk(destdir, followlinks=True):
+        for root, dirs, files in salt.utils.path.os_walk(destdir, followlinks=True):
             for name in files:
                 path = os.path.join(root, name)
                 filelist.add(path)
@@ -359,7 +359,7 @@ class Client(object):
                 )
                 return states
             for path in self.opts['file_roots'][saltenv]:
-                for root, dirs, files in os.walk(path, topdown=True):
+                for root, dirs, files in salt.utils.path.os_walk(path, topdown=True):
                     log.debug(
                         'Searching for states in dirs %s and files %s',
                         dirs, files
@@ -893,7 +893,7 @@ class LocalClient(Client):
             return ret
         prefix = prefix.strip('/')
         for path in self.opts['file_roots'][saltenv]:
-            for root, dirs, files in os.walk(
+            for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
                 # Don't walk any directories that match file_ignore_regex or glob
@@ -913,7 +913,7 @@ class LocalClient(Client):
         if saltenv not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][saltenv]:
-            for root, dirs, files in os.walk(
+            for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
                 # Don't walk any directories that match file_ignore_regex or glob
@@ -932,7 +932,7 @@ class LocalClient(Client):
             return ret
         prefix = prefix.strip('/')
         for path in self.opts['file_roots'][saltenv]:
-            for root, dirs, files in os.walk(
+            for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
                 ret.append(sdecode(os.path.relpath(root, path)))
