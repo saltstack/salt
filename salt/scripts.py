@@ -227,7 +227,7 @@ def salt_minion():
         logging.basicConfig()
 
 
-def proxy_minion_process(queue):
+def proxy_minion_process(queue, proxy_id=None, standalone=False):
     '''
     Start a proxy minion process
     '''
@@ -261,6 +261,9 @@ def proxy_minion_process(queue):
     status = salt.defaults.exitcodes.EX_OK
     try:
         proxyminion = salt.cli.daemons.ProxyMinion()
+        if proxy_id is not None:
+            proxyminion.proxyid = proxy_id
+        proxyminion.standalone = standalone
         proxyminion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
         log.error(u'Proxy Minion failed to start: ', exc_info=True)
@@ -286,7 +289,7 @@ def proxy_minion_process(queue):
     sys.exit(status)
 
 
-def salt_proxy():
+def salt_proxy(proxy_id=None, standalone=False):
     '''
     Start a proxy minion.
     '''
@@ -316,7 +319,10 @@ def salt_proxy():
             proxyminion = salt.cli.daemons.ProxyMinion()
             proxyminion.start()
             return
-        process = multiprocessing.Process(target=proxy_minion_process, args=(queue,))
+        process = multiprocessing.Process(target=proxy_minion_process,
+                                          args=(queue,),
+                                          kwargs={'proxy_id': proxy_id,
+                                                  'standalone': True})
         process.start()
         try:
             process.join()
@@ -476,6 +482,19 @@ def salt_main():
     if u'' in sys.path:
         sys.path.remove(u'')
     client = salt.cli.salt.SaltCMD()
+    _install_signal_handlers(client)
+    client.run()
+
+
+def salt_proxy_standalone():
+    '''
+    Publish commands to the salt system from the command line on the
+    master, which are picked to start up and execute the standalone proxy minions.
+    '''
+    import salt.cli.standalone_proxy
+    if u'' in sys.path:
+        sys.path.remove(u'')
+    client = salt.cli.standalone_proxy.StandaloneProxyMinionCMD()
     _install_signal_handlers(client)
     client.run()
 
