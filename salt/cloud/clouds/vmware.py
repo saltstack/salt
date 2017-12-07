@@ -292,11 +292,11 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1
     disk_spec.device.backing.diskMode = 'persistent'
 
     if datastore:
-        datastore_ref = salt.utils.vmware.get_datastore_ref(_get_si(), datastore)
+        datastore_ref = salt.utils.vmware.get_mor_using_container_view(_get_si(), vim.Datastore, datastore)
 
         if not datastore_ref:
             # check if it is a datastore cluster instead
-            datastore_cluster_ref = salt.utils.vmware.get_datastore_cluster_ref(_get_si(), datastore)
+            datastore_cluster_ref = salt.utils.vmware.get_mor_using_container_view(_get_si(), vim.StoragePod, datastore)
 
             if not datastore_cluster_ref:
                 # datastore/datastore cluster specified does not exist
