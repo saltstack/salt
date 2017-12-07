@@ -292,12 +292,36 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1
     disk_spec.device.backing.diskMode = 'persistent'
 
     if datastore:
-        ds_ref = salt.utils.vmware.get_datastore_ref(_get_si(), datastore)
-        if not ds_ref:
-            raise SaltCloudSystemExit('Requested {0} disk in datastore {1}, but no such datastore found.'.format(disk_label, datastore))
-        datastore_path = '[' + str(ds_ref.name) + '] ' + vm_name
+        datastore_ref = salt.utils.vmware.get_datastore_ref(_get_si(), datastore)
+
+        if not datastore_ref:
+            # check if it is a datastore cluster instead
+            datastore_cluster_ref = salt.utils.vmware.get_datastore_cluster_ref(_get_si(), datastore)
+
+            if not datastore_cluster_ref:
+                # datastore/datastore cluster specified does not exist
+                raise SaltCloudSystemExit("Specified datastore/datastore cluster ({0}) for disk ({1}) does not exist".format(datastore,disk_label))
+
+            # datastore cluster has been specified
+            # find datastore with most free space available
+            #
+            # TODO: Get DRS Recommendations instead of finding datastore with most free space
+            datastore_list = salt.utils.vmware.get_datastores(_get_si(), datastore_cluster_ref, get_all_datastores=True)
+            datastore_free_space = long(0)
+            for ds_ref in datastore_list:
+                log.trace("Found datastore ({0}) with free space ({1}) in datastore cluster ({2})".format(ds_ref.name, ds_ref.summary.freeSpace, datastore))
+                if ds_ref.summary.accessible and ds_ref.summary.freeSpace > datastore_free_space:
+                    datastore_free_space = ds_ref.summary.freeSpace
+                    datastore_ref = ds_ref
+
+            if not datastore_ref:
+                # datastore cluster specified does not have any accessible datastores
+                raise SaltCloudSystemExit("Specified datastore cluster ({0}) for disk ({1}) does not have any accessible datastores available".format(datastore, disk_label))
+
+        datastore_path = '[' + str(datastore_ref.name) + '] ' + vm_name
         disk_spec.device.backing.fileName = datastore_path + '/' + disk_label + '.vmdk'
-        disk_spec.device.backing.datastore = ds_ref
+        disk_spec.device.backing.datastore = datastore_ref
+        log.trace("Using datastore ({0}) for disk ({1}), vm_name ({2})".format(datastore_ref.name, disk_label, vm_name))
 
     disk_spec.device.controllerKey = controller_key
     disk_spec.device.unitNumber = unit_number
