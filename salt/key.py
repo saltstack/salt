@@ -162,9 +162,7 @@ class KeyCLI(object):
                     args.append(self.opts.get(arg))
         args, kwargs = salt.minion.load_args_and_kwargs(
             fun,
-            args,
-            self.opts,
-        )
+            args)
         return args, kwargs
 
     def _run_cmd(self, cmd, args=None):
