@@ -2435,15 +2435,18 @@ class _policy_info(object):
         '''
         converts a binary 0/1 to Disabled/Enabled
         '''
-        if val is not None:
-            if ord(val) == 0:
-                return 'Disabled'
-            elif ord(val) == 1:
-                return 'Enabled'
+        try:
+            if val is not None:
+                if ord(val) == 0:
+                    return 'Disabled'
+                elif ord(val) == 1:
+                    return 'Enabled'
+                else:
+                    return 'Invalid Value'
             else:
-                return 'Invalid Value'
-        else:
-            return 'Not Defined'
+                return 'Not Defined'
+        except TypeError:
+            return 'Invalid Value'
 
     @classmethod
     def _binary_enable_zero_disable_one_reverse_conversion(cls, val, **kwargs):
