@@ -1226,7 +1226,7 @@ DEFAULT_MINION_OPTS = {
     'cache': 'localfs',
     'salt_cp_chunk_size': 65536,
     'minion_sign_messages': False,
-    'schedule', {}
+    'schedule': {},
 }
 
 DEFAULT_MASTER_OPTS = {
