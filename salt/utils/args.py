@@ -12,7 +12,7 @@ import re
 import shlex
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError, TemplateError
+from salt.exceptions import SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 import salt.utils.data
@@ -522,6 +522,7 @@ def parse_function(s):
     kwargs = {}
     brackets = []
     key = None
+    token = None
     for token in sh:
         if token == '(':
             break
