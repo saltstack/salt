@@ -43,8 +43,8 @@ from salt.utils.sanitizers import clean
 
 
 __func_alias__ = {
-    'list_': 'list',
-    'key_str': 'print',
+    u'list_': u'list',
+    u'key_str': u'print',
 }
 
 log = logging.getLogger(__name__)
@@ -293,7 +293,7 @@ def finger(match, hash_type=None):
 
     '''
     if hash_type is None:
-        hash_type = __opts__['hash_type']
+        hash_type = __opts__[u'hash_type']
 
     skey = get_key(__opts__)
     return skey.finger(match, hash_type)
@@ -311,13 +311,13 @@ def finger_master(hash_type=None):
         >>> wheel.cmd('key.finger_master')
         {'local': {'master.pub': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
     '''
-    keyname = 'master.pub'
+    keyname = u'master.pub'
     if hash_type is None:
-        hash_type = __opts__['hash_type']
+        hash_type = __opts__[u'hash_type']
 
     fingerprint = salt.utils.crypt.pem_finger(
-        os.path.join(__opts__['pki_dir'], keyname), sum_type=hash_type)
-    return {'local': {keyname: fingerprint}}
+        os.path.join(__opts__[u'pki_dir'], keyname), sum_type=hash_type)
+    return {u'local': {keyname: fingerprint}}
 
 
 def gen(id_=None, keysize=2048):
@@ -351,14 +351,14 @@ def gen(id_=None, keysize=2048):
         id_ = hashlib.sha512(os.urandom(32)).hexdigest()
     else:
         id_ = clean.filename(id_)
-    ret = {'priv': '',
-           'pub': ''}
-    priv = salt.crypt.gen_keys(__opts__['pki_dir'], id_, keysize)
-    pub = '{0}.pub'.format(priv[:priv.rindex('.')])
+    ret = {u'priv': u'',
+           u'pub': u''}
+    priv = salt.crypt.gen_keys(__opts__[u'pki_dir'], id_, keysize)
+    pub = u'{0}.pub'.format(priv[:priv.rindex(u'.')])
     with salt.utils.files.fopen(priv) as fp_:
-        ret['priv'] = fp_.read()
+        ret[u'priv'] = fp_.read()
     with salt.utils.files.fopen(pub) as fp_:
-        ret['pub'] = fp_.read()
+        ret[u'pub'] = fp_.read()
 
     # The priv key is given the Read-Only attribute. The causes `os.remove` to
     # fail in Windows.
@@ -412,11 +412,11 @@ def gen_accept(id_, keysize=2048, force=False):
     '''
     id_ = clean.id(id_)
     ret = gen(id_, keysize)
-    acc_path = os.path.join(__opts__['pki_dir'], 'minions', id_)
+    acc_path = os.path.join(__opts__[u'pki_dir'], u'minions', id_)
     if os.path.isfile(acc_path) and not force:
         return {}
-    with salt.utils.files.fopen(acc_path, 'w+') as fp_:
-        fp_.write(ret['pub'])
+    with salt.utils.files.fopen(acc_path, u'w+') as fp_:
+        fp_.write(ret[u'pub'])
     return ret
 
 

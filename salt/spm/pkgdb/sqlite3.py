@@ -21,20 +21,22 @@ def init():
     '''
     Get an sqlite3 connection, and initialize the package database if necessary
     '''
-    if not os.path.exists(__opts__['spm_cache_dir']):
-        log.debug('Creating SPM cache directory at {0}'.format(__opts__['spm_db']))
-        os.makedirs(__opts__['spm_cache_dir'])
+    if not os.path.exists(__opts__[u'spm_cache_dir']):
+        log.debug(
+            u'Creating SPM cache directory at %s', __opts__[u'spm_db'])
+        os.makedirs(__opts__[u'spm_cache_dir'])
 
-    if not os.path.exists(__opts__['spm_db']):
-        log.debug('Creating new package database at {0}'.format(__opts__['spm_db']))
+    if not os.path.exists(__opts__[u'spm_db']):
+        log.debug(
+            u'Creating new package database at %s', __opts__[u'spm_db'])
 
     sqlite3.enable_callback_tracebacks(True)
-    conn = sqlite3.connect(__opts__['spm_db'], isolation_level=None)
+    conn = sqlite3.connect(__opts__[u'spm_db'], isolation_level=None)
 
     try:
-        conn.execute('SELECT count(*) FROM packages')
+        conn.execute(u'SELECT count(*) FROM packages')
     except OperationalError:
-        conn.execute('''CREATE TABLE packages (
+        conn.execute(u'''CREATE TABLE packages (
             package text,
             version text,
             release text,
@@ -46,12 +48,12 @@ def init():
             os_family_dependencies text,
             summary text,
             description text
-        )''')
+        )u''')
 
     try:
-        conn.execute('SELECT count(*) FROM files')
+        conn.execute(u'SELECT count(*) FROM files')
     except OperationalError:
-        conn.execute('''CREATE TABLE files (
+        conn.execute(u'''CREATE TABLE files (
             package text,
             path text,
             size real,
@@ -64,7 +66,7 @@ def init():
             uname text,
             gname text,
             mtime text
-        )''')
+        )u''')
 
     return conn
 
@@ -77,20 +79,20 @@ def info(package, conn=None):
         conn = init()
 
     fields = (
-        'package',
-        'version',
-        'release',
-        'installed',
-        'os',
-        'os_family',
-        'dependencies',
-        'os_dependencies',
-        'os_family_dependencies',
-        'summary',
-        'description',
+        u'package',
+        u'version',
+        u'release',
+        u'installed',
+        u'os',
+        u'os_family',
+        u'dependencies',
+        u'os_dependencies',
+        u'os_family_dependencies',
+        u'summary',
+        u'description',
     )
     data = conn.execute(
-        'SELECT {0} FROM packages WHERE package=?'.format(','.join(fields)),
+        u'SELECT {0} FROM packages WHERE package=?'.format(u','.join(fields)),
         (package, )
     )
     row = data.fetchone()
@@ -98,7 +100,7 @@ def info(package, conn=None):
         return None
 
     formula_def = dict(list(zip(fields, row)))
-    formula_def['name'] = formula_def['package']
+    formula_def[u'name'] = formula_def[u'package']
 
     return formula_def
 
@@ -111,7 +113,7 @@ def list_packages(conn=None):
         conn = init()
 
     ret = []
-    data = conn.execute('SELECT package FROM packages')
+    data = conn.execute(u'SELECT package FROM packages')
     for pkg in data.fetchall():
         ret.append(pkg)
 
@@ -125,12 +127,12 @@ def list_files(package, conn=None):
     if conn is None:
         conn = init()
 
-    data = conn.execute('SELECT package FROM packages WHERE package=?', (package, ))
+    data = conn.execute(u'SELECT package FROM packages WHERE package=?', (package, ))
     if not data.fetchone():
         return None
 
     ret = []
-    data = conn.execute('SELECT path, sum FROM files WHERE package=?', (package, ))
+    data = conn.execute(u'SELECT path, sum FROM files WHERE package=?', (package, ))
     for file_ in data.fetchall():
         ret.append(file_)
 
@@ -144,31 +146,31 @@ def register_pkg(name, formula_def, conn=None):
     if conn is None:
         conn = init()
 
-    conn.execute('INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+    conn.execute(u'INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
         name,
-        formula_def['version'],
-        formula_def['release'],
-        datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT'),
-        formula_def.get('os', None),
-        formula_def.get('os_family', None),
-        formula_def.get('dependencies', None),
-        formula_def.get('os_dependencies', None),
-        formula_def.get('os_family_dependencies', None),
-        formula_def['summary'],
-        formula_def['description'],
+        formula_def[u'version'],
+        formula_def[u'release'],
+        datetime.datetime.utcnow().strftime(u'%a, %d %b %Y %H:%M:%S GMT'),
+        formula_def.get(u'os', None),
+        formula_def.get(u'os_family', None),
+        formula_def.get(u'dependencies', None),
+        formula_def.get(u'os_dependencies', None),
+        formula_def.get(u'os_family_dependencies', None),
+        formula_def[u'summary'],
+        formula_def[u'description'],
     ))
 
 
-def register_file(name, member, path, digest='', conn=None):
+def register_file(name, member, path, digest=u'', conn=None):
     '''
     Register a file in the package database
     '''
     if conn is None:
         conn = init()
 
-    conn.execute('INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+    conn.execute(u'INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
         name,
-        '{0}/{1}'.format(path, member.path),
+        u'{0}/{1}'.format(path, member.path),
         member.size,
         member.mode,
         digest,
@@ -189,7 +191,7 @@ def unregister_pkg(name, conn=None):
     if conn is None:
         conn = init()
 
-    conn.execute('DELETE FROM packages WHERE package=?', (name, ))
+    conn.execute(u'DELETE FROM packages WHERE package=?', (name, ))
 
 
 def unregister_file(path, pkg=None, conn=None):  # pylint: disable=W0612
@@ -199,7 +201,7 @@ def unregister_file(path, pkg=None, conn=None):  # pylint: disable=W0612
     if conn is None:
         conn = init()
 
-    conn.execute('DELETE FROM files WHERE path=?', (path, ))
+    conn.execute(u'DELETE FROM files WHERE path=?', (path, ))
 
 
 def db_exists(db_):

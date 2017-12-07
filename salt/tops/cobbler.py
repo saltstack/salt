@@ -30,9 +30,9 @@ import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
 log = logging.getLogger(__name__)
 
 
-__opts__ = {'cobbler.url': 'http://localhost/cobbler_api',
-            'cobbler.user': None,
-            'cobbler.password': None
+__opts__ = {u'cobbler.url': u'http://localhost/cobbler_api',
+            u'cobbler.user': None,
+            u'cobbler.password': None
            }
 
 
@@ -40,13 +40,13 @@ def top(**kwargs):
     '''
     Look up top data in Cobbler for a minion.
     '''
-    url = __opts__['cobbler.url']
-    user = __opts__['cobbler.user']
-    password = __opts__['cobbler.password']
+    url = __opts__[u'cobbler.url']
+    user = __opts__[u'cobbler.user']
+    password = __opts__[u'cobbler.password']
 
-    minion_id = kwargs['opts']['id']
+    minion_id = kwargs[u'opts'][u'id']
 
-    log.info("Querying cobbler for information for %r", minion_id)
+    log.info(u"Querying cobbler for information for %r", minion_id)
     try:
         server = salt.ext.six.moves.xmlrpc_client.Server(url, allow_none=True)
         if user:
@@ -54,8 +54,8 @@ def top(**kwargs):
         data = server.get_blended_data(None, minion_id)
     except Exception:
         log.exception(
-            'Could not connect to cobbler.'
+            u'Could not connect to cobbler.'
         )
         return {}
 
-    return {data['status']: data['mgmt_classes']}
+    return {data[u'status']: data[u'mgmt_classes']}

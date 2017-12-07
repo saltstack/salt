@@ -20,17 +20,17 @@ from salt.serializers import DeserializationError, SerializationError
 from salt.ext import six
 from salt.utils.odict import OrderedDict
 
-__all__ = ['deserialize', 'serialize', 'available']
+__all__ = [u'deserialize', u'serialize', u'available']
 
 available = True
 
 # prefer C bindings over python when available
-BaseLoader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
-BaseDumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
+BaseLoader = getattr(yaml, u'CSafeLoader', yaml.SafeLoader)
+BaseDumper = getattr(yaml, u'CSafeDumper', yaml.SafeDumper)
 
 ERROR_MAP = {
-    ("found character '\\t' "
-     "that cannot start any token"): 'Illegal tab character'
+    (u"found character '\\t' "
+     u"that cannot start any token"): u'Illegal tab character'
 }
 
 
@@ -42,11 +42,11 @@ def deserialize(stream_or_string, **options):
     :param options: options given to lower yaml module.
     '''
 
-    options.setdefault('Loader', Loader)
+    options.setdefault(u'Loader', Loader)
     try:
         return yaml.load(stream_or_string, **options)
     except ScannerError as error:
-        err_type = ERROR_MAP.get(error.problem, 'Unknown yaml render error')
+        err_type = ERROR_MAP.get(error.problem, u'Unknown yaml render error')
         line_num = error.problem_mark.line + 1
         raise DeserializationError(err_type,
                                    line_num,
@@ -65,12 +65,12 @@ def serialize(obj, **options):
     :param options: options given to lower yaml module.
     '''
 
-    options.setdefault('Dumper', Dumper)
+    options.setdefault(u'Dumper', Dumper)
     try:
         response = yaml.dump(obj, **options)
-        if response.endswith('\n...\n'):
+        if response.endswith(u'\n...\n'):
             return response[:-5]
-        if response.endswith('\n'):
+        if response.endswith(u'\n'):
             return response[:-1]
         return response
     except Exception as error:
@@ -91,28 +91,28 @@ class EncryptedString(str):
 
 
 class Loader(BaseLoader):  # pylint: disable=W0232
-    '''Overwrites Loader as not for pollute legacy Loader'''
+    u'''Overwrites Loader as not for pollute legacy Loader'''
     pass
 
 
 Loader.add_multi_constructor(EncryptedString.yaml_tag, EncryptedString.yaml_constructor)
-Loader.add_multi_constructor('tag:yaml.org,2002:null', Loader.construct_yaml_null)
-Loader.add_multi_constructor('tag:yaml.org,2002:bool', Loader.construct_yaml_bool)
-Loader.add_multi_constructor('tag:yaml.org,2002:int', Loader.construct_yaml_int)
-Loader.add_multi_constructor('tag:yaml.org,2002:float', Loader.construct_yaml_float)
-Loader.add_multi_constructor('tag:yaml.org,2002:binary', Loader.construct_yaml_binary)
-Loader.add_multi_constructor('tag:yaml.org,2002:timestamp', Loader.construct_yaml_timestamp)
-Loader.add_multi_constructor('tag:yaml.org,2002:omap', Loader.construct_yaml_omap)
-Loader.add_multi_constructor('tag:yaml.org,2002:pairs', Loader.construct_yaml_pairs)
-Loader.add_multi_constructor('tag:yaml.org,2002:set', Loader.construct_yaml_set)
-Loader.add_multi_constructor('tag:yaml.org,2002:str', Loader.construct_yaml_str)
-Loader.add_multi_constructor('tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
-Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:null', Loader.construct_yaml_null)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:bool', Loader.construct_yaml_bool)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:int', Loader.construct_yaml_int)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:float', Loader.construct_yaml_float)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:binary', Loader.construct_yaml_binary)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:timestamp', Loader.construct_yaml_timestamp)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:omap', Loader.construct_yaml_omap)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:pairs', Loader.construct_yaml_pairs)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:set', Loader.construct_yaml_set)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:str', Loader.construct_yaml_str)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
+Loader.add_multi_constructor(u'tag:yaml.org,2002:map', Loader.construct_yaml_map)
 Loader.add_multi_constructor(None, Loader.construct_undefined)
 
 
 class Dumper(BaseDumper):  # pylint: disable=W0232
-    '''Overwrites Dumper as not for pollute legacy Dumper'''
+    u'''Overwrites Dumper as not for pollute legacy Dumper'''
     pass
 
 Dumper.add_multi_representer(EncryptedString, EncryptedString.yaml_dumper)

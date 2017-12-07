@@ -59,7 +59,7 @@ import logging
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'pgjsonb'
+__virtualname__ = u'pgjsonb'
 
 
 def __virtual__():
@@ -73,19 +73,19 @@ def _conn(commit=False):
     '''
     Return an postgres cursor
     '''
-    defaults = {'host': 'localhost',
-                'user': 'salt',
-                'password': 'salt',
-                'dbname': 'salt',
-                'port': 5432}
+    defaults = {u'host': u'localhost',
+                u'user': u'salt',
+                u'password': u'salt',
+                u'dbname': u'salt',
+                u'port': 5432}
 
     conn_kwargs = {}
     for key, value in defaults.items():
-        conn_kwargs[key] = __opts__.get('queue.{0}.{1}'.format(__virtualname__, key), value)
+        conn_kwargs[key] = __opts__.get(u'queue.{0}.{1}'.format(__virtualname__, key), value)
     try:
         conn = psycopg2.connect(**conn_kwargs)
     except psycopg2.OperationalError as exc:
-        raise SaltMasterError('pgjsonb returner could not connect to database: {exc}'.format(exc=exc))
+        raise SaltMasterError(u'pgjsonb returner could not connect to database: {exc}'.format(exc=exc))
 
     cursor = conn.cursor()
 
@@ -94,29 +94,29 @@ def _conn(commit=False):
     except psycopg2.DatabaseError as err:
         error = err.args
         sys.stderr.write(str(error))
-        cursor.execute("ROLLBACK")
+        cursor.execute(u"ROLLBACK")
         raise err
     else:
         if commit:
-            cursor.execute("COMMIT")
+            cursor.execute(u"COMMIT")
         else:
-            cursor.execute("ROLLBACK")
+            cursor.execute(u"ROLLBACK")
     finally:
         conn.close()
 
 
 def _list_tables(cur):
-    cmd = "select relname from pg_class where relkind='r' and relname !~ '^(pg_|sql_)';"
-    log.debug('SQL Query: {0}'.format(cmd))
+    cmd = u"select relname from pg_class where relkind='r' and relname !~ '^(pg_|sql_)';"
+    log.debug(u'SQL Query: %s', cmd)
     cur.execute(cmd)
     result = cur.fetchall()
     return [x[0] for x in result]
 
 
 def _create_table(cur, queue):
-    cmd = 'CREATE TABLE {0}(id SERIAL PRIMARY KEY, '\
-          'data jsonb NOT NULL)'.format(queue)
-    log.debug('SQL Query: {0}'.format(cmd))
+    cmd = u'CREATE TABLE {0}(id SERIAL PRIMARY KEY, '\
+          u'data jsonb NOT NULL)'.format(queue)
+    log.debug(u'SQL Query: %s', cmd)
     cur.execute(cmd)
     return True
 
@@ -126,8 +126,8 @@ def _list_items(queue):
     Private function to list contents of a queue
     '''
     with _conn() as cur:
-        cmd = 'SELECT data FROM {0}'.format(queue)
-        log.debug('SQL Query: {0}'.format(cmd))
+        cmd = u'SELECT data FROM {0}'.format(queue)
+        log.debug(u'SQL Query: %s', cmd)
         cur.execute(cmd)
         contents = cur.fetchall()
         return contents
@@ -174,11 +174,11 @@ def _queue_exists(queue):
 def handle_queue_creation(queue):
     if not _queue_exists(queue):
         with _conn(commit=True) as cur:
-            log.debug('Queue %s does not exist.'
-                      ' Creating', queue)
+            log.debug(u'Queue %s does not exist.'
+                      u' Creating', queue)
             _create_table(cur, queue)
     else:
-        log.debug('Queue %s already exists.', queue)
+        log.debug(u'Queue %s already exists.', queue)
 
 
 def insert(queue, items):
@@ -190,17 +190,17 @@ def insert(queue, items):
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
             items = json.dumps(items)
-            cmd = '''INSERT INTO {0}(data) VALUES('{1}')'''.format(queue, items)
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = u'''INSERT INTO {0}(data) VALUES('{1}')'''.format(queue, items)
+            log.debug(u'SQL Query: %s', cmd)
             try:
                 cur.execute(cmd)
             except psycopg2.IntegrityError as esc:
-                return('Item already exists in this queue. '
-                       'sqlite error: {0}'.format(esc))
+                return(u'Item already exists in this queue. '
+                       u'sqlite error: {0}'.format(esc))
         if isinstance(items, list):
             items = [json.dumps(el) for el in items]
-            cmd = "INSERT INTO {0}(data) VALUES (%s)".format(queue)
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = u"INSERT INTO {0}(data) VALUES (%s)".format(queue)
+            log.debug(u'SQL Query: %s', cmd)
             newitems = []
             for item in items:
                 newitems.append((item,))
@@ -208,8 +208,8 @@ def insert(queue, items):
             try:
                 cur.executemany(cmd, newitems)
             except psycopg2.IntegrityError as esc:
-                return('One or more items already exists in this queue. '
-                       'sqlite error: {0}'.format(esc))
+                return(u'One or more items already exists in this queue. '
+                       u'sqlite error: {0}'.format(esc))
     return True
 
 
@@ -219,14 +219,14 @@ def delete(queue, items):
     '''
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
-            cmd = """DELETE FROM {0} WHERE data = '{1}'""".format(queue, json.dumps(items))
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = u"""DELETE FROM {0} WHERE data = '{1}'""".format(queue, json.dumps(items))
+            log.debug(u'SQL Query: %s', cmd)
             cur.execute(cmd)
             return True
         if isinstance(items, list):
             items = [json.dumps(el) for el in items]
-            cmd = 'DELETE FROM {0} WHERE data = %s'.format(queue)
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = u'DELETE FROM {0} WHERE data = %s'.format(queue)
+            log.debug(u'SQL Query: %s', cmd)
             newitems = []
             for item in items:
                 newitems.append((item,))
@@ -239,16 +239,16 @@ def pop(queue, quantity=1, is_runner=False):
     '''
     Pop one or more or all items from the queue return them.
     '''
-    cmd = 'SELECT id, data FROM {0}'.format(queue)
-    if quantity != 'all':
+    cmd = u'SELECT id, data FROM {0}'.format(queue)
+    if quantity != u'all':
         try:
             quantity = int(quantity)
         except ValueError as exc:
-            error_txt = ('Quantity must be an integer or "all".\n'
-                         'Error: "{0}".'.format(exc))
+            error_txt = (u'Quantity must be an integer or "all".\n'
+                         u'Error: "{0}".'.format(exc))
             raise SaltInvocationError(error_txt)
-        cmd = ''.join([cmd, ' LIMIT {0};'.format(quantity)])
-    log.debug('SQL Query: {0}'.format(cmd))
+        cmd = u''.join([cmd, u' LIMIT {0};'.format(quantity)])
+    log.debug(u'SQL Query: %s', cmd)
     items = []
     with _conn(commit=True) as cur:
         cur.execute(cmd)
@@ -256,11 +256,11 @@ def pop(queue, quantity=1, is_runner=False):
         if len(result) > 0:
             ids = [six.text_type(item[0]) for item in result]
             items = [item[1] for item in result]
-            idlist = "','".join(ids)
-            del_cmd = '''DELETE FROM {0} WHERE id IN ('{1}');'''.format(
+            idlist = u"','".join(ids)
+            del_cmd = u'''DELETE FROM {0} WHERE id IN ('{1}');'''.format(
                 queue, idlist)
 
-            log.debug('SQL Query: {0}'.format(del_cmd))
+            log.debug(u'SQL Query: %s', del_cmd)
 
             cur.execute(del_cmd)
     return items

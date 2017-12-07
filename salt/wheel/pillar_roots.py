@@ -15,34 +15,34 @@ import salt.utils.files
 from salt.ext import six
 
 
-def find(path, saltenv='base'):
+def find(path, saltenv=u'base'):
     '''
     Return a dict of the files located with the given path and environment
     '''
     # Return a list of paths + text or bin
     ret = []
-    if saltenv not in __opts__['pillar_roots']:
+    if saltenv not in __opts__[u'pillar_roots']:
         return ret
-    for root in __opts__['pillar_roots'][saltenv]:
+    for root in __opts__[u'pillar_roots'][saltenv]:
         full = os.path.join(root, path)
         if os.path.isfile(full):
             # Add it to the dict
-            with salt.utils.files.fopen(full, 'rb') as fp_:
+            with salt.utils.files.fopen(full, u'rb') as fp_:
                 if salt.utils.files.is_text(fp_):
-                    ret.append({full: 'txt'})
+                    ret.append({full: u'txt'})
                 else:
-                    ret.append({full: 'bin'})
+                    ret.append({full: u'bin'})
     return ret
 
 
-def list_env(saltenv='base'):
+def list_env(saltenv=u'base'):
     '''
     Return all of the file paths found in an environment
     '''
     ret = {}
-    if saltenv not in __opts__['pillar_roots']:
+    if saltenv not in __opts__[u'pillar_roots']:
         return ret
-    for f_root in __opts__['pillar_roots'][saltenv]:
+    for f_root in __opts__[u'pillar_roots'][saltenv]:
         ret[f_root] = {}
         for root, dirs, files in os.walk(f_root):
             sub = ret[f_root]
@@ -61,7 +61,7 @@ def list_env(saltenv='base'):
             for dir_ in dirs:
                 sub[dir_] = {}
             for fn_ in files:
-                sub[fn_] = 'f'
+                sub[fn_] = u'f'
     return ret
 
 
@@ -70,13 +70,13 @@ def list_roots():
     Return all of the files names in all available environments
     '''
     ret = {}
-    for saltenv in __opts__['pillar_roots']:
+    for saltenv in __opts__[u'pillar_roots']:
         ret[saltenv] = []
         ret[saltenv].append(list_env(saltenv))
     return ret
 
 
-def read(path, saltenv='base'):
+def read(path, saltenv=u'base'):
     '''
     Read the contents of a text file, if the file is binary then
     '''
@@ -86,29 +86,29 @@ def read(path, saltenv='base'):
     for fn_ in files:
         full = next(six.iterkeys(fn_))
         form = fn_[full]
-        if form == 'txt':
-            with salt.utils.files.fopen(full, 'rb') as fp_:
+        if form == u'txt':
+            with salt.utils.files.fopen(full, u'rb') as fp_:
                 ret.append({full: fp_.read()})
     return ret
 
 
-def write(data, path, saltenv='base', index=0):
+def write(data, path, saltenv=u'base', index=0):
     '''
     Write the named file, by default the first file found is written, but the
     index of the file can be specified to write to a lower priority file root
     '''
-    if saltenv not in __opts__['pillar_roots']:
-        return 'Named environment {0} is not present'.format(saltenv)
-    if len(__opts__['pillar_roots'][saltenv]) <= index:
-        return 'Specified index {0} in environment {1} is not present'.format(
+    if saltenv not in __opts__[u'pillar_roots']:
+        return u'Named environment {0} is not present'.format(saltenv)
+    if len(__opts__[u'pillar_roots'][saltenv]) <= index:
+        return u'Specified index {0} in environment {1} is not present'.format(
                 index, saltenv)
     if os.path.isabs(path):
-        return ('The path passed in {0} is not relative to the environment '
-                '{1}').format(path, saltenv)
-    dest = os.path.join(__opts__['pillar_roots'][saltenv][index], path)
+        return (u'The path passed in {0} is not relative to the environment '
+                u'{1}').format(path, saltenv)
+    dest = os.path.join(__opts__[u'pillar_roots'][saltenv][index], path)
     dest_dir = os.path.dirname(dest)
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
-    with salt.utils.files.fopen(dest, 'w+') as fp_:
+    with salt.utils.files.fopen(dest, u'w+') as fp_:
         fp_.write(data)
-    return 'Wrote data to file {0}'.format(dest)
+    return u'Wrote data to file {0}'.format(dest)

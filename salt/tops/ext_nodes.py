@@ -61,7 +61,7 @@ def __virtual__():
     '''
     Only run if properly configured
     '''
-    if __opts__['master_tops'].get('ext_nodes'):
+    if __opts__[u'master_tops'].get(u'ext_nodes'):
         return True
     return False
 
@@ -70,11 +70,11 @@ def top(**kwargs):
     '''
     Run the command configured
     '''
-    if 'id' not in kwargs['opts']:
+    if u'id' not in kwargs[u'opts']:
         return {}
-    cmd = '{0} {1}'.format(
-            __opts__['master_tops']['ext_nodes'],
-            kwargs['opts']['id']
+    cmd = u'{0} {1}'.format(
+            __opts__[u'master_tops'][u'ext_nodes'],
+            kwargs[u'opts'][u'id']
             )
     ndata = yaml.safe_load(
             subprocess.Popen(
@@ -83,21 +83,21 @@ def top(**kwargs):
                 stdout=subprocess.PIPE
                 ).communicate()[0])
     if not ndata:
-        log.info('master_tops ext_nodes call did not return any data')
+        log.info(u'master_tops ext_nodes call did not return any data')
     ret = {}
-    if 'environment' in ndata:
-        env = ndata['environment']
+    if u'environment' in ndata:
+        env = ndata[u'environment']
     else:
-        env = 'base'
+        env = u'base'
 
-    if 'classes' in ndata:
-        if isinstance(ndata['classes'], dict):
-            ret[env] = list(ndata['classes'])
-        elif isinstance(ndata['classes'], list):
-            ret[env] = ndata['classes']
+    if u'classes' in ndata:
+        if isinstance(ndata[u'classes'], dict):
+            ret[env] = list(ndata[u'classes'])
+        elif isinstance(ndata[u'classes'], list):
+            ret[env] = ndata[u'classes']
         else:
             return ret
     else:
-        log.info('master_tops ext_nodes call did not have a dictionary with a "classes" key.')
+        log.info(u'master_tops ext_nodes call did not have a dictionary with a "classes" key.')
 
     return ret

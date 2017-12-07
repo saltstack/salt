@@ -36,9 +36,9 @@ except ImportError:
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
-        LOG_FORMAT = '[%(levelname)-8s] %(message)s'
+        LOG_FORMAT = u'[%(levelname)-8s] %(message)s'
         setup_console_logger(log_format=LOG_FORMAT)
-        log.fatal('Unable to import msgpack or msgpack_pure python modules')
+        log.fatal(u'Unable to import msgpack or msgpack_pure python modules')
         # Don't exit if msgpack is not available, this is to make local mode
         # work without msgpack
         #sys.exit(salt.defaults.exitcodes.EX_GENERIC)
@@ -48,7 +48,7 @@ except ImportError:
 if not available:
 
     def _fail():
-        raise RuntimeError('msgpack is not available')
+        raise RuntimeError(u'msgpack is not available')
 
     def _serialize(obj, **options):
         _fail()
@@ -66,8 +66,8 @@ elif msgpack.version >= (0, 2, 0):
 
     def _deserialize(stream_or_string, **options):
         try:
-            options.setdefault('use_list', True)
-            options.setdefault('encoding', 'utf-8')
+            options.setdefault(u'use_list', True)
+            options.setdefault(u'encoding', u'utf-8')
             return msgpack.loads(stream_or_string, **options)
         except Exception as error:
             raise DeserializationError(error)
@@ -100,7 +100,7 @@ else:  # msgpack.version < 0.2.0
             raise SerializationError(error)
 
     def _deserialize(stream_or_string, **options):
-        options.setdefault('use_list', True)
+        options.setdefault(u'use_list', True)
         try:
             obj = msgpack.loads(stream_or_string)
             return _decoder(obj)
@@ -115,11 +115,11 @@ serialize.__doc__ = '''
 
     :param obj: the data structure to serialize
     :param options: options given to lower msgpack module.
-'''
+'''  # future lint: disable=non-unicode-string
 
 deserialize.__doc__ = '''
     Deserialize any string of stream like object into a Python data structure.
 
     :param stream_or_string: stream or string to deserialize.
     :param options: options given to lower msgpack module.
-'''
+'''  # future lint: disable=non-unicode-string

@@ -62,7 +62,7 @@ from salt.utils.reclass import (
 from salt.exceptions import SaltInvocationError
 
 # Define the module's virtual name
-__virtualname__ = 'reclass'
+__virtualname__ = u'reclass'
 
 
 def __virtual__(retry=False):
@@ -73,7 +73,7 @@ def __virtual__(retry=False):
         if retry:
             return False
 
-        opts = __opts__.get('master_tops', {}).get('reclass', {})
+        opts = __opts__.get(u'master_tops', {}).get(u'reclass', {})
         prepend_reclass_source_path(opts)
         return __virtual__(retry=True)
 
@@ -95,7 +95,7 @@ def top(**kwargs):
         # one is expected to extract the arguments to the master_tops plugin
         # by parsing the configuration file data. I therefore use this adapter
         # to hide this internality.
-        reclass_opts = __opts__['master_tops']['reclass']
+        reclass_opts = __opts__[u'master_tops'][u'reclass']
 
         # the source path we used above isn't something reclass needs to care
         # about, so filter it:
@@ -108,7 +108,7 @@ def top(**kwargs):
         # Salt expects the top data to be filtered by minion_id, so we better
         # let it know which minion it is dealing with. Unfortunately, we must
         # extract these data (see #6930):
-        minion_id = kwargs['opts']['id']
+        minion_id = kwargs[u'opts'][u'id']
 
         # I purposely do not pass any of __opts__ or __salt__ or __grains__
         # to reclass, as I consider those to be Salt-internal and reclass
@@ -117,29 +117,29 @@ def top(**kwargs):
         return reclass_top(minion_id, **reclass_opts)
 
     except ImportError as e:
-        if 'reclass' in str(e):
+        if u'reclass' in str(e):
             raise SaltInvocationError(
-                'master_tops.reclass: cannot find reclass module '
-                'in {0}'.format(sys.path)
+                u'master_tops.reclass: cannot find reclass module '
+                u'in {0}'.format(sys.path)
             )
         else:
             raise
 
     except TypeError as e:
-        if 'unexpected keyword argument' in str(e):
+        if u'unexpected keyword argument' in str(e):
             arg = str(e).split()[-1]
             raise SaltInvocationError(
-                'master_tops.reclass: unexpected option: {0}'.format(arg)
+                u'master_tops.reclass: unexpected option: {0}'.format(arg)
             )
         else:
             raise
 
     except KeyError as e:
-        if 'reclass' in str(e):
-            raise SaltInvocationError('master_tops.reclass: no configuration '
-                                      'found in master config')
+        if u'reclass' in str(e):
+            raise SaltInvocationError(u'master_tops.reclass: no configuration '
+                                      u'found in master config')
         else:
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError('master_tops.reclass: {0}'.format(str(e)))
+        raise SaltInvocationError(u'master_tops.reclass: {0}'.format(str(e)))

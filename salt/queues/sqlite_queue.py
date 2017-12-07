@@ -30,7 +30,7 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'sqlite'
+__virtualname__ = u'sqlite'
 
 
 def __virtual__():
@@ -43,9 +43,9 @@ def _conn(queue):
     '''
     Return an sqlite connection
     '''
-    queue_dir = __opts__['sqlite_queue_dir']
-    db = os.path.join(queue_dir, '{0}.db'.format(queue))
-    log.debug('Connecting to:  {0}'.format(db))
+    queue_dir = __opts__[u'sqlite_queue_dir']
+    db = os.path.join(queue_dir, u'{0}.db'.format(queue))
+    log.debug(u'Connecting to: %s', db)
 
     con = lite.connect(db)
     tables = _list_tables(con)
@@ -57,8 +57,8 @@ def _conn(queue):
 def _list_tables(con):
     with con:
         cur = con.cursor()
-        cmd = 'SELECT name FROM sqlite_master WHERE type = "table"'
-        log.debug('SQL Query: {0}'.format(cmd))
+        cmd = u'SELECT name FROM sqlite_master WHERE type = "table"'
+        log.debug(u'SQL Query: %s', cmd)
         cur.execute(cmd)
         result = cur.fetchall()
         return [x[0] for x in result]
@@ -67,9 +67,9 @@ def _list_tables(con):
 def _create_table(con, queue):
     with con:
         cur = con.cursor()
-        cmd = 'CREATE TABLE {0}(id INTEGER PRIMARY KEY, '\
-              'name TEXT UNIQUE)'.format(queue)
-        log.debug('SQL Query: {0}'.format(cmd))
+        cmd = u'CREATE TABLE {0}(id INTEGER PRIMARY KEY, '\
+              u'name TEXT UNIQUE)'.format(queue)
+        log.debug(u'SQL Query: %s', cmd)
         cur.execute(cmd)
     return True
 
@@ -81,8 +81,8 @@ def _list_items(queue):
     con = _conn(queue)
     with con:
         cur = con.cursor()
-        cmd = 'SELECT name FROM {0}'.format(queue)
-        log.debug('SQL Query: {0}'.format(cmd))
+        cmd = u'SELECT name FROM {0}'.format(queue)
+        log.debug(u'SQL Query: %s', cmd)
         cur.execute(cmd)
         contents = cur.fetchall()
     return contents
@@ -92,8 +92,8 @@ def _list_queues():
     '''
     Return a list of sqlite databases in the queue_dir
     '''
-    queue_dir = __opts__['sqlite_queue_dir']
-    files = os.path.join(queue_dir, '*.db')
+    queue_dir = __opts__[u'sqlite_queue_dir']
+    files = os.path.join(queue_dir, u'*.db')
     paths = glob.glob(files)
     queues = [os.path.splitext(os.path.basename(item))[0] for item in paths]
 
@@ -131,9 +131,9 @@ def _quote_escape(item):
     e.g.: ' becomes ''
     '''
 
-    rex_sqlquote = re.compile("'", re.M)
+    rex_sqlquote = re.compile(u"'", re.M)
 
-    return rex_sqlquote.sub("''", item)
+    return rex_sqlquote.sub(u"''", item)
 
 
 def insert(queue, items):
@@ -145,17 +145,17 @@ def insert(queue, items):
         cur = con.cursor()
         if isinstance(items, six.string_types):
             items = _quote_escape(items)
-            cmd = '''INSERT INTO {0}(name) VALUES('{1}')'''.format(queue, items)
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = u'''INSERT INTO {0}(name) VALUES('{1}')'''.format(queue, items)
+            log.debug(u'SQL Query: %s', cmd)
             try:
                 cur.execute(cmd)
             except lite.IntegrityError as esc:
-                return('Item already exists in this queue. '
-                       'sqlite error: {0}'.format(esc))
+                return(u'Item already exists in this queue. '
+                       u'sqlite error: {0}'.format(esc))
         if isinstance(items, list):
             items = [_quote_escape(el) for el in items]
-            cmd = "INSERT INTO {0}(name) VALUES(?)".format(queue)
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = u"INSERT INTO {0}(name) VALUES(?)".format(queue)
+            log.debug(u'SQL Query: %s', cmd)
             newitems = []
             for item in items:
                 newitems.append((item,))
@@ -163,18 +163,18 @@ def insert(queue, items):
             try:
                 cur.executemany(cmd, newitems)
             except lite.IntegrityError as esc:
-                return('One or more items already exists in this queue. '
-                       'sqlite error: {0}'.format(esc))
+                return(u'One or more items already exists in this queue. '
+                       u'sqlite error: {0}'.format(esc))
         if isinstance(items, dict):
-            items = json.dumps(items).replace('"', "'")
+            items = json.dumps(items).replace(u'"', u"'")
             items = _quote_escape(items)
-            cmd = '''INSERT INTO {0}(name) VALUES('{1}')'''.format(queue, items)
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = u'''INSERT INTO {0}(name) VALUES('{1}')'''.format(queue, items)
+            log.debug(u'SQL Query: %s', cmd)
             try:
                 cur.execute(cmd)
             except lite.IntegrityError as esc:
-                return('Item already exists in this queue. '
-                       'sqlite error: {0}'.format(esc))
+                return(u'Item already exists in this queue. '
+                       u'sqlite error: {0}'.format(esc))
     return True
 
 
@@ -187,24 +187,24 @@ def delete(queue, items):
         cur = con.cursor()
         if isinstance(items, six.string_types):
             items = _quote_escape(items)
-            cmd = """DELETE FROM {0} WHERE name = '{1}'""".format(queue, items)
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = u"""DELETE FROM {0} WHERE name = '{1}'""".format(queue, items)
+            log.debug(u'SQL Query: %s', cmd)
             cur.execute(cmd)
             return True
         if isinstance(items, list):
             items = [_quote_escape(el) for el in items]
-            cmd = 'DELETE FROM {0} WHERE name = ?'.format(queue)
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = u'DELETE FROM {0} WHERE name = ?'.format(queue)
+            log.debug(u'SQL Query: %s', cmd)
             newitems = []
             for item in items:
                 newitems.append((item,))
                 # we need a list of one item tuples here
             cur.executemany(cmd, newitems)
         if isinstance(items, dict):
-            items = json.dumps(items).replace('"', "'")
+            items = json.dumps(items).replace(u'"', u"'")
             items = _quote_escape(items)
-            cmd = """DELETE FROM {0} WHERE name = '{1}'""".format(queue, items)
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = u"""DELETE FROM {0} WHERE name = '{1}'""".format(queue, items)
+            log.debug(u'SQL Query: %s', cmd)
             cur.execute(cmd)
             return True
         return True
@@ -214,16 +214,16 @@ def pop(queue, quantity=1, is_runner=False):
     '''
     Pop one or more or all items from the queue return them.
     '''
-    cmd = 'SELECT name FROM {0}'.format(queue)
-    if quantity != 'all':
+    cmd = u'SELECT name FROM {0}'.format(queue)
+    if quantity != u'all':
         try:
             quantity = int(quantity)
         except ValueError as exc:
-            error_txt = ('Quantity must be an integer or "all".\n'
-                         'Error: "{0}".'.format(exc))
+            error_txt = (u'Quantity must be an integer or "all".\n'
+                         u'Error: "{0}".'.format(exc))
             raise SaltInvocationError(error_txt)
-        cmd = ''.join([cmd, ' LIMIT {0}'.format(quantity)])
-    log.debug('SQL Query: {0}'.format(cmd))
+        cmd = u''.join([cmd, u' LIMIT {0}'.format(quantity)])
+    log.debug(u'SQL Query: %s', cmd)
     con = _conn(queue)
     items = []
     with con:
@@ -231,16 +231,16 @@ def pop(queue, quantity=1, is_runner=False):
         result = cur.execute(cmd).fetchall()
         if len(result) > 0:
             items = [item[0] for item in result]
-            itemlist = '","'.join(items)
+            itemlist = u'","'.join(items)
             _quote_escape(itemlist)
-            del_cmd = '''DELETE FROM {0} WHERE name IN ("{1}")'''.format(
+            del_cmd = u'''DELETE FROM {0} WHERE name IN ("{1}")'''.format(
                 queue, itemlist)
 
-            log.debug('SQL Query: {0}'.format(del_cmd))
+            log.debug(u'SQL Query: %s', del_cmd)
 
             cur.execute(del_cmd)
         con.commit()
     if is_runner:
-        items = [json.loads(item[0].replace("'", '"')) for item in result]
+        items = [json.loads(item[0].replace(u"'", u'"')) for item in result]
     log.info(items)
     return items

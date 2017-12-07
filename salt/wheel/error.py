@@ -12,7 +12,7 @@ from __future__ import absolute_import
 import salt.utils.error
 
 
-def error(name=None, message=''):
+def error(name=None, message=u''):
     '''
     If name is None Then return empty dict
 
