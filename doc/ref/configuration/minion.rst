@@ -1292,8 +1292,42 @@ The password used for HTTP proxy access.
 
     proxy_password: obolus
 
+.. conf_minion:: docker.compare_container_networks
+
+``docker.compare_container_networks``
+-------------------------------------
+
+.. versionadded:: Oxygen
+
+Default: ``{'static': ['Aliases', 'Links', 'IPAMConfig'], 'automatic': ['IPAddress', 'Gateway', 'GlobalIPv6Address', 'IPv6Gateway']}``
+
+Specifies which keys are examined by
+:py:func:`docker.compare_container_networks
+<salt.modules.dockermod.compare_container_networks>`.
+
+.. note::
+    This should not need to be modified unless new features added to Docker
+    result in new keys added to the network configuration which must be
+    compared to determine if two containers have different network configs.
+    This config option exists solely as a way to allow users to continue using
+    Salt to manage their containers after an API change, without waiting for a
+    new Salt release to catch up to the changes in the Docker API.
+
+.. code-block:: yaml
+
+    docker.compare_container_networks:
+      static:
+        - Aliases
+        - Links
+        - IPAMConfig
+      automatic:
+        - IPAddress
+        - Gateway
+        - GlobalIPv6Address
+        - IPv6Gateway
+
 Minion Execution Module Management
-========================
+==================================
 
 .. conf_minion:: disable_modules
 
@@ -1303,7 +1337,7 @@ Minion Execution Module Management
 Default: ``[]`` (all execution modules are enabled by default)
 
 The event may occur in which the administrator desires that a minion should not
-be able to execute a certain module. 
+be able to execute a certain module.
 
 However, the ``sys`` module is built into the minion and cannot be disabled.
 
