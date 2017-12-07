@@ -300,14 +300,14 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1
 
             if not datastore_cluster_ref:
                 # datastore/datastore cluster specified does not exist
-                raise SaltCloudSystemExit("Specified datastore/datastore cluster ({0}) for disk ({1}) does not exist".format(datastore,disk_label))
+                raise SaltCloudSystemExit("Specified datastore/datastore cluster ({0}) for disk ({1}) does not exist".format(datastore, disk_label))
 
             # datastore cluster has been specified
             # find datastore with most free space available
             #
             # TODO: Get DRS Recommendations instead of finding datastore with most free space
             datastore_list = salt.utils.vmware.get_datastores(_get_si(), datastore_cluster_ref, get_all_datastores=True)
-            datastore_free_space = long(0)
+            datastore_free_space = 0
             for ds_ref in datastore_list:
                 log.trace("Found datastore ({0}) with free space ({1}) in datastore cluster ({2})".format(ds_ref.name, ds_ref.summary.freeSpace, datastore))
                 if ds_ref.summary.accessible and ds_ref.summary.freeSpace > datastore_free_space:
