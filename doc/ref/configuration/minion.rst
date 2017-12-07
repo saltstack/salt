@@ -2255,7 +2255,7 @@ minion's pki directory.
 .. conf_minion:: autosign_grains
 
 ``autosign_grains``
-------------------------
+-------------------
 
 .. versionadded:: Oxygen
 

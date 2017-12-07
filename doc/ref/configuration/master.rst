@@ -1325,7 +1325,7 @@ membership in the :conf_master:`autosign_file` and the
 .. conf_master:: autosign_grains_dir
 
 ``autosign_grains_dir``
------------------
+-----------------------
 
 .. versionadded:: Oxygen
 
