@@ -314,6 +314,25 @@ def get_datastore_ref(si, datastore_name):
     return None
 
 
+def get_datastore_cluster_ref(si, datastore_cluster_name):
+    '''
+    Get a reference to a VMware datastore cluster for the purposes of adding/removing disks
+
+    si
+        ServiceInstance for the vSphere or ESXi server (see get_service_instance)
+
+    datastore_cluster_name
+        Name of the datastore cluster
+
+    '''
+    inventory = get_inventory(si)
+    container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [vim.StoragePod], True)
+    for item in container.view:
+        if item.name == datastore_cluster_name:
+            return item
+    return None
+
+
 def get_service_instance(host, username=None, password=None, protocol=None,
                          port=None, mechanism='userpass', principal=None,
                          domain=None):
@@ -1960,12 +1979,19 @@ def get_datastores(service_instance, reference, datastore_names=None,
             skip=False,
             type=vim.ClusterComputeResource)
     elif isinstance(reference, vim.Datacenter):
-        # Traversal spec for clusters
+        # Traversal spec for datacenter
         traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
             name='datacenter_datastore_traversal',
             path='datastore',
             skip=False,
             type=vim.Datacenter)
+    elif isinstance(reference, vim.StoragePod):
+        # Traversal spec for datastore clusters
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            name='datastore_cluster_traversal',
+            path='childEntity',
+            skip=False,
+            type=vim.StoragePod)
     elif isinstance(reference, vim.Folder) and \
             get_managed_object_name(reference) == 'Datacenters':
         # Traversal of root folder (doesn't support multiple levels of Folders)
