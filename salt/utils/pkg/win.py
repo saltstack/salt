@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 r'''
-Collect informaiotn about software installed on Windows OS
+Collect information about software installed on Windows OS
 ================
 
 :maintainer: Salt Stack <https://github.com/saltstack>
@@ -22,12 +22,11 @@ Collect informaiotn about software installed on Windows OS
 :depends: pywin32, six
 :platform: windows
 
-Known But install_date may not match Control Panel\Programs\Programs and Features
-
+Known Issue: install_date may not match Control Panel\Programs\Programs and Features
 '''
 
 
-# Note although this code will work woth Python 2.7, win32api does not
+# Note although this code will work with Python 2.7, win32api does not
 # support Unicode. i.e non ASCII characters may be returned with unexpected
 # results e.g. a '?' instead of the correct character
 # Python 3.6 or newer is recommended.
@@ -95,7 +94,6 @@ except ImportError:
 class RegSoftwareInfo(object):
     """
     Retrieve Registry data on a single installed software item or component.
-    .. versionadded:: Oxygen
 
     Attribute:
         None
@@ -131,16 +129,16 @@ class RegSoftwareInfo(object):
         __use_32bit_lookup = {True: win32con.KEY_WOW64_32KEY, False: 0}
 
     def __init__(self, key_guid, sid=None, use_32bit=False):
-        """Initalise against a software item or component.
-        All software has a unique "Identify" within the registry. This can be free
+        """Initialise against a software item or component.
+        All software has a unique "Identifer" within the registry. This can be free
         form text/numbers e.g. "MySoftware" or
         GUID e.g. "{0EAF0D8F-C9CF-4350-BD9A-07EC66929E04}"
 
         Args:
-            key_guid (str): Identify.
+            key_guid (str): Identifer.
             sid (str): Security IDentifier of the User or None for Computer/Machine.
             use_32bit (bool):
-                Regisrty location of the Identify. ``True`` 32 bit registry only
+                Regisrty location of the Identifer. ``True`` 32 bit registry only
                 meaning fully on 64 bit OS.
 
         """
@@ -434,7 +432,7 @@ class RegSoftwareInfo(object):
             # Must have a valid squid for an upgrade code to exist
             return ''
 
-        # GUID/SQUID are unique, so it does not mater if they are 32bit or
+        # GUID/SQUID are unique, so it does not matter if they are 32bit or
         # 64bit or user install so all items are cached into a single dict
         have_scan_key = '{0}\\{1}\\{2}'.format(self.__reg_hive, self.__reg_upgradecode_path, self.__reg_32bit)
         if not self.__upgrade_codes or self.__reg_key_guid not in self.__upgrade_codes:
@@ -459,7 +457,7 @@ class RegSoftwareInfo(object):
             if (have_scan_key in self.__upgrade_code_have_scan and
                     self.__upgrade_code_have_scan[have_scan_key] == (squid_upgrade_code_all, suc_pytime)):
                 log.debug('Scan skipped for upgrade codes, no changes (%s)', have_scan_key)
-                return ''  # we have scan this before and no new changes.
+                return ''  # we have scanned this before and no new changes.
 
             # Go into each squid upgrade code and find all the related product codes.
             log.debug('Scan for upgrade codes (%s) for product codes', have_scan_key)
@@ -485,7 +483,7 @@ class RegSoftwareInfo(object):
     @property
     def list_patches(self):
         """For installers which follow the Microsoft Installer standard, returns
-        the a list of patches applied.
+        a list of patches applied.
 
         Returns:
             value (list): Long name of the patch.
@@ -636,7 +634,6 @@ class RegSoftwareInfo(object):
 class WinSoftware(object):
     """Point in time snapshot of the software and components installed on
     a system.
-    .. versionadded:: Oxygen
 
     Attributes:
         None
@@ -701,7 +698,7 @@ class WinSoftware(object):
 
     @property
     def version_only(self):
-        """Returns True of class initiated with ``version_only=True``
+        """Returns True if class initiated with ``version_only=True``
 
         Returns:
             bool: The value of ``version_only``
@@ -734,6 +731,9 @@ class WinSoftware(object):
             raise KeyError(pkg_id)
 
     def __iter__(self):
+        '''
+        Standard interation class initialisation over package information.
+        '''
         if self.__iter_list is not None:
             raise RuntimeError('Can only perform one iter at a time')
         self.__iter_list = collections.deque(sorted(self.__reg_software.keys()))
@@ -782,7 +782,7 @@ class WinSoftware(object):
 
     @staticmethod
     def __latest_to_oldest_version(ver1, ver2):
-        ''''Used for sorting version numbers, latest to oldest
+        '''Used for sorting version numbers, latest to oldest
         '''
         return 1 if LooseVersion(ver1) < LooseVersion(ver2) else -1
 
@@ -809,7 +809,7 @@ class WinSoftware(object):
         return sorted(installed_versions, key=cmp_to_key(self.__oldest_to_latest_version))
 
     def pkg_version_latest(self, pkg_id):
-        """Returns a package latest version installed out of all the version
+        """Returns a package latest version installed out of all the versions
         currently installed.
 
         Args:
@@ -822,7 +822,7 @@ class WinSoftware(object):
         return self.pkg_version_list(pkg_id)[-1]
 
     def pkg_version_oldest(self, pkg_id):
-        """Returns a package oldest version installed out of all the version
+        """Returns a package oldest version installed out of all the versions
         currently installed.
 
         Args:
@@ -835,37 +835,37 @@ class WinSoftware(object):
         return self.pkg_version_list(pkg_id)[0]
 
     @staticmethod
-    def __sid_to_username(uid):
-        """Provided with a valid Windows User SID and returns a Username
+    def __sid_to_username(sid):
+        """Provided with a valid Windows Security Identifier (SID) and returns a Username
 
         Args:
-            uid (str): User SID.
+            sid (str): Security Identifier (SID).
 
         Returns:
             str: Username in the format of username@realm or username@computer.
         """
-        if uid is None or uid == '':
+        if sid is None or sid == '':
             return ''
         try:
-            sid = win32security.GetBinarySid(uid)  # pylint: disable=no-member
+            sid_bin = win32security.GetBinarySid(sid)  # pylint: disable=no-member
         except pywintypes.error as exc:  # pylint: disable=no-member
             raise ValueError(
-                    'pkg: Software owned by {0} is not valid: [{1}] {2}'.format(uid, exc.winerror, exc.strerror)
+                    'pkg: Software owned by {0} is not valid: [{1}] {2}'.format(sid, exc.winerror, exc.strerror)
                 )
         try:
-            name, domain, _account_type = win32security.LookupAccountSid(None, sid)  # pylint: disable=no-member
+            name, domain, _account_type = win32security.LookupAccountSid(None, sid_bin)  # pylint: disable=no-member
             user_name = '{0}\\{1}'.format(domain, name)
         except pywintypes.error as exc:  # pylint: disable=no-member
             # if user does not exist...
             # winerror.ERROR_NONE_MAPPED = No mapping between account names and
             # security IDs was carried out.
             if exc.winerror == winerror.ERROR_NONE_MAPPED:  # 1332
-                # As the uid is from the registry it should be valid
-                # even if it cannot be lookedup, so the uid is returned
-                return uid
+                # As the sid is from the registry it should be valid
+                # even if it cannot be lookedup, so the sid is returned
+                return sid
             else:
                 raise ValueError(
-                          'Failed looking up sid \'{0}\' username: [{1}] {2}'.format(uid, exc.winerror, exc.strerror)
+                          'Failed looking up sid \'{0}\' username: [{1}] {2}'.format(sid, exc.winerror, exc.strerror)
                         )
         try:
             user_principal = win32security.TranslateName(  # pylint: disable=no-member
@@ -877,22 +877,25 @@ class WinSoftware(object):
             # or could not be contacted, computer may not be part of a domain also
             # winerror.ERROR_INVALID_DOMAINNAME The format of the specified domain name is
             # invalid. e.g. S-1-5-19 which is a local account
-            if exc.winerror == winerror.ERROR_NO_SUCH_DOMAIN or exc.winerror == winerror.ERROR_INVALID_DOMAINNAME:
+            # winerror.ERROR_NONE_MAPPED No mapping between account names and security IDs was done.
+            if exc.winerror in (winerror.ERROR_NO_SUCH_DOMAIN,
+                                winerror.ERROR_INVALID_DOMAINNAME,
+                                winerror.ERROR_NONE_MAPPED):
                 return '{0}@{1}'.format(name.lower(), domain.lower())
             else:
                 raise
         return user_principal
 
-    def __software_to_pkg_id(self, publisher, name, iscomponent, is32bit):
+    def __software_to_pkg_id(self, publisher, name, is_component, is_32bit):
         """Determine the Package ID of a software/component using the
-        software/component ``publisher``, ``name``, weather its a software or a
+        software/component ``publisher``, ``name``, whether its a software or a
         component, and if its 32bit or 64bit archiecture.
 
         Args:
             publisher (str): Publisher of the software/component.
             name (str): Name of the software.
-            iscomponent (bool): True if package is a component.
-            is32bit (bool): True if the software/component is 32bit architecture.
+            is_component (bool): True if package is a component.
+            is_32bit (bool): True if the software/component is 32bit architecture.
 
         Returns:
             str: Package Id
@@ -911,27 +914,29 @@ class WinSoftware(object):
         else:
             name_lc = 'NoValue'  # Capitals/Special Value
 
-        if iscomponent:
+        if is_component:
             soft_type = 'comp'
         else:
             soft_type = 'soft'
 
-        if is32bit:
+        if is_32bit:
             soft_type += '32'  # Tag only the 32bit only
 
         default_pkg_id = pub_lc+'\\\\'+name_lc+'\\\\'+soft_type
 
+        # Check to see if class was initialise with pkg_obj with a method called
+        # to_pkg_id, and if so use it for the naming standard instead of the default
         if self.__pkg_obj and hasattr(self.__pkg_obj, 'to_pkg_id'):
-            pkg_id = self.__pkg_obj.to_pkg_id(publisher, name, iscomponent, is32bit)
+            pkg_id = self.__pkg_obj.to_pkg_id(publisher, name, is_component, is_32bit)
             if pkg_id:
                 return pkg_id
 
         return default_pkg_id
 
     def __version_capture_slp(self, pkg_id, version_binary, version_display, display_name):
-        """This returns version and where the version string came from. based on
-        instructions under version_capture, if version_capture missing defaults to
-        display-version
+        """This returns the version and where the version string came from, based on instructions
+        under ``version_capture``, if ``version_capture`` is missing, it defaults to
+        value of display-version.
 
         Args:
             pkg_id (str): Publisher of the software/component.
@@ -956,7 +961,7 @@ class WinSoftware(object):
 
         # If self.__pkg_obj.version_capture() not defined defaults to using
         # version_display and if not valid then use version_binary, and as a last
-        # result provided the version 0.0.0.0.0 to indicate version string was not determined.
+        # result provide the version 0.0.0.0.0 to indicate version string was not determined.
         if version_display and re.match(r'\d+', version_display, flags=re.IGNORECASE + re.UNICODE) is not None:
             version_str = version_display
             src = 'display-version'
@@ -998,18 +1003,23 @@ class WinSoftware(object):
         uninstall_no_remove = reg_soft_info.is_install_true('NoRemove')
         uninstall_string = reg_soft_info.get_install_value('UninstallString')
         uninstall_quiet_string = reg_soft_info.get_install_value('QuietUninstallString')
+        uninstall_modify_path = reg_soft_info.get_install_value('ModifyPath')
         windows_installer = reg_soft_info.is_install_true('WindowsInstaller')
         system_component = reg_soft_info.is_install_true('SystemComponent')
         publisher = reg_soft_info.get_install_value('Publisher', wanted_type='str')
 
         # UninstallString is optional if the installer is "windows installer"/MSI
-        # However for add to appear in Control-Panel -> Program and Features -> Uninstall or change a program
-        # the UninstallString needs to be set or ModifyString set
-        # if (uninstall_string is None and uninstall_quiet_string is None) and (not windows_installer):
-        #    return
+        # However for it to appear in Control-Panel -> Program and Features -> Uninstall or change a program
+        # the UninstallString needs to be set or ModifyPath set
+        if (uninstall_string is None and
+                uninstall_quiet_string is None and
+                uninstall_modify_path is None and
+                (not windows_installer)):
+            return
 
         # Question: If uninstall string is not set and windows_installer should we set it
-        # Question: if uninstall_quite is not set .......
+        # Question: if uninstall_quiet is not set .......
+
         if sid:
             username = self.__sid_to_username(sid)
         else:
@@ -1034,10 +1044,10 @@ class WinSoftware(object):
 
         # Guessing the architecture http://helpnet.flexerasoftware.com/isxhelp21/helplibrary/IHelp64BitSupport.htm
         # A 32 bit installed.exe can install a 64 bit app, but for it to write to 64bit reg it will
-        # need to use WOW. So the follow is a bit of a guess
+        # need to use WOW. So the following is a bit of a guess
 
         if self.__version_only:
-            # package name and package version list, are only info being return
+            # package name and package version list, are the only info being return
             if dict_key in self.__reg_software:
                 if version_text not in self.__reg_software[dict_key]:
                     # Not expecting the list to be big, simple search and insert
@@ -1185,10 +1195,12 @@ class WinSoftware(object):
         This searches the uninstall keys in the registry to find
         a match in the sub keys, it will return a dict with the
         display name as the key and the version as the value
+        .. sectionauthor:: Damon Atkins <https://github.com/damon-atkins>
+        .. versionadded:: Carbon
         '''
 
         # FUNCTION MAIN CODE #
-        # Search 64bit, on 64bit platform, on 32bit its ignored
+        # Search 64bit, on 64bit platform, on 32bit its ignored.
         if platform.architecture()[0] == '32bit':
             # Handle Python 32bit on 64&32 bit platform and Python 64bit
             if win32process.IsWow64Process():  # pylint: disable=no-member
@@ -1201,11 +1213,11 @@ class WinSoftware(object):
                 arch_list = [True]
 
         else:
-            # Python is 64bit therefore most be on 64bit System
+            # Python is 64bit therefore most be on 64bit System.
             use_32bit_lookup = {True: win32con.KEY_WOW64_32KEY, False: 0}
             arch_list = [True, False]
 
-        # Process software installed for the machine i.e. all users
+        # Process software installed for the machine i.e. all users.
         for arch_flag in arch_list:
             key_search = 'Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
             log.debug('SYSTEM processing 32bit:{0}'.format(arch_flag))
@@ -1223,8 +1235,8 @@ class WinSoftware(object):
             return
 
         # Process software installed under all USERs, this adds significate processing time.
-        # Their is not 32/64 bit registry redirection under user tree
-        log.debug('Processing user software.. please wait')
+        # There is not 32/64 bit registry redirection under user tree.
+        log.debug('Processing user software... please wait')
         handle_sid = win32api.RegOpenKeyEx(  # pylint: disable=no-member
                         win32con.HKEY_USERS,
                         '',
@@ -1282,7 +1294,7 @@ def __main():
     import timeit
 
     def run():
-        """ Main run code when this modules is run directly
+        """ Main run code, when this module is run directly
         """
         pkg_list = WinSoftware(user_pkgs=user_pkgs, version_only=version_only)
         print(json.dumps(pkg_list.data, sort_keys=True, indent=4))  # pylint: disable=superfluous-parens
