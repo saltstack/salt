@@ -211,7 +211,9 @@ def update(table_name, throughput=None, global_indexes=None,
     '''
     Update a DynamoDB table.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_dynamodb.update table_name region=us-east-1
     '''
@@ -226,6 +228,7 @@ def create_global_secondary_index(table_name, global_index, region=None,
     Creates a single global secondary index on a DynamoDB table.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_dynamodb.create_global_secondary_index table_name /
@@ -242,6 +245,7 @@ def update_global_secondary_index(table_name, global_indexes, region=None,
     Updates the throughput of the given global secondary indexes.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_dynamodb.update_global_secondary_index table_name /
@@ -252,11 +256,36 @@ def update_global_secondary_index(table_name, global_indexes, region=None,
     return table.update_global_secondary_index(global_indexes)
 
 
+def list_tables(region=None, key=None, keyid=None, profile=None):
+    '''
+    List all DynamoDB tables visible to the supplied credentials.
+
+    .. versionadded:: Oxygen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_dynamodb.list_tables region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    estn = ''
+    tables = []
+    while estn is not None:
+        args = {'exclusive_start_table_name': estn} if estn else {}
+        ret = conn.list_tables(**args)
+        tables += ret.get('TableNames', [])
+        estn = ret.get('LastEvaluatedTableName', None)
+    return tables
+
+
 def describe(table_name, region=None, key=None, keyid=None, profile=None):
     '''
     Describe a DynamoDB table.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_dynamodb.describe table_name region=us-east-1
     '''
@@ -271,6 +300,9 @@ def extract_index(index_data, global_index=False):
     configuration
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt myminion boto_dynamodb.extract_index index
     '''
     parsed_data = {}
