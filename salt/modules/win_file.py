@@ -58,7 +58,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
         comment, uncomment, _add_flags, comment_line, _regex_to_static,
         _get_line_indent, apply_template_on_contents, dirname, basename,
-        list_backups_dir)
+        list_backups_dir, _assert_occurrence, _starts_till)
 from salt.modules.file import normpath as normpath_
 
 from salt.utils import namespaced_function as _namespaced_function
@@ -116,7 +116,7 @@ def __virtual__():
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
             global _regex_to_static, _get_line_indent, dirname, basename
-            global list_backups_dir, normpath_
+            global list_backups_dir, normpath_, _assert_occurrence, _starts_till
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -179,6 +179,8 @@ def __virtual__():
             basename = _namespaced_function(basename, globals())
             list_backups_dir = _namespaced_function(list_backups_dir, globals())
             normpath_ = _namespaced_function(normpath_, globals())
+            _assert_occurrence = _namespaced_function(_assert_occurrence, globals())
+            _starts_till = _namespaced_function(_starts_till, globals())
 
         else:
             return False, 'Module win_file: Missing Win32 modules'
