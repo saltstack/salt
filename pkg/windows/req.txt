@@ -2,7 +2,6 @@ backports-abc==0.5
 backports.ssl-match-hostname==3.5.0.1
 certifi
 cffi==1.11.2
-CherryPy==13.0.0
 cryptography==2.1.4
 enum34==1.1.6
 futures==3.2.0
