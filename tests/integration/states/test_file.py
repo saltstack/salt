@@ -572,9 +572,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Make sure that we enforce the source_hash even with local files
         '''
-        name = os.path.join(integration.TMP, 'local_source_with_source_hash')
-        local_path = os.path.join(
-            integration.FILES, 'file', 'base', 'grail', 'scene33')
+        name = os.path.join(TMP, 'local_source_with_source_hash')
+        local_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene33')
         actual_hash = '567fd840bf1548edc35c48eb66cdd78bfdfcccff'
         # Reverse the actual hash
         bad_hash = actual_hash[::-1]
@@ -629,9 +628,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Make sure that we exit gracefully when a local source doesn't exist
         '''
-        name = os.path.join(integration.TMP, 'local_source_does_not_exist')
-        local_path = os.path.join(
-            integration.FILES, 'file', 'base', 'grail', 'scene99')
+        name = os.path.join(TMP, 'local_source_does_not_exist')
+        local_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene99')
 
         for proto in ('file://', ''):
             source = proto + local_path
