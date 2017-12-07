@@ -898,7 +898,7 @@ def run(name,
 
     ret['changes'] = cmd_all
     ret['result'] = not bool(cmd_all['retcode'])
-    ret['comment'] = u'Command "{0}" run'.format(name)
+    ret['comment'] = 'Command "{0}" run'.format(name)
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:
