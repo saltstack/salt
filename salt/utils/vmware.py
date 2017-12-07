@@ -296,40 +296,24 @@ def get_customizationspec_ref(si, customization_spec_name):
     return customization_spec_name
 
 
-def get_datastore_ref(si, datastore_name):
+def get_mor_using_container_view(si, obj_type, obj_name):
     '''
-    Get a reference to a VMware datastore for the purposes of adding/removing disks
+    Get reference to an object of specified object type and name
 
     si
         ServiceInstance for the vSphere or ESXi server (see get_service_instance)
 
-    datastore_name
-        Name of the datastore
+    obj_type
+        Type of the object (vim.StoragePod, vim.Datastore, etc)
+
+    obj_name
+        Name of the object
 
     '''
     inventory = get_inventory(si)
-    container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [vim.Datastore], True)
+    container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [obj_type], True)
     for item in container.view:
-        if item.name == datastore_name:
-            return item
-    return None
-
-
-def get_datastore_cluster_ref(si, datastore_cluster_name):
-    '''
-    Get a reference to a VMware datastore cluster for the purposes of adding/removing disks
-
-    si
-        ServiceInstance for the vSphere or ESXi server (see get_service_instance)
-
-    datastore_cluster_name
-        Name of the datastore cluster
-
-    '''
-    inventory = get_inventory(si)
-    container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [vim.StoragePod], True)
-    for item in container.view:
-        if item.name == datastore_cluster_name:
+        if item.name == obj_name:
             return item
     return None
 
