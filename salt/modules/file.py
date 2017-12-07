@@ -3368,7 +3368,11 @@ def stats(path, hash_type=None, follow_symlinks=True):
             pstat = os.lstat(path)
         except OSError:
             # Not a broken symlink, just a nonexistent path
-            return ret
+            # NOTE: The file.directory state checks the content of the error
+            # message in this exception. Any changes made to the message for this
+            # exception will reflect the file.directory state as well, and will
+            # likely require changes there.
+            raise CommandExecutionError('Path not found: {0}'.format(path))
     else:
         if follow_symlinks:
             pstat = os.stat(path)
@@ -4193,12 +4197,6 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     # Check permissions
     perms = {}
     cur = stats(name, follow_symlinks=follow_symlinks)
-    if not cur:
-        # NOTE: The file.directory state checks the content of the error
-        # message in this exception. Any changes made to the message for this
-        # exception will reflect the file.directory state as well, and will
-        # likely require changes there.
-        raise CommandExecutionError('{0} does not exist'.format(name))
     perms['luser'] = cur['user']
     perms['lgroup'] = cur['group']
     perms['lmode'] = salt.utils.normalize_mode(cur['mode'])
@@ -4498,11 +4496,18 @@ def check_file_meta(
     '''
     changes = {}
     if not source_sum:
-        source_sum = {}
-    lstats = stats(name, hash_type=source_sum.get('hash_type', None), follow_symlinks=False)
+        source_sum = dict()
+
+    try:
+        lstats = stats(name, hash_type=source_sum.get('hash_type', None),
+                       follow_symlinks=False)
+    except CommandExecutionError:
+        lstats = {}
+
     if not lstats:
         changes['newfile'] = name
         return changes
+
     if 'hsum' in source_sum:
         if source_sum['hsum'] != lstats['sum']:
             if not sfn and source:

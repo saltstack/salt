@@ -758,7 +758,7 @@ def _check_directory_win(name,
     changes = {}
 
     if not os.path.isdir(name):
-        changes = {'directory': 'new'}
+        changes = {name: {'directory': 'new'}}
     else:
         # Check owner
         owner = salt.utils.win_dacl.get_owner(name)
@@ -883,7 +883,11 @@ def _check_dir_meta(name,
     '''
     Check the changes in directory metadata
     '''
-    stats = __salt__['file.stats'](name, None, follow_symlinks)
+    try:
+        stats = __salt__['file.stats'](name, None, follow_symlinks)
+    except CommandExecutionError:
+        stats = {}
+
     changes = {}
     if not stats:
         changes['directory'] = 'new'
@@ -2988,7 +2992,7 @@ def directory(name,
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, dir_mode, follow_symlinks)
                     except CommandExecutionError as exc:
-                        if not exc.strerror.endswith('does not exist'):
+                        if not exc.strerror.startswith('Path not found'):
                             errors.append(exc.strerror)
 
     if clean:
