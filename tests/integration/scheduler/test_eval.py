@@ -66,4 +66,5 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status('job1')
+        log.info('=== ret {0} ==='.format(ret))
         self.assertEqual(ret['_last_run'], run_time2)
