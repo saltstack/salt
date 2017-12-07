@@ -3,7 +3,7 @@
 Management of OpenStack Keystone Services
 =========================================
 
-.. versionadded:: Nitrogen
+.. versionadded:: Oxygen
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.keystoneng` for setup instructions

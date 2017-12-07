@@ -456,7 +456,7 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.INFO
             else:
                 logging_level = logging.ERROR
-            os.environ['TESTS_LOG_LEVEL'] = six.text_type(self.options.verbosity)
+            os.environ['TESTS_LOG_LEVEL'] = six.binary_type(self.options.verbosity)
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
             log.info('Runtests logging has been setup')

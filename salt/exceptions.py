@@ -397,16 +397,22 @@ class TemplateError(SaltException):
     '''
 
 
+class ArgumentValueError(CommandExecutionError):
+    '''
+    Used when an invalid argument was passed to a command execution
+    '''
+
+
+class CheckError(CommandExecutionError):
+    '''
+    Used when a check fails
+    '''
+
+
 # Validation related exceptions
 class InvalidConfigError(CommandExecutionError):
     '''
     Used when the config is invalid
-    '''
-
-
-class ArgumentValueError(CommandExecutionError):
-    '''
-    Used when an invalid argument was passed to a command execution
     '''
 
 
@@ -443,13 +449,25 @@ class VMwareObjectRetrievalError(VMwareSaltError):
     '''
 
 
+class VMwareObjectNotFoundError(VMwareSaltError):
+    '''
+    Used when a VMware object was not found
+    '''
+
+
 class VMwareObjectExistsError(VMwareSaltError):
     '''
-    Used when a VMware object exists
+    Used when a VMware object already exists
     '''
 
 
-class VMwareObjectNotFoundError(VMwareSaltError):
+class VMwareMultipleObjectsError(VMwareObjectRetrievalError):
+    '''
+    Used when multiple objects were retrieved (and one was expected)
+    '''
+
+
+class VMwareNotFoundError(VMwareSaltError):
     '''
     Used when a VMware object was not found
     '''
@@ -461,7 +479,31 @@ class VMwareApiError(VMwareSaltError):
     '''
 
 
+class VMwareFileNotFoundError(VMwareApiError):
+    '''
+    Used when representing a generic VMware error if a file not found
+    '''
+
+
 class VMwareSystemError(VMwareSaltError):
     '''
     Used when representing a generic VMware system error
+    '''
+
+
+class VMwarePowerOnError(VMwareSaltError):
+    '''
+    Used when error occurred during power on
+    '''
+
+
+class VMwareVmRegisterError(VMwareSaltError):
+    '''
+    Used when a configuration parameter is incorrect
+    '''
+
+
+class VMwareVmCreationError(VMwareSaltError):
+    '''
+    Used when a configuration parameter is incorrect
     '''
