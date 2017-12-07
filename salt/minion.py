@@ -214,8 +214,38 @@ def resolve_dns(opts, fallback=True):
                 u'Master ip address changed from %s to %s',
                 opts[u'master_ip'], ret[u'master_ip']
             )
+    if opts[u'source_interface_name']:
+        log.trace('Custom source interface required: %s', opts[u'source_interface_name'])
+        interfaces = salt.utils.network.interfaces()
+        log.trace('The following interfaces are available on this Minion:')
+        log.trace(interfaces)
+        if opts[u'source_interface_name'] in interfaces:
+            if interfaces[opts[u'source_interface_name']]['up']:
+                addrs = interfaces[opts[u'source_interface_name']]['inet'] if not opts[u'ipv6'] else\
+                        interfaces[opts[u'source_interface_name']]['inet6']
+                ret[u'source_ip'] = addrs[0]['address']
+                log.debug('Using %s as source IP address', ret[u'source_ip'])
+            else:
+                log.warning('The interface %s is down so it cannot be used as source to connect to the Master',
+                            opts[u'source_interface_name'])
+        else:
+            log.warning('%s is not a valid interface. Ignoring.', opts[u'source_interface_name'])
+    elif opts[u'source_address']:
+        ret[u'source_ip'] = salt.utils.network.dns_check(
+            opts[u'source_address'],
+            int(opts[u'source_ret_port']),
+            True,
+            opts[u'ipv6'])
+        log.debug('Using %s as source IP address', ret[u'source_ip'])
+    if opts[u'source_ret_port']:
+        ret[u'source_ret_port'] = int(opts[u'source_ret_port'])
+        log.debug('Using %d as source port for the ret server', ret[u'source_ret_port'])
+    if opts[u'source_publish_port']:
+        ret[u'source_publish_port'] = int(opts[u'source_publish_port'])
+        log.debug('Using %d as source port for the master pub', ret[u'source_publish_port'])
     ret[u'master_uri'] = u'tcp://{ip}:{port}'.format(
         ip=ret[u'master_ip'], port=opts[u'master_port'])
+    log.debug('Master URI: %s', ret[u'master_uri'])
 
     return ret
 
@@ -736,8 +766,8 @@ class SMinion(MinionBase):
             if not os.path.isdir(pdir):
                 os.makedirs(pdir, 0o700)
             ptop = os.path.join(pdir, u'top.sls')
-            if self.opts[u'environment'] is not None:
-                penv = self.opts[u'environment']
+            if self.opts[u'saltenv'] is not None:
+                penv = self.opts[u'saltenv']
             else:
                 penv = u'base'
             cache_top = {penv: {self.opts[u'id']: [u'cache']}}
@@ -773,7 +803,7 @@ class SMinion(MinionBase):
             self.opts,
             self.opts[u'grains'],
             self.opts[u'id'],
-            self.opts[u'environment'],
+            self.opts[u'saltenv'],
             pillarenv=self.opts.get(u'pillarenv'),
         ).compile_pillar()
 
@@ -1144,7 +1174,7 @@ class Minion(MinionBase):
                 self.opts,
                 self.opts[u'grains'],
                 self.opts[u'id'],
-                self.opts[u'environment'],
+                self.opts[u'saltenv'],
                 pillarenv=self.opts.get(u'pillarenv')
             ).compile_pillar()
 
@@ -2032,7 +2062,7 @@ class Minion(MinionBase):
                     self.opts,
                     self.opts[u'grains'],
                     self.opts[u'id'],
-                    self.opts[u'environment'],
+                    self.opts[u'saltenv'],
                     pillarenv=self.opts.get(u'pillarenv'),
                 ).compile_pillar()
             except SaltClientError:
@@ -2067,12 +2097,16 @@ class Minion(MinionBase):
             self.schedule.run_job(name)
         elif func == u'disable_job':
             self.schedule.disable_job(name, persist)
+        elif func == u'postpone_job':
+            self.schedule.postpone_job(name, data)
         elif func == u'reload':
             self.schedule.reload(schedule)
         elif func == u'list':
             self.schedule.list(where)
         elif func == u'save_schedule':
             self.schedule.save_schedule()
+        elif func == u'get_next_fire_time':
+            self.schedule.get_next_fire_time(name)
 
     def manage_beacons(self, tag, data):
         '''
@@ -3349,7 +3383,7 @@ class ProxyMinion(Minion):
                 self.opts,
                 self.opts[u'grains'],
                 self.opts[u'id'],
-                saltenv=self.opts[u'environment'],
+                saltenv=self.opts[u'saltenv'],
                 pillarenv=self.opts.get(u'pillarenv'),
             ).compile_pillar()
 
@@ -3391,7 +3425,7 @@ class ProxyMinion(Minion):
         # we can then sync any proxymodules down from the master
         # we do a sync_all here in case proxy code was installed by
         # SPM or was manually placed in /srv/salt/_modules etc.
-        self.functions[u'saltutil.sync_all'](saltenv=self.opts[u'environment'])
+        self.functions[u'saltutil.sync_all'](saltenv=self.opts[u'saltenv'])
 
         # Pull in the utils
         self.utils = salt.loader.utils(self.opts)

@@ -369,7 +369,8 @@ def install(name,
             force_x86=False,
             package_args=None,
             allow_multiple=False,
-            no_progress=False):
+            no_progress=False,
+            execution_timeout=None):
     '''
     Instructs Chocolatey to install a package.
 
@@ -428,6 +429,11 @@ def install(name,
         no_progress
             Do not show download progress percentages. Defaults to False.
 
+        execution_timeout (str):
+        Chocolatey execution timeout value you want to pass to the installation process. Default is None.
+
+            .. versionadded:: Oxygen
+
     Returns:
         str: The output of the ``chocolatey`` command
 
@@ -468,6 +474,8 @@ def install(name,
         cmd.append('--allow-multiple')
     if no_progress:
         cmd.append(_no_progress(__context__))
+    if execution_timeout:
+        cmd.extend(['--execution-timeout', execution_timeout])
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 

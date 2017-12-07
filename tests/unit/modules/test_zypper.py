@@ -669,8 +669,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     '--download-only',
                     'vim'
                 )
@@ -699,8 +699,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     '--download-only',
                     'vim'
                 )
@@ -724,8 +724,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     'patch:SUSE-PATCH-1234'
                 )
                 self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
