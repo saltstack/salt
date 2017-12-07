@@ -49,7 +49,7 @@ def _load_state():
     try:
         with salt.utils.files.fopen(FILENAME, 'r') as pck:
             DETAILS = pickle.load(pck)
-    except IOError:
+    except EOFError:
         DETAILS = {}
         DETAILS['initialized'] = False
         _save_state(DETAILS)
