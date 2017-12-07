@@ -65,6 +65,18 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+
+New (Proxy) Minion Configuration Options
+----------------------------------------
+
+To be able to connect the Minion to the Master using a certain source IP address
+or port, the following options have been added:
+
+- :conf_minion:`source_interface_name`
+- :conf_minion:`source_address`
+- :conf_minion:`source_ret_port`
+- :conf_minion:`source_publish_port`
+
 :conf_minion:`environment` config option renamed to :conf_minion:`saltenv`
 --------------------------------------------------------------------------
 
@@ -83,6 +95,18 @@ used as :conf_minion:`saltenv`.
 If set to ``True``, this option will prevent a minion from allowing the
 ``saltenv`` argument to override the value set in :conf_minion:`saltenv` when
 running states.
+
+Failed Minions for State/Function Orchestration Jobs Added to Changes Dictionary
+--------------------------------------------------------------------------------
+
+For orchestration jobs which run states (or run remote execution functions and
+also use a :ref:`fail function <orchestrate-runner-fail-functions>` to indicate
+success or failure), minions which have ``False`` results were previously
+included as a formatted string in the comment field of the return for that
+orchestration job. This made the failed returns difficult to :ref:`parse
+programatically <orchestrate-runner-parsing-results-programatically>`. The
+failed returns in these cases are now included in the changes dictionary,
+making for much easier parsing.
 
 New Grains
 ----------
@@ -149,7 +173,7 @@ environments (i.e. ``saltenvs``) have been added:
    available as saltenvs.
 
 Additional output modes
-------------------
+-----------------------
 
 The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``terse_id``.
 Just like ``mixed_id``, these use the state ID as name in the highstate output.

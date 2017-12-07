@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Sync custom types to the Master
+The Saltutil runner is used to sync custom types to the Master. See the
+:mod:`saltutil module <salt.modules.saltutil>` for documentation on
+managing updates to minions.
 
 .. versionadded:: 2016.3.0
 '''
