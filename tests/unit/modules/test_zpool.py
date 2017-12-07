@@ -129,7 +129,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         Tests successful return of list function
         '''
         ret = {}
-        ret['stdout'] = "mypool\t111G\t47.4G\t63.6G\t42%\tONLINE\n"
+        ret['stdout'] = "mypool\t1.81T\t714G\t1.11T\t38%\tONLINE"
         ret['stderr'] = ""
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
@@ -137,7 +137,23 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.zpool._check_features',
                       MagicMock(return_value=False)):
             ret = zpool.list_()
-            res = OrderedDict([('mypool', {'alloc': '47.4G', 'cap': '42%', 'free': '63.6G', 'health': 'ONLINE', 'size': '111G'})])
+            res = OrderedDict([('mypool', {'alloc': '714G', 'cap': '38%', 'free': '1.11T', 'health': 'ONLINE', 'size': '1.81T'})])
+            self.assertEqual(res, ret)
+
+    def test_list_parsable(self):
+        '''
+        Tests successful return of list function with parsable output
+        '''
+        ret = {}
+        ret['stdout'] = "mypool\t1992864825344\t767076794368\t1225788030976\t38\tONLINE"
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}), \
+                patch('salt.modules.zpool._check_features',
+                      MagicMock(return_value=False)):
+            ret = zpool.list_()
+            res = OrderedDict([('mypool', {'alloc': 767076794368, 'cap': 38, 'free': 1225788030976, 'health': 'ONLINE', 'size': 1992864825344})])
             self.assertEqual(res, ret)
 
     def test_get(self):
@@ -145,13 +161,41 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         Tests successful return of get function
         '''
         ret = {}
-        ret['stdout'] = "readonly\toff\t-\n"
+        ret['stdout'] = "size\t1.81T\t-\n"
         ret['stderr'] = ""
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
-            ret = zpool.get('mypool', 'readonly')
-            res = OrderedDict([('mypool', OrderedDict([('readonly', 'off')]))])
+            ret = zpool.get('mypool', 'size')
+            res = OrderedDict([('mypool', OrderedDict([('size', '1.81T')]))])
+            self.assertEqual(res, ret)
+
+    def test_get_parsable(self):
+        '''
+        Tests successful return of get function with parsable output
+        '''
+        ret = {}
+        ret['stdout'] = "size\t1992864825344\t-\n"
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+            ret = zpool.get('mypool', 'size')
+            res = OrderedDict([('mypool', OrderedDict([('size', 1992864825344)]))])
+            self.assertEqual(res, ret)
+
+    def test_get_whitespace(self):
+        '''
+        Tests successful return of get function with a string with whitespaces
+        '''
+        ret = {}
+        ret['stdout'] = "comment\tmy testing pool\t-\n"
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+            ret = zpool.get('mypool', 'comment')
+            res = OrderedDict([('mypool', OrderedDict([('comment', "'my testing pool'")]))])
             self.assertEqual(res, ret)
 
     def test_scrub_start(self):
