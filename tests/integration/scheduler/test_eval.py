@@ -5,6 +5,9 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
+import time
+
+import dateutil.parser as dateutil_parser
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -48,12 +51,12 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           'schedule': {
             'job1': {
               'function': 'test.ping',
-              'when': '11/29/2017 4pm',
+              'when': '11/29/2017 4:00pm',
             }
           }
         }
-        run_time1 = 1512000000 - 1
-        run_time2 = 1512000000
+        run_time2 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        run_time1 = run_time2 - 1
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -66,5 +69,4 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status('job1')
-        log.info('=== ret {0} ==='.format(ret))
         self.assertEqual(ret['_last_run'], run_time2)

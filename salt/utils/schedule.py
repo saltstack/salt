@@ -1050,7 +1050,7 @@ class Schedule(object):
 
         '''
 
-        log.trace('==== evaluating schedule =====')
+        log.trace('==== evaluating schedule now {} ====='.format(now))
 
         def _splay(splaytime):
             '''

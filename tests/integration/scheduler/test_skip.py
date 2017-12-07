@@ -5,6 +5,9 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
+import time
+
+import dateutil.parser as dateutil_parser
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -56,7 +59,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         # Add job to schedule
         self.schedule.opts.update(job)
 
-        run_time = 1512000000
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
         self.schedule.skip_job('job1', {'time': run_time})
 
         # Run 11/29/2017 at 4pm
@@ -65,10 +68,9 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotIn('_last_run', ret)
 
         # Run 11/29/2017 at 5pm
-        run_time = 1512003600
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 5:00pm').timetuple()))
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        log.info('=== ret {0} ==='.format(ret))
         self.assertEqual(ret['_last_run'], run_time)
 
     def test_skip_during_range(self):
@@ -92,13 +94,13 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 2:30pm, will not run during range.
-        run_time = 148045860
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 2:30pm').timetuple()))
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertNotIn('_last_run', ret)
 
         # eval at 3:30pm, will run.
-        run_time = 1480462200
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 3:30pm').timetuple()))
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
