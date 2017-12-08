@@ -65,7 +65,7 @@ def cmd(fun, *args, **kwargs):
         If ``True``, pillar data will be compiled for the master
 
         .. note::
-            To target the master in pillar data, keep in mind that the
+            To target the master in the pillar top file, keep in mind that the
             default ``id`` for the master is ``<hostname>_master``. This can be
             overridden by setting an ``id`` configuration parameter in the
             master config file.
