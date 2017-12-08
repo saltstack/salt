@@ -1304,7 +1304,8 @@ def __main():
     import timeit
 
     def run():
-        ''' Main run code, when this module is run directly
+        '''
+        Main run code, when this module is run directly
         '''
         pkg_list = WinSoftware(user_pkgs=user_pkgs, version_only=version_only)
         print(json.dumps(pkg_list.data, sort_keys=True, indent=4))  # pylint: disable=superfluous-parens
