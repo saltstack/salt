@@ -698,9 +698,9 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(state, '_check_queue', mock):
             self.assertEqual(state.top("reverse_top.sls"), "A")
 
-            mock = MagicMock(side_effect=[False, True, True])
-            with patch.object(state, '_check_pillar', mock):
-                with patch.dict(state.__pillar__, {"_errors": "E"}):
+            mock = MagicMock(side_effect=[['E'], None, None])
+            with patch.object(state, '_get_pillar_errors', mock):
+                with patch.dict(state.__pillar__, {"_errors": ['E']}):
                     self.assertListEqual(state.top("reverse_top.sls"), ret)
 
                 with patch.dict(state.__opts__, {"test": "A"}):
@@ -857,14 +857,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                True),
                                      ["A"])
 
-                mock = MagicMock(side_effect=[False,
-                                              True,
-                                              True,
-                                              True,
-                                              True])
-                with patch.object(state, '_check_pillar', mock):
+                mock = MagicMock(side_effect=[['E', '1'], None, None, None, None])
+                with patch.object(state, '_get_pillar_errors', mock):
                     with patch.dict(state.__context__, {"retcode": 5}):
-                        with patch.dict(state.__pillar__, {"_errors": "E1"}):
+                        with patch.dict(state.__pillar__, {"_errors": ['E', '1']}):
                             self.assertListEqual(state.sls("core,edit.vim dev",
                                                            None,
                                                            None,
@@ -979,3 +975,62 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 MockJson.flag = False
                 with patch('salt.utils.fopen', mock_open()):
                     self.assertTrue(state.pkg(tar_file, 0, "md5"))
+
+    def test_get_pillar_errors_CC(self):
+        '''
+        Test _get_pillar_errors function.
+        CC: External clean, Internal clean
+        :return:
+        '''
+        for int_pillar, ext_pillar in [({'foo': 'bar'}, {'fred': 'baz'}),
+                                       ({'foo': 'bar'}, None),
+                                       ({}, {'fred': 'baz'})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, None),
+                                  ({}, None)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+    def test_get_pillar_errors_EC(self):
+        '''
+        Test _get_pillar_errors function.
+        EC: External erroneous, Internal clean
+        :return:
+        '''
+        errors = ['failure', 'everywhere']
+        for int_pillar, ext_pillar in [({'foo': 'bar'}, {'fred': 'baz', '_errors': errors}),
+                                       ({}, {'fred': 'baz', '_errors': errors})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, errors),
+                                  ({}, errors)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+    def test_get_pillar_errors_EE(self):
+        '''
+        Test _get_pillar_errors function.
+        CC: External erroneous, Internal erroneous
+        :return:
+        '''
+        errors = ['failure', 'everywhere']
+        for int_pillar, ext_pillar in [({'foo': 'bar', '_errors': errors}, {'fred': 'baz', '_errors': errors})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, errors),
+                                  ({}, errors)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+    def test_get_pillar_errors_CE(self):
+        '''
+        Test _get_pillar_errors function.
+        CC: External clean, Internal erroneous
+        :return:
+        '''
+        errors = ['failure', 'everywhere']
+        for int_pillar, ext_pillar in [({'foo': 'bar', '_errors': errors}, {'fred': 'baz'}),
+                                       ({'foo': 'bar', '_errors': errors}, None)]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, errors),
+                                  ({}, errors)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
