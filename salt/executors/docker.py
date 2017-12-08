@@ -1,0 +1,31 @@
+# -*- coding: utf-8 -*-
+'''
+Docker executor module
+
+.. versionadded: Fluorine
+
+Used with the docker proxy minion.
+'''
+from __future__ import absolute_import, unicode_literals
+
+
+DOCKER_MOD_MAP = {
+    'state.sls': 'docker.sls',
+    'state.apply': 'docker.apply',
+    'state.highstate': 'docker.highstate',
+}
+
+
+def execute(opts, data, func, args, kwargs):
+    '''
+    Directly calls the given function with arguments
+    '''
+    if data['fun'] == 'saltutil.find_job':
+        return __executors__['direct_call.execute'](opts, data, func, args, kwargs)
+    if data['fun'] in DOCKER_MOD_MAP:
+        return __executors__['direct_call.execute'](opts, data, __salt__[DOCKER_MOD_MAP[data['fun']]], [opts['proxy']['name']] + args, kwargs)
+    return __salt__['docker.call'](opts['proxy']['name'], data['fun'], *args, **kwargs)
+
+
+def allow_missing_funcs():
+    return True

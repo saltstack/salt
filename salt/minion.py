@@ -1589,8 +1589,9 @@ class Minion(MinionBase):
                     data['arg'],
                     data)
                 minion_instance.functions.pack['__context__']['retcode'] = 0
-
-                executors = data.get('module_executors') or opts.get('module_executors', ['direct_call'])
+                executors = data.get('module_executors') or \
+                            getattr(minion_instance, 'module_executors', []) or \
+                            opts.get('module_executors', ['direct_call'])
                 if isinstance(executors, six.string_types):
                     executors = [executors]
                 elif not isinstance(executors, list) or not executors:
@@ -3597,6 +3598,7 @@ class ProxyMinion(Minion):
             self._running = False
             raise SaltSystemExit(code=-1, msg=errmsg)
 
+        self.module_executors = self.proxy.get('{0}.module_executors'.format(fq_proxyname), lambda: [])()
         proxy_init_fn = self.proxy[fq_proxyname + '.init']
         proxy_init_fn(self.opts)
 
@@ -3747,6 +3749,9 @@ class ProxyMinion(Minion):
                 minion_instance.proxy.reload_modules()
 
                 fq_proxyname = opts['proxy']['proxytype']
+
+                minion_instance.module_executors = minion_instance.proxy.get('{0}.module_executors'.format(fq_proxyname), lambda: [])()
+
                 proxy_init_fn = minion_instance.proxy[fq_proxyname + '.init']
                 proxy_init_fn(opts)
             if not hasattr(minion_instance, 'serial'):
