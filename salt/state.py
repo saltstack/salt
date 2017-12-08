@@ -1747,7 +1747,7 @@ class State(object):
         return ret
 
     @salt.utils.decorators.state.state_output_check
-    @salt.utils.decorators.state.state_output_unificator
+    @salt.utils.decorators.state.state_output_unifier
     def call(self, low, chunks=None, running=None, retries=1):
         '''
         Call a state directly with the low data structure, verify data

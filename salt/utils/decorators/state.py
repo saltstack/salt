@@ -43,7 +43,7 @@ def state_output_check(func):
     return _func
 
 
-def state_output_unificator(func):
+def state_output_unifier(func):
     '''
     While comments as a list are allowed,
     comments needs to be strings for backward compatibility.
