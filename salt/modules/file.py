@@ -4763,7 +4763,7 @@ def check_file_meta(
         if mode is not None and mode != smode:
             changes['mode'] = mode
 
-        if lsattr_cmd:
+        if lsattr_cmd and attrs:
             diff_attrs = _cmp_attrs(name, attrs)
             if (
                 attrs is not None and
