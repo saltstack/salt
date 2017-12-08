@@ -682,11 +682,11 @@ def run(name,
 
     onlyif
         A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
+        passed to the ``onlyif`` option returns a zero exit status
 
     unless
         A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
+        passed to the ``unless`` option returns a non-zero exit status
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -790,13 +790,13 @@ def run(name,
 
         .. versionadded:: 2014.7.0
 
-    use_vt
+    use_vt : False
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
         This is experimental.
 
-    bg
-        If ``True``, run command in background and do not await or deliver it's
+    bg : False
+        If ``True``, run command in background and do not await or deliver its
         results.
 
         .. versionadded:: 2016.3.6
