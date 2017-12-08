@@ -92,15 +92,14 @@ except ImportError:
 # pylint: disable=too-many-instance-attributes
 
 class RegSoftwareInfo(object):
-    """
+    '''
     Retrieve Registry data on a single installed software item or component.
 
     Attribute:
         None
 
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
-
-    """
+    '''
 
     # Variables shared by all instances
     __guid_pattern = re.compile(r'^\{(\w{8})-(\w{4})-(\w{4})-(\w\w)(\w\w)-(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)\}$')
@@ -129,7 +128,9 @@ class RegSoftwareInfo(object):
         __use_32bit_lookup = {True: win32con.KEY_WOW64_32KEY, False: 0}
 
     def __init__(self, key_guid, sid=None, use_32bit=False):
-        """Initialise against a software item or component.
+        '''
+        Initialise against a software item or component.
+
         All software has a unique "Identifer" within the registry. This can be free
         form text/numbers e.g. "MySoftware" or
         GUID e.g. "{0EAF0D8F-C9CF-4350-BD9A-07EC66929E04}"
@@ -140,8 +141,7 @@ class RegSoftwareInfo(object):
             use_32bit (bool):
                 Regisrty location of the Identifer. ``True`` 32 bit registry only
                 meaning fully on 64 bit OS.
-
-        """
+        '''
         self.__reg_key_guid = key_guid  # also called IdentifyingNumber(wmic)
         self.__squid = ''
         self.__reg_products_path = ''
@@ -233,7 +233,8 @@ class RegSoftwareInfo(object):
                 self.__mod_time1970 = int(mod_win_time)
 
     def __squid_to_guid(self, squid):
-        """Squished GUID (SQUID) to GUID.
+        '''
+        Squished GUID (SQUID) to GUID.
 
         A SQUID is a Squished/Compressed version of a GUID to use up less space
         in the registry.
@@ -243,8 +244,7 @@ class RegSoftwareInfo(object):
 
         Returns:
             str: the GUID if a valid SQUID provided.
-
-        """
+        '''
         if not squid:
             return ''
         squid_match = self.__squid_pattern.match(squid)
@@ -262,15 +262,15 @@ class RegSoftwareInfo(object):
 
     @staticmethod
     def __one_equals_true(value):
-        """Test for ``1`` as a number or a string and return ``True`` if it is.
+        '''
+        Test for ``1`` as a number or a string and return ``True`` if it is.
 
         Args:
             value: string or number or None.
 
         Returns:
             bool: ``True`` if 1 otherwise ``False``.
-
-        """
+        '''
         if isinstance(value, six.integer_types) and value == 1:
             return True
         elif (isinstance(value, six.string_types) and
@@ -281,7 +281,8 @@ class RegSoftwareInfo(object):
 
     @staticmethod
     def __reg_query_value(handle, value_name):
-        """Calls RegQueryValueEx
+        '''
+        Calls RegQueryValueEx
 
         If PY2 ensure unicode string and expand REG_EXPAND_SZ before returning
         Remember to catch not found exceptions when calling.
@@ -292,8 +293,7 @@ class RegSoftwareInfo(object):
 
         Returns:
             tuple: type, value
-
-        """
+        '''
         # item_value, item_type = win32api.RegQueryValueEx(self.__reg_uninstall_handle, value_name)
         item_value, item_type = win32api.RegQueryValueEx(handle, value_name)  # pylint: disable=no-member
         if six.PY2 and isinstance(item_value, six.string_types) and not isinstance(item_value, six.text_type):
@@ -309,7 +309,8 @@ class RegSoftwareInfo(object):
 
     @property
     def install_time(self):
-        """Return the install time, or provide an estimate of install time.
+        '''
+        Return the install time, or provide an estimate of install time.
 
         Installers or even self upgrading software must/should update the date
         held within InstallDate field when they change versions. Some installers
@@ -318,8 +319,7 @@ class RegSoftwareInfo(object):
 
         Returns:
             int: Seconds since 1970 UTC.
-
-        """
+        '''
         time1970 = self.__mod_time1970  # time of last resort
         try:
             # pylint: disable=no-member
@@ -341,7 +341,8 @@ class RegSoftwareInfo(object):
         return time1970
 
     def get_install_value(self, value_name, wanted_type=None):
-        """For the uninstall section of the registry return the name value.
+        '''
+        For the uninstall section of the registry return the name value.
 
         Args:
             value_name (str): Registry value name.
@@ -352,8 +353,7 @@ class RegSoftwareInfo(object):
 
         Returns:
             value: Value requested or None if not found.
-
-        """
+        '''
         try:
             item_value, item_type = self.__reg_query_value(self.__reg_uninstall_handle, value_name)
         except pywintypes.error as exc:  # pylint: disable=no-member
@@ -368,19 +368,20 @@ class RegSoftwareInfo(object):
         return item_value
 
     def is_install_true(self, key):
-        """For the uninstall section check if name value is ``1``.
+        '''
+        For the uninstall section check if name value is ``1``.
 
         Args:
             value_name (str): Registry value name.
 
         Returns:
             bool: ``True`` if ``1`` otherwise ``False``.
-
-        """
+        '''
         return self.__one_equals_true(self.get_install_value(key))
 
     def get_product_value(self, value_name, wanted_type=None):
-        """For the product section of the registry return the name value.
+        '''
+        For the product section of the registry return the name value.
 
         Args:
             value_name (str): Registry value name.
@@ -391,8 +392,7 @@ class RegSoftwareInfo(object):
 
         Returns:
             value: Value requested or ``None`` if not found.
-
-        """
+        '''
         if not self.__reg_products_handle:
             return None
         subkey, search_value_name = os.path.split(value_name)
@@ -421,13 +421,13 @@ class RegSoftwareInfo(object):
 
     @property
     def upgrade_code(self):
-        """For installers which follow the Microsoft Installer standard, returns
+        '''
+        For installers which follow the Microsoft Installer standard, returns
         the ``Upgrade code``.
 
         Returns:
             value (str): ``Upgrade code`` GUID for installed software.
-
-        """
+        '''
         if not self.__squid:
             # Must have a valid squid for an upgrade code to exist
             return ''
@@ -452,7 +452,7 @@ class RegSoftwareInfo(object):
                 raise
             squid_upgrade_code_all, _, _, suc_pytime = zip(*win32api.RegEnumKeyEx(uc_handle))  # pylint: disable=no-member
 
-            # Check if we have already scan these upgrade codes before, and also
+            # Check if we have already scanned these upgrade codes before, and also
             # check if they have been updated in the registry since last time we scanned.
             if (have_scan_key in self.__upgrade_code_have_scan and
                     self.__upgrade_code_have_scan[have_scan_key] == (squid_upgrade_code_all, suc_pytime)):
@@ -482,13 +482,13 @@ class RegSoftwareInfo(object):
 
     @property
     def list_patches(self):
-        """For installers which follow the Microsoft Installer standard, returns
+        '''
+        For installers which follow the Microsoft Installer standard, returns
         a list of patches applied.
 
         Returns:
             value (list): Long name of the patch.
-
-        """
+        '''
         if not self.__squid:
             # Must have a valid squid for an upgrade code to exist
             return []
@@ -543,56 +543,62 @@ class RegSoftwareInfo(object):
 
     @property
     def registry_path_text(self):
-        """Returns the uninstall path this object is associated with.
+        '''
+        Returns the uninstall path this object is associated with.
 
         Returns:
             str: <hive>\\<uninstall registry entry>
-        """
+        '''
         return '{0}\\{1}'.format(self.__reg_hive, self.__reg_uninstall_path)
 
     @property
     def registry_path(self):
-        """Returns the uninstall path this object is associated with.
+        '''
+        Returns the uninstall path this object is associated with.
 
         Returns:
             tuple: hive, uninstall registry entry path.
-        """
+        '''
         return (self.__reg_hive, self.__reg_uninstall_path)
 
     @property
     def guid(self):
-        """Return GUID or Key.
+        '''
+        Return GUID or Key.
 
         Returns:
             str: GUID or Key
-        """
+        '''
         return self.__reg_key_guid
 
     @property
     def squid(self):
-        """Return SQUID of the GUID if a valid GUID.
+        '''
+        Return SQUID of the GUID if a valid GUID.
 
         Returns:
             str: GUID
-        """
+        '''
         return self.__squid
 
     @property
     def package_code(self):
-        """Return package code of the software.
+        '''
+        Return package code of the software.
 
         Returns:
             str: GUID
-        """
+        '''
         return self.__squid_to_guid(self.get_product_value('PackageCode'))
 
     @property
     def version_binary(self):
-        """Return version number which is stored in binary format.
+        '''
+        Return version number which is stored in binary format.
 
         Returns:
             str: <major 0-255>.<minior 0-255>.<build 0-65535> or None if not found
-        """
+        '''
         # Under MSI 'Version' is a 'REG_DWORD' which then sets other registry
         # values like DisplayVersion to x.x.x to the same value.
         # However not everyone plays by the rules, so we need to check first.
@@ -632,15 +638,15 @@ class RegSoftwareInfo(object):
 
 
 class WinSoftware(object):
-    """Point in time snapshot of the software and components installed on
+    '''
+    Point in time snapshot of the software and components installed on
     a system.
 
     Attributes:
         None
 
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
-
-    """
+    '''
     __sid_pattern = re.compile(r'^S-\d-\d-\d+$|^S-\d-\d-\d+-\d+-\d+-\d+-\d+$')
     __whitespace_pattern = re.compile(r'^\s*$', flags=re.UNICODE)
     # items we copy out of the uninstall section of the registry without further processing
@@ -666,7 +672,8 @@ class WinSoftware(object):
       ]
 
     def __init__(self, version_only=False, user_pkgs=False, pkg_obj=None):
-        """Point in time snapshot of the software and components installed on
+        '''
+        Point in time snapshot of the software and components installed on
         a system.
 
         Args:
@@ -676,8 +683,7 @@ class WinSoftware(object):
                 If None (default) return default package naming standard and use
                 default version capture methods (``DisplayVersion`` then
                 ``Version``, otherwise ``0.0.0.0``)
-
-        """
+        '''
         self.__pkg_obj = pkg_obj  # must be set before calling get_software_details
         self.__version_only = version_only
         self.__reg_software = {}
@@ -687,44 +693,44 @@ class WinSoftware(object):
 
     @property
     def data(self):
-        """Returns the raw data
+        '''
+        Returns the raw data
 
         Returns:
             dict: contents of the dict are dependant on the parameters passed
                 when the class was initiated.
-
-        """
+        '''
         return self.__reg_software
 
     @property
     def version_only(self):
-        """Returns True if class initiated with ``version_only=True``
+        '''
+        Returns True if class initiated with ``version_only=True``
 
         Returns:
             bool: The value of ``version_only``
-
-        """
+        '''
         return self.__version_only
 
     def __len__(self):
-        """Returns total number of software/components installed.
+        '''
+        Returns total number of software/components installed.
 
         Returns:
             int: total number of software/components installed.
-
-        """
+        '''
         return self.__pkg_cnt
 
     def __getitem__(self, pkg_id):
-        """Returns information on a package.
+        '''
+        Returns information on a package.
 
         Args:
             pkg_id (str): Package Id of the software/component
 
         Returns:
             dict or list: List if ``version_only`` is ``True`` otherwise dict
-
-        """
+        '''
         if pkg_id in self.__reg_software:
             return self.__reg_software[pkg_id]
         else:
@@ -740,12 +746,12 @@ class WinSoftware(object):
         return self
 
     def __next__(self):
-        """Returns next Package Id.
+        '''
+        Returns next Package Id.
 
         Returns:
             str: Package Id
-
-        """
+        '''
         try:
             return self.__iter_list.popleft()
         except IndexError:
@@ -753,16 +759,17 @@ class WinSoftware(object):
             raise StopIteration
 
     def next(self):
-        """Returns next Package Id.
+        '''
+        Returns next Package Id.
 
         Returns:
             str: Package Id
-
-        """
+        '''
         return self.__next__()
 
     def get(self, pkg_id, default_value=None):
-        """Returns information on a package.
+        '''
+        Returns information on a package.
 
         Args:
             pkg_id (str): Package Id of the software/component.
@@ -770,32 +777,33 @@ class WinSoftware(object):
 
         Returns:
             dict or list: List if ``version_only`` is ``True`` otherwise dict
-
-        """
+        '''
         return self.__reg_software.get(pkg_id, default_value)
 
     @staticmethod
     def __oldest_to_latest_version(ver1, ver2):
-        '''Used for sorting version numbers oldest to latest
+        '''
+        Used for sorting version numbers oldest to latest
         '''
         return 1 if LooseVersion(ver1) > LooseVersion(ver2) else -1
 
     @staticmethod
     def __latest_to_oldest_version(ver1, ver2):
-        '''Used for sorting version numbers, latest to oldest
+        '''
+        Used for sorting version numbers, latest to oldest
         '''
         return 1 if LooseVersion(ver1) < LooseVersion(ver2) else -1
 
     def pkg_version_list(self, pkg_id):
-        """Returns information on a package.
+        '''
+        Returns information on a package.
 
         Args:
             pkg_id (str): Package Id of the software/component.
 
         Returns:
             list: List of version numbers installed.
-
-        """
+        '''
         pkg_data = self.__reg_software.get(pkg_id, None)
         if not pkg_data:
             return []
@@ -809,7 +817,8 @@ class WinSoftware(object):
         return sorted(installed_versions, key=cmp_to_key(self.__oldest_to_latest_version))
 
     def pkg_version_latest(self, pkg_id):
-        """Returns a package latest version installed out of all the versions
+        '''
+        Returns a package latest version installed out of all the versions
         currently installed.
 
         Args:
@@ -817,12 +826,12 @@ class WinSoftware(object):
 
         Returns:
             str: Latest/Newest version number installed.
-
-        """
+        '''
         return self.pkg_version_list(pkg_id)[-1]
 
     def pkg_version_oldest(self, pkg_id):
-        """Returns a package oldest version installed out of all the versions
+        '''
+        Returns a package oldest version installed out of all the versions
         currently installed.
 
         Args:
@@ -830,20 +839,20 @@ class WinSoftware(object):
 
         Returns:
             str: Oldest version number installed.
-
-        """
+        '''
         return self.pkg_version_list(pkg_id)[0]
 
     @staticmethod
     def __sid_to_username(sid):
-        """Provided with a valid Windows Security Identifier (SID) and returns a Username
+        '''
+        Provided with a valid Windows Security Identifier (SID) and returns a Username
 
         Args:
             sid (str): Security Identifier (SID).
 
         Returns:
             str: Username in the format of username@realm or username@computer.
-        """
+        '''
         if sid is None or sid == '':
             return ''
         try:
@@ -887,7 +896,8 @@ class WinSoftware(object):
         return user_principal
 
     def __software_to_pkg_id(self, publisher, name, is_component, is_32bit):
-        """Determine the Package ID of a software/component using the
+        '''
+        Determine the Package ID of a software/component using the
         software/component ``publisher``, ``name``, whether its a software or a
         component, and if its 32bit or 64bit archiecture.
 
@@ -899,7 +909,7 @@ class WinSoftware(object):
 
         Returns:
             str: Package Id
-        """
+        '''
         if publisher:
             # remove , and lowercase as , are used as list separators
             pub_lc = publisher.replace(',', '').lower()
@@ -934,7 +944,8 @@ class WinSoftware(object):
         return default_pkg_id
 
     def __version_capture_slp(self, pkg_id, version_binary, version_display, display_name):
-        """This returns the version and where the version string came from, based on instructions
+        '''
+        This returns the version and where the version string came from, based on instructions
         under ``version_capture``, if ``version_capture`` is missing, it defaults to
         value of display-version.
 
@@ -946,7 +957,7 @@ class WinSoftware(object):
 
         Returns:
             str: Package Id
-        """
+        '''
         if self.__pkg_obj and hasattr(self.__pkg_obj, 'version_capture'):
             version_str, src, version_user_str = \
                 self.__pkg_obj.version_capture(pkg_id, version_binary, version_display, display_name)
@@ -977,7 +988,7 @@ class WinSoftware(object):
 
     def __collect_software_info(self, sid, key_software, use_32bit):
         '''
-        update data with the next software found
+        Update data with the next software found
         '''
 
         reg_soft_info = RegSoftwareInfo(key_software, sid, use_32bit)
@@ -1275,12 +1286,11 @@ class WinSoftware(object):
 
 
 def __main():
-    """This module can also be run directly for testing
+    '''This module can also be run directly for testing
         Args:
             detail|list : Provide ``detail`` or version ``list``.
             system|system+user: System installed and System and User installs.
-
-        """
+    '''
     if len(sys.argv) < 3:
         sys.stderr.write('usage: {0} <detail|list> <system|system+user>\n'.format(sys.argv[0]))
         sys.exit(64)
@@ -1294,8 +1304,8 @@ def __main():
     import timeit
 
     def run():
-        """ Main run code, when this module is run directly
-        """
+        ''' Main run code, when this module is run directly
+        '''
         pkg_list = WinSoftware(user_pkgs=user_pkgs, version_only=version_only)
         print(json.dumps(pkg_list.data, sort_keys=True, indent=4))  # pylint: disable=superfluous-parens
         print('Total: {}'.format(len(pkg_list)))  # pylint: disable=superfluous-parens
