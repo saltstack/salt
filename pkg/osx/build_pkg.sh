@@ -29,6 +29,14 @@
 ############################################################################
 
 ############################################################################
+# Make sure the script is launched with sudo
+############################################################################
+if [[ $(id -u) -ne 0 ]]
+    then
+        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+fi
+
+############################################################################
 # Set to Exit on all Errors
 ############################################################################
 trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
@@ -37,6 +45,11 @@ quit_on_error() {
     echo "$(basename $0) caught error on line : $1 command was: $2"
     exit -1
 }
+
+if [ $EUID -ne 0 ]
+  then echo "This script must be run with sudo"
+  exit
+fi
 
 ############################################################################
 # Check passed parameters, set defaults
@@ -96,8 +109,8 @@ mkdir -p $PKGDIR
 ############################################################################
 echo -n -e "\033]0;Build_Pkg: Copy Start Scripts\007"
 
-sudo cp $PKGRESOURCES/scripts/start-*.sh /opt/salt/bin/
-sudo cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
+cp $PKGRESOURCES/scripts/start-*.sh /opt/salt/bin/
+cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
 
 ############################################################################
 # Copy Service Definitions from Salt Repo to the Package Directory
@@ -118,20 +131,20 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaem
 ############################################################################
 echo -n -e "\033]0;Build_Pkg: Trim unneeded files\007"
 
-sudo rm -rdf $PKGDIR/opt/salt/bin/pkg-config
-sudo rm -rdf $PKGDIR/opt/salt/lib/pkgconfig
-sudo rm -rdf $PKGDIR/opt/salt/lib/engines
-sudo rm -rdf $PKGDIR/opt/salt/share/aclocal
-sudo rm -rdf $PKGDIR/opt/salt/share/doc
-sudo rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
+rm -rdf $PKGDIR/opt/salt/bin/pkg-config
+rm -rdf $PKGDIR/opt/salt/lib/pkgconfig
+rm -rdf $PKGDIR/opt/salt/lib/engines
+rm -rdf $PKGDIR/opt/salt/share/aclocal
+rm -rdf $PKGDIR/opt/salt/share/doc
+rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
 if [ "$PYVER" == "2" ]; then
-    sudo rm -rdf $PKGDIR/opt/salt/lib/python2.7/test
+    rm -rdf $PKGDIR/opt/salt/lib/python2.7/test
 else
-    sudo rm -rdf $PKGDIR/opt/salt/lib/python3.5/test
+    rm -rdf $PKGDIR/opt/salt/lib/python3.5/test
 fi
 
 echo -n -e "\033]0;Build_Pkg: Remove compiled python files\007"
-sudo find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
+find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
 
 ############################################################################
 # Copy Config Files from Salt Repo to the Package Directory
