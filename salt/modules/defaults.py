@@ -5,6 +5,7 @@ Module to work with salt formula defaults files
 '''
 
 from __future__ import absolute_import
+import copy
 import json
 import logging
 import os
@@ -121,3 +122,17 @@ def merge(dest, upd):
     instead of directly on the command-line.
     '''
     return dictupdate.update(dest, upd)
+
+
+def deepcopy(source):
+    '''
+    defaults.deepcopy
+        Allows deep copy of objects in formulas.
+
+        By default, Python does not copy objects,
+        it creates bindings between a target and an object.
+
+    It is more typical to use this in a templating language in formulas,
+    instead of directly on the command-line.
+    '''
+    return copy.deepcopy(source)

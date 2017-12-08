@@ -1503,6 +1503,9 @@ def exists(name,
     (e.g., keytabs, private keys, etc.) have been previously satisfied before
     deployment.
 
+    This function does not create the file if it doesn't exist, it will return
+    an error.
+
     name
         Absolute path which must exist
     '''

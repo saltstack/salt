@@ -619,6 +619,30 @@ class VMwareTestCase(ExtendedTestCase):
             call='function'
         )
 
+    def test_remove_snapshot_call(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when trying to call remove_snapshot
+        with anything other than --action or -a.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.remove_snapshot,
+            name=VM_NAME,
+            kwargs={'snapshot_name': 'mySnapshot'},
+            call='function'
+        )
+
+    def test_remove_snapshot_call_no_snapshot_name_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when name is not present in kwargs.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.remove_snapshot,
+            name=VM_NAME,
+            call='action'
+        )
+
     def test_remove_all_snapshots_call(self):
         '''
         Tests that a SaltCloudSystemExit is raised when trying to call remove_all_snapshots

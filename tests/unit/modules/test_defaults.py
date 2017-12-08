@@ -37,3 +37,25 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value={'users': {'root': [0]}})):
             self.assertEqual(defaults.get('core:users:root'),
                              {'users': {'root': [0]}})
+
+    def test_deepcopy(self):
+        '''
+        Test a deep copy of object.
+        '''
+
+        src = {
+            'A': 'A',
+            'B': 'B'
+        }
+
+        dist = defaults.deepcopy(src)
+        dist.update({'C': 'C'})
+
+        result = {
+            'A': 'A',
+            'B': 'B',
+            'C': 'C'
+        }
+
+        self.assertFalse(src == dist)
+        self.assertTrue(dist == result)
