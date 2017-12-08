@@ -227,7 +227,7 @@ def salt_minion():
         logging.basicConfig()
 
 
-def proxy_minion_process(queue, proxy_id=None, standalone=False):
+def proxy_minion_process(queue):
     '''
     Start a proxy minion process
     '''
@@ -261,9 +261,6 @@ def proxy_minion_process(queue, proxy_id=None, standalone=False):
     status = salt.defaults.exitcodes.EX_OK
     try:
         proxyminion = salt.cli.daemons.ProxyMinion()
-        if proxy_id is not None:
-            proxyminion.proxyid = proxy_id
-        proxyminion.standalone = standalone
         proxyminion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
         log.error(u'Proxy Minion failed to start: ', exc_info=True)
@@ -286,6 +283,26 @@ def proxy_minion_process(queue, proxy_id=None, standalone=False):
         queue.put(random_delay)
     else:
         queue.put(0)
+    sys.exit(status)
+
+
+def standalone_proxy_process(proxy_id):
+    restart = False
+    proxyminion = None
+    status = salt.defaults.exitcodes.EX_OK
+    try:
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.proxyid = proxy_id
+        proxyminion.standalone = True
+        proxyminion.start()
+    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        log.error(u'Proxy Minion failed to start: ', exc_info=True)
+        restart = True
+        # status is superfluous since the process will be restarted
+        status = salt.defaults.exitcodes.SALT_KEEPALIVE
+    except SystemExit as exc:
+        restart = False
+        status = exc.code
     sys.exit(status)
 
 

@@ -4,14 +4,15 @@
 from __future__ import absolute_import, print_function
 import sys
 sys.modules['pkg_resources'] = None
+import time
 import multiprocessing
 
 # Import Salt libs
 # We import log ASAP because we NEED to make sure that any logger instance salt
 # instantiates is using salt.log.setup.SaltLoggingClass
 import salt.log.setup
-from salt.cli.salt import SaltCMD
-from salt.scripts import salt_proxy
+import salt.utils.parsers
+from salt.scripts import standalone_proxy_process
 from salt.cli.daemons import ProxyMinion
 from salt.utils.verify import verify_log
 
@@ -20,7 +21,7 @@ from salt.utils.verify import verify_log
 log = salt.log.setup.logging.getLogger(__name__)
 
 
-class StandaloneProxyMinionCMD(SaltCMD):
+class StandaloneProxyMinionCMD(salt.utils.parsers.SaltCMDOptionParser):
     '''
     The execution of a salt-proxy-standalone command happens here
     '''
@@ -55,7 +56,6 @@ class StandaloneProxyMinionCMD(SaltCMD):
         log.debug('Starting a process for each of the targeted:')
         for targeted_minion in preview_target:
             log.debug('Starting process for %s', targeted_minion)
-            process = multiprocessing.Process(target=salt_proxy,
-                                              kwargs={'proxy_id': targeted_minion,
-                                                      'standalone': True})
+            process = multiprocessing.Process(target=standalone_proxy_process,
+                                              args=(targeted_minion,))
             process.start()
