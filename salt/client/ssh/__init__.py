@@ -723,6 +723,7 @@ class Single(object):
             self.thin_dir = kwargs['thin_dir']
         elif self.winrm:
             saltwinshell.set_winvars(self)
+            self.python_env = kwargs.get('ssh_python_env')
         else:
             if user:
                 thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
@@ -782,6 +783,10 @@ class Single(object):
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
         self.shell = salt.client.ssh.shell.gen_shell(opts, **args)
+        if self.winrm:
+            # Determine if Windows client is x86 or AMD64
+            arch, _, _ = self.shell.exec_cmd('powershell $ENV:PROCESSOR_ARCHITECTURE')
+            self.arch = arch.strip()
         self.thin = thin if thin else salt.utils.thin.thin_path(opts['cachedir'])
 
     def __arg_comps(self):
