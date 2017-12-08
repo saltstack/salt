@@ -337,9 +337,7 @@ def salt_proxy(proxy_id=None, standalone=False):
             proxyminion.start()
             return
         process = multiprocessing.Process(target=proxy_minion_process,
-                                          args=(queue,),
-                                          kwargs={'proxy_id': proxy_id,
-                                                  'standalone': True})
+                                          args=(queue,))
         process.start()
         try:
             process.join()
