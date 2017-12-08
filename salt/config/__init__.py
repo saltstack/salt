@@ -615,6 +615,7 @@ VALID_OPTS = {
     'add_proxymodule_to_opts': bool,
 
     'standalone_proxy': bool,
+    'standalone_proxy_wait_time': int,
 
     # Merge pillar data into configuration opts.
     # As multiple proxies can run on the same server, we may need different
@@ -1767,6 +1768,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'default_include': 'proxy.d/*.conf',
 
     'standalone_proxy': False,
+    'standalone_proxy_wait_time': 5,
     'proxy_merge_pillar_in_opts': False,
     'proxy_deep_merge_pillar_in_opts': False,
     'proxy_merge_pillar_in_opts_strategy': 'smart',
