@@ -46,11 +46,6 @@ quit_on_error() {
     exit -1
 }
 
-if [ $EUID -ne 0 ]
-  then echo "This script must be run with sudo"
-  exit
-fi
-
 ############################################################################
 # Check passed parameters, set defaults
 ############################################################################
