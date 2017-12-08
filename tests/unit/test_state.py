@@ -521,7 +521,7 @@ class StateReturnsTestCase(TestCase):
             statedecorators.state_output_check(lambda: data)()
         assert ' The following keys were not present in the state return: name, result, comment' in str(err)
 
-    def test_state_output_unificator_comment_is_not_list(self):
+    def test_state_output_unifier_comment_is_not_list(self):
         '''
         Test for output is unified so the comment is converted to a multi-line string
         :return:
@@ -532,23 +532,23 @@ class StateReturnsTestCase(TestCase):
 
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': None}
         expected = 'data\nin\nthe\nlist'
-        assert statedecorators.state_output_unificator(lambda: data)()['comment'] == expected
+        assert statedecorators.state_output_unifier(lambda: data)()['comment'] == expected
 
-    def test_state_output_unificator_result_converted_to_true(self):
+    def test_state_output_unifier_result_converted_to_true(self):
         '''
         Test for output is unified so the result is converted to True
         :return:
         '''
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'Fantastic'}
-        assert statedecorators.state_output_unificator(lambda: data)()['result'] is True
+        assert statedecorators.state_output_unifier(lambda: data)()['result'] is True
 
-    def test_state_output_unificator_result_converted_to_false(self):
+    def test_state_output_unifier_result_converted_to_false(self):
         '''
         Test for output is unified so the result is converted to False
         :return:
         '''
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': ''}
-        assert statedecorators.state_output_unificator(lambda: data)()['result'] is False
+        assert statedecorators.state_output_unifier(lambda: data)()['result'] is False
 
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
