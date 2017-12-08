@@ -129,9 +129,9 @@ def merge(dest, src, merge_lists=False, in_place=True):
     instead of directly on the command-line.
     '''
     if in_place:
-      merged = dest
+        merged = dest
     else:
-      merged = copy.deepcopy(dest)
+        merged = copy.deepcopy(dest)
     return dictupdate.update(merged, src, merge_lists=merge_lists)
 
 
