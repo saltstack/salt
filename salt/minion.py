@@ -896,8 +896,7 @@ class MinionManager(MinionBase):
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
         if 'standalone_proxy' in opts and opts['standalone_proxy']:
-            # anyway deprecated as of pyzm
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.io_loop = tornado.ioloop.IOLoop.instance()
         else:
             self.io_loop = LOOP_CLASS.current()
         self.process_manager = ProcessManager(name=u'MultiMinionProcessManager')
