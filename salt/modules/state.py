@@ -773,7 +773,7 @@ def request(mods=None,
     .. versionadded:: 2015.5.0
 
     Request that the local admin execute a state run via
-    `salt-call state.run_request`. 
+    `salt-call state.run_request`.
     All arguments match those of state.apply.
 
     CLI Example:
