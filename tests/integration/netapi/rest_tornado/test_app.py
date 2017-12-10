@@ -238,7 +238,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(len(ret), 3)  # make sure we got 3 responses
         self.assertIn('jid', ret[0])  # the first 2 are regular returns
         self.assertIn('jid', ret[1])
-        self.assertIn('Failed to authenticate', ret[2])  # bad auth
+        self.assertIn('Authentication error occurred.', ret[2])  # bad auth
         self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
         self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion']))
 
