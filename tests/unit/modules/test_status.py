@@ -202,3 +202,36 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                     patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=systat)}):
             ret = status.cpustats()
             self.assertDictEqual(ret, m.ret)
+
+    def _set_up_test_cpuinfo_bsd(self):
+        class MockData(object):
+            '''
+            Store mock data
+            '''
+
+        m = MockData()
+        m.ret = {
+          'hw.model': 'Intel(R) Core(TM) i5-7287U CPU @ 3.30GHz',
+          'hw.ncpu': '4',
+        }
+
+        return m
+
+    def test_cpuinfo_freebsd(self):
+        m = self._set_up_test_cpuinfo_bsd()
+        sysctl = 'hw.model:Intel(R) Core(TM) i5-7287U CPU @ 3.30GHz\nhw.ncpu:4'
+
+        with patch.dict(status.__grains__, {'kernel': 'FreeBSD'}):
+            with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=sysctl)}):
+                ret = status.cpuinfo()
+                self.assertDictEqual(ret, m.ret)
+
+    def test_cpuinfo_openbsd(self):
+        m = self._set_up_test_cpuinfo_bsd()
+        sysctl = 'hw.model=Intel(R) Core(TM) i5-7287U CPU @ 3.30GHz\nhw.ncpu=4'
+
+        for bsd in ['NetBSD', 'OpenBSD']:
+            with patch.dict(status.__grains__, {'kernel': bsd}):
+                with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=sysctl)}):
+                    ret = status.cpuinfo()
+                    self.assertDictEqual(ret, m.ret)
