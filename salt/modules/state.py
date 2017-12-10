@@ -773,8 +773,8 @@ def request(mods=None,
     .. versionadded:: 2015.5.0
 
     Request that the local admin execute a state run via
-    `salt-call state.run_request`
-    All arguments match state.apply
+    `salt-call state.run_request`. 
+    All arguments match those of state.apply.
 
     CLI Example:
 
@@ -916,7 +916,7 @@ def highstate(test=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.highstate test pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -1088,7 +1088,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.sls test pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override existing Pillar values set via
