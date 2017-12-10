@@ -893,10 +893,12 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts[u'acceptance_wait_time_max']
         self.minions = []
         self.jid_queue = []
-
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
-        self.io_loop = LOOP_CLASS.current()
+        if 'standalone_proxy' in opts and opts['standalone_proxy']:
+            self.io_loop = tornado.ioloop.IOLoop.instance()
+        else:
+            self.io_loop = LOOP_CLASS.current()
         self.process_manager = ProcessManager(name=u'MultiMinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, async=True)
 
@@ -2039,8 +2041,9 @@ class Minion(MinionBase):
         log.debug(u'Refreshing modules. Notify=%s', notify)
         self.functions, self.returners, _, self.executors = self._load_modules(force_refresh, notify=notify)
 
-        self.schedule.functions = self.functions
-        self.schedule.returners = self.returners
+        if not self.opts.get('standalone_proxy', False):
+            self.schedule.functions = self.functions
+            self.schedule.returners = self.returners
 
     def beacons_refresh(self):
         '''
@@ -3469,99 +3472,105 @@ class ProxyMinion(Minion):
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
-        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+        if self.opts.get('standalone_proxy', False):
+            log.info('Dont need Beacons for this standalone proxy (%s)', self.opts['id'])
+            self.beacons = {}
+        else:
+            self.beacons = salt.beacons.Beacon(self.opts, self.functions)
         uid = salt.utils.user.get_uid(user=self.opts.get(u'user', None))
         self.proc_dir = get_proc_dir(self.opts[u'cachedir'], uid=uid)
 
-        if self.connected and self.opts[u'pillar']:
-            # The pillar has changed due to the connection to the master.
-            # Reload the functions so that they can use the new pillar data.
-            self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
-            if hasattr(self, u'schedule'):
-                self.schedule.functions = self.functions
-                self.schedule.returners = self.returners
+        if not self.opts.get('standalone_proxy', False):
+            if self.connected and self.opts[u'pillar']:
+                # The pillar has changed due to the connection to the master.
+                # Reload the functions so that they can use the new pillar data.
+                self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+                if hasattr(self, u'schedule'):
+                    self.schedule.functions = self.functions
+                    self.schedule.returners = self.returners
 
-        if not hasattr(self, u'schedule'):
-            self.schedule = salt.utils.schedule.Schedule(
-                self.opts,
-                self.functions,
-                self.returners,
-                cleanup=[master_event(type=u'alive')],
-                proxy=self.proxy)
+            if not hasattr(self, u'schedule'):
+                self.schedule = salt.utils.schedule.Schedule(
+                    self.opts,
+                    self.functions,
+                    self.returners,
+                    cleanup=[master_event(type=u'alive')],
+                    proxy=self.proxy)
 
-        # add default scheduling jobs to the minions scheduler
-        if self.opts[u'mine_enabled'] and u'mine.update' in self.functions:
-            self.schedule.add_job({
-                u'__mine_interval':
-                    {
-                        u'function': u'mine.update',
-                        u'minutes': self.opts[u'mine_interval'],
-                        u'jid_include': True,
-                        u'maxrunning': 2,
-                        u'return_job': self.opts.get(u'mine_return_job', False)
-                    }
-            }, persist=True)
-            log.info(u'Added mine.update to scheduler')
-        else:
-            self.schedule.delete_job(u'__mine_interval', persist=True)
 
-        # add master_alive job if enabled
-        if (self.opts[u'transport'] != u'tcp' and
-                self.opts[u'master_alive_interval'] > 0):
-            self.schedule.add_job({
-                master_event(type=u'alive', master=self.opts[u'master']):
-                    {
-                        u'function': u'status.master',
-                        u'seconds': self.opts[u'master_alive_interval'],
-                        u'jid_include': True,
-                        u'maxrunning': 1,
-                        u'return_job': False,
-                        u'kwargs': {u'master': self.opts[u'master'],
-                                    u'connected': True}
-                    }
-            }, persist=True)
-            if self.opts[u'master_failback'] and \
-                    u'master_list' in self.opts and \
-                    self.opts[u'master'] != self.opts[u'master_list'][0]:
+            # add default scheduling jobs to the minions scheduler
+            if self.opts[u'mine_enabled'] and u'mine.update' in self.functions:
                 self.schedule.add_job({
-                    master_event(type=u'failback'):
+                    u'__mine_interval':
+                        {
+                            u'function': u'mine.update',
+                            u'minutes': self.opts[u'mine_interval'],
+                            u'jid_include': True,
+                            u'maxrunning': 2,
+                            u'return_job': self.opts.get(u'mine_return_job', False)
+                        }
+                }, persist=True)
+                log.info(u'Added mine.update to scheduler')
+            else:
+                self.schedule.delete_job(u'__mine_interval', persist=True)
+
+            # add master_alive job if enabled
+            if (self.opts[u'transport'] != u'tcp' and
+                    self.opts[u'master_alive_interval'] > 0):
+                self.schedule.add_job({
+                    master_event(type=u'alive', master=self.opts[u'master']):
+                        {
+                            u'function': u'status.master',
+                            u'seconds': self.opts[u'master_alive_interval'],
+                            u'jid_include': True,
+                            u'maxrunning': 1,
+                            u'return_job': False,
+                            u'kwargs': {u'master': self.opts[u'master'],
+                                        u'connected': True}
+                        }
+                }, persist=True)
+                if self.opts[u'master_failback'] and \
+                        u'master_list' in self.opts and \
+                        self.opts[u'master'] != self.opts[u'master_list'][0]:
+                    self.schedule.add_job({
+                        master_event(type=u'failback'):
+                        {
+                            u'function': u'status.ping_master',
+                            u'seconds': self.opts[u'master_failback_interval'],
+                            u'jid_include': True,
+                            u'maxrunning': 1,
+                            u'return_job': False,
+                            u'kwargs': {u'master': self.opts[u'master_list'][0]}
+                        }
+                    }, persist=True)
+                else:
+                    self.schedule.delete_job(master_event(type=u'failback'), persist=True)
+            else:
+                self.schedule.delete_job(master_event(type=u'alive', master=self.opts[u'master']), persist=True)
+                self.schedule.delete_job(master_event(type=u'failback'), persist=True)
+
+            # proxy keepalive
+            proxy_alive_fn = fq_proxyname+u'.alive'
+            if (proxy_alive_fn in self.proxy
+                and u'status.proxy_reconnect' in self.functions
+                and self.opts.get(u'proxy_keep_alive', True)):
+                # if `proxy_keep_alive` is either not specified, either set to False does not retry reconnecting
+                self.schedule.add_job({
+                    u'__proxy_keepalive':
                     {
-                        u'function': u'status.ping_master',
-                        u'seconds': self.opts[u'master_failback_interval'],
+                        u'function': u'status.proxy_reconnect',
+                        u'minutes': self.opts.get(u'proxy_keep_alive_interval', 1),  # by default, check once per minute
                         u'jid_include': True,
                         u'maxrunning': 1,
                         u'return_job': False,
-                        u'kwargs': {u'master': self.opts[u'master_list'][0]}
+                        u'kwargs': {
+                            u'proxy_name': fq_proxyname
+                        }
                     }
                 }, persist=True)
+                self.schedule.enable_schedule()
             else:
-                self.schedule.delete_job(master_event(type=u'failback'), persist=True)
-        else:
-            self.schedule.delete_job(master_event(type=u'alive', master=self.opts[u'master']), persist=True)
-            self.schedule.delete_job(master_event(type=u'failback'), persist=True)
-
-        # proxy keepalive
-        proxy_alive_fn = fq_proxyname+u'.alive'
-        if (proxy_alive_fn in self.proxy
-            and u'status.proxy_reconnect' in self.functions
-            and self.opts.get(u'proxy_keep_alive', True)):
-            # if `proxy_keep_alive` is either not specified, either set to False does not retry reconnecting
-            self.schedule.add_job({
-                u'__proxy_keepalive':
-                {
-                    u'function': u'status.proxy_reconnect',
-                    u'minutes': self.opts.get(u'proxy_keep_alive_interval', 1),  # by default, check once per minute
-                    u'jid_include': True,
-                    u'maxrunning': 1,
-                    u'return_job': False,
-                    u'kwargs': {
-                        u'proxy_name': fq_proxyname
-                    }
-                }
-            }, persist=True)
-            self.schedule.enable_schedule()
-        else:
-            self.schedule.delete_job(u'__proxy_keepalive', persist=True)
+                self.schedule.delete_job(u'__proxy_keepalive', persist=True)
 
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions[u'saltutil.sync_grains'](saltenv=u'base')

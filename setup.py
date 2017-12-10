@@ -1112,6 +1112,7 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-syndic',
                         'scripts/salt-unity',
                         'scripts/salt-proxy',
+                        'scripts/salt-standalone-proxy',
                         'scripts/spm'])
         return scripts
 

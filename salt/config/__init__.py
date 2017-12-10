@@ -614,6 +614,9 @@ VALID_OPTS = {
     # False in 2016.3.0
     'add_proxymodule_to_opts': bool,
 
+    'standalone_proxy': bool,
+    'standalone_proxy_wait_time': int,
+
     # Merge pillar data into configuration opts.
     # As multiple proxies can run on the same server, we may need different
     # configuration options for each, while there's one single configuration file.
@@ -1772,6 +1775,8 @@ DEFAULT_PROXY_MINION_OPTS = {
     'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include', 'extension_modules'],
     'default_include': 'proxy.d/*.conf',
 
+    'standalone_proxy': False,
+    'standalone_proxy_wait_time': 5,
     'proxy_merge_pillar_in_opts': False,
     'proxy_deep_merge_pillar_in_opts': False,
     'proxy_merge_pillar_in_opts_strategy': 'smart',

@@ -423,8 +423,13 @@ class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # 
         '''
         super(ProxyMinion, self).prepare()
 
-        if not self.values.proxyid:
+        if not self.values.proxyid and not hasattr(self, 'proxyid'):
             self.error('salt-proxy requires --proxyid')
+
+        if hasattr(self, 'proxyid'):
+            self.config['id'] = self.proxyid
+        if hasattr(self, 'standalone'):
+            self.config['standalone_proxy'] = self.standalone
 
         # Proxies get their ID from the command line.  This may need to change in
         # the future.
@@ -475,13 +480,11 @@ class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # 
                 )
         except OSError as error:
             self.environment_failure(error)
-
         self.setup_logfile_logger()
         verify_log(self.config)
         self.action_log_info('Setting up "{0}"'.format(self.config['id']))
 
         migrations.migrate_paths(self.config)
-
         # Bail out if we find a process running and it matches out pidfile
         if self.check_running():
             self.action_log_info('An instance is already running. Exiting')

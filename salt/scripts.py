@@ -286,7 +286,27 @@ def proxy_minion_process(queue):
     sys.exit(status)
 
 
-def salt_proxy():
+def standalone_proxy_process(proxy_id):
+    restart = False
+    proxyminion = None
+    status = salt.defaults.exitcodes.EX_OK
+    try:
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.proxyid = proxy_id
+        proxyminion.standalone = True
+        proxyminion.start()
+    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        log.error(u'Proxy Minion failed to start: ', exc_info=True)
+        restart = True
+        # status is superfluous since the process will be restarted
+        status = salt.defaults.exitcodes.SALT_KEEPALIVE
+    except SystemExit as exc:
+        restart = False
+        status = exc.code
+    sys.exit(status)
+
+
+def salt_proxy(proxy_id=None, standalone=False):
     '''
     Start a proxy minion.
     '''
@@ -316,7 +336,8 @@ def salt_proxy():
             proxyminion = salt.cli.daemons.ProxyMinion()
             proxyminion.start()
             return
-        process = multiprocessing.Process(target=proxy_minion_process, args=(queue,))
+        process = multiprocessing.Process(target=proxy_minion_process,
+                                          args=(queue,))
         process.start()
         try:
             process.join()
@@ -476,6 +497,19 @@ def salt_main():
     if u'' in sys.path:
         sys.path.remove(u'')
     client = salt.cli.salt.SaltCMD()
+    _install_signal_handlers(client)
+    client.run()
+
+
+def salt_proxy_standalone():
+    '''
+    Publish commands to the salt system from the command line on the
+    master, which are picked to start up and execute the standalone proxy minions.
+    '''
+    import salt.cli.standalone_proxy
+    if u'' in sys.path:
+        sys.path.remove(u'')
+    client = salt.cli.standalone_proxy.StandaloneProxyMinionCMD()
     _install_signal_handlers(client)
     client.run()
 
