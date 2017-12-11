@@ -34,7 +34,7 @@ def symlink(source, link_name):
     '''
     Handle symlinks on Windows with Python < 3.2
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         win32file.CreateSymbolicLink(link_name, source)
     else:
         os.symlink(source, link_name)
@@ -209,6 +209,6 @@ class FileModuleTest(ModuleCase):
     def test_file_line_content(self):
         self.minion_run('file.line', self.myfile, 'Goodbye',
                         mode='insert', after='Hello')
-        with salt.utils.fopen(self.myfile, 'r') as fp:
+        with salt.utils.files.fopen(self.myfile, 'r') as fp:
             content = fp.read()
         self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
