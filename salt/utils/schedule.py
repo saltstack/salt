@@ -431,6 +431,7 @@ class Schedule(object):
         self.functions = functions
         self.standalone = standalone
         self.skip_function = None
+        self.skip_during_range = None
         if isinstance(intervals, dict):
             self.intervals = intervals
         else:
@@ -1075,6 +1076,8 @@ class Schedule(object):
             return
         if 'skip_function' in schedule:
             self.skip_function = schedule['skip_function']
+        if 'skip_during_range' in schedule:
+            self.skip_during_range = schedule['skip_during_range']
         for job, data in six.iteritems(schedule):
             run = False
 
@@ -1453,7 +1456,12 @@ class Schedule(object):
                                      Ignoring job {0}.'.format(job))
                             continue
 
-                if 'skip_during_range' in data:
+                # If there is no job specific skip_during_range available,
+                # grab the global which defaults to None.
+                if 'skip_during_range' not in data:
+                    data['skip_during_range'] = self.skip_during_range
+
+                if 'skip_during_range' in data and data['skip_during_range']:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
                         continue

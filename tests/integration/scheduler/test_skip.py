@@ -104,3 +104,35 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
+
+    def test_skip_during_range_global(self):
+        '''
+        verify that scheduled job is skipped during the specified range
+        '''
+        job = {
+          'schedule': {
+            'skip_during_range': {
+              'start': '2pm',
+              'end': '3pm'
+            },
+            'job1': {
+              'function': 'test.ping',
+              'hours': '1',
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        # eval at 2:30pm, will not run during range.
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 2:30pm').timetuple()))
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertNotIn('_last_run', ret)
+
+        # eval at 3:30pm, will run.
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 3:30pm').timetuple()))
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
