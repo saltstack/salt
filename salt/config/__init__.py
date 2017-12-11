@@ -1463,6 +1463,7 @@ DEFAULT_MINION_OPTS = {
         'static': ['Aliases', 'Links', 'IPAMConfig'],
         'automatic': ['IPAddress', 'Gateway',
                       'GlobalIPv6Address', 'IPv6Gateway'],
+    },
     'discovery': {
         'attempts': 3,
         'pause': 5,
