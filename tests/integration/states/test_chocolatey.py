@@ -50,45 +50,57 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
         target = 'firefox'
         pre_version = '52.0.2'
         upg_version = '57.0.2'
+        log.debug('Making sure {0} is not installed'.format(target))
         self.assertFalse(
             self.run_function('chocolatey.version', [target]))
 
-        ####################################################
-        # Test `chocolatey.installed`
-        ####################################################
-        # Install the package
-        ret = self.run_state(
-            'chocolatey.installed',
-            name=target,
-            version=pre_version)
-        self.assertSaltTrueReturn(ret)
+        try:
+            ####################################################
+            # Test `chocolatey.installed`
+            ####################################################
+            # Install the package
+            log.debug('Testing chocolatey.installed')
+            ret = self.run_state(
+                'chocolatey.installed',
+                name=target,
+                version=pre_version)
+            self.assertSaltTrueReturn(ret)
 
-        # Verify the package is installed
-        ret = self.run_function('chocolatey.version', [target])
-        self.assertEqual(ret, {'Firefox': pre_version})
+            # Verify the package is installed
+            log.debug('Verifying install success')
+            ret = self.run_function('chocolatey.version', [target])
+            self.assertEqual(ret, {'Firefox': [pre_version]})
 
-        ####################################################
-        # Test `chocolatey.upgraded`
-        ####################################################
-        # Upgrade the package
-        ret = self.run_state(
-            'chocolatey.upgraded',
-            name=target,
-            version=upg_version)
-        self.assertSaltTrueReturn(ret)
+            ####################################################
+            # Test `chocolatey.upgraded`
+            ####################################################
+            # Upgrade the package
+            log.debug('Testing chocolatey.upgraded')
+            ret = self.run_state(
+                'chocolatey.upgraded',
+                name=target,
+                version=upg_version)
+            self.assertSaltTrueReturn(ret)
 
-        # Verify the package is upgraded
-        ret = self.run_function('chocolatey.version', [target])
-        self.assertEqual(ret, {'Firefox': upg_version})
+            # Verify the package is upgraded
+            log.debug('Verifying upgrade success')
+            ret = self.run_function('chocolatey.version', [target])
+            self.assertEqual(ret, {'Firefox': [upg_version]})
 
-        ####################################################
-        # Test `chocolatey.uninstalled`
-        ####################################################
-        # uninstall the package
-        ret = self.run_state('chocolatey.uninstalled', name=target)
-        self.assertSaltTrueReturn(ret)
+            ####################################################
+            # Test `chocolatey.uninstalled`
+            ####################################################
+            # uninstall the package
+            log.debug('Testing chocolatey.uninstalled')
+            ret = self.run_state('chocolatey.uninstalled', name=target)
+            self.assertSaltTrueReturn(ret)
 
-        # Verify the package is uninstalled
-        ret = self.run_function('chocolatey.version', [target])
-        self.assertEqual(ret, {})
+            # Verify the package is uninstalled
+            log.debug('Verifying uninstall success')
+            ret = self.run_function('chocolatey.version', [target])
+            self.assertEqual(ret, {})
 
+        finally:
+            # Always uninstall
+            log.debug('Uninstalling {0}'.format(target))
+            self.run_function('chocolatey.uninstall', [target])
