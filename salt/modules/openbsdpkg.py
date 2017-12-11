@@ -4,7 +4,8 @@ Package support for OpenBSD
 
 .. note::
 
-    The package repository is configured on each host using ``/etc/pkg.conf``
+    The package repository is configured on each host using ``/etc/installurl``
+    from OpenBSD 6.1 onwards. Earlier releases relied on ``/etc/pkg.conf``.
 
 .. versionchanged:: 2016.3.5
 
