@@ -14,7 +14,7 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -174,7 +174,7 @@ class MacUserModuleTest(ModuleCase):
 
             # Are the contents of the file correct
             test_data = b'.\xf8\'B\xa0\xd9\xad\x8b\xcd\xcdl'
-            with salt.utils.fopen('/etc/kcpassword', 'rb') as f:
+            with salt.utils.files.fopen('/etc/kcpassword', 'rb') as f:
                 file_data = f.read()
             self.assertEqual(test_data, file_data)
 

@@ -699,7 +699,7 @@ SwapTotal:       4789244 kB'''
             raise Exception("{0} is suppose to be empty. value: {1} \
                             exists".format(key, value))
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_fqdn_return(self):
         '''
         test ip4 and ip6 return values
@@ -710,7 +710,7 @@ SwapTotal:       4789244 kB'''
         self._run_fqdn_tests(net_ip4_mock, net_ip6_mock,
                              ip4_empty=False, ip6_empty=False)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_fqdn6_empty(self):
         '''
         test when ip6 is empty
@@ -721,7 +721,7 @@ SwapTotal:       4789244 kB'''
         self._run_fqdn_tests(net_ip4_mock, net_ip6_mock,
                              ip4_empty=False)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_fqdn4_empty(self):
         '''
         test when ip4 is empty
@@ -732,7 +732,7 @@ SwapTotal:       4789244 kB'''
         self._run_fqdn_tests(net_ip4_mock, net_ip6_mock,
                              ip6_empty=False)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_fqdn_all_empty(self):
         '''
         test when both ip4 and ip6 are empty
@@ -775,7 +775,7 @@ SwapTotal:       4789244 kB'''
                             value = get_fqdn[key]
                             _check_type(key, value, ip4_empty, ip6_empty)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_dns_return(self):
         '''
         test the return for a dns grain. test for issue:

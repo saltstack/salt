@@ -59,7 +59,7 @@ def __clean_tmp(tmp):
     Remove temporary files
     '''
     try:
-        salt.utils.rm_rf(tmp)
+        rm_rf(tmp)
     except Exception:
         pass
 

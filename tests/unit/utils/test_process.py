@@ -18,6 +18,7 @@ from tests.support.mock import (
 )
 
 # Import salt libs
+import salt.utils.platform
 import salt.utils.process
 
 # Import 3rd-party libs
@@ -107,7 +108,7 @@ class TestProcessManager(TestCase):
         process_manager.add_process(self.spin_kill)
         initial_pid = next(six.iterkeys(process_manager._process_map))
         # kill the child
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             os.kill(initial_pid, signal.SIGTERM)
         else:
             os.kill(initial_pid, signal.SIGKILL)

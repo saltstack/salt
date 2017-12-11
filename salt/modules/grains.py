@@ -27,6 +27,7 @@ from salt.ext import six
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.yamldumper
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
@@ -230,7 +231,7 @@ def setvals(grains, destructive=False):
         raise SaltException('setvals grains must be a dictionary.')
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
-        if salt.utils.is_proxy():
+        if salt.utils.platform.is_proxy():
             gfn = os.path.join(
                 os.path.dirname(__opts__['conf_file']),
                 'proxy.d',
@@ -243,7 +244,7 @@ def setvals(grains, destructive=False):
                 'grains'
             )
     elif os.path.isdir(__opts__['conf_file']):
-        if salt.utils.is_proxy():
+        if salt.utils.platform.is_proxy():
             gfn = os.path.join(
                 __opts__['conf_file'],
                 'proxy.d',
@@ -256,7 +257,7 @@ def setvals(grains, destructive=False):
                 'grains'
             )
     else:
-        if salt.utils.is_proxy():
+        if salt.utils.platform.is_proxy():
             gfn = os.path.join(
                 os.path.dirname(__opts__['conf_file']),
                 'proxy.d',

@@ -17,7 +17,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.win_file as win_file
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.platform
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -26,7 +26,7 @@ class WinFileTestCase(TestCase):
         Test cases for salt.modules.win_file
     '''
     FAKE_RET = {'fake': 'ret data'}
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         FAKE_PATH = os.sep.join(['C:', 'path', 'does', 'not', 'exist'])
     else:
         FAKE_PATH = os.sep.join(['path', 'does', 'not', 'exist'])

@@ -19,7 +19,7 @@ from tests.support.paths import TMP
 # Import Salt libs
 import salt.roster
 import salt.config
-import salt.utils
+import salt.utils.files
 
 ROSTER = '''
 localhost:
@@ -53,7 +53,7 @@ class SSHRosterDefaults(TestCase):
             root_dir = os.path.join(tempdir, 'foo', 'bar')
             os.makedirs(root_dir)
             fpath = os.path.join(root_dir, 'config')
-            with salt.utils.fopen(fpath, 'w') as fp_:
+            with salt.utils.files.fopen(fpath, 'w') as fp_:
                 fp_.write(
                     '''
                     roster_defaults:

@@ -20,6 +20,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.platform
+import salt.utils.state
 import salt.utils.thin
 import salt.roster
 import salt.state
@@ -47,7 +48,7 @@ def _set_retcode(ret, highstate=None):
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
-    if not salt.utils.check_state_result(ret, highstate=highstate):
+    if not salt.utils.state.check_result(ret, highstate=highstate):
 
         __context__['retcode'] = 2
 
@@ -357,7 +358,7 @@ def _get_test_value(test=None, **kwargs):
     '''
     ret = True
     if test is None:
-        if salt.utils.test_mode(test=test, **kwargs):
+        if salt.utils.args.test_mode(test=test, **kwargs):
             ret = True
         else:
             ret = __opts__.get('test', None)

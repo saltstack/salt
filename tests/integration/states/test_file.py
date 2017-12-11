@@ -618,7 +618,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         log.debug('Trying with nonexistant destination file')
         do_test()
         log.debug('Trying with destination file already present')
-        with salt.utils.fopen(name, 'w'):
+        with salt.utils.files.fopen(name, 'w'):
             pass
         try:
             do_test(clean=False)

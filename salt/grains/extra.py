@@ -40,7 +40,7 @@ def config():
     if 'conf_file' not in __opts__:
         return {}
     if os.path.isdir(__opts__['conf_file']):
-        if salt.utils.is_proxy():
+        if salt.utils.platform.is_proxy():
             gfn = os.path.join(
                     __opts__['conf_file'],
                     'proxy.d',
@@ -53,7 +53,7 @@ def config():
                     'grains'
                     )
     else:
-        if salt.utils.is_proxy():
+        if salt.utils.platform.is_proxy():
             gfn = os.path.join(
                     os.path.dirname(__opts__['conf_file']),
                     'proxy.d',

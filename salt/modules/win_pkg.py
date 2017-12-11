@@ -1837,4 +1837,4 @@ def compare_versions(ver1='', oper='==', ver2=''):
     if ver2 == 'Not Found':
         ver2 = '0.0.0.0.0'
 
-    return salt.utils.compare_versions(ver1, oper, ver2, ignore_epoch=True)
+    return salt.utils.versions.compare(ver1, oper, ver2, ignore_epoch=True)

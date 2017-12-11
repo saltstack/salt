@@ -2005,8 +2005,8 @@ def line(path, content=None, match=None, mode=None, location=None,
         if __opts__['test'] is False:
             fh_ = None
             try:
-                # Make sure we match the file mode from salt.utils.fopen
-                mode = 'wb' if six.PY2 and salt.utils.is_windows() else 'w'
+                # Make sure we match the file mode from salt.utils.files.fopen
+                mode = 'wb' if six.PY2 and salt.utils.platform.is_windows() else 'w'
                 fh_ = salt.utils.atomicfile.atomic_open(path, mode)
                 fh_.write(body)
             finally:

@@ -368,6 +368,7 @@ import salt.utils.minion
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.user
 import salt.loader
 import salt.minion
 import salt.payload
@@ -961,7 +962,7 @@ class Schedule(object):
 
                 func_globals = {
                     '__jid__': jid,
-                    '__user__': salt.utils.get_user(),
+                    '__user__': salt.utils.user.get_user(),
                     '__tag__': tag,
                     '__jid_event__': weakref.proxy(namespaced_event),
                 }

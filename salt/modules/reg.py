@@ -46,6 +46,7 @@ except ImportError:
 
 # Import Salt libs
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 PY2 = sys.version_info[0] == 2
@@ -76,7 +77,7 @@ def _to_mbcs(vdata):
     Converts unicode to to current users character encoding. Use this for values
     returned by reg functions
     '''
-    return salt.utils.to_unicode(vdata, 'mbcs')
+    return salt.utils.stringutils.to_unicode(vdata, 'mbcs')
 
 
 def _to_unicode(vdata):
@@ -84,7 +85,7 @@ def _to_unicode(vdata):
     Converts from current users character encoding to unicode. Use this for
     parameters being pass to reg functions
     '''
-    return salt.utils.to_unicode(vdata, 'utf-8')
+    return salt.utils.stringutils.to_unicode(vdata, 'utf-8')
 
 
 class Registry(object):  # pylint: disable=R0903
