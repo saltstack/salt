@@ -502,6 +502,9 @@ class LogSettingsParserTests(TestCase):
             opts.update({log_file_name:
                          getattr(self, log_file_name)})
 
+        if log_file_name is 'key_logfile':
+            self.skipTest('salt-key creates log file outside of parse_args.')
+
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
