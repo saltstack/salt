@@ -317,7 +317,6 @@ def version(*names, **kwargs):
         str: version string when a single packge is specified.
         dict: The package name(s) with the installed versions.
 
-
     .. code-block:: cfg
         {['<version>', '<version>', ]} OR
         {'<package name>': ['<version>', '<version>', ]}
