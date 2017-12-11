@@ -1526,6 +1526,54 @@ Returns:
 
 .. jinja_ref:: jinja-in-files
 
+Escape filters
+--------------
+
+.. jinja_ref:: regex_escape
+
+``regex_escape``
+----------------
+
+.. versionadded:: 2017.7.0
+
+Allows escaping of strings so they can be interpreted literally by another function.
+
+Example:
+
+.. code-block:: jinja
+
+regex_escape = {{ 'https://example.com?foo=bar%20baz' | regex_escape }}
+
+will be rendered as:
+
+.. code-block:: text
+
+regex_escape = https\:\/\/example\.com\?foo\=bar\%20baz
+
+Set Theory Filters
+------------------
+
+.. jinja_ref:: unique
+
+``unique``
+----------
+
+.. versionadded:: 2017.7.0
+
+Performs set math using Jinja filters.
+
+Example:
+
+.. code-block:: jinja
+
+unique = {{ ['foo', 'foo', 'bar'] | unique }}
+
+will be rendered as:
+
+.. code-block:: text
+
+unique = ['foo', 'bar']
+
 Jinja in Files
 ==============
 

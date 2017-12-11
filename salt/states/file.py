@@ -758,7 +758,7 @@ def _check_directory_win(name,
     changes = {}
 
     if not os.path.isdir(name):
-        changes = {'directory': 'new'}
+        changes = {name: {'directory': 'new'}}
     else:
         # Check owner
         owner = salt.utils.win_dacl.get_owner(name)
@@ -883,7 +883,11 @@ def _check_dir_meta(name,
     '''
     Check the changes in directory metadata
     '''
-    stats = __salt__['file.stats'](name, None, follow_symlinks)
+    try:
+        stats = __salt__['file.stats'](name, None, follow_symlinks)
+    except CommandExecutionError:
+        stats = {}
+
     changes = {}
     if not stats:
         changes['directory'] = 'new'
@@ -2087,6 +2091,9 @@ def managed(name,
            'name': name,
            'result': True}
 
+    if not name:
+        return _error(ret, 'Destination file name is required')
+
     if mode is not None and salt.utils.is_windows():
         return _error(ret, 'The \'mode\' option is not supported on Windows')
 
@@ -2237,8 +2244,6 @@ def managed(name,
                     ret['comment'] = 'Error while applying template on contents'
                 return ret
 
-    if not name:
-        return _error(ret, 'Must provide name to file.managed')
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
 
@@ -2988,7 +2993,7 @@ def directory(name,
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, dir_mode, follow_symlinks)
                     except CommandExecutionError as exc:
-                        if not exc.strerror.endswith('does not exist'):
+                        if not exc.strerror.startswith('Path not found'):
                             errors.append(exc.strerror)
 
     if clean:
