@@ -536,7 +536,14 @@ def win_verify_env(path, dirs, permissive=False, pki_dir='', skip_extra=False):
 
     # Make sure the file_roots is not set to something unsafe since permissions
     # on that directory are reset
-    if not salt.utils.path.safe_path(path=path):
+
+    # `salt.utils.path.safe_path` will consider anything inside `C:\Windows` to
+    # be unsafe. In some instances the test suite uses
+    # `C:\Windows\Temp\salt-tests-tmpdir\rootdir` as the file_roots. So, we need
+    # to consider anything in `C:\Windows\Temp` to be safe
+    system_root = os.environ.get('SystemRoot', r'C:\Windows')
+    allow_path = '\\'.join([system_root, 'TEMP'])
+    if not salt.utils.path.safe_path(path=path, allow_path=allow_path):
         raise CommandExecutionError(
             '`file_roots` set to a possibly unsafe location: {0}'.format(path)
         )
