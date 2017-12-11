@@ -299,6 +299,9 @@ def cpustats():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: Oxygen
+        Added support for OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
@@ -407,10 +410,28 @@ def cpustats():
 
         return ret
 
+    def openbsd_cpustats():
+        '''
+        openbsd specific implementation of cpustats
+        '''
+        systat = __salt__['cmd.run']('systat -s 2 -B cpu').splitlines()
+        fields = systat[3].split()
+        ret = {}
+        for cpu in systat[4:]:
+            cpu_line = cpu.split()
+            cpu_idx = cpu_line[0]
+            ret[cpu_idx] = {}
+
+            for idx, field in enumerate(fields[1:]):
+                ret[cpu_idx][field] = cpu_line[idx+1]
+
+        return ret
+
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_cpustats,
         'FreeBSD': freebsd_cpustats,
+        'OpenBSD': openbsd_cpustats,
         'SunOS': sunos_cpustats,
         'AIX': aix_cpustats,
     }
