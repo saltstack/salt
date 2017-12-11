@@ -489,7 +489,7 @@ class MinionBase(object):
         self._discover_masters()
 
         # check if master_type was altered from its default
-        if opts[u'master_type'] != u'str' and opts[u'__role'] != u'syndic':
+        if opts['master_type'] != 'str' and opts['__role'] != 'syndic':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 eval_master_func(opts)
@@ -666,8 +666,8 @@ class MinionBase(object):
 
         # single master sign in
         else:
-            if opts[u'random_master']:
-                log.warning(u'random_master is True but there is only one master specified. Ignoring.')
+            if opts['random_master']:
+                log.warning('random_master is True but there is only one master specified. Ignoring.')
             while True:
                 if attempts != 0:
                     # Give up a little time between connection attempts
