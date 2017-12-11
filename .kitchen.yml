@@ -10,6 +10,7 @@
 driver:
   name: docker
   use_sudo: false
+  hostname: salt
   privileged: true
   username: root
   volume:
