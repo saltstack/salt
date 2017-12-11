@@ -1032,19 +1032,46 @@ def nproc():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: Oxygen
+        Added support for Darwin, FreeBSD and OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' status.nproc
     '''
-    if __grains__['kernel'] == 'AIX':
-        return _aix_nproc()
+    def linux_nproc():
+        '''
+        linux specific implementation of nproc
+        '''
+        try:
+            return _number(__salt__['cmd.run']('nproc').strip())
+        except ValueError:
+            return 0
 
-    try:
-        return _number(__salt__['cmd.run']('nproc').strip())
-    except ValueError:
-        return 0
+    def generic_nproc():
+        '''
+        generic implementation of nproc
+        '''
+        ncpu_data = __salt__['sysctl.get']('hw.ncpu')
+        if not ncpu_data:
+            # We need at least one CPU to run
+            return 1
+        else:
+            return _number(ncpu_data)
+
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_nproc,
+        'Darwin': generic_nproc,
+        'FreeBSD': generic_nproc,
+        'OpenBSD': generic_nproc,
+        'AIX': _aix_nproc,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def netstats():
