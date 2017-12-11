@@ -3265,7 +3265,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
     return value
 
 
-def is_provider_configured(opts, provider, required_keys=()):
+def is_provider_configured(opts, provider, required_keys=(), log_message=True):
     '''
     Check and return the first matching and fully configured cloud provider
     configuration.
@@ -3278,13 +3278,14 @@ def is_provider_configured(opts, provider, required_keys=()):
             return False
         for key in required_keys:
             if opts['providers'][alias][driver].get(key, None) is None:
-                # There's at least one require configuration key which is not
-                # set.
-                log.warning(
-                    "The required '{0}' configuration setting is missing "
-                    "from the '{1}' driver, which is configured under the "
-                    "'{2}' alias.".format(key, provider, alias)
-                )
+                if log_message is True:
+                    # There's at least one require configuration key which is not
+                    # set.
+                    log.warning(
+                        "The required '{0}' configuration setting is missing "
+                        "from the '{1}' driver, which is configured under the "
+                        "'{2}' alias.".format(key, provider, alias)
+                    )
                 return False
         # If we reached this far, there's a properly configured provider.
         # Return it!
@@ -3300,15 +3301,16 @@ def is_provider_configured(opts, provider, required_keys=()):
             skip_provider = False
             for key in required_keys:
                 if provider_details.get(key, None) is None:
-                    # This provider does not include all necessary keys,
-                    # continue to next one.
-                    log.warning(
-                        "The required '{0}' configuration setting is "
-                        "missing from the '{1}' driver, which is configured "
-                        "under the '{2}' alias.".format(
-                            key, provider, alias
+                    if log_message is True:
+                        # This provider does not include all necessary keys,
+                        # continue to next one.
+                        log.warning(
+                            "The required '{0}' configuration setting is "
+                            "missing from the '{1}' driver, which is configured "
+                            "under the '{2}' alias.".format(
+                                key, provider, alias
+                            )
                         )
-                    )
                     skip_provider = True
                     break
 
