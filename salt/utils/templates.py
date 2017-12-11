@@ -3,7 +3,7 @@
 Template render systems
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Python libs
 import codecs
@@ -127,7 +127,7 @@ def get_context(template, line, num_lines=5, marker=None):
     if marker:
         buf[error_line_in_context] += marker
 
-    return u'---\n{0}\n---'.format(u'\n'.join(buf))
+    return '---\n{0}\n---'.format('\n'.join(buf))
 
 
 def wrap_tmpl_func(render_str):
@@ -256,7 +256,7 @@ def _get_jinja_error_message(tb_data):
     '''
     try:
         line = _get_jinja_error_slug(tb_data)
-        return u'{0}({1}):\n{3}'.format(*line)
+        return '{0}({1}):\n{3}'.format(*line)
     except IndexError:
         pass
     return None

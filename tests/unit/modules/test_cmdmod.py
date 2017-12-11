@@ -89,13 +89,6 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(LOG_LEVELS, self.mock_loglevels):
             self.assertEqual(cmdmod._check_loglevel(level='quiet'), None)
 
-    def test_check_loglevel_utils_quite(self):
-        '''
-        Tests the return of quiet=True
-        '''
-        with patch.dict(LOG_LEVELS, self.mock_loglevels):
-            self.assertEqual(cmdmod._check_loglevel(quiet=True), None)
-
     def test_parse_env_not_env(self):
         '''
         Tests the return of an env that is not an env
