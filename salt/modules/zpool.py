@@ -16,6 +16,7 @@ import salt.utils.decorators
 import salt.utils.decorators.path
 import salt.utils.path
 from salt.utils.odict import OrderedDict
+from salt.modules.zfs import _conform_value
 
 log = logging.getLogger(__name__)
 
@@ -307,10 +308,10 @@ def iostat(zpool=None, sample_time=0):
     return ret
 
 
-def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
+def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=False):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: 2016.3.0
+    .. versionchanged:: Oxygen
 
     Return information about (all) storage pools
 
@@ -318,6 +319,9 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
         optional name of storage pool
     properties : string
         comma-separated list of properties to list
+    parsable : boolean
+        display numbers in parsable (exact) values
+        .. versionadded:: Oxygen
 
     .. note::
         the 'name' property will always be included, the 'frag' property will get removed if not available
@@ -333,6 +337,9 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
     .. code-block:: bash
 
         salt '*' zpool.list
+        salt '*' zpool.list zpool=tank
+        salt '*' zpool.list 'size,free'
+        salt '*' zpool.list 'size,free' tank
     '''
     ret = OrderedDict()
 
@@ -346,9 +353,10 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
 
     # get zpool list data
     zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} list -H -o {properties}{zpool}'.format(
+    cmd = '{zpool_cmd} list -H -o {properties}{parsable}{zpool}'.format(
         zpool_cmd=zpool_cmd,
         properties=','.join(properties),
+        parsable=' -p' if parsable else '',
         zpool=' {0}'.format(zpool) if zpool else ''
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -362,7 +370,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
         zp_data = {}
 
         for prop in properties:
-            zp_data[prop] = zp[properties.index(prop)]
+            zp_data[prop] = _conform_value(zp[properties.index(prop)])
 
         ret[zp_data['name']] = zp_data
         del ret[zp_data['name']]['name']
@@ -370,9 +378,10 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
     return ret
 
 
-def get(zpool, prop=None, show_source=False):
+def get(zpool, prop=None, show_source=False, parsable=False):
     '''
     .. versionadded:: 2016.3.0
+    .. versionchanged: Oxygen
 
     Retrieves the given list of properties
 
@@ -382,6 +391,9 @@ def get(zpool, prop=None, show_source=False):
         optional name of property to retrieve
     show_source : boolean
         show source of property
+    parsable : boolean
+        display numbers in parsable (exact) values
+        .. versionadded:: Oxygen
 
     CLI Example:
 
@@ -396,9 +408,10 @@ def get(zpool, prop=None, show_source=False):
 
     # get zpool list data
     zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} get -H -o {properties} {prop} {zpool}'.format(
+    cmd = '{zpool_cmd} get -H -o {properties}{parsable} {prop} {zpool}'.format(
         zpool_cmd=zpool_cmd,
         properties=','.join(properties),
+        parsable=' -p' if parsable else '',
         prop=prop if prop else 'all',
         zpool=zpool
     )
@@ -413,7 +426,7 @@ def get(zpool, prop=None, show_source=False):
         zp_data = {}
 
         for prop in properties:
-            zp_data[prop] = zp[properties.index(prop)]
+            zp_data[prop] = _conform_value(zp[properties.index(prop)])
 
         if show_source:
             ret[zpool][zp_data['property']] = zp_data
@@ -445,10 +458,9 @@ def set(zpool, prop, value):
     '''
     ret = {}
     ret[zpool] = {}
-    if isinstance(value, bool):
-        value = 'on' if value else 'off'
-    elif ' ' in value:
-        value = "'{0}'".format(value)
+
+    # make sure value is what zfs expects
+    value = _conform_value(value)
 
     # get zpool list data
     zpool_cmd = _check_zpool()
@@ -484,7 +496,7 @@ def exists(zpool):
         zpool_cmd=zpool_cmd,
         zpool=zpool
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
     if res['retcode'] != 0:
         return False
     return True
@@ -673,34 +685,30 @@ def create(zpool, *vdevs, **kwargs):
     if properties and 'bootsize' in properties:
         createboot = True
 
+    # make sure values are in the format zfs expects
+    if properties:
+        for prop in properties:
+            properties[prop] = _conform_value(properties[prop])
+
+    if filesystem_properties:
+        for prop in filesystem_properties:
+            filesystem_properties[prop] = _conform_value(filesystem_properties[prop])
+
     # apply extra arguments from kwargs
     if force:  # force creation
         cmd = '{0} -f'.format(cmd)
     if createboot:  # create boot paritition
         cmd = '{0} -B'.format(cmd)
     if properties:  # create "-o property=value" pairs
-        optlist = []
+        proplist = []
         for prop in properties:
-            if isinstance(properties[prop], bool):
-                value = 'on' if properties[prop] else 'off'
-            else:
-                if ' ' in properties[prop]:
-                    value = "'{0}'".format(properties[prop])
-                else:
-                    value = properties[prop]
-            optlist.append('-o {0}={1}'.format(prop, value))
-        opts = ' '.join(optlist)
-        cmd = '{0} {1}'.format(cmd, opts)
+            proplist.append('-o {0}={1}'.format(prop, properties[prop]))
+        cmd = '{0} {1}'.format(cmd, ' '.join(proplist))
     if filesystem_properties:  # create "-O property=value" pairs
-        optlist = []
+        fsproplist = []
         for prop in filesystem_properties:
-            if ' ' in filesystem_properties[prop]:
-                value = "'{0}'".format(filesystem_properties[prop])
-            else:
-                value = filesystem_properties[prop]
-            optlist.append('-O {0}={1}'.format(prop, value))
-        opts = ' '.join(optlist)
-        cmd = '{0} {1}'.format(cmd, opts)
+            fsproplist.append('-O {0}={1}'.format(prop, filesystem_properties[prop]))
+        cmd = '{0} {1}'.format(cmd, ' '.join(fsproplist))
     if mountpoint:  # set mountpoint
         cmd = '{0} -m {1}'.format(cmd, mountpoint)
     if altroot:  # set altroot
@@ -938,18 +946,10 @@ def split(zpool, newzpool, **kwargs):
 
     # apply extra arguments from kwargs
     if properties:  # create "-o property=value" pairs
-        optlist = []
+        proplist = []
         for prop in properties:
-            if isinstance(properties[prop], bool):
-                value = 'on' if properties[prop] else 'off'
-            else:
-                if ' ' in properties[prop]:
-                    value = "'{0}'".format(properties[prop])
-                else:
-                    value = properties[prop]
-            optlist.append('-o {0}={1}'.format(prop, value))
-        opts = ' '.join(optlist)
-        cmd = '{0} {1}'.format(cmd, opts)
+            proplist.append('-o {0}={1}'.format(prop, _conform_value(properties[prop])))
+        cmd = '{0} {1}'.format(cmd, ' '.join(proplist))
     if altroot:  # set altroot
         cmd = '{0} -R {1}'.format(cmd, altroot)
     cmd = '{0} {1} {2}'.format(cmd, zpool, newzpool)
