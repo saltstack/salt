@@ -14,6 +14,7 @@ from salt.ext.six.moves import range
 
 
 @skip_if_not_root
+@destructiveTest
 class GroupModuleTest(ModuleCase):
     '''
     Validate the linux group system module
@@ -39,7 +40,6 @@ class GroupModuleTest(ModuleCase):
                 )
             )
 
-    @destructiveTest
     def tearDown(self):
         '''
         Reset to original settings
@@ -57,33 +57,30 @@ class GroupModuleTest(ModuleCase):
             for x in range(size)
         )
 
-    @destructiveTest
     def test_add(self):
         '''
         Test the add group function
         '''
-        #add a new group
+        # add a new group
         self.assertTrue(self.run_function('group.add', [self._group, self._gid]))
         group_info = self.run_function('group.info', [self._group])
         self.assertEqual(group_info['name'], self._group)
         self.assertEqual(group_info['gid'], self._gid)
-        #try adding the group again
+        # try adding the group again
         self.assertFalse(self.run_function('group.add', [self._group, self._gid]))
 
-    @destructiveTest
     def test_delete(self):
         '''
         Test the delete group function
         '''
         self.assertTrue(self.run_function('group.add', [self._group]))
 
-        #correct functionality
+        # correct functionality
         self.assertTrue(self.run_function('group.delete', [self._group]))
 
-        #group does not exist
+        # group does not exist
         self.assertFalse(self.run_function('group.delete', [self._no_group]))
 
-    @destructiveTest
     def test_info(self):
         '''
         Test the info group function
@@ -97,7 +94,6 @@ class GroupModuleTest(ModuleCase):
         self.assertEqual(group_info['gid'], self._gid)
         self.assertIn(self._user, group_info['members'])
 
-    @destructiveTest
     def test_chgid(self):
         '''
         Test the change gid function
@@ -107,7 +103,6 @@ class GroupModuleTest(ModuleCase):
         group_info = self.run_function('group.info', [self._group])
         self.assertEqual(group_info['gid'], self._new_gid)
 
-    @destructiveTest
     def test_adduser(self):
         '''
         Test the add user to group function
@@ -117,14 +112,13 @@ class GroupModuleTest(ModuleCase):
         self.assertTrue(self.run_function('group.adduser', [self._group, self._user]))
         group_info = self.run_function('group.info', [self._group])
         self.assertIn(self._user, group_info['members'])
-        #try add a non existing user
+        # try add a non existing user
         self.assertFalse(self.run_function('group.adduser', [self._group, self._no_user]))
-        #try add a user to non existing group
+        # try add a user to non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._user]))
-        #try add a non existing user to a non existing group
+        # try add a non existing user to a non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._no_user]))
 
-    @destructiveTest
     def test_deluser(self):
         '''
         Test the delete user from group function
@@ -136,7 +130,6 @@ class GroupModuleTest(ModuleCase):
         group_info = self.run_function('group.info', [self._group])
         self.assertNotIn(self._user, group_info['members'])
 
-    @destructiveTest
     def test_members(self):
         '''
         Test the members function
@@ -150,7 +143,6 @@ class GroupModuleTest(ModuleCase):
         self.assertIn(self._user, group_info['members'])
         self.assertIn(self._user1, group_info['members'])
 
-    @destructiveTest
     def test_getent(self):
         '''
         Test the getent function

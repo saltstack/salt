@@ -74,9 +74,9 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
     # Get the current mode so that we can put the file back the way we
     # found it when we're done.
     grail_fs_mode = int(testcase.run_function('file.get_mode', [grail_fs_path]), 8)
-    initial_mode = 504    # 0770 octal
-    new_mode_1 = 384      # 0600 octal
-    new_mode_2 = 420      # 0644 octal
+    initial_mode = 0o770
+    new_mode_1 = 0o600
+    new_mode_2 = 0o644
 
     # Set the initial mode, so we can be assured that when we set the mode
     # to "keep", we're actually changing the permissions of the file to the
@@ -566,6 +566,84 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # Clean Up File
             if os.path.exists('/tmp/sudoers'):
                 os.remove('/tmp/sudoers')
+
+    def test_managed_local_source_with_source_hash(self):
+        '''
+        Make sure that we enforce the source_hash even with local files
+        '''
+        name = os.path.join(TMP, 'local_source_with_source_hash')
+        local_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene33')
+        actual_hash = '567fd840bf1548edc35c48eb66cdd78bfdfcccff'
+        # Reverse the actual hash
+        bad_hash = actual_hash[::-1]
+
+        def remove_file():
+            try:
+                os.remove(name)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise
+
+        def do_test(clean=False):
+            for proto in ('file://', ''):
+                source = proto + local_path
+                log.debug('Trying source %s', source)
+                try:
+                    ret = self.run_state(
+                        'file.managed',
+                        name=name,
+                        source=source,
+                        source_hash='sha1={0}'.format(bad_hash))
+                    self.assertSaltFalseReturn(ret)
+                    ret = ret[next(iter(ret))]
+                    # Shouldn't be any changes
+                    self.assertFalse(ret['changes'])
+                    # Check that we identified a hash mismatch
+                    self.assertIn(
+                        'does not match actual checksum', ret['comment'])
+
+                    ret = self.run_state(
+                        'file.managed',
+                        name=name,
+                        source=source,
+                        source_hash='sha1={0}'.format(actual_hash))
+                    self.assertSaltTrueReturn(ret)
+                finally:
+                    if clean:
+                        remove_file()
+
+        remove_file()
+        log.debug('Trying with nonexistant destination file')
+        do_test()
+        log.debug('Trying with destination file already present')
+        with salt.utils.fopen(name, 'w'):
+            pass
+        try:
+            do_test(clean=False)
+        finally:
+            remove_file()
+
+    def test_managed_local_source_does_not_exist(self):
+        '''
+        Make sure that we exit gracefully when a local source doesn't exist
+        '''
+        name = os.path.join(TMP, 'local_source_does_not_exist')
+        local_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene99')
+
+        for proto in ('file://', ''):
+            source = proto + local_path
+            log.debug('Trying source %s', source)
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=source)
+            self.assertSaltFalseReturn(ret)
+            ret = ret[next(iter(ret))]
+            # Shouldn't be any changes
+            self.assertFalse(ret['changes'])
+            # Check that we identified a hash mismatch
+            self.assertIn(
+                'does not exist', ret['comment'])
 
     def test_directory(self):
         '''

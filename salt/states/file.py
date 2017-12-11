@@ -2091,6 +2091,9 @@ def managed(name,
            'name': name,
            'result': True}
 
+    if not name:
+        return _error(ret, 'Destination file name is required')
+
     if mode is not None and salt.utils.is_windows():
         return _error(ret, 'The \'mode\' option is not supported on Windows')
 
@@ -2241,8 +2244,6 @@ def managed(name,
                     ret['comment'] = 'Error while applying template on contents'
                 return ret
 
-    if not name:
-        return _error(ret, 'Must provide name to file.managed')
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
 

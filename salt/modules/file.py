@@ -3836,8 +3836,15 @@ def get_managed(
         parsed_scheme = urlparsed_source.scheme
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
+        unix_local_source = parsed_scheme in ('file', '')
 
-        if parsed_scheme and parsed_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz':
+        if unix_local_source:
+            sfn = parsed_path
+            if not os.path.exists(sfn):
+                msg = 'Local file source {0} does not exist'.format(sfn)
+                return '', {}, msg
+
+        if parsed_scheme and parsed_scheme.lower() in string.ascii_lowercase:
             parsed_path = ':'.join([parsed_scheme, parsed_path])
             parsed_scheme = 'file'
 
@@ -3845,9 +3852,10 @@ def get_managed(
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        elif not source_hash and parsed_scheme == 'file':
+        elif not source_hash and unix_local_source:
             source_sum = _get_local_file_source_sum(parsed_path)
         elif not source_hash and source.startswith(os.sep):
+            # This should happen on Windows
             source_sum = _get_local_file_source_sum(source)
         else:
             if not skip_verify:
@@ -4746,21 +4754,22 @@ def manage_file(name,
     if source_sum and ('hsum' in source_sum):
         source_sum['hsum'] = source_sum['hsum'].lower()
 
-    if source and not sfn:
-        # File is not present, cache it
-        sfn = __salt__['cp.cache_file'](source, saltenv)
+    if source:
         if not sfn:
-            return _error(
-                ret, 'Source file \'{0}\' not found'.format(source))
-        htype = source_sum.get('hash_type', __opts__['hash_type'])
-        # Recalculate source sum now that file has been cached
-        source_sum = {
-            'hash_type': htype,
-            'hsum': get_hash(sfn, form=htype)
-        }
+            # File is not present, cache it
+            sfn = __salt__['cp.cache_file'](source, saltenv)
+            if not sfn:
+                return _error(
+                    ret, 'Source file \'{0}\' not found'.format(source))
+            htype = source_sum.get('hash_type', __opts__['hash_type'])
+            # Recalculate source sum now that file has been cached
+            source_sum = {
+                'hash_type': htype,
+                'hsum': get_hash(sfn, form=htype)
+            }
+
         if keep_mode:
-            if _urlparse(source).scheme in ('salt', 'file') \
-                    or source.startswith('/'):
+            if _urlparse(source).scheme in ('salt', 'file', ''):
                 try:
                     mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
                 except Exception as exc:
@@ -4790,7 +4799,7 @@ def manage_file(name,
             # source, and we are not skipping checksum verification, then
             # verify that it matches the specified checksum.
             if not skip_verify \
-                    and _urlparse(source).scheme not in ('salt', ''):
+                    and _urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = (
@@ -4978,8 +4987,6 @@ def manage_file(name,
                 makedirs_(name, user=user, group=group, mode=dir_mode)
 
         if source:
-            # It is a new file, set the diff accordingly
-            ret['changes']['diff'] = 'New file'
             # Apply the new file
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
@@ -5003,6 +5010,8 @@ def manage_file(name,
                     )
                     ret['result'] = False
                     return ret
+            # It is a new file, set the diff accordingly
+            ret['changes']['diff'] = 'New file'
             if not os.path.isdir(contain_dir):
                 if makedirs:
                     _set_mode_and_make_dirs(name, dir_mode, mode, user, group)
