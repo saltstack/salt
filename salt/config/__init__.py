@@ -855,7 +855,7 @@ VALID_OPTS = {
 
     'queue_dirs': list,
 
-    # Instructs the minion to ping its master(s) every n number of seconds. Used
+    # Instructs the minion to ping its master(s) every n number of minutes. Used
     # primarily as a mitigation technique against minion disconnects.
     'ping_interval': int,
 
