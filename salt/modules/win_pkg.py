@@ -195,6 +195,7 @@ def upgrade_available(name, **kwargs):
     # Refresh before looking for the latest version available,
     # same default as latest_version
     refresh = salt.utils.is_true(kwargs.get('refresh', True))
+
     # if latest_version returns blank, the latest version is already installed or
     # their is no package definition. This is a salt standard which could be improved.
     return latest_version(name, saltenv=saltenv, refresh=refresh) != ''
@@ -314,7 +315,7 @@ def version(*names, **kwargs):
         refresh (bool): Refresh package metadata. Default ``False``.
 
     Returns:
-        str: version string when a single packge is specified.
+        str: version string when a single package is specified.
         dict: The package name(s) with the installed versions.
 
     .. code-block:: cfg
@@ -330,13 +331,13 @@ def version(*names, **kwargs):
 
     '''
     # Standard is return empty string even if not a valid name
-    # TODO: Look at returning an error accross all platforms with
+    # TODO: Look at returning an error across all platforms with
     # CommandExecutionError(msg,info={'errors': errors })
     # available_pkgs = get_repo_data(saltenv).get('repo')
     # for name in names:
     #    if name in available_pkgs:
     #        ret[name] = installed_pkgs.get(name, '')
-    #
+
     saltenv = kwargs.get('saltenv', 'base')
     installed_pkgs = list_pkgs(saltenv=saltenv, refresh=kwargs.get('refresh', False))
 
@@ -1582,6 +1583,8 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             cached_pkg = cached_pkg.replace('/', '\\')
             cache_path, _ = os.path.split(cached_pkg)
 
+            # os.path.expandvars is not required as we run everything through cmd.exe /s /c
+
             # Get uninstall flags
             uninstall_flags = pkginfo[target].get('uninstall_flags', '')
 
@@ -1592,7 +1595,9 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             # Compute msiexec string
             use_msiexec, msiexec = _get_msiexec(pkginfo[target].get('msiexec', False))
             cmd_shell = os.getenv('ComSpec', '{0}\\system32\\cmd.exe'.format(os.getenv('WINDIR')))
-            # Build Scheduled Task Parameters
+
+            # Build cmd and arguments
+            # cmd and arguments must be separated for use with the task scheduler
             if use_msiexec:
                 # Check if uninstaller is set to {guid}, if not we assume its a remote msi file.
                 # which has already been downloaded.
