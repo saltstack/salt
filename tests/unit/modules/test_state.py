@@ -26,6 +26,7 @@ import salt.utils.odict
 import salt.utils.platform
 import salt.modules.state as state
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.modules.config as config
 from salt.ext import six
 
 
@@ -366,7 +367,15 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     '__cli': 'salt',
                 },
                 '__utils__': utils,
+                '__salt__': {
+                    'config.get': config.get,
+                }
             },
+            config: {
+                '__opts__': {},
+                '__pillar__': {},
+            },
+
         }
 
     def test_running(self):
@@ -938,6 +947,66 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                           'running',
                                                           mock):
                                             self.sub_test_sls()
+
+    def test_get_test_value(self):
+        '''
+        Test _get_test_value when opts contains different values
+        '''
+        test_arg = 'test'
+        with patch.dict(state.__opts__, {test_arg: True}):
+            self.assertTrue(state._get_test_value(test=None),
+                            msg='Failure when {0} is True in __opts__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {test_arg: 'blah'}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} is blah in __opts__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {test_arg: 'true'}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} is true in __opts__'.format(test_arg))
+
+        with patch.dict(config.__opts__, {test_arg: False}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} is False in __opts__'.format(test_arg))
+
+        with patch.dict(config.__opts__, {}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} does not exist in __opts__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {test_arg: None}):
+            self.assertEqual(state._get_test_value(test=None), None,
+                            msg='Failure when {0} is None in __opts__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {test_arg: True}):
+            self.assertTrue(state._get_test_value(test=None),
+                            msg='Failure when {0} is True in __pillar__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {'master': {test_arg: True}}):
+            self.assertTrue(state._get_test_value(test=None),
+                            msg='Failure when {0} is True in master __pillar__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {'master': {test_arg: False}}):
+            with patch.dict(config.__pillar__, {test_arg: True}):
+                self.assertTrue(state._get_test_value(test=None),
+                                msg='Failure when {0} is False in master __pillar__ and True in pillar'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {'master': {test_arg: True}}):
+            with patch.dict(config.__pillar__, {test_arg: False}):
+                self.assertFalse(state._get_test_value(test=None),
+                                 msg='Failure when {0} is True in master __pillar__ and False in pillar'.format(test_arg))
+
+        with patch.dict(state.__opts__, {'test': False}):
+            self.assertFalse(state._get_test_value(test=None),
+                             msg='Failure when {0} is False in __opts__'.format(test_arg))
+
+        with patch.dict(state.__opts__, {'test': False}):
+            with patch.dict(config.__pillar__, {'master': {test_arg: True}}):
+                self.assertTrue(state._get_test_value(test=None),
+                                msg='Failure when {0} is False in __opts__'.format(test_arg))
+
+        with patch.dict(state.__opts__, {}):
+            self.assertTrue(state._get_test_value(test=True),
+                            msg='Failure when test is True as arg')
 
     def sub_test_sls(self):
         '''

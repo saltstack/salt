@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 def get_file(path,
              dest,
-             saltenv=u'base',
+             saltenv='base',
              makedirs=False,
              template=None,
              gzip=None):
@@ -31,83 +31,83 @@ def get_file(path,
         cp.get_file. The argument is only accepted for interface compatibility.
     '''
     if gzip is not None:
-        log.warning(u'The gzip argument to cp.get_file in salt-ssh is '
-                    u'unsupported')
+        log.warning('The gzip argument to cp.get_file in salt-ssh is '
+                    'unsupported')
 
     if template is not None:
         (path, dest) = _render_filenames(path, dest, saltenv, template)
 
-    src = __context__[u'fileclient'].cache_file(
+    src = __context__['fileclient'].cache_file(
         path,
         saltenv,
-        cachedir=os.path.join(u'salt-ssh', __salt__.kwargs[u'id_']))
+        cachedir=os.path.join('salt-ssh', __salt__.kwargs['id_']))
     single = salt.client.ssh.Single(
             __opts__,
-            u'',
+            '',
             **__salt__.kwargs)
     ret = single.shell.send(src, dest, makedirs)
     return not ret[2]
 
 
-def get_dir(path, dest, saltenv=u'base'):
+def get_dir(path, dest, saltenv='base'):
     '''
     Transfer a directory down
     '''
-    src = __context__[u'fileclient'].cache_dir(
+    src = __context__['fileclient'].cache_dir(
         path,
         saltenv,
-        cachedir=os.path.join(u'salt-ssh', __salt__.kwargs[u'id_']))
-    src = u' '.join(src)
+        cachedir=os.path.join('salt-ssh', __salt__.kwargs['id_']))
+    src = ' '.join(src)
     single = salt.client.ssh.Single(
             __opts__,
-            u'',
+            '',
             **__salt__.kwargs)
     ret = single.shell.send(src, dest)
     return not ret[2]
 
 
-def get_url(path, dest, saltenv=u'base'):
+def get_url(path, dest, saltenv='base'):
     '''
     retrieve a URL
     '''
-    src = __context__[u'fileclient'].cache_file(
+    src = __context__['fileclient'].cache_file(
         path,
         saltenv,
-        cachedir=os.path.join(u'salt-ssh', __salt__.kwargs[u'id_']))
+        cachedir=os.path.join('salt-ssh', __salt__.kwargs['id_']))
     single = salt.client.ssh.Single(
             __opts__,
-            u'',
+            '',
             **__salt__.kwargs)
     ret = single.shell.send(src, dest)
     return not ret[2]
 
 
-def list_states(saltenv=u'base'):
+def list_states(saltenv='base'):
     '''
     List all the available state modules in an environment
     '''
-    return __context__[u'fileclient'].list_states(saltenv)
+    return __context__['fileclient'].list_states(saltenv)
 
 
-def list_master(saltenv=u'base', prefix=u''):
+def list_master(saltenv='base', prefix=''):
     '''
     List all of the files stored on the master
     '''
-    return __context__[u'fileclient'].file_list(saltenv, prefix)
+    return __context__['fileclient'].file_list(saltenv, prefix)
 
 
-def list_master_dirs(saltenv=u'base', prefix=u''):
+def list_master_dirs(saltenv='base', prefix=''):
     '''
     List all of the directories stored on the master
     '''
-    return __context__[u'fileclient'].dir_list(saltenv, prefix)
+    return __context__['fileclient'].dir_list(saltenv, prefix)
 
 
-def list_master_symlinks(saltenv=u'base', prefix=u''):
+def list_master_symlinks(saltenv='base', prefix=''):
     '''
     List all of the symlinks stored on the master
     '''
-    return __context__[u'fileclient'].symlink_list(saltenv, prefix)
+    return __context__['fileclient'].symlink_list(saltenv, prefix)
 
 
 def _render_filenames(path, dest, saltenv, template):
@@ -122,16 +122,16 @@ def _render_filenames(path, dest, saltenv, template):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            u'Attempted to render file paths with unavailable engine '
-            u'{0}'.format(template)
+            'Attempted to render file paths with unavailable engine '
+            '{0}'.format(template)
         )
 
     kwargs = {}
-    kwargs[u'salt'] = __salt__
-    kwargs[u'pillar'] = __pillar__
-    kwargs[u'grains'] = __grains__
-    kwargs[u'opts'] = __opts__
-    kwargs[u'saltenv'] = saltenv
+    kwargs['salt'] = __salt__
+    kwargs['pillar'] = __pillar__
+    kwargs['grains'] = __grains__
+    kwargs['opts'] = __opts__
+    kwargs['saltenv'] = saltenv
 
     def _render(contents):
         '''
@@ -140,7 +140,7 @@ def _render_filenames(path, dest, saltenv, template):
         '''
         # write out path to temp file
         tmp_path_fn = salt.utils.files.mkstemp()
-        with salt.utils.files.fopen(tmp_path_fn, u'w+') as fp_:
+        with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
@@ -148,15 +148,15 @@ def _render_filenames(path, dest, saltenv, template):
             **kwargs
         )
         salt.utils.files.safe_rm(tmp_path_fn)
-        if not data[u'result']:
+        if not data['result']:
             # Failed to render the template
             raise CommandExecutionError(
-                u'Failed to render file path with error: {0}'.format(
-                    data[u'data']
+                'Failed to render file path with error: {0}'.format(
+                    data['data']
                 )
             )
         else:
-            return data[u'data']
+            return data['data']
 
     path = _render(path)
     dest = _render(dest)

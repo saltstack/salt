@@ -166,6 +166,98 @@ def _snapper_post(opts, jid, pre_num):
         log.error('Failed to create snapper pre snapshot for jid: {0}'.format(jid))
 
 
+def _get_pause(jid, state_id=None):
+    '''
+    Return the pause information for a given jid
+    '''
+    pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
+    pause_path = os.path.join(pause_dir, jid)
+    if not os.path.exists(pause_dir):
+        try:
+            os.makedirs(pause_dir)
+        except OSError:
+            # File created in the gap
+            pass
+    data = {}
+    if state_id is not None:
+        if state_id not in data:
+            data[state_id] = {}
+    if os.path.exists(pause_path):
+        with salt.utils.files.fopen(pause_path, 'rb') as fp_:
+            data = msgpack.loads(fp_.read())
+    return data, pause_path
+
+
+def get_pauses(jid=None):
+    '''
+    Get a report on all of the currently paused state runs and pause
+    run settings.
+    Optionally send in a jid if you only desire to see a single pause
+    data set.
+    '''
+    ret = {}
+    active = __salt__['saltutil.is_running']('state.*')
+    pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
+    if not os.path.exists(pause_dir):
+        return ret
+    if jid is None:
+        jids = os.listdir(pause_dir)
+    elif isinstance(jid, list):
+        jids = jid
+    else:
+        jids = [str(jid)]
+    for scan_jid in jids:
+        is_active = False
+        for active_data in active:
+            if active_data['jid'] == scan_jid:
+                is_active = True
+        if not is_active:
+            try:
+                pause_path = os.path.join(pause_dir, scan_jid)
+                os.remove(pause_path)
+            except OSError:
+                # Already gone
+                pass
+            continue
+        data, pause_path = _get_pause(scan_jid)
+        ret[scan_jid] = data
+    return ret
+
+
+def soft_kill(jid, state_id=None):
+    '''
+    Set up a state run to die before executing the given state id,
+    this instructs a running state to safely exit at a given
+    state id. This needs to pass in the jid of the running state.
+    If a state_id is not passed then the jid referenced will be safely exited
+    at the begining of the next state run.
+
+    The given state id is the id got a given state execution, so given a state
+    that looks like this:
+
+    .. code-block:: yaml
+
+        vim:
+          pkg.installed: []
+
+    The state_id to pass to `soft_kill` is `vim`
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' state.soft_kill 20171130110407769519
+        salt '*' state.soft_kill 20171130110407769519 vim
+    '''
+    jid = str(jid)
+    if state_id is None:
+        state_id = '__all__'
+    data, pause_path = _get_pause(jid, state_id)
+    data[state_id]['kill'] = True
+    with salt.utils.files.fopen(pause_path, 'wb') as fp_:
+        fp_.write(msgpack.dumps(data))
+
+
 def pause(jid, state_id=None, duration=None):
     '''
     Set up a state id pause, this instructs a running state to pause at a given
@@ -194,20 +286,7 @@ def pause(jid, state_id=None, duration=None):
     jid = str(jid)
     if state_id is None:
         state_id = '__all__'
-    pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
-    pause_path = os.path.join(pause_dir, jid)
-    if not os.path.exists(pause_dir):
-        try:
-            os.makedirs(pause_dir)
-        except OSError:
-            # File created in the gap
-            pass
-    data = {}
-    if os.path.exists(pause_path):
-        with salt.utils.files.fopen(pause_path, 'rb') as fp_:
-            data = msgpack.loads(fp_.read())
-    if state_id not in data:
-        data[state_id] = {}
+    data, pause_path = _get_pause(jid, state_id)
     if duration:
         data[state_id]['duration'] = int(duration)
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
@@ -239,22 +318,11 @@ def resume(jid, state_id=None):
     jid = str(jid)
     if state_id is None:
         state_id = '__all__'
-    pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
-    pause_path = os.path.join(pause_dir, jid)
-    if not os.path.exists(pause_dir):
-        try:
-            os.makedirs(pause_dir)
-        except OSError:
-            # File created in the gap
-            pass
-    data = {}
-    if os.path.exists(pause_path):
-        with salt.utils.files.fopen(pause_path, 'rb') as fp_:
-            data = msgpack.loads(fp_.read())
-    else:
-        return True
+    data, pause_path = _get_pause(jid, state_id)
     if state_id in data:
         data.pop(state_id)
+    if state_id == '__all__':
+        data = {}
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
         fp_.write(msgpack.dumps(data))
 
@@ -428,6 +496,8 @@ def _get_test_value(test=None, **kwargs):
     ret = True
     if test is None:
         if salt.utils.args.test_mode(test=test, **kwargs):
+            ret = True
+        elif __salt__['config.get']('test', omit_opts=True) is True:
             ret = True
         else:
             ret = __opts__.get('test', None)

@@ -266,12 +266,14 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         resolver = kwargs.get('resolver')
 
         parse = urlparse.urlparse(self.opts['master_uri'])
-        host, port = parse.netloc.rsplit(':', 1)
-        self.master_addr = (host, int(port))
+        master_host, master_port = parse.netloc.rsplit(':', 1)
+        self.master_addr = (master_host, int(master_port))
         self._closing = False
         self.message_client = SaltMessageClientPool(self.opts,
-                                                    args=(self.opts, host, int(port),),
-                                                    kwargs={'io_loop': self.io_loop, 'resolver': resolver})
+                                                    args=(self.opts, master_host, int(master_port),),
+                                                    kwargs={'io_loop': self.io_loop, 'resolver': resolver,
+                                                            'source_ip': self.opts.get('source_ip'),
+                                                            'source_port': self.opts.get('source_ret_port')})
 
     def close(self):
         if self._closing:
@@ -501,7 +503,9 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
                     args=(self.opts, self.opts['master_ip'], int(self.auth.creds['publish_port']),),
                     kwargs={'io_loop': self.io_loop,
                             'connect_callback': self.connect_callback,
-                            'disconnect_callback': self.disconnect_callback})
+                            'disconnect_callback': self.disconnect_callback,
+                            'source_ip': self.opts.get('source_ip'),
+                            'source_port': self.opts.get('source_publish_port')})
                 yield self.message_client.connect()  # wait for the client to be connected
                 self.connected = True
         # TODO: better exception handling...
@@ -833,10 +837,13 @@ class SaltMessageClient(object):
     Low-level message sending client
     '''
     def __init__(self, opts, host, port, io_loop=None, resolver=None,
-                 connect_callback=None, disconnect_callback=None):
+                 connect_callback=None, disconnect_callback=None,
+                 source_ip=None, source_port=None):
         self.opts = opts
         self.host = host
         self.port = port
+        self.source_ip = source_ip
+        self.source_port = source_port
         self.connect_callback = connect_callback
         self.disconnect_callback = disconnect_callback
 
@@ -932,9 +939,21 @@ class SaltMessageClient(object):
             if self._closing:
                 break
             try:
-                self._stream = yield self._tcp_client.connect(self.host,
-                                                              self.port,
-                                                              ssl_options=self.opts.get('ssl'))
+                if (self.source_ip or self.source_port) and tornado.version_info >= (4, 5):
+                    ### source_ip and source_port are supported only in Tornado >= 4.5
+                    # See http://www.tornadoweb.org/en/stable/releases/v4.5.0.html
+                    # Otherwise will just ignore these args
+                    self._stream = yield self._tcp_client.connect(self.host,
+                                                                  self.port,
+                                                                  ssl_options=self.opts.get('ssl'),
+                                                                  source_ip=self.source_ip,
+                                                                  source_port=self.source_port)
+                else:
+                    if self.source_ip or self.source_port:
+                        log.warning('If you need a certain source IP/port, consider upgrading Tornado >= 4.5')
+                    self._stream = yield self._tcp_client.connect(self.host,
+                                                                  self.port,
+                                                                  ssl_options=self.opts.get('ssl'))
                 self._connecting_future.set_result(True)
                 break
             except Exception as e:

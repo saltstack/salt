@@ -124,6 +124,15 @@ VALID_OPTS = {
     # master address will not be split into IP and PORT.
     'master_uri_format': str,
 
+    # The following optiosn refer to the Minion only, and they specify
+    # the details of the source address / port to be used when connecting to
+    # the Master. This is useful when dealing withmachines where due to firewall
+    # rules you are restricted to use a certain IP/port combination only.
+    'source_interface_name': str,
+    'source_address': str,
+    'source_ret_port': (six.string_types, int),
+    'source_publish_port': (six.string_types, int),
+
     # The fingerprint of the master key may be specified to increase security. Generate
     # a master fingerprint with `salt-key -F master`
     'master_finger': str,
@@ -1144,6 +1153,9 @@ VALID_OPTS = {
     # part of the extra_minion_data param
     # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
     'pass_to_ext_pillars': (six.string_types, list),
+
+    # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
+    'docker.compare_container_networks': dict,
 }
 
 # default configurations
@@ -1152,6 +1164,10 @@ DEFAULT_MINION_OPTS = {
     'master': 'salt',
     'master_type': 'str',
     'master_uri_format': 'default',
+    'source_interface_name': '',
+    'source_address': '',
+    'source_ret_port': 0,
+    'source_publish_port': 0,
     'master_port': 4506,
     'master_finger': '',
     'master_shuffle': False,
@@ -1419,6 +1435,11 @@ DEFAULT_MINION_OPTS = {
     'extmod_whitelist': {},
     'extmod_blacklist': {},
     'minion_sign_messages': False,
+    'docker.compare_container_networks': {
+        'static': ['Aliases', 'Links', 'IPAMConfig'],
+        'automatic': ['IPAddress', 'Gateway',
+                      'GlobalIPv6Address', 'IPv6Gateway'],
+    },
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -2423,7 +2444,7 @@ def syndic_config(master_config_path,
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         'pki_dir', 'key_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
-        'autosign_file', 'autoreject_file', 'token_dir'
+        'autosign_file', 'autoreject_file', 'token_dir', 'autosign_grains_dir'
     ]
     for config_key in ('log_file', 'key_logfile', 'syndic_log_file'):
         # If this is not a URI and instead a local path
@@ -3603,23 +3624,23 @@ def apply_minion_config(overrides=None,
     if overrides:
         opts.update(overrides)
 
-    if u'environment' in opts:
-        if u'saltenv' in opts:
+    if 'environment' in opts:
+        if 'saltenv' in opts:
             log.warning(
-                u'The \'saltenv\' and \'environment\' minion config options '
-                u'cannot both be used. Ignoring \'environment\' in favor of '
-                u'\'saltenv\'.',
+                'The \'saltenv\' and \'environment\' minion config options '
+                'cannot both be used. Ignoring \'environment\' in favor of '
+                '\'saltenv\'.',
             )
             # Set environment to saltenv in case someone's custom module is
             # refrencing __opts__['environment']
-            opts[u'environment'] = opts[u'saltenv']
+            opts['environment'] = opts['saltenv']
         else:
             log.warning(
-                u'The \'environment\' minion config option has been renamed '
-                u'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
-                opts[u'environment']
+                'The \'environment\' minion config option has been renamed '
+                'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
+                opts['environment']
             )
-            opts[u'saltenv'] = opts[u'environment']
+            opts['saltenv'] = opts['environment']
 
     opts['__cli'] = os.path.basename(sys.argv[0])
 
@@ -3773,23 +3794,23 @@ def apply_master_config(overrides=None, defaults=None):
     if overrides:
         opts.update(overrides)
 
-    if u'environment' in opts:
-        if u'saltenv' in opts:
+    if 'environment' in opts:
+        if 'saltenv' in opts:
             log.warning(
-                u'The \'saltenv\' and \'environment\' master config options '
-                u'cannot both be used. Ignoring \'environment\' in favor of '
-                u'\'saltenv\'.',
+                'The \'saltenv\' and \'environment\' master config options '
+                'cannot both be used. Ignoring \'environment\' in favor of '
+                '\'saltenv\'.',
             )
             # Set environment to saltenv in case someone's custom runner is
             # refrencing __opts__['environment']
-            opts[u'environment'] = opts[u'saltenv']
+            opts['environment'] = opts['saltenv']
         else:
             log.warning(
-                u'The \'environment\' master config option has been renamed '
-                u'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
-                opts[u'environment']
+                'The \'environment\' master config option has been renamed '
+                'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
+                opts['environment']
             )
-            opts[u'saltenv'] = opts[u'environment']
+            opts['saltenv'] = opts['environment']
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
@@ -3833,7 +3854,7 @@ def apply_master_config(overrides=None, defaults=None):
     prepend_root_dirs = [
         'pki_dir', 'key_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir', 'syndic_dir',
-        'sqlite_queue_dir'
+        'sqlite_queue_dir', 'autosign_grains_dir'
     ]
 
     # These can be set to syslog, so, not actual paths on the system

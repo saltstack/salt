@@ -15,7 +15,7 @@ be in the :conf_master:`fileserver_backend` list to enable this backend.
 Fileserver environments are defined using the :conf_master:`file_roots`
 configuration option.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import python libs
 import os
@@ -30,6 +30,7 @@ import salt.utils.gzip_util
 import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.ext import six
 
@@ -229,7 +230,7 @@ def file_hash(load, fnd):
     cache_path = os.path.join(__opts__['cachedir'],
                               'roots/hash',
                               load['saltenv'],
-                              u'{0}.hash.{1}'.format(fnd['rel'],
+                              '{0}.hash.{1}'.format(fnd['rel'],
                               __opts__['hash_type']))
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
@@ -386,7 +387,7 @@ def _file_lists(load, form):
 
         for path in __opts__['file_roots'][load['saltenv']]:
             for root, dirs, files in os.walk(
-                    path,
+                    salt.utils.stringutils.to_unicode(path),
                     followlinks=__opts__['fileserver_followsymlinks']):
                 _add_to(ret['dirs'], path, root, dirs)
                 _add_to(ret['files'], path, root, files)

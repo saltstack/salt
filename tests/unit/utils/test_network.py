@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Import Python libs
 from __future__ import absolute_import
+import logging
 import socket
 
 # Import Salt Testing libs
@@ -10,6 +11,8 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 # Import salt libs
 import salt.utils.network as network
+
+log = logging.getLogger(__name__)
 
 LINUX = '''\
 eth0      Link encap:Ethernet  HWaddr e0:3f:49:85:6a:af
@@ -96,6 +99,11 @@ USER     COMMAND    PID   FD PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
 salt-master python2.781106 35 tcp4  127.0.0.1:61115  127.0.0.1:4506
 '''
 
+IPV4_SUBNETS = {True: ('10.10.0.0/24',),
+                False: ('10.10.0.0', '10.10.0.0/33', 'FOO', 9, '0.9.800.1000/24')}
+IPV6_SUBNETS = {True: ('::1/128',),
+                False: ('::1', '::1/129', 'FOO', 9, 'aj01::feac/64')}
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkTestCase(TestCase):
@@ -159,6 +167,31 @@ class NetworkTestCase(TestCase):
         self.assertFalse(network.is_ipv6('2001:0db8:::0370:7334'))
         self.assertFalse(network.is_ipv6('10.0.1.2'))
         self.assertFalse(network.is_ipv6('2001.0db8.85a3.0000.0000.8a2e.0370.7334'))
+
+    def test_is_subnet(self):
+        for subnet_data in (IPV4_SUBNETS, IPV6_SUBNETS):
+            for item in subnet_data[True]:
+                log.debug('Testing that %s is a valid subnet', item)
+                self.assertTrue(network.is_subnet(item))
+            for item in subnet_data[False]:
+                log.debug('Testing that %s is not a valid subnet', item)
+                self.assertFalse(network.is_subnet(item))
+
+    def test_is_ipv4_subnet(self):
+        for item in IPV4_SUBNETS[True]:
+            log.debug('Testing that %s is a valid subnet', item)
+            self.assertTrue(network.is_ipv4_subnet(item))
+        for item in IPV4_SUBNETS[False]:
+            log.debug('Testing that %s is not a valid subnet', item)
+            self.assertFalse(network.is_ipv4_subnet(item))
+
+    def test_is_ipv6_subnet(self):
+        for item in IPV6_SUBNETS[True]:
+            log.debug('Testing that %s is a valid subnet', item)
+            self.assertTrue(network.is_ipv6_subnet(item))
+        for item in IPV6_SUBNETS[False]:
+            log.debug('Testing that %s is not a valid subnet', item)
+            self.assertFalse(network.is_ipv6_subnet(item))
 
     def test_cidr_to_ipv4_netmask(self):
         self.assertEqual(network.cidr_to_ipv4_netmask(24), '255.255.255.0')

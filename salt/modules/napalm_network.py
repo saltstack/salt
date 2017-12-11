@@ -230,7 +230,7 @@ def _config_logic(napalm_device,
 
 
 @salt.utils.napalm.proxy_napalm_wrap
-def connected(**kwarvs):  # pylint: disable=unused-argument
+def connected(**kwargs):  # pylint: disable=unused-argument
     '''
     Specifies if the connection to the device succeeded.
 
@@ -1178,6 +1178,7 @@ def load_config(filename=None,
                 debug=False,
                 replace=False,
                 inherit_napalm_device=None,
+                saltenv='base',
                 **kwargs):  # pylint: disable=unused-argument
     '''
     Applies configuration changes on the device. It can be loaded from a file or from inline string.
@@ -1193,10 +1194,21 @@ def load_config(filename=None,
     To replace the config, set ``replace`` to ``True``.
 
     filename
-        Path to the file containing the desired configuration. By default is None.
+        Path to the file containing the desired configuration.
+        This can be specified using the absolute path to the file,
+        or using one of the following URL schemes:
+
+        - ``salt://``, to fetch the template from the Salt fileserver.
+        - ``http://`` or ``https://``
+        - ``ftp://``
+        - ``s3://``
+        - ``swift://``
+
+        .. versionchanged:: Oxygen
 
     text
         String containing the desired configuration.
+        This argument is ignored when ``filename`` is specified.
 
     test: False
         Dry run? If set as ``True``, will apply the config, discard and return the changes. Default: ``False``
@@ -1215,6 +1227,11 @@ def load_config(filename=None,
         Load and replace the configuration. Default: ``False``.
 
         .. versionadded:: 2016.11.2
+
+    saltenv: ``base``
+        Specifies the Salt environment name.
+
+        .. versionadded:: Oxygen
 
     :return: a dictionary having the following keys:
 
@@ -1246,7 +1263,6 @@ def load_config(filename=None,
             'diff': '[edit interfaces xe-0/0/5]+   description "Adding a description";'
         }
     '''
-
     fun = 'load_merge_candidate'
     if replace:
         fun = 'load_replace_candidate'
@@ -1259,11 +1275,22 @@ def load_config(filename=None,
         # compare_config, discard / commit
         # which have to be over the same session
         napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
+    if filename:
+        text = __salt__['cp.get_file_str'](filename, saltenv=saltenv)
+        if text is False:
+            # When using salt:// or https://, if the resource is not available,
+            #   it will either raise an exception, or return False.
+            ret = {
+                'result': False,
+                'out': None
+            }
+            ret['comment'] = 'Unable to read from {}. Please specify a valid file or text.'.format(filename)
+            log.error(ret['comment'])
+            return ret
     _loaded = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         fun,
         **{
-            'filename': filename,
             'config': text
         }
     )
