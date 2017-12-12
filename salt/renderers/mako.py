@@ -7,7 +7,7 @@ Mako Renderer for Salt
 from __future__ import absolute_import
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
 

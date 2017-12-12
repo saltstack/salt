@@ -39,8 +39,7 @@ import json
 import logging
 
 # Import third party libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
 import salt.utils.files
 import salt.exceptions
 import yaml
@@ -69,9 +68,9 @@ def _represent_yaml_str(self, node):
     Represent for yaml
     '''
     return self.represent_scalar(node)
-YamlDumper.add_representer(u'tag:yaml.org,2002:str',
+YamlDumper.add_representer('tag:yaml.org,2002:str',
                            _represent_yaml_str)
-YamlDumper.add_representer(u'tag:yaml.org,2002:timestamp',
+YamlDumper.add_representer('tag:yaml.org,2002:timestamp',
                            _represent_yaml_str)
 
 
@@ -80,9 +79,7 @@ def _construct_yaml_str(self, node):
     Construct for yaml
     '''
     return self.construct_scalar(node)
-YamlLoader.add_constructor(u'tag:yaml.org,2002:str',
-                           _construct_yaml_str)
-YamlLoader.add_constructor(u'tag:yaml.org,2002:timestamp',
+YamlLoader.add_constructor('tag:yaml.org,2002:timestamp',
                            _construct_yaml_str)
 
 logging.basicConfig(level=logging.DEBUG)
@@ -212,9 +209,9 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
 
             if (template_manage_result['result']) or \
                     ((__opts__['test']) and (template_manage_result['result'] is not False)):
-                with salt.utils.fopen(template_tmp_file, 'r') as tfp_:
+                with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
                     tpl = tfp_.read()
-                    salt.utils.safe_rm(template_tmp_file)
+                    salt.utils.files.safe_rm(template_tmp_file)
                     try:
                         if isinstance(tpl, six.binary_type):
                             tpl = tpl.decode('utf-8')
@@ -223,7 +220,7 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
                             template_new = yaml.dump(template_parse, Dumper=YamlDumper)
                         else:
                             template_new = jsonutils.dumps(template_parse, indent=2, ensure_ascii=False)
-                        salt.utils.safe_rm(template_tmp_file)
+                        salt.utils.files.safe_rm(template_tmp_file)
                     except ValueError as ex:
                         ret['result'] = False
                         ret['comment'] = 'Error parsing template {0}'.format(ex)

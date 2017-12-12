@@ -48,6 +48,15 @@ from saltstack.com:
 
 .. __: https://repo.saltstack.com/windows/
 
+.. _new-pywinrm:
+
+Self Signed Certificates with WinRM
+===================================
+
+Salt-Cloud can use versions of ``pywinrm<=0.1.1`` or ``pywinrm>=0.2.1``.
+
+For versions greater than `0.2.1`, ``winrm_verify_ssl`` needs to be set to
+`False` if the certificate is self signed and not verifiable.
 
 Firewall Settings
 =================
@@ -179,7 +188,8 @@ The default Windows user is `Administrator`, and the default Windows password
 is blank.
 
 If WinRM is to be used ``use_winrm`` needs to be set to `True`. ``winrm_port``
-can be used to specify a custom port (must be HTTPS listener).
+can be used to specify a custom port (must be HTTPS listener).  And
+``winrm_verify_ssl`` can be set to `False` to use a self signed certificate.
 
 
 Auto-Generated Passwords on EC2

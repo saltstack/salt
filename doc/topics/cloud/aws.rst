@@ -78,6 +78,7 @@ parameters are discussed in more detail below.
       # RHEL         -> ec2-user
       # CentOS       -> ec2-user
       # Ubuntu       -> ubuntu
+      # Debian       -> admin
       #
       ssh_username: ec2-user
 
@@ -470,7 +471,7 @@ EC2 API or AWS Console.
 By default, the spot instance type is set to 'one-time', meaning it will
 be launched and, if it's ever terminated for whatever reason, it will not
 be recreated. If you would like your spot instances to be relaunched after
-a termination (by your or AWS), set the ``type`` to 'persistent'.
+a termination (by you or AWS), set the ``type`` to 'persistent'.
 
 NOTE: Spot instances are a great way to save a bit of money, but you do
 run the risk of losing your spot instances if the current price for the

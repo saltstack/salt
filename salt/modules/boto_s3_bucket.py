@@ -60,7 +60,6 @@ import json
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error
 import salt.utils.compat
-import salt.utils
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 

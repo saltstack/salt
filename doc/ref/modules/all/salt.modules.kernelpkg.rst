@@ -13,7 +13,7 @@ salt.modules.kernelpkg
 Execution Module                             Used for
 ============================================ ========================================
 :py:mod:`~salt.modules.kernelpkg_linux_apt`  Debian/Ubuntu-based distros which use
-                                             ``apt-get(8)`` for package management
+                                             ``apt-get`` for package management
 :py:mod:`~salt.modules.kernelpkg_linux_yum`  RedHat-based distros and derivatives
-                                             using ``yum(8)`` or ``dnf(8)``
+                                             using ``yum`` or ``dnf``
 ============================================ ========================================

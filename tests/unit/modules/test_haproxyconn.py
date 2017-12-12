@@ -161,7 +161,10 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test listing all frontends
         '''
-        self.assertItemsEqual(haproxyconn.list_frontends(), ['frontend-alpha', 'frontend-beta', 'frontend-gamma'])
+        self.assertEqual(
+            sorted(haproxyconn.list_frontends()),
+            sorted(['frontend-alpha', 'frontend-beta', 'frontend-gamma'])
+        )
 
     # 'show_backends' function tests: 1
 
@@ -175,7 +178,10 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test listing of all backends
         '''
-        self.assertItemsEqual(haproxyconn.list_backends(), ['backend-alpha', 'backend-beta', 'backend-gamma'])
+        self.assertEqual(
+            sorted(haproxyconn.list_backends()),
+            sorted(['backend-alpha', 'backend-beta', 'backend-gamma'])
+        )
 
     def test_get_backend(self):
         '''

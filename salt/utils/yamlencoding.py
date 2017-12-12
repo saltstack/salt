@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for adding yaml encoding to the jinja context
+'''
 
 # Import Python libs
 from __future__ import absolute_import
@@ -6,10 +9,10 @@ import io
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
-from salt.utils.decorators import jinja_filter
+from salt.utils.decorators.jinja import jinja_filter
 
 
 @jinja_filter()

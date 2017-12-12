@@ -8,9 +8,13 @@ libvirt with qemu-kvm.
 
 http://www.libvirt.org/
 
-Dependencies
+Host Dependencies
 ============
 * libvirt >= 1.2.18 (older might work)
+
+Salt-Cloud Dependencies
+============
+* libvirt-python
 
 Provider Configuration
 ======================

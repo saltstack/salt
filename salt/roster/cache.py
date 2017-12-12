@@ -98,12 +98,15 @@ from __future__ import absolute_import
 # Python
 import logging
 import re
+import copy
 
 # Salt libs
+import salt.utils.data
 import salt.utils.minions
+import salt.utils.versions
 import salt.cache
 from salt._compat import ipaddress
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -116,7 +119,8 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     The resulting roster can be configured using ``roster_order`` and ``roster_default``.
     '''
     minions = salt.utils.minions.CkMinions(__opts__)
-    minions = minions.check_minions(tgt, tgt_type)
+    _res = minions.check_minions(tgt, tgt_type)
+    minions = _res['minions']
 
     ret = {}
     if not minions:
@@ -129,17 +133,21 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         'host': ('ipv6-private', 'ipv6-global', 'ipv4-private', 'ipv4-public')
     })
     if isinstance(roster_order, (tuple, list)):
-        salt.utils.warn_until('Oxygen',
-                              'Using legacy syntax for roster_order')
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Using legacy syntax for roster_order'
+        )
         roster_order = {
             'host': roster_order
         }
     for config_key, order in roster_order.items():
         for idx, key in enumerate(order):
             if key in ('public', 'private', 'local'):
-                salt.utils.warn_until('Oxygen',
-                                      'roster_order {0} will include IPv6 soon. '
-                                      'Set order to ipv4-{0} if needed.'.format(key))
+                salt.utils.versions.warn_until(
+                    'Fluorine',
+                    'roster_order {0} will include IPv6 soon. '
+                    'Set order to ipv4-{0} if needed.'.format(key)
+                )
                 order[idx] = 'ipv4-' + key
 
     # log.debug(roster_order)
@@ -151,7 +159,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         except LookupError:
             continue
 
-        minion_res = __opts__.get('roster_defaults', {}).copy()
+        minion_res = copy.deepcopy(__opts__.get('roster_defaults', {}))
         for param, order in roster_order.items():
             if not isinstance(order, (list, tuple)):
                 order = [order]
@@ -202,7 +210,7 @@ def _data_lookup(ref, lookup):
 
     res = []
     for data_key in lookup:
-        data = salt.utils.traverse_dict_and_list(ref, data_key, None)
+        data = salt.utils.data.traverse_dict_and_list(ref, data_key, None)
         # log.debug('Fetched {0} in {1}: {2}'.format(data_key, ref, data))
         if data:
             res.append(data)

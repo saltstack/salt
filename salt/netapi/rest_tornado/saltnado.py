@@ -206,7 +206,7 @@ import tornado.web
 import tornado.gen
 from tornado.concurrent import Future
 from zmq.eventloop import ioloop
-import salt.ext.six as six
+from salt.ext import six
 # pylint: enable=import-error
 
 # instantiate the zmq IOLoop (specialized poller)
@@ -214,15 +214,16 @@ ioloop.install()
 
 # salt imports
 import salt.netapi
-import salt.utils
+import salt.utils.args
 import salt.utils.event
+import salt.utils.json
 from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
 from salt.exceptions import EauthAuthenticationError
 
-json = salt.utils.import_json()
+json = salt.utils.json.import_json()
 logger = logging.getLogger()
 
 # The clients rest_cherrypi supports. We want to mimic the interface, but not
@@ -523,8 +524,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
 
         try:
             # Use cgi.parse_header to correctly separate parameters from value
-            header = cgi.parse_header(self.request.headers['Content-Type'])
-            value, parameters = header
+            value, parameters = cgi.parse_header(self.request.headers['Content-Type'])
             return ct_in_map[value](tornado.escape.native_str(data))
         except KeyError:
             self.send_error(406)
@@ -538,7 +538,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         if not self.request.body:
             return
         data = self.deserialize(self.request.body)
-        self.raw_data = copy(data)
+        self.request_payload = copy(data)
 
         if data and 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
@@ -696,15 +696,13 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             }}
         '''
         try:
-            request_payload = self.deserialize(self.request.body)
-
-            if not isinstance(request_payload, dict):
+            if not isinstance(self.request_payload, dict):
                 self.send_error(400)
                 return
 
-            creds = {'username': request_payload['username'],
-                     'password': request_payload['password'],
-                     'eauth': request_payload['eauth'],
+            creds = {'username': self.request_payload['username'],
+                     'password': self.request_payload['password'],
+                     'eauth': self.request_payload['eauth'],
                      }
         # if any of the args are missing, its a bad request
         except KeyError:
@@ -911,10 +909,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
         f_call = self._format_call_run_job_async(chunk)
         # fire a job off
-        try:
-            pub_data = yield self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-        except EauthAuthenticationError:
-            raise tornado.gen.Return('Not authorized to run this job')
+        pub_data = yield self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
         # if the job didn't publish, lets not wait around for nothing
         # TODO: set header??
@@ -1059,9 +1054,13 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         pub_data = self.saltclients['runner'](chunk)
         raise tornado.gen.Return(pub_data)
 
-    # salt.utils.format_call doesn't work for functions having the annotation tornado.gen.coroutine
+    # salt.utils.args.format_call doesn't work for functions having the
+    # annotation tornado.gen.coroutine
     def _format_call_run_job_async(self, chunk):
-        f_call = salt.utils.format_call(salt.client.LocalClient.run_job, chunk, is_class_method=True)
+        f_call = salt.utils.args.format_call(
+            salt.client.LocalClient.run_job,
+            chunk,
+            is_class_method=True)
         f_call.get('kwargs', {})['io_loop'] = tornado.ioloop.IOLoop.current()
         return f_call
 
@@ -1641,7 +1640,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
                 value = value[0]
             arguments[argname] = value
         ret = self.event.fire_event({
-            'post': self.raw_data,
+            'post': self.request_payload,
             'get': arguments,
             # In Tornado >= v4.0.3, the headers come
             # back as an HTTPHeaders instance, which

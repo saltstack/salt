@@ -80,11 +80,12 @@ import logging
 import os
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.pkg
+import salt.utils.platform
+import salt.utils.versions
 from salt.output import nested
-from salt.utils import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -92,12 +93,12 @@ from salt.exceptions import (
 from salt.modules.pkg_resource import _repack_pkgs
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # pylint: disable=invalid-name
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     # pylint: disable=import-error,no-name-in-module,unused-import
     from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
     from salt.exceptions import SaltRenderError
@@ -105,6 +106,7 @@ if salt.utils.is_windows():
     import datetime
     import errno
     import time
+    from functools import cmp_to_key
     # pylint: disable=import-error
     # pylint: enable=unused-import
     from salt.modules.win_pkg import _get_package_info
@@ -172,19 +174,16 @@ def _fulfills_version_spec(versions, oper, desired_version,
     '''
     cmp_func = __salt__.get('pkg.version_cmp')
     # stripping "with_origin" dict wrapper
-    if salt.utils.is_freebsd():
+    if salt.utils.platform.is_freebsd():
         if isinstance(versions, dict) and 'version' in versions:
             versions = versions['version']
     for ver in versions:
-        if oper == '==':
-            if fnmatch.fnmatch(ver, desired_version):
-                return True
-
-        elif salt.utils.compare_versions(ver1=ver,
-                                         oper=oper,
-                                         ver2=desired_version,
-                                         cmp_func=cmp_func,
-                                         ignore_epoch=ignore_epoch):
+        if (oper == '==' and fnmatch.fnmatch(ver, desired_version)) \
+                or salt.utils.versions.compare(ver1=ver,
+                                               oper=oper,
+                                               ver2=desired_version,
+                                               cmp_func=cmp_func,
+                                               ignore_epoch=ignore_epoch):
             return True
     return False
 
@@ -504,20 +503,22 @@ def _find_install_targets(name=None,
     if __grains__['os'] == 'FreeBSD':
         kwargs['with_origin'] = True
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # Windows requires a refresh to establish a pkg db if refresh=True, so
         # add it to the kwargs.
         kwargs['refresh'] = refresh
 
+    resolve_capabilities = kwargs.get('resolve_capabilities', False) and 'pkg.list_provides' in __salt__
     try:
         cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+        cur_prov = resolve_capabilities and __salt__['pkg.list_provides'](**kwargs) or dict()
     except CommandExecutionError as exc:
         return {'name': name,
                 'changes': {},
                 'result': False,
                 'comment': exc.strerror}
 
-    if salt.utils.is_windows() and kwargs.pop('refresh', False):
+    if salt.utils.platform.is_windows() and kwargs.pop('refresh', False):
         # We already refreshed when we called pkg.list_pkgs
         was_refreshed = True
         refresh = False
@@ -541,7 +542,7 @@ def _find_install_targets(name=None,
                                                     else 'sources')}
         to_unpurge = _find_unpurge_targets(desired)
     else:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             pkginfo = _get_package_info(name, saltenv=kwargs['saltenv'])
             if not pkginfo:
                 return {'name': name,
@@ -670,6 +671,9 @@ def _find_install_targets(name=None,
     failed_verify = False
     for key, val in six.iteritems(desired):
         cver = cur_pkgs.get(key, [])
+        if resolve_capabilities and not cver and key in cur_prov:
+            cver = cur_pkgs.get(cur_prov.get(key)[0], [])
+
         # Package not yet installed, so add to targets
         if not cver:
             targets[key] = val
@@ -787,13 +791,15 @@ def _find_install_targets(name=None,
             warnings, was_refreshed)
 
 
-def _verify_install(desired, new_pkgs, ignore_epoch=False):
+def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
     '''
     Determine whether or not the installed packages match what was requested in
     the SLS file.
     '''
     ok = []
     failed = []
+    if not new_caps:
+        new_caps = dict()
     for pkgname, pkgver in desired.items():
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names.
         # Homebrew for Mac OSX does something similar with tap names
@@ -810,6 +816,8 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False):
             cver = new_pkgs.get(pkgname.split('=')[0])
         else:
             cver = new_pkgs.get(pkgname)
+            if not cver and pkgname in new_caps:
+                cver = new_pkgs.get(new_caps.get(pkgname)[0])
 
         if not cver:
             failed.append(pkgname)
@@ -874,6 +882,26 @@ def _nested_output(obj):
     return ret
 
 
+def _resolve_capabilities(pkgs, refresh=False, **kwargs):
+    '''
+    Resolve capabilities in ``pkgs`` and exchange them with real package
+    names, when the result is distinct.
+    This feature can be turned on while setting the paramter
+    ``resolve_capabilities`` to True.
+
+    Return the input dictionary with replaced capability names and as
+    second return value a bool which say if a refresh need to be run.
+
+    In case of ``resolve_capabilities`` is False (disabled) or not
+    supported by the implementation the input is returned unchanged.
+    '''
+    if not pkgs or 'pkg.resolve_capabilities' not in __salt__:
+        return pkgs, refresh
+
+    ret = __salt__['pkg.resolve_capabilities'](pkgs, refresh=refresh, **kwargs)
+    return ret, False
+
+
 def installed(
         name,
         version=None,
@@ -907,6 +935,7 @@ def installed(
         for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
+        :mod:`pkgin <salt.modules.pkgin>`,
         :mod:`win_pkg <salt.modules.win_pkg>`,
         :mod:`yumpkg <salt.modules.yumpkg>`, and
         :mod:`zypper <salt.modules.zypper>`. The version number includes the
@@ -1105,6 +1134,11 @@ def installed(
 
         .. versionadded:: 2014.1.1
 
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+
+        .. versionadded:: Oxygen
+
     :param bool allow_updates:
         Allow the package to be updated outside Salt's control (e.g. auto
         updates on Windows). This means a package on the Minion can have a
@@ -1257,8 +1291,11 @@ def installed(
 
         ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
-        :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
-        and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
+        :mod:`pacman <salt.modules.pacman>`,
+        :mod:`winrepo <salt.modules.win_pkg>`,
+        :mod:`yumpkg <salt.modules.yumpkg>`, and
+        :mod:`zypper <salt.modules.zypper>`,
+        version numbers can be specified
         in the ``pkgs`` argument. For example:
 
         .. code-block:: yaml
@@ -1434,8 +1471,23 @@ def installed(
                 'result': True,
                 'comment': 'No packages to install provided'}
 
+    # If just a name (and optionally a version) is passed, just pack them into
+    # the pkgs argument.
+    if name and not any((pkgs, sources)):
+        if version:
+            pkgs = [{name: version}]
+            version = None
+        else:
+            pkgs = [name]
+
     kwargs['saltenv'] = __env__
     refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
+
+    # check if capabilities should be checked and modify the requested packages
+    # accordingly.
+    if pkgs:
+        pkgs, refresh = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
+
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
     if (pkg_verify or isinstance(pkg_verify, list)) \
@@ -1597,10 +1649,10 @@ def installed(
     failed_hold = None
     if targets or to_reinstall:
         force = False
-        if salt.utils.is_freebsd():
+        if salt.utils.platform.is_freebsd():
             force = True    # Downgrades need to be forced.
         try:
-            pkg_ret = __salt__['pkg.install'](name,
+            pkg_ret = __salt__['pkg.install'](name=None,
                                               refresh=refresh,
                                               version=version,
                                               force=force,
@@ -1695,8 +1747,13 @@ def installed(
         if __grains__['os'] == 'FreeBSD':
             kwargs['with_origin'] = True
         new_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+        if kwargs.get('resolve_capabilities', False) and 'pkg.list_provides' in __salt__:
+            new_caps = __salt__['pkg.list_provides'](**kwargs)
+        else:
+            new_caps = {}
         ok, failed = _verify_install(desired, new_pkgs,
-                                     ignore_epoch=ignore_epoch)
+                                     ignore_epoch=ignore_epoch,
+                                     new_caps=new_caps)
         modified = [x for x in ok if x in targets]
         not_modified = [x for x in ok
                         if x not in targets
@@ -1871,7 +1928,7 @@ def downloaded(name,
                ignore_epoch=None,
                **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     Ensure that the package is downloaded, and that it is the correct version
     (if specified).
@@ -1915,6 +1972,11 @@ def downloaded(name,
                       - dos2unix
                       - salt-minion: 2015.8.5-1.el6
 
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+
+        .. versionadded:: Oxygen
+
     CLI Example:
 
     .. code-block:: yaml
@@ -1940,10 +2002,21 @@ def downloaded(name,
         ret['comment'] = 'No packages to download provided'
         return ret
 
+    # If just a name (and optionally a version) is passed, just pack them into
+    # the pkgs argument.
+    if name and not pkgs:
+        if version:
+            pkgs = [{name: version}]
+            version = None
+        else:
+            pkgs = [name]
+
     # It doesn't make sense here to received 'downloadonly' as kwargs
     # as we're explicitely passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
+
+    pkgs, _refresh = _resolve_capabilities(pkgs, **kwargs)
 
     # Only downloading not yet downloaded packages
     targets = _find_download_targets(name,
@@ -2008,7 +2081,7 @@ def downloaded(name,
 
 def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     Ensure that packages related to certain advisory ids are installed.
 
@@ -2088,7 +2161,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
 
 def patch_downloaded(name, advisory_ids=None, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     Ensure that packages related to certain advisory ids are downloaded.
 
@@ -2191,6 +2264,10 @@ def latest(
             This parameter is available only on Debian based distributions and
             has no effect on the rest.
 
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+
+        .. versionadded:: Oxygen
 
     Multiple Package Installation Options:
 
@@ -2287,6 +2364,10 @@ def latest(
             desired_pkgs = [name]
 
     kwargs['saltenv'] = __env__
+
+    # check if capabilities should be checked and modify the requested packages
+    # accordingly.
+    desired_pkgs, refresh = _resolve_capabilities(desired_pkgs, refresh=refresh, **kwargs)
 
     try:
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
@@ -2781,6 +2862,9 @@ def purged(name,
 def uptodate(name, refresh=False, pkgs=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
+    .. versionchanged:: Oxygen
+
+        Added support for the ``pkgin`` provider.
 
     Verify that the system is completely up to date.
 
@@ -2807,6 +2891,11 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
             This parameter available only on Debian based distributions, and
             have no effect on the rest.
 
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+
+        .. versionadded:: Oxygen
+
     kwargs
         Any keyword arguments to pass through to ``pkg.upgrade``.
 
@@ -2827,6 +2916,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         return ret
 
     if isinstance(refresh, bool):
+        pkgs, refresh = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
             if isinstance(pkgs, list):
@@ -3059,7 +3149,7 @@ def mod_aggregate(low, chunks, running):
     if low.get('fun') not in agg_enabled:
         return low
     for chunk in chunks:
-        tag = salt.utils.gen_state_tag(chunk)
+        tag = __utils__['state.gen_tag'](chunk)
         if tag in running:
             # Already ran the pkg state, skip aggregation
             continue

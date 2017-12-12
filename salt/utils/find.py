@@ -102,10 +102,12 @@ except ImportError:
     pass
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.hashutils
+import salt.utils.stringutils
 import salt.defaults.exitcodes
 from salt.utils.filebuffer import BufferedReader
 
@@ -508,7 +510,7 @@ class PrintOption(Option):
                     result.append(gid)
             elif arg == 'md5':
                 if stat.S_ISREG(fstat[stat.ST_MODE]):
-                    md5digest = salt.utils.get_hash(fullpath, 'md5')
+                    md5digest = salt.utils.hashutils.get_hash(fullpath, 'md5')
                     result.append(md5digest)
                 else:
                     result.append('')
@@ -561,8 +563,8 @@ class ExecOption(Option):
     def execute(self, fullpath, fstat, test=False):
         try:
             command = self.command.replace('{}', fullpath)
-            print(salt.utils.shlex_split(command))
-            p = Popen(salt.utils.shlex_split(command),
+            print(salt.utils.args.shlex_split(command))
+            p = Popen(salt.utils.args.shlex_split(command),
                       stdout=PIPE,
                       stderr=PIPE)
             (out, err) = p.communicate()
@@ -570,8 +572,8 @@ class ExecOption(Option):
                 log.error(
                     'Error running command: {0}\n\n{1}'.format(
                     command,
-                    salt.utils.to_str(err)))
-            return "{0}:\n{1}\n".format(command, salt.utils.to_str(out))
+                    salt.utils.stringutils.to_str(err)))
+            return "{0}:\n{1}\n".format(command, salt.utils.stringutils.to_str(out))
 
         except Exception as e:
             log.error(

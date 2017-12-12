@@ -32,7 +32,7 @@ class NetapiClient(object):
 
         for fun in self.netapi:
             if fun.endswith('.start'):
-                log.info('Starting {0} netapi module'.format(fun))
+                log.info('Starting %s netapi module', fun)
                 self.process_manager.add_process(self.netapi[fun])
 
         # Install the SIGINT/SIGTERM handlers if not done so far
