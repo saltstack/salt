@@ -4,17 +4,10 @@
 # import Python Libs
 from __future__ import absolute_import
 import logging
-from copy import deepcopy
 import pkg_resources
 
 # import Python Third Party Libs
 # pylint: disable=import-error
-try:
-    import boto
-    HAS_BOTO = True
-except ImportError:
-    HAS_BOTO = False
-
 try:
     from moto import mock_route53_deprecated
     HAS_MOTO = True
@@ -38,7 +31,6 @@ import salt.config
 from salt.ext import six
 import salt.loader
 import salt.modules.boto_route53 as boto_route53
-import salt.modules.config as config
 import salt.utils.versions
 
 # Import Salt Testing Libs
@@ -70,7 +62,6 @@ def _has_required_moto():
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_moto() is False, 'The moto module must be >= to {0} for '
                                        'PY2 or {1} for PY3.'.format(required_moto, required_moto_py3))
@@ -112,11 +103,11 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
                 'HealthCheck': {
                     'HealthCheckConfig': {
                         'FailureThreshold': '3',
-                        'IPAddress': '10.0.0.1', 
-                        'ResourcePath': '/', 
-                        'RequestInterval': '30', 
+                        'IPAddress': '10.0.0.1',
+                        'ResourcePath': '/',
+                        'RequestInterval': '30',
                         'Type': 'HTTPS',
-                        'Port': '443', 
+                        'Port': '443',
                         'FullyQualifiedDomainName': 'blog.saltstack.furniture',
                     },
                     'HealthCheckVersion': '1',
