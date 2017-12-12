@@ -1513,18 +1513,20 @@ def install(name=None,
             else:
                 pkgstr = pkgpath
 
-            # Lambda to trim the epoch from the currently-installed version if
-            # no epoch is specified in the specified version
-            norm_epoch = lambda x, y: x.split(':', 1)[-1] \
-                if ':' not in y \
-                else x
             cver = old_as_list.get(pkgname, [])
             if reinstall and cver:
                 for ver in cver:
-                    ver = norm_epoch(ver, version_num)
-                    if salt.utils.versions.compare(ver1=version_num,
+                    if diff_attr:
+                        # Since diff_attr was provided, the version info
+                        # is a dict.
+                        ver2 = ver['version']
+                    else:
+                        # No diff_attr was provided, so version is directly
+                        # in ver.
+                        ver2 = ver
+                    if salt.utils.compare_versions(ver1=version_num,
                                                    oper='==',
-                                                   ver2=ver,
+                                                   ver2=ver2,
                                                    cmp_func=version_cmp):
                         # This version is already installed, so we need to
                         # reinstall.
@@ -1535,10 +1537,17 @@ def install(name=None,
                     to_install.append((pkgname, pkgstr))
                 else:
                     for ver in cver:
-                        ver = norm_epoch(ver, version_num)
-                        if salt.utils.versions.compare(ver1=version_num,
+                        if diff_attr:
+                            # Since diff_attr was provided, the version info
+                            # is a dict.
+                            ver2 = ver['version']
+                        else:
+                            # No diff_attr was provided, so version is directly
+                            # in ver.
+                            ver2 = ver
+                        if salt.utils.compare_versions(ver1=version_num,
                                                        oper='>=',
-                                                       ver2=ver,
+                                                       ver2=ver2,
                                                        cmp_func=version_cmp):
                             to_install.append((pkgname, pkgstr))
                             break
