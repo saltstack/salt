@@ -408,6 +408,19 @@ to False.
 
     color: False
 
+.. conf_master:: color_theme
+
+``color_theme``
+---------
+
+Default: ``""``
+
+Specifies a path to the color theme to use for colored command line output.
+
+.. code-block:: yaml
+
+    color_theme: /etc/salt/color_theme
+
 .. conf_master:: cli_summary
 
 ``cli_summary``
