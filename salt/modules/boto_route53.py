@@ -340,13 +340,13 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
     return True
 
 
-def create_healtcheck(ip_addr, region=None, key=None, keyid=None, profile=None,
+def create_healthcheck(ip_addr, region=None, key=None, keyid=None, profile=None,
                       port=53, hc_type='TCP', resource_path='', fqdn=None,
                       string_match=None, request_interval=30, failure_threshold=3):
     '''
     Create a Route53 healthcheck
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     CLI Example::
 
