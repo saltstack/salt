@@ -16,17 +16,17 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2_deprecated, mock_elb_deprecated
+    from moto import mock_route53_deprecated
     HAS_MOTO = True
 except ImportError:
     HAS_MOTO = False
 
-    def mock_ec2_deprecated(self):
+    def mock_route53_deprecated(self):
         '''
-        if the mock_ec2_deprecated function is not available due to import failure
+        if the mock_route53_deprecated function is not available due to import failure
         this replaces the decorated function with stub_function.
-        Allows boto_route53 unit tests to use the @mock_ec2_deprecated decorator
-        without a "NameError: name 'mock_ec2_deprecated' is not defined" error.
+        Allows boto_route53 unit tests to use the @mock_route53_deprecated decorator
+        without a "NameError: name 'mock_route53_deprecated' is not defined" error.
         '''
         def stub_function(self):
             pass
@@ -38,6 +38,7 @@ import salt.config
 from salt.ext import six
 import salt.loader
 import salt.modules.boto_route53 as boto_route53
+import salt.modules.config as config
 import salt.utils.versions
 
 # Import Salt Testing Libs
@@ -78,21 +79,22 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     TestCase for salt.modules.boto_route53 module
     '''
     def setup_loader_modules(self):
-        def config_option(*args, **kwargs):
-            return 'whatever'
         self.opts = salt.config.DEFAULT_MINION_OPTS
         self.opts['route53.keyid'] = 'GKTADJGHEIQSXMKKRBJ08H'
         self.opts['route53.key'] = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
-        utils = salt.loader.utils(self.opts, whitelist=['boto'])
+        utils = salt.loader.utils(self.opts)
         funcs = salt.loader.minion_mods(self.opts, utils=utils, whitelist=['boto_route53', 'config'])
-        funcs['config.option'] = config_option
-        utils.pack['__salt__'] = funcs
         return {
             boto_route53: {
                 '__opts__': self.opts,
                 '__utils__': utils,
                 '__salt__': funcs
-            }
+            },
+            config: {
+                '__opts__': self.opts,
+                '__utils__': utils,
+                '__salt__': funcs
+            },
         }
 
     def setUp(self):
@@ -101,12 +103,31 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
         boto_route53.__virtual__()
         boto_route53.__init__(self.opts)
 
-    @mock_ec2_deprecated
-    def test_register_instances_valid_id_result_true(self):
+    def tearDown(self):
+        del self.opts
+
+    @mock_route53_deprecated
+    def test_create_healthcheck(self):
         '''
         tests that given a valid instance id and valid ELB that
         register_instances returns True.
         '''
+        expected = {
+            'CreateHealthCheckResponse': {
+                'HealthCheck': {
+                    'HealthCheckConfig': {
+                        'FailureThreshold': '3',
+                        'IPAddress': '10.0.0.1', 
+                        'ResourcePath': '/', 
+                        'RequestInterval': '30', 
+                        'Type': 'HTTPS',
+                        'Port': '443', 
+                        'FullyQualifiedDomainName': 'blog.saltstack.furniture',
+                    },
+                    'HealthCheckVersion': '1',
+                },
+            },
+        }
         healthcheck = boto_route53.create_healthcheck(
             '10.0.0.1',
             fqdn='blog.saltstack.furniture',
@@ -114,4 +135,6 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
             port=443,
             resource_path='/',
         )
-        self.assertFalse(healthcheck)
+        del healthcheck['CreateHealthCheckResponse']['HealthCheck']['CallerReference']
+        del healthcheck['CreateHealthCheckResponse']['HealthCheck']['Id']
+        self.assertEqual(healthcheck, expected)
