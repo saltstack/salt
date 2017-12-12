@@ -340,6 +340,37 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
     return True
 
 
+def create_healtcheck(ip_addr, region=None, key=None, keyid=None, profile=None,
+                      port=53, hc_type='TCP', resource_path='', fqdn=None,
+                      string_match=None, request_interval=30, failure_threshold=3):
+    '''
+    Create a Route53 healthcheck
+
+    .. versionadded:: Nitrogen
+
+    CLI Example::
+
+        salt myminion boto_route53.create_healthcheck 192.168.0.1
+    '''
+
+    hc_ = boto.route53.healthcheck.HealthCheck(ip_addr,
+                                               port,
+                                               hc_type,
+                                               resource_path,
+                                               fqdn=None,
+                                               string_match=None,
+                                               request_interval=30,
+                                               failure_threshold=3)
+
+    if region is None:
+        region = 'universal'
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    conn.create_health_check(hc_)
+    return True
+
+
 def delete_zone(zone, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a Route53 hosted zone.
