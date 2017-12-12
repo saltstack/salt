@@ -34,7 +34,7 @@ provisioner:
   require_chef: false
   remote_states:
     name: git://github.com/saltstack/salt-jenkins.git
-    branch: oxygen
+    branch: master
     repo: git
     testingdir: /testing
   salt_copy_filter:
