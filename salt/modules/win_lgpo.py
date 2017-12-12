@@ -3071,12 +3071,13 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
     '''
     value = None
     values = []
+    encoded_semicolon = ';'.encode('utf-16-le')
     if return_value_name:
         values = {}
     if search_string:
         registry = Registry()
-        if len(search_string.split(';'.encode('utf-16-le'))) >= 3:
-            vtype = registry.vtype_reverse[ord(search_string.split(';'.encode('utf-16-le'))[2].decode('utf-32-le'))]
+        if len(search_string.split(encoded_semicolon)) >= 3:
+            vtype = registry.vtype_reverse[ord(search_string.split(encoded_semicolon)[2].decode('utf-32-le'))]
         else:
             vtype = None
         search_string = re.escape(search_string)
@@ -3087,14 +3088,13 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                 pol_entry = policy_data[match.start():(policy_data.index(']'.encode('utf-16-le'),
                                                                          match.end())
                                                        )
-                                        ].split(';'.encode('utf-16-le'))
+                                        ].split(encoded_semicolon)
                 if len(pol_entry) >= 2:
                     valueName = pol_entry[1]
                 if len(pol_entry) >= 5:
                     value = pol_entry[4]
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
                         if value:
-                            #vlist = list(ord(v) for v in value)
                             if vtype == 'REG_DWORD':
                                 for v in struct.unpack('I', value):
                                     value = v
@@ -3218,6 +3218,8 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
     registry = Registry()
     this_element_value = None
     expected_string = b''
+    encoded_semicolon = ';'.encode('utf-16-le')
+    encoded_null = chr(0).encode('utf-16-le')
     if reg_key:
         reg_key = reg_key.encode('utf-16-le')
     if reg_valueName:
@@ -3229,36 +3231,36 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
             this_element_value = struct.pack('Q', int(reg_data))
         elif reg_vtype == 'REG_SZ':
             this_element_value = b''.join([reg_data.encode('utf-16-le'),
-                                           chr(0).encode('utf-16-le')])
+                                           encoded_null])
     if check_deleted:
         reg_vtype = 'REG_SZ'
         expected_string = b''.join(['['.encode('utf-16-le'),
                                     reg_key,
-                                    chr(0).encode('utf-16-le'),
-                                    ';'.encode('utf-16-le'),
+                                    encoded_null,
+                                    encoded_semicolon,
                                     '**del.'.encode('utf-16-le'),
                                     reg_valueName,
-                                    chr(0).encode('utf-16-le'),
-                                    ';'.encode('utf-16-le'),
+                                    encoded_null,
+                                    encoded_semicolon,
                                     chr(registry.vtype[reg_vtype]).encode('utf-32-le'),
-                                    ';'.encode('utf-16-le'),
+                                    encoded_semicolon,
                                     six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
-                                    ';'.encode('utf-16-le'),
+                                    encoded_semicolon,
                                     ' '.encode('utf-16-le'),
-                                    chr(0).encode('utf-16-le'),
+                                    encoded_null,
                                     ']'.encode('utf-16-le')])
     else:
         expected_string = b''.join(['['.encode('utf-16-le'),
                                     reg_key,
-                                    chr(0).encode('utf-16-le'),
-                                    ';'.encode('utf-16-le'),
+                                    encoded_null,
+                                    encoded_semicolon,
                                     reg_valueName,
-                                    chr(0).encode('utf-16-le'),
-                                    ';'.encode('utf-16-le'),
+                                    encoded_null,
+                                    encoded_semicolon,
                                     chr(registry.vtype[reg_vtype]).encode('utf-32-le'),
-                                    ';'.encode('utf-16-le'),
+                                    encoded_semicolon,
                                     six.unichr(len(this_element_value)).encode('utf-32-le'),
-                                    ';'.encode('utf-16-le'),
+                                    encoded_semicolon,
                                     this_element_value,
                                     ']'.encode('utf-16-le')])
     return expected_string
@@ -3288,6 +3290,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
     expected_string = None
     # https://msdn.microsoft.com/en-us/library/dn606006(v=vs.85).aspx
     this_vtype = 'REG_SZ'
+    encoded_semicolon = ';'.encode('utf-16-le')
+    encoded_null = chr(0).encode('utf-16-le')
     if reg_key:
         reg_key = reg_key.encode('utf-16-le')
     if reg_valuename:
@@ -3323,7 +3327,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
     elif etree.QName(element).localname == 'string':
         this_vtype = 'REG_SZ'
         this_element_value = b''.join([element.text.encode('utf-16-le'),
-                                       chr(0).encode('utf-16-le')])
+                                       encoded_null])
     elif etree.QName(parent_element).localname == 'elements':
         standard_element_expected_string = True
         if etree.QName(element).localname == 'boolean':
@@ -3368,7 +3372,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                     this_vtype = 'REG_EXPAND_SZ'
             if this_element_value is not None:
                 this_element_value = b''.join([this_element_value.encode('utf-16-le'),
-                                               chr(0).encode('utf-16-le')])
+                                               encoded_null])
         elif etree.QName(element).localname == 'multiText':
             this_vtype = 'REG_MULTI_SZ'
             if this_element_value is not None:
@@ -3386,17 +3390,17 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                     # value = data pairs
                     del_keys = b''.join(['['.encode('utf-16-le'),
                                          reg_key,
-                                         chr(0).encode('utf-16-le'),
-                                         ';'.encode('utf-16-le'),
+                                         encoded_null,
+                                         encoded_semicolon,
                                          '**delvals.'.encode('utf-16-le'),
-                                         chr(0).encode('utf-16-le'),
-                                         ';'.encode('utf-16-le'),
+                                         encoded_null,
+                                         encoded_semicolon,
                                          chr(registry.vtype[this_vtype]).encode('utf-32-le'),
-                                         ';'.encode('utf-16-le'),
+                                         encoded_semicolon,
                                          chr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
-                                         ';'.encode('utf-16-le'),
+                                         encoded_semicolon,
                                          ' '.encode('utf-16-le'),
-                                         chr(0).encode('utf-16-le'),
+                                         encoded_null,
                                          ']'.encode('utf-16-le')])
             if 'expandable' in element.attrib:
                 this_vtype = 'REG_EXPAND_SZ'
@@ -3418,38 +3422,38 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                     for i, item in enumerate(element_valuenames):
                         expected_string = expected_string + b''.join(['['.encode('utf-16-le'),
                                                                       reg_key,
-                                                                      chr(0).encode('utf-16-le'),
-                                                                      ';'.encode('utf-16-le'),
+                                                                      encoded_null,
+                                                                      encoded_semicolon,
                                                                       element_valuenames[i].encode('utf-16-le'),
-                                                                      chr(0).encode('utf-16-le'),
-                                                                      ';'.encode('utf-16-le'),
+                                                                      encoded_null,
+                                                                      encoded_semicolon,
                                                                       chr(registry.vtype[this_vtype]).encode('utf-32-le'),
-                                                                      ';'.encode('utf-16-le'),
+                                                                      encoded_semicolon,
                                                                       six.unichr(len('{0}{1}'.format(element_values[i],
                                                                                  chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
-                                                                      ';'.encode('utf-16-le'),
+                                                                      encoded_semicolon,
                                                                       b''.join([element_values[i].encode('utf-16-le'),
-                                                                               chr(0).encode('utf-16-le')]),
+                                                                               encoded_null]),
                                                                       ']'.encode('utf-16-le')])
                 else:
                     expected_string = del_keys + b''.join(['['.encode('utf-16-le'),
                                                            reg_key,
-                                                           chr(0).encode('utf-16-le'),
-                                                           ';'.encode('utf-16-le')])
+                                                           encoded_null,
+                                                           encoded_semicolon])
             else:
                 expected_string = b''.join(['['.encode('utf-16-le'),
                                             reg_key,
-                                            chr(0).encode('utf-16-le'),
-                                            ';'.encode('utf-16-le'),
+                                            encoded_null,
+                                            encoded_semicolon,
                                             '**delvals.'.encode('utf-16-le'),
-                                            chr(0).encode('utf-16-le'),
-                                            ';'.encode('utf-16-le'),
+                                            encoded_null,
+                                            encoded_semicolon,
                                             chr(registry.vtype[this_vtype]).encode('utf-32-le'),
-                                            ';'.encode('utf-16-le'),
+                                            encoded_semicolon,
                                             chr(len(' {0}'.format(chr(0)))).encode('utf-32-le'),
-                                            ';'.encode('utf-16-le'),
+                                            encoded_semicolon,
                                             ' '.encode('utf-16-le'),
-                                            chr(0).encode('utf-16-le'),
+                                            encoded_null,
                                             ']'.encode('utf-16-le')])
         elif etree.QName(element).localname == 'enum':
             if this_element_value is not None:
@@ -3459,60 +3463,60 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if this_element_value is not None:
                 expected_string = b''.join(['['.encode('utf-16-le'),
                                             reg_key,
-                                            chr(0).encode('utf-16-le'),
-                                            ';'.encode('utf-16-le'),
+                                            encoded_null,
+                                            encoded_semicolon,
                                             reg_valuename,
-                                            chr(0).encode('utf-16-le'),
-                                            ';'.encode('utf-16-le'),
+                                            encoded_null,
+                                            encoded_semicolon,
                                             chr(registry.vtype[this_vtype]).encode('utf-32-le'),
-                                            ';'.encode('utf-16-le'),
+                                            encoded_semicolon,
                                             six.unichr(len(this_element_value)).encode('utf-32-le'),
-                                            ';'.encode('utf-16-le'),
+                                            encoded_semicolon,
                                             this_element_value,
                                             ']'.encode('utf-16-le')])
             else:
                 expected_string = b''.join(['['.encode('utf-16-le'),
                                             reg_key,
-                                            chr(0).encode('utf-16-le'),
-                                            ';'.encode('utf-16-le'),
+                                            encoded_null,
+                                            encoded_semicolon,
                                             reg_valuename,
-                                            chr(0).encode('utf-16-le'),
-                                            ';'.encode('utf-16-le'),
+                                            encoded_null,
+                                            encoded_semicolon,
                                             chr(registry.vtype[this_vtype]).encode('utf-32-le'),
-                                            ';'.encode('utf-16-le')])
+                                            encoded_semicolon])
 
     if not expected_string:
         if etree.QName(element).localname == "delete" or check_deleted:
             # delete value
             expected_string = b''.join(['['.encode('utf-16-le'),
                                         reg_key,
-                                        chr(0).encode('utf-16-le'),
-                                        ';'.encode('utf-16-le'),
+                                        encoded_null,
+                                        encoded_semicolon,
                                         '**del.'.encode('utf-16-le'),
                                         reg_valuename,
-                                        chr(0).encode('utf-16-le'),
-                                        ';'.encode('utf-16-le'),
+                                        encoded_null,
+                                        encoded_semicolon,
                                         chr(registry.vtype[this_vtype]).encode('utf-32-le'),
-                                        ';'.encode('utf-16-le'),
+                                        encoded_semicolon,
                                         six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
-                                        ';'.encode('utf-16-le'),
+                                        encoded_semicolon,
                                         ' '.encode('utf-16-le'),
-                                        chr(0).encode('utf-16-le'),
+                                        encoded_null,
                                         ']'.encode('utf-16-le')])
         else:
-           expected_string = b''.join(['['.encode('utf-16-le'),
-                                       reg_key,
-                                       chr(0).encode('utf-16-le'),
-                                       ';'.encode('utf-16-le'),
-                                       reg_valuename,
-                                       chr(0).encode('utf-16-le'),
-                                       ';'.encode('utf-16-le'),
-                                       chr(registry.vtype[this_vtype]).encode('utf-32-le'),
-                                       ';'.encode('utf-16-le'),
-                                       six.unichr(len(this_element_value)).encode('utf-32-le'),
-                                       ';'.encode('utf-16-le'),
-                                       this_element_value,
-                                       ']'.encode('utf-16-le')])
+            expected_string = b''.join(['['.encode('utf-16-le'),
+                                        reg_key,
+                                        encoded_null,
+                                        encoded_semicolon,
+                                        reg_valuename,
+                                        encoded_null,
+                                        encoded_semicolon,
+                                        chr(registry.vtype[this_vtype]).encode('utf-32-le'),
+                                        encoded_semicolon,
+                                        six.unichr(len(this_element_value)).encode('utf-32-le'),
+                                        encoded_semicolon,
+                                        this_element_value,
+                                        ']'.encode('utf-16-le')])
     return expected_string
 
 
@@ -4063,7 +4067,7 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
                                b'\00;',
                                specialValueRegex,
                                re.escape(policy_regkey),
-                               b'\00;',])
+                               b'\00;'])
         match = re.search(_thisSearch, policy_data, re.IGNORECASE)
         if match:
             return policy_data[match.start():(policy_data.index(']', match.end())) + 1]
