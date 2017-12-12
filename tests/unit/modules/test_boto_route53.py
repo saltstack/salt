@@ -90,11 +90,6 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
                 '__utils__': utils,
                 '__salt__': funcs
             },
-            config: {
-                '__opts__': self.opts,
-                '__utils__': utils,
-                '__salt__': funcs
-            },
         }
 
     def setUp(self):
