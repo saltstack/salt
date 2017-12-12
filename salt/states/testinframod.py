@@ -52,8 +52,12 @@ def _to_snake_case(pascal_case):
 
 
 def _generate_functions():
-    for module in modules.__all__:
-        module_name = _to_snake_case(module)
+    try:
+        modules_ = [_to_snake_case(module_) for module_ in modules.__all__]
+    except AttributeError:
+        modules_ = [module_ for module_ in modules.modules]
+
+    for module_name in modules_:
         func_name = 'testinfra.{0}'.format(module_name)
         __all__.append(module_name)
         log.debug('Generating state for module %s as function %s',

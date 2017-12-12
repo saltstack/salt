@@ -14,7 +14,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
-import salt.utils
+import salt.utils.files
 import salt.states.syslog_ng as syslog_ng
 import salt.modules.syslog_ng as syslog_ng_module
 
@@ -362,7 +362,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 got = syslog_ng.config(id, config=parsed_yaml_config, write=True)
 
             written_config = ""
-            with salt.utils.fopen(config_file_name, "r") as f:
+            with salt.utils.files.fopen(config_file_name, "r") as f:
                 written_config = f.read()
 
             config_without_whitespaces = remove_whitespaces(written_config)
