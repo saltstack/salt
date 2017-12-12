@@ -3,7 +3,7 @@
 Routines to set up a minion
 '''
 # Import python libs
-from __future__ import absolute_import, print_function, with_statement
+from __future__ import absolute_import, print_function, with_statement, unicode_literals
 import os
 import re
 import sys
@@ -1595,7 +1595,7 @@ class Minion(MinionBase):
                             if not iret:
                                 iret = []
                             iret.append(single)
-                        tag = tagify([data['jid'], 'prog', opts['id'], str(ind)], 'job')
+                        tag = tagify([data['jid'], 'prog', opts['id'], six.text_type(ind)], 'job')
                         event_data = {'return': single}
                         minion_instance._fire_master(event_data, tag)
                         ind += 1
@@ -1836,6 +1836,7 @@ class Minion(MinionBase):
                     # The file is gone already
                     pass
         log.info('Returning information for job: %s', jid)
+        log.trace('Return data: %s', ret)
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
                     'id': self.opts['uid'],
@@ -3239,7 +3240,7 @@ class Matcher(object):
         if isinstance(val, list):
             # We are matching a single component to a single list member
             for member in val:
-                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
+                if fnmatch.fnmatch(six.text_type(member).lower(), comps[1].lower()):
                     return True
             return False
         if isinstance(val, dict):
@@ -3312,7 +3313,7 @@ class Matcher(object):
         if proto not in grains:
             match = False
         elif isinstance(tgt, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
-            match = str(tgt) in grains[proto]
+            match = six.text_type(tgt) in grains[proto]
         else:
             match = salt.utils.network.in_subnet(tgt, grains[proto])
 
@@ -3399,12 +3400,12 @@ class Matcher(object):
                     engine_kwargs['delimiter'] = target_info['delimiter']
 
                 results.append(
-                    str(getattr(self, '{0}_match'.format(engine))(*engine_args, **engine_kwargs))
+                    six.text_type(getattr(self, '{0}_match'.format(engine))(*engine_args, **engine_kwargs))
                 )
 
             else:
                 # The match is not explicitly defined, evaluate it as a glob
-                results.append(str(self.glob_match(word)))
+                results.append(six.text_type(self.glob_match(word)))
 
         results = ' '.join(results)
         log.debug('compound_match %s ? "%s" => "%s"', self.opts['id'], tgt, results)

@@ -9,7 +9,7 @@ consult the dev team if you are unsure where a new function should go.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Salt libs
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -1530,11 +1530,13 @@ def decode_dict(data):
     salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.decode_dict\' detected. This function '
-        'has been moved to \'salt.utils.data.decode_dict\' as of '
-        'Salt Oxygen. This warning will be removed in Salt Neon.',
+        'has been moved to \'salt.utils.data.encode_dict\' as of '
+        'Salt Oxygen. Note that the new name is "encode_dict", as this '
+        'function was erroneously named when initially added. This '
+        'warning will be removed in Salt Neon.',
         stacklevel=3
     )
-    return salt.utils.data.decode_dict(data)
+    return salt.utils.data.encode_dict(data)
 
 
 def decode_list(data):
@@ -1544,11 +1546,13 @@ def decode_list(data):
     salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.decode_list\' detected. This function '
-        'has been moved to \'salt.utils.data.decode_list\' as of '
-        'Salt Oxygen. This warning will be removed in Salt Neon.',
+        'has been moved to \'salt.utils.data.encode_list\' as of '
+        'Salt Oxygen. Note that the new name is "encode_list", as this '
+        'function was erroneously named when initially added. This '
+        'warning will be removed in Salt Neon.',
         stacklevel=3
     )
-    return salt.utils.data.decode_list(data)
+    return salt.utils.data.encode_list(data)
 
 
 def exactly_n(l, n=1):

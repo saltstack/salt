@@ -169,7 +169,7 @@ def _get_pause(jid, state_id=None):
     '''
     Return the pause information for a given jid
     '''
-    pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
+    pause_dir = os.path.join(__opts__['cachedir'], 'state_pause')
     pause_path = os.path.join(pause_dir, jid)
     if not os.path.exists(pause_dir):
         try:
@@ -196,7 +196,7 @@ def get_pauses(jid=None):
     '''
     ret = {}
     active = __salt__['saltutil.is_running']('state.*')
-    pause_dir = os.path.join(__opts__[u'cachedir'], 'state_pause')
+    pause_dir = os.path.join(__opts__['cachedir'], 'state_pause')
     if not os.path.exists(pause_dir):
         return ret
     if jid is None:
@@ -1956,7 +1956,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
 
     st_._mod_init(kwargs)
     snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
-    ret = {u'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
+    ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
@@ -2026,7 +2026,7 @@ def pkg(pkg_path,
     s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.files.fopen(lowstate_json, 'r') as fp_:
-        lowstate = json.load(fp_, object_hook=salt.utils.data.decode_dict)
+        lowstate = json.load(fp_, object_hook=salt.utils.data.encode_dict)
     # Check for errors in the lowstate
     for chunk in lowstate:
         if not isinstance(chunk, dict):
@@ -2041,7 +2041,7 @@ def pkg(pkg_path,
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = json.load(fp_, object_hook=salt.utils.data.decode_dict)
+            roster_grains = json.load(fp_, object_hook=salt.utils.data.encode_dict)
 
     if os.path.isfile(roster_grains_json):
         popts['grains'] = roster_grains

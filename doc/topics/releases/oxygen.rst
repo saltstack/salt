@@ -128,6 +128,17 @@ by any master tops matches that are not matched via a top file.
 To make master tops matches execute first, followed by top file matches, set
 the new :conf_minion:`master_tops_first` minion config option to ``True``.
 
+Several Jinja Filters Renamed
+-----------------------------
+
+The following Jinja filters (originally added in 2017.7.0) have been renamed
+due to the fact that they were inaccurately named when initially added. The
+original names will be supported until the Neon release of Salt.
+
+- :jinja_ref:`rand_str` renamed to :jinja_ref:`random_hash`
+- :jinja_ref:`jinja_decode_dict` renamed to :jinja_ref:`jinja_encode_dict`
+- :jinja_ref:`jinja_decode_list` renamed to :jinja_ref:`jinja_encode_list`
+
 Return Codes for Runner/Wheel Functions
 ---------------------------------------
 

@@ -265,7 +265,7 @@ For example:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import difflib
 import itertools
 import logging
@@ -941,10 +941,10 @@ def _check_touch(name, atime, mtime):
         return None, 'File {0} is set to be created'.format(name)
     stats = __salt__['file.stats'](name, follow_symlinks=False)
     if atime is not None:
-        if str(atime) != str(stats['atime']):
+        if six.text_type(atime) != six.text_type(stats['atime']):
             return None, 'Times set to be updated on file {0}'.format(name)
     if mtime is not None:
-        if str(mtime) != str(stats['mtime']):
+        if six.text_type(mtime) != six.text_type(stats['mtime']):
             return None, 'Times set to be updated on file {0}'.format(name)
     return True, 'File {0} exists and has the correct times'.format(name)
 
@@ -1129,9 +1129,9 @@ def _validate_str_list(arg):
             if isinstance(item, six.string_types):
                 ret.append(item)
             else:
-                ret.append(str(item))
+                ret.append(six.text_type(item))
     else:
-        ret = [str(arg)]
+        ret = [six.text_type(arg)]
     return ret
 
 
@@ -1984,11 +1984,11 @@ def managed(name,
         <salt.modules.grains.get>` when retrieving the contents.
 
     encoding
-        Encoding used for the file, e.g. ```UTF-8```, ```base64```.
-        Default is None, which means str() will be applied to contents to
-        ensure an ascii encoded file and backwards compatibility.
-        See https://docs.python.org/3/library/codecs.html#standard-encodings
-        for available encodings.
+        If specified, then the specified encoding will be used. Otherwise,
+        ``six.text_type()`` will be applied to the contents (that is,
+        ``unicode()`` on Python 2, or ``str()`` on Python 3). See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
 
         .. versionadded:: 2017.7.0
 
@@ -2610,7 +2610,7 @@ def _depth_limited_walk(top, max_depth=None):
             rel_depth = root.count(os.path.sep) - top.count(os.path.sep)
             if rel_depth >= max_depth:
                 del dirs[:]
-        yield (str(root), list(dirs), list(files))
+        yield (six.text_type(root), list(dirs), list(files))
 
 
 def directory(name,
@@ -4360,7 +4360,7 @@ def blockreplace(
         text = tmpret['data']
 
         for index, item in enumerate(text):
-            content += str(item)
+            content += six.text_type(item)
 
     changes = __salt__['file.blockreplace'](
         name,
@@ -5718,11 +5718,11 @@ def serialize(name,
         modules <salt.serializers>` for supported output formats.
 
     encoding
-        Encoding used for the file, e.g. ```UTF-8```, ```base64```.
-        Default is None, which means str() will be applied to contents to
-        ensure an ascii encoded file.
-        See https://docs.python.org/3/library/codecs.html#standard-encodings
-        for available encodings.
+        If specified, then the specified encoding will be used. Otherwise,
+        ``six.text_type()`` will be applied to the contents (that is,
+        ``unicode()`` on Python 2, or ``str()`` on Python 3). See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
 
         .. versionadded:: 2017.7.0
 
