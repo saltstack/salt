@@ -1177,17 +1177,17 @@ class Schedule(object):
             if 'run_explicit' in data:
                 _run_explicit = data['run_explicit']
 
-                if isinstance(_run_explicit, six.string_types):
+                if isinstance(_run_explicit, six.integer_types):
                     _run_explicit = [_run_explicit]
 
                 # Copy the list so we can loop through it
                 for i in copy.deepcopy(_run_explicit):
                     if len(_run_explicit) > 1:
-                        if i < now - self.opts['loop_interval']:
+                        if int(i) < now - self.opts['loop_interval']:
                             _run_explicit.remove(i)
 
                 if _run_explicit:
-                    if _run_explicit[0] <= now < (_run_explicit[0] + self.opts['loop_interval']):
+                    if int(_run_explicit[0]) <= now < int(_run_explicit[0] + self.opts['loop_interval']):
                         run = True
                         data['_next_fire_time'] = _run_explicit[0]
 
