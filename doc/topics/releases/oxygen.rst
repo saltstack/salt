@@ -129,6 +129,12 @@ New support for Cisco UCS Chassis
 The salt proxy minion now allows for control of Cisco USC chassis. See
 the ``cimc`` modules for details.
 
+New support for Cassandra v3
+----------------------------
+
+The ``cassandra_cql`` module now supports Cassandra v3 which has changed
+its internal schema to define keyspaces and columns.
+
 New salt-ssh roster
 -------------------
 

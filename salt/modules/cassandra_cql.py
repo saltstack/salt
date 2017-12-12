@@ -4,6 +4,9 @@ Cassandra Database Module
 
 .. versionadded:: 2015.5.0
 
+This module works with Cassandra v2 and v3 and hence generates
+queries based on the internal schema of said version.
+
 :depends: DataStax Python Driver for Apache Cassandra
           https://github.com/datastax/python-driver
           pip install cassandra-driver
