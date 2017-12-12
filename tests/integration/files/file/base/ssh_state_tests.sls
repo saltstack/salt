@@ -1,4 +1,5 @@
+{% set jinja = 'test' %}
 ssh-file-test:
   file.managed:
-    - name: /tmp/test
+    - name: /tmp/{{ jinja }}
     - contents: 'test'

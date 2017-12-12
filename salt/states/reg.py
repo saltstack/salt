@@ -59,6 +59,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -186,13 +187,14 @@ def present(name,
                                              use_32bit_registry=use_32bit_registry)
 
     if vdata == reg_current['vdata'] and reg_current['success']:
-        ret['comment'] = '{0} in {1} is already configured'.\
-            format(vname if vname else '(Default)', name)
+        ret['comment'] = u'{0} in {1} is already configured' \
+                         ''.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else u'(Default)',
+                                   salt.utils.stringutils.to_unicode(name, 'utf-8'))
         return ret
 
     add_change = {'Key': r'{0}\{1}'.format(hive, key),
-                  'Entry': '{0}'.format(vname if vname else '(Default)'),
-                  'Value': '{0}'.format(vdata)}
+                  'Entry': u'{0}'.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else u'(Default)'),
+                  'Value': salt.utils.stringutils.to_unicode(vdata, 'utf-8')}
 
     # Check for test option
     if __opts__['test']:
