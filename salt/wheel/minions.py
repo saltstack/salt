@@ -4,7 +4,7 @@ Wheel system wrapper for connected minions
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Salt libs
 from salt.utils.cache import CacheCli

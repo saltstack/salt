@@ -3,7 +3,7 @@
 Create ssh executor system
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 # Import python libs
 import os
 import time
@@ -177,7 +177,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -347,7 +347,7 @@ def low(data, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -435,7 +435,7 @@ def high(data, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -521,6 +521,8 @@ def check_request(name=None):
     serial = salt.payload.Serial(__opts__)
     if os.path.isfile(notify_path):
         with salt.utils.files.fopen(notify_path, 'rb') as fp_:
+            # Not sure if this needs to be decoded since it is being returned,
+            # and msgpack serialization will encode it to bytes anyway.
             req = serial.load(fp_)
         if name:
             return req[name]
@@ -676,7 +678,7 @@ def highstate(test=None, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -756,7 +758,7 @@ def top(topfn, test=None, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -1119,7 +1121,7 @@ def single(fun, name, test=None, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
