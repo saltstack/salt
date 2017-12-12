@@ -1121,13 +1121,16 @@ class Schedule(object):
             self.skip_function = schedule['skip_function']
         if 'skip_during_range' in schedule:
             self.skip_during_range = schedule['skip_during_range']
+
+        _hidden = ['enabled',
+                   'skip_function',
+                   'skip_during_range']
         for job, data in six.iteritems(schedule):
             run = False
 
-            if job == 'enabled' or not data:
+            if job in _hidden and not data:
                 continue
-            if job == 'skip_function' or not data:
-                continue
+
             if not isinstance(data, dict):
                 log.error('Scheduled job "{0}" should have a dict value, not {1}'.format(job, type(data)))
                 continue
