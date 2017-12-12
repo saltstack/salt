@@ -433,6 +433,7 @@ class Schedule(object):
         self.functions = functions
         self.standalone = standalone
         self.skip_function = None
+        self.skip_during_range = None
         if isinstance(intervals, dict):
             self.intervals = intervals
         else:
@@ -820,17 +821,26 @@ class Schedule(object):
 
     def get_next_fire_time(self, name):
         '''
-        Disable a job in the scheduler. Ignores jobs from pillar
+        Return the  next fire time for the specified job
         '''
 
         schedule = self._get_schedule()
+        _next_fire_time = None
         if schedule:
-            _next_fire_time = schedule[name]['_next_fire_time']
+            _next_fire_time = schedule.get(name, {}).get('_next_fire_time', None)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'next_fire_time': _next_fire_time},
                        tag='/salt/minion/minion_schedule_next_fire_time_complete')
+
+    def job_status(self, name):
+        '''
+        Return the specified schedule item
+        '''
+
+        schedule = self._get_schedule()
+        return schedule.get(name, {})
 
     def handle_func(self, multiprocessing_enabled, func, data):
         '''
@@ -1084,7 +1094,7 @@ class Schedule(object):
 
         '''
 
-        log.trace('==== evaluating schedule =====')
+        log.trace('==== evaluating schedule now {} ====='.format(now))
 
         def _splay(splaytime):
             '''
@@ -1109,7 +1119,11 @@ class Schedule(object):
             return
         if 'skip_function' in schedule:
             self.skip_function = schedule['skip_function']
+        if 'skip_during_range' in schedule:
+            self.skip_during_range = schedule['skip_during_range']
         for job, data in six.iteritems(schedule):
+            run = False
+
             if job == 'enabled' or not data:
                 continue
             if job == 'skip_function' or not data:
@@ -1206,17 +1220,17 @@ class Schedule(object):
             if 'run_explicit' in data:
                 _run_explicit = data['run_explicit']
 
-                if isinstance(_run_explicit, six.string_types):
+                if isinstance(_run_explicit, six.integer_types):
                     _run_explicit = [_run_explicit]
 
                 # Copy the list so we can loop through it
                 for i in copy.deepcopy(_run_explicit):
                     if len(_run_explicit) > 1:
-                        if i < now - self.opts['loop_interval']:
+                        if int(i) < now - self.opts['loop_interval']:
                             _run_explicit.remove(i)
 
                 if _run_explicit:
-                    if _run_explicit[0] <= now < (_run_explicit[0] + self.opts['loop_interval']):
+                    if int(_run_explicit[0]) <= now < int(_run_explicit[0] + self.opts['loop_interval']):
                         run = True
                         data['_next_fire_time'] = _run_explicit[0]
 
@@ -1327,6 +1341,7 @@ class Schedule(object):
                             data['_next_fire_time'] = when
 
                         if data['_next_fire_time'] < when and \
+                                not run and \
                                 not data['_run']:
                             data['_next_fire_time'] = when
                             data['_run'] = True
@@ -1369,6 +1384,7 @@ class Schedule(object):
 
                     if when < now and \
                             not data.get('_run', False) and \
+                            not run and \
                             not data['_splay']:
                         data['_next_fire_time'] = None
                         continue
@@ -1410,7 +1426,6 @@ class Schedule(object):
             else:
                 continue
 
-            run = False
             seconds = data['_next_fire_time'] - now
 
             if 'splay' in data:
@@ -1493,7 +1508,12 @@ class Schedule(object):
                                      Ignoring job {0}.'.format(job))
                             continue
 
-                if 'skip_during_range' in data:
+                # If there is no job specific skip_during_range available,
+                # grab the global which defaults to None.
+                if 'skip_during_range' not in data:
+                    data['skip_during_range'] = self.skip_during_range
+
+                if 'skip_during_range' in data and data['skip_during_range']:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
                         continue
