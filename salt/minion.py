@@ -105,6 +105,7 @@ import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
+import salt.utils.ssdp
 import salt.utils.user
 import salt.utils.zeromq
 import salt.defaults.exitcodes
@@ -482,8 +483,13 @@ class MinionBase(object):
             log.warning('Master is set to disable, skipping connection')
             self.connected = False
             raise tornado.gen.Return((None, None))
+
+        # Run masters discovery over SSDP. This may modify the whole configuration,
+        # depending of the networking and sets of masters.
+        self._discover_masters()
+
         # check if master_type was altered from its default
-        elif opts['master_type'] != 'str' and opts['__role'] != 'syndic':
+        if opts['master_type'] != 'str' and opts['__role'] != 'syndic':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 eval_master_func(opts)
@@ -704,6 +710,43 @@ class MinionBase(object):
                         # Exhausted all attempts. Return exception.
                         self.connected = False
                         raise exc
+
+    def _discover_masters(self):
+        '''
+        Discover master(s) and decide where to connect, if SSDP is around.
+        This modifies the configuration on the fly.
+        :return:
+        '''
+        if self.opts['master'] == DEFAULT_MINION_OPTS['master'] and self.opts['discovery'] is not False:
+            master_discovery_client = salt.utils.ssdp.SSDPDiscoveryClient()
+            masters = {}
+            for att in range(self.opts['discovery'].get('attempts', 3)):
+                try:
+                    att += 1
+                    log.info('Attempting {0} time{1} to discover masters'.format(att, (att > 1 and 's' or '')))
+                    masters.update(master_discovery_client.discover())
+                    if not masters:
+                        time.sleep(self.opts['discovery'].get('pause', 5))
+                    else:
+                        break
+                except Exception as err:
+                    log.error('SSDP discovery failure: {0}'.format(err))
+                    break
+
+            if masters:
+                policy = self.opts.get(u'discovery', {}).get(u'match', DEFAULT_MINION_OPTS[u'discovery'][u'match'])
+                if policy not in ['any', 'all']:
+                    log.error('SSDP configuration matcher failure: unknown value "{0}". '
+                              'Should be "any" or "all"'.format(policy))
+                else:
+                    mapping = self.opts[u'discovery'].get(u'mapping', {})
+                    for addr, mappings in masters.items():
+                        for proto_data in mappings:
+                            cnt = len([key for key, value in mapping.items()
+                                       if proto_data.get('mapping', {}).get(key) == value])
+                            if policy == 'any' and bool(cnt) or cnt == len(mapping):
+                                self.opts['master'] = proto_data['master']
+                                return
 
     def _return_retry_timer(self):
         '''
