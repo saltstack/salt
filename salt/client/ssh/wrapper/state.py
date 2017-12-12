@@ -19,6 +19,7 @@ import salt.utils.args
 import salt.utils.data
 import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.jid
 import salt.utils.platform
 import salt.utils.state
 import salt.utils.thin
@@ -71,7 +72,7 @@ def _wait(jid):
     Wait for all previously started state jobs to finish running
     '''
     if jid is None:
-        jid = salt.utils.jid.gen_jid()
+        jid = salt.utils.jid.gen_jid(__opts__)
     states = _prior_running_states(jid)
     while states:
         time.sleep(1)

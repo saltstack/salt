@@ -1123,12 +1123,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             ret[pkg_name] = 'Unable to locate package {0}'.format(pkg_name)
             continue
 
-            version_num = options.get('version', '')
-            #  Using the salt cmdline with version=5.3 might be interpreted
-            #  as a float it must be converted to a string in order for
-            #  string matching to work.
-            if not isinstance(version_num, six.string_types) and version_num is not None:
-                version_num = str(version_num)
+        version_num = options.get('version', '')
+        #  Using the salt cmdline with version=5.3 might be interpreted
+        #  as a float it must be converted to a string in order for
+        #  string matching to work.
+        if not isinstance(version_num, six.string_types) and version_num is not None:
+            version_num = str(version_num)
 
         if not version_num:
             # following can be version number or latest

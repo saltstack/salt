@@ -944,7 +944,7 @@ class Schedule(object):
 
             # Only include these when running runner modules
             if self.opts['__role'] == 'master':
-                jid = salt.utils.jid.gen_jid()
+                jid = salt.utils.jid.gen_jid(self.opts)
                 tag = salt.utils.event.tagify(jid, prefix='salt/scheduler/')
 
                 event = salt.utils.event.get_event(
