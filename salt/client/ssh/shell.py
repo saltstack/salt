@@ -2,7 +2,7 @@
 '''
 Manage transport commands via ssh
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import python libs
 import re
@@ -17,6 +17,8 @@ import subprocess
 import salt.defaults.exitcodes
 import salt.utils.nb_popen
 import salt.utils.vt
+
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +90,7 @@ class Shell(object):
         self.host = host.strip('[]')
         self.user = user
         self.port = port
-        self.passwd = str(passwd) if passwd else passwd
+        self.passwd = six.text_type(passwd) if passwd else passwd
         self.priv = priv
         self.timeout = timeout
         self.sudo = sudo

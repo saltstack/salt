@@ -4,7 +4,7 @@ A collection of mixins useful for the various *Client interfaces
 '''
 
 # Import Python libs
-from __future__ import absolute_import, print_function, with_statement
+from __future__ import absolute_import, print_function, with_statement, unicode_literals
 import fnmatch
 import signal
 import logging
@@ -395,7 +395,7 @@ class SyncClientMixin(object):
                     data['success'] = salt.utils.state.check_result(data['return']['data'])
         except (Exception, SystemExit) as ex:
             if isinstance(ex, salt.exceptions.NotImplemented):
-                data['return'] = str(ex)
+                data['return'] = six.text_type(ex)
             else:
                 data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
                     self.client,

@@ -19,7 +19,7 @@ The data structure needs to be:
 # 4. How long do we wait for all of the replies?
 #
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import random
@@ -38,6 +38,7 @@ import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.versions
@@ -196,7 +197,7 @@ class LocalClient(object):
                                                    key_user,
                                                    self.skip_perm_errors)
             with salt.utils.files.fopen(keyfile, 'r') as key:
-                return key.read()
+                return salt.utils.stringutils.to_unicode(key.read())
         except (OSError, IOError, SaltClientError):
             # Fall back to eauth
             return ''
@@ -1795,7 +1796,7 @@ class LocalClient(object):
                 **kwargs)
 
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                     ':' + str(self.opts['ret_port'])
+                     ':' + six.text_type(self.opts['ret_port'])
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt='clear',
                                                  master_uri=master_uri)
@@ -1903,7 +1904,7 @@ class LocalClient(object):
                 **kwargs)
 
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                     ':' + str(self.opts['ret_port'])
+                     ':' + six.text_type(self.opts['ret_port'])
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
                                                                 io_loop=io_loop,
                                                                 crypt='clear',
