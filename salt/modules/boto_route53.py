@@ -408,8 +408,9 @@ def create_healthcheck(ip_addr=None, fqdn=None, region=None, key=None, keyid=Non
                                                       resource_path=/ fqdn=blog.saltstack.furniture
     '''
     if fqdn is None and ip_addr is None:
-        log.error('One of the following must be specified: fqdn or ip_addr')
-        return None
+        msg = 'One of the following must be specified: fqdn or ip_addr'
+        log.error(msg)
+        return {'error': msg}
     hc_ = boto.route53.healthcheck.HealthCheck(ip_addr,
                                                port,
                                                hc_type,
@@ -426,7 +427,7 @@ def create_healthcheck(ip_addr=None, fqdn=None, region=None, key=None, keyid=Non
 
     while error_retries > 0:
         try:
-            return conn.create_health_check(hc_)
+            return {'result': conn.create_health_check(hc_)}
         except DNSServerError as exc:
             log.debug(exc)
             if retry_on_errors:
@@ -438,7 +439,7 @@ def create_healthcheck(ip_addr=None, fqdn=None, region=None, key=None, keyid=Non
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise exc
+            return {'error': __utils__['boto.get_error'](exc)}
     return False
 
 
