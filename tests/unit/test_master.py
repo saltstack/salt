@@ -329,5 +329,5 @@ class ClearFuncsTestCase(TestCase):
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.auth.LoadAuth.authenticate_key', MagicMock(return_value='fake-user-key')), \
                 patch('salt.utils.master.get_values_of_matching_keys', MagicMock(return_value=['test'])), \
-                patch('salt.utils.minions.CkMinions.auth_check', MagicMock(return_value=False)):
-            self.assertEqual(mock_ret, self.clear_funcs.publish(load))
+                patch('salt.tgt.auth_check', MagicMock(return_value=False)):
+            self.assertEqual(u'', self.clear_funcs.publish(load))

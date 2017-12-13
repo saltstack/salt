@@ -11,13 +11,13 @@ import shutil
 import binascii
 
 # Import Salt Libs
+import salt.tgt
 import salt.crypt
 import salt.payload
 import salt.master
 import salt.transport.frame
 import salt.utils.event
 import salt.utils.files
-import salt.utils.minions
 import salt.utils.stringutils
 import salt.utils.verify
 from salt.utils.cache import CacheCli
@@ -102,8 +102,6 @@ class AESReqServerMixin(object):
             self.cache_cli = CacheCli(self.opts)
         else:
             self.cache_cli = False
-            # Make an minion checker object
-            self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
@@ -190,7 +188,7 @@ class AESReqServerMixin(object):
             if self.cache_cli:
                 minions = self.cache_cli.get_cached()
             else:
-                minions = self.ckminions.connected_ids()
+                minions = salt.tgt.connected_ids(self.opts)
                 if len(minions) > 1000:
                     log.info('With large numbers of minions it is advised '
                              'to enable the ConCache with \'con_cache: True\' '

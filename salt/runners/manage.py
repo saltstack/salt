@@ -21,9 +21,9 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: dis
 
 # Import salt libs
 import salt.key
+import salt.tgt
 import salt.utils.compat
 import salt.utils.files
-import salt.utils.minions
 import salt.utils.path
 import salt.utils.raetevent
 import salt.utils.versions
@@ -267,8 +267,7 @@ def list_state(subset=None, show_ipv4=False, state=None):
     else:
         # Always return 'present' for 0MQ for now
         # TODO: implement other states spport for 0MQ
-        ckminions = salt.utils.minions.CkMinions(__opts__)
-        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset, include_localhost=True)
+        minions = salt.tgt.connected_ids(__opts__, show_ipv4=show_ipv4, subset=subset, include_localhost=True)
 
     connected = dict(minions) if show_ipv4 else sorted(minions)
 

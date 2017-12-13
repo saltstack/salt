@@ -25,7 +25,7 @@ fake_opts = {
 fake_pillar_name = 'fake_pillar_name'
 
 
-def side_effect(group_sel, t):
+def side_effect(opts, group_sel, t):
     if group_sel.find(fake_minion_id) != -1:
         return {'minions': [fake_minion_id, ],
                 'missing': []}
@@ -41,7 +41,7 @@ class NodegroupsPillarTestCase(TestCase, LoaderModuleMockMixin):
         return {nodegroups: {'__opts__': fake_opts}}
 
     def _runner(self, expected_ret, pillar_name=None):
-        with patch('salt.utils.minions.CkMinions.check_minions',
+        with patch('salt.tgt.check_minions',
                 MagicMock(side_effect=side_effect)):
             pillar_name = pillar_name or fake_pillar_name
             actual_ret = nodegroups.ext_pillar(fake_minion_id, fake_pillar, pillar_name=pillar_name)

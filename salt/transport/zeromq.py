@@ -20,8 +20,8 @@ from salt.ext import six
 from salt.ext.six.moves import map
 import salt.auth
 import salt.crypt
+import salt.tgt
 import salt.utils.event
-import salt.utils.minions
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.verify
@@ -762,7 +762,6 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
     def connect(self):
         return tornado.gen.sleep(5)
@@ -904,8 +903,9 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         match_targets = ["pcre", "glob", "list"]
         if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
             # Fetch a list of minions that match
-            _res = self.ckminions.check_minions(load['tgt'],
-                                                tgt_type=load['tgt_type'])
+            _res = salt.tgt.check_minions(self.opts,
+                                          load['tgt'],
+                                          tgt_type=load['tgt_type'])
             match_ids = _res['minions']
 
             log.debug("Publish Side Match: %s", match_ids)

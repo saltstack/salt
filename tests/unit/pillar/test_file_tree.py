@@ -97,7 +97,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
     def test_absolute_path(self):
         'check file tree is imported correctly with an absolute path'
         absolute_path = os.path.join(self.pillar_path, 'base')
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
             mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
             self.assertEqual(BASE_PILLAR_CONTENT, mypillar)
 
@@ -107,7 +107,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_relative_path(self):
         'check file tree is imported correctly with a relative path'
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
             mypillar = file_tree.ext_pillar(MINION_ID, None, '.')
             self.assertEqual(BASE_PILLAR_CONTENT, mypillar)
 
@@ -117,14 +117,14 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_parent_path(self):
         'check if file tree is merged correctly with a .. path'
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
             with patch.dict(file_tree.__opts__, {'pillarenv': 'parent'}):
                 mypillar = file_tree.ext_pillar(MINION_ID, None, '..')
                 self.assertEqual(PARENT_PILLAR_CONTENT, mypillar)
 
     def test_no_pillarenv(self):
         'confirm that file_tree yells when pillarenv is missing for a relative path'
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
             with patch.dict(file_tree.__opts__, {'pillarenv': None}):
                 with TestsLoggingHandler() as handler:
                     mypillar = file_tree.ext_pillar(MINION_ID, None, '.')

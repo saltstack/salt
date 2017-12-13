@@ -186,10 +186,10 @@ import logging
 import os
 
 # Import salt libs
+import salt.tgt
 import salt.loader
 import salt.utils.dictupdate
 import salt.utils.files
-import salt.utils.minions
 import salt.utils.path
 import salt.utils.stringio
 import salt.template
@@ -398,8 +398,8 @@ def _ext_pillar(minion_id,
             for nodegroup in ext_pillar_dirs:
                 if (os.path.isdir(nodegroups_dir) and
                         nodegroup in master_ngroups):
-                    ckminions = salt.utils.minions.CkMinions(__opts__)
-                    _res = ckminions.check_minions(
+                    _res = salt.tgt.check_minions(
+                        __opts__,
                         master_ngroups[nodegroup],
                         'compound')
                     match = _res['minions']

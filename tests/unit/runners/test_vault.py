@@ -98,7 +98,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     'single-dict:{minion}': ['single-dict:{0}'.format(minion_id)],
                     'single-list:{grains[roles]}': []
         }
-        with patch('salt.utils.minions.get_minion_data',
+        with patch('salt.tgt.get_minion_data',
                    MagicMock(return_value=(None, None, None))):
             for case, correct_output in six.iteritems(cases):
                 test_config = {'policies': [case]}
@@ -139,7 +139,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     ]
                 }
 
-        with patch('salt.utils.minions.get_minion_data',
+        with patch('salt.tgt.get_minion_data',
                    MagicMock(return_value=(None, self.grains, None))):
             for case, correct_output in six.iteritems(cases):
                 test_config = {'policies': [case]}

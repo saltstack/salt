@@ -35,7 +35,7 @@ class LoadAuthTestCase(TestCase):
                 patcher = patch(mod)
             patcher.start()
             self.addCleanup(patcher.stop)
-        self.lauth = auth.LoadAuth({})  # Load with empty opts
+        self.lauth = auth.LoadAuth({'extension_modules': ''})
 
     def test_load_name(self):
         valid_eauth_load = {'username': 'test_user',
@@ -158,7 +158,7 @@ class MasterACLTestCase(ModuleCase):
         This tests to ensure test_user can access test.ping but *not* sys.doc
         '''
         _check_minions_return = {'minions': ['some_minions'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):
             # Can we access test.ping?
             self.clear.publish(self.valid_clear_load)
             self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], 'test.ping')
@@ -174,7 +174,7 @@ class MasterACLTestCase(ModuleCase):
         Tests to ensure test_group can access test.echo but *not* sys.doc
         '''
         _check_minions_return = {'minions': ['some_minions'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):
             self.valid_clear_load['kwargs']['user'] = 'new_user'
             self.valid_clear_load['fun'] = 'test.echo'
             self.valid_clear_load['arg'] = 'hello'
@@ -242,7 +242,7 @@ class MasterACLTestCase(ModuleCase):
         self.valid_clear_load['tgt'] = requested_tgt
         self.valid_clear_load['fun'] = requested_function
         _check_minions_return = {'minions': ['minion_glob1'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):  # Assume that there is a listening minion match
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):  # Assume that there is a listening minion match
             self.clear.publish(self.valid_clear_load)
         self.assertTrue(self.fire_event_mock.called, 'Did not fire {0} for minion tgt {1}'.format(requested_function, requested_tgt))
         self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], requested_function, 'Did not fire {0} for minion glob'.format(requested_function))
@@ -270,7 +270,7 @@ class MasterACLTestCase(ModuleCase):
                 - test.empty:
         '''
         _check_minions_return = {'minions': ['minion1'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):
             self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
             self.valid_clear_load.update({'user': 'test_user_func',
                                           'tgt': 'minion1',
@@ -292,7 +292,7 @@ class MasterACLTestCase(ModuleCase):
                         - 'TEST.*'
         '''
         _check_minions_return = {'minions': ['minion1'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):
             self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
             self.valid_clear_load.update({'user': 'test_user_func',
                                           'tgt': 'minion1',
@@ -314,7 +314,7 @@ class MasterACLTestCase(ModuleCase):
                         - 'TEST.*'
         '''
         _check_minions_return = {'minions': ['minion1'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):
             self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
             self.valid_clear_load.update({'user': 'test_user_func',
                                           'tgt': 'minion1',
@@ -340,7 +340,7 @@ class MasterACLTestCase(ModuleCase):
                         - 'TEST.*'
         '''
         _check_minions_return = {'minions': ['minion1'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):
             self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
             # Wrong last arg
             self.valid_clear_load.update({'user': 'test_user_func',
@@ -374,7 +374,7 @@ class MasterACLTestCase(ModuleCase):
                         text: 'KWMSG:.*'
         '''
         _check_minions_return = {'minions': ['some_minions'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):
             self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
             self.valid_clear_load.update({'user': 'test_user_func',
                                           'tgt': '*',
@@ -397,7 +397,7 @@ class MasterACLTestCase(ModuleCase):
                         text: 'KWMSG:.*'
         '''
         _check_minions_return = {'minions': ['some_minions'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):
             self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
             self.valid_clear_load.update({'user': 'test_user_func',
                                           'tgt': '*',
@@ -452,7 +452,7 @@ class MasterACLTestCase(ModuleCase):
                         'kwb': 'kwb'
         '''
         _check_minions_return = {'minions': ['some_minions'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):
             self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
             self.valid_clear_load.update({'user': 'test_user_func',
                                           'tgt': '*',
@@ -483,7 +483,7 @@ class MasterACLTestCase(ModuleCase):
                         'kwb': 'kwb'
         '''
         _check_minions_return = {'minions': ['some_minions'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):
+        with patch('salt.tgt.check_minions', MagicMock(return_value=_check_minions_return)):
             self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
             self.valid_clear_load.update({'user': 'test_user_func',
                                           'tgt': '*',
@@ -537,7 +537,7 @@ class AuthACLTestCase(ModuleCase):
         patches = (
             ('salt.minion.MasterMinion', MagicMock()),
             ('salt.utils.verify.check_path_traversal', MagicMock()),
-            ('salt.utils.minions.CkMinions.auth_check', self.auth_check_mock),
+            ('salt.tgt.auth_check', self.auth_check_mock),
             ('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True)),
             ('salt.client.get_local_client', MagicMock(return_value=opts['conf_file'])),
         )
@@ -585,11 +585,11 @@ class AuthACLTestCase(ModuleCase):
     @skipIf(salt.utils.platform.is_windows(), 'PAM eauth not available on Windows')
     def test_acl_simple_allow(self):
         self.clear.publish(self.valid_clear_load)
-        self.assertEqual(self.auth_check_mock.call_args[0][0],
+        self.assertEqual(self.auth_check_mock.call_args[0][1],
                          [{'alpha_minion': ['test.ping']}])
 
     def test_acl_simple_deny(self):
         with patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[{'beta_minion': ['test.ping']}])):
             self.clear.publish(self.valid_clear_load)
-            self.assertEqual(self.auth_check_mock.call_args[0][0],
+            self.assertEqual(self.auth_check_mock.call_args[0][1],
                              [{'beta_minion': ['test.ping']}])

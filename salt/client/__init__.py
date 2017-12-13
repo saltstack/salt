@@ -32,11 +32,11 @@ import salt.cache
 import salt.payload
 import salt.transport
 import salt.loader
+import salt.tgt
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
-import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
@@ -354,7 +354,7 @@ class LocalClient(object):
         return self._check_pub_data(pub_data)
 
     def gather_minions(self, tgt, expr_form):
-        _res = salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
+        _res = salt.tgt.check_minions(self.opts, tgt, tgt_type=expr_form)
         return _res['minions']
 
     @tornado.gen.coroutine
@@ -1617,7 +1617,7 @@ class LocalClient(object):
             for id_, min_ret in six.iteritems(ret):
                 if min_ret.get('failed') is True:
                     if connected_minions is None:
-                        connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
+                        connected_minions = salt.tgt.connected_ids(self.opts)
                     if self.opts['minion_data_cache'] \
                             and salt.cache.factory(self.opts).contains('minions/{0}'.format(id_), 'data') \
                             and connected_minions \
@@ -1694,8 +1694,8 @@ class LocalClient(object):
                         tgt, conf_file
                     )
                 )
-            tgt = salt.utils.minions.nodegroup_comp(tgt,
-                                                    self.opts['nodegroups'])
+            tgt = salt.tgt.nodegroup_comp(tgt,
+                                          self.opts['nodegroups'])
             tgt_type = 'compound'
 
         # Convert a range expression to a list of nodes and change expression

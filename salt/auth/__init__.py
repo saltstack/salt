@@ -25,12 +25,12 @@ from salt.ext import six
 
 # Import salt libs
 import salt.config
+import salt.tgt
 import salt.loader
 import salt.transport.client
 import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.files
-import salt.utils.minions
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.zeromq
@@ -52,13 +52,12 @@ class LoadAuth(object):
     '''
     Wrap the authentication system to handle peripheral components
     '''
-    def __init__(self, opts, ckminions=None):
+    def __init__(self, opts):
         self.opts = opts
         self.max_fail = 1.0
         self.serial = salt.payload.Serial(opts)
         self.auth = salt.loader.auth(opts)
         self.tokens = salt.loader.eauth_tokens(opts)
-        self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
 
     def load_name(self, load):
         '''
@@ -376,7 +375,8 @@ class LoadAuth(object):
 
         # We now have an authenticated session and it is time to determine
         # what the user has access to.
-        auth_list = self.ckminions.fill_auth_list(
+        auth_list = salt.tgt.fill_auth_list(
+                self.opts,
                 eauth_config,
                 name,
                 groups)
@@ -475,7 +475,6 @@ class Authorize(object):
         )
         self.opts = salt.config.master_config(opts['conf_file'])
         self.load = load
-        self.ckminions = salt.utils.minions.CkMinions(opts)
         if loadauth is None:
             self.loadauth = LoadAuth(opts)
         else:
@@ -592,7 +591,8 @@ class Authorize(object):
         '''
         if load.get('eauth'):
             sub_auth = sub_auth[load['eauth']]
-        good = self.ckminions.any_auth(
+        good = salt.tgt.any_auth(
+                self.opts,
                 form,
                 sub_auth[name] if name in sub_auth else sub_auth['*'],
                 load.get('fun', None),

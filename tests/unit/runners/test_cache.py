@@ -27,7 +27,7 @@ class CacheTest(TestCase, LoaderModuleMockMixin):
     Validate the cache runner
     '''
     def setup_loader_modules(self):
-        return {cache: {'__opts__': {'cache': 'localfs', 'pki_dir': TMP, 'key_cache': True}}}
+        return {cache: {'__opts__': {'cache': 'localfs', 'pki_dir': TMP, 'key_cache': True, 'extension_modules': ''}}}
 
     def test_grains(self):
         '''

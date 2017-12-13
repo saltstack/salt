@@ -126,10 +126,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
 
+import salt.tgt
+import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 from salt.utils.dictupdate import update as dict_merge
-import salt.utils.minions
-import salt.utils.yaml
 
 # Import third party libs
 try:
@@ -165,8 +165,7 @@ def ext_pillar(minion_id,
     if match:
         opts['target'] = match.group(1)
         temp = temp.replace(match.group(0), '')
-        checker = salt.utils.minions.CkMinions(__opts__)
-        _res = checker.check_minions(opts['target'], 'compound')
+        _res = salt.tgt.check_minions(__opts__, opts['target'], 'compound')
         minions = _res['minions']
         if minion_id not in minions:
             return {}
