@@ -68,9 +68,9 @@ def _represent_yaml_str(self, node):
     Represent for yaml
     '''
     return self.represent_scalar(node)
-YamlDumper.add_representer(u'tag:yaml.org,2002:str',
+YamlDumper.add_representer('tag:yaml.org,2002:str',
                            _represent_yaml_str)
-YamlDumper.add_representer(u'tag:yaml.org,2002:timestamp',
+YamlDumper.add_representer('tag:yaml.org,2002:timestamp',
                            _represent_yaml_str)
 
 
@@ -79,7 +79,7 @@ def _construct_yaml_str(self, node):
     Construct for yaml
     '''
     return self.construct_scalar(node)
-YamlLoader.add_constructor(u'tag:yaml.org,2002:timestamp',
+YamlLoader.add_constructor('tag:yaml.org,2002:timestamp',
                            _construct_yaml_str)
 
 logging.basicConfig(level=logging.DEBUG)

@@ -41,6 +41,19 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
                              cwd=tempfile.gettempdir(), test=True)
         self.assertSaltNoneReturn(ret)
 
+    def test_run_hide_output(self):
+        '''
+        cmd.run with output hidden
+        '''
+        ret = self.run_state(
+            u'cmd.run',
+            name=u'ls',
+            hide_output=True)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret[u'changes'][u'stdout'], u'')
+        self.assertEqual(ret[u'changes'][u'stderr'], u'')
+
 
 class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     '''

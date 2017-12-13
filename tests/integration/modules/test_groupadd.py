@@ -17,6 +17,7 @@ import salt.utils.files
 
 
 @skip_if_not_root
+@destructiveTest
 class GroupModuleTest(ModuleCase):
     '''
     Validate the linux group system module
@@ -42,7 +43,6 @@ class GroupModuleTest(ModuleCase):
                 )
             )
 
-    @destructiveTest
     def tearDown(self):
         '''
         Reset to original settings
@@ -79,7 +79,7 @@ class GroupModuleTest(ModuleCase):
         gid_max = login_defs.get('SYS_GID_MAX',
                                  int(login_defs.get('GID_MIN', 1000)) - 1)
 
-        return gid_min, gid_max
+        return int(gid_min), int(gid_max)
 
     def __get_free_system_gid(self):
         '''
@@ -159,7 +159,6 @@ class GroupModuleTest(ModuleCase):
         # group does not exist
         self.assertFalse(self.run_function('group.delete', [self._no_group]))
 
-    @destructiveTest
     def test_info(self):
         '''
         Test the info group function
@@ -173,7 +172,6 @@ class GroupModuleTest(ModuleCase):
         self.assertEqual(group_info['gid'], self._gid)
         self.assertIn(self._user, group_info['members'])
 
-    @destructiveTest
     def test_chgid(self):
         '''
         Test the change gid function
@@ -183,7 +181,6 @@ class GroupModuleTest(ModuleCase):
         group_info = self.run_function('group.info', [self._group])
         self.assertEqual(group_info['gid'], self._new_gid)
 
-    @destructiveTest
     def test_adduser(self):
         '''
         Test the add user to group function
@@ -200,7 +197,6 @@ class GroupModuleTest(ModuleCase):
         # try to add a non existing user to a non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._no_user]))
 
-    @destructiveTest
     def test_deluser(self):
         '''
         Test the delete user from group function
@@ -212,7 +208,6 @@ class GroupModuleTest(ModuleCase):
         group_info = self.run_function('group.info', [self._group])
         self.assertNotIn(self._user, group_info['members'])
 
-    @destructiveTest
     def test_members(self):
         '''
         Test the members function
@@ -226,7 +221,6 @@ class GroupModuleTest(ModuleCase):
         self.assertIn(self._user, group_info['members'])
         self.assertIn(self._user1, group_info['members'])
 
-    @destructiveTest
     def test_getent(self):
         '''
         Test the getent function
