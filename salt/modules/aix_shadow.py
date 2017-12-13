@@ -2,6 +2,8 @@
 '''
 Manage account locks on AIX systems
 
+.. versionadded:: Oxygen
+
 :depends: none
 '''
 
@@ -34,7 +36,7 @@ def login_failures(user):
 
     CLI Example:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt <minion_id> shadow.login_failures ALL
     '''
@@ -58,7 +60,7 @@ def locked(user):
 
     CLI Example:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt <minion_id> shadow.locked ALL
     '''
@@ -82,7 +84,7 @@ def unlock(user):
 
     CLI Example:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt <minion_id> shadow.unlock user
     '''
