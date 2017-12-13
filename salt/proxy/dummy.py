@@ -140,7 +140,7 @@ def service_list():
     List "services" on the REST server
     '''
     DETAILS = _load_state()
-    return DETAILS['services'].keys()
+    return list(DETAILS['services'])
 
 
 def service_status(name):
