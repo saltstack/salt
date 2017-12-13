@@ -2,21 +2,21 @@
 '''
 Beacon to fire event when we notice a AIX user is locked due to many failed login attempts.
 
+.. versionadded:: Oxygen
+
 :depends: none
 '''
-from __future__ import absolute_import
 
 # Import Python libs
-
+from __future__ import absolute_import
 import logging
 
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'aix_account'
 
-def __virtual__():
 
-    
+def __virtual__():
     '''
     Only load if kernel is AIX
     '''
@@ -50,7 +50,6 @@ def beacon(config):
           aix_account:
             user: ALL
             interval: 120
-
 
     '''
 
