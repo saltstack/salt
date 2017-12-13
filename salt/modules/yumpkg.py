@@ -1281,7 +1281,6 @@ def install(name=None,
     if pkg_type == 'repository':
         has_wildcards = [x for x, y in six.iteritems(pkg_params)
                          if y is not None and '*' in y]
-        _available = list_repo_pkgs(*has_wildcards, byrepo=False, **kwargs)
         pkg_params_items = six.iteritems(pkg_params)
     elif pkg_type == 'advisory':
         pkg_params_items = []
@@ -1363,6 +1362,9 @@ def install(name=None,
 
                 if '*' in version_num:
                     # Resolve wildcard matches
+                    if 'byrepo' in kwargs:
+                        _ = kwargs.pop('byrepo')
+                    _available = list_repo_pkgs(*has_wildcards, byrepo=False, **kwargs)
                     candidates = _available.get(pkgname, [])
                     match = salt.utils.fnmatch_multiple(candidates, version_num)
                     if match is not None:
@@ -1412,7 +1414,7 @@ def install(name=None,
                             to_install.append((pkgname, pkgstr))
                             break
                     else:
-                        if re.match('kernel(-.+)?', name):
+                        if name and re.match('kernel(-.+)?', name):
                             # kernel and its subpackages support multiple
                             # installs as their paths do not conflict.
                             # Performing a yum/dnf downgrade will be a no-op
