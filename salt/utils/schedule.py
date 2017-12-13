@@ -1121,13 +1121,16 @@ class Schedule(object):
             self.skip_function = schedule['skip_function']
         if 'skip_during_range' in schedule:
             self.skip_during_range = schedule['skip_during_range']
+
+        _hidden = ['enabled',
+                   'skip_function',
+                   'skip_during_range']
         for job, data in six.iteritems(schedule):
             run = False
 
-            if job == 'enabled' or not data:
+            if job in _hidden and not data:
                 continue
-            if job == 'skip_function' or not data:
-                continue
+
             if not isinstance(data, dict):
                 log.error('Scheduled job "{0}" should have a dict value, not {1}'.format(job, type(data)))
                 continue
@@ -1530,6 +1533,19 @@ class Schedule(object):
                                 log.error('Invalid date string for end in skip_during_range. Ignoring job {0}.'.format(job))
                                 log.error(data)
                                 continue
+
+                            # Check to see if we should run the job immediately
+                            # after the skip_during_range is over
+                            if 'run_after_skip_range' in data and \
+                               data['run_after_skip_range']:
+                                if 'run_explicit' not in data:
+                                    data['run_explicit'] = []
+                                # Add a run_explicit for immediately after the
+                                # skip_during_range ends
+                                _run_immediate = end + self.opts['loop_interval']
+                                if _run_immediate not in data['run_explicit']:
+                                    data['run_explicit'].append(_run_immediate)
+
                             if end > start:
                                 if start <= now <= end:
                                     if self.skip_function:
