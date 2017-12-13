@@ -29,9 +29,6 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 # Globals
-core.__salt__ = {}
-core.__opts__ = {}
-
 IPv4Address = salt.ext.ipaddress.IPv4Address
 IPv6Address = salt.ext.ipaddress.IPv6Address
 IP4_LOCAL = '127.0.0.1'
