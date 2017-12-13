@@ -1069,7 +1069,7 @@ def query(action=None,
         md = EVP.MessageDigest('sha256')
         md.update(timestamp.encode(__salt_system_encoding__))
         digest = md.final()
-        signed = key.sign(digest, algo='sha256')
+        signed = rsa_key.sign(digest, algo='sha256')
     else:
         rsa_ = PKCS1_v1_5.new(rsa_key)
         hash_ = SHA256.new()
