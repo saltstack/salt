@@ -253,7 +253,7 @@ def run(**kwargs):
     if 'name' in kwargs:
         kwargs.pop('name')
     ret = {
-        'name': kwargs.keys(),
+        'name': list(kwargs),
         'changes': {},
         'comment': '',
         'result': None,
