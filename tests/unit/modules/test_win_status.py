@@ -3,7 +3,6 @@
 # Import python libs
 from __future__ import absolute_import
 import sys
-import types
 
 # Import Salt libs
 from salt.ext import six
@@ -12,25 +11,16 @@ from salt.ext import six
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY
 
-# wmi and pythoncom modules are platform specific...
-wmi = types.ModuleType('wmi')
-sys.modules['wmi'] = wmi
-
-pythoncom = types.ModuleType('pythoncom')
-sys.modules['pythoncom'] = pythoncom
-
-if NO_MOCK is False:
-    WMI = Mock()
-    wmi.WMI = Mock(return_value=WMI)
-    pythoncom.CoInitialize = Mock()
-    pythoncom.CoUninitialize = Mock()
+try:
+    import wmi
+except ImportError:
+    pass
 
 # This is imported late so mock can do its job
 import salt.modules.win_status as status
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(sys.stdin.encoding != 'UTF-8', 'UTF-8 encoding required for this test is not supported')
 @skipIf(status.HAS_WMI is False, 'This test requires Windows')
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
@@ -55,8 +45,10 @@ class TestProcsBase(TestCase):
         self.__processes.append(process)
 
     def call_procs(self):
+        WMI = Mock()
         WMI.win32_process = Mock(return_value=self.__processes)
-        self.result = status.procs()
+        with patch.object(wmi, 'WMI', Mock(return_value=WMI)):
+            self.result = status.procs()
 
 
 class TestProcsCount(TestProcsBase):
@@ -101,6 +93,7 @@ class TestProcsAttributes(TestProcsBase):
         self.assertEqual(self.proc['user_domain'], self._expected_domain)
 
 
+@skipIf(sys.stdin.encoding != 'UTF-8', 'UTF-8 encoding required for this test is not supported')
 class TestProcsUnicodeAttributes(TestProcsBase):
     def setUp(self):
         unicode_str = u'\xc1'

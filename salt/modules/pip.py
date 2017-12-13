@@ -83,6 +83,7 @@ import shutil
 import logging
 import sys
 import tempfile
+import json
 
 # Import Salt libs
 import salt.utils.data
@@ -1132,6 +1133,13 @@ def list_upgrades(bin_env=None,
 
     cmd = [pip_bin, 'list', '--outdated']
 
+    # If pip >= 9.0 use --format=json
+    min_version = '9.0'
+    cur_version = version(pip_bin)
+    if salt.utils.versions.compare(ver1=cur_version, oper='>=',
+                                       ver2=min_version):
+        cmd.append('--format=json')
+
     cmd_kwargs = dict(cwd=cwd, runas=user)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
@@ -1142,15 +1150,76 @@ def list_upgrades(bin_env=None,
         raise CommandExecutionError(result['stderr'])
 
     packages = {}
-    for line in result['stdout'].splitlines():
-        match = re.search(r'(\S*)\s+\(.*Latest:\s+(.*)\)', line)
-        if match:
-            name, version_ = match.groups()
+    try:
+        json_results = json.loads(result['stdout'])
+        for json_result in json_results:
+            packages[json_result['name']] = json_result['latest_version']
+    except ValueError:
+        for line in result['stdout'].splitlines():
+            match = re.search(r'(\S*)\s+.*Latest:\s+(.*)', line)
+            if match:
+                name, version_ = match.groups()
+            else:
+                logger.error('Can\'t parse line \'{0}\''.format(line))
+                continue
+            packages[name] = version_
+
+    return packages
+
+
+def is_installed(pkgname=None,
+          bin_env=None,
+          user=None,
+          cwd=None):
+    '''
+    Filter list of installed apps from ``freeze`` and return True or False  if
+    ``pkgname`` exists in the list of packages installed.
+
+    .. note::
+
+        If the version of pip available is older than 8.0.3, the packages
+        wheel, setuptools, and distribute will not be reported by this function
+        even if they are installed. Unlike
+        :py:func:`pip.freeze <salt.modules.pip.freeze>`, this function always
+        reports the version of pip which is installed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.is_installed salt
+
+    .. versionadded:: Oxygen
+
+        The packages wheel, setuptools, and distribute are included if the
+        installed pip is new enough.
+    '''
+    for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
+        if line.startswith('-f') or line.startswith('#'):
+            # ignore -f line as it contains --find-links directory
+            # ignore comment lines
+            continue
+        elif line.startswith('-e hg+not trust'):
+            # ignore hg + not trust problem
+            continue
+        elif line.startswith('-e'):
+            line = line.split('-e ')[1]
+            version_, name = line.split('#egg=')
+        elif len(line.split('===')) >= 2:
+            name = line.split('===')[0]
+            version_ = line.split('===')[1]
+        elif len(line.split('==')) >= 2:
+            name = line.split('==')[0]
+            version_ = line.split('==')[1]
         else:
             logger.error('Can\'t parse line \'{0}\''.format(line))
             continue
-        packages[name] = version_
-    return packages
+
+        if pkgname:
+            if pkgname == name.lower():
+                return True
+
+    return False
 
 
 def upgrade_available(pkg,

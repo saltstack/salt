@@ -15,6 +15,24 @@ from salt.exceptions import SaltInvocationError
 LOGGER = logging.getLogger(__name__)
 
 
+def set_pause(jid, state_id, duration=None):
+    '''
+    Set up a state id pause, this instructs a running state to pause at a given
+    state id. This needs to pass in the jid of the running state and can
+    optionally pass in a duration in seconds.
+    '''
+    minion = salt.minion.MasterMinion(__opts__)
+    minion['state.set_pause'](jid, state_id, duration)
+
+
+def rm_pause(jid, state_id, duration=None):
+    '''
+    Remove a pause from a jid, allowing it to continue
+    '''
+    minion = salt.minion.MasterMinion(__opts__)
+    minion['state.rm_pause'](jid, state_id)
+
+
 def orchestrate(mods,
                 saltenv='base',
                 test=None,
@@ -71,6 +89,12 @@ def orchestrate(mods,
         )
     __opts__['file_client'] = 'local'
     minion = salt.minion.MasterMinion(__opts__)
+
+    if pillarenv is None and 'pillarenv' in __opts__:
+        pillarenv = __opts__['pillarenv']
+    if saltenv is None and 'saltenv' in __opts__:
+        saltenv = __opts__['saltenv']
+
     running = minion.functions['state.sls'](
             mods,
             test,

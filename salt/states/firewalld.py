@@ -82,7 +82,9 @@ import logging
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
+from salt.output import nested
 import salt.utils.path
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -153,37 +155,96 @@ def __virtual__():
 
 def present(name,
             block_icmp=None,
+            prune_block_icmp=False,
             default=None,
             masquerade=False,
             ports=None,
+            prune_ports=False,
             port_fwd=None,
+            prune_port_fwd=False,
             services=None,
-            prune_services=True,
+            # TODO: prune_services=False in future release
+            # prune_services=False,
+            prune_services=None,
             interfaces=None,
+            prune_interfaces=False,
             sources=None,
-            rich_rules=None):
+            prune_sources=False,
+            rich_rules=None,
+            prune_rich_rules=False):
 
     '''
     Ensure a zone has specific attributes.
+
+    name
+        The zone to modify.
+
+    default : None
+        Set this zone as the default zone if ``True``.
+
+    masquerade : False
+        Enable or disable masquerade for a zone.
+
+    block_icmp : None
+        List of ICMP types to block in the zone.
+
+    prune_block_icmp : False
+        If ``True``, remove all but the specified block_icmp from the zone.
+
+    ports : None
+        List of ports to add to the zone.
+
+    prune_ports : False
+        If ``True``, remove all but the specified ports from the zone.
+
+    port_fwd : None
+        List of port forwards to add to the zone.
+
+    prune_port_fwd : False
+        If ``True``, remove all but the specified port_fwd from the zone.
+
+    services : None
+        List of services to add to the zone.
+
+    prune_services : True
+        If ``True``, remove all but the specified services from the zone.
+        .. note:: Currently defaults to True for compatibility, but will be changed to False in a future release.
+
+    interfaces : None
+        List of interfaces to add to the zone.
+
+    prune_interfaces : False
+        If ``True``, remove all but the specified interfaces from the zone.
+
+    sources : None
+        List of sources to add to the zone.
+
+    prune_sources : False
+        If ``True``, remove all but the specified sources from the zone.
+
+    rich_rules : None
+        List of rich rules to add to the zone.
+
+    prune_rich_rules : False
+        If ``True``, remove all but the specified rich rules from the zone.
     '''
 
-    ret = _present(name, block_icmp, default, masquerade, ports, port_fwd,
-                   services, prune_services, interfaces, sources, rich_rules)
+    # if prune_services == None, set to True and log a deprecation warning
+    if prune_services is None:
+        prune_services = True
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'prune_services\' argument default is currently True, '
+            'but will be changed to True in future releases.')
 
+    ret = _present(name, block_icmp, prune_block_icmp, default, masquerade, ports, prune_ports,
+            port_fwd, prune_port_fwd, services, prune_services, interfaces, prune_interfaces,
+            sources, prune_sources, rich_rules, prune_rich_rules)
+
+    # Reload firewalld service on changes
     if ret['changes'] != {}:
         __salt__['firewalld.reload_rules']()
 
-    ret['result'] = True
-    if ret['changes'] == {}:
-        ret['comment'] = '\'{0}\' is already in the desired state.'.format(name)
-        return ret
-
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Configuration for \'{0}\' will change.'.format(name)
-        return ret
-
-    ret['comment'] = '\'{0}\' was configured.'.format(name)
     return ret
 
 
@@ -288,15 +349,23 @@ def service(name,
 
 def _present(name,
             block_icmp=None,
+            prune_block_icmp=False,
             default=None,
             masquerade=False,
             ports=None,
+            prune_ports=False,
             port_fwd=None,
+            prune_port_fwd=False,
             services=None,
-            prune_services=True,
+            # TODO: prune_services=False in future release
+            # prune_services=False,
+            prune_services=None,
             interfaces=None,
+            prune_interfaces=False,
             sources=None,
-            rich_rules=None):
+            prune_sources=False,
+            rich_rules=None,
+            prune_rich_rules=False):
     '''
     Ensure a zone has specific attributes.
     '''
@@ -320,8 +389,8 @@ def _present(name,
                 return ret
 
         ret['changes'].update({name:
-                              {'old': zones,
-                               'new': name}})
+                                {'old': zones,
+                                'new': name}})
 
     block_icmp = block_icmp or []
     new_icmp_types = []
@@ -335,8 +404,8 @@ def _present(name,
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
 
-    old_icmp_types = set(_current_icmp_blocks) - set(block_icmp)
     new_icmp_types = set(block_icmp) - set(_current_icmp_blocks)
+    old_icmp_types = []
 
     for icmp_type in new_icmp_types:
         if icmp_type in _valid_icmp_types:
@@ -350,19 +419,25 @@ def _present(name,
         else:
             log.error('{0} is an invalid ICMP type'.format(icmp_type))
 
-    for icmp_type in old_icmp_types:
-        # no need to check against _valid_icmp_types here, because all
-        # elements in old_icmp_types are guaranteed to be in
-        # _current_icmp_blocks, whose elements are inherently valid
-        if not __opts__['test']:
-            try:
-                __salt__['firewalld.allow_icmp'](name, icmp_type,
-                                                 permanent=True)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+    if prune_block_icmp:
+        old_icmp_types = set(_current_icmp_blocks) - set(block_icmp)
+        for icmp_type in old_icmp_types:
+            # no need to check against _valid_icmp_types here, because all
+            # elements in old_icmp_types are guaranteed to be in
+            # _current_icmp_blocks, whose elements are inherently valid
+            if not __opts__['test']:
+                try:
+                    __salt__['firewalld.allow_icmp'](name, icmp_type,
+                                                     permanent=True)
+                except CommandExecutionError as err:
+                    ret['comment'] = 'Error: {0}'.format(err)
+                    return ret
 
     if new_icmp_types or old_icmp_types:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_block_icmp:
+            block_icmp = list(new_icmp_types | set(_current_icmp_blocks))
         ret['changes'].update({'icmp_types':
                                 {'old': _current_icmp_blocks,
                                 'new': block_icmp}})
@@ -386,7 +461,6 @@ def _present(name,
                                   {'old': default_zone,
                                    'new': name}})
 
-    masquerade = masquerade or False
     if masquerade:
         try:
             masquerade_ret = __salt__['firewalld.get_masquerade'](name,
@@ -433,25 +507,32 @@ def _present(name,
         return ret
 
     new_ports = set(ports) - set(_current_ports)
-    old_ports = set(_current_ports) - set(ports)
+    old_ports = []
 
     for port in new_ports:
         if not __opts__['test']:
             try:
-                __salt__['firewalld.add_port'](name, port, permanent=True)
+                # TODO: force_masquerade to be removed in future release
+                __salt__['firewalld.add_port'](name, port, permanent=True, force_masquerade=False)
             except CommandExecutionError as err:
                 ret['comment'] = 'Error: {0}'.format(err)
                 return ret
 
-    for port in old_ports:
-        if not __opts__['test']:
-            try:
-                __salt__['firewalld.remove_port'](name, port, permanent=True)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+    if prune_ports:
+        old_ports = set(_current_ports) - set(ports)
+        for port in old_ports:
+            if not __opts__['test']:
+                try:
+                    __salt__['firewalld.remove_port'](name, port, permanent=True)
+                except CommandExecutionError as err:
+                    ret['comment'] = 'Error: {0}'.format(err)
+                    return ret
 
     if new_ports or old_ports:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_ports:
+            ports = list(new_ports | set(_current_ports))
         ret['changes'].update({'ports':
                                 {'old': _current_ports,
                                 'new': ports}})
@@ -474,27 +555,35 @@ def _present(name,
         ) for fwd in _current_port_fwd]
 
     new_port_fwd = set(port_fwd) - set(_current_port_fwd)
-    old_port_fwd = set(_current_port_fwd) - set(port_fwd)
+    old_port_fwd = []
 
     for fwd in new_port_fwd:
         if not __opts__['test']:
             try:
+                # TODO: force_masquerade to be removed in future release
                 __salt__['firewalld.add_port_fwd'](name, fwd.srcport,
-                    fwd.destport, fwd.protocol, fwd.destaddr, permanent=True)
+                    fwd.destport, fwd.protocol, fwd.destaddr, permanent=True,
+                    force_masquerade=False)
             except CommandExecutionError as err:
                 ret['comment'] = 'Error: {0}'.format(err)
                 return ret
 
-    for fwd in old_port_fwd:
-        if not __opts__['test']:
-            try:
-                __salt__['firewalld.remove_port_fwd'](name, fwd.srcport,
-                    fwd.destport, fwd.protocol, fwd.destaddr, permanent=True)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+    if prune_port_fwd:
+        old_port_fwd = set(_current_port_fwd) - set(port_fwd)
+        for fwd in old_port_fwd:
+            if not __opts__['test']:
+                try:
+                    __salt__['firewalld.remove_port_fwd'](name, fwd.srcport,
+                        fwd.destport, fwd.protocol, fwd.destaddr, permanent=True)
+                except CommandExecutionError as err:
+                    ret['comment'] = 'Error: {0}'.format(err)
+                    return ret
 
     if new_port_fwd or old_port_fwd:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_port_fwd:
+            port_fwd = list(new_port_fwd | set(_current_port_fwd))
         ret['changes'].update({'port_fwd':
                                 {'old': [fwd.todict() for fwd in
                                          _current_port_fwd],
@@ -532,6 +621,10 @@ def _present(name,
                     return ret
 
     if new_services or old_services:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_services:
+            services = list(new_services | set(_current_services))
         ret['changes'].update({'services':
                                 {'old': _current_services,
                                 'new': services}})
@@ -545,7 +638,7 @@ def _present(name,
         return ret
 
     new_interfaces = set(interfaces) - set(_current_interfaces)
-    old_interfaces = set(_current_interfaces) - set(interfaces)
+    old_interfaces = []
 
     for interface in new_interfaces:
         if not __opts__['test']:
@@ -556,16 +649,22 @@ def _present(name,
                 ret['comment'] = 'Error: {0}'.format(err)
                 return ret
 
-    for interface in old_interfaces:
-        if not __opts__['test']:
-            try:
-                __salt__['firewalld.remove_interface'](name, interface,
-                                                       permanent=True)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+    if prune_interfaces:
+        old_interfaces = set(_current_interfaces) - set(interfaces)
+        for interface in old_interfaces:
+            if not __opts__['test']:
+                try:
+                    __salt__['firewalld.remove_interface'](name, interface,
+                                                           permanent=True)
+                except CommandExecutionError as err:
+                    ret['comment'] = 'Error: {0}'.format(err)
+                    return ret
 
     if new_interfaces or old_interfaces:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_interfaces:
+            interfaces = list(new_interfaces | set(_current_interfaces))
         ret['changes'].update({'interfaces':
                                 {'old': _current_interfaces,
                                 'new': interfaces}})
@@ -579,7 +678,7 @@ def _present(name,
         return ret
 
     new_sources = set(sources) - set(_current_sources)
-    old_sources = set(_current_sources) - set(sources)
+    old_sources = []
 
     for source in new_sources:
         if not __opts__['test']:
@@ -589,16 +688,22 @@ def _present(name,
                 ret['comment'] = 'Error: {0}'.format(err)
                 return ret
 
-    for source in old_sources:
-        if not __opts__['test']:
-            try:
-                __salt__['firewalld.remove_source'](name, source,
-                                                    permanent=True)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+    if prune_sources:
+        old_sources = set(_current_sources) - set(sources)
+        for source in old_sources:
+            if not __opts__['test']:
+                try:
+                    __salt__['firewalld.remove_source'](name, source,
+                                                        permanent=True)
+                except CommandExecutionError as err:
+                    ret['comment'] = 'Error: {0}'.format(err)
+                    return ret
 
     if new_sources or old_sources:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_sources:
+            sources = list(new_sources | set(_current_sources))
         ret['changes'].update({'sources':
                                 {'old': _current_sources,
                                 'new': sources}})
@@ -612,7 +717,7 @@ def _present(name,
         return ret
 
     new_rich_rules = set(rich_rules) - set(_current_rich_rules)
-    old_rich_rules = set(_current_rich_rules) - set(rich_rules)
+    old_rich_rules = []
 
     for rich_rule in new_rich_rules:
         if not __opts__['test']:
@@ -623,29 +728,45 @@ def _present(name,
                 ret['comment'] = 'Error: {0}'.format(err)
                 return ret
 
-    for rich_rule in old_rich_rules:
-        if not __opts__['test']:
-            try:
-                __salt__['firewalld.remove_rich_rule'](name, rich_rule,
-                                                       permanent=True)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+    if prune_rich_rules:
+        old_rich_rules = set(_current_rich_rules) - set(rich_rules)
+        for rich_rule in old_rich_rules:
+            if not __opts__['test']:
+                try:
+                    __salt__['firewalld.remove_rich_rule'](name, rich_rule,
+                                                           permanent=True)
+                except CommandExecutionError as err:
+                    ret['comment'] = 'Error: {0}'.format(err)
+                    return ret
 
     if new_rich_rules or old_rich_rules:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_rich_rules:
+            rich_rules = list(new_rich_rules | set(_current_rich_rules))
         ret['changes'].update({'rich_rules':
                               {'old': _current_rich_rules,
                                'new': rich_rules}})
 
-    ret['result'] = True
+    # No changes
     if ret['changes'] == {}:
+        ret['result'] = True
         ret['comment'] = '\'{0}\' is already in the desired state.'.format(name)
         return ret
 
+    # test=True and changes predicted
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Configuration for \'{0}\' will change.'.format(name)
+        # build comment string
+        nested.__opts__ = __opts__
+        comment = []
+        comment.append('Configuration for \'{0}\' will change:'.format(name))
+        comment.append(nested.output(ret['changes']).rstrip())
+        ret['comment'] = '\n'.join(comment)
+        ret['changes'] = {}
         return ret
 
+    # Changes were made successfully
+    ret['result'] = True
     ret['comment'] = '\'{0}\' was configured.'.format(name)
     return ret

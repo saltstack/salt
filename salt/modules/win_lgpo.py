@@ -619,8 +619,8 @@ class _policy_info(object):
                         },
                     },
                     'RemoteRegistryExactPaths': {
-                        'Policy': 'Network access: Remotely accessible registry '
-                                  'paths',
+                        'Policy': 'Network access: Remotely accessible '
+                                  'registry paths',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -632,8 +632,8 @@ class _policy_info(object):
                         },
                     },
                     'RemoteRegistryPaths': {
-                        'Policy': 'Network access: Remotely accessible registry '
-                                  'paths and sub-paths',
+                        'Policy': 'Network access: Remotely accessible '
+                                  'registry paths and sub-paths',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -644,8 +644,8 @@ class _policy_info(object):
                         },
                     },
                     'RestrictNullSessAccess': {
-                        'Policy': 'Network access: Restrict anonymous access to '
-                                  'Named Pipes and Shares',
+                        'Policy': 'Network access: Restrict anonymous access '
+                                  'to Named Pipes and Shares',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'Registry': {
@@ -710,7 +710,9 @@ class _policy_info(object):
                         'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
-                            'Args': {'min': 0, 'max': 86313600}
+                            'Args': {'min': 1,
+                                     'max': 86313600,
+                                     'zero_value': 0xffffffff}
                         },
                         'NetUserModal': {
                             'Modal': 0,
@@ -718,7 +720,9 @@ class _policy_info(object):
                         },
                         'Transform': {
                             'Get': '_seconds_to_days',
-                            'Put': '_days_to_seconds'
+                            'Put': '_days_to_seconds',
+                            'GetArgs': {'zero_value': 0xffffffff},
+                            'PutArgs': {'zero_value': 0xffffffff}
                         },
                     },
                     'MinPasswordAge': {
@@ -750,7 +754,7 @@ class _policy_info(object):
                         },
                     },
                     'PasswordComplexity': {
-                        'Policy': 'Passwords must meet complexity requirements',
+                        'Policy': 'Password must meet complexity requirements',
                         'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'Secedit': {
@@ -894,9 +898,9 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'CachedLogonsCount': {
-                        'Policy': 'Interactive logon: Number of previous logons '
-                                  'to cache (in case domain controller is not '
-                                  'available)',
+                        'Policy': 'Interactive logon: Number of previous '
+                                  'logons to cache (in case domain controller '
+                                  'is not available)',
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 50}
@@ -911,8 +915,9 @@ class _policy_info(object):
                         },
                     },
                     'ForceUnlockLogon': {
-                        'Policy': 'Interactive logon: Require Domain Controller '
-                                  'authentication to unlock workstation',
+                        'Policy': 'Interactive logon: Require Domain '
+                                  'Controller authentication to unlock '
+                                  'workstation',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -979,8 +984,8 @@ class _policy_info(object):
                     },
                     'EnableUIADesktopToggle': {
                         'Policy': 'User Account Control: Allow UIAccess '
-                                  'applications to prompt for elevation without '
-                                  'using the secure desktop',
+                                  'applications to prompt for elevation '
+                                  'without using the secure desktop',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -994,8 +999,8 @@ class _policy_info(object):
                     },
                     'ConsentPromptBehaviorAdmin': {
                         'Policy': 'User Account Control: Behavior of the '
-                                  'elevation prompt for administrators in Admin '
-                                  'Approval Mode',
+                                  'elevation prompt for administrators in '
+                                  'Admin Approval Mode',
                         'Settings': self.uac_admin_prompt_lookup.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1073,7 +1078,7 @@ class _policy_info(object):
                     },
                     'EnableSecureUIAPaths': {
                         'Policy': 'User Account Control: Only elevate UIAccess '
-                                  'applicaitons that are installed in secure '
+                                  'applications that are installed in secure '
                                   'locations',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
@@ -1087,8 +1092,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'EnableLUA': {
-                        'Policy': 'User Account Control: Run all administrators '
-                                  'in Admin Approval Mode',
+                        'Policy': 'User Account Control: Run all '
+                                  'administrators in Admin Approval Mode',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1350,8 +1355,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'EnableForcedLogoff': {
-                        'Policy': 'Microsoft network server: Disconnect clients '
-                                  'when logon hours expire',
+                        'Policy': 'Microsoft network server: Disconnect '
+                                  'clients when logon hours expire',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1418,7 +1423,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'UndockWithoutLogon': {
-                        'Policy': 'Devices: Allow undock without having to log on',
+                        'Policy': 'Devices: Allow undock without having to log '
+                                  'on',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1493,8 +1499,8 @@ class _policy_info(object):
                         },
                     },
                     'SubmitControl': {
-                        'Policy': 'Domain controller: Allow server operators to '
-                                  'schedule tasks',
+                        'Policy': 'Domain controller: Allow server operators '
+                                  'to schedule tasks',
                         'Settings': self.enabled_one_disabled_zero_strings.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1573,8 +1579,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_strings_transform,
                     },
                     'SignSecureChannel': {
-                        'Policy': 'Domain member: Digitally sign secure channel '
-                                  'data (when possible)',
+                        'Policy': 'Domain member: Digitally sign secure '
+                                  'channel data (when possible)',
                         'Settings': self.enabled_one_disabled_zero_strings.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -2297,7 +2303,7 @@ class _policy_info(object):
                     },
                     'RecoveryConsoleSecurityLevel': {
                         'Policy': 'Recovery console: Allow automatic '
-                                  'adminstrative logon',
+                                  'administrative logon',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -2369,7 +2375,10 @@ class _policy_info(object):
         '''
         converts a number of seconds to days
         '''
+        zero_value = kwargs.get('zero_value', 0)
         if val is not None:
+            if val == zero_value:
+                return 0
             return val / 86400
         else:
             return 'Not Defined'
@@ -2379,7 +2388,10 @@ class _policy_info(object):
         '''
         converts a number of days to seconds
         '''
+        zero_value = kwargs.get('zero_value', 0)
         if val is not None:
+            if val == 0:
+                return zero_value
             return val * 86400
         else:
             return 'Not Defined'
@@ -2423,15 +2435,18 @@ class _policy_info(object):
         '''
         converts a binary 0/1 to Disabled/Enabled
         '''
-        if val is not None:
-            if ord(val) == 0:
-                return 'Disabled'
-            elif ord(val) == 1:
-                return 'Enabled'
+        try:
+            if val is not None:
+                if ord(val) == 0:
+                    return 'Disabled'
+                elif ord(val) == 1:
+                    return 'Enabled'
+                else:
+                    return 'Invalid Value'
             else:
-                return 'Invalid Value'
-        else:
-            return 'Not Defined'
+                return 'Not Defined'
+        except TypeError:
+            return 'Invalid Value'
 
     @classmethod
     def _binary_enable_zero_disable_one_reverse_conversion(cls, val, **kwargs):
@@ -2491,9 +2506,11 @@ class _policy_info(object):
     def _in_range_inclusive(cls, val, **kwargs):
         '''
         checks that a value is in an inclusive range
+        The value for 0 used by Max Password Age is actually 0xffffffff
         '''
-        minimum = 0
-        maximum = 1
+        minimum = kwargs.get('min', 0)
+        maximum = kwargs.get('max', 1)
+        zero_value = kwargs.get('zero_value', 0)
 
         if isinstance(val, six.string_types):
             if val.lower() == 'not defined':
@@ -2503,12 +2520,8 @@ class _policy_info(object):
                     val = int(val)
                 except ValueError:
                     return False
-        if 'min' in kwargs:
-            minimum = kwargs['min']
-        if 'max' in kwargs:
-            maximum = kwargs['max']
         if val is not None:
-            if val >= minimum and val <= maximum:
+            if minimum <= val <= maximum or val == zero_value:
                 return True
             else:
                 return False
@@ -2640,11 +2653,7 @@ class _policy_info(object):
         or values
         '''
         log.debug('item == {0}'.format(item))
-        value_lookup = False
-        if 'value_lookup' in kwargs:
-            value_lookup = kwargs['value_lookup']
-        else:
-            value_lookup = False
+        value_lookup = kwargs.get('value_lookup', False)
         if 'lookup' in kwargs:
             for k, v in six.iteritems(kwargs['lookup']):
                 if value_lookup:
@@ -3498,7 +3507,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                     reg_key,
                                     reg_valuename,
                                     chr(registry.vtype[this_vtype]),
-                                    six.unichr(len(this_element_value.encode('utf-16-le'))),
+                                    six.unichr(len(this_element_value.encode('utf-16-le', '' if six.PY2 else 'surrogatepass'))),
                                     this_element_value)
     return expected_string
 
@@ -4238,8 +4247,8 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
         for adm_namespace in admtemplate_data:
             for adm_policy in admtemplate_data[adm_namespace]:
                 if str(admtemplate_data[adm_namespace][adm_policy]).lower() == 'not configured':
-                    if adm_policy in base_policy_settings[adm_namespace]:
-                        base_policy_settings[adm_namespace].pop(adm_policy)
+                    if base_policy_settings.get(adm_namespace, {}).pop(adm_policy, None) is not None:
+                        log.debug('Policy "{0}" removed'.format(adm_policy))
                 else:
                     log.debug('adding {0} to base_policy_settings'.format(adm_policy))
                     if adm_namespace not in base_policy_settings:

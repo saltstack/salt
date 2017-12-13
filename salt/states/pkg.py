@@ -508,8 +508,10 @@ def _find_install_targets(name=None,
         # add it to the kwargs.
         kwargs['refresh'] = refresh
 
+    resolve_capabilities = kwargs.get('resolve_capabilities', False) and 'pkg.list_provides' in __salt__
     try:
         cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+        cur_prov = resolve_capabilities and __salt__['pkg.list_provides'](**kwargs) or dict()
     except CommandExecutionError as exc:
         return {'name': name,
                 'changes': {},
@@ -669,6 +671,9 @@ def _find_install_targets(name=None,
     failed_verify = False
     for key, val in six.iteritems(desired):
         cver = cur_pkgs.get(key, [])
+        if resolve_capabilities and not cver and key in cur_prov:
+            cver = cur_pkgs.get(cur_prov.get(key)[0], [])
+
         # Package not yet installed, so add to targets
         if not cver:
             targets[key] = val
@@ -786,13 +791,15 @@ def _find_install_targets(name=None,
             warnings, was_refreshed)
 
 
-def _verify_install(desired, new_pkgs, ignore_epoch=False):
+def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
     '''
     Determine whether or not the installed packages match what was requested in
     the SLS file.
     '''
     ok = []
     failed = []
+    if not new_caps:
+        new_caps = dict()
     for pkgname, pkgver in desired.items():
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names.
         # Homebrew for Mac OSX does something similar with tap names
@@ -809,6 +816,8 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False):
             cver = new_pkgs.get(pkgname.split('=')[0])
         else:
             cver = new_pkgs.get(pkgname)
+            if not cver and pkgname in new_caps:
+                cver = new_pkgs.get(new_caps.get(pkgname)[0])
 
         if not cver:
             failed.append(pkgname)
@@ -873,6 +882,26 @@ def _nested_output(obj):
     return ret
 
 
+def _resolve_capabilities(pkgs, refresh=False, **kwargs):
+    '''
+    Resolve capabilities in ``pkgs`` and exchange them with real package
+    names, when the result is distinct.
+    This feature can be turned on while setting the paramter
+    ``resolve_capabilities`` to True.
+
+    Return the input dictionary with replaced capability names and as
+    second return value a bool which say if a refresh need to be run.
+
+    In case of ``resolve_capabilities`` is False (disabled) or not
+    supported by the implementation the input is returned unchanged.
+    '''
+    if not pkgs or 'pkg.resolve_capabilities' not in __salt__:
+        return pkgs, refresh
+
+    ret = __salt__['pkg.resolve_capabilities'](pkgs, refresh=refresh, **kwargs)
+    return ret, False
+
+
 def installed(
         name,
         version=None,
@@ -906,6 +935,7 @@ def installed(
         for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
+        :mod:`pkgin <salt.modules.pkgin>`,
         :mod:`win_pkg <salt.modules.win_pkg>`,
         :mod:`yumpkg <salt.modules.yumpkg>`, and
         :mod:`zypper <salt.modules.zypper>`. The version number includes the
@@ -1103,6 +1133,11 @@ def installed(
         Force strict package naming. Disables lookup of package alternatives.
 
         .. versionadded:: 2014.1.1
+
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+
+        .. versionadded:: Oxygen
 
     :param bool allow_updates:
         Allow the package to be updated outside Salt's control (e.g. auto
@@ -1447,6 +1482,12 @@ def installed(
 
     kwargs['saltenv'] = __env__
     refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
+
+    # check if capabilities should be checked and modify the requested packages
+    # accordingly.
+    if pkgs:
+        pkgs, refresh = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
+
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
     if (pkg_verify or isinstance(pkg_verify, list)) \
@@ -1706,8 +1747,13 @@ def installed(
         if __grains__['os'] == 'FreeBSD':
             kwargs['with_origin'] = True
         new_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+        if kwargs.get('resolve_capabilities', False) and 'pkg.list_provides' in __salt__:
+            new_caps = __salt__['pkg.list_provides'](**kwargs)
+        else:
+            new_caps = {}
         ok, failed = _verify_install(desired, new_pkgs,
-                                     ignore_epoch=ignore_epoch)
+                                     ignore_epoch=ignore_epoch,
+                                     new_caps=new_caps)
         modified = [x for x in ok if x in targets]
         not_modified = [x for x in ok
                         if x not in targets
@@ -1926,6 +1972,11 @@ def downloaded(name,
                       - dos2unix
                       - salt-minion: 2015.8.5-1.el6
 
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+
+        .. versionadded:: Oxygen
+
     CLI Example:
 
     .. code-block:: yaml
@@ -1951,10 +2002,21 @@ def downloaded(name,
         ret['comment'] = 'No packages to download provided'
         return ret
 
+    # If just a name (and optionally a version) is passed, just pack them into
+    # the pkgs argument.
+    if name and not pkgs:
+        if version:
+            pkgs = [{name: version}]
+            version = None
+        else:
+            pkgs = [name]
+
     # It doesn't make sense here to received 'downloadonly' as kwargs
     # as we're explicitely passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
+
+    pkgs, _refresh = _resolve_capabilities(pkgs, **kwargs)
 
     # Only downloading not yet downloaded packages
     targets = _find_download_targets(name,
@@ -2202,6 +2264,10 @@ def latest(
             This parameter is available only on Debian based distributions and
             has no effect on the rest.
 
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+
+        .. versionadded:: Oxygen
 
     Multiple Package Installation Options:
 
@@ -2298,6 +2364,10 @@ def latest(
             desired_pkgs = [name]
 
     kwargs['saltenv'] = __env__
+
+    # check if capabilities should be checked and modify the requested packages
+    # accordingly.
+    desired_pkgs, refresh = _resolve_capabilities(desired_pkgs, refresh=refresh, **kwargs)
 
     try:
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
@@ -2792,6 +2862,9 @@ def purged(name,
 def uptodate(name, refresh=False, pkgs=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
+    .. versionchanged:: Oxygen
+
+        Added support for the ``pkgin`` provider.
 
     Verify that the system is completely up to date.
 
@@ -2818,6 +2891,11 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
             This parameter available only on Debian based distributions, and
             have no effect on the rest.
 
+    :param bool resolve_capabilities:
+        Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
+
+        .. versionadded:: Oxygen
+
     kwargs
         Any keyword arguments to pass through to ``pkg.upgrade``.
 
@@ -2838,6 +2916,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         return ret
 
     if isinstance(refresh, bool):
+        pkgs, refresh = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
             if isinstance(pkgs, list):

@@ -643,12 +643,18 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 result[opt] = opts[opt]
 
     if iface_type not in ['bond', 'vlan', 'bridge', 'ipip']:
+        auto_addr = False
         if 'addr' in opts:
             if salt.utils.validate.net.mac(opts['addr']):
                 result['addr'] = opts['addr']
-            else:
-                _raise_error_iface(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF'])
+            elif opts['addr'] == 'auto':
+                auto_addr = True
+            elif opts['addr'] != 'none':
+                _raise_error_iface(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF', 'auto', 'none'])
         else:
+            auto_addr = True
+
+        if auto_addr:
             # If interface type is slave for bond, not setting hwaddr
             if iface_type != 'slave':
                 ifaces = __salt__['network.interfaces']()
@@ -717,9 +723,24 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if opt in opts:
             result[opt] = opts[opt]
 
-    for opt in ['ipaddrs', 'ipv6addrs']:
-        if opt in opts:
-            result[opt] = opts[opt]
+    if 'ipaddrs' in opts:
+        result['ipaddrs'] = []
+        for opt in opts['ipaddrs']:
+            if salt.utils.validate.net.ipv4_addr(opt):
+                ip, prefix = [i.strip() for i in opt.split('/')]
+                result['ipaddrs'].append({'ipaddr': ip, 'prefix': prefix})
+            else:
+                msg = 'ipv4 CIDR is invalid'
+                log.error(msg)
+                raise AttributeError(msg)
+
+    if 'ipv6addrs' in opts:
+        for opt in opts['ipv6addrs']:
+            if not salt.utils.validate.net.ipv6_addr(opt):
+                msg = 'ipv6 CIDR is invalid'
+                log.error(msg)
+                raise AttributeError(msg)
+            result['ipv6addrs'] = opts['ipv6addrs']
 
     if 'enable_ipv6' in opts:
         result['enable_ipv6'] = opts['enable_ipv6']
@@ -1099,8 +1120,8 @@ def build_routes(iface, **settings):
     log.debug("IPv4 routes:\n{0}".format(opts4))
     log.debug("IPv6 routes:\n{0}".format(opts6))
 
-    routecfg = template.render(routes=opts4)
-    routecfg6 = template.render(routes=opts6)
+    routecfg = template.render(routes=opts4, iface=iface)
+    routecfg6 = template.render(routes=opts6, iface=iface)
 
     if settings['test']:
         routes = _read_temp(routecfg)

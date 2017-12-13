@@ -3,7 +3,7 @@
 Template render systems
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Python libs
 import codecs
@@ -127,7 +127,7 @@ def get_context(template, line, num_lines=5, marker=None):
     if marker:
         buf[error_line_in_context] += marker
 
-    return u'---\n{0}\n---'.format(u'\n'.join(buf))
+    return '---\n{0}\n---'.format('\n'.join(buf))
 
 
 def wrap_tmpl_func(render_str):
@@ -256,7 +256,7 @@ def _get_jinja_error_message(tb_data):
     '''
     try:
         line = _get_jinja_error_slug(tb_data)
-        return u'{0}({1}):\n{3}'.format(*line)
+        return '{0}({1}):\n{3}'.format(*line)
     except IndexError:
         pass
     return None
@@ -355,16 +355,40 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
     env_args['extensions'].append(salt.utils.jinja.SerializerExtension)
 
+    opt_jinja_env = opts.get('jinja_env', {})
+    opt_jinja_sls_env = opts.get('jinja_sls_env', {})
+
+    opt_jinja_env = opt_jinja_env if isinstance(opt_jinja_env, dict) else {}
+    opt_jinja_sls_env = opt_jinja_sls_env if isinstance(opt_jinja_sls_env, dict) else {}
+
     # Pass through trim_blocks and lstrip_blocks Jinja parameters
     # trim_blocks removes newlines around Jinja blocks
     # lstrip_blocks strips tabs and spaces from the beginning of
     # line to the start of a block.
     if opts.get('jinja_trim_blocks', False):
         log.debug('Jinja2 trim_blocks is enabled')
-        env_args['trim_blocks'] = True
+        log.warning('jinja_trim_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead')
+        opt_jinja_env['trim_blocks'] = True
+        opt_jinja_sls_env['trim_blocks'] = True
     if opts.get('jinja_lstrip_blocks', False):
         log.debug('Jinja2 lstrip_blocks is enabled')
-        env_args['lstrip_blocks'] = True
+        log.warning('jinja_lstrip_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead')
+        opt_jinja_env['lstrip_blocks'] = True
+        opt_jinja_sls_env['lstrip_blocks'] = True
+
+    def opt_jinja_env_helper(opts, optname):
+        for k, v in six.iteritems(opts):
+            k = k.lower()
+            if hasattr(jinja2.defaults, k.upper()):
+                log.debug('Jinja2 environment {0} was set to {1} by {2}'.format(k, v, optname))
+                env_args[k] = v
+            else:
+                log.warning('Jinja2 environment {0} is not recognized'.format(k))
+
+    if 'sls' in context and context['sls'] != '':
+        opt_jinja_env_helper(opt_jinja_sls_env, 'jinja_sls_env')
+    else:
+        opt_jinja_env_helper(opt_jinja_env, 'jinja_env')
 
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)

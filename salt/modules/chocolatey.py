@@ -369,7 +369,7 @@ def install(name,
             force_x86=False,
             package_args=None,
             allow_multiple=False,
-            no_progress=False):
+            execution_timeout=None):
     '''
     Instructs Chocolatey to install a package.
 
@@ -425,8 +425,10 @@ def install(name,
 
             .. versionadded:: 2017.7.0
 
-        no_progress
-            Do not show download progress percentages. Defaults to False.
+        execution_timeout (str):
+        Chocolatey execution timeout value you want to pass to the installation process. Default is None.
+
+            .. versionadded:: Oxygen
 
     Returns:
         str: The output of the ``chocolatey`` command
@@ -466,9 +468,13 @@ def install(name,
         cmd.extend(['--packageparameters', package_args])
     if allow_multiple:
         cmd.append('--allow-multiple')
-    if no_progress:
-        cmd.append(_no_progress(__context__))
+    if execution_timeout:
+        cmd.extend(['--execution-timeout', execution_timeout])
+
+    # Salt doesn't need to see the progress
+    cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
+
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
@@ -738,13 +744,12 @@ def upgrade(name,
             install_args=None,
             override_args=False,
             force_x86=False,
-            package_args=None,
-            no_progress=False):
+            package_args=None):
     '''
     .. versionadded:: 2016.3.4
 
     Instructs Chocolatey to upgrade packages on the system. (update is being
-    deprecated)
+    deprecated). This command will install the package if not installed.
 
     Args:
 
@@ -782,9 +787,6 @@ def upgrade(name,
         package_args
             A list of arguments you want to pass to the package
 
-        no_progress
-            Do not show download progress percentages. Defaults to False.
-
     Returns:
         str: Results of the ``chocolatey`` command
 
@@ -799,7 +801,7 @@ def upgrade(name,
     choc_path = _find_chocolatey(__context__, __salt__)
     cmd = [choc_path, 'upgrade', name]
     if version:
-        cmd.extend(['-version', version])
+        cmd.extend(['--version', version])
     if source:
         cmd.extend(['--source', source])
     if salt.utils.data.is_true(force):
@@ -814,9 +816,9 @@ def upgrade(name,
         cmd.append('--forcex86')
     if package_args:
         cmd.extend(['--packageparameters', package_args])
-    if no_progress:
-        cmd.append(_no_progress(__context__))
 
+    # Salt doesn't need to see the progress
+    cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -828,7 +830,7 @@ def upgrade(name,
     return result['stdout']
 
 
-def update(name, source=None, pre_versions=False, no_progress=False):
+def update(name, source=None, pre_versions=False):
     '''
     Instructs Chocolatey to update packages on the system.
 
@@ -842,9 +844,6 @@ def update(name, source=None, pre_versions=False, no_progress=False):
 
     pre_versions
         Include pre-release packages in comparison. Defaults to False.
-
-    no_progress
-        Do not show download progress percentages. Defaults to False.
 
     CLI Example:
 
@@ -864,9 +863,11 @@ def update(name, source=None, pre_versions=False, no_progress=False):
         cmd.extend(['--source', source])
     if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
-    if no_progress:
-        cmd.append(_no_progress(__context__))
+
+    # Salt doesn't need to see the progress
+    cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
+
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:

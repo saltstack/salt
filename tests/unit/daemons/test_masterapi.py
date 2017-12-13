@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import
 from functools import wraps
+import io
 import stat
 
 # Import Salt libs
@@ -58,7 +59,8 @@ class AutoKeyTest(TestCase):
     '''
 
     def setUp(self):
-        opts = {'user': 'test_user'}
+        opts = salt.config.master_config(None)
+        opts[u'user'] = u'test_user'
         self.auto_key = masterapi.AutoKey(opts)
         self.stats = {}
 
@@ -134,6 +136,93 @@ class AutoKeyTest(TestCase):
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', '', ''), 'gid': 0}
         self.assertTrue(self.auto_key.check_permissions('testfile'))
+
+    def _test_check_autosign_grains(self,
+                                    test_func,
+                                    file_content=u'test_value',
+                                    file_name=u'test_grain',
+                                    autosign_grains_dir=u'test_dir',
+                                    permissions_ret=True):
+        '''
+        Helper function for testing autosign_grains().
+
+        Patches ``os.walk`` to return only ``file_name`` and ``salt.utils.files.fopen`` to open a
+        mock file with ``file_content`` as content. Optionally sets ``opts`` values.
+        Then executes test_func. The ``os.walk`` and ``salt.utils.files.fopen`` mock objects
+        are passed to the function as arguments.
+        '''
+        if autosign_grains_dir:
+            self.auto_key.opts[u'autosign_grains_dir'] = autosign_grains_dir
+        mock_file = io.StringIO(file_content)
+        mock_dirs = [(None, None, [file_name])]
+
+        with patch('os.walk', MagicMock(return_value=mock_dirs)) as mock_walk, \
+             patch('salt.utils.files.fopen', MagicMock(return_value=mock_file)) as mock_open, \
+             patch('salt.daemons.masterapi.AutoKey.check_permissions',
+                MagicMock(return_value=permissions_ret)) as mock_permissions:
+            test_func(mock_walk, mock_open, mock_permissions)
+
+    def test_check_autosign_grains_no_grains(self):
+        '''
+        Asserts that autosigning from grains fails when no grain values are passed.
+        '''
+        def test_func(mock_walk, mock_open, mock_permissions):
+            self.assertFalse(self.auto_key.check_autosign_grains(None))
+            self.assertEqual(mock_walk.call_count, 0)
+            self.assertEqual(mock_open.call_count, 0)
+            self.assertEqual(mock_permissions.call_count, 0)
+
+            self.assertFalse(self.auto_key.check_autosign_grains({}))
+            self.assertEqual(mock_walk.call_count, 0)
+            self.assertEqual(mock_open.call_count, 0)
+            self.assertEqual(mock_permissions.call_count, 0)
+
+        self._test_check_autosign_grains(test_func)
+
+    def test_check_autosign_grains_no_autosign_grains_dir(self):
+        '''
+        Asserts that autosigning from grains fails when the \'autosign_grains_dir\' config option
+        is undefined.
+        '''
+        def test_func(mock_walk, mock_open, mock_permissions):
+            self.assertFalse(self.auto_key.check_autosign_grains({u'test_grain': u'test_value'}))
+            self.assertEqual(mock_walk.call_count, 0)
+            self.assertEqual(mock_open.call_count, 0)
+            self.assertEqual(mock_permissions.call_count, 0)
+
+        self._test_check_autosign_grains(test_func, autosign_grains_dir=None)
+
+    def test_check_autosign_grains_accept(self):
+        '''
+        Asserts that autosigning from grains passes when a matching grain value is in an
+        autosign_grain file.
+        '''
+        def test_func(*args):
+            self.assertTrue(self.auto_key.check_autosign_grains({u'test_grain': u'test_value'}))
+
+        file_content = u'#test_ignore\ntest_value'
+        self._test_check_autosign_grains(test_func, file_content=file_content)
+
+    def test_check_autosign_grains_accept_not(self):
+        '''
+        Asserts that autosigning from grains fails when the grain value is not in the
+        autosign_grain files.
+        '''
+        def test_func(*args):
+            self.assertFalse(self.auto_key.check_autosign_grains({u'test_grain': u'test_invalid'}))
+
+        file_content = u'#test_invalid\ntest_value'
+        self._test_check_autosign_grains(test_func, file_content=file_content)
+
+    def test_check_autosign_grains_invalid_file_permissions(self):
+        '''
+        Asserts that autosigning from grains fails when the grain file has the wrong permissions.
+        '''
+        def test_func(*args):
+            self.assertFalse(self.auto_key.check_autosign_grains({u'test_grain': u'test_value'}))
+
+        file_content = u'#test_ignore\ntest_value'
+        self._test_check_autosign_grains(test_func, file_content=file_content, permissions_ret=False)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -427,3 +516,59 @@ class LocalFuncsTestCase(TestCase):
                 patch('salt.utils.master.get_values_of_matching_keys', MagicMock(return_value=['test'])), \
                 patch('salt.utils.minions.CkMinions.auth_check', MagicMock(return_value=False)):
             self.assertEqual(u'', self.local_funcs.publish(load))
+
+
+class FakeCache(object):
+
+    def __init__(self):
+        self.data = {}
+
+    def store(self, bank, key, value):
+        self.data[bank, key] = value
+
+    def fetch(self, bank, key):
+        return self.data[bank, key]
+
+
+class RemoteFuncsTestCase(TestCase):
+    '''
+    TestCase for salt.daemons.masterapi.RemoteFuncs class
+    '''
+
+    def setUp(self):
+        opts = salt.config.master_config(None)
+        self.funcs = masterapi.RemoteFuncs(opts)
+        self.funcs.cache = FakeCache()
+
+    def test_mine_get(self, tgt_type_key='tgt_type'):
+        '''
+        Asserts that ``mine_get`` gives the expected results.
+
+        Actually this only tests that:
+
+        - the correct check minions method is called
+        - the correct cache key is subsequently used
+        '''
+        self.funcs.cache.store('minions/webserver', 'mine',
+                               dict(ip_addr='2001:db8::1:3'))
+        with patch('salt.utils.minions.CkMinions._check_compound_minions',
+                   MagicMock(return_value=(dict(
+                       minions=['webserver'],
+                       missing=[])))):
+            ret = self.funcs._mine_get(
+                {
+                    'id': 'requester_minion',
+                    'tgt': 'G@roles:web',
+                    'fun': 'ip_addr',
+                    tgt_type_key: 'compound',
+                }
+            )
+        self.assertDictEqual(ret, dict(webserver='2001:db8::1:3'))
+
+    def test_mine_get_pre_nitrogen_compat(self):
+        '''
+        Asserts that pre-Nitrogen API key ``expr_form`` is still accepted.
+
+        This is what minions before Nitrogen would issue.
+        '''
+        self.test_mine_get(tgt_type_key='expr_form')
