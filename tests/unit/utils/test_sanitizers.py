@@ -21,7 +21,7 @@ class SanitizersTestCase(TestCase):
         '''
         Test sanitized input for trimming
         '''
-        value = u' sample '
+        value = ' sample '
         response = clean.trim(value)
         assert response == 'sample'
         assert type(response) == text

@@ -743,6 +743,10 @@ class Master(SMaster):
                 kwargs=kwargs,
                 name='ReqServer')
 
+            self.process_manager.add_process(
+                FileserverUpdate,
+                args=(self.opts,))
+
             # Fire up SSDP discovery publisher
             if self.opts['discovery']:
                 if salt.utils.ssdp.SSDPDiscoveryServer.is_available():
@@ -754,10 +758,6 @@ class Master(SMaster):
                     log.error('Unable to load SSDP: asynchronous IO is not available.')
                     if sys.version_info.major == 2:
                         log.error('You are using Python 2, please install "trollius" module to enable SSDP discovery.')
-
-            self.process_manager.add_process(
-                FileserverUpdate,
-                args=(self.opts,))
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:

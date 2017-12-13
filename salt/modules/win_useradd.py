@@ -462,12 +462,12 @@ def getUserSid(username):
         username = _to_unicode(username)
 
     domain = win32api.GetComputerName()
-    if username.find(u'\\') != -1:
-        domain = username.split(u'\\')[0]
-        username = username.split(u'\\')[-1]
+    if username.find('\\') != -1:
+        domain = username.split('\\')[0]
+        username = username.split('\\')[-1]
     domain = domain.upper()
     return win32security.ConvertSidToStringSid(
-        win32security.LookupAccountName(None, domain + u'\\' + username)[0])
+        win32security.LookupAccountName(None, domain + '\\' + username)[0])
 
 
 def setpassword(name, password):
@@ -843,10 +843,13 @@ def _get_userprofile_from_registry(user, sid):
     '''
     profile_dir = __salt__['reg.read_value'](
         'HKEY_LOCAL_MACHINE',
-        u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+        'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
         'ProfileImagePath'
     )['vdata']
-    log.debug(u'user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
+    log.debug(
+        'user %s with sid=%s profile is located at "%s"',
+        user, sid, profile_dir
+    )
     return profile_dir
 
 

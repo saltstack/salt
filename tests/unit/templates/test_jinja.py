@@ -424,7 +424,7 @@ class TestGetTemplate(TestCase):
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_render_with_unicode_syntax_error(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
-            template = 'hello\n\n{{ bad\n\nfoo\ud55c'
+            template = 'hello\n\n{{ bad\n\nfoo한'
             expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
             self.assertRaisesRegex(
                 SaltRenderError,
@@ -472,7 +472,7 @@ class TestGetTemplate(TestCase):
         )
 
     def test_render_with_undefined_variable_unicode(self):
-        template = "hello\ud55c\n\n{{ foo }}\n\nfoo"
+        template = 'hello한\n\n{{ foo }}\n\nfoo'
         expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegex(
             SaltRenderError,
@@ -652,7 +652,7 @@ class TestCustomExtensions(TestCase):
         self.assertEqual(dataset, rendered)
 
     def test_serialize_yaml_unicode(self):
-        dataset = "str value"
+        dataset = 'str value'
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
         if six.PY3:
