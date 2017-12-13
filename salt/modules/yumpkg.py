@@ -273,7 +273,7 @@ def _get_extra_options(**kwargs):
     ret = []
     kwargs = salt.utils.clean_kwargs(**kwargs)
     for key, value in six.iteritems(kwargs):
-        if isinstance(key, six.string_types):
+        if isinstance(value, six.string_types):
             ret.append('--{0}=\'{1}\''.format(key, value))
         elif value is True:
             ret.append('--{0}'.format(key))
