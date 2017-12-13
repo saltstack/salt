@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Sync custom types to the Master
+The Saltutil runner is used to sync custom types to the Master. See the
+:mod:`saltutil module <salt.modules.saltutil>` for documentation on
+managing updates to minions.
 
 .. versionadded:: 2016.3.0
 '''
@@ -408,7 +410,7 @@ def sync_sdb(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utils modules from ``salt://_sdb`` to the master
+    Sync sdb modules from ``salt://_sdb`` to the master
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -454,7 +456,7 @@ def sync_cache(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utils modules from ``salt://_cache`` to the master
+    Sync cache modules from ``salt://_cache`` to the master
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -480,7 +482,7 @@ def sync_fileserver(saltenv='base', extmod_whitelist=None, extmod_blacklist=None
     '''
     .. versionadded:: Oxygen
 
-    Sync utils modules from ``salt://_fileserver`` to the master
+    Sync fileserver modules from ``salt://_fileserver`` to the master
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -506,7 +508,7 @@ def sync_clouds(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utils modules from ``salt://_clouds`` to the master
+    Sync cloud modules from ``salt://_clouds`` to the master
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -532,7 +534,7 @@ def sync_roster(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utils modules from ``salt://_roster`` to the master
+    Sync roster modules from ``salt://_roster`` to the master
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
