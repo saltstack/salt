@@ -113,7 +113,7 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as 
 # Import 3rd-Party Libs
 # Try to import PyCrypto, which may not be installed on a RAET-based system
 try:
-    import M2Crypto
+    from M2Crypto import RSA
     HAS_M2 = True
 except ImportError:
     HAS_M2 = False
@@ -4743,7 +4743,7 @@ def get_password_data(
             rsa_key = kwargs['key']
             pwdata = base64.b64decode(pwdata)
             if HAS_M2:
-                key = M2Crypto.RSA.load_key_string(rsa_key)
+                key = RSA.load_key_string(rsa_key)
                 password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
             else:
                 dsize = Crypto.Hash.SHA.digest_size

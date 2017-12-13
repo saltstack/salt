@@ -56,8 +56,11 @@ import tornado.gen
 import tornado.concurrent
 
 # Import third party libs
-HAS_M2 = salt.crypt.HAS_M2
-if not HAS_M2:
+try:
+    from M2Crypto import RSA
+    HAS_M2 = True
+except ImportError:
+    HAS_M2 = False
     try:
         from Cryptodome.Cipher import PKCS1_OAEP
     except ImportError:
