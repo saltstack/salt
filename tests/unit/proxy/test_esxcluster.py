@@ -92,7 +92,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
             with self.assertRaises(salt.exceptions.InvalidConfigError) as \
                     excinfo:
                 esxcluster.init(self.opts_userpass)
-        self.assertEqual(excinfo.exception.strerror.message,
+        self.assertEqual(excinfo.exception.strerror,
                          'Validation Error')
 
     def test_no_username(self):

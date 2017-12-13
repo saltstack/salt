@@ -8,97 +8,97 @@ from __future__ import absolute_import
 # Import 3rd-party libs
 from salt.ext import six
 
-graph_prefix = u'\x1b['
-graph_suffix = u'm'
+graph_prefix = '\x1b['
+graph_suffix = 'm'
 codes = {
-    u'reset': u'0',
+    'reset': '0',
 
-    u'bold': u'1',
-    u'faint': u'2',
-    u'italic': u'3',
-    u'underline': u'4',
-    u'blink': u'5',
-    u'slow_blink': u'5',
-    u'fast_blink': u'6',
-    u'inverse': u'7',
-    u'conceal': u'8',
-    u'strike': u'9',
+    'bold': '1',
+    'faint': '2',
+    'italic': '3',
+    'underline': '4',
+    'blink': '5',
+    'slow_blink': '5',
+    'fast_blink': '6',
+    'inverse': '7',
+    'conceal': '8',
+    'strike': '9',
 
-    u'primary_font': u'10',
-    u'reset_font': u'10',
-    u'font_0': u'10',
-    u'font_1': u'11',
-    u'font_2': u'12',
-    u'font_3': u'13',
-    u'font_4': u'14',
-    u'font_5': u'15',
-    u'font_6': u'16',
-    u'font_7': u'17',
-    u'font_8': u'18',
-    u'font_9': u'19',
-    u'fraktur': u'20',
+    'primary_font': '10',
+    'reset_font': '10',
+    'font_0': '10',
+    'font_1': '11',
+    'font_2': '12',
+    'font_3': '13',
+    'font_4': '14',
+    'font_5': '15',
+    'font_6': '16',
+    'font_7': '17',
+    'font_8': '18',
+    'font_9': '19',
+    'fraktur': '20',
 
-    u'double_underline': u'21',
-    u'end_bold': u'21',
-    u'normal_intensity': u'22',
-    u'end_italic': u'23',
-    u'end_fraktur': u'23',
-    u'end_underline': u'24',  # single or double
-    u'end_blink': u'25',
-    u'end_inverse': u'27',
-    u'end_conceal': u'28',
-    u'end_strike': u'29',
+    'double_underline': '21',
+    'end_bold': '21',
+    'normal_intensity': '22',
+    'end_italic': '23',
+    'end_fraktur': '23',
+    'end_underline': '24',  # single or double
+    'end_blink': '25',
+    'end_inverse': '27',
+    'end_conceal': '28',
+    'end_strike': '29',
 
-    u'black': u'30',
-    u'red': u'31',
-    u'green': u'32',
-    u'yellow': u'33',
-    u'blue': u'34',
-    u'magenta': u'35',
-    u'cyan': u'36',
-    u'white': u'37',
-    u'extended': u'38',
-    u'default': u'39',
+    'black': '30',
+    'red': '31',
+    'green': '32',
+    'yellow': '33',
+    'blue': '34',
+    'magenta': '35',
+    'cyan': '36',
+    'white': '37',
+    'extended': '38',
+    'default': '39',
 
-    u'fg_black': u'30',
-    u'fg_red': u'31',
-    u'fg_green': u'32',
-    u'fg_yellow': u'33',
-    u'fg_blue': u'34',
-    u'fg_magenta': u'35',
-    u'fg_cyan': u'36',
-    u'fg_white': u'37',
-    u'fg_extended': u'38',
-    u'fg_default': u'39',
+    'fg_black': '30',
+    'fg_red': '31',
+    'fg_green': '32',
+    'fg_yellow': '33',
+    'fg_blue': '34',
+    'fg_magenta': '35',
+    'fg_cyan': '36',
+    'fg_white': '37',
+    'fg_extended': '38',
+    'fg_default': '39',
 
-    u'bg_black': u'40',
-    u'bg_red': u'41',
-    u'bg_green': u'42',
-    u'bg_yellow': u'44',
-    u'bg_blue': u'44',
-    u'bg_magenta': u'45',
-    u'bg_cyan': u'46',
-    u'bg_white': u'47',
-    u'bg_extended': u'48',
-    u'bg_default': u'49',
+    'bg_black': '40',
+    'bg_red': '41',
+    'bg_green': '42',
+    'bg_yellow': '44',
+    'bg_blue': '44',
+    'bg_magenta': '45',
+    'bg_cyan': '46',
+    'bg_white': '47',
+    'bg_extended': '48',
+    'bg_default': '49',
 
-    u'frame': u'51',
-    u'encircle': u'52',
-    u'overline': u'53',
-    u'end_frame': u'54',
-    u'end_encircle': u'54',
-    u'end_overline': u'55',
+    'frame': '51',
+    'encircle': '52',
+    'overline': '53',
+    'end_frame': '54',
+    'end_encircle': '54',
+    'end_overline': '55',
 
-    u'ideogram_underline': u'60',
-    u'right_line': u'60',
-    u'ideogram_double_underline': u'61',
-    u'right_double_line': u'61',
-    u'ideogram_overline': u'62',
-    u'left_line': u'62',
-    u'ideogram_double_overline': u'63',
-    u'left_double_line': u'63',
-    u'ideogram_stress': u'64',
-    u'reset_ideogram': u'65'
+    'ideogram_underline': '60',
+    'right_line': '60',
+    'ideogram_double_underline': '61',
+    'right_double_line': '61',
+    'ideogram_overline': '62',
+    'left_line': '62',
+    'ideogram_double_overline': '63',
+    'left_double_line': '63',
+    'ideogram_stress': '64',
+    'reset_ideogram': '65'
 }
 
 
@@ -144,8 +144,8 @@ class TextFormat(object):
         '''
         self.codes = [codes[attr.lower()] for attr in attrs if isinstance(attr, six.string_types)]
 
-        if kwargs.get(u'reset', True):
-            self.codes[:0] = [codes[u'reset']]
+        if kwargs.get('reset', True):
+            self.codes[:0] = [codes['reset']]
 
         def qualify_int(i):
             if isinstance(i, int):
@@ -155,20 +155,20 @@ class TextFormat(object):
             if isinstance(t, (list, tuple)) and len(t) == 3:
                 return qualify_int(t[0]), qualify_int(t[1]), qualify_int(t[2])
 
-        if kwargs.get(u'x', None) is not None:
-            self.codes.extend((codes[u'extended'], u'5', qualify_int(kwargs[u'x'])))
-        elif kwargs.get(u'rgb', None) is not None:
-            self.codes.extend((codes[u'extended'], u'2'))
-            self.codes.extend(*qualify_triple_int(kwargs[u'rgb']))
+        if kwargs.get('x', None) is not None:
+            self.codes.extend((codes['extended'], '5', qualify_int(kwargs['x'])))
+        elif kwargs.get('rgb', None) is not None:
+            self.codes.extend((codes['extended'], '2'))
+            self.codes.extend(*qualify_triple_int(kwargs['rgb']))
 
-        if kwargs.get(u'bg_x', None) is not None:
-            self.codes.extend((codes[u'extended'], u'5', qualify_int(kwargs[u'bg_x'])))
-        elif kwargs.get(u'bg_rgb', None) is not None:
-            self.codes.extend((codes[u'extended'], u'2'))
-            self.codes.extend(*qualify_triple_int(kwargs[u'bg_rgb']))
+        if kwargs.get('bg_x', None) is not None:
+            self.codes.extend((codes['extended'], '5', qualify_int(kwargs['bg_x'])))
+        elif kwargs.get('bg_rgb', None) is not None:
+            self.codes.extend((codes['extended'], '2'))
+            self.codes.extend(*qualify_triple_int(kwargs['bg_rgb']))
 
-        self.sequence = u'%s%s%s' % (graph_prefix,  # pylint: disable=E1321
-                                    u';'.join(self.codes),
+        self.sequence = '%s%s%s' % (graph_prefix,  # pylint: disable=E1321
+                                    ';'.join(self.codes),
                                     graph_suffix)
 
     def __call__(self, text, reset=True):
@@ -183,8 +183,8 @@ class TextFormat(object):
             green_blink_text = TextFormat('blink', 'green')
             'The answer is: {0}'.format(green_blink_text(42))
         '''
-        end = TextFormat(u'reset') if reset else u''
-        return u'%s%s%s' % (self.sequence, text, end)  # pylint: disable=E1321
+        end = TextFormat('reset') if reset else ''
+        return '%s%s%s' % (self.sequence, text, end)  # pylint: disable=E1321
 
     def __str__(self):
         return self.sequence

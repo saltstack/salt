@@ -71,19 +71,19 @@ def dropfile(cachedir, user=None):
     '''
     Set an AES dropfile to request the master update the publish session key
     '''
-    dfn = os.path.join(cachedir, u'.dfn')
+    dfn = os.path.join(cachedir, '.dfn')
     # set a mask (to avoid a race condition on file creation) and store original.
     mask = os.umask(191)
     try:
-        log.info(u'Rotating AES key')
+        log.info('Rotating AES key')
         if os.path.isfile(dfn):
-            log.info(u'AES key rotation already requested')
+            log.info('AES key rotation already requested')
             return
 
         if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
             os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
-        with salt.utils.files.fopen(dfn, u'wb+') as fp_:
-            fp_.write(b'')  # future lint: disable=non-unicode-string
+        with salt.utils.files.fopen(dfn, 'wb+') as fp_:
+            fp_.write(b'')
         os.chmod(dfn, stat.S_IRUSR)
         if user:
             try:
@@ -110,8 +110,8 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     :return: Path on the filesystem to the RSA private key
     '''
     base = os.path.join(keydir, keyname)
-    priv = u'{0}.pem'.format(base)
-    pub = u'{0}.pub'.format(base)
+    priv = '{0}.pem'.format(base)
+    pub = '{0}.pub'.format(base)
 
     salt.utils.crypt.reinit_crypto()
     gen = RSA.generate(bits=keysize, e=65537)
@@ -122,14 +122,14 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
 
     # Do not try writing anything, if directory has no permissions.
     if not os.access(keydir, os.W_OK):
-        raise IOError(u'Write access denied to "{0}" for user "{1}".'.format(os.path.abspath(keydir), getpass.getuser()))
+        raise IOError('Write access denied to "{0}" for user "{1}".'.format(os.path.abspath(keydir), getpass.getuser()))
 
     cumask = os.umask(191)
-    with salt.utils.files.fopen(priv, u'wb+') as f:
-        f.write(gen.exportKey(u'PEM', passphrase))
+    with salt.utils.files.fopen(priv, 'wb+') as f:
+        f.write(gen.exportKey('PEM', passphrase))
     os.umask(cumask)
-    with salt.utils.files.fopen(pub, u'wb+') as f:
-        f.write(gen.publickey().exportKey(u'PEM'))
+    with salt.utils.files.fopen(pub, 'wb+') as f:
+        f.write(gen.publickey().exportKey('PEM'))
     os.chmod(priv, 256)
     if user:
         try:
@@ -153,7 +153,7 @@ def _get_key_with_evict(path, timestamp, passphrase):
     the result is returned from the memoiziation.  If the file gets modified
     then the params are different and the key is loaded from disk.
     '''
-    log.debug(u'salt.crypt._get_key_with_evict: Loading private key')
+    log.debug('salt.crypt._get_key_with_evict: Loading private key')
     with salt.utils.files.fopen(path) as f:
         key = RSA.importKey(f.read(), passphrase)
     return key
@@ -170,7 +170,7 @@ def _get_rsa_key(path, passphrase):
     is called it is called with different parameters and the fn is run fully to
     retrieve the key from disk.
     '''
-    log.debug(u'salt.crypt._get_rsa_key: Loading private key')
+    log.debug('salt.crypt._get_rsa_key: Loading private key')
     return _get_key_with_evict(path, str(os.path.getmtime(path)), passphrase)
 
 
@@ -179,7 +179,7 @@ def sign_message(privkey_path, message, passphrase=None):
     Use Crypto.Signature.PKCS1_v1_5 to sign a message. Returns the signature.
     '''
     key = _get_rsa_key(privkey_path, passphrase)
-    log.debug(u'salt.crypt.sign_message: Signing message.')
+    log.debug('salt.crypt.sign_message: Signing message.')
     signer = PKCS1_v1_5.new(key)
     return signer.sign(SHA.new(message))
 
@@ -189,10 +189,10 @@ def verify_signature(pubkey_path, message, signature):
     Use Crypto.Signature.PKCS1_v1_5 to verify the signature on a message.
     Returns True for valid signature.
     '''
-    log.debug(u'salt.crypt.verify_signature: Loading public key')
+    log.debug('salt.crypt.verify_signature: Loading public key')
     with salt.utils.files.fopen(pubkey_path) as f:
         pubkey = RSA.importKey(f.read())
-    log.debug(u'salt.crypt.verify_signature: Verifying signature')
+    log.debug('salt.crypt.verify_signature: Verifying signature')
     verifier = PKCS1_v1_5.new(pubkey)
     return verifier.verify(SHA.new(message), signature)
 
@@ -211,19 +211,19 @@ def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
     if os.path.isfile(sign_path):
         return False
     log.trace(
-        u'Calculating signature for %s with %s',
+        'Calculating signature for %s with %s',
         os.path.basename(pub_path), os.path.basename(priv_path)
     )
 
     if os.path.isfile(sign_path):
         log.trace(
-            u'Signature file %s already exists, please remove it first and '
-            u'try again', sign_path
+            'Signature file %s already exists, please remove it first and '
+            'try again', sign_path
         )
     else:
-        with salt.utils.files.fopen(sign_path, u'wb+') as sig_f:
+        with salt.utils.files.fopen(sign_path, 'wb+') as sig_f:
             sig_f.write(salt.utils.stringutils.to_bytes(mpub_sig_64))
-        log.trace(u'Wrote signature to %s', sign_path)
+        log.trace('Wrote signature to %s', sign_path)
     return True
 
 
@@ -236,7 +236,7 @@ def private_encrypt(key, message):
     :rtype: str
     :return: The signature, or an empty string if the signature operation failed
     '''
-    signer = salt.utils.rsax931.RSAX931Signer(key.exportKey(u'PEM'))
+    signer = salt.utils.rsax931.RSAX931Signer(key.exportKey('PEM'))
     return signer.sign(message)
 
 
@@ -250,7 +250,7 @@ def public_decrypt(pub, message):
     :return: The message (or digest) recovered from the signature, or an
         empty string if the verification failed
     '''
-    verifier = salt.utils.rsax931.RSAX931Verifier(pub.exportKey(u'PEM'))
+    verifier = salt.utils.rsax931.RSAX931Verifier(pub.exportKey('PEM'))
     return verifier.verify(message)
 
 
@@ -264,8 +264,8 @@ class MasterKeys(dict):
     def __init__(self, opts):
         super(MasterKeys, self).__init__()
         self.opts = opts
-        self.pub_path = os.path.join(self.opts[u'pki_dir'], u'master.pub')
-        self.rsa_path = os.path.join(self.opts[u'pki_dir'], u'master.pem')
+        self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
+        self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
 
         key_pass = salt.utils.sdb.sdb_get(self.opts['key_pass'], self.opts)
         self.key = self.__get_keys(passphrase=key_pass)
@@ -273,41 +273,41 @@ class MasterKeys(dict):
         self.pub_signature = None
 
         # set names for the signing key-pairs
-        if opts[u'master_sign_pubkey']:
+        if opts['master_sign_pubkey']:
 
             # if only the signature is available, use that
-            if opts[u'master_use_pubkey_signature']:
-                self.sig_path = os.path.join(self.opts[u'pki_dir'],
-                                             opts[u'master_pubkey_signature'])
+            if opts['master_use_pubkey_signature']:
+                self.sig_path = os.path.join(self.opts['pki_dir'],
+                                             opts['master_pubkey_signature'])
                 if os.path.isfile(self.sig_path):
                     with salt.utils.files.fopen(self.sig_path) as fp_:
                         self.pub_signature = fp_.read()
                     log.info(
-                        u'Read %s\'s signature from %s',
+                        'Read %s\'s signature from %s',
                         os.path.basename(self.pub_path),
-                        self.opts[u'master_pubkey_signature']
+                        self.opts['master_pubkey_signature']
                     )
                 else:
                     log.error(
-                        u'Signing the master.pub key with a signature is '
-                        u'enabled but no signature file found at the defined '
-                        u'location %s', self.sig_path
+                        'Signing the master.pub key with a signature is '
+                        'enabled but no signature file found at the defined '
+                        'location %s', self.sig_path
                     )
                     log.error(
-                        u'The signature-file may be either named differently '
-                        u'or has to be created with \'salt-key --gen-signature\''
+                        'The signature-file may be either named differently '
+                        'or has to be created with \'salt-key --gen-signature\''
                     )
                     sys.exit(1)
 
             # create a new signing key-pair to sign the masters
             # auth-replies when a minion tries to connect
             else:
-                key_pass = salt.utils.sdb.sdb_get(self.opts[u'signing_key_pass'], self.opts)
-                self.pub_sign_path = os.path.join(self.opts[u'pki_dir'],
-                                                  opts[u'master_sign_key_name'] + u'.pub')
-                self.rsa_sign_path = os.path.join(self.opts[u'pki_dir'],
-                                                  opts[u'master_sign_key_name'] + u'.pem')
-                self.sign_key = self.__get_keys(name=opts[u'master_sign_key_name'])
+                key_pass = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
+                self.pub_sign_path = os.path.join(self.opts['pki_dir'],
+                                                  opts['master_sign_key_name'] + '.pub')
+                self.rsa_sign_path = os.path.join(self.opts['pki_dir'],
+                                                  opts['master_sign_key_name'] + '.pem')
+                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'])
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # some of the member variables correspond to Cython objects which are
@@ -315,48 +315,48 @@ class MasterKeys(dict):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        self.__init__(state[u'opts'])
+        self.__init__(state['opts'])
 
     def __getstate__(self):
-        return {u'opts': self.opts}
+        return {'opts': self.opts}
 
-    def __get_keys(self, name=u'master', passphrase=None):
+    def __get_keys(self, name='master', passphrase=None):
         '''
         Returns a key object for a key in the pki-dir
         '''
-        path = os.path.join(self.opts[u'pki_dir'],
-                            name + u'.pem')
+        path = os.path.join(self.opts['pki_dir'],
+                            name + '.pem')
         if os.path.exists(path):
             with salt.utils.files.fopen(path) as f:
                 try:
                     key = RSA.importKey(f.read(), passphrase)
                 except ValueError as e:
-                    message = u'Unable to read key: {0}; passphrase may be incorrect'.format(path)
+                    message = 'Unable to read key: {0}; passphrase may be incorrect'.format(path)
                     log.error(message)
                     raise MasterExit(message)
-            log.debug(u'Loaded %s key: %s', name, path)
+            log.debug('Loaded %s key: %s', name, path)
         else:
-            log.info(u'Generating %s keys: %s', name, self.opts[u'pki_dir'])
-            gen_keys(self.opts[u'pki_dir'],
+            log.info('Generating %s keys: %s', name, self.opts['pki_dir'])
+            gen_keys(self.opts['pki_dir'],
                      name,
-                     self.opts[u'keysize'],
-                     self.opts.get(u'user'),
+                     self.opts['keysize'],
+                     self.opts.get('user'),
                      passphrase)
             with salt.utils.files.fopen(self.rsa_path) as f:
                 key = RSA.importKey(f.read(), passphrase)
         return key
 
-    def get_pub_str(self, name=u'master'):
+    def get_pub_str(self, name='master'):
         '''
         Return the string representation of a public key
         in the pki-directory
         '''
-        path = os.path.join(self.opts[u'pki_dir'],
-                            name + u'.pub')
+        path = os.path.join(self.opts['pki_dir'],
+                            name + '.pub')
         if not os.path.isfile(path):
             key = self.__get_keys()
-            with salt.utils.files.fopen(path, u'wb+') as wfh:
-                wfh.write(key.publickey().exportKey(u'PEM'))
+            with salt.utils.files.fopen(path, 'wb+') as wfh:
+                wfh.write(key.publickey().exportKey('PEM'))
         with salt.utils.files.fopen(path) as rfh:
             return rfh.read()
 
@@ -398,7 +398,7 @@ class AsyncAuth(object):
         key = cls.__key(opts)
         auth = loop_instance_map.get(key)
         if auth is None:
-            log.debug(u'Initializing new AsyncAuth for %s', key)
+            log.debug('Initializing new AsyncAuth for %s', key)
             # we need to make a local variable for this, as we are going to store
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
@@ -406,14 +406,14 @@ class AsyncAuth(object):
             auth.__singleton_init__(opts, io_loop=io_loop)
             loop_instance_map[key] = auth
         else:
-            log.debug(u'Re-using AsyncAuth for %s', key)
+            log.debug('Re-using AsyncAuth for %s', key)
         return auth
 
     @classmethod
     def __key(cls, opts, io_loop=None):
-        return (opts[u'pki_dir'],     # where the keys are stored
-                opts[u'id'],          # minion ID
-                opts[u'master_uri'],  # master ID
+        return (opts['pki_dir'],     # where the keys are stored
+                opts['id'],          # minion ID
+                opts['master_uri'],  # master ID
                 )
 
     # has to remain empty for singletons, since __init__ will *always* be called
@@ -435,12 +435,12 @@ class AsyncAuth(object):
         else:
             self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.serial = salt.payload.Serial(self.opts)
-        self.pub_path = os.path.join(self.opts[u'pki_dir'], u'minion.pub')
-        self.rsa_path = os.path.join(self.opts[u'pki_dir'], u'minion.pem')
-        if self.opts[u'__role'] == u'syndic':
-            self.mpub = u'syndic_master.pub'
+        self.pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
+        self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+        if self.opts['__role'] == 'syndic':
+            self.mpub = 'syndic_master.pub'
         else:
-            self.mpub = u'minion_master.pub'
+            self.mpub = 'minion_master.pub'
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
@@ -452,7 +452,7 @@ class AsyncAuth(object):
         if key in AsyncAuth.creds_map:
             creds = AsyncAuth.creds_map[key]
             self._creds = creds
-            self._crypticle = Crypticle(self.opts, creds[u'aes'])
+            self._crypticle = Crypticle(self.opts, creds['aes'])
             self._authenticate_future = tornado.concurrent.Future()
             self._authenticate_future.set_result(True)
         else:
@@ -463,7 +463,7 @@ class AsyncAuth(object):
         result = cls.__new__(cls, copy.deepcopy(self.opts, memo), io_loop=None)
         memo[id(self)] = result
         for key in self.__dict__:
-            if key in (u'io_loop',):
+            if key in ('io_loop',):
                 # The io_loop has a thread Lock which will fail to be deep
                 # copied. Skip it because it will just be recreated on the
                 # new copy.
@@ -481,7 +481,7 @@ class AsyncAuth(object):
 
     @property
     def authenticated(self):
-        return hasattr(self, u'_authenticate_future') and \
+        return hasattr(self, '_authenticate_future') and \
                self._authenticate_future.done() and \
                self._authenticate_future.exception() is None
 
@@ -500,7 +500,7 @@ class AsyncAuth(object):
         for the sign-in-- whis way callers can all assume there aren't others
         '''
         # if an auth is in flight-- and not done-- just pass that back as the future to wait on
-        if hasattr(self, u'_authenticate_future') and not self._authenticate_future.done():
+        if hasattr(self, '_authenticate_future') and not self._authenticate_future.done():
             future = self._authenticate_future
         else:
             future = tornado.concurrent.Future()
@@ -526,13 +526,13 @@ class AsyncAuth(object):
         :rtype: Crypticle
         :returns: A crypticle used for encryption operations
         '''
-        acceptance_wait_time = self.opts[u'acceptance_wait_time']
-        acceptance_wait_time_max = self.opts[u'acceptance_wait_time_max']
+        acceptance_wait_time = self.opts['acceptance_wait_time']
+        acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                crypt=u'clear',
+                                                                crypt='clear',
                                                                 io_loop=self.io_loop)
         error = None
         while True:
@@ -541,45 +541,45 @@ class AsyncAuth(object):
             except SaltClientError as exc:
                 error = exc
                 break
-            if creds == u'retry':
-                if self.opts.get(u'detect_mode') is True:
-                    error = SaltClientError(u'Detect mode is on')
+            if creds == 'retry':
+                if self.opts.get('detect_mode') is True:
+                    error = SaltClientError('Detect mode is on')
                     break
-                if self.opts.get(u'caller'):
-                    print(u'Minion failed to authenticate with the master, '
-                          u'has the minion key been accepted?')
+                if self.opts.get('caller'):
+                    print('Minion failed to authenticate with the master, '
+                          'has the minion key been accepted?')
                     sys.exit(2)
                 if acceptance_wait_time:
                     log.info(
-                        u'Waiting %s seconds before retry.', acceptance_wait_time
+                        'Waiting %s seconds before retry.', acceptance_wait_time
                     )
                     yield tornado.gen.sleep(acceptance_wait_time)
                 if acceptance_wait_time < acceptance_wait_time_max:
                     acceptance_wait_time += acceptance_wait_time
                     log.debug(
-                        u'Authentication wait time is %s', acceptance_wait_time
+                        'Authentication wait time is %s', acceptance_wait_time
                     )
                 continue
             break
-        if not isinstance(creds, dict) or u'aes' not in creds:
-            if self.opts.get(u'detect_mode') is True:
-                error = SaltClientError(u'-|RETRY|-')
+        if not isinstance(creds, dict) or 'aes' not in creds:
+            if self.opts.get('detect_mode') is True:
+                error = SaltClientError('-|RETRY|-')
             try:
                 del AsyncAuth.creds_map[self.__key(self.opts)]
             except KeyError:
                 pass
             if not error:
-                error = SaltClientError(u'Attempt to authenticate with the salt master failed')
+                error = SaltClientError('Attempt to authenticate with the salt master failed')
             self._authenticate_future.set_exception(error)
         else:
             key = self.__key(self.opts)
             AsyncAuth.creds_map[key] = creds
             self._creds = creds
-            self._crypticle = Crypticle(self.opts, creds[u'aes'])
+            self._crypticle = Crypticle(self.opts, creds['aes'])
             self._authenticate_future.set_result(True)  # mark the sign-in as complete
             # Notify the bus about creds change
-            event = salt.utils.event.get_event(self.opts.get(u'__role'), opts=self.opts, listen=False)
-            event.fire_event({u'key': key, u'creds': creds}, salt.utils.event.tagify(prefix=u'auth', suffix=u'creds'))
+            event = salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False)
+            event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
 
     @tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
@@ -600,23 +600,23 @@ class AsyncAuth(object):
         '''
         auth = {}
 
-        auth_timeout = self.opts.get(u'auth_timeout', None)
+        auth_timeout = self.opts.get('auth_timeout', None)
         if auth_timeout is not None:
             timeout = auth_timeout
-        auth_safemode = self.opts.get(u'auth_safemode', None)
+        auth_safemode = self.opts.get('auth_safemode', None)
         if auth_safemode is not None:
             safe = auth_safemode
-        auth_tries = self.opts.get(u'auth_tries', None)
+        auth_tries = self.opts.get('auth_tries', None)
         if auth_tries is not None:
             tries = auth_tries
 
-        m_pub_fn = os.path.join(self.opts[u'pki_dir'], self.mpub)
+        m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
 
-        auth[u'master_uri'] = self.opts[u'master_uri']
+        auth['master_uri'] = self.opts['master_uri']
 
         if not channel:
             channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                crypt=u'clear',
+                                                                crypt='clear',
                                                                 io_loop=self.io_loop)
 
         sign_in_payload = self.minion_sign_in_payload()
@@ -628,68 +628,68 @@ class AsyncAuth(object):
             )
         except SaltReqTimeoutError as e:
             if safe:
-                log.warning(u'SaltReqTimeoutError: %s', e)
-                raise tornado.gen.Return(u'retry')
-            if self.opts.get(u'detect_mode') is True:
-                raise tornado.gen.Return(u'retry')
+                log.warning('SaltReqTimeoutError: %s', e)
+                raise tornado.gen.Return('retry')
+            if self.opts.get('detect_mode') is True:
+                raise tornado.gen.Return('retry')
             else:
-                raise SaltClientError(u'Attempt to authenticate with the salt master failed with timeout error')
+                raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
         if not isinstance(payload, dict):
-            log.error(u'Sign-in attempt failed: %s', payload)
+            log.error('Sign-in attempt failed: %s', payload)
             raise tornado.gen.Return(False)
-        if u'load' in payload:
-            if u'ret' in payload[u'load']:
-                if not payload[u'load'][u'ret']:
-                    if self.opts[u'rejected_retry']:
+        if 'load' in payload:
+            if 'ret' in payload['load']:
+                if not payload['load']['ret']:
+                    if self.opts['rejected_retry']:
                         log.error(
-                            u'The Salt Master has rejected this minion\'s public '
-                            u'key.\nTo repair this issue, delete the public key '
-                            u'for this minion on the Salt Master.\nThe Salt '
-                            u'Minion will attempt to to re-authenicate.'
+                            'The Salt Master has rejected this minion\'s public '
+                            'key.\nTo repair this issue, delete the public key '
+                            'for this minion on the Salt Master.\nThe Salt '
+                            'Minion will attempt to to re-authenicate.'
                         )
-                        raise tornado.gen.Return(u'retry')
+                        raise tornado.gen.Return('retry')
                     else:
                         log.critical(
-                            u'The Salt Master has rejected this minion\'s public '
-                            u'key!\nTo repair this issue, delete the public key '
-                            u'for this minion on the Salt Master and restart this '
-                            u'minion.\nOr restart the Salt Master in open mode to '
-                            u'clean out the keys. The Salt Minion will now exit.'
+                            'The Salt Master has rejected this minion\'s public '
+                            'key!\nTo repair this issue, delete the public key '
+                            'for this minion on the Salt Master and restart this '
+                            'minion.\nOr restart the Salt Master in open mode to '
+                            'clean out the keys. The Salt Minion will now exit.'
                         )
                         sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
-                elif payload[u'load'][u'ret'] == u'full':
-                    raise tornado.gen.Return(u'full')
+                elif payload['load']['ret'] == 'full':
+                    raise tornado.gen.Return('full')
                 else:
                     log.error(
-                        u'The Salt Master has cached the public key for this '
-                        u'node, this salt minion will wait for %s seconds '
-                        u'before attempting to re-authenticate',
-                        self.opts[u'acceptance_wait_time']
+                        'The Salt Master has cached the public key for this '
+                        'node, this salt minion will wait for %s seconds '
+                        'before attempting to re-authenticate',
+                        self.opts['acceptance_wait_time']
                     )
-                    raise tornado.gen.Return(u'retry')
-        auth[u'aes'] = self.verify_master(payload, master_pub=u'token' in sign_in_payload)
-        if not auth[u'aes']:
+                    raise tornado.gen.Return('retry')
+        auth['aes'] = self.verify_master(payload, master_pub='token' in sign_in_payload)
+        if not auth['aes']:
             log.critical(
-                u'The Salt Master server\'s public key did not authenticate!\n'
-                u'The master may need to be updated if it is a version of Salt '
-                u'lower than %s, or\n'
-                u'If you are confident that you are connecting to a valid Salt '
-                u'Master, then remove the master public key and restart the '
-                u'Salt Minion.\nThe master public key can be found '
-                u'at:\n%s', salt.version.__version__, m_pub_fn
+                'The Salt Master server\'s public key did not authenticate!\n'
+                'The master may need to be updated if it is a version of Salt '
+                'lower than %s, or\n'
+                'If you are confident that you are connecting to a valid Salt '
+                'Master, then remove the master public key and restart the '
+                'Salt Minion.\nThe master public key can be found '
+                'at:\n%s', salt.version.__version__, m_pub_fn
             )
-            raise SaltClientError(u'Invalid master key')
-        if self.opts.get(u'syndic_master', False):  # Is syndic
-            syndic_finger = self.opts.get(u'syndic_finger', self.opts.get(u'master_finger', False))
+            raise SaltClientError('Invalid master key')
+        if self.opts.get('syndic_master', False):  # Is syndic
+            syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:
-                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != syndic_finger:
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != syndic_finger:
                     self._finger_fail(syndic_finger, m_pub_fn)
         else:
-            if self.opts.get(u'master_finger', False):
-                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != self.opts[u'master_finger']:
-                    self._finger_fail(self.opts[u'master_finger'], m_pub_fn)
-        auth[u'publish_port'] = payload[u'publish_port']
+            if self.opts.get('master_finger', False):
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != self.opts['master_finger']:
+                    self._finger_fail(self.opts['master_finger'], m_pub_fn)
+        auth['publish_port'] = payload['publish_port']
         raise tornado.gen.Return(auth)
 
     def get_keys(self):
@@ -700,19 +700,19 @@ class AsyncAuth(object):
         :return: The RSA keypair
         '''
         # Make sure all key parent directories are accessible
-        user = self.opts.get(u'user', u'root')
-        salt.utils.verify.check_path_traversal(self.opts[u'pki_dir'], user)
+        user = self.opts.get('user', 'root')
+        salt.utils.verify.check_path_traversal(self.opts['pki_dir'], user)
 
         if os.path.exists(self.rsa_path):
             with salt.utils.files.fopen(self.rsa_path) as f:
                 key = RSA.importKey(f.read())
-            log.debug(u'Loaded minion key: %s', self.rsa_path)
+            log.debug('Loaded minion key: %s', self.rsa_path)
         else:
-            log.info(u'Generating keys: %s', self.opts[u'pki_dir'])
-            gen_keys(self.opts[u'pki_dir'],
-                     u'minion',
-                     self.opts[u'keysize'],
-                     self.opts.get(u'user'))
+            log.info('Generating keys: %s', self.opts['pki_dir'])
+            gen_keys(self.opts['pki_dir'],
+                     'minion',
+                     self.opts['keysize'],
+                     self.opts.get('user'))
             with salt.utils.files.fopen(self.rsa_path) as f:
                 key = RSA.importKey(f.read())
         return key
@@ -738,18 +738,23 @@ class AsyncAuth(object):
         :rtype: dict
         '''
         payload = {}
-        payload[u'cmd'] = u'_auth'
-        payload[u'id'] = self.opts[u'id']
+        payload['cmd'] = '_auth'
+        payload['id'] = self.opts['id']
+        if 'autosign_grains' in self.opts:
+            autosign_grains = {}
+            for grain in self.opts['autosign_grains']:
+                autosign_grains[grain] = self.opts['grains'].get(grain, None)
+            payload['autosign_grains'] = autosign_grains
         try:
-            pubkey_path = os.path.join(self.opts[u'pki_dir'], self.mpub)
+            pubkey_path = os.path.join(self.opts['pki_dir'], self.mpub)
             with salt.utils.files.fopen(pubkey_path) as f:
                 pub = RSA.importKey(f.read())
             cipher = PKCS1_OAEP.new(pub)
-            payload[u'token'] = cipher.encrypt(self.token)
+            payload['token'] = cipher.encrypt(self.token)
         except Exception:
             pass
         with salt.utils.files.fopen(self.pub_path) as f:
-            payload[u'pub'] = f.read()
+            payload['pub'] = f.read()
         return payload
 
     def decrypt_aes(self, payload, master_pub=True):
@@ -775,42 +780,42 @@ class AsyncAuth(object):
         :rtype: str
         :return: The decrypted AES seed key
         '''
-        if self.opts.get(u'auth_trb', False):
-            log.warning(u'Auth Called: %s', u''.join(traceback.format_stack()))
+        if self.opts.get('auth_trb', False):
+            log.warning('Auth Called: %s', ''.join(traceback.format_stack()))
         else:
-            log.debug(u'Decrypting the current master AES key')
+            log.debug('Decrypting the current master AES key')
         key = self.get_keys()
         cipher = PKCS1_OAEP.new(key)
-        key_str = cipher.decrypt(payload[u'aes'])
-        if u'sig' in payload:
-            m_path = os.path.join(self.opts[u'pki_dir'], self.mpub)
+        key_str = cipher.decrypt(payload['aes'])
+        if 'sig' in payload:
+            m_path = os.path.join(self.opts['pki_dir'], self.mpub)
             if os.path.exists(m_path):
                 try:
                     with salt.utils.files.fopen(m_path) as f:
                         mkey = RSA.importKey(f.read())
                 except Exception:
-                    return u'', u''
+                    return '', ''
                 digest = hashlib.sha256(key_str).hexdigest()
                 if six.PY3:
                     digest = salt.utils.stringutils.to_bytes(digest)
-                m_digest = public_decrypt(mkey.publickey(), payload[u'sig'])
+                m_digest = public_decrypt(mkey.publickey(), payload['sig'])
                 if m_digest != digest:
-                    return u'', u''
+                    return '', ''
         else:
-            return u'', u''
+            return '', ''
 
         if six.PY3:
             key_str = salt.utils.stringutils.to_str(key_str)
 
-        if u'_|-' in key_str:
-            return key_str.split(u'_|-')
+        if '_|-' in key_str:
+            return key_str.split('_|-')
         else:
-            if u'token' in payload:
-                token = cipher.decrypt(payload[u'token'])
+            if 'token' in payload:
+                token = cipher.decrypt(payload['token'])
                 return key_str, token
             elif not master_pub:
-                return key_str, u''
-        return u'', u''
+                return key_str, ''
+        return '', ''
 
     def verify_pubkey_sig(self, message, sig):
         '''
@@ -820,9 +825,9 @@ class AsyncAuth(object):
         :rtype: bool
         :return: Success or failure of public key verification
         '''
-        if self.opts[u'master_sign_key_name']:
-            path = os.path.join(self.opts[u'pki_dir'],
-                                self.opts[u'master_sign_key_name'] + u'.pub')
+        if self.opts['master_sign_key_name']:
+            path = os.path.join(self.opts['pki_dir'],
+                                self.opts['master_sign_key_name'] + '.pub')
 
             if os.path.isfile(path):
                 res = verify_signature(path,
@@ -830,52 +835,52 @@ class AsyncAuth(object):
                                        binascii.a2b_base64(sig))
             else:
                 log.error(
-                    u'Verification public key %s does not exist. You need to '
-                    u'copy it from the master to the minions pki directory',
+                    'Verification public key %s does not exist. You need to '
+                    'copy it from the master to the minions pki directory',
                     os.path.basename(path)
                 )
                 return False
             if res:
                 log.debug(
-                    u'Successfully verified signature of master public key '
-                    u'with verification public key %s',
-                    self.opts[u'master_sign_key_name'] + u'.pub'
+                    'Successfully verified signature of master public key '
+                    'with verification public key %s',
+                    self.opts['master_sign_key_name'] + '.pub'
                 )
                 return True
             else:
-                log.debug(u'Failed to verify signature of public key')
+                log.debug('Failed to verify signature of public key')
                 return False
         else:
             log.error(
-                u'Failed to verify the signature of the message because the '
-                u'verification key-pairs name is not defined. Please make '
-                u'sure that master_sign_key_name is defined.'
+                'Failed to verify the signature of the message because the '
+                'verification key-pairs name is not defined. Please make '
+                'sure that master_sign_key_name is defined.'
             )
             return False
 
     def verify_signing_master(self, payload):
         try:
-            if self.verify_pubkey_sig(payload[u'pub_key'],
-                                      payload[u'pub_sig']):
+            if self.verify_pubkey_sig(payload['pub_key'],
+                                      payload['pub_sig']):
                 log.info(
-                    u'Received signed and verified master pubkey from master %s',
-                    self.opts[u'master']
+                    'Received signed and verified master pubkey from master %s',
+                    self.opts['master']
                 )
-                m_pub_fn = os.path.join(self.opts[u'pki_dir'], self.mpub)
-                uid = salt.utils.user.get_uid(self.opts.get(u'user', None))
-                with salt.utils.files.fpopen(m_pub_fn, u'wb+', uid=uid) as wfh:
-                    wfh.write(salt.utils.stringutils.to_bytes(payload[u'pub_key']))
+                m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
+                uid = salt.utils.user.get_uid(self.opts.get('user', None))
+                with salt.utils.files.fpopen(m_pub_fn, 'wb+', uid=uid) as wfh:
+                    wfh.write(salt.utils.stringutils.to_bytes(payload['pub_key']))
                 return True
             else:
                 log.error(
-                    u'Received signed public-key from master %s but signature '
-                    u'verification failed!', self.opts[u'master']
+                    'Received signed public-key from master %s but signature '
+                    'verification failed!', self.opts['master']
                 )
                 return False
         except Exception as sign_exc:
             log.error(
-                u'There was an error while verifying the masters public-key '
-                u'signature'
+                'There was an error while verifying the masters public-key '
+                'signature'
             )
             raise Exception(sign_exc)
 
@@ -892,25 +897,25 @@ class AsyncAuth(object):
             'pub_key': The RSA public key of the sender.
         '''
         # master and minion sign and verify
-        if u'pub_sig' in payload and self.opts[u'verify_master_pubkey_sign']:
+        if 'pub_sig' in payload and self.opts['verify_master_pubkey_sign']:
             return True
         # master and minion do NOT sign and do NOT verify
-        elif u'pub_sig' not in payload and not self.opts[u'verify_master_pubkey_sign']:
+        elif 'pub_sig' not in payload and not self.opts['verify_master_pubkey_sign']:
             return True
 
         # master signs, but minion does NOT verify
-        elif u'pub_sig' in payload and not self.opts[u'verify_master_pubkey_sign']:
-            log.error(u'The masters sent its public-key signature, but signature '
-                      u'verification is not enabled on the minion. Either enable '
-                      u'signature verification on the minion or disable signing '
-                      u'the public key on the master!')
+        elif 'pub_sig' in payload and not self.opts['verify_master_pubkey_sign']:
+            log.error('The masters sent its public-key signature, but signature '
+                      'verification is not enabled on the minion. Either enable '
+                      'signature verification on the minion or disable signing '
+                      'the public key on the master!')
             return False
         # master does NOT sign but minion wants to verify
-        elif u'pub_sig' not in payload and self.opts[u'verify_master_pubkey_sign']:
-            log.error(u'The master did not send its public-key signature, but '
-                      u'signature verification is enabled on the minion. Either '
-                      u'disable signature verification on the minion or enable '
-                      u'signing the public on the master!')
+        elif 'pub_sig' not in payload and self.opts['verify_master_pubkey_sign']:
+            log.error('The master did not send its public-key signature, but '
+                      'signature verification is enabled on the minion. Either '
+                      'disable signature verification on the minion or enable '
+                      'signing the public on the master!')
             return False
 
     def extract_aes(self, payload, master_pub=True):
@@ -933,14 +938,14 @@ class AsyncAuth(object):
                 aes, token = self.decrypt_aes(payload, master_pub)
                 if token != self.token:
                     log.error(
-                        u'The master failed to decrypt the random minion token'
+                        'The master failed to decrypt the random minion token'
                     )
-                    return u''
+                    return ''
             except Exception:
                 log.error(
-                    u'The master failed to decrypt the random minion token'
+                    'The master failed to decrypt the random minion token'
                 )
-                return u''
+                return ''
             return aes
         else:
             aes, token = self.decrypt_aes(payload, master_pub)
@@ -962,77 +967,77 @@ class AsyncAuth(object):
         :rtype: str
         :return: An empty string on verification failure. On success, the decrypted AES message in the payload.
         '''
-        m_pub_fn = os.path.join(self.opts[u'pki_dir'], self.mpub)
+        m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         m_pub_exists = os.path.isfile(m_pub_fn)
-        if m_pub_exists and master_pub and not self.opts[u'open_mode']:
+        if m_pub_exists and master_pub and not self.opts['open_mode']:
             with salt.utils.files.fopen(m_pub_fn) as fp_:
                 local_master_pub = fp_.read()
 
-            if payload[u'pub_key'].replace(u'\n', u'').replace(u'\r', u'') != \
-                    local_master_pub.replace(u'\n', u'').replace(u'\r', u''):
+            if payload['pub_key'].replace('\n', '').replace('\r', '') != \
+                    local_master_pub.replace('\n', '').replace('\r', ''):
                 if not self.check_auth_deps(payload):
-                    return u''
+                    return ''
 
-                if self.opts[u'verify_master_pubkey_sign']:
+                if self.opts['verify_master_pubkey_sign']:
                     if self.verify_signing_master(payload):
                         return self.extract_aes(payload, master_pub=False)
                     else:
-                        return u''
+                        return ''
                 else:
                     # This is not the last master we connected to
                     log.error(
-                        u'The master key has changed, the salt master could '
-                        u'have been subverted, verify salt master\'s public '
-                        u'key'
+                        'The master key has changed, the salt master could '
+                        'have been subverted, verify salt master\'s public '
+                        'key'
                     )
-                    return u''
+                    return ''
 
             else:
                 if not self.check_auth_deps(payload):
-                    return u''
+                    return ''
                 # verify the signature of the pubkey even if it has
                 # not changed compared with the one we already have
-                if self.opts[u'always_verify_signature']:
+                if self.opts['always_verify_signature']:
                     if self.verify_signing_master(payload):
                         return self.extract_aes(payload)
                     else:
                         log.error(
-                            u'The masters public could not be verified. Is the '
-                            u'verification pubkey %s up to date?',
-                            self.opts[u'master_sign_key_name'] + u'.pub'
+                            'The masters public could not be verified. Is the '
+                            'verification pubkey %s up to date?',
+                            self.opts['master_sign_key_name'] + '.pub'
                         )
-                        return u''
+                        return ''
 
                 else:
                     return self.extract_aes(payload)
         else:
             if not self.check_auth_deps(payload):
-                return u''
+                return ''
 
             # verify the masters pubkey signature if the minion
             # has not received any masters pubkey before
-            if self.opts[u'verify_master_pubkey_sign']:
+            if self.opts['verify_master_pubkey_sign']:
                 if self.verify_signing_master(payload):
                     return self.extract_aes(payload, master_pub=False)
                 else:
-                    return u''
+                    return ''
             else:
                 if not m_pub_exists:
                     # the minion has not received any masters pubkey yet, write
                     # the newly received pubkey to minion_master.pub
-                    with salt.utils.files.fopen(m_pub_fn, u'wb+') as fp_:
-                        fp_.write(salt.utils.stringutils.to_bytes(payload[u'pub_key']))
+                    with salt.utils.files.fopen(m_pub_fn, 'wb+') as fp_:
+                        fp_.write(salt.utils.stringutils.to_bytes(payload['pub_key']))
                 return self.extract_aes(payload, master_pub=False)
 
     def _finger_fail(self, finger, master_key):
         log.critical(
-            u'The specified fingerprint in the master configuration '
-            u'file:\n%s\nDoes not match the authenticating master\'s '
-            u'key:\n%s\nVerify that the configured fingerprint '
-            u'matches the fingerprint of the correct master and that '
-            u'this minion is not subject to a man-in-the-middle attack.',
+            'The specified fingerprint in the master configuration '
+            'file:\n%s\nDoes not match the authenticating master\'s '
+            'key:\n%s\nVerify that the configured fingerprint '
+            'matches the fingerprint of the correct master and that '
+            'this minion is not subject to a man-in-the-middle attack.',
             finger,
-            salt.utils.crypt.pem_finger(master_key, sum_type=self.opts[u'hash_type'])
+            salt.utils.crypt.pem_finger(master_key, sum_type=self.opts['hash_type'])
         )
         sys.exit(42)
 
@@ -1052,19 +1057,19 @@ class SAuth(AsyncAuth):
         key = cls.__key(opts)
         auth = SAuth.instances.get(key)
         if auth is None:
-            log.debug(u'Initializing new SAuth for %s', key)
+            log.debug('Initializing new SAuth for %s', key)
             auth = object.__new__(cls)
             auth.__singleton_init__(opts)
             SAuth.instances[key] = auth
         else:
-            log.debug(u'Re-using SAuth for %s', key)
+            log.debug('Re-using SAuth for %s', key)
         return auth
 
     @classmethod
     def __key(cls, opts, io_loop=None):
-        return (opts[u'pki_dir'],     # where the keys are stored
-                opts[u'id'],          # minion ID
-                opts[u'master_uri'],  # master ID
+        return (opts['pki_dir'],     # where the keys are stored
+                opts['id'],          # minion ID
+                opts['master_uri'],  # master ID
                 )
 
     # has to remain empty for singletons, since __init__ will *always* be called
@@ -1086,26 +1091,26 @@ class SAuth(AsyncAuth):
         else:
             self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.serial = salt.payload.Serial(self.opts)
-        self.pub_path = os.path.join(self.opts[u'pki_dir'], u'minion.pub')
-        self.rsa_path = os.path.join(self.opts[u'pki_dir'], u'minion.pem')
-        if u'syndic_master' in self.opts:
-            self.mpub = u'syndic_master.pub'
-        elif u'alert_master' in self.opts:
-            self.mpub = u'monitor_master.pub'
+        self.pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
+        self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+        if 'syndic_master' in self.opts:
+            self.mpub = 'syndic_master.pub'
+        elif 'alert_master' in self.opts:
+            self.mpub = 'monitor_master.pub'
         else:
-            self.mpub = u'minion_master.pub'
+            self.mpub = 'minion_master.pub'
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
     @property
     def creds(self):
-        if not hasattr(self, u'_creds'):
+        if not hasattr(self, '_creds'):
             self.authenticate()
         return self._creds
 
     @property
     def crypticle(self):
-        if not hasattr(self, u'_crypticle'):
+        if not hasattr(self, '_crypticle'):
             self.authenticate()
         return self._crypticle
 
@@ -1119,28 +1124,28 @@ class SAuth(AsyncAuth):
         :rtype: Crypticle
         :returns: A crypticle used for encryption operations
         '''
-        acceptance_wait_time = self.opts[u'acceptance_wait_time']
-        acceptance_wait_time_max = self.opts[u'acceptance_wait_time_max']
-        channel = salt.transport.client.ReqChannel.factory(self.opts, crypt=u'clear')
+        acceptance_wait_time = self.opts['acceptance_wait_time']
+        acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+        channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         while True:
             creds = self.sign_in(channel=channel)
-            if creds == u'retry':
-                if self.opts.get(u'caller'):
-                    print(u'Minion failed to authenticate with the master, '
-                          u'has the minion key been accepted?')
+            if creds == 'retry':
+                if self.opts.get('caller'):
+                    print('Minion failed to authenticate with the master, '
+                          'has the minion key been accepted?')
                     sys.exit(2)
                 if acceptance_wait_time:
-                    log.info(u'Waiting %s seconds before retry.', acceptance_wait_time)
+                    log.info('Waiting %s seconds before retry.', acceptance_wait_time)
                     time.sleep(acceptance_wait_time)
                 if acceptance_wait_time < acceptance_wait_time_max:
                     acceptance_wait_time += acceptance_wait_time
-                    log.debug(u'Authentication wait time is %s', acceptance_wait_time)
+                    log.debug('Authentication wait time is %s', acceptance_wait_time)
                 continue
             break
         self._creds = creds
-        self._crypticle = Crypticle(self.opts, creds[u'aes'])
+        self._crypticle = Crypticle(self.opts, creds['aes'])
 
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         '''
@@ -1160,22 +1165,22 @@ class SAuth(AsyncAuth):
         '''
         auth = {}
 
-        auth_timeout = self.opts.get(u'auth_timeout', None)
+        auth_timeout = self.opts.get('auth_timeout', None)
         if auth_timeout is not None:
             timeout = auth_timeout
-        auth_safemode = self.opts.get(u'auth_safemode', None)
+        auth_safemode = self.opts.get('auth_safemode', None)
         if auth_safemode is not None:
             safe = auth_safemode
-        auth_tries = self.opts.get(u'auth_tries', None)
+        auth_tries = self.opts.get('auth_tries', None)
         if auth_tries is not None:
             tries = auth_tries
 
-        m_pub_fn = os.path.join(self.opts[u'pki_dir'], self.mpub)
+        m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
 
-        auth[u'master_uri'] = self.opts[u'master_uri']
+        auth['master_uri'] = self.opts['master_uri']
 
         if not channel:
-            channel = salt.transport.client.ReqChannel.factory(self.opts, crypt=u'clear')
+            channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
@@ -1186,66 +1191,66 @@ class SAuth(AsyncAuth):
             )
         except SaltReqTimeoutError as e:
             if safe:
-                log.warning(u'SaltReqTimeoutError: %s', e)
-                return u'retry'
-            raise SaltClientError(u'Attempt to authenticate with the salt master failed with timeout error')
+                log.warning('SaltReqTimeoutError: %s', e)
+                return 'retry'
+            raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
 
-        if u'load' in payload:
-            if u'ret' in payload[u'load']:
-                if not payload[u'load'][u'ret']:
-                    if self.opts[u'rejected_retry']:
+        if 'load' in payload:
+            if 'ret' in payload['load']:
+                if not payload['load']['ret']:
+                    if self.opts['rejected_retry']:
                         log.error(
-                            u'The Salt Master has rejected this minion\'s public '
-                            u'key.\nTo repair this issue, delete the public key '
-                            u'for this minion on the Salt Master.\nThe Salt '
-                            u'Minion will attempt to to re-authenicate.'
+                            'The Salt Master has rejected this minion\'s public '
+                            'key.\nTo repair this issue, delete the public key '
+                            'for this minion on the Salt Master.\nThe Salt '
+                            'Minion will attempt to to re-authenicate.'
                         )
-                        return u'retry'
+                        return 'retry'
                     else:
                         log.critical(
-                            u'The Salt Master has rejected this minion\'s public '
-                            u'key!\nTo repair this issue, delete the public key '
-                            u'for this minion on the Salt Master and restart this '
-                            u'minion.\nOr restart the Salt Master in open mode to '
-                            u'clean out the keys. The Salt Minion will now exit.'
+                            'The Salt Master has rejected this minion\'s public '
+                            'key!\nTo repair this issue, delete the public key '
+                            'for this minion on the Salt Master and restart this '
+                            'minion.\nOr restart the Salt Master in open mode to '
+                            'clean out the keys. The Salt Minion will now exit.'
                         )
                         sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
-                elif payload[u'load'][u'ret'] == u'full':
-                    return u'full'
+                elif payload['load']['ret'] == 'full':
+                    return 'full'
                 else:
                     log.error(
-                        u'The Salt Master has cached the public key for this '
-                        u'node. If this is the first time connecting to this '
-                        u'master then this key may need to be accepted using '
-                        u'\'salt-key -a %s\' on the salt master. This salt '
-                        u'minion will wait for %s seconds before attempting '
-                        u'to re-authenticate.',
-                        self.opts[u'id'], self.opts[u'acceptance_wait_time']
+                        'The Salt Master has cached the public key for this '
+                        'node. If this is the first time connecting to this '
+                        'master then this key may need to be accepted using '
+                        '\'salt-key -a %s\' on the salt master. This salt '
+                        'minion will wait for %s seconds before attempting '
+                        'to re-authenticate.',
+                        self.opts['id'], self.opts['acceptance_wait_time']
                     )
-                    return u'retry'
-        auth[u'aes'] = self.verify_master(payload, master_pub=u'token' in sign_in_payload)
-        if not auth[u'aes']:
+                    return 'retry'
+        auth['aes'] = self.verify_master(payload, master_pub='token' in sign_in_payload)
+        if not auth['aes']:
             log.critical(
-                u'The Salt Master server\'s public key did not authenticate!\n'
-                u'The master may need to be updated if it is a version of Salt '
-                u'lower than %s, or\n'
-                u'If you are confident that you are connecting to a valid Salt '
-                u'Master, then remove the master public key and restart the '
-                u'Salt Minion.\nThe master public key can be found '
-                u'at:\n%s', salt.version.__version__, m_pub_fn
+                'The Salt Master server\'s public key did not authenticate!\n'
+                'The master may need to be updated if it is a version of Salt '
+                'lower than %s, or\n'
+                'If you are confident that you are connecting to a valid Salt '
+                'Master, then remove the master public key and restart the '
+                'Salt Minion.\nThe master public key can be found '
+                'at:\n%s', salt.version.__version__, m_pub_fn
             )
             sys.exit(42)
-        if self.opts.get(u'syndic_master', False):  # Is syndic
-            syndic_finger = self.opts.get(u'syndic_finger', self.opts.get(u'master_finger', False))
+        if self.opts.get('syndic_master', False):  # Is syndic
+            syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:
-                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != syndic_finger:
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != syndic_finger:
                     self._finger_fail(syndic_finger, m_pub_fn)
         else:
-            if self.opts.get(u'master_finger', False):
-                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != self.opts[u'master_finger']:
-                    self._finger_fail(self.opts[u'master_finger'], m_pub_fn)
-        auth[u'publish_port'] = payload[u'publish_port']
+            if self.opts.get('master_finger', False):
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != self.opts['master_finger']:
+                    self._finger_fail(self.opts['master_finger'], m_pub_fn)
+        auth['publish_port'] = payload['publish_port']
         return auth
 
 
@@ -1257,7 +1262,7 @@ class Crypticle(object):
     Signing algorithm: HMAC-SHA256
     '''
 
-    PICKLE_PAD = b'pickle::'  # future lint: disable=non-unicode-string
+    PICKLE_PAD = b'pickle::'
     AES_BLOCK_SIZE = 16
     SIG_SIZE = hashlib.sha256().digest_size
 
@@ -1272,17 +1277,17 @@ class Crypticle(object):
         key = os.urandom(key_size // 8 + cls.SIG_SIZE)
         b64key = base64.b64encode(key)
         if six.PY3:
-            b64key = b64key.decode(u'utf-8')
+            b64key = b64key.decode('utf-8')
         # Return data must be a base64-encoded string, not a unicode type
-        return b64key.replace('\n', '')  # future lint: disable=non-unicode-string
+        return b64key.replace('\n', '')
 
     @classmethod
     def extract_keys(cls, key_string, key_size):
         if six.PY2:
-            key = key_string.decode(u'base64')
+            key = key_string.decode('base64')
         else:
             key = salt.utils.stringutils.to_bytes(base64.b64decode(key_string))
-        assert len(key) == key_size / 8 + cls.SIG_SIZE, u'invalid key'
+        assert len(key) == key_size / 8 + cls.SIG_SIZE, 'invalid key'
         return key[:-cls.SIG_SIZE], key[-cls.SIG_SIZE:]
 
     def encrypt(self, data):
@@ -1312,8 +1317,8 @@ class Crypticle(object):
             data = salt.utils.stringutils.to_bytes(data)
         mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
         if len(mac_bytes) != len(sig):
-            log.debug(u'Failed to authenticate message')
-            raise AuthenticationError(u'message authentication failed')
+            log.debug('Failed to authenticate message')
+            raise AuthenticationError('message authentication failed')
         result = 0
 
         if six.PY2:
@@ -1323,8 +1328,8 @@ class Crypticle(object):
             for zipped_x, zipped_y in zip(mac_bytes, sig):
                 result |= zipped_x ^ zipped_y
         if result != 0:
-            log.debug(u'Failed to authenticate message')
-            raise AuthenticationError(u'message authentication failed')
+            log.debug('Failed to authenticate message')
+            raise AuthenticationError('message authentication failed')
         iv_bytes = data[:self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE:]
         cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)

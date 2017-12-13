@@ -337,12 +337,12 @@ def sanitize_win_path(winpath):
     Remove illegal path characters for windows
     '''
     intab = '<>:|?*'
-    outtab = '_' * len(intab)
-    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
-    if isinstance(winpath, six.string_types):
+    if isinstance(winpath, six.text_type):
+        winpath = winpath.translate(dict((ord(c), '_') for c in intab))
+    elif isinstance(winpath, six.string_types):
+        outtab = '_' * len(intab)
+        trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
         winpath = winpath.translate(trantab)
-    elif isinstance(winpath, six.text_type):
-        winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
     return winpath
 
 

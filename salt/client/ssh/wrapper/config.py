@@ -17,44 +17,44 @@ import salt.syspaths as syspaths
 from salt.ext import six
 
 # Set up the default values for all systems
-DEFAULTS = {u'mongo.db': u'salt',
-            u'mongo.host': u'salt',
-            u'mongo.password': u'',
-            u'mongo.port': 27017,
-            u'mongo.user': u'',
-            u'redis.db': u'0',
-            u'redis.host': u'salt',
-            u'redis.port': 6379,
-            u'test.foo': u'unconfigured',
-            u'ca.cert_base_path': u'/etc/pki',
-            u'solr.cores': [],
-            u'solr.host': u'localhost',
-            u'solr.port': u'8983',
-            u'solr.baseurl': u'/solr',
-            u'solr.type': u'master',
-            u'solr.request_timeout': None,
-            u'solr.init_script': u'/etc/rc.d/solr',
-            u'solr.dih.import_options': {u'clean': False, u'optimize': True,
-                                         u'commit': True, u'verbose': False},
-            u'solr.backup_path': None,
-            u'solr.num_backups': 1,
-            u'poudriere.config': u'/usr/local/etc/poudriere.conf',
-            u'poudriere.config_dir': u'/usr/local/etc/poudriere.d',
-            u'ldap.server': u'localhost',
-            u'ldap.port': u'389',
-            u'ldap.tls': False,
-            u'ldap.scope': 2,
-            u'ldap.attrs': None,
-            u'ldap.binddn': u'',
-            u'ldap.bindpw': u'',
-            u'hosts.file': u'/etc/hosts',
-            u'aliases.file': u'/etc/aliases',
-            u'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, u'salt-images'),
-            u'virt.tunnel': False,
+DEFAULTS = {'mongo.db': 'salt',
+            'mongo.host': 'salt',
+            'mongo.password': '',
+            'mongo.port': 27017,
+            'mongo.user': '',
+            'redis.db': '0',
+            'redis.host': 'salt',
+            'redis.port': 6379,
+            'test.foo': 'unconfigured',
+            'ca.cert_base_path': '/etc/pki',
+            'solr.cores': [],
+            'solr.host': 'localhost',
+            'solr.port': '8983',
+            'solr.baseurl': '/solr',
+            'solr.type': 'master',
+            'solr.request_timeout': None,
+            'solr.init_script': '/etc/rc.d/solr',
+            'solr.dih.import_options': {'clean': False, 'optimize': True,
+                                         'commit': True, 'verbose': False},
+            'solr.backup_path': None,
+            'solr.num_backups': 1,
+            'poudriere.config': '/usr/local/etc/poudriere.conf',
+            'poudriere.config_dir': '/usr/local/etc/poudriere.d',
+            'ldap.server': 'localhost',
+            'ldap.port': '389',
+            'ldap.tls': False,
+            'ldap.scope': 2,
+            'ldap.attrs': None,
+            'ldap.binddn': '',
+            'ldap.bindpw': '',
+            'hosts.file': '/etc/hosts',
+            'aliases.file': '/etc/aliases',
+            'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images'),
+            'virt.tunnel': False,
             }
 
 
-def backup_mode(backup=u''):
+def backup_mode(backup=''):
     '''
     Return the backup mode
 
@@ -66,7 +66,7 @@ def backup_mode(backup=u''):
     '''
     if backup:
         return backup
-    return option(u'backup_mode')
+    return option('backup_mode')
 
 
 def manage_mode(mode):
@@ -97,14 +97,14 @@ def valid_fileproto(uri):
         salt '*' config.valid_fileproto salt://path/to/file
     '''
     try:
-        return bool(re.match(u'^(?:salt|https?|ftp)://', uri))
+        return bool(re.match('^(?:salt|https?|ftp)://', uri))
     except Exception:
         return False
 
 
 def option(
         value,
-        default=u'',
+        default='',
         omit_opts=False,
         omit_master=False,
         omit_pillar=False):
@@ -121,8 +121,8 @@ def option(
         if value in __opts__:
             return __opts__[value]
     if not omit_master:
-        if value in __pillar__.get(u'master', {}):
-            return __pillar__[u'master'][value]
+        if value in __pillar__.get('master', {}):
+            return __pillar__['master'][value]
     if not omit_pillar:
         if value in __pillar__:
             return __pillar__[value]
@@ -132,7 +132,7 @@ def option(
 
 
 def merge(value,
-          default=u'',
+          default='',
           omit_opts=False,
           omit_master=False,
           omit_pillar=False):
@@ -155,8 +155,8 @@ def merge(value,
             if isinstance(ret, six.string_types):
                 return ret
     if not omit_master:
-        if value in __pillar__.get(u'master', {}):
-            tmp = __pillar__[u'master'][value]
+        if value in __pillar__.get('master', {}):
+            tmp = __pillar__['master'][value]
             if ret is None:
                 ret = tmp
                 if isinstance(ret, six.string_types):
@@ -185,7 +185,7 @@ def merge(value,
     return ret or default
 
 
-def get(key, default=u''):
+def get(key, default=''):
     '''
     .. versionadded: 0.14.0
 
@@ -216,17 +216,17 @@ def get(key, default=u''):
 
         salt '*' config.get pkg:apache
     '''
-    ret = salt.utils.data.traverse_dict_and_list(__opts__, key, u'_|-')
-    if ret != u'_|-':
+    ret = salt.utils.data.traverse_dict_and_list(__opts__, key, '_|-')
+    if ret != '_|-':
         return ret
-    ret = salt.utils.data.traverse_dict_and_list(__grains__, key, u'_|-')
-    if ret != u'_|-':
+    ret = salt.utils.data.traverse_dict_and_list(__grains__, key, '_|-')
+    if ret != '_|-':
         return ret
-    ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, u'_|-')
-    if ret != u'_|-':
+    ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, '_|-')
+    if ret != '_|-':
         return ret
-    ret = salt.utils.data.traverse_dict_and_list(__pillar__.get(u'master', {}), key, u'_|-')
-    if ret != u'_|-':
+    ret = salt.utils.data.traverse_dict_and_list(__pillar__.get('master', {}), key, '_|-')
+    if ret != '_|-':
         return ret
     return default
 
@@ -243,10 +243,10 @@ def dot_vals(value):
         salt '*' config.dot_vals host
     '''
     ret = {}
-    for key, val in six.iteritems(__pillar__.get(u'master', {})):
-        if key.startswith(u'{0}.'.format(value)):
+    for key, val in six.iteritems(__pillar__.get('master', {})):
+        if key.startswith('{0}.'.format(value)):
             ret[key] = val
     for key, val in six.iteritems(__opts__):
-        if key.startswith(u'{0}.'.format(value)):
+        if key.startswith('{0}.'.format(value)):
             ret[key] = val
     return ret

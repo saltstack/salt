@@ -35,3 +35,4 @@ Tutorials Index
 * :ref:`Multi-cloud orchestration with Apache Libcloud <tutorial-libcloud>`
 * :ref:`Running Salt States and Commands in Docker Containers <docker-sls>`
 * :ref:`Preseed Minion with Accepted Key <tutorial-preseed-key>`
+* :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`

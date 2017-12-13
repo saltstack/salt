@@ -292,12 +292,36 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1
     disk_spec.device.backing.diskMode = 'persistent'
 
     if datastore:
-        ds_ref = salt.utils.vmware.get_datastore_ref(_get_si(), datastore)
-        if not ds_ref:
-            raise SaltCloudSystemExit('Requested {0} disk in datastore {1}, but no such datastore found.'.format(disk_label, datastore))
-        datastore_path = '[' + str(ds_ref.name) + '] ' + vm_name
+        datastore_ref = salt.utils.vmware.get_mor_using_container_view(_get_si(), vim.Datastore, datastore)
+
+        if not datastore_ref:
+            # check if it is a datastore cluster instead
+            datastore_cluster_ref = salt.utils.vmware.get_mor_using_container_view(_get_si(), vim.StoragePod, datastore)
+
+            if not datastore_cluster_ref:
+                # datastore/datastore cluster specified does not exist
+                raise SaltCloudSystemExit("Specified datastore/datastore cluster ({0}) for disk ({1}) does not exist".format(datastore, disk_label))
+
+            # datastore cluster has been specified
+            # find datastore with most free space available
+            #
+            # TODO: Get DRS Recommendations instead of finding datastore with most free space
+            datastore_list = salt.utils.vmware.get_datastores(_get_si(), datastore_cluster_ref, get_all_datastores=True)
+            datastore_free_space = 0
+            for ds_ref in datastore_list:
+                log.trace("Found datastore ({0}) with free space ({1}) in datastore cluster ({2})".format(ds_ref.name, ds_ref.summary.freeSpace, datastore))
+                if ds_ref.summary.accessible and ds_ref.summary.freeSpace > datastore_free_space:
+                    datastore_free_space = ds_ref.summary.freeSpace
+                    datastore_ref = ds_ref
+
+            if not datastore_ref:
+                # datastore cluster specified does not have any accessible datastores
+                raise SaltCloudSystemExit("Specified datastore cluster ({0}) for disk ({1}) does not have any accessible datastores available".format(datastore, disk_label))
+
+        datastore_path = '[' + str(datastore_ref.name) + '] ' + vm_name
         disk_spec.device.backing.fileName = datastore_path + '/' + disk_label + '.vmdk'
-        disk_spec.device.backing.datastore = ds_ref
+        disk_spec.device.backing.datastore = datastore_ref
+        log.trace("Using datastore ({0}) for disk ({1}), vm_name ({2})".format(datastore_ref.name, disk_label, vm_name))
 
     disk_spec.device.controllerKey = controller_key
     disk_spec.device.unitNumber = unit_number
@@ -2473,7 +2497,12 @@ def create(vm_):
     # Either a datacenter or a folder can be optionally specified when cloning, required when creating.
     # If not specified when cloning, the existing VM/template\'s parent folder is used.
     if folder:
-        folder_ref = salt.utils.vmware.get_mor_by_property(si, vim.Folder, folder, container_ref=container_ref)
+        folder_parts = folder.split('/')
+        search_reference = container_ref
+        for folder_part in folder_parts:
+            if folder_part:
+                folder_ref = salt.utils.vmware.get_mor_by_property(si, vim.Folder, folder_part, container_ref=search_reference)
+                search_reference = folder_ref
         if not folder_ref:
             log.error("Specified folder: '{0}' does not exist".format(folder))
             log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
@@ -3647,6 +3676,65 @@ def revert_to_snapshot(name, kwargs=None, call=None):
     return msg
 
 
+def remove_snapshot(name, kwargs=None, call=None):
+    '''
+    Remove a snapshot of the specified virtual machine in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a remove_snapshot vmname snapshot_name="mySnapshot"
+        salt-cloud -a remove_snapshot vmname snapshot_name="mySnapshot" [remove_children="True"]
+    '''
+
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The create_snapshot action must be called with '
+            '-a or --action.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
+    remove_children = _str_to_bool(kwargs.get('remove_children', False))
+
+    if not snapshot_name:
+        raise SaltCloudSystemExit(
+            'You must specify snapshot name for the snapshot to be deleted.'
+        )
+
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
+
+    if not _get_snapshot_ref_by_name(vm_ref, snapshot_name):
+        raise SaltCloudSystemExit(
+            'Сould not find the snapshot with the specified name.'
+        )
+
+    try:
+        snap_obj = _get_snapshot_ref_by_name(vm_ref, snapshot_name).snapshot
+        task = snap_obj.RemoveSnapshot_Task(remove_children)
+        salt.utils.vmware.wait_for_task(task, name, 'remove snapshot', 5, 'info')
+
+    except Exception as exc:
+        log.error(
+            'Error while removing snapshot of {0}: {1}'.format(
+                name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return 'failed to remove snapshot'
+
+    if vm_ref.snapshot:
+        return {'Snapshot removed successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
+                                                            vm_ref.snapshot.currentSnapshot)}
+    else:
+        return 'Snapshots removed successfully'
+
+
 def remove_all_snapshots(name, kwargs=None, call=None):
     '''
     Remove all the snapshots present for the specified virtual machine.
@@ -3688,6 +3776,49 @@ def remove_all_snapshots(name, kwargs=None, call=None):
         return 'failed to remove snapshots'
 
     return 'removed all snapshots'
+
+
+def convert_to_template(name, kwargs=None, call=None):
+    '''
+    Convert the specified virtual machine to template.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a convert_to_template vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The convert_to_template action must be called with '
+            '-a or --action.'
+        )
+
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
+
+    if vm_ref.config.template:
+        raise SaltCloudSystemExit(
+            '{0} already a template'.format(
+                name
+            )
+        )
+
+    try:
+        vm_ref.MarkAsTemplate()
+    except Exception as exc:
+        log.error(
+            'Error while converting VM to template {0}: {1}'.format(
+                name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return 'failed to convert to teamplate'
+
+    return '{0} converted to template'.format(
+        name
+    )
 
 
 def add_host(kwargs=None, call=None):
