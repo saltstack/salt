@@ -37,8 +37,7 @@ log = logging.getLogger(__name__)
 
 def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     client = salt.client.get_local_client(__opts__['conf_file'])
-    client.event.connect_pub(timeout=timeout)
-    pub_data = client.run_job(tgt, 'test.ping', (), tgt_type, '', timeout, '')
+    pub_data = client.run_job(tgt, 'test.ping', (), tgt_type, '', timeout, '', listen=True)
 
     if not pub_data:
         return pub_data
