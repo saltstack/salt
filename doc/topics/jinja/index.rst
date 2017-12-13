@@ -883,12 +883,13 @@ Example:
 
 .. versionadded:: 2017.7.0
 .. versionadded:: Oxygen
-    Renamed from ``json_decode_list`` to ``json_encode_list``. Encoding results
-    in bytes, decoding results in Unicode. This filter was incorrectly-named
+    Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
+    something you get bytes, and when you decode, you get your locale's
+    encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_list`` will be supported until the Neon
     release.
 
-Recursively encodes all elements of list to bytes.
+Recursively encodes all string elements of the list to bytes.
 
 Example:
 
@@ -911,16 +912,18 @@ Returns:
 
 .. versionadded:: 2017.7.0
 .. versionadded:: Oxygen
-    Renamed from ``json_decode_dict`` to ``json_encode_dict``. Encoding results
-    in bytes, decoding results in Unicode. This filter was incorrectly-named
+    Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
+    something you get bytes, and when you decode, you get your locale's
+    encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_dict`` will be supported until the Neon
     release.
 
-Recursively encodes all items in dictionary to bytes.
+Recursively encodes all string items in the dictionary to bytes.
 
 Example:
 
-Assuming that ``pillar['foo']`` contains ``{u'a': u'\u0414'}``:
+Assuming that ``pillar['foo']`` contains ``{u'a': u'\u0414'}``, and your locale
+is ``en_US.UTF-8``:
 
 .. code-block:: jinja
 
