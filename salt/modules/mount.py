@@ -11,7 +11,6 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.utils import which as _which
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 # Import 3rd-party libs
@@ -1114,12 +1113,12 @@ def is_fuse_exec(cmd):
 
         salt '*' mount.is_fuse_exec sshfs
     '''
-    cmd_path = _which(cmd)
+    cmd_path = salt.utils.which(cmd)
 
     # No point in running ldd on a command that doesn't exist
     if not cmd_path:
         return False
-    elif not _which('ldd'):
+    elif not salt.utils.which('ldd'):
         raise CommandNotFoundError('ldd')
 
     out = __salt__['cmd.run']('ldd {0}'.format(cmd_path), python_shell=False)

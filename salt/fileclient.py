@@ -622,10 +622,14 @@ class Client(object):
             def on_header(hdr):
                 if write_body[1] is not False and write_body[2] is None:
                     if not hdr.strip() and 'Content-Type' not in write_body[1]:
-                        # We've reached the end of the headers and not yet
-                        # found the Content-Type. Reset the values we're
-                        # tracking so that we properly follow the redirect.
-                        write_body[0] = None
+                        # If write_body[0] is True, then we are not following a
+                        # redirect (initial response was a 200 OK). So there is
+                        # no need to reset write_body[0].
+                        if write_body[0] is not True:
+                            # We are following a redirect, so we need to reset
+                            # write_body[0] so that we properly follow it.
+                            write_body[0] = None
+                        # We don't need the HTTPHeaders object anymore
                         write_body[1] = False
                         return
                     # Try to find out what content type encoding is used if
@@ -648,9 +652,12 @@ class Client(object):
                         # If write_body[0] is False, this means that this
                         # header is a 30x redirect, so we need to reset
                         # write_body[0] to None so that we parse the HTTP
-                        # status code from the redirect target.
+                        # status code from the redirect target. Additionally,
+                        # we need to reset write_body[2] so that we inspect the
+                        # headers for the Content-Type of the URL we're
+                        # following.
                         if write_body[0] is write_body[1] is False:
-                            write_body[0] = None
+                            write_body[0] = write_body[2] = None
 
                 # Check the status line of the HTTP request
                 if write_body[0] is None:

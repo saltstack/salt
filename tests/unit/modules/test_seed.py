@@ -47,14 +47,19 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to update and get the random script to a random place
         '''
-        with patch.dict(seed.__salt__,
-                        {'config.gather_bootstrap_script': MagicMock(return_value='BS_PATH/BS')}):
-            with patch.object(uuid, 'uuid4', return_value='UUID'):
-                with patch.object(os.path, 'exists', return_value=True):
-                    with patch.object(os, 'chmod', return_value=None):
-                        with patch.object(shutil, 'copy', return_value=None):
-                            self.assertEqual(seed.prep_bootstrap('MPT'), ('MPT/tmp/UUID/BS', '/tmp/UUID'))
-                            self.assertEqual(seed.prep_bootstrap('/MPT'), ('/MPT/tmp/UUID/BS', '/tmp/UUID'))
+        with patch.dict(seed.__salt__, {'config.gather_bootstrap_script': MagicMock(return_value=os.path.join('BS_PATH', 'BS'))}),\
+                patch.object(uuid, 'uuid4', return_value='UUID'),\
+                patch.object(os.path, 'exists', return_value=True),\
+                patch.object(os, 'chmod', return_value=None),\
+                patch.object(shutil, 'copy', return_value=None):
+
+            expect = (os.path.join('MPT', 'tmp', 'UUID', 'BS'),
+                      os.sep + os.path.join('tmp', 'UUID'))
+            self.assertEqual(seed.prep_bootstrap('MPT'), expect)
+
+            expect = (os.sep + os.path.join('MPT', 'tmp', 'UUID', 'BS'),
+                      os.sep + os.path.join('tmp', 'UUID'))
+            self.assertEqual(seed.prep_bootstrap(os.sep + 'MPT'), expect)
 
     def test_apply_(self):
         '''

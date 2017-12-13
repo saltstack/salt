@@ -367,6 +367,16 @@ def _file_lists(load, form):
                         'roots: %s symlink destination is %s',
                         abs_path, link_dest
                     )
+                    if salt.utils.is_windows() \
+                            and link_dest.startswith('\\\\'):
+                        # Symlink points to a network path. Since you can't
+                        # join UNC and non-UNC paths, just assume the original
+                        # path.
+                        log.trace(
+                            'roots: %s is a UNC path, using %s instead',
+                            link_dest, abs_path
+                        )
+                        link_dest = abs_path
                     if link_dest.startswith('..'):
                         joined = os.path.join(abs_path, link_dest)
                     else:

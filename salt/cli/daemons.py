@@ -160,6 +160,7 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
+                    root_dir=self.config['root_dir'],
                 )
                 # Clear out syndics from cachedir
                 for syndic_file in os.listdir(self.config['syndic_dir']):
@@ -280,6 +281,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
+                    root_dir=self.config['root_dir'],
                 )
         except OSError as error:
             self.environment_failure(error)
@@ -467,6 +469,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
+                    root_dir=self.config['root_dir'],
                 )
         except OSError as error:
             self.environment_failure(error)
@@ -575,6 +578,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
+                    root_dir=self.config['root_dir'],
                 )
         except OSError as error:
             self.environment_failure(error)

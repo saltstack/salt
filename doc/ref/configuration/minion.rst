@@ -303,6 +303,20 @@ option on the Salt master.
 
     master_port: 4506
 
+.. conf_minion:: publish_port
+
+``publish_port``
+---------------
+
+Default: ``4505``
+
+The port of the master publish server, this needs to coincide with the publish_port
+option on the Salt master.
+
+.. code-block:: yaml
+
+    publish_port: 4505
+
 .. conf_minion:: user
 
 ``user``
@@ -674,7 +688,7 @@ Note these can be defined in the pillar for a minion as well.
 
 Default: ``60``
 
-The number of seconds a mine update runs.
+The number of minutes between mine updates.
 
 .. code-block:: yaml
 
@@ -1164,7 +1178,7 @@ be able to execute a certain module. The ``sys`` module is built into the minion
 and cannot be disabled.
 
 This setting can also tune the minion. Because all modules are loaded into system
-memory, disabling modules will lover the minion's memory footprint.
+memory, disabling modules will lower the minion's memory footprint.
 
 Modules should be specified according to their file name on the system and not by
 their virtual name. For example, to disable ``cmd``, use the string ``cmdmod`` which
@@ -2337,11 +2351,14 @@ Thread Settings
 
 .. conf_minion:: multiprocessing
 
+``multiprocessing``
+-------
+
 Default: ``True``
 
-If `multiprocessing` is enabled when a minion receives a
+If ``multiprocessing`` is enabled when a minion receives a
 publication a new process is spawned and the command is executed therein.
-Conversely, if `multiprocessing` is disabled the new publication will be run
+Conversely, if ``multiprocessing`` is disabled the new publication will be run
 executed in a thread.
 
 

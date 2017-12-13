@@ -1143,10 +1143,10 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Oxygen comes out, after
+    # We'll be showing errors to the users until Salt Fluorine comes out, after
     # which, errors will be raised instead.
     warn_until(
-        'Oxygen',
+        'Fluorine',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
@@ -1183,7 +1183,7 @@ def format_call(fun,
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
             '\'key: value\' pairs. Your approach will work until Salt '
-            'Oxygen is out.{1}'.format(
+            'Fluorine is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
@@ -1330,10 +1330,14 @@ def fopen(*args, **kwargs):
         if len(args) > 1:
             args = list(args)
             if 'b' not in args[1]:
-                args[1] += 'b'
-        elif kwargs.get('mode', None):
+                args[1] = args[1].replace('t', 'b')
+                if 'b' not in args[1]:
+                    args[1] += 'b'
+        elif kwargs.get('mode'):
             if 'b' not in kwargs['mode']:
-                kwargs['mode'] += 'b'
+                kwargs['mode'] = kwargs['mode'].replace('t', 'b')
+                if 'b' not in kwargs['mode']:
+                    kwargs['mode'] += 'b'
         else:
             # the default is to read
             kwargs['mode'] = 'rb'
@@ -2012,7 +2016,11 @@ def check_state_result(running, recurse=False, highstate=None):
 
     ret = True
     for state_id, state_result in six.iteritems(running):
-        if not recurse and not isinstance(state_result, dict):
+        expected_type = dict
+        # The __extend__ state is a list
+        if "__extend__" == state_id:
+            expected_type = list
+        if not recurse and not isinstance(state_result, expected_type):
             ret = False
         if ret and isinstance(state_result, dict):
             result = state_result.get('result', _empty)
@@ -2098,7 +2106,7 @@ def is_true(value=None):
         pass
 
     # Now check for truthiness
-    if isinstance(value, (int, float)):
+    if isinstance(value, (six.integer_types, float)):
         return value > 0
     elif isinstance(value, six.string_types):
         return str(value).lower() == 'true'
@@ -2874,7 +2882,7 @@ def repack_dictlist(data,
     if val_cb is None:
         val_cb = lambda x, y: y
 
-    valid_non_dict = (six.string_types, int, float)
+    valid_non_dict = (six.string_types, six.integer_types, float)
     if isinstance(data, list):
         for element in data:
             if isinstance(element, valid_non_dict):

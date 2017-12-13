@@ -34,16 +34,20 @@ Current known limitations
   - pywin32 Python module
   - lxml
   - uuid
-  - codecs
   - struct
   - salt.modules.reg
 '''
 
 # Import python libs
 from __future__ import absolute_import
+from __future__ import unicode_literals
+import io
 import os
 import logging
 import re
+import locale
+import ctypes
+import time
 
 # Import salt libs
 import salt.utils
@@ -90,7 +94,6 @@ try:
     import win32net
     import win32security
     import uuid
-    import codecs
     import lxml
     import struct
     from lxml import etree
@@ -117,6 +120,16 @@ try:
     ADMX_DISPLAYNAME_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "displayName"] = $display_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class) ]')
     PRESENTATION_ANCESTOR_XPATH = etree.XPath('ancestor::*[local-name() = "presentation"]')
     TEXT_ELEMENT_XPATH = etree.XPath('.//*[local-name() = "text"]')
+    # Get the System Install Language
+    # https://msdn.microsoft.com/en-us/library/dd318123(VS.85).aspx
+    # local.windows_locale is a dict
+    # GetSystemDefaultUILanguage() returns a 4 digit language code that
+    # corresponds to an entry in the dict
+    # Not available in win32api, so we have to use ctypes
+    # Default to `en-US` (1033)
+    windll = ctypes.windll.kernel32
+    INSTALL_LANGUAGE = locale.windows_locale.get(
+        windll.GetSystemDefaultUILanguage(), 1033).replace('_', '-')
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
@@ -606,8 +619,8 @@ class _policy_info(object):
                         },
                     },
                     'RemoteRegistryExactPaths': {
-                        'Policy': 'Network access: Remotely accessible registry '
-                                  'paths',
+                        'Policy': 'Network access: Remotely accessible '
+                                  'registry paths',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -619,8 +632,8 @@ class _policy_info(object):
                         },
                     },
                     'RemoteRegistryPaths': {
-                        'Policy': 'Network access: Remotely accessible registry '
-                                  'paths and sub-paths',
+                        'Policy': 'Network access: Remotely accessible '
+                                  'registry paths and sub-paths',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -631,8 +644,8 @@ class _policy_info(object):
                         },
                     },
                     'RestrictNullSessAccess': {
-                        'Policy': 'Network access: Restrict anonymous access to '
-                                  'Named Pipes and Shares',
+                        'Policy': 'Network access: Restrict anonymous access '
+                                  'to Named Pipes and Shares',
                         'lgpo_section': self.security_options_gpedit_path,
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'Registry': {
@@ -697,7 +710,9 @@ class _policy_info(object):
                         'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
-                            'Args': {'min': 0, 'max': 86313600}
+                            'Args': {'min': 1,
+                                     'max': 86313600,
+                                     'zero_value': 0xffffffff}
                         },
                         'NetUserModal': {
                             'Modal': 0,
@@ -705,7 +720,9 @@ class _policy_info(object):
                         },
                         'Transform': {
                             'Get': '_seconds_to_days',
-                            'Put': '_days_to_seconds'
+                            'Put': '_days_to_seconds',
+                            'GetArgs': {'zero_value': 0xffffffff},
+                            'PutArgs': {'zero_value': 0xffffffff}
                         },
                     },
                     'MinPasswordAge': {
@@ -737,7 +754,7 @@ class _policy_info(object):
                         },
                     },
                     'PasswordComplexity': {
-                        'Policy': 'Passwords must meet complexity requirements',
+                        'Policy': 'Password must meet complexity requirements',
                         'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'Secedit': {
@@ -881,9 +898,9 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'CachedLogonsCount': {
-                        'Policy': 'Interactive logon: Number of previous logons '
-                                  'to cache (in case domain controller is not '
-                                  'available)',
+                        'Policy': 'Interactive logon: Number of previous '
+                                  'logons to cache (in case domain controller '
+                                  'is not available)',
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 50}
@@ -898,8 +915,9 @@ class _policy_info(object):
                         },
                     },
                     'ForceUnlockLogon': {
-                        'Policy': 'Interactive logon: Require Domain Controller '
-                                  'authentication to unlock workstation',
+                        'Policy': 'Interactive logon: Require Domain '
+                                  'Controller authentication to unlock '
+                                  'workstation',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -966,8 +984,8 @@ class _policy_info(object):
                     },
                     'EnableUIADesktopToggle': {
                         'Policy': 'User Account Control: Allow UIAccess '
-                                  'applications to prompt for elevation without '
-                                  'using the secure desktop',
+                                  'applications to prompt for elevation '
+                                  'without using the secure desktop',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -981,8 +999,8 @@ class _policy_info(object):
                     },
                     'ConsentPromptBehaviorAdmin': {
                         'Policy': 'User Account Control: Behavior of the '
-                                  'elevation prompt for administrators in Admin '
-                                  'Approval Mode',
+                                  'elevation prompt for administrators in '
+                                  'Admin Approval Mode',
                         'Settings': self.uac_admin_prompt_lookup.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1060,7 +1078,7 @@ class _policy_info(object):
                     },
                     'EnableSecureUIAPaths': {
                         'Policy': 'User Account Control: Only elevate UIAccess '
-                                  'applicaitons that are installed in secure '
+                                  'applications that are installed in secure '
                                   'locations',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
@@ -1074,8 +1092,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'EnableLUA': {
-                        'Policy': 'User Account Control: Run all administrators '
-                                  'in Admin Approval Mode',
+                        'Policy': 'User Account Control: Run all '
+                                  'administrators in Admin Approval Mode',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1337,8 +1355,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'EnableForcedLogoff': {
-                        'Policy': 'Microsoft network server: Disconnect clients '
-                                  'when logon hours expire',
+                        'Policy': 'Microsoft network server: Disconnect '
+                                  'clients when logon hours expire',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1405,7 +1423,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'UndockWithoutLogon': {
-                        'Policy': 'Devices: Allow undock without having to log on',
+                        'Policy': 'Devices: Allow undock without having to log '
+                                  'on',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1480,8 +1499,8 @@ class _policy_info(object):
                         },
                     },
                     'SubmitControl': {
-                        'Policy': 'Domain controller: Allow server operators to '
-                                  'schedule tasks',
+                        'Policy': 'Domain controller: Allow server operators '
+                                  'to schedule tasks',
                         'Settings': self.enabled_one_disabled_zero_strings.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -1560,8 +1579,8 @@ class _policy_info(object):
                         'Transform': self.enabled_one_disabled_zero_strings_transform,
                     },
                     'SignSecureChannel': {
-                        'Policy': 'Domain member: Digitally sign secure channel '
-                                  'data (when possible)',
+                        'Policy': 'Domain member: Digitally sign secure '
+                                  'channel data (when possible)',
                         'Settings': self.enabled_one_disabled_zero_strings.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -2284,7 +2303,7 @@ class _policy_info(object):
                     },
                     'RecoveryConsoleSecurityLevel': {
                         'Policy': 'Recovery console: Allow automatic '
-                                  'adminstrative logon',
+                                  'administrative logon',
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
@@ -2356,7 +2375,10 @@ class _policy_info(object):
         '''
         converts a number of seconds to days
         '''
+        zero_value = kwargs.get('zero_value', 0)
         if val is not None:
+            if val == zero_value:
+                return 0
             return val / 86400
         else:
             return 'Not Defined'
@@ -2366,7 +2388,10 @@ class _policy_info(object):
         '''
         converts a number of days to seconds
         '''
+        zero_value = kwargs.get('zero_value', 0)
         if val is not None:
+            if val == 0:
+                return zero_value
             return val * 86400
         else:
             return 'Not Defined'
@@ -2410,15 +2435,18 @@ class _policy_info(object):
         '''
         converts a binary 0/1 to Disabled/Enabled
         '''
-        if val is not None:
-            if ord(val) == 0:
-                return 'Disabled'
-            elif ord(val) == 1:
-                return 'Enabled'
+        try:
+            if val is not None:
+                if ord(val) == 0:
+                    return 'Disabled'
+                elif ord(val) == 1:
+                    return 'Enabled'
+                else:
+                    return 'Invalid Value'
             else:
-                return 'Invalid Value'
-        else:
-            return 'Not Defined'
+                return 'Not Defined'
+        except TypeError:
+            return 'Invalid Value'
 
     @classmethod
     def _binary_enable_zero_disable_one_reverse_conversion(cls, val, **kwargs):
@@ -2478,9 +2506,11 @@ class _policy_info(object):
     def _in_range_inclusive(cls, val, **kwargs):
         '''
         checks that a value is in an inclusive range
+        The value for 0 used by Max Password Age is actually 0xffffffff
         '''
-        minimum = 0
-        maximum = 1
+        minimum = kwargs.get('min', 0)
+        maximum = kwargs.get('max', 1)
+        zero_value = kwargs.get('zero_value', 0)
 
         if isinstance(val, six.string_types):
             if val.lower() == 'not defined':
@@ -2490,12 +2520,8 @@ class _policy_info(object):
                     val = int(val)
                 except ValueError:
                     return False
-        if 'min' in kwargs:
-            minimum = kwargs['min']
-        if 'max' in kwargs:
-            maximum = kwargs['max']
         if val is not None:
-            if val >= minimum and val <= maximum:
+            if minimum <= val <= maximum or val == zero_value:
                 return True
             else:
                 return False
@@ -2627,11 +2653,7 @@ class _policy_info(object):
         or values
         '''
         log.debug('item == {0}'.format(item))
-        value_lookup = False
-        if 'value_lookup' in kwargs:
-            value_lookup = kwargs['value_lookup']
-        else:
-            value_lookup = False
+        value_lookup = kwargs.get('value_lookup', False)
         if 'lookup' in kwargs:
             for k, v in six.iteritems(kwargs['lookup']):
                 if value_lookup:
@@ -2709,7 +2731,8 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
     helper function to process all ADMX files in the specified policy_def_path
     and build a single XML doc that we can search/use for ADMX policy processing
     '''
-    display_language_fallback = 'en-US'
+    # Fallback to the System Install Language
+    display_language_fallback = INSTALL_LANGUAGE
     t_policy_definitions = lxml.etree.Element('policyDefinitions')
     t_policy_definitions.append(lxml.etree.Element('categories'))
     t_policy_definitions.append(lxml.etree.Element('policies'))
@@ -2773,22 +2796,44 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                     temp_ns = policy_ns
                     temp_ns = _updateNamespace(temp_ns, this_namespace)
                     policydefs_policyns_xpath(t_policy_definitions)[0].append(temp_ns)
-                adml_file = os.path.join(root, display_language, os.path.splitext(t_admfile)[0] + '.adml')
+
+                # We need to make sure the adml file exists. First we'll check
+                # the passed display_language (eg: en-US). Then we'll try the
+                # abbreviated version (en) to account for alternate locations.
+                # We'll do the same for the display_language_fallback (en_US).
+                adml_file = os.path.join(root, display_language,
+                        os.path.splitext(t_admfile)[0] + '.adml')
                 if not __salt__['file.file_exists'](adml_file):
                     msg = ('An ADML file in the specified ADML language "{0}" '
-                           'does not exist for the ADMX "{1}", the fallback '
-                           'language will be tried.')
+                           'does not exist for the ADMX "{1}", the abbreviated '
+                           'language code will be tried.')
                     log.info(msg.format(display_language, t_admfile))
-                    adml_file = os.path.join(root,
-                                             display_language_fallback,
-                                             os.path.splitext(t_admfile)[0] + '.adml')
+
+                    adml_file = os.path.join(root, display_language.split('-')[0],
+                            os.path.splitext(t_admfile)[0] + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
-                        msg = ('An ADML file in the specified ADML language '
-                               '"{0}" and the fallback language "{1}" do not '
-                               'exist for the ADMX "{2}".')
-                        raise SaltInvocationError(msg.format(display_language,
-                                                             display_language_fallback,
-                                                             t_admfile))
+                        msg = ('An ADML file in the specified ADML language code "{0}" '
+                               'does not exist for the ADMX "{1}", the fallback '
+                               'language will be tried.')
+                        log.info(msg.format(display_language[:2], t_admfile))
+
+                        adml_file = os.path.join(root, display_language_fallback,
+                                os.path.splitext(t_admfile)[0] + '.adml')
+                        if not __salt__['file.file_exists'](adml_file):
+                            msg = ('An ADML file in the specified ADML fallback language "{0}" '
+                                   'does not exist for the ADMX "{1}", the abbreviated'
+                                   'fallback language code will be tried.')
+                            log.info(msg.format(display_language_fallback, t_admfile))
+
+                            adml_file = os.path.join(root, display_language_fallback.split('-')[0],
+                                    os.path.splitext(t_admfile)[0] + '.adml')
+                            if not __salt__['file.file_exists'](adml_file):
+                                msg = ('An ADML file in the specified ADML language '
+                                       '"{0}" and the fallback language "{1}" do not '
+                                       'exist for the ADMX "{2}".')
+                                raise SaltInvocationError(msg.format(display_language,
+                                                                     display_language_fallback,
+                                                                     t_admfile))
                 try:
                     xmltree = lxml.etree.parse(adml_file)
                 except lxml.etree.XMLSyntaxError:
@@ -2796,8 +2841,8 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                     try:
                         xmltree = _remove_unicode_encoding(adml_file)
                     except Exception:
-                        msg = ('An error was found while processing adml file {0}, all policy'
-                               ' languange data from this file will be unavailable via this module')
+                        msg = ('An error was found while processing adml file {0}, all policy '
+                               'language data from this file will be unavailable via this module')
                         log.error(msg.format(adml_file))
                         continue
                 if None in namespaces:
@@ -2828,15 +2873,23 @@ def _findOptionValueInSeceditFile(option):
     '''
     try:
         _d = uuid.uuid4().hex
-        _tfile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'),
+        _tfile = '{0}\\{1}'.format(__opts__['cachedir'],
                                    'salt-secedit-dump-{0}.txt'.format(_d))
         _ret = __salt__['cmd.run']('secedit /export /cfg {0}'.format(_tfile))
         if _ret:
-            _reader = codecs.open(_tfile, 'r', encoding='utf-16')
-            _secdata = _reader.readlines()
-            _reader.close()
+            with io.open(_tfile, encoding='utf-16') as _reader:
+                _secdata = _reader.readlines()
             if __salt__['file.file_exists'](_tfile):
-                _ret = __salt__['file.remove'](_tfile)
+                for _ in range(5):
+                    try:
+                        __salt__['file.remove'](_tfile)
+                    except CommandExecutionError:
+                        time.sleep(.1)
+                        continue
+                    else:
+                        break
+                else:
+                    log.error('error occurred removing {0}'.format(_tfile))
             for _line in _secdata:
                 if _line.startswith(option):
                     return True, _line.split('=')[1].strip()
@@ -2852,9 +2905,9 @@ def _importSeceditConfig(infdata):
     '''
     try:
         _d = uuid.uuid4().hex
-        _tSdbfile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'),
+        _tSdbfile = '{0}\\{1}'.format(__opts__['cachedir'],
                                       'salt-secedit-import-{0}.sdb'.format(_d))
-        _tInfFile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'),
+        _tInfFile = '{0}\\{1}'.format(__opts__['cachedir'],
                                       'salt-secedit-config-{0}.inf'.format(_d))
         # make sure our temp files don't already exist
         if __salt__['file.file_exists'](_tSdbfile):
@@ -3454,7 +3507,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                     reg_key,
                                     reg_valuename,
                                     chr(registry.vtype[this_vtype]),
-                                    six.unichr(len(this_element_value.encode('utf-16-le'))),
+                                    six.unichr(len(this_element_value.encode('utf-16-le', '' if six.PY2 else 'surrogatepass'))),
                                     this_element_value)
     return expected_string
 
@@ -4039,7 +4092,7 @@ def _write_regpol_data(data_to_write,
             gpt_ini_data = ''
             if os.path.exists(gpt_ini_path):
                 with salt.utils.fopen(gpt_ini_path, 'rb') as gpt_file:
-                    gpt_ini_data = gpt_file.read()
+                    gpt_ini_data = salt.utils.to_str(gpt_file.read())
             if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
                 gpt_ini_data = '[General]\r\n' + gpt_ini_data
             if _regexSearchRegPolData(r'{0}='.format(re.escape(gpt_extension)), gpt_ini_data):
@@ -4094,7 +4147,7 @@ def _write_regpol_data(data_to_write,
                         gpt_ini_data[general_location.end():])
             if gpt_ini_data:
                 with salt.utils.fopen(gpt_ini_path, 'wb') as gpt_file:
-                    gpt_file.write(gpt_ini_data)
+                    gpt_file.write(salt.utils.to_bytes(gpt_ini_data))
         except Exception as e:
             msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
                     gpt_ini_path, e)
@@ -4194,8 +4247,8 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
         for adm_namespace in admtemplate_data:
             for adm_policy in admtemplate_data[adm_namespace]:
                 if str(admtemplate_data[adm_namespace][adm_policy]).lower() == 'not configured':
-                    if adm_policy in base_policy_settings[adm_namespace]:
-                        base_policy_settings[adm_namespace].pop(adm_policy)
+                    if base_policy_settings.get(adm_namespace, {}).pop(adm_policy, None) is not None:
+                        log.debug('Policy "{0}" removed'.format(adm_policy))
                 else:
                     log.debug('adding {0} to base_policy_settings'.format(adm_policy))
                     if adm_namespace not in base_policy_settings:
@@ -5332,7 +5385,7 @@ def set_(computer_policy=None, user_policy=None,
                                     _regedits[regedit]['policy']['Registry']['Type'])
                         else:
                             _ret = __salt__['reg.delete_value'](
-                                    _regedits[regedit]['polic']['Registry']['Hive'],
+                                    _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'])
                         if not _ret:

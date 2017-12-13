@@ -12,6 +12,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.path
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -241,4 +242,4 @@ def _read_link(name):
     Throws an OSError if the link does not exist
     '''
     alt_link_path = '/etc/alternatives/{0}'.format(name)
-    return os.readlink(alt_link_path)
+    return salt.utils.path.readlink(alt_link_path)

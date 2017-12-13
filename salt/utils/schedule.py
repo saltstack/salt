@@ -334,6 +334,7 @@ import errno
 import random
 import yaml
 import copy
+import weakref
 
 # Import Salt libs
 import salt.config
@@ -842,7 +843,49 @@ class Schedule(object):
             if argspec.keywords:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in six.iteritems(ret):
-                    kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
+                    if key is not 'kwargs':
+                        kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
+
+            # Only include these when running runner modules
+            if self.opts['__role'] == 'master':
+                jid = salt.utils.jid.gen_jid()
+                tag = salt.utils.event.tagify(jid, prefix='salt/scheduler/')
+
+                event = salt.utils.event.get_event(
+                        self.opts['__role'],
+                        self.opts['sock_dir'],
+                        self.opts['transport'],
+                        opts=self.opts,
+                        listen=False)
+
+                namespaced_event = salt.utils.event.NamespacedEvent(
+                    event,
+                    tag,
+                    print_func=None
+                )
+
+                func_globals = {
+                    '__jid__': jid,
+                    '__user__': salt.utils.get_user(),
+                    '__tag__': tag,
+                    '__jid_event__': weakref.proxy(namespaced_event),
+                }
+                self_functions = copy.copy(self.functions)
+                salt.utils.lazy.verify_fun(self_functions, func)
+
+                # Inject some useful globals to *all* the function's global
+                # namespace only once per module-- not per func
+                completed_funcs = []
+
+                for mod_name in six.iterkeys(self_functions):
+                    if '.' not in mod_name:
+                        continue
+                    mod, _ = mod_name.split('.', 1)
+                    if mod in completed_funcs:
+                        continue
+                    completed_funcs.append(mod)
+                    for global_key, value in six.iteritems(func_globals):
+                        self.functions[mod_name].__globals__[global_key] = value
 
             ret['return'] = self.functions[func](*args, **kwargs)
 
@@ -1138,7 +1181,8 @@ class Schedule(object):
                     # Sort the list of "whens" from earlier to later schedules
                     _when.sort()
 
-                    for i in _when:
+                    # Copy the list so we can loop through it
+                    for i in copy.deepcopy(_when):
                         if i < now and len(_when) > 1:
                             # Remove all missed schedules except the latest one.
                             # We need it to detect if it was triggered previously.
@@ -1242,8 +1286,27 @@ class Schedule(object):
 
             run = False
             seconds = data['_next_fire_time'] - now
-            if data['_splay']:
-                seconds = data['_splay'] - now
+
+            if 'splay' in data:
+                # Got "splay" configured, make decision to run a job based on that
+                if not data['_splay']:
+                    # Try to add "splay" time only if next job fire time is
+                    # still in the future. We should trigger job run
+                    # immediately otherwise.
+                    splay = _splay(data['splay'])
+                    if now < data['_next_fire_time'] + splay:
+                        log.debug('schedule.handle_func: Adding splay of '
+                                  '{0} seconds to next run.'.format(splay))
+                        data['_splay'] = data['_next_fire_time'] + splay
+                        if 'when' in data:
+                            data['_run'] = True
+                    else:
+                        run = True
+
+                if data['_splay']:
+                    # The "splay" configuration has been already processed, just use it
+                    seconds = data['_splay'] - now
+
             if seconds <= 0:
                 if '_seconds' in data:
                     run = True
@@ -1262,16 +1325,6 @@ class Schedule(object):
                 run = True
                 data['_run_on_start'] = False
             elif run:
-                if 'splay' in data and not data['_splay']:
-                    splay = _splay(data['splay'])
-                    if now < data['_next_fire_time'] + splay:
-                        log.debug('schedule.handle_func: Adding splay of '
-                                  '{0} seconds to next run.'.format(splay))
-                        run = False
-                        data['_splay'] = data['_next_fire_time'] + splay
-                        if 'when' in data:
-                            data['_run'] = True
-
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))

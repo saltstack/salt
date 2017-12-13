@@ -37,6 +37,7 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.url
 import salt.utils.process
+import salt.utils.files
 import salt.syspaths as syspaths
 from salt.utils import immutabletypes
 from salt.template import compile_template, compile_template_str
@@ -144,6 +145,13 @@ def _gen_tag(low):
     Generate the running dict tag string from the low data structure
     '''
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
+
+
+def _clean_tag(tag):
+    '''
+    Make tag name safe for filenames
+    '''
+    return salt.utils.files.safe_filename_leaf(tag)
 
 
 def _l_tag(name, id_):
@@ -678,7 +686,7 @@ class State(object):
             except AttributeError:
                 pillar_enc = str(pillar_enc).lower()
         self._pillar_enc = pillar_enc
-        if initial_pillar is not None:
+        if initial_pillar:
             self.opts['pillar'] = initial_pillar
             if self._pillar_override:
                 self.opts['pillar'] = salt.utils.dictupdate.merge(
@@ -1695,7 +1703,7 @@ class State(object):
                     trb)
             }
         troot = os.path.join(self.opts['cachedir'], self.jid)
-        tfile = os.path.join(troot, tag)
+        tfile = os.path.join(troot, _clean_tag(tag))
         if not os.path.isdir(troot):
             try:
                 os.makedirs(troot)
@@ -1870,8 +1878,8 @@ class State(object):
                 sys.modules[self.states[cdata['full']].__module__].__opts__[
                     'test'] = test
 
-            self.state_con.pop('runas')
-            self.state_con.pop('runas_password')
+            self.state_con.pop('runas', None)
+            self.state_con.pop('runas_password', None)
 
         # If format_call got any warnings, let's show them to the user
         if 'warnings' in cdata:
@@ -2047,7 +2055,7 @@ class State(object):
             proc = running[tag].get('proc')
             if proc:
                 if not proc.is_alive():
-                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, tag)
+                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, _clean_tag(tag))
                     if not os.path.isfile(ret_cache):
                         ret = {'result': False,
                                'comment': 'Parallel process failed to return',
@@ -3116,7 +3124,7 @@ class BaseHighState(object):
         Returns:
         {'saltenv': ['state1', 'state2', ...]}
         '''
-        matches = {}
+        matches = DefaultOrderedDict(OrderedDict)
         # pylint: disable=cell-var-from-loop
         for saltenv, body in six.iteritems(top):
             if self.opts['environment']:

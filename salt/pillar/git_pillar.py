@@ -492,6 +492,12 @@ except ImportError:
 PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
 PER_REMOTE_ONLY = ('name', 'mountpoint')
 
+# Fall back to default per-remote-only. This isn't technically needed since
+# salt.utils.gitfs.GitBase.init_remotes() will default to
+# salt.utils.gitfs.PER_REMOTE_ONLY for this value, so this is mainly for
+# runners and other modules that import salt.pillar.git_pillar.
+PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
+
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -560,8 +566,15 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             False
         )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
+            # Map env if env == '__env__' before checking the env value
+            if env == '__env__':
+                env = opts.get('pillarenv') \
+                    or opts.get('environment') \
+                    or opts.get('git_pillar_base')
+                log.debug('__env__ maps to %s', env)
+
             # If pillarenv is set, only grab pillars with that match pillarenv
-            if opts['pillarenv'] and env != opts['pillarenv'] and env != '__env__':
+            if opts['pillarenv'] and env != opts['pillarenv']:
                 log.debug(
                     'env \'%s\' for pillar dir \'%s\' does not match '
                     'pillarenv \'%s\', skipping',
@@ -579,12 +592,6 @@ def ext_pillar(minion_id, repo, pillar_dirs):
                     'git_pillar is processing pillar SLS from %s for pillar '
                     'env \'%s\'', pillar_dir, env
                 )
-
-            if env == '__env__':
-                env = opts.get('pillarenv') \
-                    or opts.get('environment') \
-                    or opts.get('git_pillar_base')
-                log.debug('__env__ maps to %s', env)
 
             pillar_roots = [pillar_dir]
 
