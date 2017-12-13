@@ -351,15 +351,15 @@ def create_healthcheck(ip_addr=None, fqdn=None, region=None, key=None, keyid=Non
 
     ip_addr
 
-        ip address to check.  ip_addr or fqdn is required.
+        IP address to check.  ip_addr or fqdn is required.
 
     fqdn
 
-        domain name of the endpoint to check.  ip_addr or fqdn is required
+        Domain name of the endpoint to check.  ip_addr or fqdn is required
 
     port
 
-        port to check
+        Port to check
 
     hc_type
 
@@ -371,7 +371,7 @@ def create_healthcheck(ip_addr=None, fqdn=None, region=None, key=None, keyid=Non
 
     string_match
 
-        if hc_type is HTTP_STR_MATCH or HTTPS_STR_MATCH, the string to search for in the
+        If hc_type is HTTP_STR_MATCH or HTTPS_STR_MATCH, the string to search for in the
         response body from the specified resource
 
     request_interval
@@ -387,7 +387,7 @@ def create_healthcheck(ip_addr=None, fqdn=None, region=None, key=None, keyid=Non
 
     region
 
-        region endpoint to connect to
+        Region endpoint to connect to
 
     key
 
