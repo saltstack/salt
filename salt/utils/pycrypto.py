@@ -12,9 +12,12 @@ import random
 # Import 3rd-party libs
 try:
     try:
-        import Cryptodome.Random as CRand  # pylint: disable=E0611
+        from M2Crypto.Rand import rand_bytes as get_random_bytes
     except ImportError:
-        import Crypto.Random as CRand  # pylint: disable=E0611
+        try:
+            from Cryptodome.Random import get_random_bytes # pylint: disable=E0611
+        except ImportError:
+            from Crypto.Random import get_random_bytes # pylint: disable=E0611
     HAS_RANDOM = True
 except ImportError:
     HAS_RANDOM = False
@@ -42,7 +45,7 @@ def secure_password(length=20, use_random=True):
             pw += re.sub(
                 r'\W',
                 '',
-                salt.utils.stringutils.to_str(CRand.get_random_bytes(1))
+                salt.utils.stringutils.to_str(get_random_bytes(1))
             )
         else:
             pw += random.SystemRandom().choice(string.ascii_letters + string.digits)

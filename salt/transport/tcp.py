@@ -51,10 +51,12 @@ else:
 # pylint: enable=import-error,no-name-in-module
 
 # Import third party libs
-try:
-    from Cryptodome.Cipher import PKCS1_OAEP
-except ImportError:
-    from Crypto.Cipher import PKCS1_OAEP
+HAS_M2 = salt.crypt.HAS_M2
+if not HAS_M2:
+    try:
+        from Cryptodome.Cipher import PKCS1_OAEP
+    except ImportError:
+        from Crypto.Cipher import PKCS1_OAEP
 
 if six.PY3 and salt.utils.platform.is_windows():
     USE_LOAD_BALANCER = True
@@ -296,8 +298,11 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             yield self.auth.authenticate()
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
-        cipher = PKCS1_OAEP.new(key)
-        aes = cipher.decrypt(ret['key'])
+        if HAS_M2:
+            aes = key.private_decrypt(six.b(ret['key']), RSA.pkcs1_oaep_padding)
+        else:
+            cipher = PKCS1_OAEP.new(key)
+            aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         data = pcrypt.loads(ret[dictkey])
         if six.PY3:

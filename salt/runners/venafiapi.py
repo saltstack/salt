@@ -33,7 +33,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import tempfile
-from Crypto.PublicKey import RSA
+
+try:
+    from M2Crypto import RSA
+    HAS_M2 = True
+except ImportError:
+    HAS_M2 = False
+    try:
+        from Cryptodome.PublicKey import RSA
+    except ImportError:
+        from Crypto.PublicKey import RSA
 
 # Import Salt libs
 import salt.cache
@@ -138,8 +147,12 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
         key_len = 2048
 
     if keygen_type == "RSA":
-        gen = RSA.generate(bits=key_len)
-        private_key = gen.exportKey('PEM', password)
+        if HAS_M2:
+            gen = RSA.gen_key(key_len, 65537)
+            private_key = gen.as_pem(cipher='des_ede3_cbc', callback=lambda x: six.b(password))
+        else:
+            gen = RSA.generate(bits=key_len)
+            private_key = gen.exportKey('PEM', password)
         if dns_name is not None:
             bank = 'venafi/domains'
             cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
