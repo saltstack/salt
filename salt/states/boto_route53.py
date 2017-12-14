@@ -104,7 +104,7 @@ def present(name, value, zone, record_type, ttl=None, identifier=None, region=No
 
     value
         Value of the record.  As a special case, you can pass in:
-            `private:<Name tag>` to have the function determine the private IP
+            `private:<Name tag>` to have the function autodetermine the private IP
             `public:<Name tag>` to have the function autodetermine the public IP
 
     zone
