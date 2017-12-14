@@ -1513,17 +1513,19 @@ def install(name=None,
             else:
                 pkgstr = pkgpath
 
+            # Lambda to trim the epoch from the currently-installed version if
+            # no epoch is specified in the specified version
+            norm_epoch = lambda x, y: x.split(':', 1)[-1] \
+                if ':' not in y \
+                else x
+
             cver = old_as_list.get(pkgname, [])
             if reinstall and cver:
                 for ver in cver:
-                    if diff_attr:
-                        # Since diff_attr was provided, the version info
-                        # is a dict.
-                        ver2 = ver['version']
-                    else:
-                        # No diff_attr was provided, so version is directly
-                        # in ver.
-                        ver2 = ver
+                    # if diff_attr was provided, version number is directly
+                    # in ver, otherwise its a dict.
+                    ver2 = ver['version'] if diff_attr else ver
+                    ver2 = norm_epoch(ver2, version_num)
                     if salt.utils.compare_versions(ver1=version_num,
                                                    oper='==',
                                                    ver2=ver2,
@@ -1537,14 +1539,10 @@ def install(name=None,
                     to_install.append((pkgname, pkgstr))
                 else:
                     for ver in cver:
-                        if diff_attr:
-                            # Since diff_attr was provided, the version info
-                            # is a dict.
-                            ver2 = ver['version']
-                        else:
-                            # No diff_attr was provided, so version is directly
-                            # in ver.
-                            ver2 = ver
+                        # if diff_attr was provided, version number is directly
+                        # in ver, otherwise its a dict.
+                        ver2 = ver['version'] if diff_attr else ver
+                        ver2 = norm_epoch(ver2, version_num)
                         if salt.utils.compare_versions(ver1=version_num,
                                                        oper='>=',
                                                        ver2=ver2,
