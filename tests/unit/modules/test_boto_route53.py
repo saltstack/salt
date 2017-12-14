@@ -99,18 +99,20 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
         register_instances returns True.
         '''
         expected = {
-            'CreateHealthCheckResponse': {
-                'HealthCheck': {
-                    'HealthCheckConfig': {
-                        'FailureThreshold': '3',
-                        'IPAddress': '10.0.0.1',
-                        'ResourcePath': '/',
-                        'RequestInterval': '30',
-                        'Type': 'HTTPS',
-                        'Port': '443',
-                        'FullyQualifiedDomainName': 'blog.saltstack.furniture',
+            'result': {
+                'CreateHealthCheckResponse': {
+                    'HealthCheck': {
+                        'HealthCheckConfig': {
+                            'FailureThreshold': '3',
+                            'IPAddress': '10.0.0.1',
+                            'ResourcePath': '/',
+                            'RequestInterval': '30',
+                            'Type': 'HTTPS',
+                            'Port': '443',
+                            'FullyQualifiedDomainName': 'blog.saltstack.furniture',
+                        },
+                        'HealthCheckVersion': '1',
                     },
-                    'HealthCheckVersion': '1',
                 },
             },
         }
@@ -121,6 +123,6 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
             port=443,
             resource_path='/',
         )
-        del healthcheck['CreateHealthCheckResponse']['HealthCheck']['CallerReference']
-        del healthcheck['CreateHealthCheckResponse']['HealthCheck']['Id']
+        del healthcheck['result']['CreateHealthCheckResponse']['HealthCheck']['CallerReference']
+        del healthcheck['result']['CreateHealthCheckResponse']['HealthCheck']['Id']
         self.assertEqual(healthcheck, expected)
