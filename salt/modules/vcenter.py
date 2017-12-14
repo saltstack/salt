@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import salt.utils
+import salt.utils.platform
 
 
 log = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Only work on proxy
     '''
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return __virtualname__
     return False
 

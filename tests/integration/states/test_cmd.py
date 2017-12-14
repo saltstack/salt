@@ -41,6 +41,19 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
                              cwd=tempfile.gettempdir(), test=True)
         self.assertSaltNoneReturn(ret)
 
+    def test_run_hide_output(self):
+        '''
+        cmd.run with output hidden
+        '''
+        ret = self.run_state(
+            u'cmd.run',
+            name=u'ls',
+            hide_output=True)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret[u'changes'][u'stdout'], u'')
+        self.assertEqual(ret[u'changes'][u'stderr'], u'')
+
 
 class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     '''
@@ -105,7 +118,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(sls)
         # We must assert against the comment here to make sure the comment reads that the
         # command "echo "hello"" was run. This ensures that we made it to the last unless
-        # command in the state. If the comment reads "unless execution succeeded", or similar,
+        # command in the state. If the comment reads "unless condition is true", or similar,
         # then the unless state run bailed out after the first unless command succeeded,
         # which is the bug we're regression testing for.
         self.assertEqual(sls['cmd_|-cmd_run_unless_multiple_|-echo "hello"_|-run']['comment'],

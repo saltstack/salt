@@ -71,6 +71,15 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'git'
 
 
+def _gitfs(init_remotes=True):
+    return salt.utils.gitfs.GitFS(
+        __opts__,
+        __opts__['gitfs_remotes'],
+        per_remote_overrides=PER_REMOTE_OVERRIDES,
+        per_remote_only=PER_REMOTE_ONLY,
+        init_remotes=init_remotes)
+
+
 def __virtual__():
     '''
     Only load if the desired provider module is present and gitfs is enabled
@@ -79,7 +88,7 @@ def __virtual__():
     if __virtualname__ not in __opts__['fileserver_backend']:
         return False
     try:
-        salt.utils.gitfs.GitFS(__opts__)
+        _gitfs(init_remotes=False)
         # Initialization of the GitFS object did not fail, so we know we have
         # valid configuration syntax and that a valid provider was detected.
         return __virtualname__
@@ -92,18 +101,14 @@ def clear_cache():
     '''
     Completely clear gitfs cache
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    return gitfs.clear_cache()
+    return _gitfs(init_remotes=False).clear_cache()
 
 
 def clear_lock(remote=None, lock_type='update'):
     '''
     Clear update.lk
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
-    return gitfs.clear_lock(remote=remote, lock_type=lock_type)
+    return _gitfs().clear_lock(remote=remote, lock_type=lock_type)
 
 
 def lock(remote=None):
@@ -114,30 +119,21 @@ def lock(remote=None):
     information, or a pattern. If the latter, then remotes for which the URL
     matches the pattern will be locked.
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
-    return gitfs.lock(remote=remote)
+    return _gitfs().lock(remote=remote)
 
 
 def update():
     '''
     Execute a git fetch on all of the repos
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
-    gitfs.update()
+    _gitfs().update()
 
 
 def envs(ignore_cache=False):
     '''
     Return a list of refs that can be used as environments
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
-    return gitfs.envs(ignore_cache=ignore_cache)
+    return _gitfs().envs(ignore_cache=ignore_cache)
 
 
 def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
@@ -145,10 +141,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     Find the first file to match the path and ref, read the file out of git
     and send the path to the newly cached file
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
-    return gitfs.find_file(path, tgt_env=tgt_env, **kwargs)
+    return _gitfs().find_file(path, tgt_env=tgt_env, **kwargs)
 
 
 def init():
@@ -156,29 +149,21 @@ def init():
     Initialize remotes. This is only used by the master's pre-flight checks,
     and is not invoked by GitFS.
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
+    _gitfs()
 
 
 def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
-    return gitfs.serve_file(load, fnd)
+    return _gitfs().serve_file(load, fnd)
 
 
 def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
-    return gitfs.file_hash(load, fnd)
+    return _gitfs().file_hash(load, fnd)
 
 
 def file_list(load):
@@ -186,10 +171,7 @@ def file_list(load):
     Return a list of all files on the file server in a specified
     environment (specified as a key within the load dict).
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
-    return gitfs.file_list(load)
+    return _gitfs().file_list(load)
 
 
 def file_list_emptydirs(load):  # pylint: disable=W0613
@@ -204,17 +186,11 @@ def dir_list(load):
     '''
     Return a list of all directories on the master
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
-    return gitfs.dir_list(load)
+    return _gitfs().dir_list(load)
 
 
 def symlink_list(load):
     '''
     Return a dict of all symlinks based on a given path in the repo
     '''
-    gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'],
-                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
-    return gitfs.symlink_list(load)
+    return _gitfs().symlink_list(load)

@@ -9,7 +9,7 @@
 
     Context managers used throughout Salt's source code.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import python libs
 import copy
@@ -206,7 +206,7 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
         if override_name:
             self.__class__.__module__ = 'salt'
             # __name__ can't be assigned a unicode
-            self.__class__.__name__ = str(override_name)  # future lint: disable=non-unicode-string
+            self.__class__.__name__ = str(override_name)  # future lint: disable=blacklisted-function
         super(NamespacedDictWrapper, self).__init__(self._dict())
 
     def _dict(self):

@@ -428,6 +428,7 @@ class ForceImportErrorOn(object):
                 self.__module_names[modname] = set(entry[1:])
             else:
                 self.__module_names[entry] = None
+        self.__original_import = builtins.__import__
         self.patcher = patch.object(builtins, '__import__', self.__fake_import__)
 
     def patch_import_function(self):

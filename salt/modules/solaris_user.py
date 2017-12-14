@@ -22,7 +22,8 @@ import copy
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.user
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
@@ -111,7 +112,7 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if salt.utils.is_true(kwargs.pop('system', False)):
+    if salt.utils.data.is_true(kwargs.pop('system', False)):
         log.warning('solaris_user module does not support the \'system\' '
                     'argument')
     if kwargs:
@@ -168,7 +169,7 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         log.warning(
             'userdel does not support force-deleting user while user is '
             'logged in'
@@ -431,7 +432,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    return salt.utils.get_group_list(name)
+    return salt.utils.user.get_group_list(name)
 
 
 def list_users():

@@ -19,9 +19,11 @@ import salt.log
 import salt.cache
 import salt.client
 import salt.pillar
-import salt.utils
 import salt.utils.atomicfile
+import salt.utils.files
 import salt.utils.minions
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.verify
 import salt.utils.versions
 import salt.payload
@@ -686,6 +688,42 @@ def ping_all_connected_minions(opts):
         tgt = '*'
         form = 'glob'
     client.cmd(tgt, 'test.ping', tgt_type=form)
+
+
+def get_master_key(key_user, opts, skip_perm_errors=False):
+    if key_user == 'root':
+        if opts.get('user', 'root') != 'root':
+            key_user = opts.get('user', 'root')
+    if key_user.startswith('sudo_'):
+        key_user = opts.get('user', 'root')
+    if salt.utils.platform.is_windows():
+        # The username may contain '\' if it is in Windows
+        # 'DOMAIN\username' format. Fix this for the keyfile path.
+        key_user = key_user.replace('\\', '_')
+    keyfile = os.path.join(opts['cachedir'],
+                           '.{0}_key'.format(key_user))
+    # Make sure all key parent directories are accessible
+    salt.utils.verify.check_path_traversal(opts['cachedir'],
+                                           key_user,
+                                           skip_perm_errors)
+
+    try:
+        with salt.utils.files.fopen(keyfile, 'r') as key:
+            return key.read()
+    except (OSError, IOError):
+        # Fall back to eauth
+        return ''
+
+
+def get_values_of_matching_keys(pattern_dict, user_name):
+    '''
+    Check a whitelist and/or blacklist to see if the value matches it.
+    '''
+    ret = []
+    for expr in pattern_dict:
+        if salt.utils.stringutils.expr_match(user_name, expr):
+            ret.extend(pattern_dict[expr])
+    return ret
 
 # test code for the ConCache class
 if __name__ == '__main__':

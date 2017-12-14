@@ -13,6 +13,7 @@ from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
 import salt.auth
+from salt.ext.six.moves import map  # pylint: disable=import-error
 try:
     import salt.netapi.rest_tornado as rest_tornado
     from salt.netapi.rest_tornado import saltnado
@@ -617,6 +618,34 @@ class TestSaltAuthHandler(SaltnadoTestCase):
                                headers={'Content-Type': self.content_type_map['form']})
 
         self.assertEqual(response.code, 400)
+
+
+class TestSaltRunHandler(SaltnadoTestCase):
+
+    def get_app(self):
+        urls = [('/run', saltnado.RunSaltAPIHandler)]
+        return self.build_tornado_app(urls)
+
+    def test_authentication_exception_consistency(self):
+        '''
+        Test consistency of authentication exception of each clients.
+        '''
+        valid_response = {'return': ['Failed to authenticate']}
+
+        clients = ['local', 'local_async', 'runner', 'runner_async']
+        request_lowstates = map(lambda client: {"client": client,
+                                                "tgt": "*",
+                                                "fun": "test.fib",
+                                                "arg": ["10"]},
+                                clients)
+
+        for request_lowstate in request_lowstates:
+            response = self.fetch('/run',
+                                  method='POST',
+                                  body=json.dumps(request_lowstate),
+                                  headers={'Content-Type': self.content_type_map['json']})
+
+            self.assertEqual(valid_response, json.loads(response.body))
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223

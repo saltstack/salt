@@ -9,14 +9,16 @@ import copy
 import logging
 import os
 import re
+import stat
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -118,6 +120,22 @@ def _expand_path(cwd, user):
         return os.path.join(os.path.expanduser(to_expand), str(cwd))
 
 
+def _path_is_executable_others(path):
+    '''
+    Check every part of path for executable permission
+    '''
+    prevpath = None
+    while path and path != prevpath:
+        try:
+            if not os.stat(path).st_mode & stat.S_IXOTH:
+                return False
+        except OSError:
+            return False
+        prevpath = path
+        path, _ = os.path.split(path)
+    return True
+
+
 def _format_opts(opts):
     '''
     Common code to inspect opts and split them if necessary
@@ -192,7 +210,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
         for id_file in identity:
             if 'salt://' in id_file:
                 with salt.utils.files.set_umask(0o077):
-                    tmp_identity_file = salt.utils.mkstemp()
+                    tmp_identity_file = salt.utils.files.mkstemp()
                     _id_file = id_file
                     id_file = __salt__['cp.get_file'](id_file,
                                                       tmp_identity_file,
@@ -217,11 +235,12 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             }
 
             # copy wrapper to area accessible by ``runas`` user
-            # currently no suppport in windows for wrapping git ssh
+            # currently no support in windows for wrapping git ssh
             ssh_id_wrapper = os.path.join(
                 salt.utils.templates.TEMPLATE_DIRNAME,
                 'git/ssh-id-wrapper'
             )
+            tmp_ssh_wrapper = None
             if salt.utils.platform.is_windows():
                 for suffix in ('', ' (x86)'):
                     ssh_exe = (
@@ -238,12 +257,14 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 # Use the windows batch file instead of the bourne shell script
                 ssh_id_wrapper += '.bat'
                 env['GIT_SSH'] = ssh_id_wrapper
+            elif not user or _path_is_executable_others(ssh_id_wrapper):
+                env['GIT_SSH'] = ssh_id_wrapper
             else:
-                tmp_file = salt.utils.files.mkstemp()
-                salt.utils.files.copyfile(ssh_id_wrapper, tmp_file)
-                os.chmod(tmp_file, 0o500)
-                os.chown(tmp_file, __salt__['file.user_to_uid'](user), -1)
-                env['GIT_SSH'] = tmp_file
+                tmp_ssh_wrapper = salt.utils.files.mkstemp()
+                salt.utils.files.copyfile(ssh_id_wrapper, tmp_ssh_wrapper)
+                os.chmod(tmp_ssh_wrapper, 0o500)
+                os.chown(tmp_ssh_wrapper, __salt__['file.user_to_uid'](user), -1)
+                env['GIT_SSH'] = tmp_ssh_wrapper
 
             if 'salt-call' not in _salt_cli \
                     and __salt__['ssh.key_is_encrypted'](id_file):
@@ -273,13 +294,25 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                     redirect_stderr=redirect_stderr,
                     **kwargs)
             finally:
-                if not salt.utils.platform.is_windows() and 'GIT_SSH' in env:
-                    os.remove(env['GIT_SSH'])
+                # Cleanup the temporary ssh wrapper file
+                try:
+                    __salt__['file.remove'](tmp_ssh_wrapper)
+                    log.debug('Removed ssh wrapper file %s', tmp_ssh_wrapper)
+                except AttributeError:
+                    # No wrapper was used
+                    pass
+                except (SaltInvocationError, CommandExecutionError) as exc:
+                    log.warning('Failed to remove ssh wrapper file %s: %s', tmp_ssh_wrapper, exc)
 
                 # Cleanup the temporary identity file
-                if tmp_identity_file and os.path.exists(tmp_identity_file):
-                    log.debug('Removing identity file {0}'.format(tmp_identity_file))
+                try:
                     __salt__['file.remove'](tmp_identity_file)
+                    log.debug('Removed identity file %s', tmp_identity_file)
+                except AttributeError:
+                    # No identify file was used
+                    pass
+                except (SaltInvocationError, CommandExecutionError) as exc:
+                    log.warning('Failed to remove identity file %s: %s', tmp_identity_file, exc)
 
             # If the command was successful, no need to try additional IDs
             if result['retcode'] == 0:
@@ -1210,7 +1243,7 @@ def config_get_regexp(key,
         ret.setdefault(param, []).append(value)
     return ret
 
-config_get_regex = salt.utils.alias_function(config_get_regexp, 'config_get_regex')
+config_get_regex = salt.utils.functools.alias_function(config_get_regexp, 'config_get_regex')
 
 
 def config_set(key,

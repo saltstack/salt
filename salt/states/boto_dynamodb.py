@@ -287,7 +287,8 @@ def present(name=None,
     if not table_exists:
         if __opts__['test']:
             ret['result'] = None
-            comments.append('DynamoDB table {0} is set to be created.'.format(name))
+            ret['comment'] = 'DynamoDB table {0} would be created.'.format(name)
+            return ret
         else:
             is_created = __salt__['boto_dynamodb.create_table'](
                 name,

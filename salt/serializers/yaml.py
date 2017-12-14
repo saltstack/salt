@@ -79,7 +79,7 @@ def serialize(obj, **options):
 
 class EncryptedString(str):
 
-    yaml_tag = u'!encrypted'
+    yaml_tag = '!encrypted'
 
     @staticmethod
     def yaml_constructor(loader, tag, node):

@@ -24,16 +24,18 @@ from salt.ext.six.moves.urllib.parse import urlparse
 # pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yamlloader as yamlloader
+import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
 from salt.utils.locales import sdecode
@@ -69,7 +71,7 @@ if salt.utils.platform.is_windows():
 else:
     _DFLT_IPC_MODE = 'ipc'
     _MASTER_TRIES = 1
-    _MASTER_USER = salt.utils.get_user()
+    _MASTER_USER = salt.utils.user.get_user()
 
 
 def _gather_buffer_space():
@@ -122,6 +124,15 @@ VALID_OPTS = {
     # master address will not be split into IP and PORT.
     'master_uri_format': str,
 
+    # The following optiosn refer to the Minion only, and they specify
+    # the details of the source address / port to be used when connecting to
+    # the Master. This is useful when dealing withmachines where due to firewall
+    # rules you are restricted to use a certain IP/port combination only.
+    'source_interface_name': str,
+    'source_address': str,
+    'source_ret_port': (six.string_types, int),
+    'source_publish_port': (six.string_types, int),
+
     # The fingerprint of the master key may be specified to increase security. Generate
     # a master fingerprint with `salt-key -F master`
     'master_finger': str,
@@ -163,6 +174,10 @@ VALID_OPTS = {
     # The master_pubkey_signature must also be set for this.
     'master_use_pubkey_signature': bool,
 
+    # Enable master stats eveents to be fired, these events will contain information about
+    # what commands the master is processing and what the rates are of the executions
+    'master_stats': bool,
+    'master_stats_event_iter': int,
     # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
     # intended master
     'syndic_finger': str,
@@ -183,6 +198,9 @@ VALID_OPTS = {
 
     # The directory used to store public key data
     'pki_dir': str,
+
+    # The directory to store authentication keys of a master's local environment.
+    'key_dir': str,
 
     # A unique identifier for this daemon
     'id': str,
@@ -237,7 +255,10 @@ VALID_OPTS = {
     'autoload_dynamic_modules': bool,
 
     # Force the minion into a single environment when it fetches files from the master
-    'environment': str,
+    'saltenv': str,
+
+    # Prevent saltenv from being overriden on the command line
+    'lock_saltenv': bool,
 
     # Force the minion into a single pillar root when it fetches pillar data from the master
     'pillarenv': str,
@@ -885,6 +906,12 @@ VALID_OPTS = {
     # check in with their lists of expected minions before giving up
     'syndic_wait': int,
 
+    # Override Jinja environment option defaults for all templates except sls templates
+    'jinja_env': dict,
+
+    # Set Jinja environment options for sls templates
+    'jinja_sls_env': dict,
+
     # If this is set to True leading spaces and tabs are stripped from the start
     # of a line to a block.
     'jinja_lstrip_blocks': bool,
@@ -1126,6 +1153,9 @@ VALID_OPTS = {
     # part of the extra_minion_data param
     # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
     'pass_to_ext_pillars': (six.string_types, list),
+
+    # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
+    'docker.compare_container_networks': dict,
 }
 
 # default configurations
@@ -1134,6 +1164,10 @@ DEFAULT_MINION_OPTS = {
     'master': 'salt',
     'master_type': 'str',
     'master_uri_format': 'default',
+    'source_interface_name': '',
+    'source_address': '',
+    'source_ret_port': 0,
+    'source_publish_port': 0,
     'master_port': 4506,
     'master_finger': '',
     'master_shuffle': False,
@@ -1145,7 +1179,7 @@ DEFAULT_MINION_OPTS = {
     'always_verify_signature': False,
     'master_sign_key_name': 'master_sign',
     'syndic_finger': '',
-    'user': salt.utils.get_user(),
+    'user': salt.utils.user.get_user(),
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': '',
@@ -1166,7 +1200,8 @@ DEFAULT_MINION_OPTS = {
     'random_startup_delay': 0,
     'failhard': False,
     'autoload_dynamic_modules': True,
-    'environment': None,
+    'saltenv': None,
+    'lock_saltenv': False,
     'pillarenv': None,
     'pillarenv_from_saltenv': False,
     'pillar_opts': False,
@@ -1400,6 +1435,11 @@ DEFAULT_MINION_OPTS = {
     'extmod_whitelist': {},
     'extmod_blacklist': {},
     'minion_sign_messages': False,
+    'docker.compare_container_networks': {
+        'static': ['Aliases', 'Links', 'IPAMConfig'],
+        'automatic': ['IPAddress', 'Gateway',
+                      'GlobalIPv6Address', 'IPv6Gateway'],
+    },
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1418,6 +1458,7 @@ DEFAULT_MASTER_OPTS = {
     'archive_jobs': False,
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
+    'key_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'key'),
     'key_cache': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
@@ -1442,7 +1483,8 @@ DEFAULT_MASTER_OPTS = {
         },
     'top_file_merging_strategy': 'merge',
     'env_order': [],
-    'environment': None,
+    'saltenv': None,
+    'lock_saltenv': False,
     'default_top': 'base',
     'file_client': 'local',
     'git_pillar_base': 'master',
@@ -1503,6 +1545,8 @@ DEFAULT_MASTER_OPTS = {
     'svnfs_saltenv_whitelist': [],
     'svnfs_saltenv_blacklist': [],
     'max_event_size': 1048576,
+    'master_stats': False,
+    'master_stats_event_iter': 60,
     'minionfs_env': 'base',
     'minionfs_mountpoint': '',
     'minionfs_whitelist': [],
@@ -1636,6 +1680,8 @@ DEFAULT_MASTER_OPTS = {
     'winrepo_passphrase': '',
     'winrepo_refspecs': _DFLT_REFSPECS,
     'syndic_wait': 5,
+    'jinja_env': {},
+    'jinja_sls_env': {},
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'tcp_keepalive': True,
@@ -2397,8 +2443,8 @@ def syndic_config(master_config_path,
     opts.update(syndic_opts)
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
-        'autosign_file', 'autoreject_file', 'token_dir'
+        'pki_dir', 'key_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'autosign_file', 'autoreject_file', 'token_dir', 'autosign_grains_dir'
     ]
     for config_key in ('log_file', 'key_logfile', 'syndic_log_file'):
         # If this is not a URI and instead a local path
@@ -3219,7 +3265,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
     return value
 
 
-def is_provider_configured(opts, provider, required_keys=()):
+def is_provider_configured(opts, provider, required_keys=(), log_message=True):
     '''
     Check and return the first matching and fully configured cloud provider
     configuration.
@@ -3232,13 +3278,14 @@ def is_provider_configured(opts, provider, required_keys=()):
             return False
         for key in required_keys:
             if opts['providers'][alias][driver].get(key, None) is None:
-                # There's at least one require configuration key which is not
-                # set.
-                log.warning(
-                    "The required '{0}' configuration setting is missing "
-                    "from the '{1}' driver, which is configured under the "
-                    "'{2}' alias.".format(key, provider, alias)
-                )
+                if log_message is True:
+                    # There's at least one require configuration key which is not
+                    # set.
+                    log.warning(
+                        "The required '{0}' configuration setting is missing "
+                        "from the '{1}' driver, which is configured under the "
+                        "'{2}' alias.".format(key, provider, alias)
+                    )
                 return False
         # If we reached this far, there's a properly configured provider.
         # Return it!
@@ -3254,15 +3301,16 @@ def is_provider_configured(opts, provider, required_keys=()):
             skip_provider = False
             for key in required_keys:
                 if provider_details.get(key, None) is None:
-                    # This provider does not include all necessary keys,
-                    # continue to next one.
-                    log.warning(
-                        "The required '{0}' configuration setting is "
-                        "missing from the '{1}' driver, which is configured "
-                        "under the '{2}' alias.".format(
-                            key, provider, alias
+                    if log_message is True:
+                        # This provider does not include all necessary keys,
+                        # continue to next one.
+                        log.warning(
+                            "The required '{0}' configuration setting is "
+                            "missing from the '{1}' driver, which is configured "
+                            "under the '{2}' alias.".format(
+                                key, provider, alias
+                            )
                         )
-                    )
                     skip_provider = True
                     break
 
@@ -3387,6 +3435,17 @@ def _cache_id(minion_id, cache_file):
     '''
     Helper function, writes minion id to a cache file.
     '''
+    path = os.path.dirname(cache_file)
+    try:
+        if not os.path.isdir(path):
+            os.makedirs(path)
+    except OSError as exc:
+        # Handle race condition where dir is created after os.path.isdir check
+        if os.path.isdir(path):
+            pass
+        else:
+            log.error('Failed to create dirs to minion_id file: {0}'.format(exc))
+
     try:
         with salt.utils.files.fopen(cache_file, 'w') as idf:
             idf.write(minion_id)
@@ -3565,6 +3624,24 @@ def apply_minion_config(overrides=None,
     if overrides:
         opts.update(overrides)
 
+    if 'environment' in opts:
+        if 'saltenv' in opts:
+            log.warning(
+                'The \'saltenv\' and \'environment\' minion config options '
+                'cannot both be used. Ignoring \'environment\' in favor of '
+                '\'saltenv\'.',
+            )
+            # Set environment to saltenv in case someone's custom module is
+            # refrencing __opts__['environment']
+            opts['environment'] = opts['saltenv']
+        else:
+            log.warning(
+                'The \'environment\' minion config option has been renamed '
+                'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
+                opts['environment']
+            )
+            opts['saltenv'] = opts['environment']
+
     opts['__cli'] = os.path.basename(sys.argv[0])
 
     # No ID provided. Will getfqdn save us?
@@ -3695,8 +3772,8 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     # out or not present.
     if opts.get('nodegroups') is None:
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
-    if salt.utils.is_dictlist(opts['nodegroups']):
-        opts['nodegroups'] = salt.utils.repack_dictlist(opts['nodegroups'])
+    if salt.utils.data.is_dictlist(opts['nodegroups']):
+        opts['nodegroups'] = salt.utils.data.repack_dictlist(opts['nodegroups'])
     if opts.get('transport') == 'raet' and 'aes' in opts:
         opts.pop('aes')
     apply_sdb(opts)
@@ -3716,6 +3793,24 @@ def apply_master_config(overrides=None, defaults=None):
     _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides:
         opts.update(overrides)
+
+    if 'environment' in opts:
+        if 'saltenv' in opts:
+            log.warning(
+                'The \'saltenv\' and \'environment\' master config options '
+                'cannot both be used. Ignoring \'environment\' in favor of '
+                '\'saltenv\'.',
+            )
+            # Set environment to saltenv in case someone's custom runner is
+            # refrencing __opts__['environment']
+            opts['environment'] = opts['saltenv']
+        else:
+            log.warning(
+                'The \'environment\' master config option has been renamed '
+                'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
+                opts['environment']
+            )
+            opts['saltenv'] = opts['environment']
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
@@ -3757,9 +3852,9 @@ def apply_master_config(overrides=None, defaults=None):
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'pki_dir', 'key_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir', 'syndic_dir',
-        'sqlite_queue_dir'
+        'sqlite_queue_dir', 'autosign_grains_dir'
     ]
 
     # These can be set to syslog, so, not actual paths on the system
@@ -3902,7 +3997,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     # Make sure the master_uri is set
     if 'master_uri' not in opts:
         opts['master_uri'] = 'tcp://{ip}:{port}'.format(
-            ip=salt.utils.ip_bracket(opts['interface']),
+            ip=salt.utils.zeromq.ip_bracket(opts['interface']),
             port=opts['ret_port']
         )
 
