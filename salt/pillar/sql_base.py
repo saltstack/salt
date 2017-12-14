@@ -437,8 +437,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 cursor.execute(details['query'], (minion_id,))
 
                 # Extract the field names the db has returned and process them
-                self.process_fields([row[0] for row in cursor.description],
-                                           details['depth'])
+                self.process_fields([row[0] for row in cursor.description], details['depth'])
                 self.enter_root(root)
                 self.as_list = details['as_list']
                 if details['with_lists']:
