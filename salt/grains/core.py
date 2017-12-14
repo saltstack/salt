@@ -1887,6 +1887,31 @@ def append_domain():
         grain['append_domain'] = __opts__['append_domain']
     return grain
 
+def fqdns():
+    '''
+    Return all known FQDNs for the system by enumerating all interfaces and
+    then trying to reverse resolve them (excluding 'lo' interface).
+    '''
+    # Provides:
+    # fqdns
+
+    grains = {}
+    fqdns = set()
+
+    addresses = salt.utils.network.ip_addrs(include_loopback=False,
+        interface_data=_INTERFACES)
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
+        interface_data=_INTERFACES))
+
+    for ip in addresses:
+        try:
+            fqdns.add(socket.gethostbyaddr(ip)[0])
+        except (socket.error, socket.herror,
+            socket.gaierror, socket.timeout) as e:
+                log.error("Exception during resolving address: " + str(e))
+    
+    grains['fqdns'] = list(fqdns)
+    return grains
 
 def ip_fqdn():
     '''
