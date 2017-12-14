@@ -441,6 +441,30 @@ def reshard(stream_name, desired_size, force=False,
     return r
 
 
+def list_streams(region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a list of all streams visible to the current account
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_kinesis.list_streams
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    streams = []
+    exclusive_start_stream_name = ''
+    while exclusive_start_stream_name is not None:
+        args = {'ExclusiveStartStreamName': exclusive_start_stream_name} if exclusive_start_stream_name else {}
+        ret = _execute_with_retries(conn, 'list_streams', **args)
+        if 'error' in ret:
+            return ret
+        ret = ret['result'] if ret and ret.get('result') else {}
+        streams += ret.get('StreamNames', [])
+        exclusive_start_stream_name = streams[-1] if ret.get('HasMoreStreams', False) in (True, 'true') else None
+    return {'result': streams}
+
+
 def _get_next_open_shard(stream_details, shard_id):
     '''
     Return the next open shard after shard_id
@@ -502,10 +526,12 @@ def _execute_with_retries(conn, function, **kwargs):
             else:
                 # ResourceNotFoundException or InvalidArgumentException
                 r['error'] = e.response['Error']
+                log.error(r['error'])
                 r['result'] = None
                 return r
 
     r['error'] = "Tried to execute function {0} {1} times, but was unable".format(function, max_attempts)
+    log.error(r['error'])
     return r
 
 

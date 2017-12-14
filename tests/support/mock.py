@@ -68,7 +68,8 @@ except ImportError as exc:
 
     class MagicMock(object):
 
-        __name__ = '{0}.fakemock'.format(__name__)  # future lint: disable=non-unicode-string
+        # __name__ can't be assigned a unicode
+        __name__ = str('{0}.fakemock').format(__name__)  # future lint: disable=blacklisted-function
 
         def __init__(self, *args, **kwargs):
             pass
