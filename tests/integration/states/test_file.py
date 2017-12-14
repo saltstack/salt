@@ -2134,9 +2134,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
                 os.unlink(filename)
 
-    @skipIf(six.PY3, 'This test will have a LOT of rewriting to support both Py2 and Py3')
-    # And I'm more comfortable with the author doing it - s0undt3ch
-    @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
     def test_issue_8947_utf8_sls(self):
         '''
         Test some file operation with utf-8 characters on the sls
