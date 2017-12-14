@@ -168,7 +168,7 @@ More complete example for MySQL (to also show configuration)
             as_list: True
             with_lists: [1,3]
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
