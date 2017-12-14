@@ -9,6 +9,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, call, mock_open, NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # salt libs
+from salt.ext import six
 import salt.utils.files
 from salt import crypt
 
@@ -185,16 +186,16 @@ class M2CryptTestCase(TestCase):
                     save_pub.assert_called_once_with('/keydir{0}keyname.pub'.format(os.sep))
 
     def test_sign_message(self):
-        key = M2Crypto.RSA.load_key_string(PRIVKEY_DATA)
+        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
         with patch('salt.crypt.get_rsa_key', return_value=key):
             self.assertEqual(SIG, salt.crypt.sign_message('/keydir/keyname.pem', MSG))
 
     def test_sign_message_with_passphrase(self):
-        key = M2Crypto.RSA.load_key_string(PRIVKEY_DATA)
+        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
         with patch('salt.crypt.get_rsa_key', return_value=key):
             self.assertEqual(SIG, crypt.sign_message('/keydir/keyname.pem', MSG, passphrase='password'))
 
     def test_verify_signature(self):
-        key = M2Crypto.RSA.load_pub_key_bio(M2Crypto.BIO.MemoryBuffer(PUBKEY_DATA.encode()))
+        key = M2Crypto.RSA.load_pub_key_bio(M2Crypto.BIO.MemoryBuffer(six.b(PUBKEY_DATA)))
         with patch('M2Crypto.RSA.load_pub_key', return_value=key):
             self.assertTrue(crypt.verify_signature('/keydir/keyname.pub', MSG, SIG))
