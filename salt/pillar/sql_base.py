@@ -275,7 +275,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 # May set 'as_list' from qb[1][2].
             else:
                 defaults.update(qb[1])
-                if defaults['with_lists']:
+                if defaults['with_lists'] and isinstance(defaults['with_lists'], six.string_types):
                     defaults['with_lists'] = [
                         int(i) for i in defaults['with_lists'].split(',')
                     ]
