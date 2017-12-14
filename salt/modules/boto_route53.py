@@ -709,7 +709,13 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='', private_zone=Fa
 
     caller_ref
         A unique string that identifies the request and that allows create_hosted_zone() calls to
-        be retried without the risk of executing the operation twice.
+        be retried without the risk of executing the operation twice.  It can take several minutes
+        for the change to replicate globally, and change from PENDING to INSYNC status. Thus it's
+        best to provide some value for this where possible, since duplicate calls while the first
+        is in PENDING status will be accepted and can lead to multiple copies of the zone being
+        created.  On the other hand, if a zone is created with a given caller_ref, then deleted,
+        a second attempt to create a zone with the same caller_ref will fail until that caller_ref
+        is flushed from the Route53 system, which can take upwards of 24 hours.
 
     comment
         Any comments you want to include about the hosted zone.
