@@ -125,7 +125,7 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     pub = '{0}.pub'.format(base)
 
     if HAS_M2:
-        gen = RSA.gen_key(keysize, 65537)
+        gen = RSA.gen_key(keysize, 65537, lambda: None)
     else:
         salt.utils.crypt.reinit_crypto()
         gen = RSA.generate(bits=keysize, e=65537)
@@ -806,7 +806,7 @@ class AsyncAuth(object):
             pubkey_path = os.path.join(self.opts['pki_dir'], self.mpub)
             pub = get_rsa_pub_key(pubkey_path)
             if HAS_M2:
-                payload['token'] = pub.encrypt(six.b(self.token), RSA.pkcs1_oaep_padding)
+                payload['token'] = pub.public_encrypt(six.b(self.token), RSA.pkcs1_oaep_padding)
             else:
                 cipher = PKCS1_OAEP.new(pub)
                 payload['token'] = cipher.encrypt(self.token)

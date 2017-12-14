@@ -481,7 +481,7 @@ class AESReqServerMixin(object):
                 aes = salt.master.SMaster.secrets['aes']['secret'].value
 
             if HAS_M2:
-                ret['aes'] = pub.encrypt(six.b(aes), RSA.pkcs1_oaep_padding)
+                ret['aes'] = pub.public_encrypt(six.b(aes), RSA.pkcs1_oaep_padding)
             else:
                 ret['aes'] = cipher.encrypt(aes)
         else:
@@ -490,7 +490,7 @@ class AESReqServerMixin(object):
                     if HAS_M2:
                         mtoken = self.master_key.key.private_decrypt(six.b(load['token']),
                                                                      RSA.pkcs1_oaep_padding)
-                        ret['token'] = pub.encrypt(six.b(mtoken), RSA.pkcs1_oaep_padding)
+                        ret['token'] = pub.public_encrypt(six.b(mtoken), RSA.pkcs1_oaep_padding)
                     else:
                         mtoken = mcipher.decrypt(load['token'])
                         ret['token'] = cipher.encrypt(mtoken)
@@ -501,7 +501,7 @@ class AESReqServerMixin(object):
 
             aes = salt.master.SMaster.secrets['aes']['secret'].value
             if HAS_M2:
-                ret['aes'] = pub.encrypt(six.b(aes), RSA.pkcs1_oaep_padding)
+                ret['aes'] = pub.public_encrypt(six.b(aes), RSA.pkcs1_oaep_padding)
             else:
                 ret['aes'] = cipher.encrypt(aes)
         # Be aggressive about the signature
