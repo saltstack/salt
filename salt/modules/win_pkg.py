@@ -278,10 +278,9 @@ def list_available(*names, **kwargs):
 
     saltenv = kwargs.get('saltenv', 'base')
     refresh = salt.utils.data.is_true(kwargs.get('refresh', False))
-    return_dict_always = \
-        salt.utils.data.is_true(kwargs.get('return_dict_always', False))
-
     _refresh_db_conditional(saltenv, force=refresh)
+    return_dict_always = \
+        salt.utils.is_true(kwargs.get('return_dict_always', False))
     if len(names) == 1 and not return_dict_always:
         pkginfo = _get_package_info(names[0], saltenv=saltenv)
         if not pkginfo:
@@ -358,6 +357,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     List the packages currently installed
 
     Args:
+        version_as_list (bool): Returns the versions as a list
 
     Kwargs:
         saltenv (str): The salt environment to use. Default ``base``.
@@ -1255,6 +1255,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             log.debug('Source hash matches package hash.')
 
         # Get install flags
+
         install_flags = pkginfo[version_num].get('install_flags', '')
         if options and options.get('extra_install_flags'):
             install_flags = '{0} {1}'.format(
@@ -1329,14 +1330,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     log.error('Scheduled Task failed to run')
                     ret[pkg_name] = {'install status': 'failed'}
         else:
-
             # Launch the command
-            result = __salt__['cmd.run_all'](
-                '"{0}" /s /c "{1}"'.format(cmd_shell, arguments),
-                cache_path,
-                output_loglevel='trace',
-                python_shell=False,
-                redirect_stderr=True)
+            result = __salt__['cmd.run_all']('"{0}" /s /c "{1}"'.format(cmd_shell, arguments),
+                                             cache_path,
+                                             output_loglevel='trace',
+                                             python_shell=False,
+                                             redirect_stderr=True)
             if not result['retcode']:
                 ret[pkg_name] = {'install status': 'success'}
                 changed.append(pkg_name)
@@ -1513,7 +1512,6 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 removal_targets.append(version_num)
 
         for target in removal_targets:
-
             # Get the uninstaller
             uninstaller = pkginfo[target].get('uninstaller', '')
             cache_dir = pkginfo[target].get('cache_dir', False)
@@ -1538,6 +1536,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 # If true, the entire directory will be cached instead of the
                 # individual file. This is useful for installations that are not
                 # single files
+
                 if cache_dir and uninstaller.startswith('salt:'):
                     path, _ = os.path.split(uninstaller)
                     __salt__['cp.cache_dir'](path,
@@ -1578,15 +1577,13 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             else:
                 # Run the uninstaller directly
                 # (not hosted on salt:, https:, etc.)
-                cached_pkg = uninstaller
+                cached_pkg = os.path.expandvars(uninstaller)
 
             # Fix non-windows slashes
             cached_pkg = cached_pkg.replace('/', '\\')
             cache_path, _ = os.path.split(cached_pkg)
 
-            # Get parameters for cmd
-            expanded_cached_pkg = str(os.path.expandvars(cached_pkg))
-            expanded_cache_path = str(os.path.expandvars(cache_path))
+            # os.path.expandvars is not required as we run everything through cmd.exe /s /c
 
             # Get uninstall flags
             uninstall_flags = pkginfo[target].get('uninstall_flags', '')
@@ -1602,9 +1599,11 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             # Build cmd and arguments
             # cmd and arguments must be separated for use with the task scheduler
             if use_msiexec:
-                arguments = '"{0}" /X "{1}"'.format(msiexec, uninstaller if uninstaller else expanded_cached_pkg)
+                # Check if uninstaller is set to {guid}, if not we assume its a remote msi file.
+                # which has already been downloaded.
+                arguments = '"{0}" /X "{1}"'.format(msiexec, cached_pkg)
             else:
-                arguments = '"{0}"'.format(expanded_cached_pkg)
+                arguments = '"{0}"'.format(cached_pkg)
 
             if uninstall_flags:
                 arguments = '{0} {1}'.format(arguments, uninstall_flags)
@@ -1619,7 +1618,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                                              action_type='Execute',
                                              cmd=cmd_shell,
                                              arguments='/s /c "{0}"'.format(arguments),
-                                             start_in=expanded_cache_path,
+                                             start_in=cache_path,
                                              trigger_type='Once',
                                              start_date='1975-01-01',
                                              start_time='01:00',
@@ -1634,7 +1633,6 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 # Launch the command
                 result = __salt__['cmd.run_all'](
                         '"{0}" /s /c "{1}"'.format(cmd_shell, arguments),
-                        expanded_cache_path,
                         output_loglevel='trace',
                         python_shell=False,
                         redirect_stderr=True)

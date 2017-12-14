@@ -1628,13 +1628,13 @@ Example:
 
 .. code-block:: jinja
 
-regex_escape = {{ 'https://example.com?foo=bar%20baz' | regex_escape }}
+  regex_escape = {{ 'https://example.com?foo=bar%20baz' | regex_escape }}
 
 will be rendered as:
 
 .. code-block:: text
 
-regex_escape = https\:\/\/example\.com\?foo\=bar\%20baz
+  regex_escape = https\:\/\/example\.com\?foo\=bar\%20baz
 
 Set Theory Filters
 ------------------
@@ -1652,13 +1652,13 @@ Example:
 
 .. code-block:: jinja
 
-unique = {{ ['foo', 'foo', 'bar'] | unique }}
+  unique = {{ ['foo', 'foo', 'bar'] | unique }}
 
 will be rendered as:
 
 .. code-block:: text
 
-unique = ['foo', 'bar']
+  unique = ['foo', 'bar']
 
 Jinja in Files
 ==============
