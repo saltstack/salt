@@ -272,7 +272,7 @@ def start(token,
                                     ret = local.cmd('{0}'.format(target), cmd, arg=args, kwarg=kwargs, tgt_type='{0}'.format(tgt_type))
 
                                 if ret:
-                                    salt.output.highstate.__opts__ =  __opts__
+                                    salt.output.highstate.__opts__ = __opts__
                                     if 'color' not in salt.output.highstate.__opts__:
                                         salt.output.highstate.__opts__.update({"color": ""})
                                     return_text = salt.output.highstate.output(ret)
