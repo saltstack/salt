@@ -19,4 +19,4 @@ class SPMManTest(ModuleCase):
         '''
         cmd = self.run_function('cmd.run', ['man spm'])
         self.assertIn('Salt Package Manager', cmd)
-        self.assertIn('spm is the frontend command for managing Salt packages.', cmd)
+        self.assertIn('command for managing Salt packages', cmd)
