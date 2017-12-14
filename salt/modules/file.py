@@ -6379,7 +6379,7 @@ def diskusage(path):
         ret = stat_structure.st_size
         return ret
 
-    for dirpath, dirnames, filenames in os.walk(path):
+    for dirpath, dirnames, filenames in salt.utils.path.os_walk(path):
         for f in filenames:
             fp = os.path.join(dirpath, f)
 

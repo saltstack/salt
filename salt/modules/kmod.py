@@ -11,6 +11,7 @@ import logging
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -133,7 +134,7 @@ def available():
                 # Strip .ko from the basename
                 ret.append(os.path.basename(line)[:-4])
 
-    for root, dirs, files in os.walk(mod_dir):
+    for root, dirs, files in salt.utils.path.os_walk(mod_dir):
         for fn_ in files:
             if '.ko' in fn_:
                 ret.append(fn_[:fn_.index('.ko')].replace('-', '_'))
@@ -141,7 +142,7 @@ def available():
     if 'Arch' in __grains__['os_family']:
         # Sadly this path is relative to kernel major version but ignores minor version
         mod_dir_arch = '/lib/modules/extramodules-' + os.uname()[2][0:3] + '-ARCH'
-        for root, dirs, files in os.walk(mod_dir_arch):
+        for root, dirs, files in salt.utils.path.os_walk(mod_dir_arch):
             for fn_ in files:
                 if '.ko' in fn_:
                     ret.append(fn_[:fn_.index('.ko')].replace('-', '_'))

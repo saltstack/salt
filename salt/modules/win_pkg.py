@@ -600,7 +600,7 @@ def refresh_db(**kwargs):
     # Clear minion repo-ng cache see #35342 discussion
     log.info('Removing all *.sls files under \'%s\'', repo_details.local_dest)
     failed = []
-    for root, _, files in os.walk(repo_details.local_dest, followlinks=False):
+    for root, _, files in salt.utils.path.os_walk(repo_details.local_dest, followlinks=False):
         for name in files:
             if name.endswith('.sls'):
                 full_filename = os.path.join(root, name)
@@ -745,7 +745,7 @@ def genrepo(**kwargs):
     ret['errors'] = {}
     repo_details = _get_repo_details(saltenv)
 
-    for root, _, files in os.walk(repo_details.local_dest, followlinks=False):
+    for root, _, files in salt.utils.path.os_walk(repo_details.local_dest, followlinks=False):
         short_path = os.path.relpath(root, repo_details.local_dest)
         if short_path == '.':
             short_path = ''

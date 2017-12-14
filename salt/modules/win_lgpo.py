@@ -52,6 +52,7 @@ import time
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 
@@ -2746,7 +2747,7 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
     policydefs_resources_localname_xpath = etree.XPath(
             '//*[local-name() = "policyDefinitionResources"]/*')
     policydef_resources_xpath = etree.XPath('/policyDefinitionResources')
-    for root, dirs, files in os.walk(policy_def_path):
+    for root, dirs, files in salt.utils.path.os_walk(policy_def_path):
         if root == policy_def_path:
             for t_admfile in files:
                 admfile = os.path.join(root, t_admfile)
