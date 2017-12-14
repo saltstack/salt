@@ -1984,9 +1984,8 @@ def managed(name,
         <salt.modules.grains.get>` when retrieving the contents.
 
     encoding
-        If specified, then the specified encoding will be used. Otherwise,
-        ``six.text_type()`` will be applied to the contents (that is,
-        ``unicode()`` on Python 2, or ``str()`` on Python 3). See
+        If specified, then the specified encoding will be used. Otherwise, the
+        file will be encoded using the system locale (usually UTF-8). See
         https://docs.python.org/3/library/codecs.html#standard-encodings for
         the list of available encodings.
 
@@ -5718,9 +5717,8 @@ def serialize(name,
         modules <salt.serializers>` for supported output formats.
 
     encoding
-        If specified, then the specified encoding will be used. Otherwise,
-        ``six.text_type()`` will be applied to the contents (that is,
-        ``unicode()`` on Python 2, or ``str()`` on Python 3). See
+        If specified, then the specified encoding will be used. Otherwise, the
+        file will be encoded using the system locale (usually UTF-8). See
         https://docs.python.org/3/library/codecs.html#standard-encodings for
         the list of available encodings.
 

@@ -5045,9 +5045,8 @@ def manage_file(name,
             cannot mirror the mode on the salt-ssh minion
 
     encoding
-        If specified, then the specified encoding will be used. Otherwise,
-        ``six.text_type()`` will be applied to the contents (that is,
-        `unicode()` on Python 2, or `str()` on Python 3). See
+        If specified, then the specified encoding will be used. Otherwise, the
+        file will be encoded using the system locale (usually UTF-8). See
         https://docs.python.org/3/library/codecs.html#standard-encodings for
         the list of available encodings.
 
