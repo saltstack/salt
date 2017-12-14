@@ -15,7 +15,6 @@ import subprocess
 
 # Import salt libs
 import salt.defaults.exitcodes
-import salt.utils
 import salt.utils.nb_popen
 import salt.utils.vt
 
@@ -191,7 +190,7 @@ class Shell(object):
 
     def _ssh_opts(self):
         return ' '.join(['-o {0}'.format(opt)
-                        for opt in self.ssh_options])
+                          for opt in self.ssh_options])
 
     def _copy_id_str_old(self):
         '''
@@ -254,7 +253,7 @@ class Shell(object):
             command.append(self.priv and self._key_opts() or self._passwd_opts())
         if ssh != 'scp' and self.remote_port_forwards:
             command.append(' '.join(['-R {0}'.format(item)
-                                     for item in self.remote_port_forwards.split(',')]))
+                                      for item in self.remote_port_forwards.split(',')]))
         if self.ssh_options:
             command.append(self._ssh_opts())
 

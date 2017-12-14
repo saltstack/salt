@@ -69,9 +69,10 @@ import hashlib
 import json
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
+import salt.utils.data
 import salt.utils.dictupdate as dictupdate
-import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -152,6 +153,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
         to the same VPC.  This is a dict of the form:
 
         .. code-block:: yaml
+
             VpcConfig:
                 SecurityGroupNames:
                 - mysecgroup1
@@ -407,7 +409,7 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key,
         size = os.path.getsize(ZipFile)
         if size == func['CodeSize']:
             sha = hashlib.sha256()
-            with salt.utils.fopen(ZipFile, 'rb') as f:
+            with salt.utils.files.fopen(ZipFile, 'rb') as f:
                 sha.update(f.read())
             hashed = sha.digest().encode('base64').strip()
             if hashed != func['CodeSha256']:
@@ -462,7 +464,7 @@ def _function_permissions_present(FunctionName, Permissions,
     if curr_permissions is None:
         curr_permissions = {}
     need_update = False
-    diffs = salt.utils.compare_dicts(curr_permissions, Permissions or {})
+    diffs = salt.utils.data.compare_dicts(curr_permissions, Permissions or {})
     if bool(diffs):
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Function permissions to be modified'])

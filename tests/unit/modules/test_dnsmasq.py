@@ -98,7 +98,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('os.path.isfile', MagicMock(return_value=True)):
             text_file_data = '\n'.join(["line here", "second line", "A=B", "#"])
-            with patch('salt.utils.fopen',
+            with patch('salt.utils.files.fopen',
                        mock_open(read_data=text_file_data),
                        create=True) as m:
                 m.return_value.__iter__.return_value = text_file_data.splitlines()

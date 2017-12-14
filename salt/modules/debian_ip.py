@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-The networking module for Debian based distros
+The networking module for Debian-based distros
 
 References:
 
@@ -19,14 +19,15 @@ import time
 # Import third party libs
 import jinja2
 import jinja2.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.odict
+import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
-import salt.utils.odict
 
 
 # Set up logging
@@ -45,7 +46,7 @@ __virtualname__ = 'ip'
 
 def __virtual__():
     '''
-    Confine this module to Debian based distros
+    Confine this module to Debian-based distros
     '''
     if __grains__['os_family'] == 'Debian':
         return __virtualname__
@@ -219,8 +220,8 @@ def _read_file(path):
     Reads and returns the contents of a text file
     '''
     try:
-        with salt.utils.flopen(path, 'rb') as contents:
-            return [salt.utils.to_str(line) for line in contents.readlines()]
+        with salt.utils.files.flopen(path, 'rb') as contents:
+            return [salt.utils.stringutils.to_str(line) for line in contents.readlines()]
     except (OSError, IOError):
         return ''
 
@@ -280,7 +281,7 @@ def _parse_current_network_settings():
     opts['networking'] = ''
 
     if os.path.isfile(_DEB_NETWORKING_FILE):
-        with salt.utils.fopen(_DEB_NETWORKING_FILE) as contents:
+        with salt.utils.files.fopen(_DEB_NETWORKING_FILE) as contents:
             for line in contents:
                 if line.startswith('#'):
                     continue
@@ -574,7 +575,7 @@ def _parse_interfaces(interface_files=None):
     method = -1
 
     for interface_file in interface_files:
-        with salt.utils.fopen(interface_file) as interfaces:
+        with salt.utils.files.fopen(interface_file) as interfaces:
             # This ensures iface_dict exists, but does not ensure we're not reading a new interface.
             iface_dict = {}
             for line in interfaces:
@@ -1388,7 +1389,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     for opt in ['up_cmds', 'pre_up_cmds', 'post_up_cmds',
                 'down_cmds', 'pre_down_cmds', 'post_down_cmds']:
         if opt in opts:
-            iface_data['inet'][opt] = opts[opt]
+            iface_data[def_addrfam][opt] = opts[opt]
 
     for addrfam in ['inet', 'inet6']:
         if 'addrfam' in iface_data[addrfam] and iface_data[addrfam]['addrfam'] == addrfam:
@@ -1489,7 +1490,7 @@ def _write_file(iface, data, folder, pattern):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         fout.write(data)
     return filename
 
@@ -1514,7 +1515,7 @@ def _write_file_routes(iface, data, folder, pattern):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         fout.write(data)
 
     __salt__['file.set_mode'](filename, '0755')
@@ -1533,7 +1534,7 @@ def _write_file_network(data, filename, create=False):
         msg = msg.format(filename)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         fout.write(data)
 
 
@@ -1561,7 +1562,7 @@ def _read_temp_ifaces(iface, data):
         return ''
 
     ifcfg = template.render({'name': iface, 'data': data})
-    # Return as a array so the difflib works
+    # Return as an array so the difflib works
     return [item + '\n' for item in ifcfg.split('\n')]
 
 
@@ -1609,13 +1610,13 @@ def _write_file_ifaces(iface, data, **settings):
         msg = msg.format(os.path.dirname(filename))
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         if _SEPARATE_FILE:
             fout.write(saved_ifcfg)
         else:
             fout.write(ifcfg)
 
-    # Return as a array so the difflib works
+    # Return as an array so the difflib works
     return saved_ifcfg.split('\n')
 
 
@@ -1642,10 +1643,10 @@ def _write_file_ppp_ifaces(iface, data):
         msg = msg.format(os.path.dirname(filename))
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.fopen(filename, 'w') as fout:
+    with salt.utils.files.fopen(filename, 'w') as fout:
         fout.write(ifcfg)
 
-    # Return as a array so the difflib works
+    # Return as an array so the difflib works
     return filename
 
 
@@ -1702,7 +1703,6 @@ def build_interface(iface, iface_type, enabled, **settings):
         salt '*' ip.build_interface eth0 eth <settings>
     '''
 
-    iface = iface.lower()
     iface_type = iface_type.lower()
 
     if iface_type not in _IFACE_TYPES:
@@ -1772,7 +1772,6 @@ def build_routes(iface, **settings):
         salt '*' ip.build_routes eth0 <settings>
     '''
 
-    iface = iface.lower()
     opts = _parse_routes(iface, settings)
     try:
         template = JINJA.get_template('route_eth.jinja')
@@ -2037,18 +2036,11 @@ def build_network_settings(**settings):
         # Write settings
         _write_file_network(network, _DEB_NETWORKING_FILE, True)
 
-    # Write hostname to /etc/hostname
+    # Get hostname and domain from opts
     sline = opts['hostname'].split('.', 1)
     opts['hostname'] = sline[0]
-    hostname = '{0}\n' . format(opts['hostname'])
     current_domainname = current_network_settings['domainname']
     current_searchdomain = current_network_settings['searchdomain']
-
-    # Only write the hostname if it has changed
-    if not opts['hostname'] == current_network_settings['hostname']:
-        if not ('test' in settings and settings['test']):
-            # TODO  replace wiht a call to network.mod_hostname instead
-            _write_file_network(hostname, _DEB_HOSTNAME_FILE)
 
     new_domain = False
     if len(sline) > 1:

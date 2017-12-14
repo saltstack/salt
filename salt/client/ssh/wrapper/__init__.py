@@ -13,11 +13,11 @@ import copy
 
 # Import salt libs
 import salt.loader
-import salt.utils
+import salt.utils.data
 import salt.client.ssh
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class FunctionWrapper(object):
@@ -121,7 +121,7 @@ class FunctionWrapper(object):
                         'stderr': stderr,
                         'retcode': retcode}
             try:
-                ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
+                ret = json.loads(stdout, object_hook=salt.utils.data.decode_dict)
                 if len(ret) < 2 and 'local' in ret:
                     ret = ret['local']
                 ret = ret.get('return', {})

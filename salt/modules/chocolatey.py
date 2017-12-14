@@ -14,7 +14,8 @@ import re
 import tempfile
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.platform
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError, \
     SaltInvocationError
@@ -36,7 +37,7 @@ def __virtual__():
     for simulating UAC forces a GUI prompt, and is not compatible with
     salt-minion running as SYSTEM.
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return (False, 'Cannot load module chocolatey: Chocolatey requires '
                        'Windows')
 
@@ -273,9 +274,9 @@ def list_(narrow=None,
     cmd = [choc_path, 'list']
     if narrow:
         cmd.append(narrow)
-    if salt.utils.is_true(all_versions):
+    if salt.utils.data.is_true(all_versions):
         cmd.append('--allversions')
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if source:
         cmd.extend(['--source', source])
@@ -368,7 +369,8 @@ def install(name,
             force_x86=False,
             package_args=None,
             allow_multiple=False,
-            no_progress=False):
+            no_progress=False,
+            execution_timeout=None):
     '''
     Instructs Chocolatey to install a package.
 
@@ -427,6 +429,11 @@ def install(name,
         no_progress
             Do not show download progress percentages. Defaults to False.
 
+        execution_timeout (str):
+        Chocolatey execution timeout value you want to pass to the installation process. Default is None.
+
+            .. versionadded:: Oxygen
+
     Returns:
         str: The output of the ``chocolatey`` command
 
@@ -451,9 +458,9 @@ def install(name,
         cmd.extend(['--version', version])
     if source:
         cmd.extend(['--source', source])
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         cmd.append('--force')
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if install_args:
         cmd.extend(['--installarguments', install_args])
@@ -467,6 +474,8 @@ def install(name,
         cmd.append('--allow-multiple')
     if no_progress:
         cmd.append(_no_progress(__context__))
+    if execution_timeout:
+        cmd.extend(['--execution-timeout', execution_timeout])
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -801,9 +810,9 @@ def upgrade(name,
         cmd.extend(['-version', version])
     if source:
         cmd.extend(['--source', source])
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         cmd.append('--force')
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if install_args:
         cmd.extend(['--installarguments', install_args])
@@ -861,7 +870,7 @@ def update(name, source=None, pre_versions=False, no_progress=False):
     cmd = [choc_path, 'update', name]
     if source:
         cmd.extend(['--source', source])
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if no_progress:
         cmd.append(_no_progress(__context__))

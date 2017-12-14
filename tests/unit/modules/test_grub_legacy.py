@@ -43,12 +43,12 @@ class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
         Test for Parse GRUB conf file
         '''
         mock = MagicMock(side_effect=IOError('foo'))
-        with patch('salt.utils.fopen', mock):
+        with patch('salt.utils.files.fopen', mock):
             with patch.object(grub_legacy, '_detect_conf', return_value='A'):
                 self.assertRaises(CommandExecutionError, grub_legacy.conf)
 
         file_data = '\n'.join(['#', 'A B C D,E,F G H'])
-        with patch('salt.utils.fopen',
+        with patch('salt.utils.files.fopen',
                    mock_open(read_data=file_data), create=True) as f_mock:
             f_mock.return_value.__iter__.return_value = file_data.splitlines()
             with patch.object(grub_legacy, '_detect_conf', return_value='A'):

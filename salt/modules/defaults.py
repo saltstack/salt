@@ -1,15 +1,21 @@
 # -*- coding: utf-8 -*-
+'''
+Module to work with salt formula defaults files
+
+'''
+
 from __future__ import absolute_import
+import copy
 import json
 import logging
 import os
 import yaml
 
 import salt.fileclient
-import salt.utils
+import salt.utils.data
+import salt.utils.dictupdate as dictupdate
+import salt.utils.files
 import salt.utils.url
-
-from salt.utils import dictupdate
 
 
 __virtualname__ = 'defaults'
@@ -60,7 +66,7 @@ def _load(formula):
 
         if os.path.exists(file_):
             log.debug("Reading defaults from %r", file_)
-            with salt.utils.fopen(file_) as fhr:
+            with salt.utils.files.fopen(file_) as fhr:
                 defaults = loader.load(fhr)
                 log.debug("Read defaults %r", defaults)
 
@@ -97,15 +103,22 @@ def get(key, default=''):
 
     # Fetch value
     if key:
-        return salt.utils.traverse_dict_and_list(defaults, key, default)
+        return salt.utils.data.traverse_dict_and_list(defaults, key, default)
     else:
         return defaults
 
 
-def merge(dest, upd):
+def merge(dest, src, merge_lists=False, in_place=True):
     '''
     defaults.merge
         Allows deep merging of dicts in formulas.
+
+    merge_lists : False
+        If True, it will also merge lists instead of replace their items.
+
+    in_place : True
+        If True, it will merge into dest dict,
+        if not it will make a new copy from that dict and return it.
 
         CLI Example:
         .. code-block:: bash
@@ -115,4 +128,22 @@ def merge(dest, upd):
     It is more typical to use this in a templating language in formulas,
     instead of directly on the command-line.
     '''
-    return dictupdate.update(dest, upd)
+    if in_place:
+        merged = dest
+    else:
+        merged = copy.deepcopy(dest)
+    return dictupdate.update(merged, src, merge_lists=merge_lists)
+
+
+def deepcopy(source):
+    '''
+    defaults.deepcopy
+        Allows deep copy of objects in formulas.
+
+        By default, Python does not copy objects,
+        it creates bindings between a target and an object.
+
+    It is more typical to use this in a templating language in formulas,
+    instead of directly on the command-line.
+    '''
+    return copy.deepcopy(source)

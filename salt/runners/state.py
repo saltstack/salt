@@ -8,11 +8,29 @@ import logging
 
 # Import salt libs
 import salt.loader
-import salt.utils
 import salt.utils.event
+import salt.utils.functools
 from salt.exceptions import SaltInvocationError
 
 LOGGER = logging.getLogger(__name__)
+
+
+def set_pause(jid, state_id, duration=None):
+    '''
+    Set up a state id pause, this instructs a running state to pause at a given
+    state id. This needs to pass in the jid of the running state and can
+    optionally pass in a duration in seconds.
+    '''
+    minion = salt.minion.MasterMinion(__opts__)
+    minion['state.set_pause'](jid, state_id, duration)
+
+
+def rm_pause(jid, state_id, duration=None):
+    '''
+    Remove a pause from a jid, allowing it to continue
+    '''
+    minion = salt.minion.MasterMinion(__opts__)
+    minion['state.rm_pause'](jid, state_id)
 
 
 def orchestrate(mods,
@@ -71,17 +89,23 @@ def orchestrate(mods,
         )
     __opts__['file_client'] = 'local'
     minion = salt.minion.MasterMinion(__opts__)
+
+    if pillarenv is None and 'pillarenv' in __opts__:
+        pillarenv = __opts__['pillarenv']
+    if saltenv is None and 'saltenv' in __opts__:
+        saltenv = __opts__['saltenv']
+
     running = minion.functions['state.sls'](
             mods,
-            saltenv,
             test,
             exclude,
             pillar=pillar,
+            saltenv=saltenv,
             pillarenv=pillarenv,
             pillar_enc=pillar_enc,
             orchestration_jid=orchestration_jid)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
-    res = salt.utils.check_state_result(ret['data'])
+    res = __utils__['state.check_result'](ret['data'])
     if res:
         ret['retcode'] = 0
     else:
@@ -89,8 +113,8 @@ def orchestrate(mods,
     return ret
 
 # Aliases for orchestrate runner
-orch = salt.utils.alias_function(orchestrate, 'orch')
-sls = salt.utils.alias_function(orchestrate, 'sls')
+orch = salt.utils.functools.alias_function(orchestrate, 'orch')
+sls = salt.utils.functools.alias_function(orchestrate, 'sls')
 
 
 def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs):
@@ -197,7 +221,7 @@ def orchestrate_show_sls(mods,
     ret = {minion.opts['id']: running}
     return ret
 
-orch_show_sls = salt.utils.alias_function(orchestrate_show_sls, 'orch_show_sls')
+orch_show_sls = salt.utils.functools.alias_function(orchestrate_show_sls, 'orch_show_sls')
 
 
 def event(tagmatch='*',

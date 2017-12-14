@@ -8,18 +8,18 @@ from __future__ import absolute_import
 import collections
 import json
 import logging
+import os.path
 import pipes
 import pprint
 import re
 import uuid
 from functools import wraps
-from os import path
 from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 # Import third party libs
 import jinja2
-import salt.ext.six as six
+from salt.ext import six
 import yaml
 from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
@@ -27,11 +27,13 @@ from jinja2.exceptions import TemplateRuntimeError
 from jinja2.ext import Extension
 
 # Import salt libs
-import salt
+from salt.exceptions import TemplateError
 import salt.fileclient
-import salt.utils
+import salt.utils.data
+import salt.utils.files
 import salt.utils.url
-from salt.utils.decorators import jinja_filter, jinja_test
+import salt.utils.yamldumper
+from salt.utils.decorators.jinja import jinja_filter, jinja_test, jinja_global
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -42,18 +44,6 @@ __all__ = [
 ]
 
 GLOBAL_UUID = uuid.UUID('91633EBF-1C86-5E33-935A-28061F4B480E')
-
-# To dump OrderedDict objects as regular dicts. Used by the yaml
-# template filter.
-
-
-class OrderedDictDumper(yaml.Dumper):  # pylint: disable=W0232
-    pass
-
-
-yaml.add_representer(OrderedDict,
-                     yaml.representer.SafeRepresenter.represent_dict,
-                     Dumper=OrderedDictDumper)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -75,7 +65,7 @@ class SaltCacheLoader(BaseLoader):
             else:
                 self.searchpath = opts['file_roots'][saltenv]
         else:
-            self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
+            self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
         self._file_client = None
         self.cached = []
@@ -117,7 +107,7 @@ class SaltCacheLoader(BaseLoader):
         self.check_cache(template)
 
         if environment and template:
-            tpldir = path.dirname(template).replace('\\', '/')
+            tpldir = os.path.dirname(template).replace('\\', '/')
             tpldata = {
                 'tplfile': template,
                 'tpldir': '.' if tpldir == '' else tpldir,
@@ -127,15 +117,15 @@ class SaltCacheLoader(BaseLoader):
 
         # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
-            filepath = path.join(spath, template)
+            filepath = os.path.join(spath, template)
             try:
-                with salt.utils.fopen(filepath, 'rb') as ifile:
+                with salt.utils.files.fopen(filepath, 'rb') as ifile:
                     contents = ifile.read().decode(self.encoding)
-                    mtime = path.getmtime(filepath)
+                    mtime = os.path.getmtime(filepath)
 
                     def uptodate():
                         try:
-                            return path.getmtime(filepath) == mtime
+                            return os.path.getmtime(filepath) == mtime
                         except OSError:
                             return False
                     return contents, filepath, uptodate
@@ -180,6 +170,12 @@ class PrintableDict(OrderedDict):
             # function.
             output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
         return '{' + ', '.join(output) + '}'
+
+
+# Additional globals
+@jinja_global('raise')
+def jinja_raise(msg):
+    raise TemplateError(msg)
 
 
 # Additional tests
@@ -576,7 +572,7 @@ def symmetric_difference(lst1, lst2):
 
 @jinja2.contextfunction
 def show_full_context(ctx):
-    return ctx
+    return salt.utils.data.simple_types_filter({key: value for key, value in ctx.items()})
 
 
 class SerializerExtension(Extension, object):
@@ -789,8 +785,8 @@ class SerializerExtension(Extension, object):
         return Markup(json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
 
     def format_yaml(self, value, flow_style=True):
-        yaml_txt = yaml.dump(value, default_flow_style=flow_style,
-                             Dumper=OrderedDictDumper).strip()
+        yaml_txt = salt.utils.yamldumper.safe_dump(
+            value, default_flow_style=flow_style).strip()
         if yaml_txt.endswith('\n...'):
             yaml_txt = yaml_txt[:len(yaml_txt)-4]
         return Markup(yaml_txt)
