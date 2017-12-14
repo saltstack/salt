@@ -5,7 +5,7 @@ Tests for the file state
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import errno
 import glob
 import logging
@@ -2134,65 +2134,61 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
                 os.unlink(filename)
 
-    @skipIf(six.PY3, 'This test will have a LOT of rewriting to support both Py2 and Py3')
-    # And I'm more comfortable with the author doing it - s0undt3ch
-    @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
-    @skipIf(True, 'Skipped until unicode codebase conversion is completed')
     def test_issue_8947_utf8_sls(self):
         '''
         Test some file operation with utf-8 characters on the sls
 
         This is more generic than just a file test. Feel free to move
         '''
-        korean_1 = u'한국어 시험'
-        korean_2 = u'첫 번째 행'
-        korean_3 = u'마지막 행'
+        korean_1 = '한국어 시험'
+        korean_2 = '첫 번째 행'
+        korean_3 = '마지막 행'
         test_file = os.path.join(
             TMP,
-            u'salt_utf8_tests',
-            u'{0}.txt'.format(korean_1)
+            'salt_utf8_tests',
+            '{0}.txt'.format(korean_1)
         )
         test_file_encoded = salt.utils.stringutils.to_str(test_file)
         template_path = os.path.join(TMP_STATE_TREE, 'issue-8947.sls')
         # create the sls template
         template_lines = [
-            u'# -*- coding: utf-8 -*-',
-            u'some-utf8-file-create:',
-            u'  file.managed:',
-            u"    - name: '{0}'".format(test_file),
-            u"    - contents: {0}".format(korean_1),
-            u'    - makedirs: True',
-            u'    - replace: True',
-            u'    - show_diff: True',
-            u'some-utf8-file-create2:',
-            u'  file.managed:',
-            u"    - name: '{0}'".format(test_file),
-            u'    - contents: |',
-            u'       {0}'.format(korean_2),
-            u'       {0}'.format(korean_1),
-            u'       {0}'.format(korean_3),
-            u'    - replace: True',
-            u'    - show_diff: True',
-            u'some-utf8-file-exists:',
-            u'  file.exists:',
-            u"    - name: '{0}'".format(test_file),
-            u'    - require:',
-            u'      - file: some-utf8-file-create2',
-            u'some-utf8-file-content-test:',
-            u'  cmd.run:',
-            u'    - name: \'cat "{0}"\''.format(test_file),
-            u'    - require:',
-            u'      - file: some-utf8-file-exists',
-            u'some-utf8-file-content-remove:',
-            u'  cmd.run:',
-            u'    - name: \'rm -f "{0}"\''.format(test_file),
-            u'    - require:',
-            u'      - cmd: some-utf8-file-content-test',
-            u'some-utf8-file-removed:',
-            u'  file.missing:',
-            u"    - name: '{0}'".format(test_file),
-            u'    - require:',
-            u'      - cmd: some-utf8-file-content-remove',
+            '# -*- coding: utf-8 -*-',
+            'some-utf8-file-create:',
+            '  file.managed:',
+            "    - name: '{0}'".format(test_file),
+            "    - contents: {0}".format(korean_1),
+            '    - makedirs: True',
+            '    - replace: True',
+            '    - show_diff: True',
+            'some-utf8-file-create2:',
+            '  file.managed:',
+            "    - name: '{0}'".format(test_file),
+            '    - contents: |',
+            '       {0}'.format(korean_2),
+            '       {0}'.format(korean_1),
+            '       {0}'.format(korean_3),
+            '    - replace: True',
+            '    - show_diff: True',
+            'some-utf8-file-exists:',
+            '  file.exists:',
+            "    - name: '{0}'".format(test_file),
+            '    - require:',
+            '      - file: some-utf8-file-create2',
+            'some-utf8-file-content-test:',
+            '  cmd.run:',
+            '    - name: \'cat "{0}"\''.format(test_file),
+            '    - require:',
+            '      - file: some-utf8-file-exists',
+            'some-utf8-file-content-remove:',
+            '  cmd.run:',
+            '    - name: \'rm -f "{0}"\''.format(test_file),
+            '    - require:',
+            '      - cmd: some-utf8-file-content-test',
+            'some-utf8-file-removed:',
+            '  file.missing:',
+            "    - name: '{0}'".format(test_file),
+            '    - require:',
+            '      - cmd: some-utf8-file-content-remove',
         ]
         with salt.utils.files.fopen(template_path, 'wb') as fp_:
             fp_.write(
@@ -2209,57 +2205,59 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 )
             # difflib produces different output on python 2.6 than on >=2.7
             if sys.version_info < (2, 7):
-                utf_diff = '---  \n+++  \n@@ -1,1 +1,3 @@\n'
+                diff = '---  \n+++  \n@@ -1,1 +1,3 @@\n'
             else:
-                utf_diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
-            #utf_diff += '+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
-            utf_diff += salt.utils.stringutils.to_str(
-                u'+첫 번째 행\n'
-                u' 한국어 시험\n'
-                u'+마지막 행\n'
+                diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
+            diff += (
+                '+첫 번째 행\n'
+                ' 한국어 시험\n'
+                '+마지막 행\n'
             )
+            diff = salt.utils.stringutils.to_str(diff)
             # using unicode.encode('utf-8') we should get the same as
             # an utf-8 string
+            # future_lint: disable=blacklisted-function
             expected = {
-                'file_|-some-utf8-file-create_|-{0}_|-managed'.format(test_file_encoded): {
-                    'name': '{0}'.format(test_file_encoded),
+                str('file_|-some-utf8-file-create_|-{0}_|-managed').format(test_file_encoded): {
+                    'name': test_file_encoded,
                     '__run_num__': 0,
-                    'comment': 'File {0} updated'.format(test_file_encoded),
+                    'comment': str('File {0} updated').format(test_file_encoded),
                     'diff': 'New file'
                 },
-                'file_|-some-utf8-file-create2_|-{0}_|-managed'.format(test_file_encoded): {
-                    'name': '{0}'.format(test_file_encoded),
+                str('file_|-some-utf8-file-create2_|-{0}_|-managed').format(test_file_encoded): {
+                    'name': test_file_encoded,
                     '__run_num__': 1,
-                    'comment': 'File {0} updated'.format(test_file_encoded),
-                    'diff': utf_diff
+                    'comment': str('File {0} updated').format(test_file_encoded),
+                    'diff': diff
                 },
-                'file_|-some-utf8-file-exists_|-{0}_|-exists'.format(test_file_encoded): {
-                    'name': '{0}'.format(test_file_encoded),
+                str('file_|-some-utf8-file-exists_|-{0}_|-exists').format(test_file_encoded): {
+                    'name': test_file_encoded,
                     '__run_num__': 2,
-                    'comment': 'Path {0} exists'.format(test_file_encoded)
+                    'comment': str('Path {0} exists').format(test_file_encoded)
                 },
-                'cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run'.format(test_file_encoded): {
-                    'name': 'cat "{0}"'.format(test_file_encoded),
+                str('cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run').format(test_file_encoded): {
+                    'name': str('cat "{0}"').format(test_file_encoded),
                     '__run_num__': 3,
-                    'comment': 'Command "cat "{0}"" run'.format(test_file_encoded),
-                    'stdout': '{0}\n{1}\n{2}'.format(
+                    'comment': str('Command "cat "{0}"" run').format(test_file_encoded),
+                    'stdout': str('{0}\n{1}\n{2}').format(
                         salt.utils.stringutils.to_str(korean_2),
                         salt.utils.stringutils.to_str(korean_1),
                         salt.utils.stringutils.to_str(korean_3),
                     )
                 },
-                'cmd_|-some-utf8-file-content-remove_|-rm -f "{0}"_|-run'.format(test_file_encoded): {
-                    'name': 'rm -f "{0}"'.format(test_file_encoded),
+                str('cmd_|-some-utf8-file-content-remove_|-rm -f "{0}"_|-run').format(test_file_encoded): {
+                    'name': str('rm -f "{0}"').format(test_file_encoded),
                     '__run_num__': 4,
-                    'comment': 'Command "rm -f "{0}"" run'.format(test_file_encoded),
+                    'comment': str('Command "rm -f "{0}"" run').format(test_file_encoded),
                     'stdout': ''
                 },
-                'file_|-some-utf8-file-removed_|-{0}_|-missing'.format(test_file_encoded): {
-                    'name': '{0}'.format(test_file_encoded),
+                str('file_|-some-utf8-file-removed_|-{0}_|-missing').format(test_file_encoded): {
+                    'name': test_file_encoded,
                     '__run_num__': 5,
-                    'comment': 'Path {0} is missing'.format(test_file_encoded),
+                    'comment': str('Path {0} is missing').format(test_file_encoded),
                 }
             }
+            # future_lint: enable=blacklisted-function
             result = {}
             for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
@@ -2277,12 +2275,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.maxDiff = None
 
             self.assertEqual(expected, result)
-            cat_id = 'cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run'.format(test_file_encoded)
+            # future_lint: disable=blacklisted-function
+            cat_id = str('cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run').format(test_file_encoded)
+            # future_lint: enable=blacklisted-function
             self.assertEqual(
-                result[cat_id]['stdout'],
-                salt.utils.stringutils.to_str(
-                    korean_2 + '\n' + korean_1 + '\n' + korean_3
-                )
+                salt.utils.stringutils.to_unicode(result[cat_id]['stdout']),
+                korean_2 + '\n' + korean_1 + '\n' + korean_3
             )
         finally:
             if os.path.isdir(test_file):

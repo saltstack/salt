@@ -8,7 +8,7 @@ group, mode, and data
 # TODO: We should add the capability to do u+r type operations here
 # some time in the future
 
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import datetime
@@ -123,12 +123,12 @@ def _binary_replace(old, new):
     new_isbin = not __utils__['files.is_text'](new)
     if any((old_isbin, new_isbin)):
         if all((old_isbin, new_isbin)):
-            return u'Replace binary file'
+            return 'Replace binary file'
         elif old_isbin:
-            return u'Replace binary file with text file'
+            return 'Replace binary file with text file'
         elif new_isbin:
-            return u'Replace text file with binary file'
-    return u''
+            return 'Replace text file with binary file'
+    return ''
 
 
 def _get_bkroot():
@@ -384,7 +384,7 @@ def set_mode(path, mode):
     '''
     path = os.path.expanduser(path)
 
-    mode = str(mode).lstrip('0Oo')
+    mode = six.text_type(mode).lstrip('0Oo')
     if not mode:
         mode = '0'
     if not os.path.exists(path):
@@ -1090,8 +1090,8 @@ def sed(path,
         return False
 
     # Mandate that before and after are strings
-    before = str(before)
-    after = str(after)
+    before = six.text_type(before)
+    after = six.text_type(after)
     before = _sed_esc(before, escape_all)
     after = _sed_esc(after, escape_all)
     limit = _sed_esc(limit, escape_all)
@@ -1140,8 +1140,8 @@ def sed_contains(path,
     if not os.path.exists(path):
         return False
 
-    before = _sed_esc(str(text), False)
-    limit = _sed_esc(str(limit), False)
+    before = _sed_esc(six.text_type(text), False)
+    limit = _sed_esc(six.text_type(limit), False)
     options = '-n -r -e'
     if sys.platform == 'darwin':
         options = options.replace('-r', '-E')
@@ -1225,8 +1225,8 @@ def psed(path,
 
     multi = bool(multi)
 
-    before = str(before)
-    after = str(after)
+    before = six.text_type(before)
+    after = six.text_type(after)
     before = _sed_esc(before, escape_all)
     # The pattern to replace with does not need to be escaped!!!
     #after = _sed_esc(after, escape_all)
@@ -1238,9 +1238,29 @@ def psed(path,
         with salt.utils.files.fopen('{0}{1}'.format(path, backup), 'r') as ifile:
             if multi is True:
                 for line in ifile.readline():
-                    ofile.write(_psed(line, before, after, limit, flags))
+                    ofile.write(
+                        salt.utils.stringutils.to_str(
+                            _psed(
+                                salt.utils.stringutils.to_unicode(line),
+                                before,
+                                after,
+                                limit,
+                                flags
+                            )
+                        )
+                    )
             else:
-                ofile.write(_psed(ifile.read(), before, after, limit, flags))
+                ofile.write(
+                    salt.utils.stringutils.to_str(
+                        _psed(
+                            salt.utils.stringutils.to_unicode(ifile.read()),
+                            before,
+                            after,
+                            limit,
+                            flags
+                        )
+                    )
+                )
 
 
 RE_FLAG_TABLE = {'I': re.I,
@@ -1449,8 +1469,7 @@ def comment_line(path,
             # Loop through each line of the file and look for a match
             for line in r_file:
                 # Is it in this line
-                if six.PY3:
-                    line = line.decode(__salt_system_encoding__)
+                line = salt.utils.stringutils.to_unicode(line)
                 if re.match(regex, line):
                     # Load lines into dictionaries, set found to True
                     orig_file.append(line)
@@ -1492,8 +1511,7 @@ def comment_line(path,
                                       buffering=bufsize) as r_file:
                     # Loop through each line of the file and look for a match
                     for line in r_file:
-                        if six.PY3:
-                            line = line.decode(__salt_system_encoding__)
+                        line = salt.utils.stringutils.to_unicode(line)
                         try:
                             # Is it in this line
                             if re.match(regex, line):
@@ -1505,9 +1523,7 @@ def comment_line(path,
                             else:
                                 # Write the existing line (no change)
                                 wline = line
-                            if six.PY3:
-                                wline = wline.encode(__salt_system_encoding__)
-                            w_file.write(wline)
+                            w_file.write(salt.utils.stringutils.to_str(wline))
                         except (OSError, IOError) as exc:
                             raise CommandExecutionError(
                                 "Unable to write file '{0}'. Contents may "
@@ -1561,7 +1577,7 @@ def _get_flags(flags):
     if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
         _flags_acc = []
         for flag in flags:
-            _flag = getattr(re, str(flag).upper())
+            _flag = getattr(re, six.text_type(flag).upper())
 
             if not isinstance(_flag, six.integer_types):
                 raise SaltInvocationError(
@@ -1861,7 +1877,7 @@ def line(path, content=None, match=None, mode=None, location=None,
         match = content
 
     with salt.utils.files.fopen(path, mode='r') as fp_:
-        body = fp_.read()
+        body = salt.utils.stringutils.to_unicode(fp_.read())
     body_before = hashlib.sha256(salt.utils.stringutils.to_bytes(body)).hexdigest()
     after = _regex_to_static(body, after)
     before = _regex_to_static(body, before)
@@ -2000,8 +2016,13 @@ def line(path, content=None, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             with salt.utils.files.fopen(path, 'r') as fp_:
-                path_content = fp_.read().splitlines(True)
-            changes_diff = ''.join(difflib.unified_diff(path_content, body.splitlines(True)))
+                path_content = [salt.utils.stringutils.to_unicode(x)
+                                for x in fp_.read().splitlines(True)]
+            changes_diff = ''.join(difflib.unified_diff(
+                path_content,
+                [salt.utils.stringutils.to_unicode(x)
+                 for x in body.splitlines(True)]
+            ))
         if __opts__['test'] is False:
             fh_ = None
             try:
@@ -2204,16 +2225,15 @@ def replace(path,
 
     # Avoid TypeErrors by forcing repl to be bytearray related to mmap
     # Replacement text may contains integer: 123 for example
-    repl = salt.utils.stringutils.to_bytes(str(repl))
+    repl = salt.utils.stringutils.to_bytes(six.text_type(repl))
     if not_found_content:
         not_found_content = salt.utils.stringutils.to_bytes(not_found_content)
 
     found = False
     temp_file = None
-    content = salt.utils.stringutils.to_str(not_found_content) if not_found_content and \
-                                       (prepend_if_not_found or
-                                        append_if_not_found) \
-                                     else salt.utils.stringutils.to_str(repl)
+    content = salt.utils.stringutils.to_unicode(not_found_content) \
+        if not_found_content and (prepend_if_not_found or append_if_not_found) \
+        else salt.utils.stringutils.to_unicode(repl)
 
     try:
         # First check the whole file, determine whether to make the replacement
@@ -2384,8 +2404,8 @@ def replace(path,
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     def get_changes():
-        orig_file_as_str = [salt.utils.stringutils.to_str(x) for x in orig_file]
-        new_file_as_str = [salt.utils.stringutils.to_str(x) for x in new_file]
+        orig_file_as_str = [salt.utils.stringutils.to_unicode(x) for x in orig_file]
+        new_file_as_str = [salt.utils.stringutils.to_unicode(x) for x in new_file]
         return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
 
     if show_changes:
@@ -2511,7 +2531,7 @@ def blockreplace(path,
                     bufsize=1, mode='rb')
         for line in fi_file:
 
-            line = salt.utils.stringutils.to_str(line)
+            line = salt.utils.stringutils.to_unicode(line)
             result = line
 
             if marker_start in line:
@@ -2782,7 +2802,7 @@ def contains(path, text):
     if not os.path.exists(path):
         return False
 
-    stripped_text = str(text).strip()
+    stripped_text = six.text_type(text).strip()
     try:
         with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
@@ -2818,6 +2838,7 @@ def contains_regex(path, regex, lchar=''):
     try:
         with salt.utils.files.fopen(path, 'r') as target:
             for line in target:
+                line = salt.utils.stringutils.to_unicode(line)
                 if lchar:
                     line = line.lstrip(lchar)
                 if re.search(regex, line):
@@ -2918,7 +2939,11 @@ def append(path, *args, **kwargs):
     # Append lines in text mode
     with salt.utils.files.fopen(path, 'a') as ofile:
         for new_line in args:
-            ofile.write('{0}{1}'.format(new_line, os.linesep))
+            ofile.write(
+                salt.utils.stringutils.to_str(
+                    '{0}{1}'.format(new_line, os.linesep)
+                )
+            )
 
     return 'Wrote {0} lines to "{1}"'.format(len(args), path)
 
@@ -2966,7 +2991,8 @@ def prepend(path, *args, **kwargs):
 
     try:
         with salt.utils.files.fopen(path) as fhr:
-            contents = fhr.readlines()
+            contents = [salt.utils.stringutils.to_unicode(line)
+                        for line in fhr.readlines()]
     except IOError:
         contents = []
 
@@ -2974,9 +3000,9 @@ def prepend(path, *args, **kwargs):
     for line in args:
         preface.append('{0}\n'.format(line))
 
-    with salt.utils.files.fopen(path, "w") as ofile:
+    with salt.utils.files.fopen(path, 'w') as ofile:
         contents = preface + contents
-        ofile.write(''.join(contents))
+        ofile.write(salt.utils.stringutils.to_str(''.join(contents)))
     return 'Prepended {0} lines to "{1}"'.format(len(args), path)
 
 
@@ -3024,7 +3050,7 @@ def write(path, *args, **kwargs):
     for line in args:
         contents.append('{0}\n'.format(line))
     with salt.utils.files.fopen(path, "w") as ofile:
-        ofile.write(''.join(contents))
+        ofile.write(salt.utils.stringutils.to_str(''.join(contents)))
     return 'Wrote {0} lines to "{1}"'.format(len(contents), path)
 
 
@@ -3054,8 +3080,8 @@ def touch(name, atime=None, mtime=None):
         mtime = int(mtime)
     try:
         if not os.path.exists(name):
-            with salt.utils.files.fopen(name, 'a') as fhw:
-                fhw.write('')
+            with salt.utils.files.fopen(name, 'a'):
+                pass
 
         if not atime and not mtime:
             times = None
@@ -3405,7 +3431,7 @@ def read(path, binary=False):
     if binary is True:
         access_mode += 'b'
     with salt.utils.files.fopen(path, access_mode) as file_obj:
-        return file_obj.read()
+        return salt.utils.stringutils.to_unicode(file_obj.read())
 
 
 def readlink(path, canonicalize=False):
@@ -3526,7 +3552,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
-    ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['mode'] = six.text_type(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret['sum'] = get_hash(path, hash_type)
     ret['type'] = 'file'
@@ -4159,13 +4185,13 @@ def extract_hash(hash_fn,
             hash_type = ''
         hash_len_expr = '{0},{1}'.format(min(HASHES_REVMAP), max(HASHES_REVMAP))
     else:
-        hash_len_expr = str(hash_len)
+        hash_len_expr = six.text_type(hash_len)
 
     filename_separators = string.whitespace + r'\/'
 
     if source_hash_name:
         if not isinstance(source_hash_name, six.string_types):
-            source_hash_name = str(source_hash_name)
+            source_hash_name = six.text_type(source_hash_name)
         source_hash_name_idx = (len(source_hash_name) + 1) * -1
         log.debug(
             'file.extract_hash: Extracting %s hash for file matching '
@@ -4175,12 +4201,12 @@ def extract_hash(hash_fn,
         )
     if file_name:
         if not isinstance(file_name, six.string_types):
-            file_name = str(file_name)
+            file_name = six.text_type(file_name)
         file_name_basename = os.path.basename(file_name)
         file_name_idx = (len(file_name_basename) + 1) * -1
     if source:
         if not isinstance(source, six.string_types):
-            source = str(source)
+            source = six.text_type(source)
         urlparsed_source = _urlparse(source)
         source_basename = os.path.basename(
             urlparsed_source.path or urlparsed_source.netloc
@@ -4204,7 +4230,7 @@ def extract_hash(hash_fn,
 
     with salt.utils.files.fopen(hash_fn, 'r') as fp_:
         for line in fp_:
-            line = line.strip()
+            line = salt.utils.stringutils.to_unicode(line.strip())
             hash_re = r'(?i)(?<![a-z0-9])([a-f0-9]{' + hash_len_expr + '})(?![a-z0-9])'
             hash_match = re.search(hash_re, line)
             matched = None
@@ -4867,7 +4893,7 @@ def get_diff(file1,
                                                     source_hash=source_hash)
             if cached_path is False:
                 errors.append(
-                    u'File {0} not found'.format(
+                    'File {0} not found'.format(
                         salt.utils.stringutils.to_unicode(filename)
                     )
                 )
@@ -4887,20 +4913,21 @@ def get_diff(file1,
     for idx, filename in enumerate(files):
         try:
             with salt.utils.files.fopen(filename, 'r') as fp_:
-                args.append(fp_.readlines())
+                args.append([salt.utils.stringutils.to_unicode(x)
+                             for x in fp_.readlines()])
         except (IOError, OSError) as exc:
             raise CommandExecutionError(
                 'Failed to read {0}: {1}'.format(
-                    salt.utils.stringutils.to_str(filename),
+                    salt.utils.stringutils.to_unicode(filename),
                     exc.strerror
                 )
             )
 
     if args[0] != args[1]:
         if template and __salt__['config.option']('obfuscate_templates'):
-            ret = u'<Obfuscated Template>'
+            ret = '<Obfuscated Template>'
         elif not show_changes:
-            ret = u'<show_changes=False>'
+            ret = '<show_changes=False>'
         else:
             bdiff = _binary_replace(*files)
             if bdiff:
@@ -4908,14 +4935,14 @@ def get_diff(file1,
             else:
                 if show_filenames:
                     args.extend(
-                        [salt.utils.stringutils.to_str(x) for x in files]
+                        [salt.utils.stringutils.to_unicode(x) for x in files]
                     )
                 ret = salt.utils.locales.sdecode(
                     ''.join(difflib.unified_diff(*args))  # pylint: disable=no-value-for-parameter
                 )
         return ret
 
-    return u''
+    return ''
 
 
 def manage_file(name,
@@ -5017,11 +5044,11 @@ def manage_file(name,
             unable to stat the file as it exists on the fileserver and thus
             cannot mirror the mode on the salt-ssh minion
 
-    encoding : None
-        If None, str() will be applied to contents.
-        If not None, specified encoding will be used.
-        See https://docs.python.org/3/library/codecs.html#standard-encodings
-        for the list of available encodings.
+    encoding
+        If specified, then the specified encoding will be used. Otherwise, the
+        file will be encoded using the system locale (usually UTF-8). See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
 
         .. versionadded:: 2017.7.0
 
@@ -5233,12 +5260,12 @@ def manage_file(name,
             ret, _ = check_perms(name, ret, user, group, mode, attrs, follow_symlinks)
 
         if ret['changes']:
-            ret['comment'] = u'File {0} updated'.format(
+            ret['comment'] = 'File {0} updated'.format(
                 salt.utils.locales.sdecode(name)
             )
 
         elif not ret['changes'] and ret['result']:
-            ret['comment'] = u'File {0} is in the correct state'.format(
+            ret['comment'] = 'File {0} is in the correct state'.format(
                 salt.utils.locales.sdecode(name)
             )
         if sfn:
@@ -5260,10 +5287,10 @@ def manage_file(name,
                 # dir_mode was not specified. Otherwise, any
                 # directories created with makedirs_() below can't be
                 # listed via a shell.
-                mode_list = [x for x in str(mode)][-3:]
+                mode_list = [x for x in six.text_type(mode)][-3:]
                 for idx in range(len(mode_list)):
                     if mode_list[idx] != '0':
-                        mode_list[idx] = str(int(mode_list[idx]) | 1)
+                        mode_list[idx] = six.text_type(int(mode_list[idx]) | 1)
                 dir_mode = ''.join(mode_list)
 
             if salt.utils.platform.is_windows():
@@ -5623,7 +5650,7 @@ def mknod_chrdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0Oo'), 8) | stat.S_IFCHR,
+                        int(six.text_type(mode).lstrip('0Oo'), 8) | stat.S_IFCHR,
                         os.makedev(major, minor)) is None:
                 ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
                 ret['result'] = True
@@ -5698,7 +5725,7 @@ def mknod_blkdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0Oo'), 8) | stat.S_IFBLK,
+                        int(six.text_type(mode).lstrip('0Oo'), 8) | stat.S_IFBLK,
                         os.makedev(major, minor)) is None:
                 ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
                 ret['result'] = True
@@ -5769,7 +5796,7 @@ def mknod_fifo(name,
             ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
             ret['result'] = None
         else:
-            if os.mkfifo(name, int(str(mode).lstrip('0Oo'), 8)) is None:
+            if os.mkfifo(name, int(six.text_type(mode).lstrip('0Oo'), 8)) is None:
                 ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
@@ -5984,7 +6011,7 @@ def restore_backup(path, backup_id):
     ret = {'result': False,
            'comment': 'Invalid backup_id \'{0}\''.format(backup_id)}
     try:
-        if len(str(backup_id)) == len(str(int(backup_id))):
+        if len(six.text_type(backup_id)) == len(six.text_type(int(backup_id))):
             backup = list_backups(path)[int(backup_id)]
         else:
             return ret
@@ -6044,7 +6071,7 @@ def delete_backup(path, backup_id):
     ret = {'result': False,
            'comment': 'Invalid backup_id \'{0}\''.format(backup_id)}
     try:
-        if len(str(backup_id)) == len(str(int(backup_id))):
+        if len(six.text_type(backup_id)) == len(six.text_type(int(backup_id))):
             backup = list_backups(path)[int(backup_id)]
         else:
             return ret
@@ -6115,7 +6142,7 @@ def grep(path,
         try:
             split = salt.utils.args.shlex_split(opt)
         except AttributeError:
-            split = salt.utils.args.shlex_split(str(opt))
+            split = salt.utils.args.shlex_split(six.text_type(opt))
         if len(split) > 1:
             raise SaltInvocationError(
                 'Passing multiple command line arguments in a single string '

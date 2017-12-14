@@ -5,7 +5,7 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python libs
-from __future__ import absolute_import, with_statement
+from __future__ import absolute_import, with_statement, unicode_literals
 import copy
 import ctypes
 import os
@@ -1543,7 +1543,7 @@ class AESFuncs(object):
             'publish_auth')
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, str(load['jid']))
+        jid_fn = os.path.join(auth_cache, six.text_type(load['jid']))
         with salt.utils.files.fopen(jid_fn, 'r') as fp_:
             if not load['id'] == fp_.read():
                 return {}
@@ -1772,8 +1772,8 @@ class ClearFuncs(object):
         except Exception as exc:
             log.error('Exception occurred while introspecting %s: %s', fun, exc)
             return {'error': {'name': exc.__class__.__name__,
-                               'args': exc.args,
-                               'message': str(exc)}}
+                              'args': exc.args,
+                              'message': six.text_type(exc)}}
 
     def wheel(self, clear_load):
         '''
