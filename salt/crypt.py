@@ -124,10 +124,10 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
-    salt.utils.crypt.reinit_crypto()
     if HAS_M2:
         gen = RSA.gen_key(keysize, 65537)
     else:
+        salt.utils.crypt.reinit_crypto()
         gen = RSA.generate(bits=keysize, e=65537)
     if os.path.isfile(priv):
         # Between first checking and the generation another process has made
@@ -139,11 +139,21 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
         raise IOError('Write access denied to "{0}" for user "{1}".'.format(os.path.abspath(keydir), getpass.getuser()))
 
     cumask = os.umask(0o277)
-    with salt.utils.files.fopen(priv, 'wb+') as f:
-        f.write(gen.exportKey('PEM', passphrase))
+    if HAS_M2:
+        # if passphrase is empty or None use no cipher
+        if not passphrase:
+            gen.save_pem(priv, cipher=None)
+        else:
+            gen.save_pem(priv, cipher='des_ede3_cbc', callback=lambda x: six.b(passphrase))
+    else:
+        with salt.utils.files.fopen(priv, 'wb+') as f:
+            f.write(gen.exportKey('PEM', passphrase))
     os.umask(cumask)
-    with salt.utils.files.fopen(pub, 'wb+') as f:
-        f.write(gen.publickey().exportKey('PEM'))
+    if HAS_M2:
+        gen.save_pub_key(pub)
+    else:
+        with salt.utils.files.fopen(pub, 'wb+') as f:
+            f.write(gen.publickey().exportKey('PEM'))
     os.chmod(priv, 0o400)
     if user:
         try:
@@ -229,7 +239,7 @@ def verify_signature(pubkey_path, message, signature):
     pubkey = get_rsa_pub_key(pubkey_path)
     log.debug('salt.crypt.verify_signature: Verifying signature')
     if HAS_M2:
-        md = EVP.MesageDigest('sha1')
+        md = EVP.MessageDigest('sha1')
         md.update(six.b(message))
         digest = md.final()
         return pubkey.verify(digest, six.b(signature))
