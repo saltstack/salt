@@ -2053,6 +2053,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(six.PY3, 'This test will have a LOT of rewriting to support both Py2 and Py3')
     # And I'm more comfortable with the author doing it - s0undt3ch
     @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
+    @skipIf(True, 'Skipped until unicode codebase conversion is completed')
     def test_issue_8947_utf8_sls(self):
         '''
         Test some file operation with utf-8 characters on the sls

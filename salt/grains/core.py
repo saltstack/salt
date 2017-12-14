@@ -474,8 +474,14 @@ def _sunos_memdata():
             grains['mem_total'] = int(comps[2].strip())
 
     swap_cmd = salt.utils.path.which('swap')
-    swap_total = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()[1]
-    grains['swap_total'] = int(swap_total) // 1024
+    swap_data = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()
+    try:
+        swap_avail = int(swap_data[-2][:-1])
+        swap_used = int(swap_data[-4][:-1])
+        swap_total = (swap_avail + swap_used) // 1024
+    except ValueError:
+        swap_total = None
+    grains['swap_total'] = swap_total
     return grains
 
 
@@ -1476,6 +1482,9 @@ def os_data():
                         grains['init'] = 'supervisord'
                     elif init_cmdline == ['runit']:
                         grains['init'] = 'runit'
+                    elif '/sbin/my_init' in init_cmdline:
+                        #Phusion Base docker container use runit for srv mgmt, but my_init as pid1
+                        grains['init'] = 'runit'
                     else:
                         log.info(
                             'Could not determine init system from command line: ({0})'
@@ -2475,10 +2484,9 @@ def _linux_iqn():
     if os.path.isfile(initiator):
         with salt.utils.files.fopen(initiator, 'r') as _iscsi:
             for line in _iscsi:
-                if line.find('InitiatorName') != -1:
-                    iqn = line.split('=')
-                    final_iqn = iqn[1].rstrip()
-                    ret.extend([final_iqn])
+                line = line.strip()
+                if line.startswith('InitiatorName='):
+                    ret.append(line.split('=', 1)[1])
     return ret
 
 
@@ -2492,9 +2500,10 @@ def _aix_iqn():
 
     aixret = __salt__['cmd.run'](aixcmd)
     if aixret[0].isalpha():
-        iqn = aixret.split()
-        final_iqn = iqn[1].rstrip()
-        ret.extend([final_iqn])
+        try:
+            ret.append(aixret.split()[1].rstrip())
+        except IndexError:
+            pass
     return ret
 
 
@@ -2507,8 +2516,7 @@ def _linux_wwns():
     for fcfile in glob.glob('/sys/class/fc_host/*/port_name'):
         with salt.utils.files.fopen(fcfile, 'r') as _wwn:
             for line in _wwn:
-                line = line.rstrip()
-                ret.extend([line[2:]])
+                ret.append(line.rstrip()[2:])
     return ret
 
 
@@ -2532,11 +2540,9 @@ def _windows_iqn():
             wmic, namespace, mspath, get))
 
     for line in cmdret['stdout'].splitlines():
-        if line[0].isalpha():
-            continue
-        line = line.rstrip()
-        ret.extend([line])
-
+        if line.startswith('iqn.'):
+            line = line.rstrip()
+            ret.append(line.rstrip())
     return ret
 
 
@@ -2551,7 +2557,6 @@ def _windows_wwns():
     cmdret = __salt__['cmd.run_ps'](ps_cmd)
 
     for line in cmdret:
-        line = line.rstrip()
-        ret.append(line)
+        ret.append(line.rstrip())
 
     return ret

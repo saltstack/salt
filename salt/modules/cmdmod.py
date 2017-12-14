@@ -171,34 +171,23 @@ def _render_cmd(cmd, cwd, template, saltenv='base', pillarenv=None, pillar_overr
     return (cmd, cwd)
 
 
-def _check_loglevel(level='info', quiet=False):
+def _check_loglevel(level='info'):
     '''
     Retrieve the level code for use in logging.Logger.log().
     '''
-    def _bad_level(level):
-        log.error(
-            'Invalid output_loglevel \'{0}\'. Valid levels are: {1}. Falling '
-            'back to \'info\'.'
-            .format(
-                level,
-                ', '.join(
-                    sorted(LOG_LEVELS, reverse=True)
-                )
-            )
-        )
-        return LOG_LEVELS['info']
-
-    if salt.utils.data.is_true(quiet) or str(level).lower() == 'quiet':
-        return None
-
     try:
         level = level.lower()
-        if level not in LOG_LEVELS:
-            return _bad_level(level)
-    except AttributeError:
-        return _bad_level(level)
-
-    return LOG_LEVELS[level]
+        if level == 'quiet':
+            return None
+        else:
+            return LOG_LEVELS[level]
+    except (AttributeError, KeyError):
+        log.error(
+            'Invalid output_loglevel \'%s\'. Valid levels are: %s. Falling '
+            'back to \'info\'.',
+            level, ', '.join(sorted(LOG_LEVELS, reverse=True))
+        )
+        return LOG_LEVELS['info']
 
 
 def _parse_env(env):
@@ -219,7 +208,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
+        __opts__['saltenv'],
         pillar_override=pillar_override,
         pillarenv=pillarenv
     )
@@ -589,11 +578,17 @@ def _run(cmd,
             out = proc.stdout.decode(__salt_system_encoding__)
         except AttributeError:
             out = u''
+        except UnicodeDecodeError:
+            log.error('UnicodeDecodeError while decoding output of cmd {0}'.format(cmd))
+            out = proc.stdout.decode(__salt_system_encoding__, 'replace')
 
         try:
             err = proc.stderr.decode(__salt_system_encoding__)
         except AttributeError:
             err = u''
+        except UnicodeDecodeError:
+            log.error('UnicodeDecodeError while decoding error of cmd {0}'.format(cmd))
+            err = proc.stderr.decode(__salt_system_encoding__, 'replace')
 
         if rstrip:
             if out is not None:
@@ -777,6 +772,7 @@ def run(cmd,
         umask=None,
         output_loglevel='debug',
         log_callback=None,
+        hide_output=False,
         timeout=None,
         reset_system_locale=True,
         ignore_retcode=False,
@@ -884,8 +880,20 @@ def run(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -895,9 +903,8 @@ def run(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
 
-    :param bool raise_err: Specifies whether to raise a CommandExecutionError.
-      If False, the error will be logged, but no exception will be raised.
-      Default is False.
+    :param bool raise_err: If ``True`` and the command has a nonzero exit code,
+    a CommandExecutionError exception will be raised.
 
     .. warning::
         This function does not process commands through a shell
@@ -990,9 +997,11 @@ def run(cmd,
             )
             log.error(log_callback(msg))
             if raise_err:
-                raise CommandExecutionError(log_callback(ret['stdout']))
-        log.log(lvl, u'output: %s', log_callback(ret['stdout']))
-    return ret['stdout']
+                raise CommandExecutionError(
+                    log_callback(ret[u'stdout'] if not hide_output else u'')
+                )
+        log.log(lvl, u'output: %s', log_callback(ret[u'stdout']))
+    return ret[u'stdout'] if not hide_output else u''
 
 
 def shell(cmd,
@@ -1007,7 +1016,7 @@ def shell(cmd,
         umask=None,
         output_loglevel='debug',
         log_callback=None,
-        quiet=False,
+        hide_output=False,
         timeout=None,
         reset_system_locale=True,
         ignore_retcode=False,
@@ -1106,8 +1115,20 @@ def shell(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -1180,7 +1201,7 @@ def shell(cmd,
                umask=umask,
                output_loglevel=output_loglevel,
                log_callback=log_callback,
-               quiet=quiet,
+               hide_output=hide_output,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
@@ -1205,6 +1226,7 @@ def run_stdout(cmd,
                umask=None,
                output_loglevel='debug',
                log_callback=None,
+               hide_output=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
@@ -1299,8 +1321,20 @@ def run_stdout(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -1377,7 +1411,7 @@ def run_stdout(cmd,
             log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
-    return ret['stdout']
+    return ret['stdout'] if not hide_output else ''
 
 
 def run_stderr(cmd,
@@ -1393,6 +1427,7 @@ def run_stderr(cmd,
                umask=None,
                output_loglevel='debug',
                log_callback=None,
+               hide_output=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
@@ -1488,8 +1523,20 @@ def run_stderr(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -1566,7 +1613,7 @@ def run_stderr(cmd,
             log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
-    return ret['stderr']
+    return ret['stderr'] if not hide_output else ''
 
 
 def run_all(cmd,
@@ -1582,6 +1629,7 @@ def run_all(cmd,
             umask=None,
             output_loglevel='debug',
             log_callback=None,
+            hide_output=False,
             timeout=None,
             reset_system_locale=True,
             ignore_retcode=False,
@@ -1679,8 +1727,20 @@ def run_all(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -1782,6 +1842,9 @@ def run_all(cmd,
             log.log(lvl, u'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
+
+    if hide_output:
+        ret['stdout'] = ret['stderr'] = ''
     return ret
 
 
@@ -2019,7 +2082,7 @@ def script(source,
            umask=None,
            output_loglevel='debug',
            log_callback=None,
-           quiet=False,
+           hide_output=False,
            timeout=None,
            reset_system_locale=True,
            saltenv='base',
@@ -2116,12 +2179,20 @@ def script(source,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG)regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
 
-    :param bool quiet: The command will be executed quietly, meaning no log
-      entries of the actual command or its return data. This is deprecated as of
-      the **2014.1.0** release, and is being replaced with ``output_loglevel: quiet``.
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: If the command has not terminated after timeout seconds,
       send the subprocess sigterm, and if sigterm is ignored, follow up with
@@ -2225,6 +2296,9 @@ def script(source,
         _cleanup_tempfile(cwd)
     else:
         _cleanup_tempfile(path)
+
+    if hide_output:
+        ret['stdout'] = ret['stderr'] = ''
     return ret
 
 
@@ -2337,8 +2411,11 @@ def script_retcode(source,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
 
     :param bool quiet: The command will be executed quietly, meaning no log
       entries of the actual command or its return data. This is deprecated as of
@@ -2533,7 +2610,7 @@ def run_chroot(root,
                umask=None,
                output_loglevel='quiet',
                log_callback=None,
-               quiet=False,
+               hide_output=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
@@ -2627,10 +2704,22 @@ def run_chroot(root,
     umask
          The umask (in octal) to use when running the command.
 
-    output_loglevel
-        Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged (loglevel: DEBUG)
-        regardless, unless ``quiet`` is used for this value.
+    output_loglevel : quiet
+        Control the loglevel at which the output from the command is logged to
+        the minion log.
+
+        .. note::
+            The command being run will still be logged at the ``debug``
+            loglevel regardless, unless ``quiet`` is used for this value.
+
+    hide_output : False
+        If ``True``, suppress stdout and stderr in the return data.
+
+        .. note::
+            This is separate from ``output_loglevel``, which only handles how
+            Salt logs to the minion log.
+
+        .. versionadded:: Oxygen
 
     timeout
         A timeout in seconds for the executed process to return.
@@ -2680,7 +2769,6 @@ def run_chroot(root,
                    umask=umask,
                    output_loglevel=output_loglevel,
                    log_callback=log_callback,
-                   quiet=quiet,
                    timeout=timeout,
                    reset_system_locale=reset_system_locale,
                    ignore_retcode=ignore_retcode,
@@ -2706,6 +2794,8 @@ def run_chroot(root,
 
     __salt__['mount.umount'](os.path.join(root, 'proc'))
     __salt__['mount.umount'](os.path.join(root, 'dev'))
+    if hide_output:
+        ret[u'stdout'] = ret[u'stderr'] = u''
     return ret
 
 
@@ -2956,7 +3046,7 @@ def powershell(cmd,
         rstrip=True,
         umask=None,
         output_loglevel='debug',
-        quiet=False,
+        hide_output=False,
         timeout=None,
         reset_system_locale=True,
         ignore_retcode=False,
@@ -3084,8 +3174,20 @@ def powershell(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -3149,7 +3251,7 @@ def powershell(cmd,
                    rstrip=rstrip,
                    umask=umask,
                    output_loglevel=output_loglevel,
-                   quiet=quiet,
+                   hide_output=hide_output,
                    timeout=timeout,
                    reset_system_locale=reset_system_locale,
                    ignore_retcode=ignore_retcode,

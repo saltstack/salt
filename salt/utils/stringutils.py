@@ -4,14 +4,13 @@ Functions for manipulating or otherwise processing strings
 '''
 
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import fnmatch
 import logging
 import os
 import shlex
 import re
-import string
 import time
 
 # Import Salt libs
@@ -147,10 +146,10 @@ def is_binary(data):
     '''
     Detects if the passed string of data is binary or text
     '''
+    if not data or not isinstance(data, six.string_types):
+        return False
     if '\0' in data:
         return True
-    if not data:
-        return False
 
     text_characters = ''.join([chr(x) for x in range(32, 127)] + list('\n\r\t\b'))
     # Get the non-text characters (map each character to itself then use the
@@ -159,8 +158,11 @@ def is_binary(data):
         trans = ''.maketrans('', '', text_characters)
         nontext = data.translate(trans)
     else:
-        trans = string.maketrans('', '')  # pylint: disable=no-member
-        nontext = data.translate(trans, text_characters)
+        if isinstance(data, unicode):  # pylint: disable=incompatible-py3-code
+            trans_args = ({ord(x): None for x in text_characters},)
+        else:
+            trans_args = (None, str(text_characters))  # future lint: blacklisted-function
+        nontext = data.translate(*trans_args)
 
     # If more than 30% non-text characters, then
     # this is considered binary data

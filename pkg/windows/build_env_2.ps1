@@ -218,23 +218,39 @@ Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
 if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe"  "--no-cache-dir install -r $($script_path)\req_2.txt" "pip install"
+    Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe"  "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
 } else {
     if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
         # folder empty
-        Write-Output "    pip download from req_2.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe"  "-m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_2.txt" "pip download"
+        Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
+        Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe"  "-m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
     }
     Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
     Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_2.txt" "pip install"
+  Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
 }
 
 #==============================================================================
-# Move PyWin32 DLL's to site-packages\win32
+# Install PyWin32 from wheel file
 #==============================================================================
+Write-Output " ----------------------------------------------------------------"
+Write-Output " - $script_name :: Installing PyWin32 . . ."
+Write-Output " ----------------------------------------------------------------"
+# Download
+$file = "$($ini[$bitPrograms]['PyWin322'])"
+$url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
+$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
+DownloadFileWithProgress $url $file
+
+# Install
+Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install $file " "pip install PyWin32"
+
+# Move DLL's to Python Root
 Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
 Move-Item "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['SitePkgs2Dir'])\win32" -Force
+
+# Create gen_py directory
+New-Item -Path "$($ini['Settings']['SitePkgs2Dir'])\win32com\gen_py" -ItemType Directory -Force
 
 # Remove pywin32_system32 directory
 Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
@@ -247,37 +263,6 @@ Remove-Item "$($ini['Settings']['SitePkgs2Dir'])\pythonwin" -Force -Recurse
 # Remove PyWin32 PostInstall and testall Scripts
 Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
 Remove-Item "$($ini['Settings']['Scripts2Dir'])\pywin32_*" -Force -Recurse
-
-#==============================================================================
-# Install PyYAML with CLoader
-# This has to be a compiled binary to get the CLoader
-#==============================================================================
-Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Installing PyYAML . . ."
-Write-Output " ----------------------------------------------------------------"
-# Download
-$file = "$($ini[$bitPrograms]['PyYAML2'])"
-$url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
-DownloadFileWithProgress $url $file
-
-# Install
-Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\easy_install.exe" "-Z $file " "easy_install PyYAML"
-
-#==============================================================================
-# Install PyCrypto from wheel file
-#==============================================================================
-Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Installing PyCrypto . . ."
-Write-Output " ----------------------------------------------------------------"
-# Download
-$file = "$($ini[$bitPrograms]['PyCrypto2'])"
-$url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
-DownloadFileWithProgress $url $file
-
-# Install
-Start_Process_and_test_exitcode  "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyCrypto"
 
 #==============================================================================
 # Copy DLLs to Python Directory

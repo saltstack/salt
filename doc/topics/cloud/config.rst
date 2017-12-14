@@ -184,37 +184,18 @@ minion. In your pillar file, you would use something like this:
       ssh_key_file: /root/.ssh/id_rsa
       update_cachedir: True
       diff_cache_events: True
-      change_password: True
 
       providers:
-        my-nova:
-          identity_url: https://identity.api.rackspacecloud.com/v2.0/
-          compute_region: IAD
-          user: myuser
-          api_key: apikey
-          tenant: 123456
-          driver: nova
-
         my-openstack:
-          identity_url: https://identity.api.rackspacecloud.com/v2.0/tokens
-          user: user2
-          apikey: apikey2
-          tenant: 654321
-          compute_region: DFW
           driver: openstack
-          compute_name: cloudServersOpenStack
+          region_name: ORD
+          cloud: mycloud
 
       profiles:
-        ubuntu-nova:
-          provider: my-nova
-          size: performance1-8
-          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
-          script_args: git develop
-
         ubuntu-openstack:
           provider: my-openstack
-          size: performance1-8
-          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
+          size: ds512M
+          image: CentOS 7
           script_args: git develop
 
 
@@ -363,76 +344,7 @@ be set in the configuration file to enable interfacing with GoGrid:
 OpenStack
 ---------
 
-OpenStack configuration differs between providers, and at the moment several
-options need to be specified. This module has been officially tested against
-the HP and the Rackspace implementations, and some examples are provided for
-both.
-
-.. code-block:: yaml
-
-    # For HP
-    my-openstack-hp-config:
-      identity_url:
-      'https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/'
-      compute_name: Compute
-      compute_region: 'az-1.region-a.geo-1'
-      tenant: myuser-tenant1
-      user: myuser
-      ssh_key_name: mykey
-      ssh_key_file: '/etc/salt/hpcloud/mykey.pem'
-      password: mypass
-      driver: openstack
-
-    # For Rackspace
-    my-openstack-rackspace-config:
-      identity_url: 'https://identity.api.rackspacecloud.com/v2.0/tokens'
-      compute_name: cloudServersOpenStack
-      protocol: ipv4
-      compute_region: DFW
-      user: myuser
-      tenant: 5555555
-      password: mypass
-      driver: openstack
-
-
-If you have an API key for your provider, it may be specified instead of a
-password:
-
-.. code-block:: yaml
-
-    my-openstack-hp-config:
-      apikey: 901d3f579h23c8v73q9
-
-    my-openstack-rackspace-config:
-      apikey: 901d3f579h23c8v73q9
-
-.. note::
-
-    In the cloud profile that uses this provider configuration, the syntax for the
-    ``provider`` required field would be either ``provider: my-openstack-hp-config``
-    or ``provider: my-openstack-rackspace-config``.
-
-You will certainly need to configure the ``user``, ``tenant``, and either
-``password`` or ``apikey``.
-
-If your OpenStack instances only have private IP addresses and a CIDR range of
-private addresses are not reachable from the salt-master, you may set your
-preference to have Salt ignore it:
-
-.. code-block:: yaml
-
-    my-openstack-config:
-      ignore_cidr: 192.168.0.0/16
-
-For in-house OpenStack Essex installation, libcloud needs the service_type :
-
-.. code-block:: yaml
-
-    my-openstack-config:
-      identity_url: 'http://control.openstack.example.org:5000/v2.0/'
-      compute_name : Compute Service
-      service_type : compute
-
+.. automodule:: salt.cloud.clouds.openstack
 
 DigitalOcean
 ------------

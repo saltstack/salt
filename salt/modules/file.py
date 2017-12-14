@@ -552,11 +552,11 @@ def lsattr(path):
         raise SaltInvocationError("File or directory does not exist.")
 
     cmd = ['lsattr', path]
-    result = __salt__['cmd.run'](cmd, python_shell=False)
+    result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
 
     results = {}
     for line in result.splitlines():
-        if not line.startswith('lsattr'):
+        if not line.startswith('lsattr: '):
             vals = line.split(None, 1)
             results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
 
@@ -4763,7 +4763,7 @@ def check_file_meta(
         if mode is not None and mode != smode:
             changes['mode'] = mode
 
-        if lsattr_cmd:
+        if lsattr_cmd and attrs:
             diff_attrs = _cmp_attrs(name, attrs)
             if (
                 attrs is not None and
@@ -5203,13 +5203,18 @@ def manage_file(name,
                 'Replace symbolic link with regular file'
 
         if salt.utils.platform.is_windows():
-            ret = check_perms(name,
-                              ret,
-                              kwargs.get('win_owner'),
-                              kwargs.get('win_perms'),
-                              kwargs.get('win_deny_perms'),
-                              None,
-                              kwargs.get('win_inheritance'))
+            # This function resides in win_file.py and will be available
+            # on Windows. The local function will be overridden
+            # pylint: disable=E1120,E1121,E1123
+            ret = check_perms(
+               path=name,
+                ret=ret,
+                owner=kwargs.get('win_owner'),
+                grant_perms=kwargs.get('win_perms'),
+                deny_perms=kwargs.get('win_deny_perms'),
+                inheritance=kwargs.get('win_inheritance', True),
+                reset=kwargs.get('win_perms_reset', False))
+            # pylint: enable=E1120,E1121,E1123
         else:
             ret, _ = check_perms(name, ret, user, group, mode, attrs, follow_symlinks)
 
@@ -5250,13 +5255,15 @@ def manage_file(name,
             if salt.utils.platform.is_windows():
                 # This function resides in win_file.py and will be available
                 # on Windows. The local function will be overridden
-                # pylint: disable=E1121
-                makedirs_(name,
-                          kwargs.get('win_owner'),
-                          kwargs.get('win_perms'),
-                          kwargs.get('win_deny_perms'),
-                          kwargs.get('win_inheritance'))
-                # pylint: enable=E1121
+                # pylint: disable=E1120,E1121,E1123
+                makedirs_(
+                    path=name,
+                    owner=kwargs.get('win_owner'),
+                    grant_perms=kwargs.get('win_perms'),
+                    deny_perms=kwargs.get('win_deny_perms'),
+                    inheritance=kwargs.get('win_inheritance', True),
+                    reset=kwargs.get('win_perms_reset', False))
+                # pylint: enable=E1120,E1121,E1123
             else:
                 makedirs_(name, user=user, group=group, mode=dir_mode)
 
@@ -5369,13 +5376,18 @@ def manage_file(name,
             mode = oct((0o777 ^ mask) & 0o666)
 
         if salt.utils.platform.is_windows():
-            ret = check_perms(name,
-                              ret,
-                              kwargs.get('win_owner'),
-                              kwargs.get('win_perms'),
-                              kwargs.get('win_deny_perms'),
-                              None,
-                              kwargs.get('win_inheritance'))
+            # This function resides in win_file.py and will be available
+            # on Windows. The local function will be overridden
+            # pylint: disable=E1120,E1121,E1123
+            ret = check_perms(
+               path=name,
+                ret=ret,
+                owner=kwargs.get('win_owner'),
+                grant_perms=kwargs.get('win_perms'),
+                deny_perms=kwargs.get('win_deny_perms'),
+                inheritance=kwargs.get('win_inheritance', True),
+                reset=kwargs.get('win_perms_reset', False))
+            # pylint: enable=E1120,E1121,E1123
         else:
             ret, _ = check_perms(name, ret, user, group, mode, attrs)
 

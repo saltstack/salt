@@ -262,3 +262,57 @@ class CMDModuleTest(ModuleCase):
                                 f_timeout=2,
                                 python_shell=True)
         self.assertEqual(out, 'hello')
+
+    def test_hide_output(self):
+        '''
+        Test the hide_output argument
+        '''
+        ls_command = [u'ls', u'/'] \
+            if not salt.utils.platform.is_windows() \
+            else [u'dir', u'c:\\']
+
+        error_command = ['thiscommanddoesnotexist']
+
+        # cmd.run
+        out = self.run_function(
+            u'cmd.run',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out, u'')
+
+        # cmd.shell
+        out = self.run_function(
+            u'cmd.shell',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out, u'')
+
+        # cmd.run_stdout
+        out = self.run_function(
+            u'cmd.run_stdout',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out, u'')
+
+        # cmd.run_stderr
+        out = self.run_function(
+            u'cmd.shell',
+            error_command,
+            hide_output=True)
+        self.assertEqual(out, u'')
+
+        # cmd.run_all (command should have produced stdout)
+        out = self.run_function(
+            u'cmd.run_all',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out['stdout'], u'')
+        self.assertEqual(out['stderr'], u'')
+
+        # cmd.run_all (command should have produced stderr)
+        out = self.run_function(
+            u'cmd.run_all',
+            error_command,
+            hide_output=True)
+        self.assertEqual(out['stdout'], u'')
+        self.assertEqual(out['stderr'], u'')

@@ -161,6 +161,7 @@ class Master(salt.utils.parsers.MasterOptionParser, DaemonsMixin):  # pylint: di
                     v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
+                    root_dir=self.config['root_dir'],
                     sensitive_dirs=[self.config['pki_dir'], self.config['key_dir']],
                 )
                 # Clear out syndics from cachedir
@@ -281,6 +282,7 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
                     v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
+                    root_dir=self.config['root_dir'],
                     sensitive_dirs=[self.config['pki_dir']],
                 )
         except OSError as error:
@@ -468,6 +470,7 @@ class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # 
                     v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
+                    root_dir=self.config['root_dir'],
                     sensitive_dirs=[self.config['pki_dir']],
                 )
         except OSError as error:
@@ -576,6 +579,7 @@ class Syndic(salt.utils.parsers.SyndicOptionParser, DaemonsMixin):  # pylint: di
                     ],
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
+                    root_dir=self.config['root_dir'],
                     sensitive_dirs=[self.config['pki_dir']],
                 )
         except OSError as error:

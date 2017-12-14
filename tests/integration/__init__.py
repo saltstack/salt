@@ -838,6 +838,8 @@ class TestDaemon(object):
                 opts_dict['ext_pillar'].append(
                     {'cmd_yaml': 'cat {0}'.format(os.path.join(FILES, 'ext.yaml'))})
 
+        # all read, only owner write
+        autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
         for opts_dict in (master_opts, syndic_master_opts):
             # We need to copy the extension modules into the new master root_dir or
             # it will be prefixed by it
@@ -850,6 +852,14 @@ class TestDaemon(object):
                     new_extension_modules_path
                 )
             opts_dict['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
+
+            # Copy the autosign_file to the new  master root_dir
+            new_autosign_file_path = os.path.join(opts_dict['root_dir'], 'autosign_file')
+            shutil.copyfile(
+                os.path.join(INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+                new_autosign_file_path
+            )
+            os.chmod(new_autosign_file_path, autosign_file_permissions)
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
@@ -986,7 +996,9 @@ class TestDaemon(object):
                     RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
                     TMP,
                     ],
-                   RUNTIME_VARS.RUNNING_TESTS_USER)
+                   RUNTIME_VARS.RUNNING_TESTS_USER,
+                   root_dir=master_opts['root_dir'],
+                   )
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts

@@ -337,10 +337,67 @@ def sanitize_win_path(winpath):
     Remove illegal path characters for windows
     '''
     intab = '<>:|?*'
-    outtab = '_' * len(intab)
-    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
-    if isinstance(winpath, six.string_types):
+    if isinstance(winpath, six.text_type):
+        winpath = winpath.translate(dict((ord(c), '_') for c in intab))
+    elif isinstance(winpath, six.string_types):
+        outtab = '_' * len(intab)
+        trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
         winpath = winpath.translate(trantab)
-    elif isinstance(winpath, six.text_type):
-        winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
     return winpath
+
+
+def safe_path(path, allow_path=None):
+    r'''
+    .. versionadded:: 2017.7.3
+
+    Checks that the path is safe for modification by Salt. For example, you
+    wouldn't want to have salt delete the contents of ``C:\Windows``. The
+    following directories are considered unsafe:
+
+    - C:\, D:\, E:\, etc.
+    - \
+    - C:\Windows
+
+    Args:
+
+        path (str): The path to check
+
+        allow_paths (str, list): A directory or list of directories inside of
+            path that may be safe. For example: ``C:\Windows\TEMP``
+
+    Returns:
+        bool: True if safe, otherwise False
+    '''
+    # Create regex definitions for directories that may be unsafe to modify
+    system_root = os.environ.get('SystemRoot', 'C:\\Windows')
+    deny_paths = (
+        r'[a-z]\:\\$',  # C:\, D:\, etc
+        r'\\$',  # \
+        re.escape(system_root)  # C:\Windows
+    )
+
+    # Make allow_path a list
+    if allow_path and not isinstance(allow_path, list):
+        allow_path = [allow_path]
+
+    # Create regex definition for directories we may want to make exceptions for
+    allow_paths = list()
+    if allow_path:
+        for item in allow_path:
+            allow_paths.append(re.escape(item))
+
+    # Check the path to make sure it's not one of the bad paths
+    good_path = True
+    for d_path in deny_paths:
+        if re.match(d_path, path, flags=re.IGNORECASE) is not None:
+            # Found deny path
+            good_path = False
+
+    # If local_dest is one of the bad paths, check for exceptions
+    if not good_path:
+        for a_path in allow_paths:
+            if re.match(a_path, path, flags=re.IGNORECASE) is not None:
+                # Found exception
+                good_path = True
+
+    return good_path

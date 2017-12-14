@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 from jinja2 import Environment, DictLoader, exceptions
 import ast
 import copy
@@ -374,9 +374,7 @@ class TestGetTemplate(TestCase):
             salt=self.local_salt
         )
         with salt.utils.files.fopen(out['data']) as fp:
-            result = fp.read()
-            if six.PY2:
-                result = salt.utils.stringutils.to_unicode(result)
+            result = fp.read().decode(__salt_system_encoding__)
             self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
 
     def test_get_context_has_enough_context(self):
@@ -420,7 +418,7 @@ class TestGetTemplate(TestCase):
             dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
         )
 
-    @skipIf(six.PY3, 'Not applicable to Python 3: skipping.')
+    @skipIf(six.PY3, 'Not applicable to Python 3')
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_render_with_unicode_syntax_error(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
@@ -437,8 +435,10 @@ class TestGetTemplate(TestCase):
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_render_with_utf8_syntax_error(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
-            template = 'hello\n\n{{ bad\n\nfoo\xed\x95\x9c'
-            expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
+            template = 'hello\n\n{{ bad\n\nfoo한'
+            expected = salt.utils.stringutils.to_str(
+                r'.*---\nhello\n\n{{ bad\n\nfoo한    <======================\n---'
+            )
             self.assertRaisesRegex(
                 SaltRenderError,
                 expected,
@@ -662,7 +662,6 @@ class TestCustomExtensions(TestCase):
             # type of the rendered variable (should be unicode, which is the same as
             # six.text_type). This should cover all use cases but also allow the test
             # to pass on CentOS 6 running Python 2.7.
-            self.assertIn('!!python/unicode', rendered)
             self.assertIn('str value', rendered)
             self.assertIsInstance(rendered, six.text_type)
 
@@ -810,7 +809,7 @@ class TestCustomExtensions(TestCase):
     def test_nested_structures(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ data }}').render(data="foo")
-        self.assertEqual(rendered, u"foo")
+        self.assertEqual(rendered, "foo")
 
         data = OrderedDict([
             ('foo', OrderedDict([
@@ -821,7 +820,7 @@ class TestCustomExtensions(TestCase):
         ])
 
         rendered = env.from_string('{{ data }}').render(data=data)
-        self.assertEqual(rendered, u"{'foo': {'bar': 'baz', 'qux': 42}}")
+        self.assertEqual(rendered, u"{u'foo': {u'bar': u'baz', u'qux': 42}}")
 
         rendered = env.from_string('{{ data }}').render(data=[
                                                             OrderedDict(
@@ -831,7 +830,7 @@ class TestCustomExtensions(TestCase):
                                                                 baz=42,
                                                             )
                                                         ])
-        self.assertEqual(rendered, u"[{'foo': 'bar'}, {'baz': 42}]")
+        self.assertEqual(rendered, u"[{'foo': u'bar'}, {'baz': 42}]")
 
     def test_sequence(self):
         env = Environment()

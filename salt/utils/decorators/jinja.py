@@ -27,7 +27,7 @@ class JinjaFilter(object):
         '''
         name = self.name or function.__name__
         if name not in self.salt_jinja_filters:
-            log.debug(u'Marking \'%s\' as a jinja filter', name)
+            log.debug('Marking \'%s\' as a jinja filter', name)
             self.salt_jinja_filters[name] = function
         return function
 

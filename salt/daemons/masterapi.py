@@ -42,6 +42,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
+import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
 from salt.exceptions import FileserverConfigError, SaltMasterError
@@ -347,6 +348,33 @@ class AutoKey(object):
         os.remove(stub_file)
         return True
 
+    def check_autosign_grains(self, autosign_grains):
+        '''
+        Check for matching grains in the autosign_grains_dir.
+        '''
+        if not autosign_grains or u'autosign_grains_dir' not in self.opts:
+            return False
+
+        autosign_grains_dir = self.opts[u'autosign_grains_dir']
+        for root, dirs, filenames in os.walk(autosign_grains_dir):
+            for grain in filenames:
+                if grain in autosign_grains:
+                    grain_file = os.path.join(autosign_grains_dir, grain)
+
+                    if not self.check_permissions(grain_file):
+                        message = 'Wrong permissions for {0}, ignoring content'
+                        log.warning(message.format(grain_file))
+                        continue
+
+                    with salt.utils.files.fopen(grain_file, u'r') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line.startswith(u'#'):
+                                continue
+                            if autosign_grains[grain] == line:
+                                return True
+        return False
+
     def check_autoreject(self, keyid):
         '''
         Checks if the specified keyid should automatically be rejected.
@@ -356,7 +384,7 @@ class AutoKey(object):
             self.opts.get('autoreject_file', None)
         )
 
-    def check_autosign(self, keyid):
+    def check_autosign(self, keyid, autosign_grains=None):
         '''
         Checks if the specified keyid should automatically be signed.
         '''
@@ -365,6 +393,8 @@ class AutoKey(object):
         if self.check_signing_file(keyid, self.opts.get('autosign_file', None)):
             return True
         if self.check_autosign_dir(keyid):
+            return True
+        if self.check_autosign_grains(autosign_grains):
             return True
         return False
 
@@ -534,7 +564,7 @@ class RemoteFuncs(object):
             return ret
         expr_form = load.get('expr_form')
         if expr_form is not None and 'tgt_type' not in load:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Neon',
                 u'_mine_get: minion {0} uses pre-Nitrogen API key '
                 u'"expr_form". Accepting for backwards compatibility '

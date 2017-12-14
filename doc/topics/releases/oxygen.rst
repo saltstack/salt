@@ -4,6 +4,109 @@
 Salt Release Notes - Codename Oxygen
 ====================================
 
+Lots of Docker Improvements
+---------------------------
+
+Much Improved Support for Docker Networking
+===========================================
+
+The :py:func:`docker_network.present <salt.states.docker_network.present>`
+state has undergone a full rewrite, which includes the following improvements:
+
+Full API Support for Network Management
+---------------------------------------
+
+The improvements made to input handling in the
+:py:func:`docker_container.running <salt.states.docker_container.running>`
+state for 2017.7.0 have now been expanded to :py:func:`docker_network.present
+<salt.states.docker_network.present>`. This brings with it full support for all
+tunable configuration arguments.
+
+Custom Subnets
+--------------
+
+Custom subnets can now be configured. Both IPv4 and mixed IPv4/IPv6 networks
+are supported. See :ref:`here <salt-states-docker-network-present-ipam>` for
+more information.
+
+Network Configuration in :py:func:`docker_container.running` States
+-------------------------------------------------------------------
+
+A long-requested feature has finally been added! It is now possible to
+configure static IPv4/IPv6 addresses, as well as links and labels. See
+:ref:`here <salt-states-docker-container-network-management>` for more
+information.
+
+.. note::
+    While the ``containers`` argument to :py:func:`docker_network.present`
+    will continue to be supported, it will no longer be the recommended way of
+    ensuring that a container is attached to a network.
+
+Improved Handling of Images from Custom Registries
+==================================================
+
+Rather than attempting to parse the tag from the passed image name, Salt will
+now resolve that tag down to an image ID and use that ID instead.
+
+.. important::
+    Due to this change, there are some backward-incompatible changes to image
+    management. See below for a full list of these changes.
+
+Backward-incompatible Changes to Docker Image Management
+********************************************************
+
+Passing image names to the following functions must now be done using separate
+``repository`` and ``tag`` arguments:
+
+- :py:func:`docker.build <salt.modules.dockermod.build>`
+- :py:func:`docker.commit <salt.modules.dockermod.commit>`
+- :py:func:`docker.import <salt.modules.dockermod.import_>`
+- :py:func:`docker.load <salt.modules.dockermod.load>`
+- :py:func:`docker.tag <salt.modules.dockermod.tag_>`
+- :py:func:`docker.sls_build <salt.modules.dockermod.sls_build>`
+
+Additionally, the ``tag`` argument must now be explicitly passed to the
+:py:func:`docker_image.present <salt.states.docker_image.present>` state,
+unless the image is being pulled from a docker registry.
+
+State and Execution Module Support for ``docker run`` Functionality
+===================================================================
+
+The :py:func:`docker_container.running <salt.states.docker_container.running>`
+state is good for containers which run services, but it is not as useful for
+cases in which the container only needs to run once. The ``start`` argument to
+:py:func:`docker_container.running <salt.states.docker_container.running>` can
+be set to ``False`` to prevent the container from being started again on a
+subsequent run, but for many use cases this is not sufficient. Therefore, the
+:py:func:`docker.run_container <salt.modules.dockermod.run_container>`
+remote-execution function was added. When used on the Salt CLI, it will return
+information about the container, such as its name, ID, exit code, and any
+output it produces.
+
+State support has also been added via the :py:func:`docker_container.run
+<salt.states.docker_container.run>` state. This state is modeled after the
+:py:func:`cmd.run <salt.states.cmd.run>` state, and includes arguments like
+``onlyif``, ``unless``, and ``creates`` to control whether or not the container
+is run.
+
+Full API Support for :py:func:`docker.logs <salt.modules.dockermod.logs>`
+=========================================================================
+
+This function now supports all of the functions that its Docker API counterpart
+does, allowing you to do things like include timestamps, and also suppress
+stdout/stderr, etc. in the return.
+
+`start` Argument Added to :py:func:`docker.create <salt.modules.dockermod.create>` Function
+===========================================================================================
+
+This removes the need to run :py:func:`docker.start
+<salt.modules.dockermod.start_>` separately when creating containers on the
+Salt CLI.
+
+.. code-block:: bash
+
+    salt myminion docker.create image=foo/bar:baz command=/path/to/command start=True
+
 Comparison Operators in Package Installation
 --------------------------------------------
 
@@ -25,6 +128,25 @@ by any master tops matches that are not matched via a top file.
 To make master tops matches execute first, followed by top file matches, set
 the new :conf_minion:`master_tops_first` minion config option to ``True``.
 
+Return Codes for Runner/Wheel Functions
+---------------------------------------
+
+When using :ref:`orchestration <orchestrate-runner>`, runner and wheel
+functions used to report a ``True`` result if the function ran to completion
+without raising an exception. It is now possible to set a return code in the
+``__context__`` dictionary, allowing runner and wheel functions to report that
+they failed. Here's some example pseudocode:
+
+.. code-block:: python
+
+    def myrunner():
+        ...
+        do stuff
+        ...
+        if some_error_condition:
+            __context__['retcode'] = 1
+        return result
+
 LDAP via External Authentication Changes
 ----------------------------------------
 In this release of Salt, if LDAP Bind Credentials are supplied, then
@@ -45,6 +167,49 @@ Per Stormpath's announcement, their API will be shutting down on 8/17/2017 at
 noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
+
+
+New (Proxy) Minion Configuration Options
+----------------------------------------
+
+To be able to connect the Minion to the Master using a certain source IP address
+or port, the following options have been added:
+
+- :conf_minion:`source_interface_name`
+- :conf_minion:`source_address`
+- :conf_minion:`source_ret_port`
+- :conf_minion:`source_publish_port`
+
+:conf_minion:`environment` config option renamed to :conf_minion:`saltenv`
+--------------------------------------------------------------------------
+
+The :conf_minion:`environment` config option predates referring to a salt
+fileserver environment as a **saltenv**. To pin a minion to a single
+environment for running states, one would use :conf_minion:`environment`, but
+overriding that environment would be done with the ``saltenv`` argument. For
+consistency, :conf_minion:`environment` is now simply referred to as
+:conf_minion:`saltenv`. There are no plans to deprecate or remove
+:conf_minion:`environment`, if used it will log a warning and its value will be
+used as :conf_minion:`saltenv`.
+
+:conf_minion:`lock_saltenv` config option added
+-----------------------------------------------
+
+If set to ``True``, this option will prevent a minion from allowing the
+``saltenv`` argument to override the value set in :conf_minion:`saltenv` when
+running states.
+
+Failed Minions for State/Function Orchestration Jobs Added to Changes Dictionary
+--------------------------------------------------------------------------------
+
+For orchestration jobs which run states (or run remote execution functions and
+also use a :ref:`fail function <orchestrate-runner-fail-functions>` to indicate
+success or failure), minions which have ``False`` results were previously
+included as a formatted string in the comment field of the return for that
+orchestration job. This made the failed returns difficult to :ref:`parse
+programatically <orchestrate-runner-parsing-results-programatically>`. The
+failed returns in these cases are now included in the changes dictionary,
+making for much easier parsing.
 
 New Grains
 ----------
@@ -111,7 +276,7 @@ environments (i.e. ``saltenvs``) have been added:
    available as saltenvs.
 
 Additional output modes
-------------------
+-----------------------
 
 The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``terse_id``.
 Just like ``mixed_id``, these use the state ID as name in the highstate output.

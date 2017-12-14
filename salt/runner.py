@@ -38,24 +38,27 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     eauth user must be authorized to execute runner modules: (``@runner``).
     Only the :py:meth:`master_call` below supports eauth.
     '''
-    client = u'runner'
-    tag_prefix = u'run'
+    client = 'runner'
+    tag_prefix = 'run'
 
     def __init__(self, opts):
         self.opts = opts
+        self.context = {}
 
     @property
     def functions(self):
-        if not hasattr(self, u'_functions'):
-            if not hasattr(self, u'utils'):
+        if not hasattr(self, '_functions'):
+            if not hasattr(self, 'utils'):
                 self.utils = salt.loader.utils(self.opts)
             # Must be self.functions for mixin to work correctly :-/
             try:
-                self._functions = salt.loader.runner(self.opts, utils=self.utils)
+                self._functions = salt.loader.runner(
+                    self.opts, utils=self.utils, context=self.context)
             except AttributeError:
                 # Just in case self.utils is still not present (perhaps due to
                 # problems with the loader), load the runner funcs without them
-                self._functions = salt.loader.runner(self.opts)
+                self._functions = salt.loader.runner(
+                    self.opts, context=self.context)
 
         return self._functions
 
@@ -70,19 +73,19 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         New-style: ``{'fun': 'jobs.lookup_jid', 'kwarg': {'jid': '1234'}}``
         CLI-style: ``{'fun': 'jobs.lookup_jid', 'arg': ['jid="1234"']}``
         '''
-        fun = low.pop(u'fun')
+        fun = low.pop('fun')
         verify_fun(self.functions, fun)
 
         eauth_creds = dict([(i, low.pop(i)) for i in [
-            u'username', u'password', u'eauth', u'token', u'client', u'user', u'key',
+            'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
         ] if i in low])
 
         # Run name=value args through parse_input. We don't need to run kwargs
         # through because there is no way to send name=value strings in the low
         # dict other than by including an `arg` array.
         _arg, _kwarg = salt.utils.args.parse_input(
-                low.pop(u'arg', []), condition=False)
-        _kwarg.update(low.pop(u'kwarg', {}))
+                low.pop('arg', []), condition=False)
+        _kwarg.update(low.pop('kwarg', {}))
 
         # If anything hasn't been pop()'ed out of low by this point it must be
         # an old-style kwarg.
@@ -97,10 +100,9 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         arg, kwarg = salt.minion.load_args_and_kwargs(
             self.functions[fun],
             munged,
-            self.opts,
             ignore_invalid=True)
 
-        return dict(fun=fun, kwarg={u'kwarg': kwarg, u'arg': arg},
+        return dict(fun=fun, kwarg={'kwarg': kwarg, 'arg': arg},
                 **eauth_creds)
 
     def cmd_async(self, low):
@@ -167,10 +169,10 @@ class Runner(RunnerClient):
         '''
         Print out the documentation!
         '''
-        arg = self.opts.get(u'fun', None)
+        arg = self.opts.get('fun', None)
         docs = super(Runner, self).get_docs(arg)
         for fun in sorted(docs):
-            display_output(u'{0}:'.format(fun), u'text', self.opts)
+            display_output('{0}:'.format(fun), 'text', self.opts)
             print(docs[fun])
 
     # TODO: move to mixin whenever we want a salt-wheel cli
@@ -180,117 +182,115 @@ class Runner(RunnerClient):
         '''
         import salt.minion
         ret = {}
-        if self.opts.get(u'doc', False):
+        if self.opts.get('doc', False):
             self.print_docs()
         else:
-            low = {u'fun': self.opts[u'fun']}
+            low = {'fun': self.opts['fun']}
             try:
                 # Allocate a jid
                 async_pub = self._gen_async_pub()
-                self.jid = async_pub[u'jid']
+                self.jid = async_pub['jid']
 
                 fun_args = salt.utils.args.parse_input(
-                        self.opts[u'arg'],
-                        no_parse=self.opts.get(u'no_parse', []))
+                        self.opts['arg'],
+                        no_parse=self.opts.get('no_parse', []))
 
-                verify_fun(self.functions, low[u'fun'])
+                verify_fun(self.functions, low['fun'])
                 args, kwargs = salt.minion.load_args_and_kwargs(
-                    self.functions[low[u'fun']],
-                    fun_args,
-                    self.opts,
-                )
-                low[u'arg'] = args
-                low[u'kwarg'] = kwargs
+                    self.functions[low['fun']],
+                    fun_args)
+                low['arg'] = args
+                low['kwarg'] = kwargs
 
-                if self.opts.get(u'eauth'):
-                    if u'token' in self.opts:
+                if self.opts.get('eauth'):
+                    if 'token' in self.opts:
                         try:
-                            with salt.utils.files.fopen(os.path.join(self.opts[u'key_dir'], u'.root_key'), u'r') as fp_:
-                                low[u'key'] = fp_.readline()
+                            with salt.utils.files.fopen(os.path.join(self.opts['key_dir'], '.root_key'), 'r') as fp_:
+                                low['key'] = fp_.readline()
                         except IOError:
-                            low[u'token'] = self.opts[u'token']
+                            low['token'] = self.opts['token']
 
                     # If using eauth and a token hasn't already been loaded into
                     # low, prompt the user to enter auth credentials
-                    if u'token' not in low and u'key' not in low and self.opts[u'eauth']:
+                    if 'token' not in low and 'key' not in low and self.opts['eauth']:
                         # This is expensive. Don't do it unless we need to.
                         import salt.auth
                         resolver = salt.auth.Resolver(self.opts)
-                        res = resolver.cli(self.opts[u'eauth'])
-                        if self.opts[u'mktoken'] and res:
+                        res = resolver.cli(self.opts['eauth'])
+                        if self.opts['mktoken'] and res:
                             tok = resolver.token_cli(
-                                    self.opts[u'eauth'],
+                                    self.opts['eauth'],
                                     res
                                     )
                             if tok:
-                                low[u'token'] = tok.get(u'token', u'')
+                                low['token'] = tok.get('token', '')
                         if not res:
-                            log.error(u'Authentication failed')
+                            log.error('Authentication failed')
                             return ret
                         low.update(res)
-                        low[u'eauth'] = self.opts[u'eauth']
+                        low['eauth'] = self.opts['eauth']
                 else:
                     user = salt.utils.user.get_specific_user()
 
-                if low[u'fun'] == u'state.orchestrate':
-                    low[u'kwarg'][u'orchestration_jid'] = async_pub[u'jid']
+                if low['fun'] == 'state.orchestrate':
+                    low['kwarg']['orchestration_jid'] = async_pub['jid']
 
                 # Run the runner!
-                if self.opts.get(u'async', False):
-                    if self.opts.get(u'eauth'):
+                if self.opts.get('async', False):
+                    if self.opts.get('eauth'):
                         async_pub = self.cmd_async(low)
                     else:
-                        async_pub = self.async(self.opts[u'fun'],
+                        async_pub = self.async(self.opts['fun'],
                                                low,
                                                user=user,
                                                pub=async_pub)
                     # by default: info will be not enougth to be printed out !
                     log.warning(
-                        u'Running in async mode. Results of this execution may '
-                        u'be collected by attaching to the master event bus or '
-                        u'by examing the master job cache, if configured. '
-                        u'This execution is running under tag %s', async_pub[u'tag']
+                        'Running in async mode. Results of this execution may '
+                        'be collected by attaching to the master event bus or '
+                        'by examing the master job cache, if configured. '
+                        'This execution is running under tag %s', async_pub['tag']
                     )
-                    return async_pub[u'jid']  # return the jid
+                    return async_pub['jid']  # return the jid
 
                 # otherwise run it in the main process
-                if self.opts.get(u'eauth'):
+                if self.opts.get('eauth'):
                     ret = self.cmd_sync(low)
-                    if isinstance(ret, dict) and set(ret) == set((u'data', u'outputter')):
-                        outputter = ret[u'outputter']
-                        ret = ret[u'data']
+                    if isinstance(ret, dict) and set(ret) == set(('data', 'outputter')):
+                        outputter = ret['outputter']
+                        ret = ret['data']
                     else:
                         outputter = None
                     display_output(ret, outputter, self.opts)
                 else:
-                    ret = self._proc_function(self.opts[u'fun'],
+                    ret = self._proc_function(self.opts['fun'],
                                               low,
                                               user,
-                                              async_pub[u'tag'],
-                                              async_pub[u'jid'],
+                                              async_pub['tag'],
+                                              async_pub['jid'],
                                               daemonize=False)
             except salt.exceptions.SaltException as exc:
-                evt = salt.utils.event.get_event(u'master', opts=self.opts)
-                evt.fire_event({u'success': False,
-                                u'return': u'{0}'.format(exc),
-                                u'retcode': 254,
-                                u'fun': self.opts[u'fun'],
-                                u'fun_args': fun_args,
-                                u'jid': self.jid},
-                               tag=u'salt/run/{0}/ret'.format(self.jid))
+                evt = salt.utils.event.get_event('master', opts=self.opts)
+                evt.fire_event({'success': False,
+                                'return': '{0}'.format(exc),
+                                'retcode': 254,
+                                'fun': self.opts['fun'],
+                                'fun_args': fun_args,
+                                'jid': self.jid},
+                               tag='salt/run/{0}/ret'.format(self.jid))
                 # Attempt to grab documentation
-                if u'fun' in low:
-                    ret = self.get_docs(u'{0}*'.format(low[u'fun']))
+                if 'fun' in low:
+                    ret = self.get_docs('{0}*'.format(low['fun']))
                 else:
                     ret = None
 
                 # If we didn't get docs returned then
                 # return the `not availble` message.
                 if not ret:
-                    ret = u'{0}'.format(exc)
-                if not self.opts.get(u'quiet', False):
-                    display_output(ret, u'nested', self.opts)
+                    ret = '{0}'.format(exc)
+                if not self.opts.get('quiet', False):
+                    display_output(ret, 'nested', self.opts)
             else:
-                log.debug(u'Runner return: %s', ret)
+                log.debug('Runner return: %s', ret)
 
             return ret
