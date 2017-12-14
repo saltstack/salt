@@ -602,27 +602,22 @@ def _wait_for_sync(status, conn, wait=True):
     return False
 
 
-def create_hosted_zone(domain_name, caller_ref=None, comment='',
-                       private_zone=False, vpc_id=None, vpc_name=None,
-                       vpc_region=None, region=None, key=None, keyid=None,
+def create_hosted_zone(domain_name, caller_ref=None, comment='', private_zone=False, vpc_id=None,
+                       vpc_name=None, vpc_region=None, region=None, key=None, keyid=None,
                        profile=None):
     '''
-    Create a new Route53 Hosted Zone. Returns a Python data structure with
-    information about the newly created Hosted Zone.
+    Create a new Route53 Hosted Zone. Returns a Python data structure with information about the
+    newly created Hosted Zone.
 
     domain_name
-        The name of the domain. This should be a fully-specified domain, and
-        should terminate with a period. This is the name you have registered
-        with your DNS registrar. It is also the name you will delegate from your
-        registrar to the Amazon Route 53 delegation servers returned in response
+        The name of the domain. This must be fully-qualified, terminating with a period.  This is
+        the name you have registered with your domain registrar.  It is also the name you will
+        delegate from your registrar to the Amazon Route 53 delegation servers returned in response
         to this request.
 
     caller_ref
-        A unique string that identifies the request and that allows
-        create_hosted_zone() calls to be retried without the risk of executing
-        the operation twice.  You want to provide this where possible, since
-        additional calls while the first is in PENDING status will be accepted
-        and can lead to multiple copies of the zone being created in Route53.
+        A unique string that identifies the request and that allows create_hosted_zone() calls to
+        be retried without the risk of executing the operation twice.
 
     comment
         Any comments you want to include about the hosted zone.
@@ -631,33 +626,30 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='',
         Set True if creating a private hosted zone.
 
     vpc_id
-        When creating a private hosted zone, either the VPC ID or VPC Name to
-        associate with is required.  Exclusive with vpe_name.  Ignored if passed
-        for a non-private zone.
+        When creating a private hosted zone, either the VPC ID or VPC Name to associate with is
+        required.  Exclusive with vpe_name.  Ignored when creating a non-private zone.
 
     vpc_name
-        When creating a private hosted zone, either the VPC ID or VPC Name to
-        associate with is required.  Exclusive with vpe_id.  Ignored if passed
-        for a non-private zone.
+        When creating a private hosted zone, either the VPC ID or VPC Name to associate with is
+        required.  Exclusive with vpe_id.  Ignored when creating a non-private zone.
 
     vpc_region
-        When creating a private hosted zone, the region of the associated VPC is
-        required.  If not provided, an effort will be made to determine it from
-        vpc_id or vpc_name, if possible.  If this fails, you'll need to provide
-        an explicit value for this option.  Ignored if passed for a non-private
-        zone.
+        When creating a private hosted zone, the region of the associated VPC is required.  If not
+        provided, an effort will be made to determine it from vpc_id or vpc_name, where possible.
+        If this fails, you'll need to provide an explicit value for this option.  Ignored when
+        creating a non-private zone.
 
     region
-        Region endpoint to connect to
+        Region endpoint to connect to.
 
     key
-        AWS key to bind with
+        AWS key to bind with.
 
     keyid
-        AWS keyid to bind with
+        AWS keyid to bind with.
 
     profile
-        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
 
     CLI Example::
 
