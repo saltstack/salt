@@ -43,6 +43,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
             functions = {'test.ping': ping}
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
+        self.schedule.opts['loop_interval'] = 1
 
     def test_eval(self):
         '''
@@ -126,6 +127,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time2 + LOOP_INTERVAL)
+
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time2 + LOOP_INTERVAL)
 
