@@ -1962,8 +1962,8 @@ class State(object):
                 sys.modules[self.states[cdata['full']].__module__].__opts__[
                     'test'] = test
 
-            self.state_con.pop('runas')
-            self.state_con.pop('runas_password')
+            self.state_con.pop('runas', None)
+            self.state_con.pop('runas_password', None)
             self.verify_ret_for_export(ret)
 
         # If format_call got any warnings, let's show them to the user
