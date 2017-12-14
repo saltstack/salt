@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import getpass
 import os
 import shutil
@@ -47,7 +47,7 @@ class FileModuleTest(ModuleCase):
     def setUp(self):
         self.myfile = os.path.join(TMP, 'myfile')
         with salt.utils.files.fopen(self.myfile, 'w+') as fp:
-            fp.write('Hello' + os.linesep)
+            fp.write(salt.utils.stringutils.to_str('Hello' + os.linesep))
         self.mydir = os.path.join(TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
@@ -146,18 +146,20 @@ class FileModuleTest(ModuleCase):
             FILES, 'file', 'base', 'hello.patch')
         src_file = os.path.join(TMP, 'src.txt')
         with salt.utils.files.fopen(src_file, 'w+') as fp:
-            fp.write('Hello\n')
+            fp.write(salt.utils.stringutils.to_str('Hello\n'))
 
         # dry-run should not modify src_file
         ret = self.minion_run('file.patch', src_file, src_patch, dry_run=True)
         assert ret['retcode'] == 0, repr(ret)
         with salt.utils.files.fopen(src_file) as fp:
-            self.assertEqual(fp.read(), 'Hello\n')
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(fp.read()), 'Hello\n')
 
         ret = self.minion_run('file.patch', src_file, src_patch)
         assert ret['retcode'] == 0, repr(ret)
         with salt.utils.files.fopen(src_file) as fp:
-            self.assertEqual(fp.read(), 'Hello world\n')
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(fp.read()), 'Hello world\n')
 
     def test_remove_file(self):
         ret = self.run_function('file.remove', arg=[self.myfile])
