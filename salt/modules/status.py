@@ -593,6 +593,9 @@ def cpuinfo():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: Oxygen
+        Added support for NetBSD and OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
@@ -623,14 +626,19 @@ def cpuinfo():
 
     def bsd_cpuinfo():
         '''
-        freebsd specific cpuinfo implementation
+        bsd specific cpuinfo implementation
         '''
-        freebsd_cmd = 'sysctl hw.model hw.ncpu'
+        bsd_cmd = 'sysctl hw.model hw.ncpu'
         ret = {}
-        for line in __salt__['cmd.run'](freebsd_cmd).splitlines():
+        if __grains__['kernel'].lower() in ['netbsd', 'openbsd']:
+            sep = '='
+        else:
+            sep = ':'
+
+        for line in __salt__['cmd.run'](bsd_cmd).splitlines():
             if not line:
                 continue
-            comps = line.split(':')
+            comps = line.split(sep)
             comps[0] = comps[0].strip()
             ret[comps[0]] = comps[1].strip()
         return ret
@@ -775,6 +783,7 @@ def cpuinfo():
     get_version = {
         'Linux': linux_cpuinfo,
         'FreeBSD': bsd_cpuinfo,
+        'NetBSD': bsd_cpuinfo,
         'OpenBSD': bsd_cpuinfo,
         'SunOS': sunos_cpuinfo,
         'AIX': aix_cpuinfo,
