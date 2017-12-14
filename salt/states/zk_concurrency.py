@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
+Control concurrency of steps within state execution using zookeeper
+===================================================================
+
 :depends: kazoo
 :configuration: See :py:mod:`salt.modules.zookeeper` for setup instructions.
 
-Control concurrency of steps within state execution using zookeeper
-===================================================================
 
 This module allows you to "wrap" a state's execution with concurrency control.
 This is useful to protect against all hosts executing highstate simultaneously

@@ -8,7 +8,7 @@ import copy
 from tests.support.unit import TestCase
 
 # Import Salt libs
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 
 
 class UtilDictupdateTestCase(TestCase):

@@ -98,14 +98,15 @@ from copy import deepcopy
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import filter
 from salt.ext.six.moves.urllib.parse import quote as _quote
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 from salt.pillar import Pillar
-import salt.utils
+import salt.utils.files
+import salt.utils.hashutils
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -337,7 +338,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
 
     log.debug('Writing S3 buckets pillar cache file')
 
-    with salt.utils.fopen(cache_file, 'w') as fp_:
+    with salt.utils.files.fopen(cache_file, 'w') as fp_:
         pickle.dump(metadata, fp_)
 
     return metadata
@@ -350,7 +351,7 @@ def _read_buckets_cache_file(cache_file):
 
     log.debug('Reading buckets cache file')
 
-    with salt.utils.fopen(cache_file, 'rb') as fp_:
+    with salt.utils.files.fopen(cache_file, 'rb') as fp_:
         data = pickle.load(fp_)
 
     return data
@@ -402,7 +403,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         file_md5 = "".join(list(filter(str.isalnum, file_meta['ETag']))) \
             if file_meta else None
 
-        cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
+        cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, 'md5')
 
         log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
 
