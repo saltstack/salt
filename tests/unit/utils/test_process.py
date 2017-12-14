@@ -7,6 +7,7 @@ import sys
 import time
 import signal
 import multiprocessing
+import functools
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
@@ -17,6 +18,7 @@ from tests.support.mock import (
 )
 
 # Import salt libs
+import salt.utils.platform
 import salt.utils.process
 
 # Import 3rd-party libs
@@ -24,19 +26,67 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
+def die(func):
+    '''
+    Add proc title
+    '''
+    @functools.wraps(func)
+    def wrapper(self):
+        # Strip off the "test_" from the function name
+        name = func.__name__[5:]
+
+        def _die():
+            salt.utils.process.appendproctitle('test_{0}'.format(name))
+        setattr(self, 'die_' + name, _die)
+
+    return wrapper
+
+
+def incr(func):
+    '''
+    Increment counter
+    '''
+    @functools.wraps(func)
+    def wrapper(self):
+        # Strip off the "test_" from the function name
+        name = func.__name__[5:]
+
+        def _incr(counter, num):
+            salt.utils.process.appendproctitle('test_{0}'.format(name))
+            for _ in range(0, num):
+                counter.value += 1
+        setattr(self, 'incr_' + name, _incr)
+
+    return wrapper
+
+
+def spin(func):
+    '''
+    Spin indefinitely
+    '''
+    @functools.wraps(func)
+    def wrapper(self):
+        # Strip off the "test_" from the function name
+        name = func.__name__[5:]
+
+        def _spin():
+            salt.utils.process.appendproctitle('test_{0}'.format(name))
+            while True:
+                time.sleep(1)
+        setattr(self, 'spin_' + name, _spin)
+
+    return wrapper
+
+
 class TestProcessManager(TestCase):
 
+    @spin
     def test_basic(self):
         '''
         Make sure that the process is alive 2s later
         '''
-        def spin():
-            salt.utils.process.appendproctitle('test_basic')
-            while True:
-                time.sleep(1)
-
         process_manager = salt.utils.process.ProcessManager()
-        process_manager.add_process(spin)
+        process_manager.add_process(self.spin_basic)
         initial_pid = next(six.iterkeys(process_manager._process_map))
         time.sleep(2)
         process_manager.check_children()
@@ -52,17 +102,16 @@ class TestProcessManager(TestCase):
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
+    @spin
     def test_kill(self):
-        def spin():
-            salt.utils.process.appendproctitle('test_kill')
-            while True:
-                time.sleep(1)
-
         process_manager = salt.utils.process.ProcessManager()
-        process_manager.add_process(spin)
+        process_manager.add_process(self.spin_kill)
         initial_pid = next(six.iterkeys(process_manager._process_map))
         # kill the child
-        os.kill(initial_pid, signal.SIGKILL)
+        if salt.utils.platform.is_windows():
+            os.kill(initial_pid, signal.SIGTERM)
+        else:
+            os.kill(initial_pid, signal.SIGKILL)
         # give the OS time to give the signal...
         time.sleep(0.1)
         process_manager.check_children()
@@ -78,15 +127,13 @@ class TestProcessManager(TestCase):
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
+    @die
     def test_restarting(self):
         '''
         Make sure that the process is alive 2s later
         '''
-        def die():
-            salt.utils.process.appendproctitle('test_restarting')
-
         process_manager = salt.utils.process.ProcessManager()
-        process_manager.add_process(die)
+        process_manager.add_process(self.die_restarting)
         initial_pid = next(six.iterkeys(process_manager._process_map))
         time.sleep(2)
         process_manager.check_children()
@@ -103,14 +150,11 @@ class TestProcessManager(TestCase):
                 process_manager.kill_children()
 
     @skipIf(sys.version_info < (2, 7), 'Needs > Py 2.7 due to bug in stdlib')
+    @incr
     def test_counter(self):
-        def incr(counter, num):
-            salt.utils.process.appendproctitle('test_counter')
-            for _ in range(0, num):
-                counter.value += 1
         counter = multiprocessing.Value('i', 0)
         process_manager = salt.utils.process.ProcessManager()
-        process_manager.add_process(incr, args=(counter, 2))
+        process_manager.add_process(self.incr_counter, args=(counter, 2))
         time.sleep(1)
         process_manager.check_children()
         time.sleep(1)

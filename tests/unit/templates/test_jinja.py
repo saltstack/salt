@@ -39,6 +39,8 @@ from salt.utils.templates import (
     JINJA,
     render_jinja_tmpl
 )
+# dateutils is needed so that the strftime jinja filter is loaded
+import salt.utils.dateutils  # pylint: disable=unused-import
 import salt.utils.files
 import salt.utils.stringutils
 
@@ -103,7 +105,7 @@ class TestSaltCacheLoader(TestCase):
         res = loader.get_source(None, 'hello_simple')
         assert len(res) == 3
         # res[0] on Windows is unicode and use os.linesep so it works cross OS
-        self.assertEqual(str(res[0]), 'world' + os.linesep)
+        self.assertEqual(six.text_type(res[0]), 'world' + os.linesep)
         tmpl_dir = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
         self.assertEqual(res[1], tmpl_dir)
         assert res[2](), 'Template up to date?'
@@ -181,7 +183,7 @@ class TestGetTemplate(TestCase):
         fn_ = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
         with salt.utils.files.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
-                fp_.read(),
+                salt.utils.stringutils.to_unicode(fp_.read()),
                 dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
             )
         self.assertEqual(out, 'world' + os.linesep)
@@ -194,7 +196,7 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         with salt.utils.files.fopen(filename) as fp_:
             out = render_jinja_tmpl(
-                fp_.read(),
+                salt.utils.stringutils.to_unicode(fp_.read()),
                 dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
             )
         self.assertEqual(out, 'Hey world !a b !' + os.linesep)
@@ -211,7 +213,7 @@ class TestGetTemplate(TestCase):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
             with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
@@ -240,7 +242,7 @@ class TestGetTemplate(TestCase):
                     SaltRenderError,
                     expected,
                     render_jinja_tmpl,
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_macro_additional_log_for_undefined(self):
@@ -264,7 +266,7 @@ class TestGetTemplate(TestCase):
                     SaltRenderError,
                     expected,
                     render_jinja_tmpl,
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_macro_additional_log_syntaxerror(self):
@@ -288,7 +290,7 @@ class TestGetTemplate(TestCase):
                     SaltRenderError,
                     expected,
                     render_jinja_tmpl,
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_non_ascii_encoding(self):
@@ -297,7 +299,7 @@ class TestGetTemplate(TestCase):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
             with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
@@ -308,7 +310,7 @@ class TestGetTemplate(TestCase):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
             with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
@@ -374,7 +376,7 @@ class TestGetTemplate(TestCase):
             salt=self.local_salt
         )
         with salt.utils.files.fopen(out['data']) as fp:
-            result = fp.read().decode(__salt_system_encoding__)
+            result = salt.utils.stringutils.to_unicode(fp.read())
             self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
 
     def test_get_context_has_enough_context(self):

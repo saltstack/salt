@@ -201,7 +201,14 @@ def _check_cron(user,
                 return 'present'
     else:
         for cron in lst['special']:
-            if special == cron['spec'] and cmd == cron['cmd']:
+            if _cron_matched(cron, cmd, identifier):
+                if any([_needs_change(x, y) for x, y in
+                        ((cron['spec'], special),
+                         (cron['identifier'], identifier),
+                         (cron['cmd'], cmd),
+                         (cron['comment'], comment),
+                         (cron['commented'], commented))]):
+                    return 'update'
                 return 'present'
     return 'absent'
 
@@ -348,7 +355,12 @@ def present(name,
                                         commented=commented,
                                         identifier=identifier)
     else:
-        data = __salt__['cron.set_special'](user, special, name)
+        data = __salt__['cron.set_special'](user=user,
+                                            special=special,
+                                            cmd=name,
+                                            comment=comment,
+                                            commented=commented,
+                                            identifier=identifier)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -417,7 +429,7 @@ def absent(name,
     if special is None:
         data = __salt__['cron.rm_job'](user, name, identifier=identifier)
     else:
-        data = __salt__['cron.rm_special'](user, special, name)
+        data = __salt__['cron.rm_special'](user, name, special=special, identifier=identifier)
 
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)

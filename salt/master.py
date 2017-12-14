@@ -80,7 +80,9 @@ import salt.utils.schedule
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
+import salt.utils.ssdp
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.config import DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError
 from salt.transport import iter_transport_opts
 from salt.utils.debug import (
@@ -603,6 +605,18 @@ class Master(SMaster):
                 args=(self.opts, self.key, self.master_key),
                 kwargs=kwargs,
                 name='ReqServer')
+
+            # Fire up SSDP discovery publisher
+            if self.opts[u'discovery']:
+                if salt.utils.ssdp.SSDPDiscoveryServer.is_available():
+                    self.process_manager.add_process(salt.utils.ssdp.SSDPDiscoveryServer(
+                        port=self.opts[u'discovery'].get(u'port', DEFAULT_MASTER_OPTS[u'discovery'][u'port']),
+                        listen_ip=self.opts[u'interface'],
+                        answer={u'mapping': self.opts[u'discovery'].get(u'mapping', {})}).run)
+                else:
+                    log.error(u'Unable to load SSDP: asynchronous IO is not available.')
+                    if sys.version_info.major == 2:
+                        log.error(u'You are using Python 2, please install "trollius" module to enable SSDP discovery.')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:

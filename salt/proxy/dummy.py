@@ -9,10 +9,8 @@ import os
 import pickle
 import logging
 
-# Import Salt modules
-import salt.utils.files
-
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils.files
 
 # This must be present or the Salt loader won't load this module
@@ -47,9 +45,14 @@ def _save_state(details):
 
 def _load_state():
     try:
-        with salt.utils.files.fopen(FILENAME, 'r') as pck:
+        if six.PY3 is True:
+            mode = 'rb'
+        else:
+            mode = 'r'
+
+        with salt.utils.files.fopen(FILENAME, mode) as pck:
             DETAILS = pickle.load(pck)
-    except IOError:
+    except EOFError:
         DETAILS = {}
         DETAILS['initialized'] = False
         _save_state(DETAILS)
@@ -136,7 +139,7 @@ def service_list():
     List "services" on the REST server
     '''
     DETAILS = _load_state()
-    return DETAILS['services'].keys()
+    return list(DETAILS['services'])
 
 
 def service_status(name):

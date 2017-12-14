@@ -72,6 +72,7 @@ except ImportError:
 import salt
 import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.path
 import salt.exceptions
 import salt.version
 
@@ -300,7 +301,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                     elif compress == 'zip':
                         tfp.write(base, arcname=os.path.join('py{0}'.format(py_ver), base))
                 continue
-            for root, dirs, files in os.walk(base, followlinks=True):
+            for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
                     if not name.endswith(('.pyc', '.pyo')):
                         if compress == 'gzip':
@@ -594,7 +595,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
                 # top is a single file module
                 tfp.add(base, arcname=os.path.join('py{0}'.format(py_ver), base))
                 continue
-            for root, dirs, files in os.walk(base, followlinks=True):
+            for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
                     if name.endswith(('.pyc', '.pyo')):
                         continue

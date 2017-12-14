@@ -59,6 +59,7 @@ SCHEDULE_CONF = [
         'return_kwargs',
         'run_on_start'
         'skip_during_range',
+        'run_after_skip_range',
 ]
 
 
@@ -100,8 +101,11 @@ def list_(show_all=False,
         log.debug('Event module not available. Schedule list failed.')
         return ret
 
+    _hidden = ['enabled',
+               'skip_function',
+               'skip_during_range']
     for job in list(schedule.keys()):  # iterate over a copy since we will mutate it
-        if job == 'enabled':
+        if job in _hidden:
             continue
 
         # Default jobs added by salt begin with __

@@ -286,6 +286,7 @@ import salt.utils.dateutils
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.templates
@@ -567,7 +568,7 @@ def _gen_keep_files(name, require, walk_d=None):
     def _process(name):
         ret = set()
         if os.path.isdir(name):
-            for root, dirs, files in os.walk(name):
+            for root, dirs, files in salt.utils.path.os_walk(name):
                 ret.add(name)
                 for name in files:
                     ret.add(os.path.join(root, name))
@@ -654,7 +655,7 @@ def _clean_dir(root, keep, exclude_pat):
                 except OSError:
                     __salt__['file.remove'](nfn)
 
-    for roots, dirs, files in os.walk(root):
+    for roots, dirs, files in salt.utils.path.os_walk(root):
         for name in itertools.chain(dirs, files):
             _delete_not_kept(os.path.join(roots, name))
     return list(removed)
@@ -769,7 +770,7 @@ def _check_directory_win(name,
     changes = {}
 
     if not os.path.isdir(name):
-        changes = {'directory': 'new'}
+        changes = {name: {'directory': 'new'}}
     else:
         # Check owner
         owner = salt.utils.win_dacl.get_owner(name)
@@ -908,7 +909,11 @@ def _check_dir_meta(name,
     '''
     Check the changes in directory metadata
     '''
-    stats = __salt__['file.stats'](name, None, follow_symlinks)
+    try:
+        stats = __salt__['file.stats'](name, None, follow_symlinks)
+    except CommandExecutionError:
+        stats = {}
+
     changes = {}
     if not stats:
         changes['directory'] = 'new'
@@ -2137,6 +2142,9 @@ def managed(name,
            'name': name,
            'result': True}
 
+    if not name:
+        return _error(ret, 'Destination file name is required')
+
     if mode is not None and salt.utils.platform.is_windows():
         return _error(ret, 'The \'mode\' option is not supported on Windows')
 
@@ -2290,8 +2298,6 @@ def managed(name,
                     ret['comment'] = 'Error while applying template on contents'
                 return ret
 
-    if not name:
-        return _error(ret, 'Must provide name to file.managed')
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():
 
@@ -2600,7 +2606,7 @@ def _depth_limited_walk(top, max_depth=None):
     Walk the directory tree under root up till reaching max_depth.
     With max_depth=None (default), do not limit depth.
     '''
-    for root, dirs, files in os.walk(top):
+    for root, dirs, files in salt.utils.path.os_walk(top):
         if max_depth is not None:
             rel_depth = root.count(os.path.sep) - top.count(os.path.sep)
             if rel_depth >= max_depth:
@@ -3108,7 +3114,7 @@ def directory(name,
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, dir_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
-                        if not exc.strerror.endswith('does not exist'):
+                        if not exc.strerror.startswith('Path not found'):
                             errors.append(exc.strerror)
 
     if clean:
@@ -3960,11 +3966,11 @@ def replace(name,
 
             If you need to match a literal string that contains regex special
             characters, you may want to use salt's custom Jinja filter,
-            ``escape_regex``.
+            ``regex_escape``.
 
             .. code-block:: jinja
 
-                {{ 'http://example.com?foo=bar%20baz' | escape_regex }}
+                {{ 'http://example.com?foo=bar%20baz' | regex_escape }}
 
     repl
         The replacement text
@@ -5460,7 +5466,7 @@ def copy(
     try:
         if os.path.isdir(source):
             shutil.copytree(source, name, symlinks=True)
-            for root, dirs, files in os.walk(name):
+            for root, dirs, files in salt.utils.path.os_walk(name):
                 for dir_ in dirs:
                     __salt__['file.lchown'](os.path.join(root, dir_), user, group)
                 for file_ in files:
