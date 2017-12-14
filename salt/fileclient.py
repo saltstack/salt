@@ -2,7 +2,7 @@
 '''
 Classes that manage file clients
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import python libs
 import contextlib
@@ -504,7 +504,7 @@ class Client(object):
                     'Path \'{0}\' is not absolute'.format(url_path)
                 )
             if dest is None:
-                with salt.utils.files.fopen(url_path, 'r') as fp_:
+                with salt.utils.files.fopen(url_path, 'rb') as fp_:
                     data = fp_.read()
                 return data
             return url_path
@@ -512,7 +512,7 @@ class Client(object):
         if url_scheme == 'salt':
             result = self.get_file(url, dest, makedirs, saltenv, cachedir=cachedir)
             if result and dest is None:
-                with salt.utils.files.fopen(result, 'r') as fp_:
+                with salt.utils.files.fopen(result, 'rb') as fp_:
                     data = fp_.read()
                 return data
             return result
@@ -1232,7 +1232,7 @@ class RemoteClient(Client):
                     data_type = type(data).__name__
                 except AttributeError:
                     # Shouldn't happen, but don't let this cause a traceback.
-                    data_type = str(type(data))
+                    data_type = six.text_type(type(data))
                 transport_tries += 1
                 log.warning(
                     'Data transport is broken, got: %s, type: %s, '
