@@ -258,7 +258,8 @@ def present(name,
         try:
             # map values passed from the state to the build args
             build_args['path'] = build
-            build_args['image'] = full_image
+            build_args['repository'] = name
+            build_args['tag'] = tag
             build_args['dockerfile'] = dockerfile
             image_update = __salt__['docker.build'](**build_args)
         except Exception as exc:
@@ -325,7 +326,7 @@ def present(name,
     try:
         __salt__['docker.inspect_image'](full_image)
         error = False
-    except CommandExecutionError:
+    except CommandExecutionError as exc:
         msg = exc.__str__()
         if '404' not in msg:
             error = 'Failed to inspect image \'{0}\' after it was {1}: {2}'.format(
