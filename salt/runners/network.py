@@ -4,14 +4,14 @@ Network tools to run from the Master
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import socket
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.network
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -33,8 +33,9 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
     try:
         with salt.utils.files.fopen(maclist, 'r') as ifile:
             for mac in ifile:
-                wol(mac.strip(), bcast, destport)
-                print('Waking up {0}'.format(mac.strip()))
+                mac = salt.utils.stringutils.to_unicode(mac).strip()
+                wol(mac, bcast, destport)
+                print('Waking up {0}'.format(mac))
                 ret.append(mac)
     except Exception as err:
         __jid_event__.fire_event({'error': 'Failed to open the MAC file. Error: {0}'.format(err)}, 'progress')
@@ -78,7 +79,8 @@ def wolmatch(tgt, tgt_type='glob', bcast='255.255.255.255', destport=9):
         for iface, mac in minion['hwaddr_interfaces'].items():
             if iface == 'lo':
                 continue
+            mac = mac.strip()
             wol(mac, bcast, destport)
-            log.info('Waking up {0}'.format(mac.strip()))
+            log.info('Waking up %s', mac)
             ret.append(mac)
     return ret
