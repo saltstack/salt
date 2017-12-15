@@ -362,7 +362,12 @@ def system_types():
     return ret
 
 
-def is_fstype(fs_type):
+def _is_fstype(fs_type):
+    '''
+    Ensure that file system type is supported by this module
+    :param fs_type: file system type
+    :return: True if fs_type is supported by this module
+    '''
     return fs_type in set(['ext2', 'ext3', 'ext4', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                            'hfs', 'hfs+', 'hfsx', 'NTFS', 'ntfs', 'ufs'])
 
@@ -381,7 +386,7 @@ def mkfs(device, fs_type):
     '''
     _validate_device(device)
 
-    if not is_fstype(fs_type):
+    if not _is_fstype(fs_type):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
 
     if fs_type == 'NTFS':
@@ -442,7 +447,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
             'Invalid part_type passed to partition.mkpart'
         )
 
-    if not is_fstype(fs_type):
+    if not _is_fstype(fs_type):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpart'
         )
@@ -488,7 +493,7 @@ def mkpartfs(device, part_type, fs_type, start, end):
             'Invalid part_type passed to partition.mkpartfs'
         )
 
-    if not is_fstype(fs_type):
+    if not _is_fstype(fs_type):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpartfs'
         )
