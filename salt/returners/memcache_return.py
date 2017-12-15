@@ -45,7 +45,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return memcache --return_kwargs '{"host": "hostname.domain.com"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import json
@@ -99,7 +99,7 @@ def _get_serv(ret):
     host = _options.get('host')
     port = _options.get('port')
 
-    log.debug('memcache server: {0}:{1}'.format(host, port))
+    log.debug('memcache server: %s:%s', host, port)
     if not host or not port:
         log.error('Host or port not defined in salt config')
         return

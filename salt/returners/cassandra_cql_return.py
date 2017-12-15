@@ -117,9 +117,7 @@ needs.  SaltStack has seen situations where these timeouts can resolve
 some stacktraces that appear to come from the Datastax Python driver.
 
 '''
-from __future__ import absolute_import
-# Let's not allow PyLint complain about string substitution
-# pylint: disable=W1321,E1321
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import json
@@ -132,6 +130,7 @@ import salt.returners
 import salt.utils.jid
 import salt.exceptions
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 # Import third party libs
 try:
@@ -210,7 +209,7 @@ def returner(ret):
         log.critical('Could not insert into salt_returns with Cassandra returner.')
         raise
     except Exception as e:
-        log.critical('Unexpected error while inserting into salt_returns: {0}'.format(str(e)))
+        log.critical('Unexpected error while inserting into salt_returns: %s', e)
         raise
 
     # Store the last function called by the minion
@@ -234,7 +233,10 @@ def returner(ret):
         log.critical('Could not store minion ID with Cassandra returner.')
         raise
     except Exception as e:
-        log.critical('Unexpected error while inserting minion ID into the minions table: {0}'.format(str(e)))
+        log.critical(
+            'Unexpected error while inserting minion ID into the minions '
+            'table: %s', e
+        )
         raise
 
 
@@ -258,7 +260,7 @@ def event_return(events):
                    ) VALUES (
                      ?, ?, ?, ?, ?)
                  '''
-        statement_arguments = [str(uuid.uuid1()),
+        statement_arguments = [six.text_type(uuid.uuid1()),
                                int(time.time() * 1000),
                                json.dumps(data).replace("'", "''"),
                                __opts__['id'],
@@ -273,7 +275,8 @@ def event_return(events):
             log.critical('Could not store events with Cassandra returner.')
             raise
         except Exception as e:
-            log.critical('Unexpected error while inserting into salt_events: {0}'.format(str(e)))
+            log.critical(
+                'Unexpected error while inserting into salt_events: %s', e)
             raise
 
 
@@ -302,7 +305,7 @@ def save_load(jid, load, minions=None):
         log.critical('Could not save load in jids table.')
         raise
     except Exception as e:
-        log.critical('Unexpected error while inserting into jids: {0}'.format(str(e)))
+        log.critical('Unexpected error while inserting into jids: %s', e)
         raise
 
 
@@ -333,7 +336,7 @@ def get_load(jid):
         log.critical('Could not get load from jids table.')
         raise
     except Exception as e:
-        log.critical('Unexpected error while getting load from jids: {0}'.format(str(e)))
+        log.critical('Unexpected error while getting load from jids: %s', e)
         raise
 
     return ret
@@ -361,7 +364,8 @@ def get_jid(jid):
         log.critical('Could not select job specific information.')
         raise
     except Exception as e:
-        log.critical('Unexpected error while getting job specific information: {0}'.format(str(e)))
+        log.critical(
+            'Unexpected error while getting job specific information: %s', e)
         raise
 
     return ret
@@ -389,7 +393,8 @@ def get_fun(fun):
         log.critical('Could not get the list of minions.')
         raise
     except Exception as e:
-        log.critical('Unexpected error while getting list of minions: {0}'.format(str(e)))
+        log.critical(
+            'Unexpected error while getting list of minions: %s', e)
         raise
 
     return ret
@@ -417,7 +422,8 @@ def get_jids():
         log.critical('Could not get a list of all job ids.')
         raise
     except Exception as e:
-        log.critical('Unexpected error while getting list of all job ids: {0}'.format(str(e)))
+        log.critical(
+            'Unexpected error while getting list of all job ids: %s', e)
         raise
 
     return ret
@@ -444,7 +450,8 @@ def get_minions():
         log.critical('Could not get the list of minions.')
         raise
     except Exception as e:
-        log.critical('Unexpected error while getting list of minions: {0}'.format(str(e)))
+        log.critical(
+            'Unexpected error while getting list of minions: %s', e)
         raise
 
     return ret
