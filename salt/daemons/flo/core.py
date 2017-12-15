@@ -18,7 +18,9 @@ from _socket import gaierror
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
+import salt.utils.kinds as kinds
 import salt.utils.process
+import salt.utils.stringutils
 import salt.transport
 import salt.engines
 
@@ -32,7 +34,7 @@ from raet.lane.stacking import LaneStack
 from salt import daemons
 from salt.daemons import salting
 from salt.exceptions import SaltException
-from salt.utils import kinds, is_windows
+from salt.utils.platform import is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
@@ -59,7 +61,7 @@ try:
 except ImportError:
     pass
 # pylint: disable=no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -398,7 +400,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                      kind=kinds.applKinds.master))
                     except gaierror as ex:
                         log.warning("Unable to connect to master {0}: {1}".format(mha, ex))
-                        if self.opts.value.get('master_type') != 'failover':
+                        if self.opts.value.get(u'master_type') not in (u'failover', u'distributed'):
                             raise ex
                 if not stack.remotes:
                     raise ex
@@ -668,7 +670,7 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
                     )
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
-            rss, vms = psutil.Process(os.getpid()).memory_info()
+            rss, vms = psutil.Process(os.getpid()).memory_info()[:2]
             mem_limit = rss + vms + self.opts.value['modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         elif self.opts.value.get('modules_max_memory', -1) > 0:
@@ -735,7 +737,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                  'dst': (master.name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
-                'saltenv': self.opts.value['environment'],
+                'saltenv': self.opts.value['saltenv'],
                 'ver': '2',
                 'cmd': '_pillar'}
         self.road_stack.value.transmit({'route': route, 'load': load},
@@ -865,7 +867,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         self.presence_req.value = deque()
         self.stats_req.value = deque()
         self.publish.value = deque()
-        self.worker_verify.value = salt.utils.rand_string()
+        self.worker_verify.value = salt.utils.stringutils.random()
         if self.opts.value.get('worker_threads'):
             worker_seed = []
             for index in range(self.opts.value['worker_threads']):

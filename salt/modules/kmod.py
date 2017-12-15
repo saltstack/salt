@@ -10,7 +10,7 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +123,16 @@ def available():
         salt '*' kmod.available
     '''
     ret = []
+
     mod_dir = os.path.join('/lib/modules/', os.uname()[2])
+
+    built_in_file = os.path.join(mod_dir, 'modules.builtin')
+    if os.path.exists(built_in_file):
+        with salt.utils.files.fopen(built_in_file, 'r') as f:
+            for line in f:
+                # Strip .ko from the basename
+                ret.append(os.path.basename(line)[:-4])
+
     for root, dirs, files in os.walk(mod_dir):
         for fn_ in files:
             if '.ko' in fn_:
@@ -201,7 +210,7 @@ def mod_list(only_persist=False):
         conf = _get_modules_conf()
         if os.path.exists(conf):
             try:
-                with salt.utils.fopen(conf, 'r') as modules_file:
+                with salt.utils.files.fopen(conf, 'r') as modules_file:
                     for line in modules_file:
                         line = line.strip()
                         mod_name = _strip_module_name(line)

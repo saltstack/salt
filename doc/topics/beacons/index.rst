@@ -34,7 +34,7 @@ monitored, everything is configured using Salt.
 
 Beacons are typically enabled by placing a ``beacons:`` top level block in
 ``/etc/salt/minion`` or any file in ``/etc/salt/minion.d/`` such as
-``/etc/salt/minion.d/beacons.conf``:
+``/etc/salt/minion.d/beacons.conf`` or add it to pillars for that minion:
 
 .. code-block:: yaml
 

@@ -71,7 +71,7 @@ import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
     import win32com.client
@@ -81,8 +81,9 @@ except ImportError:
     HAS_DEPENDENCIES = False
 # pylint: enable=import-error
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES:
+    if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
         return True
     return False
 
@@ -179,14 +180,14 @@ class PyWinUpdater(object):
         try:
             for update in self.search_results.Updates:
                 if update.InstallationBehavior.CanRequestUserInput:
-                    log.debug(u'Skipped update {0}'.format(update.title))
+                    log.debug('Skipped update {0}'.format(update.title))
                     continue
                 for category in update.Categories:
                     if self.skipDownloaded and update.IsDownloaded:
                         continue
                     if self.categories is None or category.Name in self.categories:
                         self.download_collection.Add(update)
-                        log.debug(u'added update {0}'.format(update.title))
+                        log.debug('added update {0}'.format(update.title))
             self.foundCategories = _gather_update_categories(self.download_collection)
             return True
         except Exception as exc:
@@ -259,7 +260,7 @@ class PyWinUpdater(object):
         try:
             for update in self.search_results.Updates:
                 if not update.EulaAccepted:
-                    log.debug(u'Accepting EULA: {0}'.format(update.Title))
+                    log.debug('Accepting EULA: {0}'.format(update.Title))
                     update.AcceptEula()
         except Exception as exc:
             log.info('Accepting Eula failed: {0}'.format(exc))
@@ -465,7 +466,7 @@ def installed(name, categories=None, skips=None, retries=10):
     deprecation_msg = 'The \'win_update\' module is deprecated, and will be ' \
                       'removed in Salt Fluorine. Please use the \'win_wua\' ' \
                       'module instead.'
-    salt.utils.warn_until('Fluorine', deprecation_msg)
+    salt.utils.versions.warn_until('Fluorine', deprecation_msg)
     ret.setdefault('warnings', []).append(deprecation_msg)
     if not categories:
         categories = [name]
@@ -549,7 +550,7 @@ def downloaded(name, categories=None, skips=None, retries=10):
     deprecation_msg = 'The \'win_update\' module is deprecated, and will be ' \
                       'removed in Salt Fluorine. Please use the \'win_wua\' ' \
                       'module instead.'
-    salt.utils.warn_until('Fluorine', deprecation_msg)
+    salt.utils.versions.warn_until('Fluorine', deprecation_msg)
     ret.setdefault('warnings', []).append(deprecation_msg)
 
     if not categories:

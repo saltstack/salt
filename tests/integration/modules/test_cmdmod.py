@@ -15,13 +15,13 @@ from tests.support.helpers import (
 )
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
-AVAILABLE_PYTHON_EXECUTABLE = salt.utils.which_bin([
+AVAILABLE_PYTHON_EXECUTABLE = salt.utils.path.which_bin([
     'python',
     'python2',
     'python2.6',
@@ -187,6 +187,34 @@ class CMDModuleTest(ModuleCase):
                                             code]).rstrip(),
                          'cheese')
 
+    def test_exec_code_with_single_arg(self):
+        '''
+        cmd.exec_code
+        '''
+        code = textwrap.dedent('''\
+               import sys
+               sys.stdout.write(sys.argv[1])''')
+        arg = 'cheese'
+        self.assertEqual(self.run_function('cmd.exec_code',
+                                           [AVAILABLE_PYTHON_EXECUTABLE,
+                                            code],
+                                           args=arg).rstrip(),
+                         arg)
+
+    def test_exec_code_with_multiple_args(self):
+        '''
+        cmd.exec_code
+        '''
+        code = textwrap.dedent('''\
+               import sys
+               sys.stdout.write(sys.argv[1])''')
+        arg = 'cheese'
+        self.assertEqual(self.run_function('cmd.exec_code',
+                                           [AVAILABLE_PYTHON_EXECUTABLE,
+                                            code],
+                                           args=[arg, 'test']).rstrip(),
+                         arg)
+
     def test_quotes(self):
         '''
         cmd.run with quoted command
@@ -234,3 +262,57 @@ class CMDModuleTest(ModuleCase):
                                 f_timeout=2,
                                 python_shell=True)
         self.assertEqual(out, 'hello')
+
+    def test_hide_output(self):
+        '''
+        Test the hide_output argument
+        '''
+        ls_command = [u'ls', u'/'] \
+            if not salt.utils.platform.is_windows() \
+            else [u'dir', u'c:\\']
+
+        error_command = ['thiscommanddoesnotexist']
+
+        # cmd.run
+        out = self.run_function(
+            u'cmd.run',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out, u'')
+
+        # cmd.shell
+        out = self.run_function(
+            u'cmd.shell',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out, u'')
+
+        # cmd.run_stdout
+        out = self.run_function(
+            u'cmd.run_stdout',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out, u'')
+
+        # cmd.run_stderr
+        out = self.run_function(
+            u'cmd.shell',
+            error_command,
+            hide_output=True)
+        self.assertEqual(out, u'')
+
+        # cmd.run_all (command should have produced stdout)
+        out = self.run_function(
+            u'cmd.run_all',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out['stdout'], u'')
+        self.assertEqual(out['stderr'], u'')
+
+        # cmd.run_all (command should have produced stderr)
+        out = self.run_function(
+            u'cmd.run_all',
+            error_command,
+            hide_output=True)
+        self.assertEqual(out['stdout'], u'')
+        self.assertEqual(out['stderr'], u'')

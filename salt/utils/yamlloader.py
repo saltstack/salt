@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Custom YAML loading in Salt
+'''
+
 # Import python libs
 from __future__ import absolute_import
 import warnings
@@ -37,17 +41,17 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
     to make things like sls file more intuitive.
     '''
     def __init__(self, stream, dictclass=dict):
-        yaml.SafeLoader.__init__(self, stream)
+        super(SaltYamlSafeLoader, self).__init__(stream)
         if dictclass is not dict:
             # then assume ordered dict and use it for both !map and !omap
             self.add_constructor(
-                u'tag:yaml.org,2002:map',
+                'tag:yaml.org,2002:map',
                 type(self).construct_yaml_map)
             self.add_constructor(
-                u'tag:yaml.org,2002:omap',
+                'tag:yaml.org,2002:omap',
                 type(self).construct_yaml_map)
         self.add_constructor(
-            u'tag:yaml.org,2002:python/unicode',
+            'tag:yaml.org,2002:python/unicode',
             type(self).construct_unicode)
         self.dictclass = dictclass
 
@@ -115,7 +119,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
         while index < len(node.value):
             key_node, value_node = node.value[index]
 
-            if key_node.tag == u'tag:yaml.org,2002:merge':
+            if key_node.tag == 'tag:yaml.org,2002:merge':
                 del node.value[index]
                 if isinstance(value_node, MappingNode):
                     self.flatten_mapping(value_node)
@@ -138,8 +142,8 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
                                            node.start_mark,
                                            "expected a mapping or list of mappings for merging, but found {0}".format(value_node.id),
                                            value_node.start_mark)
-            elif key_node.tag == u'tag:yaml.org,2002:value':
-                key_node.tag = u'tag:yaml.org,2002:str'
+            elif key_node.tag == 'tag:yaml.org,2002:value':
+                key_node.tag = 'tag:yaml.org,2002:str'
                 index += 1
             else:
                 index += 1

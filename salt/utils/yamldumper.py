@@ -17,6 +17,7 @@ except ImportError:
 
 import yaml
 import collections
+
 from salt.utils.odict import OrderedDict
 
 try:
@@ -25,6 +26,17 @@ try:
 except ImportError:
     odict = None
     HAS_IOFLO = False
+
+
+class IndentMixin(Dumper):
+    '''
+    Mixin that improves YAML dumped list readability
+    by indenting them by two spaces,
+    instead of being flush with the key they are under.
+    '''
+
+    def increase_indent(self, flow=False, indentless=False):
+        return super(IndentMixin, self).increase_indent(flow, False)
 
 
 class OrderedDumper(Dumper):
@@ -37,6 +49,14 @@ class SafeOrderedDumper(SafeDumper):
     '''
     A YAML safe dumper that represents python OrderedDict as simple YAML map.
     '''
+
+
+class IndentedSafeOrderedDumper(IndentMixin, SafeOrderedDumper):
+    '''
+    A YAML safe dumper that represents python OrderedDict as simple YAML map,
+    and also indents lists by two spaces.
+    '''
+    pass
 
 
 def represent_ordereddict(dumper, data):
@@ -58,6 +78,14 @@ SafeOrderedDumper.add_representer(
 if HAS_IOFLO:
     OrderedDumper.add_representer(odict, represent_ordereddict)
     SafeOrderedDumper.add_representer(odict, represent_ordereddict)
+
+
+def get_dumper(dumper_name):
+    return {
+        'OrderedDumper': OrderedDumper,
+        'SafeOrderedDumper': SafeOrderedDumper,
+        'IndentedSafeOrderedDumper': IndentedSafeOrderedDumper,
+    }.get(dumper_name)
 
 
 def safe_dump(data, stream=None, **kwargs):

@@ -15,14 +15,17 @@ from contextlib import closing
 # Import salt libs
 import salt.client.ssh.shell
 import salt.client.ssh
-import salt.utils
 import salt.utils.files
 import salt.utils.thin
 import salt.utils.url
+import salt.utils.verify
 import salt.roster
 import salt.state
 import salt.loader
 import salt.minion
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +81,7 @@ class SSHHighState(salt.state.BaseHighState):
         '''
         return
 
-    def _ext_nodes(self):
+    def _master_tops(self):
         '''
         Evaluate master_tops locally
         '''
@@ -102,10 +105,8 @@ class SSHHighState(salt.state.BaseHighState):
             except Exception as exc:
                 # If anything happens in the top generation, log it and move on
                 log.error(
-                    'Top function {0} failed with error {1} for minion '
-                    '{2}'.format(
-                        fun, exc, self.opts['id']
-                    )
+                    'Top function %s failed with error %s for minion %s',
+                    fun, exc, self.opts['id']
                 )
         return ret
 
@@ -146,7 +147,7 @@ def salt_refs(data, ret=None):
     proto = 'salt://'
     if ret is None:
         ret = []
-    if isinstance(data, str):
+    if isinstance(data, six.string_types):
         if data.startswith(proto) and data not in ret:
             ret.append(data)
     if isinstance(data, list):
@@ -158,7 +159,7 @@ def salt_refs(data, ret=None):
     return ret
 
 
-def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None):
+def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, roster_grains=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure
@@ -167,6 +168,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None):
     trans_tar = salt.utils.files.mkstemp()
     lowfn = os.path.join(gendir, 'lowstate.json')
     pillarfn = os.path.join(gendir, 'pillar.json')
+    roster_grainsfn = os.path.join(gendir, 'roster_grains.json')
     sync_refs = [
             [salt.utils.url.create('_modules')],
             [salt.utils.url.create('_states')],
@@ -176,11 +178,14 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None):
             [salt.utils.url.create('_output')],
             [salt.utils.url.create('_utils')],
             ]
-    with salt.utils.fopen(lowfn, 'w+') as fp_:
+    with salt.utils.files.fopen(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
     if pillar:
-        with salt.utils.fopen(pillarfn, 'w+') as fp_:
+        with salt.utils.files.fopen(pillarfn, 'w+') as fp_:
             fp_.write(json.dumps(pillar))
+    if roster_grains:
+        with salt.utils.files.fopen(roster_grainsfn, 'w+') as fp_:
+            fp_.write(json.dumps(roster_grains))
 
     if id_ is None:
         id_ = ''

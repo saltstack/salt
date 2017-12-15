@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from salt.ext.six.moves import map
-
 '''
 CSF Ip tables management
 ========================
@@ -17,6 +14,9 @@ CSF Ip tables management
         ip: 1.2.3.4
         method: allow
 '''  # pylint: disable=W0105
+
+from __future__ import absolute_import
+from salt.ext.six.moves import map
 
 
 def __virtual__():

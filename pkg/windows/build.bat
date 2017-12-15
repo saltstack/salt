@@ -89,7 +89,7 @@ if Defined x (
 if %Python%==2 (
     Set "PyDir=C:\Python27"
 ) else (
-    Set "PyDir=C:\Program Files\Python35"
+    Set "PyDir=C:\Python35"
 )
 Set "PATH=%PATH%;%PyDir%;%PyDir%\Scripts"
 

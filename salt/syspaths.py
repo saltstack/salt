@@ -33,7 +33,7 @@ except ImportError:
     import types
     __generated_syspaths = types.ModuleType('salt._syspaths')
     for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
-                'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR',
+                'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
                 'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
                 'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
                 'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH',
@@ -135,6 +135,10 @@ if SPM_PILLAR_PATH is None:
 SPM_REACTOR_PATH = __generated_syspaths.SPM_REACTOR_PATH
 if SPM_REACTOR_PATH is None:
     SPM_REACTOR_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'reactor')
+
+HOME_DIR = __generated_syspaths.HOME_DIR
+if HOME_DIR is None:
+    HOME_DIR = os.path.expanduser('~')
 
 
 __all__ = [
