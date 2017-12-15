@@ -144,7 +144,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return pgjsonb --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
@@ -247,7 +247,7 @@ def _get_serv(ret=None, commit=False):
         yield cursor
     except psycopg2.DatabaseError as err:
         error = err.args
-        sys.stderr.write(str(error))
+        sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
         raise err
     else:
