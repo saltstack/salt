@@ -214,3 +214,52 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_cron(self):
+        '''
+        verify that scheduled job runs
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'cron': '0 16 29 11 *'
+            }
+          }
+        }
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        with patch('croniter.croniter.get_next', MagicMock(return_value=run_time)):
+            self.schedule.eval(now=run_time)
+
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_cron_loop_interval(self):
+        '''
+        verify that scheduled job runs
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'cron': '0 16 29 11 *'
+            }
+          }
+        }
+        # Randomn second loop interval
+        LOOP_INTERVAL = random.randint(0, 59)
+        self.schedule.opts['loop_interval'] = LOOP_INTERVAL
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        with patch('croniter.croniter.get_next', MagicMock(return_value=run_time)):
+            self.schedule.eval(now=run_time)
+
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
