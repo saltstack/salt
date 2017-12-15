@@ -73,6 +73,8 @@ def present(name,
             sls=None,
             base='opensuse/python',
             saltenv='base',
+            pillarenv=None,
+            pillar=None,
             **kwargs):
     '''
     .. versionchanged:: Oxygen
@@ -178,13 +180,34 @@ def present(name,
         Base image with which to start :py:func:`docker.sls_build
         <salt.modules.dockermod.sls_build>`
 
-        .. versionadded: 2017.7.0
+        .. versionadded:: 2017.7.0
 
     saltenv
-        Environment from which to pull SLS files for :py:func:`docker.sls_build
-        <salt.modules.dockermod.sls_build>`
+        Specify the environment from which to retrieve the SLS indicated by the
+        `mods` parameter.
 
-        .. versionadded: 2017.7.0
+        .. versionadded:: 2017.7.0
+        .. versionchanged:: Oxygen
+            Now uses the effective saltenv if not explicitly passed. In earlier
+            versions, ``base`` was assumed as a default.
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+        .. versionadded:: Oxygen
+
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
+        .. versionadded:: Oxygen
     '''
     ret = {'name': name,
            'changes': {},
@@ -273,12 +296,15 @@ def present(name,
             ret['changes'] = image_update
 
     elif sls:
+        _locals = locals()
+        sls_build_kwargs = {k: _locals[k] for k in ('saltenv', 'pillarenv', 'pillar')
+                            if _locals[k] is not None}
         try:
             image_update = __salt__['docker.sls_build'](repository=name,
                                                         tag=tag,
                                                         base=base,
                                                         mods=sls,
-                                                        saltenv=saltenv)
+                                                        **sls_build_kwargs)
         except Exception as exc:
             ret['comment'] = (
                 'Encountered error using SLS {0} for building {1}: {2}'

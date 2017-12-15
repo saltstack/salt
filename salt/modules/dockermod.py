@@ -6466,26 +6466,6 @@ def _compile_state(mods=None, saltenv='base'):
     return st_.state.compile_high_data(high_data)
 
 
-def _gather_pillar(pillarenv, pillar_override, **grains):
-    '''
-    Gathers pillar with a custom set of grains, which should
-    be first retrieved from the container
-    '''
-    pillar = salt.pillar.get_pillar(
-        __opts__,
-        grains,
-        # Not sure if these two are correct
-        __opts__['id'],
-        __opts__['saltenv'],
-        pillar_override=pillar_override,
-        pillarenv=pillarenv
-    )
-    ret = pillar.compile_pillar()
-    if pillar_override and isinstance(pillar_override, dict):
-        ret.update(pillar_override)
-    return ret
-
-
 def call(name, function, *args, **kwargs):
     '''
     Executes a Salt function inside a running container
@@ -6574,7 +6554,7 @@ def call(name, function, *args, **kwargs):
         run_all(name, subprocess.list2cmdline(rm_thin_argv))
 
 
-def sls(name, mods=None, saltenv='base', **kwargs):
+def sls(name, mods=None, **kwargs):
     '''
     Apply the states defined by the specified SLS modules to the running
     container
@@ -6594,6 +6574,24 @@ def sls(name, mods=None, saltenv='base', **kwargs):
         Specify the environment from which to retrieve the SLS indicated by the
         `mods` parameter.
 
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+        .. versionadded:: Oxygen
+
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
+        .. versionadded:: Oxygen
+
     CLI Example:
 
     .. code-block:: bash
@@ -6603,13 +6601,30 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     '''
     mods = [item.strip() for item in mods.split(',')] if mods else []
 
+    # Figure out the saltenv/pillarenv to use
+    pillar_override = kwargs.pop('pillar', None)
+    if 'saltenv' not in kwargs:
+        kwargs['saltenv'] = 'base'
+    sls_opts = __utils__['state.get_sls_opts'](__opts__, **kwargs)
+
     # gather grains from the container
     grains = call(name, 'grains.items')
 
     # compile pillar with container grains
-    pillar = _gather_pillar(saltenv, {}, **grains)
+    pillar = salt.pillar.get_pillar(
+        __opts__,
+        grains,
+        __opts__['id'],
+        pillar_override=pillar_override,
+        pillarenv=sls_opts['pillarenv']).compile_pillar()
+    if pillar_override and isinstance(pillar_override, dict):
+        pillar.update(pillar_override)
 
-    trans_tar = _prepare_trans_tar(name, mods=mods, saltenv=saltenv, pillar=pillar)
+    trans_tar = _prepare_trans_tar(
+        name,
+        mods=mods,
+        saltenv=sls_opts['saltenv'],
+        pillar=pillar)
 
     # where to put the salt trans tar
     trans_dest_path = _generate_tmp_path()
@@ -6659,7 +6674,6 @@ def sls_build(repository,
               tag='latest',
               base='opensuse/python',
               mods=None,
-              saltenv='base',
               dryrun=False,
               **kwargs):
     '''
@@ -6698,6 +6712,24 @@ def sls_build(repository,
     saltenv : base
         Specify the environment from which to retrieve the SLS indicated by the
         `mods` parameter.
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+        .. versionadded:: Oxygen
+
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
+        .. versionadded:: Oxygen
 
     dryrun: False
         when set to True the container will not be commited at the end of
@@ -6742,7 +6774,7 @@ def sls_build(repository,
         start_(id_)
 
         # Now execute the state into the container
-        ret = sls(id_, mods, saltenv, **kwargs)
+        ret = sls(id_, mods, **kwargs)
         # fail if the state was not successful
         if not dryrun and not __utils__['state.check_result'](ret):
             raise CommandExecutionError(ret)
