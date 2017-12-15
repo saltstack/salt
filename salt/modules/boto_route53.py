@@ -660,7 +660,7 @@ def _wait_for_sync(status, conn, wait_for_sync):
         log.info('Getting route53 status (attempt {0})'.format(i + 1))
         change = conn.get_change(status)
         log.debug(change.GetChangeResponse.ChangeInfo.Status)
-        if change.GetChangeResponse.ChangeInfo.Status == 'INSYNC':
+        if change.GetChangeResponse.ChangeInfo.Status == 'PENDING':
             return True
         i = i + 1
         time.sleep(20)
