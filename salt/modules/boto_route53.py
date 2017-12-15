@@ -754,44 +754,71 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
             raise e
 
 
-def _wait_for_sync(status, conn, wait_for_sync):
-    if not wait_for_sync:
+def _try_func(conn, func, **args):
+    tries = 30
+    while True:
+        try:
+            return getattr(conn, func)(**args)
+        except AttributeError as e:
+            # Don't include **args in log messages - security concern.
+            log.error('Function `{0}()` not found for AWS connection object '
+                      '{1}'.format(func, conn))
+            return None
+        except DNSServerError as e:
+            if tries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API.  Will retry in 5 seconds')
+                time.sleep(5)
+                tries -= 1
+                continue
+            log.error('Failed calling {0}(): {1}'.format(func, str(e)))
+            return None
+
+
+def _wait_for_sync(status, conn, wait=True):
+    ### Wait should be a bool or an integer
+    if wait is True:
+        wait = 600
+    if not wait:
         return True
-    retry = 10
-    i = 0
-    while i < retry:
-        log.info('Getting route53 status (attempt {0})'.format(i + 1))
+    orig_wait = wait
+    log.info('Waiting up to {0} seconds for Route53 changes to synchronize'.format(orig_wait))
+    while wait > 0:
         change = conn.get_change(status)
-        log.debug(change.GetChangeResponse.ChangeInfo.Status)
-        if change.GetChangeResponse.ChangeInfo.Status == 'INSYNC':
+        current = change.GetChangeResponse.ChangeInfo.Status
+        if current == 'INSYNC':
             return True
-        i = i + 1
-        time.sleep(20)
-    log.error('Timed out waiting for Route53 status update.')
+        sleep = wait if wait % 60 == wait else 60
+        log.info('Sleeping {0} seconds waiting for changes to synch (current status {1})'.format(
+                 sleep, current))
+        time.sleep(sleep)
+        wait -= sleep
+        continue
+    log.error('Route53 changes not synced after {0} seconds.'.format(orig_wait))
     return False
 
 
-def create_hosted_zone(domain_name, caller_ref=None, comment='',
-                       private_zone=False, vpc_id=None, vpc_name=None,
-                       vpc_region=None, region=None, key=None, keyid=None,
+def create_hosted_zone(domain_name, caller_ref=None, comment='', private_zone=False, vpc_id=None,
+                       vpc_name=None, vpc_region=None, region=None, key=None, keyid=None,
                        profile=None):
     '''
-    Create a new Route53 Hosted Zone. Returns a Python data structure with
-    information about the newly created Hosted Zone.
+    Create a new Route53 Hosted Zone. Returns a Python data structure with information about the
+    newly created Hosted Zone.
 
     domain_name
-        The name of the domain. This should be a fully-specified domain, and
-        should terminate with a period. This is the name you have registered
-        with your DNS registrar. It is also the name you will delegate from your
-        registrar to the Amazon Route 53 delegation servers returned in response
+        The name of the domain. This must be fully-qualified, terminating with a period.  This is
+        the name you have registered with your domain registrar.  It is also the name you will
+        delegate from your registrar to the Amazon Route 53 delegation servers returned in response
         to this request.
 
     caller_ref
-        A unique string that identifies the request and that allows
-        create_hosted_zone() calls to be retried without the risk of executing
-        the operation twice.  You want to provide this where possible, since
-        additional calls while the first is in PENDING status will be accepted
-        and can lead to multiple copies of the zone being created in Route53.
+        A unique string that identifies the request and that allows create_hosted_zone() calls to
+        be retried without the risk of executing the operation twice.  It can take several minutes
+        for the change to replicate globally, and change from PENDING to INSYNC status. Thus it's
+        best to provide some value for this where possible, since duplicate calls while the first
+        is in PENDING status will be accepted and can lead to multiple copies of the zone being
+        created.  On the other hand, if a zone is created with a given caller_ref, then deleted,
+        a second attempt to create a zone with the same caller_ref will fail until that caller_ref
+        is flushed from the Route53 system, which can take upwards of 24 hours.
 
     comment
         Any comments you want to include about the hosted zone.
@@ -800,33 +827,30 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='',
         Set True if creating a private hosted zone.
 
     vpc_id
-        When creating a private hosted zone, either the VPC ID or VPC Name to
-        associate with is required.  Exclusive with vpe_name.  Ignored if passed
-        for a non-private zone.
+        When creating a private hosted zone, either the VPC ID or VPC Name to associate with is
+        required.  Exclusive with vpe_name.  Ignored when creating a non-private zone.
 
     vpc_name
-        When creating a private hosted zone, either the VPC ID or VPC Name to
-        associate with is required.  Exclusive with vpe_id.  Ignored if passed
-        for a non-private zone.
+        When creating a private hosted zone, either the VPC ID or VPC Name to associate with is
+        required.  Exclusive with vpe_id.  Ignored when creating a non-private zone.
 
     vpc_region
-        When creating a private hosted zone, the region of the associated VPC is
-        required.  If not provided, an effort will be made to determine it from
-        vpc_id or vpc_name, if possible.  If this fails, you'll need to provide
-        an explicit value for this option.  Ignored if passed for a non-private
-        zone.
+        When creating a private hosted zone, the region of the associated VPC is required.  If not
+        provided, an effort will be made to determine it from vpc_id or vpc_name, where possible.
+        If this fails, you'll need to provide an explicit value for this option.  Ignored when
+        creating a non-private zone.
 
     region
-        Region endpoint to connect to
+        Region endpoint to connect to.
 
     key
-        AWS key to bind with
+        AWS key to bind with.
 
     keyid
-        AWS keyid to bind with
+        AWS keyid to bind with.
 
     profile
-        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
 
     CLI Example::
 
@@ -879,24 +903,15 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='',
             log.info('Options vpc_id, vpc_name, and vpc_region are ignored '
                      'when creating non-private zones.')
 
-    retries = 10
-    while retries:
-        try:
-            # Crazy layers of dereference...
-            r = conn.create_hosted_zone(**args)
-            r = r.CreateHostedZoneResponse.__dict__ if hasattr(r,
-                    'CreateHostedZoneResponse') else {}
-            return r.get('parent', {}).get('CreateHostedZoneResponse')
-        except DNSServerError as e:
-            if retries:
-                if 'Throttling' == e.code:
-                    log.debug('Throttled by AWS API.')
-                elif 'PriorRequestNotComplete' == e.code:
-                    log.debug('The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request')
-                time.sleep(3)
-                retries -= 1
-                continue
-            log.error('Failed to create hosted zone {0}: {1}'.format(
-                    domain_name, e.message))
-            return None
+    r = _try_func(conn, 'create_hosted_zone', **args)
+    if r is None:
+        log.error('Failed to create hosted zone {0}'.format(domain_name))
+        return None
+    r = r.get('CreateHostedZoneResponse', {})
+    # Pop it since it'll be irrelevant by the time we return
+    status = r.pop('ChangeInfo', {}).get('Id', '').replace('/change/', '')
+    synced = _wait_for_sync(status, conn, wait=600)
+    if not synced:
+        log.error('Hosted zone {0} not synced after 600 seconds.'.format(domain_name))
+        return None
+    return r
