@@ -364,9 +364,9 @@ def system_types():
 
 def _is_fstype(fs_type):
     '''
-    Ensure that file system type is supported by this module
+    Check if file system type is supported in module
     :param fs_type: file system type
-    :return: True if fs_type is supported by this module
+    :return: True if fs_type is supported in this module, False otherwise
     '''
     return fs_type in set(['ext2', 'ext3', 'ext4', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                            'hfs', 'hfs+', 'hfsx', 'NTFS', 'ntfs', 'ufs'])
