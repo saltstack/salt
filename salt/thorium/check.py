@@ -6,7 +6,7 @@ succeed or fail based on the state of the register, this creates the pattern
 of having a command execution get gated by a check state via a requisite.
 '''
 # import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 import salt.utils.stringutils
@@ -252,7 +252,7 @@ def contains(name,
                         count_gte or count_gt or count_ne
         if count_compare:
             occurrences = __reg__[name]['val'].count(value)
-            log.debug('{} appears {} times'.format(value, occurrences))
+            log.debug('%s appears %s times', value, occurrences)
             ret['result'] = True
             if count_lt:
                 ret['result'] &= occurrences < count_lt

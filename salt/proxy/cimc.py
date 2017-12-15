@@ -60,7 +60,7 @@ The password used to login to the cimc host. Required.
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python Libs
 import logging
