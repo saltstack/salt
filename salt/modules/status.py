@@ -447,6 +447,9 @@ def meminfo():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: Oxygen
+        Added support for OpenBSD
+
     CLI Example:
 
     .. code-block:: bash
@@ -574,10 +577,25 @@ def meminfo():
 
         return ret
 
+    def openbsd_meminfo():
+        '''
+        openbsd specific implementation of meminfo
+        '''
+        vmstat = __salt__['cmd.run']('vmstat').splitlines()
+        # We're only interested in memory and page values which are printed
+        # as subsequent fields.
+        fields = ['active virtual pages', 'free list size', 'page faults',
+                  'pages reclaimed', 'pages paged in', 'pages paged out',
+                  'pages freed', 'pages scanned']
+        data = vmstat[2].split()[2:10]
+        ret = dict(zip(fields, data))
+        return ret
+
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_meminfo,
         'FreeBSD': freebsd_meminfo,
+        'OpenBSD': openbsd_meminfo,
         'AIX': aix_meminfo,
     }
 

@@ -235,3 +235,34 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=sysctl)}):
                     ret = status.cpuinfo()
                     self.assertDictEqual(ret, m.ret)
+
+    def _set_up_test_meminfo_openbsd(self):
+        class MockData(object):
+            '''
+            Store mock data
+            '''
+
+        m = MockData()
+        m.ret = {
+            'active virtual pages': '355M',
+            'free list size': '305M',
+            'page faults': '845',
+            'pages reclaimed': '1',
+            'pages paged in': '2',
+            'pages paged out': '3',
+            'pages freed': '4',
+            'pages scanned': '5'
+        }
+
+        return m
+
+    def test_meminfo_openbsd(self):
+        m = self._set_up_test_meminfo_openbsd()
+        vmstat = ' procs    memory       page                    disks    traps          cpu\n' \
+                 ' r   s   avm     fre  flt  re  pi  po  fr  sr cd0 sd0  int   sys   cs us sy id\n' \
+                 ' 2 103  355M    305M  845   1   2   3   4   5   0   1   21   682   86  1  1 98'
+
+        with patch.dict(status.__grains__, {'kernel': 'OpenBSD'}):
+            with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=vmstat)}):
+                ret = status.meminfo()
+                self.assertDictEqual(ret, m.ret)
