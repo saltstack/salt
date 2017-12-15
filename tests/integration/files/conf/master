@@ -8,7 +8,6 @@ worker_threads: 3
 pidfile: master.pid
 sock_dir: master_sock
 timeout: 12
-open_mode: True
 fileserver_list_cache_time: 0
 file_buffer_size: 8192
 file_recv: True
@@ -97,3 +96,6 @@ libcloud_dns:
     key: 12345
     secret: mysecret
     shopper_id: 12345
+
+autosign_grains_dir: autosign_grains
+autosign_file: autosign_file

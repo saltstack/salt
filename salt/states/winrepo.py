@@ -13,6 +13,7 @@ import itertools
 import salt.runner
 import salt.config
 import salt.syspaths
+import salt.utils.path
 
 
 def __virtual__():
@@ -69,7 +70,7 @@ def genrepo(name, force=False, allow_empty=False):
             ret['comment'] = '{0} is missing'.format(winrepo_cachefile)
         else:
             winrepo_cachefile_mtime = os.stat(winrepo_cachefile)[stat.ST_MTIME]
-            for root, dirs, files in os.walk(winrepo_dir):
+            for root, dirs, files in salt.utils.path.os_walk(winrepo_dir):
                 for name in itertools.chain(files, dirs):
                     full_path = os.path.join(root, name)
                     if os.stat(full_path)[stat.ST_MTIME] > winrepo_cachefile_mtime:

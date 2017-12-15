@@ -5,7 +5,7 @@ like, but also useful for basic http testing.
 
 .. versionadded:: 2015.5.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import logging
 

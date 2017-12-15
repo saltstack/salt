@@ -120,7 +120,7 @@ def _get_zone_etc_localtime():
             hash_type = __opts__.get('hash_type', 'md5')
             tzfile_hash = salt.utils.hashutils.get_hash(tzfile, hash_type)
             # Not a link, just a copy of the tzdata file
-            for root, dirs, files in os.walk(tzdir):
+            for root, dirs, files in salt.utils.path.os_walk(tzdir):
                 for filename in files:
                     full_path = os.path.join(root, filename)
                     olson_name = full_path[tzdir_len:]

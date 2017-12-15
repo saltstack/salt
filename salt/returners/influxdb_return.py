@@ -50,7 +50,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return influxdb --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import json
@@ -113,7 +113,10 @@ def _get_version(host, port, user, password):
         if influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]
     except Exception as ex:
-        log.critical('Failed to query InfluxDB version from HTTP API within InfluxDB returner: {0}'.format(ex))
+        log.critical(
+            'Failed to query InfluxDB version from HTTP API within InfluxDB '
+            'returner: %s', ex
+        )
     return version
 
 
@@ -187,7 +190,7 @@ def returner(ret):
     try:
         serv.write_points(req)
     except Exception as ex:
-        log.critical('Failed to store return with InfluxDB returner: {0}'.format(ex))
+        log.critical('Failed to store return with InfluxDB returner: %s', ex)
 
 
 def save_load(jid, load, minions=None):
@@ -224,7 +227,7 @@ def save_load(jid, load, minions=None):
     try:
         serv.write_points(req)
     except Exception as ex:
-        log.critical('Failed to store load with InfluxDB returner: {0}'.format(ex))
+        log.critical('Failed to store load with InfluxDB returner: %s', ex)
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
@@ -241,9 +244,9 @@ def get_load(jid):
     serv = _get_serv(ret=None)
     sql = "select load from jids where jid = '{0}'".format(jid)
 
-    log.debug(">> Now in get_load {0}".format(jid))
+    log.debug(">> Now in get_load %s", jid)
     data = serv.query(sql)
-    log.debug(">> Now Data: {0}".format(data))
+    log.debug(">> Now Data: %s", data)
     if data:
         return data
     return {}

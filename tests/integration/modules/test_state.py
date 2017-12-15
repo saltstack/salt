@@ -11,7 +11,7 @@ import time
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
+from tests.support.paths import TMP, TMP_PILLAR_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -590,6 +590,33 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         #ret = self.run_function('state.sls', mods='requisites.mixed_complex1')
         #result = self.normalize_ret(ret)
         #self.assertEqual(expected_result, result)
+
+    def test_watch_in(self):
+        '''
+        test watch_in requisite when there is a success
+        '''
+        ret = self.run_function('state.sls', mods='requisites.watch_in')
+        changes = 'test_|-return_changes_|-return_changes_|-succeed_with_changes'
+        watch = 'test_|-watch_states_|-watch_states_|-succeed_without_changes'
+
+        self.assertEqual(ret[changes]['__run_num__'], 0)
+        self.assertEqual(ret[watch]['__run_num__'], 2)
+
+        self.assertEqual('Watch statement fired.', ret[watch]['comment'])
+        self.assertEqual('Something pretended to change',
+                         ret[changes]['changes']['testing']['new'])
+
+    def test_watch_in_failure(self):
+        '''
+        test watch_in requisite when there is a failure
+        '''
+        ret = self.run_function('state.sls', mods='requisites.watch_in_failure')
+        fail = 'test_|-return_changes_|-return_changes_|-fail_with_changes'
+        watch = 'test_|-watch_states_|-watch_states_|-succeed_without_changes'
+
+        self.assertEqual(False, ret[fail]['result'])
+        self.assertEqual('One or more requisite failed: requisites.watch_in_failure.return_changes',
+                         ret[watch]['comment'])
 
     def normalize_ret(self, ret):
         '''
@@ -1634,7 +1661,104 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(state_run['file_|-test_file_|-/tmp/nonbase_env_|-managed']['result'])
         self.assertTrue(os.path.isfile('/tmp/nonbase_env'))
 
+    def _add_runtime_pillar(self, pillar):
+        '''
+        helper class to add pillar data at runtime
+        '''
+        import yaml
+        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE,
+                                                 'pillar.sls'), 'w') as fp:
+            fp.write(yaml.dump(pillar))
+
+        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     base:
+                       '*':
+                         - pillar
+                     '''))
+
+        self.run_function('saltutil.refresh_pillar')
+        self.run_function('test.sleep', [5])
+
+    def test_state_sls_id_test(self):
+        '''
+        test state.sls_id when test is set
+        to true in pillar data
+        '''
+        self._add_runtime_pillar(pillar={'test': True})
+        ret = self.run_function('state.sls', ['core'])
+
+        for key, val in ret.items():
+            self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is set to be changed')
+            self.assertEqual(val['changes'], {})
+
+    def test_state_sls_id_test_state_test_post_run(self):
+        '''
+        test state.sls_id when test is set to
+        true post the state already being run previously
+        '''
+        ret = self.run_function('state.sls', ['core'])
+        for key, val in ret.items():
+            self.assertEqual(val['comment'], 'File /tmp/salt-tests-tmpdir/testfile updated')
+            self.assertEqual(val['changes']['diff'], 'New file')
+
+        self._add_runtime_pillar(pillar={'test': True})
+        ret = self.run_function('state.sls', ['core'])
+
+        for key, val in ret.items():
+            self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is in the correct state')
+            self.assertEqual(val['changes'], {})
+
+    def test_state_sls_id_test_true(self):
+        '''
+        test state.sls_id when test=True is passed as arg
+        '''
+        ret = self.run_function('state.sls', ['core'], test=True)
+        for key, val in ret.items():
+            self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is set to be changed')
+            self.assertEqual(val['changes'], {})
+
+    def test_state_sls_id_test_true_post_run(self):
+        '''
+        test state.sls_id when test is set to true as an
+        arg post the state already being run previously
+        '''
+        ret = self.run_function('state.sls', ['core'])
+        for key, val in ret.items():
+            self.assertEqual(val['comment'], 'File /tmp/salt-tests-tmpdir/testfile updated')
+            self.assertEqual(val['changes']['diff'], 'New file')
+
+        ret = self.run_function('state.sls', ['core'], test=True)
+
+        for key, val in ret.items():
+            self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is in the correct state')
+            self.assertEqual(val['changes'], {})
+
+    def test_state_sls_id_test_false_pillar_true(self):
+        '''
+        test state.sls_id when test is set to false as an
+        arg and minion_state_test is set to True. Should
+        return test=False.
+        '''
+        self._add_runtime_pillar(pillar={'test': True})
+        ret = self.run_function('state.sls', ['core'], test=False)
+
+        for key, val in ret.items():
+            self.assertEqual(val['comment'], 'File /tmp/salt-tests-tmpdir/testfile updated')
+            self.assertEqual(val['changes']['diff'], 'New file')
+
     def tearDown(self):
         nonbase_file = '/tmp/nonbase_env'
         if os.path.isfile(nonbase_file):
             os.remove(nonbase_file)
+
+        # remove old pillar data
+        for filename in os.listdir(TMP_PILLAR_TREE):
+            os.remove(os.path.join(TMP_PILLAR_TREE, filename))
+        self.run_function('saltutil.refresh_pillar')
+        self.run_function('test.sleep', [5])
+
+        # remove testfile added in core.sls state file
+        state_file = os.path.join(TMP, 'testfile')
+        if os.path.isfile(state_file):
+            os.remove(state_file)

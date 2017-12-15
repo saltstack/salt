@@ -48,7 +48,7 @@ JID/MINION_ID
 return: return_data
 full_ret: full load of job return
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import logging
@@ -59,10 +59,13 @@ try:
 except ImportError:
     HAS_DEPS = False
 
-# Import salt libs
+# Import Salt libs
 import salt.utils.jid
 import salt.utils.json
 import salt.utils.minions
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -168,7 +171,7 @@ def prep_jid(nocache=False, passed_jid=None):
     cb_ = _get_connection()
 
     try:
-        cb_.add(str(jid),
+        cb_.add(six.text_type(jid),
                {'nocache': nocache},
                ttl=_get_ttl(),
                )
@@ -197,10 +200,8 @@ def returner(load):
                )
     except couchbase.exceptions.KeyExistsError:
         log.error(
-            'An extra return was detected from minion {0}, please verify '
-            'the minion, this could be a replay attack'.format(
-                load['id']
-            )
+            'An extra return was detected from minion %s, please verify '
+            'the minion, this could be a replay attack', load['id']
         )
         return False
 
@@ -212,13 +213,13 @@ def save_load(jid, clear_load, minion=None):
     cb_ = _get_connection()
 
     try:
-        jid_doc = cb_.get(str(jid))
+        jid_doc = cb_.get(six.text_type(jid))
     except couchbase.exceptions.NotFoundError:
-        cb_.add(str(jid), {}, ttl=_get_ttl())
-        jid_doc = cb_.get(str(jid))
+        cb_.add(six.text_type(jid), {}, ttl=_get_ttl())
+        jid_doc = cb_.get(six.text_type(jid))
 
     jid_doc.value['load'] = clear_load
-    cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
+    cb_.replace(six.text_type(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
 
     # if you have a tgt, save that for the UI etc
     if 'tgt' in clear_load and clear_load['tgt'] != '':
@@ -240,9 +241,9 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     cb_ = _get_connection()
 
     try:
-        jid_doc = cb_.get(str(jid))
+        jid_doc = cb_.get(six.text_type(jid))
     except couchbase.exceptions.NotFoundError:
-        log.warning('Could not write job cache file for jid: {0}'.format(jid))
+        log.warning('Could not write job cache file for jid: %s', jid)
         return False
 
     # save the minions to a cache so we can see in the UI
@@ -252,7 +253,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
         )
     else:
         jid_doc.value['minions'] = minions
-    cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
+    cb_.replace(six.text_type(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
 
 
 def get_load(jid):
@@ -262,7 +263,7 @@ def get_load(jid):
     cb_ = _get_connection()
 
     try:
-        jid_doc = cb_.get(str(jid))
+        jid_doc = cb_.get(six.text_type(jid))
     except couchbase.exceptions.NotFoundError:
         return {}
 
@@ -285,7 +286,7 @@ def get_jid(jid):
 
     ret = {}
 
-    for result in cb_.query(DESIGN_NAME, 'jid_returns', key=str(jid), include_docs=True):
+    for result in cb_.query(DESIGN_NAME, 'jid_returns', key=six.text_type(jid), include_docs=True):
         ret[result.value] = result.doc.value
 
     return ret

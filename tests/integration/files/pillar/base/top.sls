@@ -6,3 +6,6 @@ base:
     - generic
     - blackout
     - sub
+  'localhost':
+    - generic
+    - blackout

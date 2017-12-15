@@ -338,7 +338,7 @@ def sanitize_win_path(winpath):
     '''
     intab = '<>:|?*'
     if isinstance(winpath, six.text_type):
-        winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
+        winpath = winpath.translate(dict((ord(c), '_') for c in intab))
     elif isinstance(winpath, six.string_types):
         outtab = '_' * len(intab)
         trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
@@ -401,3 +401,15 @@ def safe_path(path, allow_path=None):
                 good_path = True
 
     return good_path
+
+
+def os_walk(top, *args, **kwargs):
+    '''
+    This is a helper to ensure that we get unicode paths when walking a
+    filesystem. The reason for this is that when using os.walk, the paths in
+    the generator which is returned are all the same type as the top directory
+    passed in. This can cause problems when a str path is passed and the
+    filesystem underneath that path contains files with unicode characters in
+    the filename.
+    '''
+    return os.walk(salt.utils.stringutils.to_unicode(top), *args, **kwargs)
