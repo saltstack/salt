@@ -2350,13 +2350,13 @@ def version():
     ret = _client_wrapper('version')
     version_re = re.compile(VERSION_RE)
     if 'Version' in ret:
-        match = version_re.match(str(ret['Version']))
+        match = version_re.match(six.text_type(ret['Version']))
         if match:
             ret['VersionInfo'] = tuple(
                 [int(x) for x in match.group(1).split('.')]
             )
     if 'ApiVersion' in ret:
-        match = version_re.match(str(ret['ApiVersion']))
+        match = version_re.match(six.text_type(ret['ApiVersion']))
         if match:
             ret['ApiVersionInfo'] = tuple(
                 [int(x) for x in match.group(1).split('.')]
@@ -3935,9 +3935,9 @@ def build(path=None,
             )
         else:
             if not isinstance(repository, six.string_types):
-                repository = str(repository)
+                repository = six.text_type(repository)
             if not isinstance(tag, six.string_types):
-                tag = str(tag)
+                tag = six.text_type(tag)
 
     # For the build function in the low-level API, the "tag" refers to the full
     # tag (e.g. myuser/myimage:mytag). This is different than in other
@@ -4075,9 +4075,9 @@ def commit(name,
         respository = image
 
     if not isinstance(repository, six.string_types):
-        repository = str(repository)
+        repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
-        tag = str(tag)
+        tag = six.text_type(tag)
 
     time_started = time.time()
     response = _client_wrapper(
@@ -4226,9 +4226,9 @@ def import_(source,
         respository = image
 
     if not isinstance(repository, six.string_types):
-        repository = str(repository)
+        repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
-        tag = str(tag)
+        tag = six.text_type(tag)
 
     path = __salt__['container_resource.cache_file'](source)
 
@@ -4575,7 +4575,7 @@ def push(image,
         salt myminion docker.push myuser/mycontainer:mytag
     '''
     if not isinstance(image, six.string_types):
-        image = str(image)
+        image = six.text_type(image)
 
     kwargs = {'stream': True,
               'client_timeout': client_timeout}
@@ -4846,6 +4846,8 @@ def save(name,
 
         try:
             with __utils__['files.fopen'](saved_path, 'rb') as uncompressed:
+                # No need to decode on read and encode on on write, since we're
+                # reading and immediately writing out bytes.
                 if compression != 'gzip':
                     # gzip doesn't use a Compressor object, it uses a .open()
                     # method to open the filehandle. If not using gzip, we need
@@ -4940,9 +4942,9 @@ def tag_(name, repository, tag='latest', force=False, image=None):
         respository = image
 
     if not isinstance(repository, six.string_types):
-        repository = str(repository)
+        repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
-        tag = str(tag)
+        tag = six.text_type(tag)
 
     image_id = inspect_image(name)['Id']
     response = _client_wrapper('tag',
@@ -5952,7 +5954,7 @@ def _script(name,
 
     ret = run_all(
         name,
-        path + ' ' + str(args) if args else path,
+        path + ' ' + six.text_type(args) if args else path,
         exec_driver=exec_driver,
         stdin=stdin,
         python_shell=python_shell,
