@@ -24,9 +24,9 @@ import re
 import logging
 import time
 import json
+import yaml
 
 # Import third party libs
-import yaml
 # pylint: disable=no-name-in-module,import-error,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves.urllib.error import HTTPError
@@ -47,6 +47,7 @@ import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.systemd
 import salt.utils.versions
+import salt.utils.yaml
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -2644,7 +2645,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
 
     if isinstance(selection, six.string_types):
         try:
-            selection = yaml.safe_load(selection)
+            selection = salt.utils.yaml.safe_load(selection)
         except (yaml.parser.ParserError, yaml.scanner.ScannerError) as exc:
             raise SaltInvocationError(
                 'Improperly-formatted selection: {0}'.format(exc)

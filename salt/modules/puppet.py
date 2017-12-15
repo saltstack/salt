@@ -15,6 +15,7 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -312,7 +313,7 @@ def summary():
 
     try:
         with salt.utils.files.fopen(puppet.lastrunfile, 'r') as fp_:
-            report = yaml.safe_load(fp_.read())
+            report = salt.utils.yaml.safe_load(fp_.read())
         result = {}
 
         if 'time' in report:

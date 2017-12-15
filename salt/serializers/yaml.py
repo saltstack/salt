@@ -66,6 +66,8 @@ def serialize(obj, **options):
     '''
 
     options.setdefault('Dumper', Dumper)
+    if 'allow_unicode' not in options:
+        options['allow_unicode'] = True
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):

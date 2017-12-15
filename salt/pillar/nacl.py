@@ -19,11 +19,17 @@ this:
 Set ``nacl.config`` in your config.
 
 '''
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
+import salt.loader
 
-from __future__ import absolute_import
-import salt
+log = logging.getLogger(__name__)
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
-    render_function = salt.loader.render(__opts__, __salt__).get("nacl")
-    return render_function(pillar)
+    render_function = salt.loader.render(__opts__, __salt__).get('nacl')
+    try:
+        return render_function(pillar)
+    except Exception as exc:
+        log.critical('Failed to compile nacl pillar data: %s', exc)
+        return {}

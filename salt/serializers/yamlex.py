@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
     salt.serializers.yamlex
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~~~~~~
 
     YAMLEX is a format that allows for things like sls files to be
     more intuitive.
@@ -57,7 +57,7 @@
     .. code-block:: python
 
         from salt.serializers import yaml
-        yml_obj = yaml.deserialize(str(obj))
+        yml_obj = yaml.deserialize(six.text_type(obj))
         assert yml_obj == obj
 
     yamlex implements also custom tags:
@@ -103,7 +103,7 @@
 # pylint: disable=too-few-public-methods,too-many-public-methods
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import datetime
 from copy import copy
@@ -170,6 +170,8 @@ def serialize(obj, **options):
     '''
 
     options.setdefault('Dumper', Dumper)
+    if 'allow_unicode' not in options:
+        options['allow_unicode'] = True
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
@@ -354,7 +356,7 @@ class SLSString(str):
 
     .. code-block:: python
 
-        >>> scalar = str('foo')
+        >>> scalar = six.text_type('foo')
         >>> print 'foo'
         foo
 

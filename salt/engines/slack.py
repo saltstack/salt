@@ -100,7 +100,6 @@ import logging
 import time
 import re
 import traceback
-import yaml
 
 log = logging.getLogger(__name__)
 
@@ -119,7 +118,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.http
 import salt.utils.slack
-from salt.utils.yamldumper import OrderedDumper
+import salt.utils.yaml
 
 __virtualname__ = 'slack'
 
@@ -373,7 +372,7 @@ class SlackClient(object):
 
         # Convert UTF to string
         _text = json.dumps(_text)
-        _text = yaml.safe_load(_text)
+        _text = salt.utils.yaml.safe_load(_text)
 
         if not _text:
             raise ValueError('_text has no value')
@@ -561,7 +560,7 @@ class SlackClient(object):
         '''
         Print out YAML using the block mode
         '''
-        params = dict(Dumper=OrderedDumper)
+        params = dict(Dumper=salt.utils.yamldumper.OrderedDumper)
         if 'output_indent' not in __opts__:
             # default indentation
             params.update(default_flow_style=False)
@@ -573,7 +572,7 @@ class SlackClient(object):
             params.update(default_flow_style=True,
                           indent=0)
         try:
-            #return yaml.dump(data, **params).replace("\n\n", "\n")
+            #return salt.utils.yamldumper.dump(data, **params).replace("\n\n", "\n")
             return json.dumps(data, sort_keys=True, indent=1)
         # pylint: disable=broad-except
         except Exception as exc:
@@ -627,7 +626,7 @@ class SlackClient(object):
                 # pylint is tripping
                 # pylint: disable=missing-whitespace-after-comma
                 job_data = json.dumps({key:val['return'] for key, val in jid_result.items()})
-                results[jid] = yaml.load(job_data)
+                results[jid] = salt.utils.yamlloader.safe_load(job_data)
 
         return results
 
@@ -692,7 +691,7 @@ class SlackClient(object):
                         content=return_text)
                     # Handle unicode return
                     log.debug('Got back {} via the slack client'.format(r))
-                    resp = yaml.safe_load(json.dumps(r))
+                    resp = salt.utils.yaml.safe_load(json.dumps(r))
                     if 'ok' in resp and resp['ok'] is False:
                         this_job['channel'].send_message('Error: {0}'.format(resp['error']))
                     del outstanding[jid]

@@ -178,14 +178,14 @@ will result in the following pillar data for minions in the node group
                 file2.txt:
                     Contents of file #2.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
+# Import Python libs
 import fnmatch
 import logging
 import os
 
-# Import salt libs
+# Import Salt libs
 import salt.loader
 import salt.utils.dictupdate
 import salt.utils.files
@@ -193,6 +193,9 @@ import salt.utils.minions
 import salt.utils.path
 import salt.utils.stringio
 import salt.template
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -221,7 +224,7 @@ def _check_newline(prefix, file_name, keep_newline):
             if fnmatch.fnmatch(full_path, pattern):
                 return False
         except TypeError:
-            if fnmatch.fnmatch(full_path, str(pattern)):
+            if fnmatch.fnmatch(full_path, six.text_type(pattern)):
                 return False
     return True
 
@@ -329,7 +332,7 @@ def ext_pillar(minion_id,
         env_roots = __opts__['pillar_roots'].get(pillarenv, None)
         if env_roots is None:
             log.error('file_tree: root_dir is relative but no pillar_roots are specified '
-                      ' for pillarenv %s', pillarenv)
+                      'for pillarenv %s', pillarenv)
             return {}
 
         env_dirs = []
@@ -404,7 +407,7 @@ def _ext_pillar(minion_id,
                     match = _res['minions']
                     if minion_id in match:
                         ngroup_dir = os.path.join(
-                            nodegroups_dir, str(nodegroup))
+                            nodegroups_dir, six.text_type(nodegroup))
                         ngroup_pillar = salt.utils.dictupdate.merge(ngroup_pillar,
                             _construct_pillar(ngroup_dir,
                                               follow_dir_links,

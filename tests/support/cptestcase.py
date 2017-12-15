@@ -29,6 +29,8 @@
 # https://bitbucket.org/Lawouach/cherrypy-recipes/src/50aff88dc4e24206518ec32e1c32af043f2729da/testing/unit/serverless/cptestcase.py
 
 # Import Python libs
+# NOTE: CherryPy does not work well with unicode, so unicode_literals is not
+# being imported here.
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs

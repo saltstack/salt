@@ -5,10 +5,10 @@ Utilities for managing kickstart
 .. versionadded:: Beryllium
 '''
 from __future__ import absolute_import
-import yaml
 import shlex
 import argparse  # pylint: disable=minimum-python-version
 import salt.utils.files
+import salt.utils.yaml
 from salt.ext.six.moves import range
 
 
@@ -1174,8 +1174,9 @@ def mksls(src, dst=None):
         elif packages[package] is False:
             sls[package] = {'pkg': ['absent']}
 
+    ret = salt.utils.yaml.safe_dump(sls, default_flow_style=False)
     if dst:
         with salt.utils.files.fopen(dst, 'w') as fp_:
-            fp_.write(yaml.safe_dump(sls, default_flow_style=False))
+            fp_.write(ret)
     else:
-        return yaml.safe_dump(sls, default_flow_style=False)
+        return ret

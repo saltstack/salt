@@ -40,7 +40,7 @@ Use the following Pg database schema:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from contextlib import contextmanager
 import json
 import sys
@@ -93,7 +93,7 @@ def _conn(commit=False):
         yield cursor
     except psycopg2.DatabaseError as err:
         error = err.args
-        sys.stderr.write(str(error))
+        sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
         raise err
     else:
@@ -107,7 +107,7 @@ def _conn(commit=False):
 
 def _list_tables(cur):
     cmd = "select relname from pg_class where relkind='r' and relname !~ '^(pg_|sql_)';"
-    log.debug('SQL Query: {0}'.format(cmd))
+    log.debug('SQL Query: %s', cmd)
     cur.execute(cmd)
     result = cur.fetchall()
     return [x[0] for x in result]
@@ -116,7 +116,7 @@ def _list_tables(cur):
 def _create_table(cur, queue):
     cmd = 'CREATE TABLE {0}(id SERIAL PRIMARY KEY, '\
           'data jsonb NOT NULL)'.format(queue)
-    log.debug('SQL Query: {0}'.format(cmd))
+    log.debug('SQL Query: %s', cmd)
     cur.execute(cmd)
     return True
 
@@ -127,7 +127,7 @@ def _list_items(queue):
     '''
     with _conn() as cur:
         cmd = 'SELECT data FROM {0}'.format(queue)
-        log.debug('SQL Query: {0}'.format(cmd))
+        log.debug('SQL Query: %s', cmd)
         cur.execute(cmd)
         contents = cur.fetchall()
         return contents
@@ -191,7 +191,7 @@ def insert(queue, items):
         if isinstance(items, dict):
             items = json.dumps(items)
             cmd = '''INSERT INTO {0}(data) VALUES('{1}')'''.format(queue, items)
-            log.debug('SQL Query: {0}'.format(cmd))
+            log.debug('SQL Query: %s', cmd)
             try:
                 cur.execute(cmd)
             except psycopg2.IntegrityError as esc:
@@ -200,7 +200,7 @@ def insert(queue, items):
         if isinstance(items, list):
             items = [json.dumps(el) for el in items]
             cmd = "INSERT INTO {0}(data) VALUES (%s)".format(queue)
-            log.debug('SQL Query: {0}'.format(cmd))
+            log.debug('SQL Query: %s', cmd)
             newitems = []
             for item in items:
                 newitems.append((item,))
@@ -220,13 +220,13 @@ def delete(queue, items):
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
             cmd = """DELETE FROM {0} WHERE data = '{1}'""".format(queue, json.dumps(items))
-            log.debug('SQL Query: {0}'.format(cmd))
+            log.debug('SQL Query: %s', cmd)
             cur.execute(cmd)
             return True
         if isinstance(items, list):
             items = [json.dumps(el) for el in items]
             cmd = 'DELETE FROM {0} WHERE data = %s'.format(queue)
-            log.debug('SQL Query: {0}'.format(cmd))
+            log.debug('SQL Query: %s', cmd)
             newitems = []
             for item in items:
                 newitems.append((item,))
@@ -248,7 +248,7 @@ def pop(queue, quantity=1, is_runner=False):
                          'Error: "{0}".'.format(exc))
             raise SaltInvocationError(error_txt)
         cmd = ''.join([cmd, ' LIMIT {0};'.format(quantity)])
-    log.debug('SQL Query: {0}'.format(cmd))
+    log.debug('SQL Query: %s', cmd)
     items = []
     with _conn(commit=True) as cur:
         cur.execute(cmd)
@@ -260,7 +260,7 @@ def pop(queue, quantity=1, is_runner=False):
             del_cmd = '''DELETE FROM {0} WHERE id IN ('{1}');'''.format(
                 queue, idlist)
 
-            log.debug('SQL Query: {0}'.format(del_cmd))
+            log.debug('SQL Query: %s', del_cmd)
 
             cur.execute(del_cmd)
     return items

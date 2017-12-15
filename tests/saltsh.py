@@ -42,11 +42,8 @@ import salt.runner
 import jinja2
 from salt.ext.six.moves import builtins  # pylint: disable=import-error
 
-
 # pylint: disable=W0611
 # These are imported to be available in the spawned shell
-
-
 import yaml
 import pprint
 

@@ -30,10 +30,13 @@ Configuring the Redis ext_pillar
           - redis: {function: key_value}
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import json
+import logging
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'redis'
 
@@ -51,10 +54,24 @@ def ext_pillar(minion_id, pillar, function, **kwargs):
     '''
     Grabs external pillar data based on configured function
     '''
-    if function.startswith('_') or function not in globals():
+    if function.startswith('_'):
         return {}
     # Call specified function to pull redis data
-    return globals()[function](minion_id, pillar, **kwargs)
+    redis_function = globals().get(function)
+    if redis_function is None:
+        log.critical(
+            'Redis pillar configured to run function %s, which does not exist',
+            function
+        )
+    else:
+        try:
+            return redis_function(minion_id, pillar, **kwargs)
+        except Exception as exc:
+            log.critical(
+                'Redis pillar failed to run function %s: %s',
+                function, exc
+            )
+    return {}
 
 
 def key_value(minion_id,

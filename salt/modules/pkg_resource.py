@@ -18,6 +18,7 @@ from salt.ext import six
 # Import salt libs
 import salt.utils.data
 import salt.utils.versions
+import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -72,7 +73,7 @@ def pack_sources(sources, normalize=True):
 
     if isinstance(sources, six.string_types):
         try:
-            sources = yaml.safe_load(sources)
+            sources = salt.utils.yaml.safe_load(sources)
         except yaml.parser.ParserError as err:
             log.error(err)
             return {}

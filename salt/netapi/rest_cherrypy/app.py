@@ -580,7 +580,9 @@ rest_cherrypy will remain the officially recommended REST API.
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
 # Import Python libs
-from __future__ import absolute_import
+# NOTE: CherryPy does not work well with unicode, so unicode_literals is not
+# being imported here.
+from __future__ import absolute_import, print_function
 import collections
 import itertools
 import functools
@@ -591,7 +593,7 @@ import signal
 import tarfile
 from multiprocessing import Process, Pipe
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Import third-party libs
 # pylint: disable=import-error, 3rd-party-module-not-gated
@@ -600,14 +602,13 @@ try:
     from cherrypy.lib import cpstats
 except AttributeError:
     cpstats = None
-    logger.warn('Import of cherrypy.cpstats failed. '
+    log.warn('Import of cherrypy.cpstats failed. '
         'Possible upstream bug: '
         'https://github.com/cherrypy/cherrypy/issues/1444')
 except ImportError:
     cpstats = None
-    logger.warn('Import of cherrypy.cpstats failed.')
+    log.warn('Import of cherrypy.cpstats failed.')
 
-import yaml
 # pylint: enable=import-error, 3rd-party-module-not-gated
 
 # Import Salt libs
@@ -617,6 +618,7 @@ import salt.exceptions
 import salt.utils.event
 import salt.utils.stringutils
 import salt.utils.versions
+import salt.utils.yaml
 from salt.ext import six
 from salt.ext.six import BytesIO
 
@@ -630,7 +632,7 @@ try:
 
     HAS_WEBSOCKETS = True
 except ImportError:
-    websockets = type('websockets', (object,), {
+    websockets = type(str('websockets'), (object,), {
         'SynchronizingWebsocket': None,
     })
 
@@ -710,12 +712,12 @@ def salt_api_acl_tool(username, request):
     :param request: Cherrypy request to check against the API.
     :type request: cherrypy.request
     '''
-    failure_str = ("[api_acl] Authentication failed for "
-                   "user {0} from IP {1}")
-    success_str = ("[api_acl] Authentication sucessful for "
-                   "user {0} from IP {1}")
-    pass_str = ("[api_acl] Authentication not checked for "
-                "user {0} from IP {1}")
+    failure_str = ('[api_acl] Authentication failed for '
+                   'user %s from IP %s')
+    success_str = ('[api_acl] Authentication sucessful for '
+                   'user %s from IP %s')
+    pass_str = ('[api_acl] Authentication not checked for '
+                'user %s from IP %s')
 
     acl = None
     # Salt Configuration
@@ -733,23 +735,23 @@ def salt_api_acl_tool(username, request):
         if users:
             if username in users:
                 if ip in users[username] or '*' in users[username]:
-                    logger.info(success_str.format(username, ip))
+                    log.info(success_str, username, ip)
                     return True
                 else:
-                    logger.info(failure_str.format(username, ip))
+                    log.info(failure_str, username, ip)
                     return False
             elif username not in users and '*' in users:
                 if ip in users['*'] or '*' in users['*']:
-                    logger.info(success_str.format(username, ip))
+                    log.info(success_str, username, ip)
                     return True
                 else:
-                    logger.info(failure_str.format(username, ip))
+                    log.info(failure_str, username, ip)
                     return False
             else:
-                logger.info(failure_str.format(username, ip))
+                log.info(failure_str, username, ip)
                 return False
     else:
-        logger.info(pass_str.format(username, ip))
+        log.info(pass_str, username, ip)
         return True
 
 
@@ -766,11 +768,11 @@ def salt_ip_verify_tool():
         if cherrypy_conf:
             auth_ip_list = cherrypy_conf.get('authorized_ips', None)
             if auth_ip_list:
-                logger.debug("Found IP list: {0}".format(auth_ip_list))
+                log.debug('Found IP list: %s', auth_ip_list)
                 rem_ip = cherrypy.request.headers.get('Remote-Addr', None)
-                logger.debug("Request from IP: {0}".format(rem_ip))
+                log.debug('Request from IP: %s', rem_ip)
                 if rem_ip not in auth_ip_list:
-                    logger.error("Blocked IP: {0}".format(rem_ip))
+                    log.error('Blocked IP: %s', rem_ip)
                     raise cherrypy.HTTPError(403, 'Bad IP')
 
 
@@ -837,7 +839,7 @@ def cors_tool():
 ct_out_map = (
     ('application/json', json.dumps),
     ('application/x-yaml', functools.partial(
-        yaml.safe_dump, default_flow_style=False)),
+        salt.utils.yaml.safe_dump, default_flow_style=False)),
 )
 
 
@@ -878,9 +880,10 @@ def hypermedia_handler(*args, **kwargs):
 
         import traceback
 
-        logger.debug("Error while processing request for: %s",
-                cherrypy.request.path_info,
-                exc_info=True)
+        log.debug(
+            'Error while processing request for: %s',
+            cherrypy.request.path_info, exc_info=True
+        )
 
         cherrypy.response.status = 500
 
@@ -903,7 +906,7 @@ def hypermedia_handler(*args, **kwargs):
         return response
     except Exception:
         msg = 'Could not serialize the return data from Salt.'
-        logger.debug(msg, exc_info=True)
+        log.debug(msg, exc_info=True)
         raise cherrypy.HTTPError(500, msg)
 
 
@@ -998,7 +1001,7 @@ def yaml_processor(entity):
         contents.seek(0)
         body = salt.utils.stringutils.to_unicode(contents.read())
     try:
-        cherrypy.serving.request.unserialized_data = yaml.safe_load(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.yaml.safe_load(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
 
@@ -1883,11 +1886,13 @@ class Login(LowDataAdapter):
                         perms.extend(eauth['{0}%'.format(group)])
 
             if not perms:
-                logger.debug("Eauth permission list not found.")
+                log.debug("Eauth permission list not found.")
         except Exception:
-            logger.debug("Configuration for external_auth malformed for "
-                "eauth '{0}', and user '{1}'."
-                .format(token.get('eauth'), token.get('name')), exc_info=True)
+            log.debug(
+                'Configuration for external_auth malformed for eauth \'%s\', '
+                'and user \'%s\'.', token.get('eauth'), token.get('name'),
+                exc_info=True
+            )
             perms = None
 
         return {'return': [{
@@ -2334,12 +2339,12 @@ class Events(object):
                     listen=True)
             stream = event.iter_events(full=True, auto_reconnect=True)
 
-            yield u'retry: {0}\n'.format(400)
+            yield 'retry: {0}\n'.format(400)
 
             while True:
                 data = next(stream)
-                yield u'tag: {0}\n'.format(data.get('tag', ''))
-                yield u'data: {0}\n\n'.format(json.dumps(data))
+                yield 'tag: {0}\n'.format(data.get('tag', ''))
+                yield 'data: {0}\n\n'.format(json.dumps(data))
 
         return listen()
 
@@ -2523,9 +2528,8 @@ class WebsocketEndpoint(object):
                             handler.send('data: {0}\n\n'.format(
                                 json.dumps(data)), False)
                     except UnicodeDecodeError:
-                        logger.error(
-                                "Error: Salt event has non UTF-8 data:\n{0}"
-                                .format(data))
+                        log.error(
+                            'Error: Salt event has non UTF-8 data:\n%s', data)
 
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe

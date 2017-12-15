@@ -4,7 +4,9 @@ Integration Tests for restcherry salt-api with pam eauth
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+# NOTE: CherryPy does not work well with unicode, so unicode_literals is not
+# being imported here.
+from __future__ import absolute_import, print_function
 
 # Import test support libs
 from tests.support.case import ModuleCase
@@ -16,6 +18,7 @@ import tests.support.cherrypy_testclasses as cptc
 import salt.utils.platform
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
 if cptc.HAS_CHERRYPY:
     import cherrypy
@@ -52,7 +55,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_function('user.list_users')
-            self.assertIn(USERA, str(user_list))
+            self.assertIn(USERA, six.text_type(user_list))
         except AssertionError:
             self.run_function('user.delete', [USERA], remove=True)
             self.skipTest(

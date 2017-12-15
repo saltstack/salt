@@ -18,12 +18,12 @@ Runner Module for Firing Events via PagerDuty
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import yaml
 import json
 
 # Import salt libs
 import salt.utils.functools
 import salt.utils.pagerduty
+import salt.utils.yaml
 from salt.ext import six
 
 
@@ -176,7 +176,7 @@ def create_event(service_key=None, description=None, details=None,
     trigger_url = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
 
     if isinstance(details, six.string_types):
-        details = yaml.safe_load(details)
+        details = salt.utils.yaml.safe_load(details)
         if isinstance(details, six.string_types):
             details = {'details': details}
 

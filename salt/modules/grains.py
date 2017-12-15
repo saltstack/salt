@@ -28,7 +28,7 @@ import salt.utils.compat
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
-import salt.utils.yamldumper
+import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.ext.six.moves import range
@@ -273,7 +273,7 @@ def setvals(grains, destructive=False):
     if os.path.isfile(gfn):
         with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
-                grains = yaml.safe_load(fp_.read())
+                grains = salt.utils.yaml.safe_load(fp_.read())
             except yaml.YAMLError as exc:
                 return 'Unable to read existing grains file: {0}'.format(exc)
         if not isinstance(grains, dict):
@@ -287,7 +287,7 @@ def setvals(grains, destructive=False):
         else:
             grains[key] = val
             __grains__[key] = val
-    cstr = salt.utils.yamldumper.safe_dump(grains, default_flow_style=False)
+    cstr = salt.utils.yaml.safe_dump(grains, default_flow_style=False)
     try:
         with salt.utils.files.fopen(gfn, 'w+') as fp_:
             fp_.write(cstr)

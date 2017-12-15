@@ -1,11 +1,13 @@
 # coding: utf-8
 
 # Import Python libs
-from __future__ import absolute_import
+# NOTE: CherryPy does not work well with unicode, so unicode_literals is not
+# being imported here.
+from __future__ import absolute_import, print_function
 import json
 
 # Import 3rd-party libs
-import yaml
+import salt.utils.yaml
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
 
 from tests.support.cherrypy_testclasses import BaseToolsTest
@@ -79,7 +81,7 @@ class TestInFormats(BaseToolsTest):
     def test_yaml_ctype(self):
         data = {'valid': 'stuff'}
         request, response = self.request('/', method='POST',
-            body=yaml.dump(data), headers=(
+            body=salt.utils.yaml.safe_dump(data), headers=(
                 ('Content-type', 'application/x-yaml'),
         ))
         self.assertEqual(response.status, '200 OK')

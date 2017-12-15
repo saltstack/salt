@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import errno
 import socket
@@ -22,6 +22,7 @@ import salt.transport.client
 import salt.utils.platform
 
 from salt.ext.six.moves import range
+from salt.ext import six
 
 # Import Salt Testing libs
 from tests.support.mock import MagicMock
@@ -125,7 +126,7 @@ class IPCMessageClient(BaseIPCReqCase):
         self.assertEqual(self.payloads[:-1], msgs)
 
     def test_very_big_message(self):
-        long_str = ''.join([str(num) for num in range(10**5)])
+        long_str = ''.join([six.text_type(num) for num in range(10**5)])
         msg = {'long_str': long_str, 'stop': True}
         self.channel.send(msg)
         self.wait()

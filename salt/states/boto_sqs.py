@@ -63,7 +63,6 @@ from __future__ import absolute_import
 import difflib
 import json
 import logging
-import yaml
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -202,14 +201,14 @@ def present(
     final_attributes.update(attrs_to_set)
 
     def _yaml_safe_dump(attrs):
-        '''Safely dump YAML using a readable flow style'''
-        dumper_name = 'IndentedSafeOrderedDumper'
-        dumper = __utils__['yamldumper.get_dumper'](dumper_name)
-        return yaml.dump(
+        '''
+        Safely dump YAML using a readable flow style
+        '''
+        dumper = __utils__['yaml.get_dumper']('IndentedSafeOrderedDumper')
+        return __utils__['yaml.dump'](
             attrs,
             default_flow_style=False,
-            Dumper=dumper,
-        )
+            Dumper=dumper)
     attributes_diff = ''.join(difflib.unified_diff(
         _yaml_safe_dump(current_attributes).splitlines(True),
         _yaml_safe_dump(final_attributes).splitlines(True),

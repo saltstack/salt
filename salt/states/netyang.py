@@ -29,7 +29,7 @@ log = logging.getLogger(__file__)
 
 # Import third party libs
 try:
-    import yaml
+    import salt.utils.yaml
     # pylint: disable=W0611
     import napalm_yang
     HAS_NAPALM_YANG = True
@@ -157,7 +157,7 @@ def managed(name,
         data = {'to_dict': data}
     data = [data]
     with salt.utils.files.fopen(temp_file, 'w') as file_handle:
-        yaml.safe_dump(json.loads(json.dumps(data)), file_handle, encoding='utf-8', allow_unicode=True)
+        salt.utils.yaml.safe_dump(json.loads(json.dumps(data)), file_handle, encoding='utf-8')
     device_config = __salt__['napalm_yang.parse'](*models,
                                                   config=True,
                                                   profiles=profiles)

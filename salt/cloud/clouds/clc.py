@@ -62,7 +62,7 @@ cloud configuration at
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 import json
@@ -71,6 +71,8 @@ import importlib
 from salt.exceptions import SaltCloudSystemExit
 # Import salt cloud libs
 import salt.config as config
+
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -286,7 +288,7 @@ def get_build_status(req_id, nodename):
     get the build status from CLC to make sure we dont return to early
     '''
     counter = 0
-    req_id = str(req_id)
+    req_id = six.text_type(req_id)
     while counter < 10:
         queue = clc.v1.Blueprint.GetStatus(request_id=(req_id))
         if queue["PercentComplete"] == 100:
@@ -298,7 +300,10 @@ def get_build_status(req_id, nodename):
             return internal_ip_address
         else:
             counter = counter + 1
-            log.info("Creating Cloud VM " + nodename + " Time out in " + str(10 - counter) + " minutes")
+            log.info(
+                'Creating Cloud VM %s Time out in %d minutes',
+                nodename, 10 - counter
+            )
             time.sleep(60)
 
 

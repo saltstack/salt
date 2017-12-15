@@ -27,12 +27,10 @@ from tests.support.mock import (
     mock_open,
     patch)
 
-# Import third party libs
-import yaml
-
 # Import salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.yaml
 import salt.states.file as filestate
 import salt.serializers.yaml as yamlserializer
 import salt.serializers.json as jsonserializer
@@ -75,10 +73,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             }
 
             filestate.serialize('/tmp', dataset)
-            self.assertEqual(yaml.load(returner.returned), dataset)
+            self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
 
             filestate.serialize('/tmp', dataset, formatter="yaml")
-            self.assertEqual(yaml.load(returner.returned), dataset)
+            self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
 
             filestate.serialize('/tmp', dataset, formatter="json")
             self.assertEqual(json.loads(returner.returned), dataset)

@@ -328,7 +328,7 @@ mountpoint to ``web/`` (and restart the ``salt-master`` daemon).
     - Content from mounted git_pillar repos can only be referenced by a top
       file in the same pillar environment.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -454,7 +454,8 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
 
 
 def _extract_key_val(kv, delimiter='='):
-    '''Extract key and value from key=val string.
+    '''
+    Extract key and value from key=val string.
 
     Example:
     >>> _extract_key_val('foo=bar')

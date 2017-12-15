@@ -655,13 +655,13 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
         })
 
         import salt.utils.files
-        import yaml
+        import salt.utils.yaml
 
         if not os.path.isdir(config['formula_path']):
             os.makedirs(config['formula_path'])
 
         with salt.utils.files.fopen(os.path.join(self._tmp_spm, 'spm'), 'w') as fp:
-            fp.write(yaml.dump(config))
+            salt.utils.yaml.safe_dump(config, fp)
 
         return config
 

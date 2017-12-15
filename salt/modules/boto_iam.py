@@ -41,7 +41,6 @@ Connection module for Amazon IAM
 from __future__ import absolute_import
 import logging
 import json
-import yaml
 import time
 
 # Import salt libs
@@ -1612,21 +1611,6 @@ def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=Non
         return False
 
 
-def _safe_dump(data):
-    ###########################################
-    # this presenter magic makes yaml.safe_dump
-    # work with the objects returned from
-    # boto.export_users()
-    ###########################################
-    def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(data.items())
-
-    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
-                         Dumper=yaml.dumper.SafeDumper)
-
-    return yaml.safe_dump(data, default_flow_style=False, indent=2)
-
-
 def export_users(path_prefix='/', region=None, key=None, keyid=None,
                  profile=None):
     '''
@@ -1660,7 +1644,10 @@ def export_users(path_prefix='/', region=None, key=None, keyid=None,
         user_sls.append({"policies": policies})
         user_sls.append({"path": user.path})
         results["manage user " + name] = {"boto_iam.user_present": user_sls}
-    return _safe_dump(results)
+    return __utils__['yaml.safe_dump'](
+        results,
+        default_flow_style=False,
+        indent=2)
 
 
 def export_roles(path_prefix='/', region=None, key=None, keyid=None, profile=None):
@@ -1694,7 +1681,10 @@ def export_roles(path_prefix='/', region=None, key=None, keyid=None, profile=Non
         role_sls.append({'policy_document': json.loads(_unquote(role.assume_role_policy_document))})
         role_sls.append({"path": role.path})
         results["manage role " + name] = {"boto_iam_role.present": role_sls}
-    return _safe_dump(results)
+    return __utils__['yaml.safe_dump'](
+        results,
+        default_flow_style=False,
+        indent=2)
 
 
 def _get_policy_arn(name, region=None, key=None, keyid=None, profile=None):

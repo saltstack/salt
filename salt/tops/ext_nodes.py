@@ -51,8 +51,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import subprocess
 
-# Import third party libs
-import yaml
+# Import Salt libs
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ def top(**kwargs):
             __opts__['master_tops']['ext_nodes'],
             kwargs['opts']['id']
             )
-    ndata = yaml.safe_load(
+    ndata = salt.utils.yaml.safe_load(
             subprocess.Popen(
                 cmd,
                 shell=True,

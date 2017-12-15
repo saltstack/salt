@@ -41,7 +41,7 @@ The above URI is analogous to running the following vault command:
 '''
 
 # import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import salt.exceptions
 
@@ -73,7 +73,7 @@ def set_(key, value, profile=None):
             response.raise_for_status()
         return True
     except Exception as e:
-        log.error('Failed to write secret! {0}: {1}'.format(type(e).__name__, e))
+        log.error('Failed to write secret! %s: %s', type(e).__name__, e)
         raise salt.exceptions.CommandExecutionError(e)
 
 
@@ -94,5 +94,5 @@ def get(key, profile=None):
 
         return data[key]
     except Exception as e:
-        log.error('Failed to read secret! {0}: {1}'.format(type(e).__name__, e))
+        log.error('Failed to read secret! %s: %s', type(e).__name__, e)
         raise salt.exceptions.CommandExecutionError(e)

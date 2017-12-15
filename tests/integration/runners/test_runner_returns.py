@@ -7,7 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import os
 import tempfile
-import yaml
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -18,6 +17,7 @@ import salt.payload
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.yaml
 
 
 class RunnerReturnsTest(ShellCase):
@@ -73,7 +73,7 @@ class RunnerReturnsTest(ShellCase):
         '''
         Dump the config dict to the conf file
         '''
-        self.conf.write(yaml.dump(data, default_flow_style=False))
+        self.conf.write(salt.utils.yaml.safe_dump(data, default_flow_style=False))
         self.conf.flush()
 
     def test_runner_returns_disabled(self):

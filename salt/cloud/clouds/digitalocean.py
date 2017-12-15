@@ -26,7 +26,7 @@ under the "SSH Keys" section.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import json
@@ -114,7 +114,7 @@ def avail_locations(call=None):
     for region in items['regions']:
         ret[region['name']] = {}
         for item in six.iterkeys(region):
-            ret[region['name']][item] = str(region[item])
+            ret[region['name']][item] = six.text_type(region[item])
 
     return ret
 
@@ -134,7 +134,7 @@ def avail_images(call=None):
     ret = {}
 
     while fetch:
-        items = query(method='images', command='?page=' + str(page) + '&per_page=200')
+        items = query(method='images', command='?page=' + six.text_type(page) + '&per_page=200')
 
         for image in items['images']:
             ret[image['name']] = {}
@@ -165,7 +165,7 @@ def avail_sizes(call=None):
     for size in items['sizes']:
         ret[size['slug']] = {}
         for item in six.iterkeys(size):
-            ret[size['slug']][item] = str(size[item])
+            ret[size['slug']][item] = six.text_type(size[item])
 
     return ret
 
@@ -210,7 +210,7 @@ def get_image(vm_):
         'image', vm_, __opts__, search_global=False
     )
     if not isinstance(vm_image, six.string_types):
-        vm_image = str(vm_image)
+        vm_image = six.text_type(vm_image)
 
     for image in images:
         if vm_image in (images[image]['name'],
@@ -229,7 +229,7 @@ def get_size(vm_):
     Return the VM's size. Used by create_node().
     '''
     sizes = avail_sizes()
-    vm_size = str(config.get_cloud_config_value(
+    vm_size = six.text_type(config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
     ))
     for size in sizes:
@@ -245,7 +245,7 @@ def get_location(vm_):
     Return the VM's location
     '''
     locations = avail_locations()
-    vm_location = str(config.get_cloud_config_value(
+    vm_location = six.text_type(config.get_cloud_config_value(
         'location', vm_, __opts__, search_global=False
     ))
 
@@ -291,7 +291,7 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
 
     kwargs = {
         'name': vm_['name'],
@@ -340,7 +340,7 @@ def create(vm_):
     )
 
     if ssh_interface in ['private', 'public']:
-        log.info("ssh_interface: Setting interface for ssh to {}".format(ssh_interface))
+        log.info('ssh_interface: Setting interface for ssh to %s', ssh_interface)
         kwargs['ssh_interface'] = ssh_interface
     else:
         raise SaltCloudConfigError(
@@ -410,7 +410,7 @@ def create(vm_):
             default_dns_hostname = '.'.join(dns_domain_name[:-2])
             default_dns_domain = '.'.join(dns_domain_name[-2:])
         else:
-            log.debug("create_dns_record: can't infer dns_domain from {0}".format(vm_['name']))
+            log.debug("create_dns_record: can't infer dns_domain from %s", vm_['name'])
             default_dns_hostname = dns_domain_name[0]
 
         dns_hostname = config.get_cloud_config_value(
@@ -420,13 +420,16 @@ def create(vm_):
             'dns_domain', vm_, __opts__, search_global=False, default=default_dns_domain,
         )
         if dns_hostname and dns_domain:
-            log.info('create_dns_record: using dns_hostname="{0}", dns_domain="{1}"'.format(dns_hostname, dns_domain))
+            log.info(
+                'create_dns_record: using dns_hostname="%s", dns_domain="%s"',
+                dns_hostname, dns_domain
+            )
             __add_dns_addr__ = lambda t, d: post_dns_record(dns_domain=dns_domain,
                                                             name=dns_hostname,
                                                             record_type=t,
                                                             record_data=d)
 
-            log.debug('create_dns_record: {0}'.format(__add_dns_addr__))
+            log.debug('create_dns_record: %s', __add_dns_addr__)
         else:
             log.error('create_dns_record: could not determine dns_hostname and/or dns_domain')
             raise SaltCloudConfigError(
@@ -447,12 +450,10 @@ def create(vm_):
         ret = create_node(kwargs)
     except Exception as exc:
         log.error(
-            'Error creating {0} on DIGITALOCEAN\n\n'
+            'Error creating %s on DIGITALOCEAN\n\n'
             'The following exception was thrown when trying to '
-            'run the initial deployment: {1}'.format(
-                vm_['name'],
-                str(exc)
-            ),
+            'run the initial deployment: %s',
+            vm_['name'], six.text_type(exc),
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -485,7 +486,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     if not vm_.get('ssh_host'):
         vm_['ssh_host'] = None
@@ -496,7 +497,10 @@ def create(vm_):
     for facing, addr_family, ip_address in [(net['type'], family, net['ip_address'])
                                             for family in addr_families
                                             for net in data['networks'][family]]:
-        log.info('found {0} IP{1} interface for "{2}"'.format(facing, addr_family, ip_address))
+        log.info(
+            'found %s IP%s interface for "%s"',
+            facing, addr_family, ip_address
+        )
         dns_rec_type = arec_map[addr_family]
         if facing == 'public':
             if create_dns_record:
@@ -510,18 +514,17 @@ def create(vm_):
             'No suitable IP addresses found for ssh minion bootstrapping: {0}'.format(repr(data['networks']))
         )
 
-    log.debug('Found public IP address to use for ssh minion bootstrapping: {0}'.format(vm_['ssh_host']))
+    log.debug(
+        'Found public IP address to use for ssh minion bootstrapping: %s',
+        vm_['ssh_host']
+    )
 
     vm_['key_filename'] = key_filename
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     ret.update(data)
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
-    log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
-    )
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
+    log.debug('\'%s\' VM creation details:\n%s', vm_['name'], pprint.pformat(data))
 
     __utils__['cloud.fire_event'](
         'event',
@@ -539,7 +542,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None, http_meth
     '''
     Make a web call to DigitalOcean
     '''
-    base_path = str(config.get_cloud_config_value(
+    base_path = six.text_type(config.get_cloud_config_value(
         'api_root',
         get_configured_provider(),
         __opts__,
@@ -629,10 +632,8 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for node \'{0}\'. Remaining '
-                'attempts: {1}'.format(
-                    name, attempts
-                )
+                'Failed to get the data for node \'%s\'. Remaining '
+                'attempts: %s', name, attempts
             )
             # Just a little delay between attempts...
             time.sleep(0.5)
@@ -655,7 +656,7 @@ def list_keypairs(call=None):
     ret = {}
 
     while fetch:
-        items = query(method='account/keys', command='?page=' + str(page) +
+        items = query(method='account/keys', command='?page=' + six.text_type(page) +
                       '&per_page=100')
 
         for key_pair in items['ssh_keys']:
@@ -671,7 +672,7 @@ def list_keypairs(call=None):
                 )
             ret[name] = {}
             for item in six.iterkeys(key_pair):
-                ret[name][item] = str(key_pair[item])
+                ret[name][item] = six.text_type(key_pair[item])
 
         page += 1
         try:
@@ -701,7 +702,7 @@ def show_keypair(kwargs=None, call=None):
 
     keypairs = list_keypairs(call='function')
     keyid = keypairs[kwargs['keyname']]['id']
-    log.debug('Key ID is {0}'.format(keyid))
+    log.debug('Key ID is %s', keyid)
 
     details = query(method='account/keys', command=keyid)
 
@@ -835,17 +836,17 @@ def destroy(name, call=None):
             '\'delete_dns_record\' should be a boolean value.'
         )
     # When the "to do" a few lines up is resolved, remove these lines and use the if/else logic below.
-    log.debug('Deleting DNS records for {0}.'.format(name))
+    log.debug('Deleting DNS records for %s.', name)
     destroy_dns_records(name)
 
     # Until the "to do" from line 754 is taken care of, we don't need this logic.
     # if delete_dns_record:
-    #    log.debug('Deleting DNS records for {0}.'.format(name))
+    #    log.debug('Deleting DNS records for %s.', name)
     #    destroy_dns_records(name)
     # else:
-    #    log.debug('delete_dns_record : {0}'.format(delete_dns_record))
+    #    log.debug('delete_dns_record : %s', delete_dns_record)
     #    for line in pprint.pformat(dir()).splitlines():
-    #       log.debug('delete  context: {0}'.format(line))
+    #       log.debug('delete  context: %s', line)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -875,7 +876,7 @@ def post_dns_record(**kwargs):
         if kwargs[i]:
             pass
         else:
-            error = '{0}="{1}" ## all mandatory args must be provided: {2}'.format(i, kwargs[i], str(mandatory_kwargs))
+            error = '{0}="{1}" ## all mandatory args must be provided: {2}'.format(i, kwargs[i], six.text_type(mandatory_kwargs))
             raise SaltInvocationError(error)
 
     domain = query(method='domains', droplet_id=kwargs['dns_domain'])
@@ -905,24 +906,30 @@ def destroy_dns_records(fqdn):
     except SaltCloudSystemExit:
         log.debug('Failed to find domains.')
         return False
-    log.debug("found DNS records: {0}".format(pprint.pformat(response)))
+    log.debug("found DNS records: %s", pprint.pformat(response))
     records = response['domain_records']
 
     if records:
         record_ids = [r['id'] for r in records if r['name'].decode() == hostname]
-        log.debug("deleting DNS record IDs: {0}".format(repr(record_ids)))
-        for id in record_ids:
+        log.debug('deleting DNS record IDs: %r', record_ids)
+        for id_ in record_ids:
             try:
-                log.info('deleting DNS record {0}'.format(id))
+                log.info('deleting DNS record %s', id_)
                 ret = query(
                     method='domains',
                     droplet_id=domain,
-                    command='records/{0}'.format(id),
+                    command='records/{0}'.format(id_),
                     http_method='delete'
                 )
             except SaltCloudSystemExit:
-                log.error('failed to delete DNS domain {0} record ID {1}.'.format(domain, hostname))
-            log.debug('DNS deletion REST call returned: {0}'.format(pprint.pformat(ret)))
+                log.error(
+                    'failed to delete DNS domain %s record ID %s.',
+                    domain, hostname
+                )
+            log.debug(
+                'DNS deletion REST call returned: %s',
+                pprint.pformat(ret)
+            )
 
     return False
 
@@ -990,7 +997,7 @@ def list_floating_ips(call=None):
 
     while fetch:
         items = query(method='floating_ips',
-                      command='?page=' + str(page) + '&per_page=200')
+                      command='?page=' + six.text_type(page) + '&per_page=200')
 
         for floating_ip in items['floating_ips']:
             ret[floating_ip['ip']] = {}
@@ -1032,7 +1039,7 @@ def show_floating_ip(kwargs=None, call=None):
         return False
 
     floating_ip = kwargs['floating_ip']
-    log.debug('Floating ip is {0}'.format(floating_ip))
+    log.debug('Floating ip is %s', floating_ip)
 
     details = query(method='floating_ips', command=floating_ip)
 
@@ -1107,7 +1114,7 @@ def delete_floating_ip(kwargs=None, call=None):
         return False
 
     floating_ip = kwargs['floating_ip']
-    log.debug('Floating ip is {0}'.format('floating_ip'))
+    log.debug('Floating ip is %s', floating_ip)
 
     result = query(method='floating_ips',
                    command=floating_ip,
@@ -1192,7 +1199,7 @@ def _list_nodes(full=False, for_output=False):
 
     while fetch:
         items = query(method='droplets',
-                      command='?page=' + str(page) + '&per_page=200')
+                      command='?page=' + six.text_type(page) + '&per_page=200')
         for node in items['droplets']:
             name = node['name']
             ret[name] = {}
@@ -1207,7 +1214,7 @@ def _list_nodes(full=False, for_output=False):
                     'private_ips': private_ips,
                     'public_ips': public_ips,
                     'size': node['size_slug'],
-                    'state': str(node['status']),
+                    'state': six.text_type(node['status']),
                 }
 
         page += 1
@@ -1339,7 +1346,7 @@ def _get_full_output(node, for_output=False):
     for item in six.iterkeys(node):
         value = node[item]
         if value is not None and for_output:
-            value = str(value)
+            value = six.text_type(value)
         ret[item] = value
     return ret
 

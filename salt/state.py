@@ -50,7 +50,7 @@ from salt.exceptions import (
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
 from salt.utils.locales import sdecode
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
-import salt.utils.yamlloader as yamlloader
+import salt.utils.yaml
 
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -748,9 +748,8 @@ class State(object):
                 # decrypted above, and should now be a stringified dictionary.
                 # Use the YAML loader to convert that to a Python dictionary.
                 try:
-                    self._pillar_override = yamlloader.load(
-                        self._pillar_override,
-                        Loader=yamlloader.SaltYamlSafeLoader)
+                    self._pillar_override = salt.utils.yaml.safe_load(
+                        self._pillar_override)
                 except Exception as exc:
                     log.error('Failed to load CLI pillar override')
                     log.exception(exc)

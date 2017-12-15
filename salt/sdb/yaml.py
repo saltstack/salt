@@ -40,7 +40,7 @@ GPG-encrypted data using the :py:mod:`GPG renderer <salt.renderers.gpg>`.
 '''
 
 # import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 import salt.exceptions
@@ -96,9 +96,9 @@ def _get_values(profile=None):
                 ret = salt.utils.dictupdate.merge(
                     ret, contents, **profile.get('merge', {}))
         except IOError:
-            log.error("File not found '{0}'".format(fname))
+            log.error('File not found \'%s\'', fname)
         except TypeError:
-            log.error("Error deserializing sdb file '{0}'".format(fname))
+            log.error('Error deserializing sdb file \'%s\'', fname)
     return ret
 
 

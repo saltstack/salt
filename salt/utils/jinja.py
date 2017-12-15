@@ -20,7 +20,6 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 # Import third party libs
 import jinja2
 from salt.ext import six
-import yaml
 from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
 from jinja2.exceptions import TemplateRuntimeError
@@ -32,7 +31,7 @@ import salt.fileclient
 import salt.utils.data
 import salt.utils.files
 import salt.utils.url
-import salt.utils.yamldumper
+import salt.utils.yaml
 from salt.utils.decorators.jinja import jinja_filter, jinja_test, jinja_global
 from salt.utils.odict import OrderedDict
 
@@ -785,7 +784,7 @@ class SerializerExtension(Extension, object):
         return Markup(json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
 
     def format_yaml(self, value, flow_style=True):
-        yaml_txt = salt.utils.yamldumper.safe_dump(
+        yaml_txt = salt.utils.yaml.safe_dump(
             value, default_flow_style=flow_style).strip()
         if yaml_txt.endswith('\n...'):
             yaml_txt = yaml_txt[:len(yaml_txt)-4]
@@ -844,7 +843,7 @@ class SerializerExtension(Extension, object):
         if isinstance(value, TemplateModule):
             value = str(value)
         try:
-            return yaml.safe_load(value)
+            return salt.utils.yaml.safe_load(value)
         except AttributeError:
             raise TemplateRuntimeError(
                 'Unable to load yaml from {0}'.format(value))
