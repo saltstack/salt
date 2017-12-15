@@ -159,7 +159,7 @@ def vgdisplay(vgname=''):
     return ret
 
 
-def lvdisplay(lvname=''):
+def lvdisplay(lvname='', quiet=False):
     '''
     Return information about the logical volume(s)
 
@@ -174,7 +174,10 @@ def lvdisplay(lvname=''):
     cmd = ['lvdisplay', '-c']
     if lvname:
         cmd.append(lvname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if quiet:
+        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
+    else:
+        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -236,10 +239,13 @@ def pvcreate(devices, override=True, **kwargs):
              'pvmetadatacopies', 'metadatacopies', 'metadataignore',
              'restorefile', 'norestorefile', 'labelsector',
              'setphysicalvolumesize')
+    no_parameter = ('force', 'norestorefile')
     for var in kwargs:
         if kwargs[var] and var in valid:
+            cmd.extend(['--{0}'.format(var), kwargs[var]])
+        elif kwargs[var] and var in no_parameter:
             cmd.append('--{0}'.format(var))
-            cmd.append(kwargs[var])
+
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out.get('retcode'):
         raise CommandExecutionError(out.get('stderr'))

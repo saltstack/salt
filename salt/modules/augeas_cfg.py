@@ -41,7 +41,6 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 from salt.exceptions import SaltInvocationError
 
@@ -200,7 +199,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             method = METHOD_MAP[cmd]
             nargs = arg_map[method]
 
-            parts = salt.utils.args.shlex_split(arg, posix=False)
+            parts = salt.utils.args.shlex_split(arg)
 
             if len(parts) not in nargs:
                 err = '{0} takes {1} args: {2}'.format(method, nargs, parts)

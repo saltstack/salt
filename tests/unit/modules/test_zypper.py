@@ -190,7 +190,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': MagicMock(return_value=ref_out)}):
             with self.assertRaisesRegex(CommandExecutionError,
-                    "^Zypper command failure: Some handled zypper internal error\nAnother zypper internal error$"):
+                    "^Zypper command failure: Some handled zypper internal error{0}Another zypper internal error$".format(os.linesep)):
                 zypper.list_upgrades(refresh=False)
 
         # Test unhandled error
@@ -533,36 +533,42 @@ Repository 'DUMMY' not found by its alias, number, or URI.
              patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
              patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
-            pkgs = zypper.list_pkgs(attr=['arch', 'install_date_time_t'])
+            pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             for pkg_name, pkg_attr in {
                 'jakarta-commons-discovery': {
-                    'version': '0.4-129.686',
+                    'version': '0.4',
+                    'release': '129.686',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636511,
                 },
                 'yast2-ftp-server': {
-                    'version': '3.1.8-8.1',
+                    'version': '3.1.8',
+                    'release': '8.1',
                     'arch': 'x86_64',
                     'install_date_time_t': 1499257798,
                 },
                 'protobuf-java': {
-                    'version': '2.6.1-3.1.develHead',
-                    'arch': 'noarch',
+                    'version': '2.6.1',
+                    'release': '3.1.develHead',
                     'install_date_time_t': 1499257756,
+                    'arch': 'noarch',
                 },
                 'susemanager-build-keys-web': {
-                    'version': '12.0-5.1.develHead',
+                    'version': '12.0',
+                    'release': '5.1.develHead',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636510,
                 },
                 'apache-commons-cli': {
-                    'version': '1.2-1.233',
+                    'version': '1.2',
+                    'release': '1.233',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636510,
                 },
                 'jose4j': {
-                    'version': '0.4.4-2.1.develHead',
                     'arch': 'noarch',
+                    'version': '0.4.4',
+                    'release': '2.1.develHead',
                     'install_date_time_t': 1499257756,
                 }}.items():
                 self.assertTrue(pkgs.get(pkg_name))
@@ -592,7 +598,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             self.assertEqual(len(list_patches), 3)
             self.assertDictEqual(list_patches, PATCHES_RET)
 
-    @patch('os.walk', MagicMock(return_value=[('test', 'test', 'test')]))
+    @patch('salt.utils.path.os_walk', MagicMock(return_value=[('test', 'test', 'test')]))
     @patch('os.path.getsize', MagicMock(return_value=123456))
     @patch('os.path.getctime', MagicMock(return_value=1234567890.123456))
     @patch('fnmatch.filter', MagicMock(return_value=['/var/cache/zypper/packages/foo/bar/test_package.rpm']))
@@ -663,8 +669,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     '--download-only',
                     'vim'
                 )
@@ -693,8 +699,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     '--download-only',
                     'vim'
                 )
@@ -718,8 +724,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     'patch:SUSE-PATCH-1234'
                 )
                 self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})

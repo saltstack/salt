@@ -17,6 +17,7 @@ import time
 import salt.loader
 import salt.utils.files
 import salt.utils.locales
+import salt.utils.path
 import salt.utils.url
 import salt.utils.versions
 from salt.utils.args import get_function_argspec as _argspec
@@ -182,7 +183,7 @@ def generate_mtime_map(opts, path_map):
     file_map = {}
     for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
-            for directory, dirnames, filenames in os.walk(path):
+            for directory, dirnames, filenames in salt.utils.path.os_walk(path):
                 # Don't walk any directories that match file_ignore_regex or glob
                 dirnames[:] = [d for d in dirnames if not is_file_ignored(opts, d)]
                 for item in filenames:
@@ -225,7 +226,7 @@ def reap_fileserver_cache_dir(cache_base, find_func):
     '''
     for saltenv in os.listdir(cache_base):
         env_base = os.path.join(cache_base, saltenv)
-        for root, dirs, files in os.walk(env_base):
+        for root, dirs, files in salt.utils.path.os_walk(env_base):
             # if we have an empty directory, lets cleanup
             # This will only remove the directory on the second time
             # "_reap_cache" is called (which is intentional)
@@ -553,12 +554,7 @@ class Fileserver(object):
                     kwargs[args[0]] = args[1]
 
         if 'env' in kwargs:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             kwargs.pop('env')
         if 'saltenv' in kwargs:
             saltenv = kwargs.pop('saltenv')
@@ -583,12 +579,7 @@ class Fileserver(object):
                'dest': ''}
 
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
@@ -609,13 +600,7 @@ class Fileserver(object):
         Common code for hashing and stating files
         '''
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list. '
-                'This parameter is no longer used and has been replaced by '
-                '\'saltenv\' as of Salt 2016.11.0. This warning will be removed '
-                'in Salt Oxygen.'
-            )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         if 'path' not in load or 'saltenv' not in load:
@@ -656,12 +641,7 @@ class Fileserver(object):
         Deletes the file_lists cache files
         '''
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         saltenv = load.get('saltenv', [])
@@ -738,12 +718,7 @@ class Fileserver(object):
         Return a list of files from the dominant environment
         '''
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         ret = set()
@@ -769,12 +744,7 @@ class Fileserver(object):
         List all emptydirs in the given environment
         '''
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         ret = set()
@@ -800,12 +770,7 @@ class Fileserver(object):
         List all directories in the given environment
         '''
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         ret = set()
@@ -831,12 +796,7 @@ class Fileserver(object):
         Return a list of symlinked files and dirs
         '''
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         ret = {}

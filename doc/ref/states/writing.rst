@@ -111,6 +111,8 @@ This code will call the `managed` function in the :mod:`file
 <salt.states.file>` state module and pass the arguments ``name`` and ``source``
 to it.
 
+.. _state-return-data:
+
 Return Data
 ===========
 
@@ -153,7 +155,12 @@ A State Module must return a dict containing the following keys/values:
       However, if a state is going to fail and this can be determined
       in test mode without applying the change, ``False`` can be returned.
 
-- **comment:** A string containing a summary of the result.
+- **comment:** A list of strings or a single string summarizing the result.
+  Note that support for lists of strings is available as of Salt Oxygen.
+  Lists of strings will be joined with newlines to form the final comment;
+  this is useful to allow multiple comments from subparts of a state.
+  Prefer to keep line lengths short (use multiple lines as needed),
+  and end with punctuation (e.g. a period) to delimit multiple comments.
 
 The return data can also, include the **pchanges** key, this stands for
 `predictive changes`. The **pchanges** key informs the State system what

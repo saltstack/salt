@@ -465,5 +465,5 @@ def server_pxe():
             log.warning('failed to set boot order')
             return False
 
-    log.warning('failed to to configure PXE boot')
+    log.warning('failed to configure PXE boot')
     return False

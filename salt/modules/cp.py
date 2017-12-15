@@ -14,10 +14,10 @@ import fnmatch
 # Import salt libs
 import salt.minion
 import salt.fileclient
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.locales
+import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 import salt.crypt
@@ -50,7 +50,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
+        __opts__['saltenv'],
         pillar_override=pillar_override,
         pillarenv=pillarenv
     )
@@ -352,7 +352,7 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, **kwargs):
     return _client().get_dir(path, dest, saltenv, gzip)
 
 
-def get_url(path, dest='', saltenv='base', makedirs=False):
+def get_url(path, dest='', saltenv='base', makedirs=False, source_hash=None):
     '''
     .. versionchanged:: Oxygen
         ``dest`` can now be a directory
@@ -386,6 +386,13 @@ def get_url(path, dest='', saltenv='base', makedirs=False):
         Salt fileserver envrionment from which to retrieve the file. Ignored if
         ``path`` is not a ``salt://`` URL.
 
+    source_hash
+        If ``path`` is an http(s) or ftp URL and the file exists in the
+        minion's file cache, this option can be passed to keep the minion from
+        re-downloading the file if the cached copy matches the specified hash.
+
+        .. versionadded:: Oxygen
+
     CLI Example:
 
     .. code-block:: bash
@@ -394,9 +401,11 @@ def get_url(path, dest='', saltenv='base', makedirs=False):
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     '''
     if isinstance(dest, six.string_types):
-        result = _client().get_url(path, dest, makedirs, saltenv)
+        result = _client().get_url(
+            path, dest, makedirs, saltenv, source_hash=source_hash)
     else:
-        result = _client().get_url(path, None, makedirs, saltenv, no_cache=True)
+        result = _client().get_url(
+            path, None, makedirs, saltenv, no_cache=True, source_hash=source_hash)
     if not result:
         log.error(
             'Unable to fetch file {0} from saltenv {1}.'.format(
@@ -429,11 +438,18 @@ def get_file_str(path, saltenv='base'):
     return fn_
 
 
-def cache_file(path, saltenv='base'):
+def cache_file(path, saltenv='base', source_hash=None):
     '''
     Used to cache a single file on the Minion
 
-    Returns the location of the new cached file on the Minion.
+    Returns the location of the new cached file on the Minion
+
+    source_hash
+        If ``name`` is an http(s) or ftp URL and the file exists in the
+        minion's file cache, this option can be passed to keep the minion from
+        re-downloading the file if the cached copy matches the specified hash.
+
+        .. versionadded:: Oxygen
 
     CLI Example:
 
@@ -485,7 +501,7 @@ def cache_file(path, saltenv='base'):
     if senv:
         saltenv = senv
 
-    result = _client().cache_file(path, saltenv)
+    result = _client().cache_file(path, saltenv, source_hash=source_hash)
     if not result:
         log.error(
             u'Unable to cache file \'%s\' from saltenv \'%s\'.',
@@ -732,7 +748,7 @@ def stat_file(path, saltenv='base', octal=True):
     stat = _client().hash_and_stat_file(path, saltenv)[1]
     if stat is None:
         return stat
-    return salt.utils.st_mode_to_octal(stat[0]) if octal is True else stat[0]
+    return salt.utils.files.st_mode_to_octal(stat[0]) if octal is True else stat[0]
 
 
 def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
@@ -860,7 +876,7 @@ def push_dir(path, glob=None, upload_path=None):
         return push(path, upload_path=upload_path)
     else:
         filelist = []
-        for root, _, files in os.walk(path):
+        for root, _, files in salt.utils.path.os_walk(path):
             filelist += [os.path.join(root, tmpfile) for tmpfile in files]
         if glob is not None:
             filelist = [fi for fi in filelist if fnmatch.fnmatch(os.path.basename(fi), glob)]

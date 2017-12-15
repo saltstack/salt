@@ -138,7 +138,7 @@ import json
 import os
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.data
 import salt.utils.files
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
@@ -1535,7 +1535,7 @@ def policy_present(name, policy_document, path=None, description=None,
         if isinstance(policy_document, six.string_types):
             policy_document = json.loads(policy_document)
 
-        r = salt.utils.compare_dicts(describeDict, policy_document)
+        r = salt.utils.data.compare_dicts(describeDict, policy_document)
 
         if bool(r):
             if __opts__['test']:
@@ -1636,7 +1636,7 @@ def policy_absent(name,
 def saml_provider_present(name, saml_metadata_document, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded::
+    .. versionadded:: 2016.11.0
 
     Ensure the SAML provider with the specified name is present.
 
@@ -1694,7 +1694,7 @@ def saml_provider_present(name, saml_metadata_document, region=None, key=None, k
 def saml_provider_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded::
+    .. versionadded:: 2016.11.0
 
     Ensure the SAML provider with the specified name is absent.
 

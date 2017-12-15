@@ -1303,6 +1303,23 @@ def latest(name,
                         'if it does not already exist).',
                         comments
                     )
+                remote_tags = set([
+                    x.replace('refs/tags/', '') for x in __salt__['git.ls_remote'](
+                        cwd=target,
+                        remote=remote,
+                        opts="--tags",
+                        user=user,
+                        password=password,
+                        identity=identity,
+                        saltenv=__env__,
+                        ignore_retcode=True,
+                    ).keys() if '^{}' not in x
+                ])
+                if set(all_local_tags) != remote_tags:
+                    has_remote_rev = False
+                    ret['changes']['new_tags'] = list(remote_tags.symmetric_difference(
+                        all_local_tags
+                    ))
 
                 if not has_remote_rev:
                     try:
@@ -2985,13 +3002,13 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     cmd_kwargs['python_shell'] = True
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            return {'comment': 'onlyif execution failed',
+            return {'comment': 'onlyif condition is false',
                     'skip_watch': True,
                     'result': True}
 
     if unless:
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless execution succeeded',
+            return {'comment': 'unless condition is true',
                     'skip_watch': True,
                     'result': True}
 

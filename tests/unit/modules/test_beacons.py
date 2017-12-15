@@ -60,6 +60,13 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                           'tag': '/salt/minion/minion_beacons_list_complete',
                           'beacons': {}},
                          {'complete': True,
+                          'tag': '/salt/minion/minion_beacons_list_available_complete',
+                          'beacons': ['ps']},
+                         {'complete': True,
+                          'valid': True,
+                          'vcomment': '',
+                          'tag': '/salt/minion/minion_beacons_list_complete'},
+                         {'complete': True,
                           'tag': '/salt/minion/minion_beacon_add_complete',
                           'beacons': {'ps': [{'processes': {'salt-master': 'stopped', 'apache2': 'stopped'}}]}}]
 

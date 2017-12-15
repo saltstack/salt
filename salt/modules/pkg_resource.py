@@ -16,7 +16,7 @@ import yaml
 from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
@@ -36,7 +36,7 @@ def _repack_pkgs(pkgs, normalize=True):
     return dict(
         [
             (_normalize_name(str(x)), str(y) if y is not None else y)
-            for x, y in six.iteritems(salt.utils.repack_dictlist(pkgs))
+            for x, y in six.iteritems(salt.utils.data.repack_dictlist(pkgs))
         ]
     )
 
@@ -106,12 +106,7 @@ def parse_targets(name=None,
         salt '*' pkg_resource.parse_targets
     '''
     if '__env__' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
     if __grains__['os'] == 'MacOS' and sources:
@@ -196,7 +191,7 @@ def version(*names, **kwargs):
     '''
     ret = {}
     versions_as_list = \
-        salt.utils.is_true(kwargs.pop('versions_as_list', False))
+        salt.utils.data.is_true(kwargs.pop('versions_as_list', False))
     pkg_glob = False
     if len(names) != 0:
         pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
@@ -316,7 +311,8 @@ def format_pkg_list(packages, versions_as_list, attr):
     '''
     ret = copy.deepcopy(packages)
     if attr:
-        requested_attr = set(['version', 'arch', 'install_date', 'install_date_time_t'])
+        requested_attr = set(['epoch', 'version', 'release', 'arch',
+                              'install_date', 'install_date_time_t'])
 
         if attr != 'all':
             requested_attr &= set(attr + ['version'])
@@ -326,13 +322,25 @@ def format_pkg_list(packages, versions_as_list, attr):
             for all_attr in ret[name]:
                 filtered_attr = {}
                 for key in requested_attr:
-                    filtered_attr[key] = all_attr[key]
+                    if all_attr[key]:
+                        filtered_attr[key] = all_attr[key]
                 versions.append(filtered_attr)
             ret[name] = versions
         return ret
 
     for name in ret:
-        ret[name] = [d['version'] for d in ret[name]]
+        ret[name] = [format_version(d['epoch'], d['version'], d['release'])
+                     for d in ret[name]]
     if not versions_as_list:
         stringify(ret)
     return ret
+
+
+def format_version(epoch, version, release):
+    '''
+    Formats a version string for list_pkgs.
+    '''
+    full_version = '{0}:{1}'.format(epoch, version) if epoch else version
+    if release:
+        full_version += '-{0}'.format(release)
+    return full_version

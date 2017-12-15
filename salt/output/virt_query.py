@@ -8,7 +8,7 @@ runner.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import 3rd-party libs
 from salt.ext import six

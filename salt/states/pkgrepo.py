@@ -91,9 +91,8 @@ import sys
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
-import salt.utils
+import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
@@ -259,6 +258,16 @@ def managed(name, ppa=None, **kwargs):
 
            Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
 
+    key_text
+        The string representation of the GPG key to install.
+
+        .. versionadded:: Oxygen
+
+       .. note::
+
+           Use either ``keyid``/``keyserver``, ``key_url``, or ``key_text`` but
+           not more than one method.
+
     consolidate : False
        If set to ``True``, this will consolidate all sources definitions to the
        sources.list file, cleanup the now unused files, consolidate components
@@ -312,6 +321,16 @@ def managed(name, ppa=None, **kwargs):
         ret['result'] = False
         ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
                          '"key_url" argument.'
+
+    if 'key_text' in kwargs and ('keyid' in kwargs or 'keyserver' in kwargs):
+        ret['result'] = False
+        ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
+                         '"key_text" argument.'
+    if 'key_text' in kwargs and ('key_url' in kwargs):
+        ret['result'] = False
+        ret['comment'] = 'You may not use both "key_url" and ' \
+                         '"key_text" argument.'
+
     if 'repo' in kwargs:
         ret['result'] = False
         ret['comment'] = ('\'repo\' is not a supported argument for this '
@@ -341,9 +360,9 @@ def managed(name, ppa=None, **kwargs):
             except TypeError:
                 repo = ':'.join(('ppa', str(ppa)))
 
-        kwargs['disabled'] = not salt.utils.is_true(enabled) \
+        kwargs['disabled'] = not salt.utils.data.is_true(enabled) \
             if enabled is not None \
-            else salt.utils.is_true(disabled)
+            else salt.utils.data.is_true(disabled)
 
     elif os_family in ('redhat', 'suse'):
         if 'humanname' in kwargs:
@@ -352,15 +371,15 @@ def managed(name, ppa=None, **kwargs):
             # Fall back to the repo name if humanname not provided
             kwargs['name'] = repo
 
-        kwargs['enabled'] = not salt.utils.is_true(disabled) \
+        kwargs['enabled'] = not salt.utils.data.is_true(disabled) \
             if disabled is not None \
-            else salt.utils.is_true(enabled)
+            else salt.utils.data.is_true(enabled)
 
     elif os_family == 'nilinuxrt':
         # opkg is the pkg virtual
-        kwargs['enabled'] = not salt.utils.is_true(disabled) \
+        kwargs['enabled'] = not salt.utils.data.is_true(disabled) \
             if disabled is not None \
-            else salt.utils.is_true(enabled)
+            else salt.utils.data.is_true(enabled)
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
@@ -386,7 +405,7 @@ def managed(name, ppa=None, **kwargs):
         sanitizedkwargs = kwargs
 
     if os_family == 'debian':
-        repo = _strip_uri(repo)
+        repo = salt.utils.pkg.deb.strip_uri(repo)
 
     if pre:
         for kwarg in sanitizedkwargs:
@@ -397,7 +416,7 @@ def managed(name, ppa=None, **kwargs):
                     # if it's desired to be enabled and the 'enabled' key is
                     # missing from the repo definition
                     if os_family == 'redhat':
-                        if not salt.utils.is_true(sanitizedkwargs[kwarg]):
+                        if not salt.utils.data.is_true(sanitizedkwargs[kwarg]):
                             break
                     else:
                         break
@@ -432,8 +451,8 @@ def managed(name, ppa=None, **kwargs):
                         and any(isinstance(x, bool) for x in
                                 (sanitizedkwargs[kwarg], pre[kwarg])):
                     # This check disambiguates 1/0 from True/False
-                    if salt.utils.is_true(sanitizedkwargs[kwarg]) != \
-                            salt.utils.is_true(pre[kwarg]):
+                    if salt.utils.data.is_true(sanitizedkwargs[kwarg]) != \
+                            salt.utils.data.is_true(pre[kwarg]):
                         break
                 else:
                     if str(sanitizedkwargs[kwarg]) != str(pre[kwarg]):

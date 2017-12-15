@@ -91,12 +91,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
     def render_sls(self, content, sls='', saltenv='base', **kws):
         if 'env' in kws:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             kws.pop('env')
 
         return self.HIGHSTATE.state.rend['pydsl'](
@@ -314,21 +309,21 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                     - cwd: /
                 .Y:
                   cmd.run:
-                    - name: echo Y >> {1}
+                    - name: echo Y >> {0}
                     - cwd: /
                 .Z:
                   cmd.run:
-                    - name: echo Z >> {2}
+                    - name: echo Z >> {0}
                     - cwd: /
-                '''.format(output, output, output)))
+                '''.format(output.replace('\\', '/'))))
             write_to(os.path.join(dirpath, 'yyy.sls'), textwrap.dedent('''\
                 #!pydsl|stateconf -ps
 
                 __pydsl__.set(ordered=True)
                 state('.D').cmd.run('echo D >> {0}', cwd='/')
-                state('.E').cmd.run('echo E >> {1}', cwd='/')
-                state('.F').cmd.run('echo F >> {2}', cwd='/')
-                '''.format(output, output, output)))
+                state('.E').cmd.run('echo E >> {0}', cwd='/')
+                state('.F').cmd.run('echo F >> {0}', cwd='/')
+                '''.format(output.replace('\\', '/'))))
 
             write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
                 #!pydsl|stateconf -ps
@@ -344,9 +339,9 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 __pydsl__.set(ordered=True)
 
                 state('.A').cmd.run('echo A >> {0}', cwd='/')
-                state('.B').cmd.run('echo B >> {1}', cwd='/')
-                state('.C').cmd.run('echo C >> {2}', cwd='/')
-                '''.format(output, output, output)))
+                state('.B').cmd.run('echo B >> {0}', cwd='/')
+                state('.C').cmd.run('echo C >> {0}', cwd='/')
+                '''.format(output.replace('\\', '/'))))
 
             self.state_highstate({'base': ['aaa']}, dirpath)
             with salt.utils.files.fopen(output, 'r') as f:
@@ -366,26 +361,29 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 )
             )
         try:
+            # The Windows shell will include any spaces before the redirect
+            # in the text that is redirected.
+            # For example: echo hello > test.txt will contain "hello "
             write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
                 #!pydsl
 
                 __pydsl__.set(ordered=True)
                 A = state('A')
-                A.cmd.run('echo hehe > {0}/zzz.txt', cwd='/')
-                A.file.managed('{1}/yyy.txt', source='salt://zzz.txt')
+                A.cmd.run('echo hehe>{0}/zzz.txt', cwd='/')
+                A.file.managed('{0}/yyy.txt', source='salt://zzz.txt')
                 A()
                 A()
 
-                state().cmd.run('echo hoho >> {2}/yyy.txt', cwd='/')
+                state().cmd.run('echo hoho>>{0}/yyy.txt', cwd='/')
 
-                A.file.managed('{3}/xxx.txt', source='salt://zzz.txt')
+                A.file.managed('{0}/xxx.txt', source='salt://zzz.txt')
                 A()
-                '''.format(dirpath, dirpath, dirpath, dirpath)))
+                '''.format(dirpath.replace('\\', '/'))))
             self.state_highstate({'base': ['aaa']}, dirpath)
             with salt.utils.files.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
-                self.assertEqual(f.read(), 'hehe\nhoho\n')
+                self.assertEqual(f.read(), 'hehe' + os.linesep + 'hoho' + os.linesep)
             with salt.utils.files.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
-                self.assertEqual(f.read(), 'hehe\n')
+                self.assertEqual(f.read(), 'hehe' + os.linesep)
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 

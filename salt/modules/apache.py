@@ -447,11 +447,15 @@ def config(name, config, edit=True):
         salt '*' apache.config /etc/httpd/conf.d/ports.conf config="[{'Listen': '22'}]"
     '''
 
+    configs = []
     for entry in config:
         key = next(six.iterkeys(entry))
-        configs = _parse_config(entry[key], key)
-        if edit:
-            with salt.utils.files.fopen(name, 'w') as configfile:
-                configfile.write('# This file is managed by Salt.\n')
-                configfile.write(configs)
-    return configs
+        configs.append(_parse_config(entry[key], key))
+
+    # Python auto-correct line endings
+    configstext = "\n".join(configs)
+    if edit:
+        with salt.utils.files.fopen(name, 'w') as configfile:
+            configfile.write('# This file is managed by Salt.\n')
+            configfile.write(configstext)
+    return configstext

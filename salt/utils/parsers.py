@@ -30,12 +30,14 @@ import salt.defaults.exitcodes
 import salt.log.setup as log
 import salt.syspaths as syspaths
 import salt.version as version
-import salt.utils
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.kinds as kinds
 import salt.utils.platform
+import salt.utils.process
+import salt.utils.stringutils
+import salt.utils.user
 import salt.utils.xdg
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
@@ -772,12 +774,13 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # Since we're not be able to write to the log file or its parent
             # directory (if the log file does not exit), are we the same user
             # as the one defined in the configuration file?
-            current_user = salt.utils.get_user()
+            current_user = salt.utils.user.get_user()
             if self.config['user'] != current_user:
                 # Yep, not the same user!
                 # Is the current user in ACL?
                 acl = self.config['publisher_acl']
-                if salt.utils.check_whitelist_blacklist(current_user, whitelist=six.iterkeys(acl)):
+                if salt.utils.stringutils.check_whitelist_blacklist(
+                            current_user, whitelist=six.iterkeys(acl)):
                     # Yep, the user is in ACL!
                     # Let's write the logfile to its home directory instead.
                     xdg_dir = salt.utils.xdg.xdg_config_dir()
@@ -968,7 +971,14 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
             # We've loaded and merged options into the configuration, it's safe
             # to query about the pidfile
             if self.check_pidfile():
-                os.unlink(self.config['pidfile'])
+                try:
+                    os.unlink(self.config['pidfile'])
+                except OSError as err:
+                    self.info(
+                        'PIDfile could not be deleted: {0}'.format(
+                            self.config['pidfile']
+                        )
+                    )
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
@@ -996,7 +1006,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                 log.shutdown_multiprocessing_logging_listener(daemonizing=True)
 
             # Late import so logging works correctly
-            salt.utils.daemonize()
+            salt.utils.process.daemonize()
 
         # Setup the multiprocessing log queue listener if enabled
         self._setup_mp_logging_listener()
@@ -1547,7 +1557,7 @@ class CloudQueriesMixIn(six.with_metaclass(MixInMeta, object)):
             action='store',
             help='Display a list of configured profiles. Pass in a cloud '
                  'provider to view the provider\'s associated profiles, '
-                 'such as digital_ocean, or pass in "all" to list all the '
+                 'such as digitalocean, or pass in "all" to list all the '
                  'configured profiles.'
         )
         self.add_option_group(group)
@@ -2147,9 +2157,12 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                         self.config['arg'].append([])
                             else:
                                 self.config['arg'][cmd_index].append(arg)
-                        if len(self.config['fun']) != len(self.config['arg']):
+                        if len(self.config['fun']) > len(self.config['arg']):
                             self.exit(42, 'Cannot execute compound command without '
                                           'defining all arguments.\n')
+                        elif len(self.config['fun']) < len(self.config['arg']):
+                            self.exit(42, 'Cannot execute compound command with more '
+                                          'arguments than commands.\n')
                     # parse the args and kwargs before sending to the publish
                     # interface
                     for i in range(len(self.config['arg'])):
@@ -2402,6 +2415,16 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                   'Default: %default.')
         )
 
+        self.add_option(
+            '--preserve-minions',
+            default=False,
+            help=('Setting this to True prevents the master from deleting '
+                  'the minion cache when keys are deleted, this may have '
+                  'security implications if compromised minions auth with '
+                  'a previous deleted minion ID. '
+                  'Default: %default.')
+        )
+
         key_options_group = optparse.OptionGroup(
             self, 'Key Generation Options'
         )
@@ -2500,6 +2523,13 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                 self.options.rotate_aes_key = True
             elif self.options.rotate_aes_key.lower() == 'false':
                 self.options.rotate_aes_key = False
+
+    def process_preserve_minions(self):
+        if hasattr(self.options, 'preserve_minions') and isinstance(self.options.preserve_minions, str):
+            if self.options.preserve_minions.lower() == 'true':
+                self.options.preserve_minions = True
+            elif self.options.preserve_minions.lower() == 'false':
+                self.options.preserve_minions = False
 
     def process_list(self):
         # Filter accepted list arguments as soon as possible
