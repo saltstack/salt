@@ -470,7 +470,7 @@ def _purge_jobs(timestamp):
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to delete contents of table \'jids\'')
             log.error(str(e))
-            raise salt.exceptions.Salt(str(e))
+            raise salt.exceptions.SaltRunnerError(str(e))
 
         try:
             sql = 'delete from `salt_returns` where alter_time < %s'
@@ -479,7 +479,7 @@ def _purge_jobs(timestamp):
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to delete contents of table \'salt_returns\'')
             log.error(str(e))
-            raise salt.exceptions.Salt(str(e))
+            raise salt.exceptions.SaltRunnerError(str(e))
 
         try:
             sql = 'delete from `salt_events` where alter_time < %s'
@@ -488,7 +488,7 @@ def _purge_jobs(timestamp):
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to delete contents of table \'salt_events\'')
             log.error(str(e))
-            raise salt.exceptions.Salt(str(e))
+            raise salt.exceptions.SaltRunnerError(str(e))
 
     return True
 
@@ -571,4 +571,4 @@ def clean_old_jobs():
         except MySQLdb.Error as e:
             log.error('Mysql returner was unable to get timestamp for purge/archive of jobs')
             log.error(str(e))
-            raise salt.exceptions.Salt(str(e))
+            raise salt.exceptions.SaltRunnerError(str(e))
