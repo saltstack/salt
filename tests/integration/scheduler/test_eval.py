@@ -117,7 +117,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           }
         }
         # 30 second loop interval
-        LOOP_INTERVAL = random.randint(30, 60)
+        LOOP_INTERVAL = random.randint(30, 59)
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
         run_time2 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
@@ -147,7 +147,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           }
         }
         # 30 second loop interval
-        LOOP_INTERVAL = random.randint(30, 60)
+        LOOP_INTERVAL = random.randint(30, 59)
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
         run_time1 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
@@ -201,7 +201,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           }
         }
         # Randomn second loop interval
-        LOOP_INTERVAL = random.randint(0, 60)
+        LOOP_INTERVAL = random.randint(0, 59)
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
         # Run the job at the right plus LOOP_INTERVAL
