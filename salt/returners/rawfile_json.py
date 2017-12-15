@@ -18,7 +18,7 @@ to restrict the events that are written.
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function, with_statement
+from __future__ import absolute_import, print_function, with_statement, unicode_literals
 import logging
 import json
 
@@ -60,7 +60,7 @@ def returner(ret):
         with salt.utils.files.flopen(opts['filename'], 'a') as logfile:
             logfile.write(json.dumps(ret)+'\n')
     except:
-        log.error('Could not write to rawdata_json file {0}'.format(opts['filename']))
+        log.error('Could not write to rawdata_json file %s', opts['filename'])
         raise
 
 
@@ -79,5 +79,5 @@ def event_return(events):
                 json.dump(event, logfile)
                 logfile.write('\n')
     except:
-        log.error('Could not write to rawdata_json file {0}'.format(opts['filename']))
+        log.error('Could not write to rawdata_json file %s', opts['filename'])
         raise

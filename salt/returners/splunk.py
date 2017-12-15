@@ -17,7 +17,7 @@ Run a test by using ``salt-call test.ping --return splunk``
 Written by Scott Pack (github.com/scottjpack)
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 import socket
@@ -27,6 +27,8 @@ import requests
 import json
 import time
 import logging
+
+from salt.ext import six
 
 _max_content_bytes = 100000
 http_event_collector_SSL_verify = False
@@ -74,7 +76,7 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
     '''
     #Get Splunk Options
     opts = _get_options()
-    logging.info('Options: {0}'.format(json.dumps(opts)))
+    logging.info('Options: %s', json.dumps(opts))
     http_event_collector_key = opts['token']
     http_event_collector_host = opts['indexer']
     #Set up the collector
@@ -94,7 +96,7 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
 
     #Add the event
     payload.update({"event": event})
-    logging.info('Payload: {0}'.format(json.dumps(payload)))
+    logging.info('Payload: %s', json.dumps(payload))
          #fire it off
     splunk_event.sendEvent(payload)
     return True
@@ -145,7 +147,7 @@ class http_event_collector(object):
 
         # If eventtime in epoch not passed as optional argument use current system time in epoch
         if not eventtime:
-            eventtime = str(int(time.time()))
+            eventtime = six.text_type(int(time.time()))
 
         # Fill in local hostname if not manually populated
         if 'host' not in payload:
@@ -182,7 +184,7 @@ class http_event_collector(object):
 
         # If eventtime in epoch not passed as optional argument use current system time in epoch
         if not eventtime:
-            eventtime = str(int(time.time()))
+            eventtime = six.text_type(int(time.time()))
 
         # Update time value on payload if need to use system time
         data = {"time": eventtime}
