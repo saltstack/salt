@@ -35,7 +35,7 @@ module (formerly called **dockerng**) in the 2017.7.0 release.
     :ref:`here <docker-authentication>` for more information on how to
     configure access to docker registries in :ref:`Pillar <pillar>` data.
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
