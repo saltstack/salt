@@ -11,6 +11,7 @@ import os
 import logging
 
 import salt.utils.files
+import salt.utils.path
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -91,7 +92,7 @@ def list_tokens(opts):
     :returns: List of dicts (tokens)
     '''
     ret = []
-    for (dirpath, dirnames, filenames) in os.walk(opts['token_dir']):
+    for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(opts['token_dir']):
         for token in filenames:
             ret.append(token)
     return ret

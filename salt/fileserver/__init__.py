@@ -17,6 +17,7 @@ import time
 import salt.loader
 import salt.utils.files
 import salt.utils.locales
+import salt.utils.path
 import salt.utils.url
 import salt.utils.versions
 from salt.utils.args import get_function_argspec as _argspec
@@ -182,7 +183,7 @@ def generate_mtime_map(opts, path_map):
     file_map = {}
     for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
-            for directory, dirnames, filenames in os.walk(path):
+            for directory, dirnames, filenames in salt.utils.path.os_walk(path):
                 # Don't walk any directories that match file_ignore_regex or glob
                 dirnames[:] = [d for d in dirnames if not is_file_ignored(opts, d)]
                 for item in filenames:
@@ -225,7 +226,7 @@ def reap_fileserver_cache_dir(cache_base, find_func):
     '''
     for saltenv in os.listdir(cache_base):
         env_base = os.path.join(cache_base, saltenv)
-        for root, dirs, files in os.walk(env_base):
+        for root, dirs, files in salt.utils.path.os_walk(env_base):
             # if we have an empty directory, lets cleanup
             # This will only remove the directory on the second time
             # "_reap_cache" is called (which is intentional)

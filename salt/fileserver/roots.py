@@ -386,8 +386,8 @@ def _file_lists(load, form):
                         ret['links'][rel_path] = link_dest
 
         for path in __opts__['file_roots'][load['saltenv']]:
-            for root, dirs, files in os.walk(
-                    salt.utils.stringutils.to_unicode(path),
+            for root, dirs, files in salt.utils.path.os_walk(
+                    path,
                     followlinks=__opts__['fileserver_followsymlinks']):
                 _add_to(ret['dirs'], path, root, dirs)
                 _add_to(ret['files'], path, root, files)
