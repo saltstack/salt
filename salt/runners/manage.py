@@ -5,7 +5,7 @@ and what hosts are down
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import operator
 import re
@@ -816,7 +816,7 @@ def bootstrap(version='develop',
             client_opts['argv'] = ['file.remove', tmp_dir]
             salt.client.ssh.SSH(client_opts).run()
         except SaltSystemExit as exc:
-            log.error(str(exc))
+            log.error(six.text_type(exc))
 
 
 def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',

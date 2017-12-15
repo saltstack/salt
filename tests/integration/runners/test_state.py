@@ -4,7 +4,7 @@ Tests for the state runner
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import json
 import os
@@ -25,6 +25,10 @@ from tests.support.paths import TMP
 import salt.utils.platform
 import salt.utils.event
 import salt.utils.files
+import salt.utils.stringutils
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 class StateRunnerTest(ShellCase):
@@ -92,12 +96,12 @@ class StateRunnerTest(ShellCase):
         self.run_run('saltutil.sync_modules')
         ret = json.loads(
             '\n'.join(
-                self.run_run(u'state.orchestrate orch.issue43204 --out=json')
+                self.run_run('state.orchestrate orch.issue43204 --out=json')
             )
         )
         # Drill down to the changes dict
-        state_ret = ret[u'data'][u'master'][u'salt_|-Step01_|-Step01_|-state'][u'changes']
-        func_ret = ret[u'data'][u'master'][u'salt_|-Step02_|-runtests_helpers.nonzero_retcode_return_false_|-function'][u'changes']
+        state_ret = ret['data']['master']['salt_|-Step01_|-Step01_|-state']['changes']
+        func_ret = ret['data']['master']['salt_|-Step02_|-runtests_helpers.nonzero_retcode_return_false_|-function']['changes']
 
         # Remove duration and start time from the results, since they would
         # vary with each run and that would make it impossible to test.
@@ -107,22 +111,22 @@ class StateRunnerTest(ShellCase):
         self.assertEqual(
             state_ret,
             {
-                u'out': u'highstate',
-                u'ret': {
-                    u'minion': {
-                        u'test_|-test fail with changes_|-test fail with changes_|-fail_with_changes': {
-                            u'__id__': u'test fail with changes',
-                            u'__run_num__': 0,
-                            u'__sls__': u'orch.issue43204.fail_with_changes',
-                            u'changes': {
-                                u'testing': {
-                                    u'new': u'Something pretended to change',
-                                    u'old': u'Unchanged'
+                'out': 'highstate',
+                'ret': {
+                    'minion': {
+                        'test_|-test fail with changes_|-test fail with changes_|-fail_with_changes': {
+                            '__id__': 'test fail with changes',
+                            '__run_num__': 0,
+                            '__sls__': 'orch.issue43204.fail_with_changes',
+                            'changes': {
+                                'testing': {
+                                    'new': 'Something pretended to change',
+                                    'old': 'Unchanged'
                                 }
                             },
-                            u'comment': u'Failure!',
-                            u'name': u'test fail with changes',
-                            u'result': False,
+                            'comment': 'Failure!',
+                            'name': 'test fail with changes',
+                            'result': False,
                         }
                     }
                 }
@@ -131,7 +135,7 @@ class StateRunnerTest(ShellCase):
 
         self.assertEqual(
             func_ret,
-            {u'out': u'highstate', u'ret': {u'minion': False}}
+            {'out': 'highstate', 'ret': {'minion': False}}
         )
 
     def test_orchestrate_target_exists(self):
@@ -230,7 +234,7 @@ class StateRunnerTest(ShellCase):
         while q.empty():
             self.run_salt('minion test.ping --static')
         out = q.get()
-        self.assertIn(expect, str(out))
+        self.assertIn(expect, six.text_type(out))
 
         server_thread.join()
 
@@ -288,14 +292,14 @@ class OrchEventTest(ShellCase):
 
         state_sls = os.path.join(self.base_env, 'test_state.sls')
         with salt.utils.files.fopen(state_sls, 'w') as fp_:
-            fp_.write(textwrap.dedent('''
+            fp_.write(salt.utils.stringutils.to_str(textwrap.dedent('''
                 date:
                   cmd.run
-            '''))
+            ''')))
 
         orch_sls = os.path.join(self.base_env, 'test_orch.sls')
         with salt.utils.files.fopen(orch_sls, 'w') as fp_:
-            fp_.write(textwrap.dedent('''
+            fp_.write(salt.utils.stringutils.to_str(textwrap.dedent('''
                 date_cmd:
                   salt.state:
                     - tgt: minion
@@ -311,7 +315,7 @@ class OrchEventTest(ShellCase):
 
                 config.values:
                   salt.wheel
-            '''))
+            ''')))
 
         listener = salt.utils.event.get_event(
             'master',
