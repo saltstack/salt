@@ -2,7 +2,7 @@
 '''
 Create ssh executor system
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 # Import python libs
 import logging
 import os
@@ -17,6 +17,7 @@ import salt.client.ssh.shell
 import salt.client.ssh
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
@@ -180,13 +181,13 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
             [salt.utils.url.create('_utils')],
             ]
     with salt.utils.files.fopen(lowfn, 'w+') as fp_:
-        fp_.write(json.dumps(chunks))
+        fp_.write(salt.utils.stringutils.to_str(json.dumps(chunks)))
     if pillar:
         with salt.utils.files.fopen(pillarfn, 'w+') as fp_:
-            fp_.write(json.dumps(pillar))
+            fp_.write(salt.utils.stringutils.to_str(json.dumps(pillar)))
     if roster_grains:
         with salt.utils.files.fopen(roster_grainsfn, 'w+') as fp_:
-            fp_.write(json.dumps(roster_grains))
+            fp_.write(salt.utils.stringutils.to_str(json.dumps(roster_grains)))
 
     if id_ is None:
         id_ = ''
@@ -194,7 +195,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
         cachedir = os.path.join('salt-ssh', id_).rstrip(os.sep)
     except AttributeError:
         # Minion ID should always be a str, but don't let an int break this
-        cachedir = os.path.join('salt-ssh', str(id_)).rstrip(os.sep)
+        cachedir = os.path.join('salt-ssh', six.string_types(id_)).rstrip(os.sep)
 
     for saltenv in file_refs:
         # Location where files in this saltenv will be cached
