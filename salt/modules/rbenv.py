@@ -17,8 +17,8 @@ import re
 import logging
 
 # Import Salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.data
 import salt.utils.platform
 from salt.exceptions import SaltInvocationError
 
@@ -62,7 +62,7 @@ def _parse_env(env):
     if not env:
         env = {}
     if isinstance(env, list):
-        env = salt.utils.repack_dictlist(env)
+        env = salt.utils.data.repack_dictlist(env)
     if not isinstance(env, dict):
         env = {}
 

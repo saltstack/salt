@@ -123,7 +123,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return odbc --return_kwargs '{"dsn": "dsn-name"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
@@ -329,4 +329,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

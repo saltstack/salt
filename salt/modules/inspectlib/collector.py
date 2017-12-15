@@ -28,9 +28,10 @@ from salt.modules.inspectlib import kiwiproc
 from salt.modules.inspectlib.entities import (AllowedDir, IgnoredDir, Package,
                                               PayloadFile, PackageCfgFile)
 
-import salt.utils  # Can be removed when reinit_crypto is moved
+import salt.utils.crypt
 import salt.utils.files
 import salt.utils.fsutils
+import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
@@ -312,7 +313,7 @@ class Inspector(EnvLoader):
                         continue
                 if not valid or not os.path.exists(obj) or not os.access(obj, os.R_OK):
                     continue
-                if os.path.islink(obj):
+                if salt.utils.path.islink(obj):
                     links.append(obj)
                 elif os.path.isdir(obj):
                     dirs.append(obj)
@@ -504,10 +505,10 @@ if __name__ == '__main__':
     # Double-fork stuff
     try:
         if os.fork() > 0:
-            salt.utils.reinit_crypto()
+            salt.utils.crypt.reinit_crypto()
             sys.exit(0)
         else:
-            salt.utils.reinit_crypto()
+            salt.utils.crypt.reinit_crypto()
     except OSError as ex:
         sys.exit(1)
 
@@ -517,12 +518,12 @@ if __name__ == '__main__':
     try:
         pid = os.fork()
         if pid > 0:
-            salt.utils.reinit_crypto()
+            salt.utils.crypt.reinit_crypto()
             with salt.utils.files.fopen(os.path.join(pidfile, EnvLoader.PID_FILE), 'w') as fp_:
                 fp_.write('{0}\n'.format(pid))
             sys.exit(0)
     except OSError as ex:
         sys.exit(1)
 
-    salt.utils.reinit_crypto()
+    salt.utils.crypt.reinit_crypto()
     main(dbfile, pidfile, mode)

@@ -4,7 +4,8 @@ Package support for OpenBSD
 
 .. note::
 
-    The package repository is configured on each host using ``/etc/pkg.conf``
+    The package repository is configured on each host using ``/etc/installurl``
+    from OpenBSD 6.1 onwards. Earlier releases relied on ``/etc/pkg.conf``.
 
 .. versionchanged:: 2016.3.5
 
@@ -29,7 +30,7 @@ import re
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 
@@ -65,9 +66,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -209,7 +210,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -268,7 +269,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(

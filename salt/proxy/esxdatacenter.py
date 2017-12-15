@@ -146,13 +146,14 @@ Look there to find an example structure for Pillar as well as an example
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
 # Import Salt Libs
 import salt.exceptions
 from salt.config.schemas.esxdatacenter import EsxdatacenterProxySchema
+from salt.utils.dictupdate import merge
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['esxdatacenter']
@@ -190,47 +191,48 @@ def init(opts):
     This function gets called when the proxy starts up.
     All login details are cached.
     '''
-    log.debug('Initting esxdatacenter proxy module in process '
-              '{}'.format(os.getpid()))
+    log.debug('Initting esxdatacenter proxy module in process %s', os.getpid())
     log.trace('Validating esxdatacenter proxy input')
     schema = EsxdatacenterProxySchema.serialize()
-    log.trace('schema = {}'.format(schema))
+    log.trace('schema = %s', schema)
+    proxy_conf = merge(opts.get('proxy', {}), __pillar__.get('proxy', {}))
+    log.trace('proxy_conf = %s', proxy_conf)
     try:
-        jsonschema.validate(opts['proxy'], schema)
+        jsonschema.validate(proxy_conf, schema)
     except jsonschema.exceptions.ValidationError as exc:
         raise salt.exceptions.InvalidConfigError(exc)
 
     # Save mandatory fields in cache
     for key in ('vcenter', 'datacenter', 'mechanism'):
-        DETAILS[key] = opts['proxy'][key]
+        DETAILS[key] = proxy_conf[key]
 
     # Additional validation
     if DETAILS['mechanism'] == 'userpass':
-        if 'username' not in opts['proxy']:
+        if 'username' not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'userpass\', but no '
                 '\'username\' key found in proxy config.')
-        if 'passwords' not in opts['proxy']:
+        if 'passwords' not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'userpass\', but no '
                 '\'passwords\' key found in proxy config.')
         for key in ('username', 'passwords'):
-            DETAILS[key] = opts['proxy'][key]
+            DETAILS[key] = proxy_conf[key]
     else:
-        if 'domain' not in opts['proxy']:
+        if 'domain' not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'sspi\', but no '
                 '\'domain\' key found in proxy config.')
-        if 'principal' not in opts['proxy']:
+        if 'principal' not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'sspi\', but no '
                 '\'principal\' key found in proxy config.')
         for key in ('domain', 'principal'):
-            DETAILS[key] = opts['proxy'][key]
+            DETAILS[key] = proxy_conf[key]
 
     # Save optional
-    DETAILS['protocol'] = opts['proxy'].get('protocol')
-    DETAILS['port'] = opts['proxy'].get('port')
+    DETAILS['protocol'] = proxy_conf.get('protocol')
+    DETAILS['port'] = proxy_conf.get('port')
 
     # Test connection
     if DETAILS['mechanism'] == 'userpass':
@@ -241,7 +243,7 @@ def init(opts):
             username, password = find_credentials()
             DETAILS['password'] = password
         except salt.exceptions.SaltSystemExit as err:
-            log.critical('Error: {0}'.format(err))
+            log.critical('Error: %s', err)
             return False
     return True
 

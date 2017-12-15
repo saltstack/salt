@@ -85,6 +85,7 @@ def cert(name,
             comment += 'would have been renewed'
         else:
             comment += 'would not have been touched'
+            ret['result'] = True
         ret['comment'] = comment
         return ret
 
@@ -116,9 +117,14 @@ def cert(name,
     if res['result'] is None:
         ret['changes'] = {}
     else:
+        if not __salt__['acme.has'](name):
+            new = None
+        else:
+            new = __salt__['acme.info'](name)
+
         ret['changes'] = {
             'old': old,
-            'new': __salt__['acme.info'](name)
+            'new': new
         }
 
     return ret

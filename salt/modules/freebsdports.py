@@ -6,7 +6,7 @@ Install software from the FreeBSD ``ports(7)`` system
 
 This module allows you to install ports using ``BATCH=yes`` to bypass
 configuration prompts. It is recommended to use the :mod:`ports state
-<salt.states.freebsdports>` to install ports, but it it also possible to use
+<salt.states.freebsdports>` to install ports, but it is also possible to use
 this module exclusively from the command line.
 
 .. code-block:: bash
@@ -23,8 +23,9 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 from salt.ext.six import string_types
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext import six
@@ -185,7 +186,7 @@ def install(name, clean=True):
         __context__['ports.install_error'] = result['stderr']
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
     if not ret and result['retcode'] == 0:
         # No change in package list, but the make install was successful.
         # Assume that the installation was a recompile with new options, and
@@ -215,7 +216,7 @@ def deinstall(name):
     )
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def rmconfig(name):
@@ -470,7 +471,7 @@ def list_all():
     '''
     if 'ports.list_all' not in __context__:
         __context__['ports.list_all'] = []
-        for path, dirs, files in os.walk('/usr/ports'):
+        for path, dirs, files in salt.utils.path.os_walk('/usr/ports'):
             stripped = path[len('/usr/ports'):]
             if stripped.count('/') != 2 or stripped.endswith('/CVS'):
                 continue

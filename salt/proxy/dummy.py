@@ -2,12 +2,16 @@
 '''
 This is a dummy proxy-minion designed for testing the proxy minion subsystem.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
-import logging
 import pickle
+import logging
+
+# Import Salt libs
+import salt.ext.six as six
+import salt.utils.files
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['dummy']
@@ -19,7 +23,7 @@ DETAILS = {}
 
 DETAILS['services'] = {'apache': 'running', 'ntp': 'running', 'samba': 'stopped'}
 DETAILS['packages'] = {'coreutils': '1.0', 'apache': '2.4', 'tinc': '1.4', 'redbull': '999.99'}
-FILENAME = os.tmpnam()
+FILENAME = salt.utils.files.mkstemp()
 # Want logging!
 log = logging.getLogger(__file__)
 
@@ -35,17 +39,20 @@ def __virtual__():
 
 
 def _save_state(details):
-    pck = open(FILENAME, 'wb')  # pylint: disable=W8470
-    pickle.dump(details, pck)
-    pck.close()
+    with salt.utils.files.fopen(FILENAME, 'wb') as pck:
+        pickle.dump(details, pck)
 
 
 def _load_state():
     try:
-        pck = open(FILENAME, 'r')  # pylint: disable=W8470
-        DETAILS = pickle.load(pck)
-        pck.close()
-    except IOError:
+        if six.PY3 is True:
+            mode = 'rb'
+        else:
+            mode = 'r'
+
+        with salt.utils.files.fopen(FILENAME, mode) as pck:
+            DETAILS = pickle.load(pck)
+    except EOFError:
         DETAILS = {}
         DETAILS['initialized'] = False
         _save_state(DETAILS)
@@ -132,7 +139,7 @@ def service_list():
     List "services" on the REST server
     '''
     DETAILS = _load_state()
-    return DETAILS['services'].keys()
+    return list(DETAILS['services'])
 
 
 def service_status(name):
@@ -187,7 +194,7 @@ def uptodate():
     for p in DETAILS['packages']:
         version_float = float(DETAILS['packages'][p])
         version_float = version_float + 1.0
-        DETAILS['packages'][p] = str(version_float)
+        DETAILS['packages'][p] = six.text_type(version_float)
     return DETAILS['packages']
 
 
