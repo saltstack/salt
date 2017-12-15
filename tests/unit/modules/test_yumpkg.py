@@ -55,13 +55,12 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
              patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 0})}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
-             patch.dict(yumpkg.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'python-urlgrabber': '0.0.1'} , 'repository'))}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'python-urlgrabber': '0.0.1'}, 'repository'))}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
              patch.dict(yumpkg.__salt__, {'config.get': MagicMock()}), \
              patch.dict(yumpkg.__salt__, {'lowpkg.version_cmp': MagicMock(return_value=-1)}):
             pkgs = yumpkg.install(name='python-urlgrabber')
             self.assertEqual(pkgs, {})
-
 
     def test_install_pkg_with_diff_attr(self):
         '''
@@ -91,13 +90,12 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
              patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 0})}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
-             patch.dict(yumpkg.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'python-urlgrabber': '0.0.1'} , 'repository'))}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'python-urlgrabber': '0.0.1'}, 'repository'))}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
              patch.dict(yumpkg.__salt__, {'config.get': MagicMock()}), \
              patch.dict(yumpkg.__salt__, {'lowpkg.version_cmp': MagicMock(return_value=-1)}):
-            pkgs = yumpkg.install(name='python-urlgrabber', diff_attr=['version', 'epoch', 'release', 'arch'])
+            pkgs = yumpkg.install(name='python-urlgrabber', diff_attr=['epoch', 'release', 'arch'], reinstall=True)
             self.assertEqual(pkgs, {})
-
 
     def test_list_pkgs(self):
         '''
