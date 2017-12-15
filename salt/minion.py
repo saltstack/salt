@@ -16,6 +16,7 @@ import fnmatch
 import logging
 import threading
 import traceback
+import subprocess
 import contextlib
 import multiprocessing
 from random import randint, shuffle
@@ -250,6 +251,60 @@ def resolve_dns(opts, fallback=True):
     return ret
 
 
+def srv_lookup_cmd(record_name):
+    """
+    Returns back a list that can be run by subprocess/etc. based on what's
+    available on the system to do a lookup
+    :param record_name: (str) srv record to look up.
+           '_saltmaster._tcp.example.com' for instance.
+    :return: (list) what to run - can be fed into subprocess/etc.
+    """
+    cmd = None
+    lookupcmds = {'host': ['-t', 'SRV', record_name],
+                  'nslookup': ['-query=SRV', record_name],
+                  'dig': ['+short', record_name, 'SRV']
+                  }
+
+    for i, k in six.iteritems(lookupcmds):
+        if salt.utils.which(i):
+            k.insert(0, salt.utils.which(i))
+            cmd = k
+            break
+    logging.debug("SRV Lookup Command: " + str(cmd))
+    return cmd
+
+
+def srv_lookup(name, protocol='TCP', domain=None):
+    if domain:
+        domain = '.' + domain
+    record_name = '_{0}._{1}{2}'.format(name, protocol.lower(), domain or '')
+
+    # Find which command we should be using to do lookup and pass it in
+    cmd = srv_lookup_cmd(record_name)
+
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        result, _ = proc.communicate()
+        retcode = proc.poll()
+    except:
+        raise
+
+    if retcode >= 1 or len(result) == 0:
+        if not result:
+           result = 'No Data Returned'
+        raise SaltException('DNS SRV Query for masters failed: '
+                            'error: {0}'
+                            ' - return code: {1}'
+                            .format(result.rstrip(), retcode))
+
+    regex = re.compile('(?P<prio>\d+) (?P<weight>\d+) (?P<port>\d+) (?P<host>.+)')
+    cmdout = [match.groupdict() for match in regex.finditer(result)]
+    # We won't round-robin dns at all, so some other mechanism will prob need
+    # to be used to randomize minions of same priority/weight so not all
+    # minions get piled onto a single master.  This should prob be fixed at
+    # somepoint. (normal dns behavior will rr hosts of same name and priority)
+    return sorted(cmdout, key=lambda x: (int(x['prio']), -int(x['weight'])))
+
 def prep_ip_port(opts):
     ret = {}
     # Use given master IP if "ip_only" is set or if master_ip is an ipv6 address without
@@ -482,6 +537,14 @@ class MinionBase(object):
             log.warning('Master is set to disable, skipping connection')
             self.connected = False
             raise tornado.gen.Return((None, None))
+        # do we discover our masters via dns SRV records?
+        elif opts['master_dns_discovery'] is True:
+            lookup = srv_lookup(opts['master_dns_discovery_name'],
+                                domain=opts['master_dns_discovery_domain'])
+            masters = [record['host'] for record in lookup]
+            if masters:
+                logging.debug("SRV master list received:"+str(masters))
+                opts['master'] = masters
         # check if master_type was altered from its default
         elif opts['master_type'] != 'str' and opts['__role'] != 'syndic':
             # check for a valid keyword
