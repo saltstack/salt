@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import
 
-# Import Salt libs
+# Import pytoml
 try:
     import pytoml as toml
     available = True
