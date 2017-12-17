@@ -215,7 +215,7 @@ def present(name,
            'comment': ''}
 
     if not isinstance(name, six.string_types):
-        name = six.string_types(name)
+        name = six.text_type(name)
 
     # At most one of the args that result in an image being built can be used
     num_build_args = len([x for x in (build, load, sls) if x is not None])
@@ -232,7 +232,7 @@ def present(name,
             )
             return ret
         if not isinstance(tag, six.string_types):
-            tag = six.string_types(tag)
+            tag = six.text_type(tag)
         full_image = ':'.join((name, tag))
     else:
         if tag:
