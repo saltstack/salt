@@ -6425,30 +6425,30 @@ def _generate_tmp_path():
         'salt.docker.{0}'.format(uuid.uuid4().hex[:6]))
 
 
-def _prepare_trans_tar(name, mods=None, saltenv='base', pillar=None):
+def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None):
     '''
     Prepares a self contained tarball that has the state
     to be applied in the container
     '''
-    chunks = _compile_state(mods, saltenv)
+    chunks = _compile_state(sls_opts, mods)
     # reuse it from salt.ssh, however this function should
     # be somewhere else
     refs = salt.client.ssh.state.lowstate_file_refs(chunks)
     _mk_fileclient()
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-        __opts__,
+        sls_opts,
         __context__['cp.fileclient'],
         chunks, refs, pillar, name)
     return trans_tar
 
 
-def _compile_state(mods=None, saltenv='base'):
+def _compile_state(sls_opts, mods=None):
     '''
     Generates the chunks of lowdata from the list of modules
     '''
-    st_ = HighState(__opts__)
+    st_ = HighState(sls_opts)
 
-    high_data, errors = st_.render_highstate({saltenv: mods})
+    high_data, errors = st_.render_highstate({sls_opts['saltenv']: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
     errors += st_.state.verify_high(high_data)
@@ -6622,8 +6622,8 @@ def sls(name, mods=None, **kwargs):
 
     trans_tar = _prepare_trans_tar(
         name,
+        sls_opts,
         mods=mods,
-        saltenv=sls_opts['saltenv'],
         pillar=pillar)
 
     # where to put the salt trans tar
