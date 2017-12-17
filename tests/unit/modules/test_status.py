@@ -155,3 +155,65 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
             with self.assertRaises(CommandExecutionError):
                 with patch.dict(status.__salt__, {'cmd.run': exc_mock}):
                     status.uptime()
+
+    def _set_up_test_w_linux(self):
+        '''
+        Define mock data for status.w on Linux
+        '''
+        class MockData(object):
+            '''
+            Store mock data
+            '''
+
+        m = MockData()
+        m.ret = [{
+            'idle': '0s',
+            'jcpu': '0.24s',
+            'login': '13:42',
+            'pcpu': '0.16s',
+            'tty': 'pts/1',
+            'user': 'root',
+            'what': 'nmap -sV 10.2.2.2',
+        }]
+
+        return m
+
+    def _set_up_test_w_bsd(self):
+        '''
+        Define mock data for status.w on Linux
+        '''
+        class MockData(object):
+            '''
+            Store mock data
+            '''
+
+        m = MockData()
+        m.ret = [{
+            'idle': '0',
+            'from': '10.2.2.1',
+            'login': '1:42PM',
+            'tty': 'p1',
+            'user': 'root',
+            'what': 'nmap -sV 10.2.2.2',
+        }]
+
+        return m
+
+    def test_w_linux(self):
+        m = self._set_up_test_w_linux()
+        w_output = 'root   pts/1  13:42    0s  0.24s  0.16s nmap -sV 10.2.2.2'
+
+        with patch.dict(status.__grains__, {'kernel': 'Linux'}):
+            with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=w_output)}):
+                ret = status.w()
+                self.assertListEqual(ret, m.ret)
+
+    def test_w_bsd(self):
+        m = self._set_up_test_w_bsd()
+        w_output = 'root   p1 10.2.2.1    1:42PM  0 nmap -sV 10.2.2.2'
+
+        for bsd in ['Darwin', 'FreeBSD', 'OpenBSD']:
+            with patch.dict(status.__grains__, {'kernel': bsd}):
+                with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=w_output)}):
+                    ret = status.w()
+                    self.assertListEqual(ret, m.ret)

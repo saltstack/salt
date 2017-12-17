@@ -38,7 +38,7 @@ def tokenify(cmd, token=None):
     Otherwise return cmd
     '''
     if token is not None:
-        cmd[u'token'] = token
+        cmd['token'] = token
     return cmd
 
 
@@ -51,19 +51,19 @@ class APIClient(object):
         if not opts:
             opts = salt.config.client_config(
                 os.environ.get(
-                    u'SALT_MASTER_CONFIG',
-                    os.path.join(syspaths.CONFIG_DIR, u'master')
+                    'SALT_MASTER_CONFIG',
+                    os.path.join(syspaths.CONFIG_DIR, 'master')
                 )
             )
         self.opts = opts
-        self.localClient = salt.client.get_local_client(self.opts[u'conf_file'])
+        self.localClient = salt.client.get_local_client(self.opts['conf_file'])
         self.runnerClient = salt.runner.RunnerClient(self.opts)
         self.wheelClient = salt.wheel.Wheel(self.opts)
         self.resolver = salt.auth.Resolver(self.opts)
         self.event = salt.utils.event.get_event(
-                u'master',
-                self.opts[u'sock_dir'],
-                self.opts[u'transport'],
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
                 opts=self.opts,
                 listen=listen)
 
@@ -119,20 +119,20 @@ class APIClient(object):
 
         '''
         cmd = dict(cmd)  # make copy
-        client = u'minion'  # default to local minion client
-        mode = cmd.get(u'mode', u'async')  # default to 'async'
+        client = 'minion'  # default to local minion client
+        mode = cmd.get('mode', 'async')  # default to 'async'
 
         # check for wheel or runner prefix to fun name to use wheel or runner client
-        funparts = cmd.get(u'fun', u'').split(u'.')
-        if len(funparts) > 2 and funparts[0] in [u'wheel', u'runner']:  # master
+        funparts = cmd.get('fun', '').split('.')
+        if len(funparts) > 2 and funparts[0] in ['wheel', 'runner']:  # master
             client = funparts[0]
-            cmd[u'fun'] = u'.'.join(funparts[1:])  # strip prefix
+            cmd['fun'] = '.'.join(funparts[1:])  # strip prefix
 
-        if not (u'token' in cmd or
-                (u'eauth' in cmd and u'password' in cmd and u'username' in cmd)):
-            raise EauthAuthenticationError(u'No authentication credentials given')
+        if not ('token' in cmd or
+                ('eauth' in cmd and 'password' in cmd and 'username' in cmd)):
+            raise EauthAuthenticationError('No authentication credentials given')
 
-        executor = getattr(self, u'{0}_{1}'.format(client, mode))
+        executor = getattr(self, '{0}_{1}'.format(client, mode))
         result = executor(**cmd)
         return result
 
@@ -205,9 +205,9 @@ class APIClient(object):
 
         Adds client per the command.
         '''
-        cmd[u'client'] = u'minion'
-        if len(cmd[u'module'].split(u'.')) > 2 and cmd[u'module'].split(u'.')[0] in [u'runner', u'wheel']:
-            cmd[u'client'] = u'master'
+        cmd['client'] = 'minion'
+        if len(cmd['module'].split('.')) > 2 and cmd['module'].split('.')[0] in ['runner', 'wheel']:
+            cmd['client'] = 'master'
         return self._signature(cmd)
 
     def _signature(self, cmd):
@@ -217,20 +217,20 @@ class APIClient(object):
         '''
         result = {}
 
-        client = cmd.get(u'client', u'minion')
-        if client == u'minion':
-            cmd[u'fun'] = u'sys.argspec'
-            cmd[u'kwarg'] = dict(module=cmd[u'module'])
+        client = cmd.get('client', 'minion')
+        if client == 'minion':
+            cmd['fun'] = 'sys.argspec'
+            cmd['kwarg'] = dict(module=cmd['module'])
             result = self.run(cmd)
-        elif client == u'master':
-            parts = cmd[u'module'].split(u'.')
+        elif client == 'master':
+            parts = cmd['module'].split('.')
             client = parts[0]
-            module = u'.'.join(parts[1:])  # strip prefix
-            if client == u'wheel':
+            module = '.'.join(parts[1:])  # strip prefix
+            if client == 'wheel':
                 functions = self.wheelClient.functions
-            elif client == u'runner':
+            elif client == 'runner':
                 functions = self.runnerClient.functions
-            result = {u'master': salt.utils.args.argspec_report(functions, module)}
+            result = {'master': salt.utils.args.argspec_report(functions, module)}
         return result
 
     def create_token(self, creds):
@@ -275,20 +275,20 @@ class APIClient(object):
             tokenage = self.resolver.mk_token(creds)
         except Exception as ex:
             raise EauthAuthenticationError(
-                u"Authentication failed with {0}.".format(repr(ex)))
+                "Authentication failed with {0}.".format(repr(ex)))
 
-        if u'token' not in tokenage:
-            raise EauthAuthenticationError(u"Authentication failed with provided credentials.")
+        if 'token' not in tokenage:
+            raise EauthAuthenticationError("Authentication failed with provided credentials.")
 
         # Grab eauth config for the current backend for the current user
-        tokenage_eauth = self.opts[u'external_auth'][tokenage[u'eauth']]
-        if tokenage[u'name'] in tokenage_eauth:
-            tokenage[u'perms'] = tokenage_eauth[tokenage[u'name']]
+        tokenage_eauth = self.opts['external_auth'][tokenage['eauth']]
+        if tokenage['name'] in tokenage_eauth:
+            tokenage['perms'] = tokenage_eauth[tokenage['name']]
         else:
-            tokenage[u'perms'] = tokenage_eauth[u'*']
+            tokenage['perms'] = tokenage_eauth['*']
 
-        tokenage[u'user'] = tokenage[u'name']
-        tokenage[u'username'] = tokenage[u'name']
+        tokenage['user'] = tokenage['name']
+        tokenage['username'] = tokenage['name']
 
         return tokenage
 
@@ -301,11 +301,11 @@ class APIClient(object):
             result = self.resolver.get_token(token)
         except Exception as ex:
             raise EauthAuthenticationError(
-                u"Token validation failed with {0}.".format(repr(ex)))
+                "Token validation failed with {0}.".format(repr(ex)))
 
         return result
 
-    def get_event(self, wait=0.25, tag=u'', full=False):
+    def get_event(self, wait=0.25, tag='', full=False):
         '''
         Get a single salt event.
         If no events are available, then block for up to ``wait`` seconds.
@@ -323,4 +323,4 @@ class APIClient(object):
         Need to convert this to a master call with appropriate authentication
 
         '''
-        return self.event.fire_event(data, salt.utils.event.tagify(tag, u'wui'))
+        return self.event.fire_event(data, salt.utils.event.tagify(tag, 'wui'))

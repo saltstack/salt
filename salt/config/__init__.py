@@ -3265,7 +3265,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
     return value
 
 
-def is_provider_configured(opts, provider, required_keys=()):
+def is_provider_configured(opts, provider, required_keys=(), log_message=True):
     '''
     Check and return the first matching and fully configured cloud provider
     configuration.
@@ -3278,13 +3278,14 @@ def is_provider_configured(opts, provider, required_keys=()):
             return False
         for key in required_keys:
             if opts['providers'][alias][driver].get(key, None) is None:
-                # There's at least one require configuration key which is not
-                # set.
-                log.warning(
-                    "The required '{0}' configuration setting is missing "
-                    "from the '{1}' driver, which is configured under the "
-                    "'{2}' alias.".format(key, provider, alias)
-                )
+                if log_message is True:
+                    # There's at least one require configuration key which is not
+                    # set.
+                    log.warning(
+                        "The required '{0}' configuration setting is missing "
+                        "from the '{1}' driver, which is configured under the "
+                        "'{2}' alias.".format(key, provider, alias)
+                    )
                 return False
         # If we reached this far, there's a properly configured provider.
         # Return it!
@@ -3300,15 +3301,16 @@ def is_provider_configured(opts, provider, required_keys=()):
             skip_provider = False
             for key in required_keys:
                 if provider_details.get(key, None) is None:
-                    # This provider does not include all necessary keys,
-                    # continue to next one.
-                    log.warning(
-                        "The required '{0}' configuration setting is "
-                        "missing from the '{1}' driver, which is configured "
-                        "under the '{2}' alias.".format(
-                            key, provider, alias
+                    if log_message is True:
+                        # This provider does not include all necessary keys,
+                        # continue to next one.
+                        log.warning(
+                            "The required '{0}' configuration setting is "
+                            "missing from the '{1}' driver, which is configured "
+                            "under the '{2}' alias.".format(
+                                key, provider, alias
+                            )
                         )
-                    )
                     skip_provider = True
                     break
 
@@ -3622,23 +3624,23 @@ def apply_minion_config(overrides=None,
     if overrides:
         opts.update(overrides)
 
-    if u'environment' in opts:
-        if u'saltenv' in opts:
+    if 'environment' in opts:
+        if 'saltenv' in opts:
             log.warning(
-                u'The \'saltenv\' and \'environment\' minion config options '
-                u'cannot both be used. Ignoring \'environment\' in favor of '
-                u'\'saltenv\'.',
+                'The \'saltenv\' and \'environment\' minion config options '
+                'cannot both be used. Ignoring \'environment\' in favor of '
+                '\'saltenv\'.',
             )
             # Set environment to saltenv in case someone's custom module is
             # refrencing __opts__['environment']
-            opts[u'environment'] = opts[u'saltenv']
+            opts['environment'] = opts['saltenv']
         else:
             log.warning(
-                u'The \'environment\' minion config option has been renamed '
-                u'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
-                opts[u'environment']
+                'The \'environment\' minion config option has been renamed '
+                'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
+                opts['environment']
             )
-            opts[u'saltenv'] = opts[u'environment']
+            opts['saltenv'] = opts['environment']
 
     opts['__cli'] = os.path.basename(sys.argv[0])
 
@@ -3792,23 +3794,23 @@ def apply_master_config(overrides=None, defaults=None):
     if overrides:
         opts.update(overrides)
 
-    if u'environment' in opts:
-        if u'saltenv' in opts:
+    if 'environment' in opts:
+        if 'saltenv' in opts:
             log.warning(
-                u'The \'saltenv\' and \'environment\' master config options '
-                u'cannot both be used. Ignoring \'environment\' in favor of '
-                u'\'saltenv\'.',
+                'The \'saltenv\' and \'environment\' master config options '
+                'cannot both be used. Ignoring \'environment\' in favor of '
+                '\'saltenv\'.',
             )
             # Set environment to saltenv in case someone's custom runner is
             # refrencing __opts__['environment']
-            opts[u'environment'] = opts[u'saltenv']
+            opts['environment'] = opts['saltenv']
         else:
             log.warning(
-                u'The \'environment\' master config option has been renamed '
-                u'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
-                opts[u'environment']
+                'The \'environment\' master config option has been renamed '
+                'to \'saltenv\'. Using %s as the \'saltenv\' config value.',
+                opts['environment']
             )
-            opts[u'saltenv'] = opts[u'environment']
+            opts['saltenv'] = opts['environment']
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')

@@ -296,21 +296,24 @@ def get_customizationspec_ref(si, customization_spec_name):
     return customization_spec_name
 
 
-def get_datastore_ref(si, datastore_name):
+def get_mor_using_container_view(si, obj_type, obj_name):
     '''
-    Get a reference to a VMware datastore for the purposes of adding/removing disks
+    Get reference to an object of specified object type and name
 
     si
         ServiceInstance for the vSphere or ESXi server (see get_service_instance)
 
-    datastore_name
-        Name of the datastore
+    obj_type
+        Type of the object (vim.StoragePod, vim.Datastore, etc)
+
+    obj_name
+        Name of the object
 
     '''
     inventory = get_inventory(si)
-    container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [vim.Datastore], True)
+    container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [obj_type], True)
     for item in container.view:
-        if item.name == datastore_name:
+        if item.name == obj_name:
             return item
     return None
 
@@ -2073,12 +2076,19 @@ def get_datastores(service_instance, reference, datastore_names=None,
             skip=False,
             type=vim.ClusterComputeResource)
     elif isinstance(reference, vim.Datacenter):
-        # Traversal spec for clusters
+        # Traversal spec for datacenter
         traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
             name='datacenter_datastore_traversal',
             path='datastore',
             skip=False,
             type=vim.Datacenter)
+    elif isinstance(reference, vim.StoragePod):
+        # Traversal spec for datastore clusters
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            name='datastore_cluster_traversal',
+            path='childEntity',
+            skip=False,
+            type=vim.StoragePod)
     elif isinstance(reference, vim.Folder) and \
             get_managed_object_name(reference) == 'Datacenters':
         # Traversal of root folder (doesn't support multiple levels of Folders)
