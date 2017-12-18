@@ -102,7 +102,7 @@ The user to run the Salt processes
 
 Default: ``False``
 
-Tell the master to also use SaltSSH when running commands against minions.
+Tell the master to also use salt-ssh when running commands against minions.
 
 .. code-block:: yaml
 
@@ -110,7 +110,7 @@ Tell the master to also use SaltSSH when running commands against minions.
 
 .. note::
 
-    Cross minion type communication is still not possible.  The SaltMine and
+    Cross-minion communication is still not possible.  The Salt mine and
     publish.publish do not work between minion types.
 
 ``ret_port``
