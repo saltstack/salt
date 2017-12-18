@@ -21,6 +21,8 @@ import traceback
 import json
 import os
 import glob
+from threading import Lock
+
 import yaml
 
 try:
@@ -59,6 +61,8 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'junos'
 
 __proxyenabled__ = ['junos']
+
+lock = Lock()
 
 
 def __virtual__():
@@ -1394,7 +1398,8 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
             return ret
         try:
             data = globals()[table](conn)
-            data.get(**get_kvargs)
+            with lock:
+                data.get(**get_kvargs)
         except KeyError as err:
             ret['message'] = 'Uncaught exception during get API call - please ' \
                              'report: {0}'.format(str(err))
