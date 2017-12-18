@@ -209,7 +209,7 @@ pillar data like so:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import logging
@@ -288,7 +288,7 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
     else:
         if six.PY3 and isinstance(decrypted_data, bytes):
             decrypted_data = decrypted_data.decode(__salt_system_encoding__)
-        return str(decrypted_data)
+        return six.text_type(decrypted_data)
 
 
 def _decrypt_object(obj, translate_newlines=False):

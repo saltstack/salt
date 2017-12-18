@@ -2,7 +2,7 @@
 '''
 This is a dummy proxy-minion designed for testing the proxy minion subsystem.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -194,7 +194,7 @@ def uptodate():
     for p in DETAILS['packages']:
         version_float = float(DETAILS['packages'][p])
         version_float = version_float + 1.0
-        DETAILS['packages'][p] = str(version_float)
+        DETAILS['packages'][p] = six.text_type(version_float)
     return DETAILS['packages']
 
 

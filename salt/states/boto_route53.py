@@ -74,6 +74,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 # Import Python Libs
 from __future__ import absolute_import
 import json
+import uuid
 
 # Import Salt Libs
 from salt.utils import exactly_one
@@ -93,20 +94,8 @@ def rr_present(*args, **kwargs):
     return present(*args, **kwargs)
 
 
-def present(
-        name,
-        value,
-        zone,
-        record_type,
-        ttl=None,
-        identifier=None,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None,
-        wait_for_sync=True,
-        split_dns=False,
-        private_zone=False):
+def present(name, value, zone, record_type, ttl=None, identifier=None, region=None, key=None,
+            keyid=None, profile=None, wait_for_sync=True, split_dns=False, private_zone=False):
     '''
     Ensure the Route53 record is present.
 
@@ -115,8 +104,8 @@ def present(
 
     value
         Value of the record.  As a special case, you can pass in:
-            private:<Name tag> to have the function autodetermine the private IP
-            public:<Name tag> to have the function autodetermine the public IP
+            `private:<Name tag>` to have the function autodetermine the private IP
+            `public:<Name tag>` to have the function autodetermine the public IP
 
     zone
         The zone to create the record in.
@@ -140,15 +129,14 @@ def present(
         Access key to be used.
 
     profile
-        A dict with region, key and keyid, or a pillar key (string)
-        that contains a dict with region, key and keyid.
+        A dict with region, key and keyid, or a pillar key (string) that contains a dict
+        with region, key and keyid.
 
     wait_for_sync
-        Wait for an INSYNC change status from Route53.
+        Wait for an INSYNC change status from Route53 before returning success.
 
     split_dns
-        Route53 supports a public and private DNS zone with the same
-        names.
+        Route53 supports parallel public and private DNS zones with the same name.
 
     private_zone
         If using split_dns, specify if this is the private zone.
@@ -360,53 +348,57 @@ def absent(
     return ret
 
 
-def hosted_zone_present(name, domain_name=None, private_zone=False, comment='',
-                        vpc_id=None, vpc_name=None, vpc_region=None,
-                        region=None, key=None, keyid=None, profile=None):
+def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=None, comment='',
+                        vpc_id=None, vpc_name=None, vpc_region=None, region=None, key=None,
+                        keyid=None, profile=None):
     '''
-    Ensure a hosted zone exists with the given attributes.  Note that most
-    things cannot be modified once a zone is created - it must be deleted and
-    re-spun to update these attributes:
+    Ensure a hosted zone exists with the given attributes.  Note that most things cannot be
+    modified once a zone is created - it must be deleted and re-spun to update these attributes.
+    If you need the ability to update these attributes, please use the newer boto3_route53
+    module instead:
         - private_zone (AWS API limitation).
-        - comment (the appropriate call exists in the AWS API and in boto3, but
-                   has not, as of this writing, been added to boto2).
-        - vpc_id (same story - we really need to rewrite this module with boto3)
+        - comment (the appropriate call exists in the AWS API and in boto3, but has not, as of
+          this writing, been added to boto2).
+        - vpc_id (boto3 only)
         - vpc_name (really just a pointer to vpc_id anyway).
         - vpc_region (again, supported in boto3 but not boto2).
 
     name
-        The name of the state definition.  This will be used as the 'caller_ref'
-        param if/when creating the hosted zone.
+        The name of the state definition.
 
     domain_name
-        The name of the domain. This should be a fully-specified domain, and
-        should terminate with a period. This is the name you have registered
-        with your DNS registrar. It is also the name you will delegate from your
-        registrar to the Amazon Route 53 delegation servers returned in response
+        The name of the domain. This must be fully-qualified, terminating with a period.  This is
+        the name you have registered with your domain registrar.  It is also the name you will
+        delegate from your registrar to the Amazon Route 53 delegation servers returned in response
         to this request.  Defaults to the value of name if not provided.
-
-    comment
-        Any comments you want to include about the hosted zone.
 
     private_zone
         Set True if creating a private hosted zone.
 
+    caller_ref
+        A unique string that identifies the request and that allows create_hosted_zone() calls to be
+        retried without the risk of executing the operation twice.  This helps ensure idempotency
+        across state calls, but can cause issues if a zone is deleted and then an attempt is made
+        to recreate it with the same caller_ref.  If not provided, a unique UUID will be generated
+        at each state run, which avoids the risk of the above (transient) error.  This option is
+        generally not needed.  Maximum length of 128.
+
+    comment
+        Any comments you want to include about the hosted zone.
+
     vpc_id
-        When creating a private hosted zone, either the VPC ID or VPC Name to
-        associate with is required.  Exclusive with vpe_name.  Ignored if passed
-        for a non-private zone.
+        When creating a private hosted zone, either the VPC ID or VPC Name to associate with is
+        required.  Exclusive with vpe_name.  Ignored when creating a non-private zone.
 
     vpc_name
-        When creating a private hosted zone, either the VPC ID or VPC Name to
-        associate with is required.  Exclusive with vpe_id.  Ignored if passed
-        for a non-private zone.
+        When creating a private hosted zone, either the VPC ID or VPC Name to associate with is
+        required.  Exclusive with vpe_id.  Ignored when creating a non-private zone.
 
     vpc_region
-        When creating a private hosted zone, the region of the associated VPC is
-        required.  If not provided, an effort will be made to determine it from
-        vpc_id or vpc_name, if possible.  If this fails, you'll need to provide
-        an explicit value for this option.  Ignored if passed for a non-private
-        zone.
+        When creating a private hosted zone, the region of the associated VPC is required.  If not
+        provided, an effort will be made to determine it from vpc_id or vpc_name, where possible.
+        If this fails, you'll need to provide an explicit value for this option.  Ignored when
+        creating a non-private zone.
     '''
     domain_name = domain_name if domain_name else name
 
@@ -415,23 +407,22 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, comment='',
     # First translaste vpc_name into a vpc_id if possible
     if private_zone:
         if not exactly_one((vpc_name, vpc_id)):
-            raise SaltInvocationError('Either vpc_name or vpc_id is required '
-                                      'when creating a private zone.')
+            raise SaltInvocationError('Either vpc_name or vpc_id is required when creating a '
+                                      'private zone.')
         vpcs = __salt__['boto_vpc.describe_vpcs'](
                 vpc_id=vpc_id, name=vpc_name, region=region, key=key,
                 keyid=keyid, profile=profile).get('vpcs', [])
         if vpc_region and vpcs:
             vpcs = [v for v in vpcs if v['region'] == vpc_region]
         if not vpcs:
-            msg = ('Private zone requested but a VPC matching given criteria '
-                    'not found.')
+            msg = ('Private zone requested but a VPC matching given criteria not found.')
             log.error(msg)
             ret['result'] = False
             ret['comment'] = msg
             return ret
         if len(vpcs) > 1:
-            msg = ('Private zone requested but multiple VPCs matching given '
-                   'criteria found: {0}.'.format([v['id'] for v in vpcs]))
+            msg = ('Private zone requested but multiple VPCs matching given criteria found: '
+                   '{0}.'.format([v['id'] for v in vpcs]))
             log.error(msg)
             return None
         vpc = vpcs[0]
@@ -476,13 +467,15 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, comment='',
                      'This may fail...'.format(domain_name))
 
     if create:
+        if caller_ref is None:
+            caller_ref = str(uuid.uuid4())
         if __opts__['test']:
             ret['comment'] = 'Route53 Hosted Zone {0} set to be added.'.format(
                     domain_name)
             ret['result'] = None
             return ret
         res = __salt__['boto_route53.create_hosted_zone'](domain_name=domain_name,
-                caller_ref=name, comment=comment, private_zone=private_zone,
+                caller_ref=caller_ref, comment=comment, private_zone=private_zone,
                 vpc_id=vpc_id, vpc_region=vpc_region, region=region, key=key,
                 keyid=keyid, profile=profile)
         if res:

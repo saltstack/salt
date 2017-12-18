@@ -4,7 +4,7 @@ A convenience system to manage jobs, both active and already run
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import logging
 import os
