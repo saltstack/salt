@@ -5,6 +5,8 @@ masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 '''
 # Import python libs
+# NOTE: We can't use unicode_literals because this module implicitly uses
+# the Array class, which has incompatibilities with it.
 from __future__ import absolute_import, print_function
 import os
 import sys
@@ -171,7 +173,7 @@ def _get_rsa_key(path, passphrase):
     retrieve the key from disk.
     '''
     log.debug('salt.crypt._get_rsa_key: Loading private key')
-    return _get_key_with_evict(path, str(os.path.getmtime(path)), passphrase)
+    return _get_key_with_evict(path, six.text_type(os.path.getmtime(path)), passphrase)
 
 
 def sign_message(privkey_path, message, passphrase=None):

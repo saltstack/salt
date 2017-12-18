@@ -1156,6 +1156,30 @@ VALID_OPTS = {
 
     # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
     'docker.compare_container_networks': dict,
+
+    # SSDP discovery publisher description.
+    # Contains publisher configuration and minion mapping.
+    # Setting it to False disables discovery
+    'discovery': (dict, bool),
+
+    # SSDP discovery mapping
+    # Defines arbitrary data for description and grouping minions across various types of masters,
+    # especially when masters are not related to each other.
+    'mapping': dict,
+
+    # SSDP discovery mapping matcher policy
+    # Values: "any" where at least one key/value pair should be found or
+    # "all", where every key/value should be identical
+    'match': str,
+
+    # Port definition.
+    'port': int,
+
+    # SSDP discovery attempts to send query to the Universe
+    'attempts': int,
+
+    # SSDP discovery pause between the attempts
+    'pause': int,
 }
 
 # default configurations
@@ -1439,6 +1463,13 @@ DEFAULT_MINION_OPTS = {
         'static': ['Aliases', 'Links', 'IPAMConfig'],
         'automatic': ['IPAddress', 'Gateway',
                       'GlobalIPv6Address', 'IPv6Gateway'],
+    },
+    'discovery': {
+        'attempts': 3,
+        'pause': 5,
+        'port': 4520,
+        'match': 'any',
+        'mapping': {},
     },
 }
 
@@ -1758,6 +1789,10 @@ DEFAULT_MASTER_OPTS = {
     'salt_cp_chunk_size': 98304,
     'require_minion_sign_messages': False,
     'drop_messages_signature_fail': False,
+    'discovery': {
+        'port': 4520,
+        'mapping': {},
+    },
 }
 
 
