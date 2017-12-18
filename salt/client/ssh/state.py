@@ -195,7 +195,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
         cachedir = os.path.join('salt-ssh', id_).rstrip(os.sep)
     except AttributeError:
         # Minion ID should always be a str, but don't let an int break this
-        cachedir = os.path.join('salt-ssh', six.string_types(id_)).rstrip(os.sep)
+        cachedir = os.path.join('salt-ssh', six.text_type(id_)).rstrip(os.sep)
 
     for saltenv in file_refs:
         # Location where files in this saltenv will be cached
