@@ -330,4 +330,4 @@ class ClearFuncsTestCase(TestCase):
                 patch('salt.auth.LoadAuth.authenticate_key', MagicMock(return_value='fake-user-key')), \
                 patch('salt.utils.master.get_values_of_matching_keys', MagicMock(return_value=['test'])), \
                 patch('salt.tgt.auth_check', MagicMock(return_value=False)):
-            self.assertEqual(u'', self.clear_funcs.publish(load))
+            self.assertEqual(mock_ret, self.clear_funcs.publish(load))

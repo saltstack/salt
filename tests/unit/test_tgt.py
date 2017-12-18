@@ -32,7 +32,8 @@ fake_opts = {
     'extension_modules': ''
 }
 
-class MinionsTestCase(TestCase):
+
+class TgtTestCase(TestCase):
     '''
     TestCase for salt.tgt module functions
     '''
@@ -362,22 +363,3 @@ class MinionsTestCase(TestCase):
         args = ['1', '2']
         ret = salt.tgt.auth_check(fake_opts, auth_list, 'test.arg', args, 'runner')
         self.assertTrue(ret)
-
-    @patch('salt.tgt.pki_minions', MagicMock(
-        return_value=['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'lota', 'kappa']))
-    def test_glob(self):
-        ret = salt.tgt.check_minions(fake_opts, 'a*', 'glob')
-        self.assertEqual(sorted(ret['minions']), sorted(['alpha']))
-
-    @patch('salt.tgt.pki_minions', MagicMock(
-        return_value=['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'lota', 'kappa']))
-    def test_list(self):
-        ret = salt.tgt.check_minions(fake_opts, 'alpha,beta', 'list')
-        self.assertEqual(sorted(ret['minions']), sorted(['alpha', 'beta']))
-
-    @patch('salt.tgt.pki_minions', MagicMock(
-        return_value=['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'lota', 'kappa']))
-    def test_pcre(self):
-        ret = salt.tgt.check_minions(fake_opts, '.*ta', 'pcre')
-        self.assertEqual(sorted(ret['minions']),
-                         sorted(['beta', 'delta', 'zeta', 'eta', 'theta', 'lota']))

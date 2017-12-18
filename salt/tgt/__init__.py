@@ -2,6 +2,13 @@
 '''
 This module contains routines used to verify the matcher against the minions
 expected to return
+
+Used to check what minions should respond from a target
+
+Note: This is a best-effort set of the minions that would match a target.
+Depending on master configuration (grains caching, etc.) and topology (syndics)
+the list may be a subset-- but we err on the side of too-many minions in this
+class.
 '''
 
 # Import python libs
@@ -163,15 +170,6 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
         return ret
 
 
-'''
-Used to check what minions should respond from a target
-
-Note: This is a best-effort set of the minions that would match a target.
-Depending on master configuration (grains caching, etc.) and topology (syndics)
-the list may be a subset-- but we err on the side of too-many minions in this
-class.
-'''
-
 def pki_dir_acc_path(opts):
     # TODO: this is actually an *auth* check
     if opts.get('transport', 'zeromq') in ('zeromq', 'tcp'):
@@ -211,11 +209,11 @@ def pki_minions(opts):
         return minions
 
 
-def check_cache_minions(expr,
+def check_cache_minions(opts,
+                        expr,
                         delimiter,
                         greedy,
                         search_type,
-                        opts,
                         regex_match=False,
                         exact_match=False):
     '''
@@ -270,7 +268,7 @@ def check_compound_minions(opts,
                            expr,
                            delimiter,
                            greedy,
-                           pillar_exact=False):  # pylint: disable=unused-argument
+                           pillar_exact=False):
     '''
     Return the minions found by looking via compound matcher
     '''
@@ -384,12 +382,16 @@ def check_compound_minions(opts,
                     )
                     return {'minions': [], 'missing': []}
 
-                engine_args = [target_info['pattern']]
-                if target_info['engine'] in ('G', 'P', 'I', 'J'):
-                    engine_args.append(target_info['delimiter'] or delimiter)
-                engine_args.append(greedy)
-
-                _results = engine(*engine_args)
+                try:
+                    fcall = salt.utils.args.format_call(engine,
+                                                        {'expr': target_info['pattern'],
+                                                         'delimiter': target_info['delimiter'] or delimiter,
+                                                         'greedy': greedy})
+                    _results = engine(*fcall['args'], **fcall.get('kwargs', {}))
+                except Exception as e:
+                    log.error(('Failed to match available minions with engine type: {0} pattern: {1}'
+                               .format(target_info['engine'], expr)), exc_info=True)
+                    return {'minions': [], 'missing': []}
                 results.append(str(set(_results['minions'])))
                 missing.extend(_results['missing'])
                 if unmatched and unmatched[-1] == '-':
@@ -398,7 +400,7 @@ def check_compound_minions(opts,
 
             else:
                 # The match is not explicitly defined, evaluate as a glob
-                _results = tgts.glob.check_minions(word, True)
+                _results = tgts.glob.check_minions(word)
                 results.append(str(set(_results['minions'])))
                 if unmatched and unmatched[-1] == '-':
                     results.append(')')
@@ -419,6 +421,38 @@ def check_compound_minions(opts,
 
     return {'minions': list(minions),
             'missing': []}
+
+
+def check_minions(opts,
+                  expr,
+                  tgt_type='glob',
+                  delimiter=DEFAULT_TARGET_DELIM,
+                  greedy=True):
+    '''
+    Check the passed regex against the available minions' public keys
+    stored for authentication. This should return a set of ids which
+    match the regex, this will then be used to parse the returns to
+    make sure everyone has checked back in.
+    '''
+    tgts = salt.loader.tgt(opts)
+    if expr is None:
+        expr = ''
+    fstr = '{0}.check_minions'.format(tgt_type)
+    if fstr not in tgts:
+        log.warn('Failed to find function for matching minion '
+                 'with given tgt_type : {0}, fstr: {1}'
+                 .format(tgt_type, fstr))
+        return {'minions': [], 'missing': []}
+
+    try:
+        fcall = salt.utils.args.format_call(tgts[fstr],
+                                            {'expr': expr, 'delimiter': delimiter, 'greedy': greedy})
+        return tgts[fstr](*fcall['args'], **fcall.get('kwargs', {}))
+    except Exception as e:
+        log.error(('Failed to match available minions with tgt_type: {0} pattern: {1}'
+                   .format(tgt_type, expr)), exc_info=True)
+        return {'minions': [], 'missing': []}
+
 
 def connected_ids(opts, subset=None, show_ipv4=False, include_localhost=False):
     '''
@@ -462,40 +496,6 @@ def connected_ids(opts, subset=None, show_ipv4=False, include_localhost=False):
                     break
     return minions
 
-def check_minions(opts,
-                  expr,
-                  tgt_type='glob',
-                  delimiter=DEFAULT_TARGET_DELIM,
-                  greedy=True):
-    '''
-    Check the passed regex against the available minions' public keys
-    stored for authentication. This should return a set of ids which
-    match the regex, this will then be used to parse the returns to
-    Make sure everyone has checked back in.
-    '''
-    tgts = salt.loader.tgt(opts)
-    if expr is None:
-        expr = ''
-    fstr = '{0}.check_minions'.format(tgt_type)
-    if fstr not in tgts:
-        log.warn('Failed to find function for matching minion '
-                 'with given tgt_type : {0}, fstr: {1}'
-                 .format(tgt_type, fstr))
-        return {'minions': [], 'missing': []}
-
-    try:
-        fcall = salt.utils.args.format_call(tgts[fstr],
-                                            {'expr': expr, 'delimiter': delimiter, 'greedy': greedy},
-                                            expected_extra_kws=['delimiter', 'greedy'])
-        return tgts[fstr](*fcall['args'], **fcall.get('kwargs', {}))
-    except Exception as e:
-        log.debug('Targeting module threw {0}'.format(e))
-        log.exception(
-            'Failed matching available minions with {0} pattern: {1}'
-            .format(tgt_type, expr))
-        _res = {'minions': [], 'missing': []}
-        return _res
-
 
 def _expand_matching(opts, auth_entry):
     ref = {'G': 'grain',
@@ -517,6 +517,7 @@ def _expand_matching(opts, auth_entry):
 
     _res = check_minions(opts, v_expr, v_matcher)
     return set(_res['minions'])
+
 
 def validate_tgt(opts, valid, expr, tgt_type, minions=None, expr_form=None):
     '''
@@ -545,6 +546,7 @@ def validate_tgt(opts, valid, expr, tgt_type, minions=None, expr_form=None):
         return True
     return d_bool
 
+
 def _match_check(regex, fun):
     '''
     Validate a single regex to function comparison, the function argument
@@ -563,6 +565,7 @@ def _match_check(regex, fun):
         except Exception:
             log.error('Invalid regular expression: {0}'.format(regex))
     return vals and all(vals)
+
 
 def any_auth(opts, form, auth_list, fun, arg, tgt=None, tgt_type='glob'):
     '''
@@ -586,6 +589,7 @@ def any_auth(opts, form, auth_list, fun, arg, tgt=None, tgt_type='glob'):
                       fun,
                       arg,
                       form)
+
 
 def auth_check_expanded(opts,
                         auth_list,
@@ -702,6 +706,7 @@ def auth_check_expanded(opts,
         return False
     return False
 
+
 def auth_check(opts,
                auth_list,
                funs,
@@ -775,6 +780,7 @@ def auth_check(opts,
         return False
     return False
 
+
 def fill_auth_list_from_groups(auth_provider, user_groups, auth_list):
     '''
     Returns a list of authorisation matchers that a user is eligible for.
@@ -788,6 +794,7 @@ def fill_auth_list_from_groups(auth_provider, user_groups, auth_list):
                 for matcher in auth_provider[group_name]:
                     auth_list.append(matcher)
     return auth_list
+
 
 def fill_auth_list(opts, auth_provider, name, groups, auth_list=None, permissive=None):
     '''
@@ -814,17 +821,20 @@ def fill_auth_list(opts, auth_provider, name, groups, auth_list=None, permissive
         auth_list.extend(auth_provider['*'])
     return auth_list
 
+
 def wheel_check(auth_list, fun, args):
     '''
     Check special API permissions
     '''
     return spec_check(auth_list, fun, args, 'wheel')
 
+
 def runner_check(auth_list, fun, args):
     '''
     Check special API permissions
     '''
     return spec_check(auth_list, fun, args, 'runner')
+
 
 def spec_check(auth_list, fun, args, form):
     '''
@@ -862,6 +872,7 @@ def spec_check(auth_list, fun, args, form):
                         return True
     return False
 
+
 def _fun_check(valid, fun, args=None, kwargs=None):
     '''
     Check the given function name (fun) and its arguments (args) against the list of conditions.
@@ -883,6 +894,7 @@ def _fun_check(valid, fun, args=None, kwargs=None):
                 if _args_check(cond[fname_cond], args, kwargs):
                     return True
     return False
+
 
 def _args_check(valid, args=None, kwargs=None):
     '''

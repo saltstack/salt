@@ -18,4 +18,4 @@ def check_minions(expr, delimiter, greedy):
     '''
     Return the minions found by looking via pillar with PCRE
     '''
-    return salt.tgt.check_cache_minions(expr, delimiter, greedy, 'pillar', __opts__, regex_match=True)
+    return salt.tgt.check_cache_minions(__opts__, expr, delimiter, greedy, 'pillar', regex_match=True)
