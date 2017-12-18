@@ -5,7 +5,7 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python libs
-from __future__ import absolute_import, with_statement
+from __future__ import absolute_import, with_statement, unicode_literals
 import copy
 import ctypes
 import os
@@ -80,7 +80,9 @@ import salt.utils.schedule
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
+import salt.utils.ssdp
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.config import DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError
 from salt.transport import iter_transport_opts
 from salt.utils.debug import (
@@ -603,6 +605,18 @@ class Master(SMaster):
                 args=(self.opts, self.key, self.master_key),
                 kwargs=kwargs,
                 name='ReqServer')
+
+            # Fire up SSDP discovery publisher
+            if self.opts[u'discovery']:
+                if salt.utils.ssdp.SSDPDiscoveryServer.is_available():
+                    self.process_manager.add_process(salt.utils.ssdp.SSDPDiscoveryServer(
+                        port=self.opts[u'discovery'].get(u'port', DEFAULT_MASTER_OPTS[u'discovery'][u'port']),
+                        listen_ip=self.opts[u'interface'],
+                        answer={u'mapping': self.opts[u'discovery'].get(u'mapping', {})}).run)
+                else:
+                    log.error(u'Unable to load SSDP: asynchronous IO is not available.')
+                    if sys.version_info.major == 2:
+                        log.error(u'You are using Python 2, please install "trollius" module to enable SSDP discovery.')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -1529,7 +1543,7 @@ class AESFuncs(object):
             'publish_auth')
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, str(load['jid']))
+        jid_fn = os.path.join(auth_cache, six.text_type(load['jid']))
         with salt.utils.files.fopen(jid_fn, 'r') as fp_:
             if not load['id'] == fp_.read():
                 return {}
@@ -1758,8 +1772,8 @@ class ClearFuncs(object):
         except Exception as exc:
             log.error('Exception occurred while introspecting %s: %s', fun, exc)
             return {'error': {'name': exc.__class__.__name__,
-                               'args': exc.args,
-                               'message': str(exc)}}
+                              'args': exc.args,
+                              'message': six.text_type(exc)}}
 
     def wheel(self, clear_load):
         '''

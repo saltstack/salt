@@ -123,7 +123,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return odbc --return_kwargs '{"dsn": "dsn-name"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 

@@ -11,6 +11,7 @@ import shutil
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.path
 
 # Import third party libs
 from salt.ext import six
@@ -170,7 +171,7 @@ def _unify_keywords():
     old_path = BASE_PATH.format('keywords')
     if os.path.exists(old_path):
         if os.path.isdir(old_path):
-            for triplet in os.walk(old_path):
+            for triplet in salt.utils.path.os_walk(old_path):
                 for file_name in triplet[2]:
                     file_path = '{0}/{1}'.format(triplet[0], file_name)
                     with salt.utils.files.fopen(file_path) as fh_:
@@ -218,7 +219,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
 
         backup_files = []
 
-        for triplet in os.walk(path):
+        for triplet in salt.utils.path.os_walk(path):
             for file_name in triplet[2]:
                 file_path = '{0}/{1}'.format(triplet[0], file_name)
                 cp = triplet[0][len(path) + 1:] + '/' + file_name
@@ -263,7 +264,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                     pass
 
         if clean:
-            for triplet in os.walk(path):
+            for triplet in salt.utils.path.os_walk(path):
                 if len(triplet[1]) == 0 and len(triplet[2]) == 0 and \
                         triplet[0] != path:
                     shutil.rmtree(triplet[0])

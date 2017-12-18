@@ -7,7 +7,7 @@ Unit tests for the Default Job Cache (local_cache).
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import logging
@@ -217,7 +217,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
         are either present or removed
         '''
         for content in contents:
-            log.debug('CONTENT {0}'.format(content))
+            log.debug('CONTENT %s', content)
             if status == 'present':
                 check_job_dir = os.path.exists(content)
             elif status == 'removed':

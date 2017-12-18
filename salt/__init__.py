@@ -4,7 +4,7 @@ Salt package
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import warnings
 
 # All salt related deprecation warnings should be shown once each!
