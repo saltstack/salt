@@ -717,11 +717,11 @@ class SerializerExtension(Extension, object):
 
     .. code-block:: jinja
 
-        escape_regex = {{ 'https://example.com?foo=bar%20baz' | escape_regex }}
+        regex_escape = {{ 'https://example.com?foo=bar%20baz' | regex_escape }}
 
     will be rendered as::
 
-        escape_regex = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
+        regex_escape = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
 
     ** Set Theory Filters **
 

@@ -20,7 +20,7 @@ For example ``/etc/salt/master.d/_vistara.conf``:
 
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import json
