@@ -147,7 +147,7 @@ must implement the following functions:
 ``prep_jid``
     Ensures that job ids (jid) don't collide, unless passed_jid is provided.
 
-    ``nochache`` is an optional boolean that indicates if return data
+    ``nocache`` is an optional boolean that indicates if return data
     should be cached. ``passed_jid`` is a caller provided jid which should be
     returned unconditionally.
 
