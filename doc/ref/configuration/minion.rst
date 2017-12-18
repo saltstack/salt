@@ -606,6 +606,19 @@ This directory may contain sensitive data and should be protected accordingly.
 
     cachedir: /var/cache/salt/minion
 
+.. conf_master:: color_theme
+
+``color_theme``
+---------
+
+Default: ``""``
+
+Specifies a path to the color theme to use for colored command line output.
+
+.. code-block:: yaml
+
+    color_theme: /etc/salt/color_theme
+
 .. conf_minion:: append_minionid_config_dirs
 
 ``append_minionid_config_dirs``
