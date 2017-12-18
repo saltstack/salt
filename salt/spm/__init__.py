@@ -33,6 +33,7 @@ from salt.ext.six.moves import filter
 from salt.template import compile_template
 import salt.utils.files
 import salt.utils.http as http
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_functions
 from salt.utils.yamldumper import SafeOrderedDumper
@@ -615,7 +616,7 @@ class SPMClient(object):
         if os.path.exists(self.opts['spm_repos_config']):
             repo_files.append(self.opts['spm_repos_config'])
 
-        for (dirpath, dirnames, filenames) in os.walk('{0}.d'.format(self.opts['spm_repos_config'])):
+        for (dirpath, dirnames, filenames) in salt.utils.path.os_walk('{0}.d'.format(self.opts['spm_repos_config'])):
             for repo_file in filenames:
                 if not repo_file.endswith('.repo'):
                     continue
@@ -726,7 +727,7 @@ class SPMClient(object):
 
         old_files = []
         repo_metadata = {}
-        for (dirpath, dirnames, filenames) in os.walk(repo_path):
+        for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(repo_path):
             for spm_file in filenames:
                 if not spm_file.endswith('.spm'):
                     continue

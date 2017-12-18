@@ -36,6 +36,7 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.verify
 import salt.syspaths
 from salt.template import compile_template
 
@@ -184,6 +185,10 @@ class CloudClient(object):
             self.opts = opts
         else:
             self.opts = salt.config.cloud_config(path)
+
+        # Check the cache-dir exists. If not, create it.
+        v_dirs = [self.opts['cachedir']]
+        salt.utils.verify.verify_env(v_dirs, salt.utils.get_user())
 
         if pillars:
             for name, provider in six.iteritems(pillars.pop('providers', {})):
