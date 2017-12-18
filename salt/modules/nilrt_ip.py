@@ -34,6 +34,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'ip'
 
 SERVICE_PATH = '/net/connman/service/'
+NIRTCFG_PATH = '/usr/local/natinst/bin/nirtcfg'
 _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
 
 
@@ -233,7 +234,7 @@ def _get_requestmode_info(interface):
     '''
     return requestmode for given interface
     '''
-    ifacemod = __salt__['cmd.run']('nirtcfg -l').lower()
+    ifacemod = __salt__['cmd.run']('{0} -l'.format(NIRTCFG_PATH)).lower()
     if '[{0}]dhcpenabled=1'.format(interface) in ifacemod:
         if '[{0}]linklocalenabled=1'.format(interface) in ifacemod:
             return 'dhcp_linklocal'
@@ -447,10 +448,9 @@ def set_dhcp_linklocal_all(interface):
         salt '*' ip.set_dhcp_linklocal_all interface-label
     '''
     if _is_older_nilrt():
-        nirtcfg_cmd = salt.utils.which('nirtcfg')
-        if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'dhcpenabled\',value=\'1\''.format(interface))['retcode'] != 0:
+        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'1\''.format(interface))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp linklocal  for interface: {0}\nError: could not enable dhcp option\n'.format(interface))
-        if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'linklocalenabled\',value=\'1\''.format(interface))['retcode'] != 0:
+        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'linklocalenabled\',value=\'1\''.format(interface))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp linklocal  for interface: {0}\nError: could not enable linklocal option\n'.format(interface))
         disable(interface)
         enable(interface)
@@ -488,10 +488,9 @@ def set_dhcp_only_all(interface):
     '''
     if not _is_older_nilrt():
         raise salt.exceptions.CommandExecutionError('Not supported in this version')
-    nirtcfg_cmd = salt.utils.which('nirtcfg')
-    if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'dhcpenabled\',value=\'1\''.format(interface))['retcode'] != 0:
+    if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'1\''.format(interface))['retcode'] != 0:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp only for interface: {0}\nError: could not enable dhcp option\n'.format(interface))
-    if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'linklocalenabled\',value=\'0\''.format(interface))['retcode'] != 0:
+    if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'linklocalenabled\',value=\'0\''.format(interface))['retcode'] != 0:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp only for interface: {0}\nError: could not disable linklocal option\n'.format(interface))
     disable(interface)
     enable(interface)
@@ -514,10 +513,9 @@ def set_linklocal_only_all(interface):
     '''
     if not _is_older_nilrt():
         raise salt.exceptions.CommandExecutionError('Not supported in this version')
-    nirtcfg_cmd = salt.utils.which('nirtcfg')
-    if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'dhcpenabled\',value=\'0\''.format(interface))['retcode'] != 0:
+    if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'0\''.format(interface))['retcode'] != 0:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set linklocal only for interface: {0}\nError: could not disable dhcp option\n'.format(interface))
-    if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'linklocalenabled\',value=\'1\''.format(interface))['retcode'] != 0:
+    if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'linklocalenabled\',value=\'1\''.format(interface))['retcode'] != 0:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set set linklocal only for interface: {0}\nError: could not enable linklocal option\n'.format(interface))
     disable(interface)
     enable(interface)
@@ -552,19 +550,19 @@ def set_static_all(interface, address, netmask, gateway, domains):
         dns = domains.split(' ')
         domains = dns
     if _is_older_nilrt():
-        nirtcfg_cmd = salt.utils.which('nirtcfg')
-        if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'dhcpenabled\',value=\'0\''.format(interface))['retcode'] != 0:
+        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'0\''.format(interface))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not disable dhcp option\n'.format(interface))
-        if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'linklocalenabled\',value=\'0\''.format(interface))['retcode'] != 0:
+        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'linklocalenabled\',value=\'0\''.format(interface))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not disable linklocal option\n'.format(interface))
-        if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'IP_Address\',value=\'{1}\''.format(interface, address))['retcode'] != 0:
+        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'IP_Address\',value=\'{1}\''.format(interface, address))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set static ip\n'.format(interface))
-        if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'Subnet_Mask\',value=\'{1}\''.format(interface, netmask))['retcode'] != 0:
+        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'Subnet_Mask\',value=\'{1}\''.format(interface, netmask))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set netmask\n'.format(interface))
-        if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'Gateway\',value=\'{1}\''.format(interface, gateway))['retcode'] != 0:
+        if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'Gateway\',value=\'{1}\''.format(interface, gateway))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set gateway\n'.format(interface))
-        if __salt__['cmd.run_all'](nirtcfg_cmd + ' --set section={0},token=\'DNS_Address\',value=\'{1}\''.format(interface, domains[0]))['retcode'] != 0:
-            raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set dns\n'.format(interface))
+        if nameservers:
+            if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'DNS_Address\',value=\'{1}\''.format(interface, domains[0]))['retcode'] != 0:
+                raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set dns\n'.format(interface))
         disable(interface)
         enable(interface)
         return True
