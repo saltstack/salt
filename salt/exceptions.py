@@ -2,7 +2,7 @@
 '''
 This module is a central location for all salt exceptions
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy

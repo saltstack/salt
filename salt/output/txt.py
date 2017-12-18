@@ -7,7 +7,7 @@ The txt outputter has been developed to make the output from shell
 commands on minions appear as they do when the command is executed
 on the minion.
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import pprint

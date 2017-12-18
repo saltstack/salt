@@ -5,7 +5,7 @@ Tests for the file state
 '''
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import glob
 import logging
