@@ -43,7 +43,7 @@ To override individual configuration items, append --return_kwargs '{'key:': 'va
 
     salt '*' test.ping --return mattermost --return_kwargs '{'channel': '#random'}'
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -89,7 +89,7 @@ def _get_options(ret=None):
                                                    attrs,
                                                    __salt__=__salt__,
                                                    __opts__=__opts__)
-    log.debug('Options: {0}'.format(_options))
+    log.debug('Options: %s', _options)
     return _options
 
 
@@ -146,8 +146,8 @@ def event_return(events):
 
     is_ok = True
     for event in events:
-        log.debug('Event: {0}'.format(str(event)))
-        log.debug('Event data: {0}'.format(str(event['data'])))
+        log.debug('Event: %s', event)
+        log.debug('Event data: %s', event['data'])
         message = 'tag: {0}\r\n'.format(event['tag'])
         for key, value in six.iteritems(event['data']):
             message += '{0}: {1}\r\n'.format(key, value)
@@ -183,10 +183,10 @@ def post_message(channel,
     if username:
         parameters['username'] = username
     parameters['text'] = '```' + message + '```'  # pre-formatted, fixed-width text
-    log.debug('Parameters: {0}'.format(parameters))
+    log.debug('Parameters: %s', parameters)
     result = salt.utils.mattermost.query(api_url=api_url,
                                          hook=hook,
                                          data='payload={0}'.format(json.dumps(parameters)))
 
-    log.debug('result {0}'.format(result))
+    log.debug('result %s', result)
     return bool(result)

@@ -16,7 +16,7 @@ Module for sending messages to Mattermost
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import json
 import logging
 
@@ -128,7 +128,7 @@ def post_message(message,
     if username:
         parameters['username'] = username
     parameters['text'] = '```' + message + '```'  # pre-formatted, fixed-width text
-    log.debug('Parameters: {0}'.format(parameters))
+    log.debug('Parameters: %s', parameters)
     result = salt.utils.mattermost.query(api_url=api_url,
                                          hook=hook,
                                          data='payload={0}'.format(json.dumps(parameters)))
@@ -168,8 +168,8 @@ def post_event(event,
     if not event:
         log.error('message is a required option.')
 
-    log.debug('Event: {0}'.format(str(event)))
-    log.debug('Event data: {0}'.format(str(event['data'])))
+    log.debug('Event: %s', event)
+    log.debug('Event data: %s', event['data'])
     message = 'tag: {0}\r\n'.format(event['tag'])
     for key, value in six.iteritems(event['data']):
         message += '{0}: {1}\r\n'.format(key, value)

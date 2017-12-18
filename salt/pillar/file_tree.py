@@ -190,6 +190,7 @@ import salt.loader
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.path
 import salt.utils.stringio
 import salt.template
 
@@ -199,7 +200,7 @@ log = logging.getLogger(__name__)
 
 def _on_walk_error(err):
     '''
-    Log os.walk() error.
+    Log salt.utils.path.os_walk() error.
     '''
     log.error('%s: %s', err.filename, err.strerror)
 
@@ -239,7 +240,7 @@ def _construct_pillar(top_dir,
     renderers = salt.loader.render(__opts__, __salt__)
 
     norm_top_dir = os.path.normpath(top_dir)
-    for dir_path, dir_names, file_names in os.walk(
+    for dir_path, dir_names, file_names in salt.utils.path.os_walk(
             top_dir, topdown=True, onerror=_on_walk_error,
             followlinks=follow_dir_links):
         # Find current path in pillar tree
