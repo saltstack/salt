@@ -2034,7 +2034,7 @@ class ClearFuncs(object):
             ssh_minions = ssh._prep_ssh(**load).targets.keys()
             if ssh_minions:
                 minions.extend(ssh_minions)
-                threading.Thread(target=ssh.cmd, kwargs=clear_load).start()
+                threading.Thread(target=ssh.cmd, kwargs=load).start()
         return minions
 
     def _prep_pub(self, minions, jid, clear_load, extra, missing):
