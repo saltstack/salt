@@ -3,21 +3,25 @@
 Create ssh executor system
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import os
+import time
 import copy
 import json
 import logging
 
 # Import salt libs
+from salt.exceptions import SaltInvocationError
 import salt.client.ssh.shell
 import salt.client.ssh.state
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.jid
 import salt.utils.platform
+import salt.utils.state
 import salt.utils.thin
 import salt.roster
 import salt.state
@@ -32,6 +36,47 @@ __func_alias__ = {
     'apply_': 'apply'
 }
 log = logging.getLogger(__name__)
+
+
+def _set_retcode(ret, highstate=None):
+    '''
+    Set the return code based on the data back from the state system
+    '''
+
+    # Set default retcode to 0
+    __context__['retcode'] = 0
+
+    if isinstance(ret, list):
+        __context__['retcode'] = 1
+        return
+    if not salt.utils.state.check_result(ret, highstate=highstate):
+
+        __context__['retcode'] = 2
+
+
+def _check_pillar(kwargs, pillar=None):
+    '''
+    Check the pillar for errors, refuse to run the state if there are errors
+    in the pillar and return the pillar errors
+    '''
+    if kwargs.get('force'):
+        return True
+    pillar_dict = pillar if pillar is not None else __pillar__
+    if '_errors' in pillar_dict:
+        return False
+    return True
+
+
+def _wait(jid):
+    '''
+    Wait for all previously started state jobs to finish running
+    '''
+    if jid is None:
+        jid = salt.utils.jid.gen_jid(__opts__)
+    states = _prior_running_states(jid)
+    while states:
+        time.sleep(1)
+        states = _prior_running_states(jid)
 
 
 def _merge_extra_filerefs(*args):
@@ -132,10 +177,104 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
+
+
+def running(concurrent=False):
+    '''
+    Return a list of strings that contain state return data if a state function
+    is already running. This function is used to prevent multiple state calls
+    from being run at the same time.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.running
+    '''
+    ret = []
+    if concurrent:
+        return ret
+    active = __salt__['saltutil.is_running']('state.*')
+    for data in active:
+        err = (
+            'The function "{0}" is running as PID {1} and was started at '
+            '{2} with jid {3}'
+        ).format(
+            data['fun'],
+            data['pid'],
+            salt.utils.jid.jid_to_time(data['jid']),
+            data['jid'],
+        )
+        ret.append(err)
+    return ret
+
+
+def _prior_running_states(jid):
+    '''
+    Return a list of dicts of prior calls to state functions.  This function is
+    used to queue state calls so only one is run at a time.
+    '''
+
+    ret = []
+    active = __salt__['saltutil.is_running']('state.*')
+    for data in active:
+        try:
+            data_jid = int(data['jid'])
+        except ValueError:
+            continue
+        if data_jid < int(jid):
+            ret.append(data)
+    return ret
+
+
+def _check_queue(queue, kwargs):
+    '''
+    Utility function to queue the state run if requested
+    and to check for conflicts in currently running states
+    '''
+    if queue:
+        _wait(kwargs.get('__pub_jid'))
+    else:
+        conflict = running(concurrent=kwargs.get('concurrent', False))
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
+
+
+def _get_opts(**kwargs):
+    '''
+    Return a copy of the opts for use, optionally load a local config on top
+    '''
+    opts = copy.deepcopy(__opts__)
+
+    if 'localconfig' in kwargs:
+        return salt.config.minion_config(kwargs['localconfig'], defaults=opts)
+
+    if 'saltenv' in kwargs:
+        saltenv = kwargs['saltenv']
+        if saltenv is not None and not isinstance(saltenv, six.string_types):
+            opts['environment'] = str(kwargs['saltenv'])
+        else:
+            opts['environment'] = kwargs['saltenv']
+
+    if 'pillarenv' in kwargs:
+        pillarenv = kwargs['pillarenv']
+        if pillarenv is not None and not isinstance(pillarenv, six.string_types):
+            opts['pillarenv'] = str(kwargs['pillarenv'])
+        else:
+            opts['pillarenv'] = kwargs['pillarenv']
+
+    return opts
+
+
+def _get_initial_pillar(opts):
+    return __pillar__ if __opts__['__cli'] == 'salt-call' \
+        and opts['pillarenv'] == __opts__['pillarenv'] \
+        else None
 
 
 def low(data, **kwargs):
@@ -208,10 +347,25 @@ def low(data, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
+
+
+def _get_test_value(test=None, **kwargs):
+    '''
+    Determine the correct value for the test flag.
+    '''
+    ret = True
+    if test is None:
+        if salt.utils.args.test_mode(test=test, **kwargs):
+            ret = True
+        else:
+            ret = __opts__.get('test', None)
+    else:
+        ret = test
+    return ret
 
 
 def high(data, **kwargs):
@@ -281,7 +435,7 @@ def high(data, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -367,6 +521,8 @@ def check_request(name=None):
     serial = salt.payload.Serial(__opts__)
     if os.path.isfile(notify_path):
         with salt.utils.files.fopen(notify_path, 'rb') as fp_:
+            # Not sure if this needs to be decoded since it is being returned,
+            # and msgpack serialization will encode it to bytes anyway.
             req = serial.load(fp_)
         if name:
             return req[name]
@@ -522,7 +678,7 @@ def highstate(test=None, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -602,7 +758,7 @@ def top(topfn, test=None, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -644,6 +800,99 @@ def show_lowstate():
             __salt__,
             __context__['fileclient'])
     return st_.compile_low_chunks()
+
+
+def sls_id(id_, mods, test=None, queue=False, **kwargs):
+    '''
+    Call a single ID from the named module(s) and handle all requisites
+
+    The state ID comes *before* the module ID(s) on the command line.
+
+    id
+        ID to call
+
+    mods
+        Comma-delimited list of modules to search for given id and its requisites
+
+    .. versionadded:: 2017.7.3
+
+    saltenv : base
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.sls_id my_state my_module
+
+        salt '*' state.sls_id my_state my_module,a_common_module
+    '''
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        return conflict
+    orig_test = __opts__.get('test', None)
+    opts = _get_opts(**kwargs)
+    opts['test'] = _get_test_value(test, **kwargs)
+
+    # Since this is running a specific ID within a specific SLS file, fall back
+    # to the 'base' saltenv if none is configured and none was passed.
+    if opts['environment'] is None:
+        opts['environment'] = 'base'
+
+    try:
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   initial_pillar=_get_initial_pillar(opts))
+
+    if not _check_pillar(kwargs, st_.opts['pillar']):
+        __context__['retcode'] = 5
+        err = ['Pillar failed to render with the following messages:']
+        err += __pillar__['_errors']
+        return err
+
+    if isinstance(mods, six.string_types):
+        split_mods = mods.split(',')
+    st_.push_active()
+    try:
+        high_, errors = st_.render_highstate({opts['environment']: split_mods})
+    finally:
+        st_.pop_active()
+    errors += st_.state.verify_high(high_)
+    # Apply requisites to high data
+    high_, req_in_errors = st_.state.requisite_in(high_)
+    if req_in_errors:
+        # This if statement should not be necessary if there were no errors,
+        # but it is required to get the unit tests to pass.
+        errors.extend(req_in_errors)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    chunks = st_.state.compile_high_data(high_)
+    ret = {}
+    for chunk in chunks:
+        if chunk.get('__id__', '') == id_:
+            ret.update(st_.state.call_chunk(chunk, {}, chunks))
+
+    _set_retcode(ret, highstate=highstate)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
+    if not ret:
+        raise SaltInvocationError(
+            'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
+            '\'{2}\''.format(id_, mods, opts['environment'])
+        )
+    return ret
 
 
 def show_sls(mods, saltenv='base', test=None, **kwargs):
@@ -872,7 +1121,7 @@ def single(fun, name, test=None, **kwargs):
         return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout

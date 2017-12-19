@@ -35,7 +35,7 @@ module (formerly called **dockerng**) in the 2017.7.0 release.
     :ref:`here <docker-authentication>` for more information on how to
     configure access to docker registries in :ref:`Pillar <pillar>` data.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -192,7 +192,7 @@ def present(name,
            'comment': ''}
 
     if not isinstance(name, six.string_types):
-        name = str(name)
+        name = six.string_types(name)
 
     # At most one of the args that result in an image being built can be used
     num_build_args = len([x for x in (build, load, sls) if x is not None])
@@ -209,7 +209,7 @@ def present(name,
             )
             return ret
         if not isinstance(tag, six.string_types):
-            tag = str(tag)
+            tag = six.string_types(tag)
         full_image = ':'.join((name, tag))
     else:
         if tag:

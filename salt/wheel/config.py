@@ -2,7 +2,7 @@
 '''
 Manage the master configuration file
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -15,6 +15,9 @@ import yaml
 import salt.config
 import salt.utils.files
 from salt.utils.yamldumper import SafeOrderedDumper
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +87,7 @@ def update_config(file_name, yaml_contents):
         yaml_out = yaml.safe_dump(yaml_contents, default_flow_style=False)
 
         if not os.path.exists(dir_path):
-            log.debug('Creating directory {0}'.format(dir_path))
+            log.debug('Creating directory %s', dir_path)
             os.makedirs(dir_path, 0o755)
 
         file_path = os.path.join(dir_path, file_name)
@@ -93,4 +96,4 @@ def update_config(file_name, yaml_contents):
 
         return 'Wrote {0}'.format(file_name)
     except (IOError, OSError, yaml.YAMLError, ValueError) as err:
-        return str(err)
+        return six.text_type(err)

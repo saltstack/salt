@@ -7,7 +7,7 @@ The txt outputter has been developed to make the output from shell
 commands on minions appear as they do when the command is executed
 on the minion.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import pprint
@@ -17,21 +17,21 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Output the data in lines, very nice for running commands
     '''
-    ret = u''
-    if hasattr(data, u'keys'):
+    ret = ''
+    if hasattr(data, 'keys'):
         for key in data:
             value = data[key]
             # Don't blow up on non-strings
             try:
                 for line in value.splitlines():
-                    ret += u'{0}: {1}\n'.format(key, line)
+                    ret += '{0}: {1}\n'.format(key, line)
             except AttributeError:
-                ret += u'{0}: {1}\n'.format(key, value)
+                ret += '{0}: {1}\n'.format(key, value)
     else:
         try:
-            ret += data + u'\n'
+            ret += data + '\n'
         except TypeError:
             # For non-dictionary, non-string data, just use print
-            ret += u'{0}\n'.format(pprint.pformat(data))
+            ret += '{0}\n'.format(pprint.pformat(data))
 
     return ret

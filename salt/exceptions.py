@@ -2,7 +2,7 @@
 '''
 This module is a central location for all salt exceptions
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -54,7 +54,7 @@ class SaltException(Exception):
             # Some non-string input was passed. Run the parent dunder init with
             # a str version, and convert the passed value to unicode for the
             # message/strerror attributes.
-            super(SaltException, self).__init__(str(message))
+            super(SaltException, self).__init__(str(message))  # future lint: blacklisted-function
             self.message = self.strerror = unicode(message)  # pylint: disable=incompatible-py3-code
 
     def __unicode__(self):
@@ -66,8 +66,7 @@ class SaltException(Exception):
         transport via msgpack
         '''
         if six.PY3:
-            # The message should be a str type, not a unicode
-            return {'message': str(self), 'args': self.args}
+            return {'message': six.text_type(self), 'args': self.args}
         return dict(message=self.__unicode__(), args=self.args)
 
 

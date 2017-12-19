@@ -2,7 +2,7 @@
 '''
 Return cached data from minions
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import fnmatch
 import logging

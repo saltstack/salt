@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 
@@ -37,6 +37,16 @@ class SSHStateTest(SSHCase):
         test state.apply with salt-ssh
         '''
         ret = self.run_function('state.apply', [SSH_SLS])
+        self._check_dict_ret(ret=ret, val='__sls__', exp_ret=SSH_SLS)
+
+        check_file = self.run_function('file.file_exists', ['/tmp/test'])
+        self.assertTrue(check_file)
+
+    def test_state_sls_id(self):
+        '''
+        test state.sls_id with salt-ssh
+        '''
+        ret = self.run_function('state.sls_id', ['ssh-file-test', SSH_SLS])
         self._check_dict_ret(ret=ret, val='__sls__', exp_ret=SSH_SLS)
 
         check_file = self.run_function('file.file_exists', ['/tmp/test'])

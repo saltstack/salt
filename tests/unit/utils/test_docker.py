@@ -6,7 +6,7 @@ tests.unit.utils.test_docker
 Test the funcs in salt.utils.docker and salt.utils.docker.translate
 '''
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import functools
 import logging
@@ -1985,7 +1985,7 @@ class TranslateNetworkInputTestCase(TranslateBase):
                 ),
                 self.apply_defaults(
                     {'gateway': val if isinstance(val, six.string_types)
-                                else str(val)}
+                                else six.text_type(val)}
                 )
             )
 

@@ -321,6 +321,20 @@ option on the Salt master.
 
     master_port: 4506
 
+.. conf_minion:: publish_port
+
+``publish_port``
+---------------
+
+Default: ``4505``
+
+The port of the master publish server, this needs to coincide with the publish_port
+option on the Salt master.
+
+.. code-block:: yaml
+
+    publish_port: 4505
+
 .. conf_minion:: source_interface_name
 
 ``source_interface_name``
@@ -605,6 +619,19 @@ This directory may contain sensitive data and should be protected accordingly.
 .. code-block:: yaml
 
     cachedir: /var/cache/salt/minion
+
+.. conf_master:: color_theme
+
+``color_theme``
+---------
+
+Default: ``""``
+
+Specifies a path to the color theme to use for colored command line output.
+
+.. code-block:: yaml
+
+    color_theme: /etc/salt/color_theme
 
 .. conf_minion:: append_minionid_config_dirs
 

@@ -12,6 +12,7 @@ import shutil
 # Import salt libs
 import salt.fileclient
 import salt.utils.hashutils
+import salt.utils.path
 import salt.utils.url
 
 # Import 3rd-party libs
@@ -22,7 +23,7 @@ log = logging.getLogger(__name__)
 
 def _list_emptydirs(rootdir):
     emptydirs = []
-    for root, dirs, files in os.walk(rootdir):
+    for root, dirs, files in salt.utils.path.os_walk(rootdir):
         if not files and not dirs:
             emptydirs.append(root)
     return emptydirs
@@ -30,7 +31,7 @@ def _list_emptydirs(rootdir):
 
 def _listdir_recursively(rootdir):
     file_list = []
-    for root, dirs, files in os.walk(rootdir):
+    for root, dirs, files in salt.utils.path.os_walk(rootdir):
         for filename in files:
             relpath = os.path.relpath(root, rootdir).strip('.')
             file_list.append(os.path.join(relpath, filename))

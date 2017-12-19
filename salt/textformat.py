@@ -3,7 +3,7 @@
 ANSI escape code utilities, see
 http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import 3rd-party libs
 from salt.ext import six

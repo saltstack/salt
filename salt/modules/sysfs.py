@@ -13,6 +13,7 @@ import stat
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 
 # Import 3rd-party libs
@@ -231,7 +232,7 @@ def interfaces(root):
     reads = []
     writes = []
 
-    for path, _, files in os.walk(root, followlinks=False):
+    for path, _, files in salt.utils.path.os_walk(root, followlinks=False):
         for afile in files:
             canpath = os.path.join(path, afile)
 

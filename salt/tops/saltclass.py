@@ -9,7 +9,7 @@ SaltClass master_tops Module
 '''
 
 # import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 import salt.utils.saltclass as sc
@@ -45,7 +45,7 @@ def top(**kwargs):
     _opts = __opts__['master_tops']['saltclass']
     if 'path' not in _opts:
         path = '/srv/saltclass'
-        log.warning('path variable unset, using default: {0}'.format(path))
+        log.warning('path variable unset, using default: %s', path)
     else:
         path = _opts['path']
 

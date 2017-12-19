@@ -4,7 +4,7 @@ A collection of mixins useful for the various *Client interfaces
 '''
 
 # Import Python libs
-from __future__ import absolute_import, print_function, with_statement
+from __future__ import absolute_import, print_function, with_statement, unicode_literals
 import fnmatch
 import signal
 import logging
@@ -245,7 +245,7 @@ class SyncClientMixin(object):
 
     def low(self, fun, low, print_event=True, full_return=False):
         '''
-        Check for deprecated usage and allow until Salt Oxygen.
+        Check for deprecated usage and allow until Salt Fluorine.
         '''
         msg = []
         if 'args' in low:
@@ -256,7 +256,7 @@ class SyncClientMixin(object):
             low['kwarg'] = low.pop('kwargs')
 
         if msg:
-            salt.utils.versions.warn_until('Oxygen', ' '.join(msg))
+            salt.utils.versions.warn_until('Fluorine', ' '.join(msg))
 
         return self._low(fun, low, print_event=print_event, full_return=full_return)
 
@@ -395,7 +395,7 @@ class SyncClientMixin(object):
                     data['success'] = salt.utils.state.check_result(data['return']['data'])
         except (Exception, SystemExit) as ex:
             if isinstance(ex, salt.exceptions.NotImplemented):
-                data['return'] = str(ex)
+                data['return'] = six.text_type(ex)
             else:
                 data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
                     self.client,
