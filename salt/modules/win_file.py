@@ -58,7 +58,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
         comment, uncomment, _add_flags, comment_line, _regex_to_static,
         _get_line_indent, apply_template_on_contents, dirname, basename,
-        list_backups_dir)
+        list_backups_dir, _assert_occurrence, _starts_till)
 from salt.modules.file import normpath as normpath_
 
 from salt.utils import namespaced_function as _namespaced_function
@@ -116,7 +116,7 @@ def __virtual__():
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
             global _regex_to_static, _get_line_indent, dirname, basename
-            global list_backups_dir, normpath_
+            global list_backups_dir, normpath_, _assert_occurrence, _starts_till
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -179,6 +179,8 @@ def __virtual__():
             basename = _namespaced_function(basename, globals())
             list_backups_dir = _namespaced_function(list_backups_dir, globals())
             normpath_ = _namespaced_function(normpath_, globals())
+            _assert_occurrence = _namespaced_function(_assert_occurrence, globals())
+            _starts_till = _namespaced_function(_starts_till, globals())
 
         else:
             return False, 'Module win_file: Missing Win32 modules'
@@ -789,7 +791,7 @@ def chgrp(path, group):
 
 def stats(path, hash_type='sha256', follow_symlinks=True):
     '''
-    Return a dict containing the stats for a given file
+    Return a dict containing the stats about a given file
 
     Under Windows, `gid` will equal `uid` and `group` will equal `user`.
 
@@ -818,6 +820,8 @@ def stats(path, hash_type='sha256', follow_symlinks=True):
 
         salt '*' file.stats /etc/passwd
     '''
+    # This is to mirror the behavior of file.py. `check_file_meta` expects an
+    # empty dictionary when the file does not exist
     if not os.path.exists(path):
         raise CommandExecutionError('Path not found: {0}'.format(path))
 
@@ -1225,33 +1229,37 @@ def mkdir(path,
 
         path (str): The full path to the directory.
 
-        owner (str): The owner of the directory. If not passed, it will be the
-        account that created the directory, likely SYSTEM
+        owner (str):
+            The owner of the directory. If not passed, it will be the account
+            that created the directory, likely SYSTEM
 
-        grant_perms (dict): A dictionary containing the user/group and the basic
-        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
-        You can also set the ``applies_to`` setting here. The default is
-        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
-        like this:
+        grant_perms (dict):
+            A dictionary containing the user/group and the basic permissions to
+            grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
+            set the ``applies_to`` setting here. The default is
+            ``this_folder_subfolders_files``. Specify another ``applies_to``
+            setting like this:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+                {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
 
-        To set advanced permissions use a list for the ``perms`` parameter, ie:
+            To set advanced permissions use a list for the ``perms`` parameter, ie:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
+                {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
 
-        deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny along with the ``applies_to`` setting. Use the same
-        format used for the ``grant_perms`` parameter. Remember, deny
-        permissions supersede grant permissions.
+        deny_perms (dict):
+            A dictionary containing the user/group and permissions to deny along
+            with the ``applies_to`` setting. Use the same format used for the
+            ``grant_perms`` parameter. Remember, deny permissions supersede
+            grant permissions.
 
-        inheritance (bool): If True the object will inherit permissions from the
-        parent, if False, inheritance will be disabled. Inheritance setting will
-        not apply to parent directories if they must be created
+        inheritance (bool):
+            If True the object will inherit permissions from the parent, if
+            False, inheritance will be disabled. Inheritance setting will not
+            apply to parent directories if they must be created
 
     Returns:
         bool: True if successful
@@ -1310,33 +1318,37 @@ def makedirs_(path,
 
         path (str): The full path to the directory.
 
-        owner (str): The owner of the directory. If not passed, it will be the
-        account that created the directly, likely SYSTEM
+        owner (str):
+            The owner of the directory. If not passed, it will be the account
+            that created the directly, likely SYSTEM
 
-        grant_perms (dict): A dictionary containing the user/group and the basic
-        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
-        You can also set the ``applies_to`` setting here. The default is
-        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
-        like this:
+        grant_perms (dict):
+            A dictionary containing the user/group and the basic permissions to
+            grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
+            set the ``applies_to`` setting here. The default is
+            ``this_folder_subfolders_files``. Specify another ``applies_to``
+            setting like this:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+                {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
 
-        To set advanced permissions use a list for the ``perms`` parameter, ie:
+            To set advanced permissions use a list for the ``perms`` parameter, ie:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
+                {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
 
-        deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny along with the ``applies_to`` setting. Use the same
-        format used for the ``grant_perms`` parameter. Remember, deny
-        permissions supersede grant permissions.
+        deny_perms (dict):
+            A dictionary containing the user/group and permissions to deny along
+            with the ``applies_to`` setting. Use the same format used for the
+            ``grant_perms`` parameter. Remember, deny permissions supersede
+            grant permissions.
 
-        inheritance (bool): If True the object will inherit permissions from the
-        parent, if False, inheritance will be disabled. Inheritance setting will
-        not apply to parent directories if they must be created
+        inheritance (bool):
+            If True the object will inherit permissions from the parent, if
+            False, inheritance will be disabled. Inheritance setting will not
+            apply to parent directories if they must be created
 
     .. note::
 
@@ -1421,36 +1433,40 @@ def makedirs_perms(path,
 
         path (str): The full path to the directory.
 
-        owner (str): The owner of the directory. If not passed, it will be the
-        account that created the directory, likely SYSTEM
+        owner (str):
+            The owner of the directory. If not passed, it will be the account
+            that created the directory, likely SYSTEM
 
-        grant_perms (dict): A dictionary containing the user/group and the basic
-        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
-        You can also set the ``applies_to`` setting here. The default is
-        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
-        like this:
+        grant_perms (dict):
+            A dictionary containing the user/group and the basic permissions to
+            grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
+            set the ``applies_to`` setting here. The default is
+            ``this_folder_subfolders_files``. Specify another ``applies_to``
+            setting like this:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+                {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
 
-        To set advanced permissions use a list for the ``perms`` parameter, ie:
+            To set advanced permissions use a list for the ``perms`` parameter, ie:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
+                {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
 
-        deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny along with the ``applies_to`` setting. Use the same
-        format used for the ``grant_perms`` parameter. Remember, deny
-        permissions supersede grant permissions.
+        deny_perms (dict):
+            A dictionary containing the user/group and permissions to deny along
+            with the ``applies_to`` setting. Use the same format used for the
+            ``grant_perms`` parameter. Remember, deny permissions supersede
+            grant permissions.
 
-        inheritance (bool): If True the object will inherit permissions from the
-        parent, if False, inheritance will be disabled. Inheritance setting will
-        not apply to parent directories if they must be created
+        inheritance (bool):
+            If True the object will inherit permissions from the parent, if
+            False, inheritance will be disabled. Inheritance setting will not
+            apply to parent directories if they must be created
 
     Returns:
-        bool: True if successful, otherwise raise an error
+        bool: True if successful, otherwise raises an error
 
     CLI Example:
 
@@ -1503,45 +1519,54 @@ def check_perms(path,
                 deny_perms=None,
                 inheritance=True):
     '''
-    Set owner and permissions for each directory created.
+    Set owner and permissions for each directory created. Used mostly by the
+    state system.
 
     Args:
 
         path (str): The full path to the directory.
 
-        ret (dict): A dictionary to append changes to and return. If not passed,
-        will create a new dictionary to return.
+        ret (dict):
+            A dictionary to append changes to and return. If not passed, will
+            create a new dictionary to return.
 
-        owner (str): The owner of the directory. If not passed, it will be the
-        account that created the directory, likely SYSTEM
+        owner (str):
+            The owner of the directory. If not passed, it will be the account
+            that created the directory, likely SYSTEM
 
-        grant_perms (dict): A dictionary containing the user/group and the basic
-        permissions to grant, ie: ``{'user': {'perms': 'basic_permission'}}``.
-        You can also set the ``applies_to`` setting here. The default is
-        ``this_folder_subfolders_files``. Specify another ``applies_to`` setting
-        like this:
+        grant_perms (dict):
+            A dictionary containing the user/group and the basic permissions to
+            grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
+            set the ``applies_to`` setting here. The default is
+            ``this_folder_subfolders_files``. Specify another ``applies_to``
+            setting like this:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
+                {'user': {'perms': 'full_control', 'applies_to': 'this_folder'}}
 
-        To set advanced permissions use a list for the ``perms`` parameter, ie:
+            To set advanced permissions use a list for the ``perms`` parameter, ie:
 
-        .. code-block:: yaml
+            .. code-block:: yaml
 
-            {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
+                {'user': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder'}}
 
-        deny_perms (dict): A dictionary containing the user/group and
-        permissions to deny along with the ``applies_to`` setting. Use the same
-        format used for the ``grant_perms`` parameter. Remember, deny
-        permissions supersede grant permissions.
+        deny_perms (dict):
+            A dictionary containing the user/group and permissions to deny along
+            with the ``applies_to`` setting. Use the same format used for the
+            ``grant_perms`` parameter. Remember, deny permissions supersede
+            grant permissions.
 
-        inheritance (bool): If True the object will inherit permissions from the
-        parent, if False, inheritance will be disabled. Inheritance setting will
-        not apply to parent directories if they must be created
+        inheritance (bool):
+            If True the object will inherit permissions from the parent, if
+            False, inheritance will be disabled. Inheritance setting will not
+            apply to parent directories if they must be created
 
     Returns:
-        bool: True if successful, otherwise raise an error
+        dict: A dictionary of changes made to the object
+
+    Raises:
+        CommandExecutionError: If the object does not exist
 
     CLI Example:
 
@@ -1556,6 +1581,9 @@ def check_perms(path,
         # Specify advanced attributes with a list
         salt '*' file.check_perms C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
     '''
+    if not os.path.exists(path):
+        raise CommandExecutionError('Path not found: {0}'.format(path))
+
     path = os.path.expanduser(path)
 
     if not ret:

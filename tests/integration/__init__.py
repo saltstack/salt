@@ -800,9 +800,31 @@ class TestDaemon(object):
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = syndic_master_opts['pillar_roots'] = {
-            'base': [os.path.join(FILES, 'pillar', 'base')]
+            'base': [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(FILES, 'pillar', 'base'),
+            ]
+        }
+        minion_opts['pillar_roots'] = {
+            'base': [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(FILES, 'pillar', 'base'),
+            ]
         }
         master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
+            'base': [
+                os.path.join(FILES, 'file', 'base'),
+                # Let's support runtime created files that can be used like:
+                #   salt://my-temp-file.txt
+                RUNTIME_VARS.TMP_STATE_TREE
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(FILES, 'file', 'prod'),
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE
+            ]
+        }
+        minion_opts['file_roots'] = {
             'base': [
                 os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
@@ -976,10 +998,13 @@ class TestDaemon(object):
                     sub_minion_opts['sock_dir'],
                     minion_opts['sock_dir'],
                     RUNTIME_VARS.TMP_STATE_TREE,
+                    RUNTIME_VARS.TMP_PILLAR_TREE,
                     RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
                     TMP,
                     ],
-                   RUNTIME_VARS.RUNNING_TESTS_USER)
+                   RUNTIME_VARS.RUNNING_TESTS_USER,
+                   root_dir=master_opts['root_dir'],
+                   )
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts
@@ -1087,7 +1112,8 @@ class TestDaemon(object):
             os.chmod(path, stat.S_IRWXU)
             func(path)
 
-        for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
+        for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE,
+                        RUNTIME_VARS.TMP_PILLAR_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
                 shutil.rmtree(dirname, onerror=remove_readonly)
 

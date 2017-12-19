@@ -586,6 +586,33 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         #result = self.normalize_ret(ret)
         #self.assertEqual(expected_result, result)
 
+    def test_watch_in(self):
+        '''
+        test watch_in requisite when there is a success
+        '''
+        ret = self.run_function('state.sls', mods='requisites.watch_in')
+        changes = 'test_|-return_changes_|-return_changes_|-succeed_with_changes'
+        watch = 'test_|-watch_states_|-watch_states_|-succeed_without_changes'
+
+        self.assertEqual(ret[changes]['__run_num__'], 0)
+        self.assertEqual(ret[watch]['__run_num__'], 2)
+
+        self.assertEqual('Watch statement fired.', ret[watch]['comment'])
+        self.assertEqual('Something pretended to change',
+                         ret[changes]['changes']['testing']['new'])
+
+    def test_watch_in_failure(self):
+        '''
+        test watch_in requisite when there is a failure
+        '''
+        ret = self.run_function('state.sls', mods='requisites.watch_in_failure')
+        fail = 'test_|-return_changes_|-return_changes_|-fail_with_changes'
+        watch = 'test_|-watch_states_|-watch_states_|-succeed_without_changes'
+
+        self.assertEqual(False, ret[fail]['result'])
+        self.assertEqual('One or more requisite failed: requisites.watch_in_failure.return_changes',
+                         ret[watch]['comment'])
+
     def normalize_ret(self, ret):
         '''
         Normalize the return to the format that we'll use for result checking
@@ -1240,3 +1267,23 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn(state_id, state_run)
         self.assertEqual(state_run[state_id]['comment'], 'Failure!')
         self.assertFalse(state_run[state_id]['result'])
+
+    def test_state_nonbase_environment(self):
+        '''
+        test state.sls with saltenv using a nonbase environment
+        with a salt source
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='non-base-env',
+            saltenv='prod'
+        )
+        state_id = 'file_|-test_file_|-/tmp/nonbase_env_|-managed'
+        self.assertEqual(state_run[state_id]['comment'], 'File /tmp/nonbase_env updated')
+        self.assertTrue(state_run['file_|-test_file_|-/tmp/nonbase_env_|-managed']['result'])
+        self.assertTrue(os.path.isfile('/tmp/nonbase_env'))
+
+    def tearDown(self):
+        nonbase_file = '/tmp/nonbase_env'
+        if os.path.isfile(nonbase_file):
+            os.remove(nonbase_file)

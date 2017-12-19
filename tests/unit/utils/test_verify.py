@@ -63,6 +63,16 @@ class TestVerify(TestCase):
         opts = {'pki_dir': '/tmp/whatever'}
         self.assertFalse(valid_id(opts, None))
 
+    def test_valid_id_pathsep(self):
+        '''
+        Path separators in id should make it invalid
+        '''
+        opts = {'pki_dir': '/tmp/whatever'}
+        # We have to test both path separators because os.path.normpath will
+        # convert forward slashes to backslashes on Windows.
+        for pathsep in ('/', '\\'):
+            self.assertFalse(valid_id(opts, pathsep.join(('..', 'foobar'))))
+
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
 
@@ -101,7 +111,7 @@ class TestVerify(TestCase):
     def test_verify_env(self):
         root_dir = tempfile.mkdtemp(dir=TMP)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
-        verify_env([var_dir], getpass.getuser())
+        verify_env([var_dir], getpass.getuser(), root_dir=root_dir)
         self.assertTrue(os.path.exists(var_dir))
         dir_stat = os.stat(var_dir)
         self.assertEqual(dir_stat.st_uid, os.getuid())
