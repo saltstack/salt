@@ -49,7 +49,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         )
         # Force the LazyDict to populate its references. Otherwise the lookup
         # will fail inside the unit tests.
-        utils.keys()
+        list(utils)
         return {docker_mod: {'__context__': {'docker.docker_version': ''},
                              '__utils__': utils}}
 
