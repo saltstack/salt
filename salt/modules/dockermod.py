@@ -629,6 +629,7 @@ def _client_wrapper(attr, *args, **kwargs):
         )
         ret = func(*args, **kwargs)
     except docker.errors.APIError as exc:
+        log.exception('Encountered error running API function %s', attr)
         if catch_api_errors:
             # Generic handling of Docker API errors
             raise CommandExecutionError(
@@ -2047,7 +2048,10 @@ def logs(name, **kwargs):
                     kwargs['since'], exc
                 )
 
-    return _client_wrapper('logs', name, **kwargs)
+    # logs() returns output as bytestrings
+    return salt.utils.stringutils.to_unicode(
+        _client_wrapper('logs', name, **kwargs)
+    )
 
 
 def pid(name):
@@ -3338,7 +3342,7 @@ def run_container(image,
                                             ret['Id'],
                                             stream=True,
                                             timestamps=False):
-                    output.append(line)
+                    output.append(salt.utils.stringutils.to_unicode(line))
             except CommandExecutionError:
                 msg = (
                     'Failed to get logs from container. This may be because '
