@@ -120,7 +120,7 @@ class CommandExecutionError(SaltException):
     def __init__(self, message='', info=None):
         # Avoid circular import
         import salt.utils.stringutils
-        self.error = exc_str_prefix = salt.utils.stringutils.to_unicode(message)
+        self.error = exc_str_prefix = six.text_type(message)
         self.info = info
         if self.info:
             if exc_str_prefix:
