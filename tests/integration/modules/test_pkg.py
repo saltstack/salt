@@ -335,15 +335,15 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         grains = self.run_function('grains.items')
         cmd_info = self.run_function('pkg.info_installed', ['htop'])
-        if cmd_info != '':
+        if cmd_info != 'ERROR: package htop is not installed':
             cmd_remove = self.run_function('pkg.remove', ['htop'])
-            if grains['os_family'] == 'RedHat':
-                cmd_htop = self.run_function('cmd.run', ['yum list htop'])
-            elif grains['os_family'] == 'Debian':
-                cmd_htop = self.run_function('cmd.run', ['apt list htop'])
-            elif grains['os_family'] == 'Arch':
-                cmd_htop = self.run_function('cmd.run', ['pacman -Si htop'])
-            elif grains['os_family'] == 'Suse':
-                cmd_htop = self.run_function('cmd.run', ['zypper info htop'])
+        if grains['os_family'] == 'RedHat':
+            cmd_htop = self.run_function('cmd.run', ['yum list htop'])
+        elif grains['os_family'] == 'Debian':
+            cmd_htop = self.run_function('cmd.run', ['apt list htop'])
+        elif grains['os_family'] == 'Arch':
+            cmd_htop = self.run_function('cmd.run', ['pacman -Si htop'])
+        elif grains['os_family'] == 'Suse':
+            cmd_htop = self.run_function('cmd.run', ['zypper info htop'])
         pkg_latest = self.run_function('pkg.latest_version', ['htop'])
         self.assertIn(pkg_latest, cmd_htop)
