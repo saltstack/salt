@@ -63,7 +63,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return mongo --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -226,7 +226,7 @@ def _safe_copy(dat):
         for k in dat:
             r = k.replace('%', '%25').replace('\\', '%5c').replace('$', '%24').replace('.', '%2e')
             if r != k:
-                log.debug('converting dict key from {0} to {1} for mongodb'.format(k, r))
+                log.debug('converting dict key from %s to %s for mongodb', k, r)
             ret[r] = _safe_copy(dat[k])
         return ret
 

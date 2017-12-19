@@ -5,8 +5,9 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
 import copy
+import os
+import time
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
@@ -16,6 +17,15 @@ import tests.integration as integration
 # Import Salt Libs
 import salt.config
 from salt.utils.schedule import Schedule
+
+# pylint: disable=import-error,unused-import
+try:
+    import croniter
+    _CRON_SUPPORTED = True
+except ImportError:
+    _CRON_SUPPORTED = False
+# pylint: enable=import-error
+
 
 ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
 SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
@@ -28,6 +38,7 @@ DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
 DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 
 
+# pylint: disable=too-many-public-methods,invalid-name
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ScheduleTestCase(TestCase):
     '''
@@ -276,3 +287,47 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'schedule': {}, 'pillar': {'schedule': ''}})
         self.assertRaises(ValueError, Schedule.eval, self.schedule)
+
+    def test_eval_schedule_time(self):
+        '''
+        Tests eval if the schedule setting time is in the future
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update({'schedule': {'testjob': {'function': 'test.true', 'seconds': 60}}})
+        now = int(time.time())
+        self.schedule.eval()
+        self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
+
+    def test_eval_schedule_time_eval(self):
+        '''
+        Tests eval if the schedule setting time is in the future plus splay
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update(
+            {'schedule': {'testjob': {'function': 'test.true', 'seconds': 60, 'splay': 5}}})
+        now = int(time.time())
+        self.schedule.eval()
+        self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] - now > 60)
+
+    @skipIf(not _CRON_SUPPORTED, 'croniter module not installed')
+    def test_eval_schedule_cron(self):
+        '''
+        Tests eval if the schedule is defined with cron expression
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update({'schedule': {'testjob': {'function': 'test.true', 'cron': '* * * * *'}}})
+        now = int(time.time())
+        self.schedule.eval()
+        self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
+
+    @skipIf(not _CRON_SUPPORTED, 'croniter module not installed')
+    def test_eval_schedule_cron_splay(self):
+        '''
+        Tests eval if the schedule is defined with cron expression plus splay
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update(
+            {'schedule': {'testjob': {'function': 'test.true', 'cron': '* * * * *', 'splay': 5}}})
+        self.schedule.eval()
+        self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] >
+                        self.schedule.opts['schedule']['testjob']['_next_fire_time'])

@@ -140,7 +140,8 @@ an alternative root.
     This directory is prepended to the following options:
     :conf_master:`pki_dir`, :conf_master:`cachedir`, :conf_master:`sock_dir`,
     :conf_master:`log_file`, :conf_master:`autosign_file`,
-    :conf_master:`autoreject_file`, :conf_master:`pidfile`.
+    :conf_master:`autoreject_file`, :conf_master:`pidfile`,
+    :conf_master:`autosign_grains_dir`.
 
 .. conf_master:: conf_file
 
@@ -406,6 +407,19 @@ to False.
 .. code-block:: yaml
 
     color: False
+
+.. conf_master:: color_theme
+
+``color_theme``
+---------
+
+Default: ``""``
+
+Specifies a path to the color theme to use for colored command line output.
+
+.. code-block:: yaml
+
+    color_theme: /etc/salt/color_theme
 
 .. conf_master:: cli_summary
 
@@ -1320,6 +1334,32 @@ Works like :conf_master:`autosign_file`, but instead allows you to specify
 minion IDs for which keys will automatically be rejected. Will override both
 membership in the :conf_master:`autosign_file` and the
 :conf_master:`auto_accept` setting.
+
+.. conf_master:: autosign_grains_dir
+
+``autosign_grains_dir``
+-----------------------
+
+.. versionadded:: Oxygen
+
+Default: ``not defined``
+
+If the ``autosign_grains_dir`` is specified, incoming keys from minions with
+grain values that match those defined in files in the autosign_grains_dir
+will be accepted automatically. Grain values that should be accepted automatically
+can be defined by creating a file named like the corresponding grain in the
+autosign_grains_dir and writing the values into that file, one value per line.
+Lines starting with a ``#`` will be ignored.
+Minion must be configured to send the corresponding grains on authentication.
+This should still be considered a less than secure option, due to the fact
+that trust is based on just the requesting minion.
+
+Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
+documentation for more infomation.
+
+.. code-block:: yaml
+
+    autosign_grains_dir: /etc/salt/autosign_grains
 
 .. conf_master:: permissive_pki_access
 

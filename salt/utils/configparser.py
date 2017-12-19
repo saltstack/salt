@@ -3,7 +3,7 @@
 Custom configparser classes
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import re
 
 # Import Salt libs
@@ -45,8 +45,8 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
     ...     conf.write(fh)
     >>>
     '''
-    DEFAULTSECT = u'DEFAULT'
-    SPACEINDENT = u' ' * 8
+    DEFAULTSECT = 'DEFAULT'
+    SPACEINDENT = ' ' * 8
 
     def __init__(self, defaults=None, dict_type=_default_dict,
                  allow_no_value=True):
@@ -79,20 +79,20 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 break
             lineno = lineno + 1
             # comment or blank line?
-            if line.strip() == u'' or line[0] in u'#;':
+            if line.strip() == '' or line[0] in '#;':
                 continue
-            if line.split(None, 1)[0].lower() == u'rem' and line[0] in u'rR':
+            if line.split(None, 1)[0].lower() == 'rem' and line[0] in 'rR':
                 # no leading whitespace
                 continue
             # Replace space indentation with a tab. Allows parser to work
             # properly in cases where someone has edited the git config by hand
             # and indented using spaces instead of tabs.
             if line.startswith(self.SPACEINDENT):
-                line = u'\t' + line[len(self.SPACEINDENT):]
+                line = '\t' + line[len(self.SPACEINDENT):]
             # is it a section header?
             mo = self.SECTCRE.match(line)
             if mo:
-                sectname = mo.group(u'header')
+                sectname = mo.group('header')
                 if sectname in self._sections:
                     cursect = self._sections[sectname]
                 elif sectname == self.DEFAULTSECT:
@@ -112,21 +112,21 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
             else:
                 mo = self._optcre.match(line.lstrip())
                 if mo:
-                    optname, vi, optval = mo.group(u'option', u'vi', u'value')
+                    optname, vi, optval = mo.group('option', 'vi', 'value')
                     optname = self.optionxform(optname.rstrip())
                     if optval is None:
-                        optval = u''
+                        optval = ''
                     if optval:
-                        if vi in (u'=', u':') and u';' in optval:
+                        if vi in ('=', ':') and ';' in optval:
                             # ';' is a comment delimiter only if it follows
                             # a spacing character
-                            pos = optval.find(u';')
+                            pos = optval.find(';')
                             if pos != -1 and optval[pos-1].isspace():
                                 optval = optval[:pos]
                         optval = optval.strip()
                         # Empty strings should be considered as blank strings
-                        if optval in (u'""', u"''"):
-                            optval = u''
+                        if optval in ('""', "''"):
+                            optval = ''
                     self._add_option(cursect, optname, optval)
                 else:
                     # a non-fatal parsing error occurred.  set up the
@@ -148,11 +148,11 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         if self._optcre is self.OPTCRE or value:
             is_list = isinstance(value, list)
             if is_list and not allow_list:
-                raise TypeError('option value cannot be a list unless allow_list is True')  # future lint: disable=non-unicode-string
+                raise TypeError('option value cannot be a list unless allow_list is True')
             elif not is_list:
                 value = [value]
             if not all(isinstance(x, six.string_types) for x in value):
-                raise TypeError('option values must be strings')  # future lint: disable=non-unicode-string
+                raise TypeError('option values must be strings')
 
     def get(self, section, option, as_list=False):
         '''
@@ -165,7 +165,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
             ret = [ret]
         return ret
 
-    def set(self, section, option, value=u''):
+    def set(self, section, option, value=''):
         '''
         This is overridden from the RawConfigParser merely to change the
         default value for the 'value' argument.
@@ -188,9 +188,9 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 sectdict[key] = [sectdict[key]]
                 sectdict[key].append(value)
         else:
-            raise TypeError('Expected str or list for option value, got %s' % type(value).__name__)  # future lint: disable=non-unicode-string
+            raise TypeError('Expected str or list for option value, got %s' % type(value).__name__)
 
-    def set_multivar(self, section, option, value=u''):
+    def set_multivar(self, section, option, value=''):
         '''
         This function is unique to the GitConfigParser. It will add another
         value for the option if it already exists, converting the option's
@@ -255,18 +255,18 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         4. Drops support for continuation lines.
         '''
         convert = salt.utils.stringutils.to_bytes \
-            if u'b' in fp_.mode \
+            if 'b' in fp_.mode \
             else salt.utils.stringutils.to_str
         if self._defaults:
-            fp_.write(convert(u'[%s]\n' % self.DEFAULTSECT))
+            fp_.write(convert('[%s]\n' % self.DEFAULTSECT))
             for (key, value) in six.iteritems(self._defaults):
-                value = salt.utils.stringutils.to_unicode(value).replace(u'\n', u'\n\t')
-                fp_.write(convert(u'%s = %s\n' % (key, value)))
+                value = salt.utils.stringutils.to_unicode(value).replace('\n', '\n\t')
+                fp_.write(convert('%s = %s\n' % (key, value)))
         for section in self._sections:
-            fp_.write(convert(u'[%s]\n' % section))
+            fp_.write(convert('[%s]\n' % section))
             for (key, value) in six.iteritems(self._sections[section]):
                 if (value is not None) or (self._optcre == self.OPTCRE):
                     if not isinstance(value, list):
                         value = [value]
                     for item in value:
-                        fp_.write(convert(u'\t%s\n' % u' = '.join((key, item)).rstrip()))
+                        fp_.write(convert('\t%s\n' % ' = '.join((key, item)).rstrip()))

@@ -4,7 +4,7 @@ Unit tests for the docker module
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -751,7 +751,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
             with patch.object(docker_mod, 'inspect_image', inspect_image_mock):
-                ret = docker_mod.compare_container('container1', 'container2')
+                ret = docker_mod.compare_containers('container1', 'container2')
                 self.assertEqual(ret, {})
 
     def test_resolve_tag(self):

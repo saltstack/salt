@@ -169,6 +169,12 @@ TEST_SUITES = {
     'external_api':
         {'display_name': 'ExternalAPIs',
          'path': 'integration/externalapi'},
+    'daemons':
+        {'display_name': 'Daemon',
+         'path': 'integration/daemons'},
+    'scheduler':
+        {'display_name': 'Scheduler',
+         'path': 'integration/scheduler'},
 }
 
 
@@ -467,6 +473,21 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             default=False,
             help='Run venafi runner tests'
+        )
+        self.test_selection_group.add_option(
+            '--daemons',
+            '--daemon-tests',
+            dest='daemons',
+            action='store_true',
+            default=False,
+            help='Run salt/daemons/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '--scheduler',
+            dest='scheduler',
+            action='store_true',
+            default=False,
+            help='Run scheduler integration tests'
         )
 
     def validate_options(self):

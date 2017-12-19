@@ -108,10 +108,17 @@ def get(key, default=''):
         return defaults
 
 
-def merge(dest, upd):
+def merge(dest, src, merge_lists=False, in_place=True):
     '''
     defaults.merge
         Allows deep merging of dicts in formulas.
+
+    merge_lists : False
+        If True, it will also merge lists instead of replace their items.
+
+    in_place : True
+        If True, it will merge into dest dict,
+        if not it will make a new copy from that dict and return it.
 
         CLI Example:
         .. code-block:: bash
@@ -121,7 +128,11 @@ def merge(dest, upd):
     It is more typical to use this in a templating language in formulas,
     instead of directly on the command-line.
     '''
-    return dictupdate.update(dest, upd)
+    if in_place:
+        merged = dest
+    else:
+        merged = copy.deepcopy(dest)
+    return dictupdate.update(merged, src, merge_lists=merge_lists)
 
 
 def deepcopy(source):
