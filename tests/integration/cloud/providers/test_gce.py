@@ -36,7 +36,7 @@ class GCETest(ShellCase):
         provider = 'gce'
         providers = self.run_cloud('--list-providers')
         # Create the cloud instance name to be used throughout the tests
-        self.INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
+        self.INSTANCE_NAME = generate_random_name('cloud-test-')
 
         if profile_str not in providers:
             self.skipTest(
