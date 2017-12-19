@@ -1246,8 +1246,10 @@ def compare_networks(first, second, ignore='Name,Id,Created,Containers'):
                 if bool(subval1) is bool(subval2) is False:
                     continue
                 elif subkey == 'Config':
-                    config1 = sorted(val1['Config'])
-                    config2 = sorted(val2.get('Config', []))
+                    kvsort = lambda x: (list(six.iterkeys(x)),
+                                        list(six.itervalues(x)))
+                    config1 = sorted(val1['Config'], key=kvsort)
+                    config2 = sorted(val2.get('Config', []), key=kvsort)
                     if config1 != config2:
                         ret.setdefault('IPAM', {})['Config'] = {
                             'old': config1, 'new': config2
