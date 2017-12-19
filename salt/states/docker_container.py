@@ -2253,6 +2253,7 @@ def run(name,
             force=force,
             **kwargs)
     except Exception as exc:
+        log.exception('Encountered error running container')
         ret['result'] = False
         ret['comment'] = 'Encountered error running container: {0}'.format(exc)
     else:
