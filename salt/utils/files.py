@@ -39,6 +39,16 @@ HASHES = {
 HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
 
+def __clean_tmp(tmp):
+    '''
+    Remove temporary files
+    '''
+    try:
+        salt.utils.rm_rf(tmp)
+    except Exception:
+        pass
+
+
 def guess_archive_type(name):
     '''
     Guess an archive type (tar, zip, or rar) by its file extension
@@ -116,7 +126,15 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
             fstat = os.stat(dest)
         except OSError:
             pass
-    shutil.move(tgt, dest)
+
+    # The move could fail if the dest has xattr protections, so delete the
+    # temp file in this case
+    try:
+        shutil.move(tgt, dest)
+    except Exception:
+        __clean_tmp(tgt)
+        raise
+
     if fstat is not None:
         os.chown(dest, fstat.st_uid, fstat.st_gid)
         os.chmod(dest, fstat.st_mode)
@@ -134,10 +152,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
                 subprocess.call(cmd, stdout=dev_null, stderr=dev_null)
     if os.path.isfile(tgt):
         # The temp file failed to move
-        try:
-            os.remove(tgt)
-        except Exception:
-            pass
+        __clean_tmp(tgt)
 
 
 def rename(src, dst):

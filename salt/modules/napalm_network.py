@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 from salt.ext import six
 import salt.utils.templates
 import salt.utils.napalm
+import salt.utils.versions
 from salt.utils.napalm import proxy_napalm_wrap
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -228,7 +229,7 @@ def _config_logic(napalm_device,
 
 
 @proxy_napalm_wrap
-def connected(**kwarvs):  # pylint: disable=unused-argument
+def connected(**kwargs):  # pylint: disable=unused-argument
     '''
     Specifies if the connection to the device succeeded.
 
@@ -932,6 +933,7 @@ def load_config(filename=None,
                 debug=False,
                 replace=False,
                 inherit_napalm_device=None,
+                saltenv='base',
                 **kwargs):  # pylint: disable=unused-argument
     '''
     Applies configuration changes on the device. It can be loaded from a file or from inline string.
@@ -947,10 +949,21 @@ def load_config(filename=None,
     To replace the config, set ``replace`` to ``True``.
 
     filename
-        Path to the file containing the desired configuration. By default is None.
+        Path to the file containing the desired configuration.
+        This can be specified using the absolute path to the file,
+        or using one of the following URL schemes:
+
+        - ``salt://``, to fetch the template from the Salt fileserver.
+        - ``http://`` or ``https://``
+        - ``ftp://``
+        - ``s3://``
+        - ``swift://``
+
+        .. versionchanged:: 2017.7.3
 
     text
         String containing the desired configuration.
+        This argument is ignored when ``filename`` is specified.
 
     test: False
         Dry run? If set as ``True``, will apply the config, discard and return the changes. Default: ``False``
@@ -969,6 +982,11 @@ def load_config(filename=None,
         Load and replace the configuration. Default: ``False``.
 
         .. versionadded:: 2016.11.2
+
+    saltenv: ``base``
+        Specifies the Salt environment name.
+
+        .. versionadded:: 2017.7.3
 
     :return: a dictionary having the following keys:
 
@@ -999,7 +1017,6 @@ def load_config(filename=None,
             'diff': '[edit interfaces xe-0/0/5]+   description "Adding a description";'
         }
     '''
-
     fun = 'load_merge_candidate'
     if replace:
         fun = 'load_replace_candidate'
@@ -1012,21 +1029,28 @@ def load_config(filename=None,
         # compare_config, discard / commit
         # which have to be over the same session
         napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
+    if filename:
+        text = __salt__['cp.get_file_str'](filename, saltenv=saltenv)
+        if text is False:
+            # When using salt:// or https://, if the resource is not available,
+            #   it will either raise an exception, or return False.
+            ret = {
+                'result': False,
+                'out': None
+            }
+            ret['comment'] = 'Unable to read from {}. Please specify a valid file or text.'.format(filename)
+            log.error(ret['comment'])
+            return ret
     _loaded = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         fun,
         **{
-            'filename': filename,
             'config': text
         }
     )
     loaded_config = None
     if debug:
-        if filename:
-            with salt.utils.fopen(filename) as rfh:
-                loaded_config = rfh.read()
-        else:
-            loaded_config = text
+        loaded_config = text
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
                          _loaded,
                          test=test,
@@ -1072,6 +1096,10 @@ def load_template(template_name,
 
     To replace the config, set ``replace`` to ``True``.
 
+    .. warning::
+        The support for native NAPALM templates will be dropped in Salt Fluorine.
+        Implicitly, the ``template_path`` argument will be removed.
+
     template_name
         Identifies path to the template source.
         The template can be either stored on the local machine, either remotely.
@@ -1107,6 +1135,9 @@ def load_template(template_name,
         E.g.: if ``template_name`` is specified as ``my_template.jinja``,
         in order to find the template, this argument must be provided:
         ``template_path: /absolute/path/to/``.
+
+        .. note::
+            This argument will be deprecated beginning with release codename ``Fluorine``.
 
     template_hash: None
         Hash of the template file. Format: ``{hash_type: 'md5', 'hsum': <md5sum>}``
@@ -1274,7 +1305,11 @@ def load_template(template_name,
         'out': None
     }
     loaded_config = None
-
+    if template_path:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Use of `template_path` detected. This argument will be removed in Salt Fluorine.'
+        )
     # prechecks
     if template_engine not in salt.utils.templates.TEMPLATE_REGISTRY:
         _loaded.update({
