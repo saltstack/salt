@@ -41,6 +41,8 @@ class SaltException(Exception):
     def __init__(self, message=''):
         # Avoid circular import
         import salt.utils.stringutils
+        if not isinstance(message, six.string_types):
+            message = six.text_type(message)
         if six.PY3 or isinstance(message, unicode):  # pylint: disable=incompatible-py3-code
             super(SaltException, self).__init__(
                 salt.utils.stringutils.to_str(message)
