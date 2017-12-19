@@ -7,7 +7,7 @@ Runner to manage Windows software repo
 # salt/modules/win_repo.py
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import third party libs
@@ -21,6 +21,7 @@ except ImportError:
 from salt.exceptions import CommandExecutionError, SaltRenderError
 import salt.utils.files
 import salt.utils.gitfs
+import salt.utils.path
 import logging
 import salt.minion
 import salt.loader
@@ -65,7 +66,7 @@ def genrepo(opts=None, fire_event=True):
     if not os.path.exists(winrepo_dir):
         os.makedirs(winrepo_dir)
     renderers = salt.loader.render(opts, __salt__)
-    for root, _, files in os.walk(winrepo_dir):
+    for root, _, files in salt.utils.path.os_walk(winrepo_dir):
         for name in files:
             if name.endswith('.sls'):
                 try:
@@ -78,37 +79,32 @@ def genrepo(opts=None, fire_event=True):
                             )
                 except SaltRenderError as exc:
                     log.debug(
-                        'Failed to render {0}.'.format(
-                            os.path.join(root, name)
-                        )
+                        'Failed to render %s.',
+                        os.path.join(root, name)
                     )
-                    log.debug('Error: {0}.'.format(exc))
+                    log.debug('Error: %s.', exc)
                     continue
                 if config:
                     revmap = {}
                     for pkgname, versions in six.iteritems(config):
                         log.debug(
-                            'Compiling winrepo data for package \'{0}\''
-                            .format(pkgname)
+                            'Compiling winrepo data for package \'%s\'',
+                            pkgname
                         )
                         for version, repodata in six.iteritems(versions):
                             log.debug(
-                                'Compiling winrepo data for {0} version {1}'
-                                .format(pkgname, version)
+                                'Compiling winrepo data for %s version %s',
+                                pkgname, version
                             )
                             if not isinstance(version, six.string_types):
-                                config[pkgname][str(version)] = \
+                                config[pkgname][six.text_type(version)] = \
                                     config[pkgname].pop(version)
                             if not isinstance(repodata, dict):
-                                log.debug(
-                                    'Failed to compile {0}.'.format(
-                                        os.path.join(root, name)
-                                    )
+                                msg = 'Failed to compile {0}.'.format(
+                                    os.path.join(root, name)
                                 )
+                                log.debug(msg)
                                 if fire_event:
-                                    msg = 'Failed to compile {0}.'.format(
-                                        os.path.join(root, name)
-                                    )
                                     try:
                                         __jid_event__.fire_event(
                                             {'error': msg},
@@ -118,8 +114,8 @@ def genrepo(opts=None, fire_event=True):
                                         log.error(
                                             'Attempted to fire the an event '
                                             'with the following error, but '
-                                            'event firing is not supported: '
-                                            '{0}'.format(msg)
+                                            'event firing is not supported: %s',
+                                            msg
                                         )
                                 continue
                             revmap[repodata['full_name']] = pkgname

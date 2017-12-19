@@ -188,7 +188,7 @@ def query(params=None):
     log.debug(request.url)
 
     content = request.text
-    result = json.loads(content, object_hook=salt.utils.data.decode_dict)
+    result = json.loads(content, object_hook=salt.utils.data.encode_dict)
 
     # print('response:')
     # pprint.pprint(result)

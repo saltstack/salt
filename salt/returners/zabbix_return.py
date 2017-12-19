@@ -20,7 +20,7 @@ To use the Zabbix returner, append '--return zabbix' to the salt command. ex:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
