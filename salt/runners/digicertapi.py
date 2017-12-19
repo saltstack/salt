@@ -35,7 +35,7 @@ This API currently only supports RSA key types.  Support for other key types wil
 if interest warrants.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import tempfile
@@ -569,7 +569,7 @@ def gen_csr(
     tmppriv = '{0}/priv'.format(tmpdir)
     tmpcsr = '{0}/csr'.format(tmpdir)
     with salt.utils.files.fopen(tmppriv, 'w') as if_:
-        if_.write(data['private_key'])
+        if_.write(salt.utils.stringutils.to_str(data['private_key']))
 
     subject = '/C={0}/ST={1}/L={2}/O={3}'.format(
         org_details['dict']['country'],
@@ -597,7 +597,7 @@ def gen_csr(
         )
 
     with salt.utils.files.fopen(tmpcsr, 'r') as of_:
-        csr = of_.read()
+        csr = salt.utils.stringutils.to_unicode(of_.read())
 
     data['minion_id'] = minion_id
     data['csr'] = csr
@@ -643,7 +643,7 @@ def show_organization(domain):
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -670,7 +670,7 @@ def show_csrs():
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )

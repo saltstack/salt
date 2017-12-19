@@ -2,8 +2,7 @@
 '''
 This runner is used only for test purposes and servers no production purpose
 '''
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import time
 from salt.ext import six

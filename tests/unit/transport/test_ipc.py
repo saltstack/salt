@@ -19,16 +19,19 @@ import salt.exceptions
 import salt.transport.ipc
 import salt.transport.server
 import salt.transport.client
+import salt.utils.platform
 
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
 from tests.support.mock import MagicMock
 from tests.support.paths import TMP
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
+@skipIf(salt.utils.platform.is_windows(), 'Windows does not support Posix IPC')
 class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     '''
     Test the req server/client pair

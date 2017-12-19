@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import os
 import sys
 import textwrap
@@ -267,52 +267,52 @@ class CMDModuleTest(ModuleCase):
         '''
         Test the hide_output argument
         '''
-        ls_command = [u'ls', u'/'] \
+        ls_command = ['ls', '/'] \
             if not salt.utils.platform.is_windows() \
-            else [u'dir', u'c:\\']
+            else ['dir', 'c:\\']
 
         error_command = ['thiscommanddoesnotexist']
 
         # cmd.run
         out = self.run_function(
-            u'cmd.run',
+            'cmd.run',
             ls_command,
             hide_output=True)
-        self.assertEqual(out, u'')
+        self.assertEqual(out, '')
 
         # cmd.shell
         out = self.run_function(
-            u'cmd.shell',
+            'cmd.shell',
             ls_command,
             hide_output=True)
-        self.assertEqual(out, u'')
+        self.assertEqual(out, '')
 
         # cmd.run_stdout
         out = self.run_function(
-            u'cmd.run_stdout',
+            'cmd.run_stdout',
             ls_command,
             hide_output=True)
-        self.assertEqual(out, u'')
+        self.assertEqual(out, '')
 
         # cmd.run_stderr
         out = self.run_function(
-            u'cmd.shell',
+            'cmd.shell',
             error_command,
             hide_output=True)
-        self.assertEqual(out, u'')
+        self.assertEqual(out, '')
 
         # cmd.run_all (command should have produced stdout)
         out = self.run_function(
-            u'cmd.run_all',
+            'cmd.run_all',
             ls_command,
             hide_output=True)
-        self.assertEqual(out['stdout'], u'')
-        self.assertEqual(out['stderr'], u'')
+        self.assertEqual(out['stdout'], '')
+        self.assertEqual(out['stderr'], '')
 
         # cmd.run_all (command should have produced stderr)
         out = self.run_function(
-            u'cmd.run_all',
+            'cmd.run_all',
             error_command,
             hide_output=True)
-        self.assertEqual(out['stdout'], u'')
-        self.assertEqual(out['stderr'], u'')
+        self.assertEqual(out['stdout'], '')
+        self.assertEqual(out['stderr'], '')
