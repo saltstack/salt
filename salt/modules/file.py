@@ -1501,8 +1501,9 @@ def comment_line(path,
 
     try:
         # Open the file in write mode
+        mode = 'wb' if six.PY2 and salt.utils.platform.is_windows() else 'w'
         with salt.utils.files.fopen(path,
-                              mode='wb',
+                              mode=mode,
                               buffering=bufsize) as w_file:
             try:
                 # Open the temp file in read mode
