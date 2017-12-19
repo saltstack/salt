@@ -1524,7 +1524,7 @@ def comment_line(path,
                             else:
                                 # Write the existing line (no change)
                                 wline = line
-                            w_file.write(salt.utils.stringutils.to_str(wline))
+                            w_file.write(salt.utils.stringutils.to_bytes(wline))
                         except (OSError, IOError) as exc:
                             raise CommandExecutionError(
                                 "Unable to write file '{0}'. Contents may "
