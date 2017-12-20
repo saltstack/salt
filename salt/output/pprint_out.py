@@ -12,7 +12,7 @@ Example output::
                           'dictionary': {'abc': 123, 'def': 456},
                           'list': ['Hello', 'World']}}}
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import pprint
