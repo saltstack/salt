@@ -75,6 +75,9 @@ if USE_IMPORTLIB:
 else:
     SUFFIXES = imp.get_suffixes()
 
+BIN_PRE_EXT = '' if six.PY2 \
+    else '.cpython-{0}{1}'.format(sys.version_info.major, sys.version_info.minor)
+
 # Because on the cloud drivers we do `from salt.cloud.libcloudfuncs import *`
 # which simplifies code readability, it adds some unsupported functions into
 # the driver's module scope.
@@ -1172,6 +1175,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.suffix_map = {}
         suffix_order = ['']  # local list to determine precedence of extensions
                              # Prefer packages (directories) over modules (single files)!
+
         for (suffix, mode, kind) in SUFFIXES:
             self.suffix_map[suffix] = (suffix, mode, kind)
             suffix_order.append(suffix)
@@ -1200,19 +1204,31 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.file_mapping = salt.utils.odict.OrderedDict()
 
         for mod_dir in self.module_dirs:
-            files = []
             try:
-                # Make sure we have a sorted listdir in order to have expectable override results
+                # Make sure we have a sorted listdir in order to have
+                # expectable override results
                 files = sorted(os.listdir(mod_dir))
             except OSError:
                 continue  # Next mod_dir
+            if six.PY3 and '__pycache__' in files:
+                try:
+                    pycache_files = [
+                        os.path.join('__pycache__', x) for x in
+                        sorted(os.listdir(os.path.join(mod_dir, '__pycache__')))
+                    ]
+                except OSError:
+                    pass
+                else:
+                    files = pycache_files + files
             for filename in files:
                 try:
-                    if filename.startswith('_'):
+                    dirname, basename = os.path.split(filename)
+                    if basename.startswith('_'):
                         # skip private modules
                         # log messages omitted for obviousness
                         continue  # Next filename
-                    f_noext, ext = os.path.splitext(filename)
+                    f_noext, ext = os.path.splitext(basename)
+                    f_noext = f_noext.replace(BIN_PRE_EXT, '')
                     # make sure it is a suffix we support
                     if ext not in self.suffix_map:
                         continue  # Next filename
@@ -1248,6 +1264,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             )
                         if not curr_ext or suffix_order.index(ext) >= suffix_order.index(curr_ext):
                             continue  # Next filename
+
+                    if six.PY3 and not dirname and ext == '.pyc':
+                        # On Python 3, we should only load .pyc files from the
+                        # __pycache__ subdirectory (i.e. when dirname is not an
+                        # empty string).
+                        continue
 
                     # Made it this far - add it
                     self.file_mapping[f_noext] = (fpath, ext)
