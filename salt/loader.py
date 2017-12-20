@@ -1219,7 +1219,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 except OSError:
                     pass
                 else:
-                    files = pycache_files + files
+                    pycache_files.extend(files)
+                    files = pycache_files
             for filename in files:
                 try:
                     dirname, basename = os.path.split(filename)
