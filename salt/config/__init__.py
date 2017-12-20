@@ -1464,13 +1464,7 @@ DEFAULT_MINION_OPTS = {
         'automatic': ['IPAddress', 'Gateway',
                       'GlobalIPv6Address', 'IPv6Gateway'],
     },
-    'discovery': {
-        'attempts': 3,
-        'pause': 5,
-        'port': 4520,
-        'match': 'any',
-        'mapping': {},
-    },
+    'discovery': False,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1789,10 +1783,7 @@ DEFAULT_MASTER_OPTS = {
     'salt_cp_chunk_size': 98304,
     'require_minion_sign_messages': False,
     'drop_messages_signature_fail': False,
-    'discovery': {
-        'port': 4520,
-        'mapping': {},
-    },
+    'discovery': False,
 }
 
 
