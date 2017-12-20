@@ -161,19 +161,19 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # some of the state return parts
             for key in six.iterkeys(ret):
                 self.assertTrue(ret[key]['result'])
-                if ret[key]['name'] != 'carbon':
+                if ret[key]['name'] != 'carbon < 1.1':
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
-                    'There was no error installing package \'carbon\' '
+                    'There was no error installing package \'carbon < 1.1\' '
                     'although it does not show when calling \'pip.freeze\'.'
                 )
                 break
             else:
                 raise Exception('Expected state did not run')
         finally:
-            if os.path.isdir('/opt/graphite'):
-                shutil.rmtree('/opt/graphite')
+            if os.path.isdir(ographite):
+                shutil.rmtree(ographite)
 
     def test_issue_2028_pip_installed_state(self):
         ret = self.run_function('state.sls', mods='issue-2028-pip-installed')
