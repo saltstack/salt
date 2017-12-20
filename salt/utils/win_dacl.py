@@ -143,6 +143,7 @@ try:
     import win32con
     import win32api
     import pywintypes
+    import winerror
     import salt.utils.win_functions
     HAS_WIN32 = True
 except ImportError:
@@ -825,8 +826,14 @@ def dacl(obj_name=None, obj_type='file'):
                 ace = self.dacl.GetAce(i)
 
                 # Get ACE Elements
-                user, a_type, a_prop, a_perms, inh = self._ace_to_dict(ace)
-
+                try:
+                    user, a_type, a_prop, a_perms, inh = self._ace_to_dict(ace)
+                except pywintypes.error as exc:
+                    # If at this point a mapping error is thrown 
+                    # we should just skip the entry, instead of failing because of this
+                    if exc.winerror == winerror.ERROR_NONE_MAPPED:
+                        continue
+                    raise
                 # Check for existing entries in the return
                 if user in ret and a_type in ret[user]:
 
