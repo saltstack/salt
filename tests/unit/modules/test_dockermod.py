@@ -49,7 +49,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         )
         # Force the LazyDict to populate its references. Otherwise the lookup
         # will fail inside the unit tests.
-        utils.keys()
+        list(utils)
         return {docker_mod: {'__context__': {'docker.docker_version': ''},
                              '__utils__': utils}}
 
@@ -565,7 +565,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             cmd='sleep infinity',
             image='opensuse/python', interactive=True, tty=True)
         docker_start_mock.assert_called_once_with('ID')
-        docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
+        docker_sls_mock.assert_called_once_with('ID', 'foo')
         docker_stop_mock.assert_called_once_with('ID')
         docker_rm_mock.assert_called_once_with('ID')
         docker_commit_mock.assert_called_once_with('ID', 'foo', tag='latest')
@@ -619,7 +619,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             cmd='sleep infinity',
             image='opensuse/python', interactive=True, tty=True)
         docker_start_mock.assert_called_once_with('ID')
-        docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
+        docker_sls_mock.assert_called_once_with('ID', 'foo')
         docker_stop_mock.assert_called_once_with('ID')
         docker_rm_mock.assert_called_once_with('ID')
         self.assertEqual(
