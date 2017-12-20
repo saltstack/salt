@@ -3241,6 +3241,13 @@ def powershell(cmd,
     else:
         encoded_cmd = False
 
+    # Put the whole command inside a try / catch block
+    # Some errors in PowerShell are not "Terminating Errors" and will not be
+    # caught in a try/catch block. For example, the `Get-WmiObject` command will
+    # often return a "Non Terminating Error". To fix this, make sure
+    # `-ErrorAction Stop` is set in the powershell command
+    cmd = 'try {' + cmd + '} catch { "{}" | ConvertTo-JSON}'
+
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
                    cwd=cwd,
