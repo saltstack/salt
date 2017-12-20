@@ -301,3 +301,83 @@ def add_volume_bricks(name, bricks):
 
     ret['comment'] = 'Adding bricks to volume {0} failed'.format(name)
     return ret
+
+def op_version(name, version):
+    '''
+    Add brick(s) to an existing volume
+
+    name
+        Volume name
+
+    version
+        Version to which the cluster.op-version should be set
+
+    .. code-block:: yaml
+
+        myvolume:
+          glusterfs.op_version:
+            - name: volume1
+            - version: 30707
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': False}
+
+    current = __salt__['glusterfs.get_op_version'](name)
+
+    if current == version:
+        ret['comment'] = 'Glusterfs cluster.op-version for {0} already set to {1}'.format(name, version)
+        ret['result'] = True
+        return ret
+
+    result = __salt__['glusterfs.set_op_version'](version)
+
+    if result[0] is False:
+        ret['comment'] = result[1]
+        return ret
+
+    ret['comment'] = result
+    ret['changes'] = {'old': current, 'new': version}
+    ret['result'] = True
+    return ret
+
+
+def max_op_version(name):
+    '''
+    Add brick(s) to an existing volume
+
+    name
+        Volume name
+
+    .. code-block:: yaml
+
+        myvolume:
+          glusterfs.max_op_version:
+            - name: volume1
+            - version: 30707
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': False}
+
+    current = int(__salt__['glusterfs.get_op_version'](name))
+    max_version = int(__salt__['glusterfs.get_max_op_version']())
+
+    if current == max_version:
+        ret['comment'] = 'The cluster.op-version is already set to the cluster.max-op-version of {0}'.format(name,
+                                                                                                             current)
+        ret['result'] = True
+        return ret
+
+    result = __salt__['glusterfs.set_op_version'](max_version)
+
+    if result[0] is False:
+        ret['comment'] = result[1]
+        return ret
+
+    ret['comment'] = result
+    ret['changes'] = {'old': current, 'new': max_version}
+    ret['result'] = True
+    return ret
