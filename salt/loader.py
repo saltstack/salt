@@ -1459,21 +1459,22 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         module_name = mod.__name__.rsplit('.', 1)[-1]
 
         # Call a module's initialization method if it exists
-        module_init = getattr(mod, '__init__', None)
-        if inspect.isfunction(module_init):
-            try:
-                module_init(self.opts)
-            except TypeError as e:
-                log.error(e)
-            except Exception:
-                err_string = '__init__ failed'
-                log.debug(
-                    'Error loading %s.%s: %s',
-                    self.tag, module_name, err_string, exc_info=True
-                )
-                self.missing_modules[module_name] = err_string
-                self.missing_modules[name] = err_string
-                return False
+        if module_name in self.missing_modules:  # If the module failed to load, don't run __init__
+            module_init = getattr(mod, '__init__', None)
+            if inspect.isfunction(module_init):
+                try:
+                    module_init(self.opts)
+                except TypeError as e:
+                    log.error(e)
+                except Exception:
+                    err_string = '__init__ failed'
+                    log.debug(
+                        'Error loading %s.%s: %s',
+                        self.tag, module_name, err_string, exc_info=True
+                    )
+                    self.missing_modules[module_name] = err_string
+                    self.missing_modules[name] = err_string
+                    return False
 
         # if virtual modules are enabled, we need to look for the
         # __virtual__() function inside that module and run it.
