@@ -1234,7 +1234,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 files = sorted(os.listdir(mod_dir))
             except OSError:
                 continue  # Next mod_dir
-            if six.PY3 and '__pycache__' in files:
+            if six.PY3:
                 try:
                     pycache_files = [
                         os.path.join('__pycache__', x) for x in
