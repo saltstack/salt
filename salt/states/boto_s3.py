@@ -59,7 +59,7 @@ import yaml
 
 # Import Salt libs
 import salt.ext.six as six
-import salt.utils
+import salt.utils.hashutils
 
 log = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ def object_present(
     if not hash_type:
         hash_type = __opts__['hash_type']
     try:
-        digest = salt.utils.get_hash(source, form=hash_type)
+        digest = salt.utils.hashutils.get_hash(source, form=hash_type)
     except IOError as e:
         ret['result'] = False
         ret['comment'] = "Could not read local file {0}: {1}".format(
