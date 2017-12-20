@@ -28,7 +28,7 @@ using the :ref:`saltutil execution module <salt.modules.saltutil>`.
 '''
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import hashlib
 import logging

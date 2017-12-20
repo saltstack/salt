@@ -8,7 +8,7 @@
 '''
 
 # Import Salt libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import errno
 import threading
