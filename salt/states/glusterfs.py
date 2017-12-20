@@ -302,6 +302,7 @@ def add_volume_bricks(name, bricks):
     ret['comment'] = 'Adding bricks to volume {0} failed'.format(name)
     return ret
 
+
 def op_version(name, version):
     '''
     Add brick(s) to an existing volume
@@ -366,8 +367,7 @@ def max_op_version(name):
     max_version = int(__salt__['glusterfs.get_max_op_version']())
 
     if current == max_version:
-        ret['comment'] = 'The cluster.op-version is already set to the cluster.max-op-version of {0}'.format(name,
-                                                                                                             current)
+        ret['comment'] = 'The cluster.op-version is already set to the cluster.max-op-version of {0}'.format(current)
         ret['result'] = True
         return ret
 
