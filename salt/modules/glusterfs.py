@@ -30,13 +30,17 @@ def __virtual__():
 
 
 def _get_minor_version():
-    # Set default version to 6 for tests
-    version = 6
+    return int(_get_version()[1])
+
+
+def _get_version():
+    # Set the default minor version to 6 for tests
+    version = [3, 6]
     cmd = 'gluster --version'
     result = __salt__['cmd.run'](cmd).splitlines()
     for line in result:
         if line.startswith('glusterfs'):
-            version = int(line.split()[1].split('.')[1])
+            version = line.split()[1].split('.')
     return version
 
 
@@ -660,3 +664,82 @@ def list_quota_volume(name):
         ret[path] = _etree_to_dict(limit)
 
     return ret
+
+
+def get_op_version(name):
+    '''
+    Returns the glusterfs volume op-version
+    name
+        Name of the glusterfs volume
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.get_op_version <volume>
+    '''
+
+    version = ''
+    cmd = 'gluster volume get {0} cluster.op-version'.format(name)
+    result = __salt__['cmd.run'](cmd).splitlines()
+
+    for line in result:
+        if line.startswith('cluster'):
+            version = int(line.split()[1])
+
+    if isinstance(version, int):
+        return version
+
+    return False, 'Unable to determine cluster.op-version'
+
+
+def get_max_op_version():
+    '''
+    Returns the glusterfs volume's max op-version value
+    Requires Glusterfs version > 3.9
+    '''
+
+    version = ''
+    minor_version = _get_minor_version()
+
+    if int(minor_version) < 10:
+        return False, 'Glusterfs version must be 3.10.x or greater.  Version is {0}'.format(minor_version)
+
+    cmd = 'gluster volume get all cluster.max-op-version'
+    result = __salt__['cmd.run'](cmd).splitlines()
+
+    for line in result:
+        if line.startswith('cluster'):
+            version = int(line.split()[1])
+
+    if isinstance(version, int):
+        return version
+
+    return False, 'Unable to determine cluster.max-op-version'
+
+
+def set_op_version(version):
+    '''
+    Set the glusterfs volume op-version
+    version
+        Version to set the glusterfs volume op-version
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.set_op_version <volume>
+    '''
+
+    cmd = 'gluster volume set all cluster.op-version {0}'.format(version)
+    result = __salt__['cmd.run'](cmd)
+
+    if 'failed' in result:
+        error = str(result.split(': ')[2])
+        return False, error
+
+    return result
+
+
+def get_version():
+    '''
+    Returns the version of glusterfs.
+    '''
+
+    return '.'.join(_get_version())
