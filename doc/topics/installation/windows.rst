@@ -142,10 +142,8 @@ Option                     Description
 
 .. note::
     ``/default-config`` and ``/custom-config=`` will backup an existing config
-    if found. A ``.bak`` extension will be added. That includes the ``minion``
-    file and the ``minion.d`` directory. If ``minion.bak`` or ``minion.d.bak``
-    already exist, they will be overwritten with a backup of the existing
-    config.
+    if found. A timestamp and a ``.bak`` extension will be added. That includes
+    the ``minion`` file and the ``minion.d`` directory.
 
 Here are some examples of using the silent installer:
 
