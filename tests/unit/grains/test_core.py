@@ -24,10 +24,14 @@ import salt.grains.core as core
 
 # Import 3rd-party libs
 from salt.ext import six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
 
 # Globals
-IPv4Address = salt.ext.ipaddress.IPv4Address
-IPv6Address = salt.ext.ipaddress.IPv6Address
+IPv4Address = ipaddress.IPv4Address
+IPv6Address = ipaddress.IPv6Address
 IP4_LOCAL = '127.0.0.1'
 IP4_ADD1 = '10.0.0.1'
 IP4_ADD2 = '10.0.0.2'

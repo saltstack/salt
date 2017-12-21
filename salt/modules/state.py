@@ -13,7 +13,6 @@ states themselves.
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import copy
 import fnmatch
 import json
 import logging
@@ -36,6 +35,7 @@ import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.jid
 import salt.utils.platform
+import salt.utils.state
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -420,36 +420,6 @@ def _check_queue(queue, kwargs):
             return conflict
 
 
-def _get_opts(**kwargs):
-    '''
-    Return a copy of the opts for use, optionally load a local config on top
-    '''
-    opts = copy.deepcopy(__opts__)
-
-    if 'localconfig' in kwargs:
-        return salt.config.minion_config(kwargs['localconfig'], defaults=opts)
-
-    if 'saltenv' in kwargs:
-        saltenv = kwargs['saltenv']
-        if saltenv is not None:
-            if not isinstance(saltenv, six.string_types):
-                saltenv = six.text_type(saltenv)
-            if opts['lock_saltenv'] and saltenv != opts['saltenv']:
-                raise CommandExecutionError(
-                    'lock_saltenv is enabled, saltenv cannot be changed'
-                )
-            opts['saltenv'] = kwargs['saltenv']
-
-    if 'pillarenv' in kwargs or opts.get('pillarenv_from_saltenv', False):
-        pillarenv = kwargs.get('pillarenv') or kwargs.get('saltenv')
-        if pillarenv is not None and not isinstance(pillarenv, six.string_types):
-            opts['pillarenv'] = str(pillarenv)
-        else:
-            opts['pillarenv'] = pillarenv
-
-    return opts
-
-
 def _get_initial_pillar(opts):
     return __pillar__ if __opts__['__cli'] == 'salt-call' \
         and opts['pillarenv'] == __opts__['pillarenv'] \
@@ -521,7 +491,7 @@ def high(data, test=None, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
 
     opts['test'] = _get_test_value(test, **kwargs)
 
@@ -573,7 +543,7 @@ def template(tem, queue=False, **kwargs):
     if conflict is not None:
         return conflict
 
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     try:
         st_ = salt.state.HighState(opts,
                                    context=__context__,
@@ -618,7 +588,7 @@ def template_str(tem, queue=False, **kwargs):
     if conflict is not None:
         return conflict
 
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
 
     try:
         st_ = salt.state.State(opts,
@@ -1022,7 +992,7 @@ def highstate(test=None, queue=False, **kwargs):
         return conflict
     orig_test = __opts__.get('test', None)
 
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
 
     opts['test'] = _get_test_value(test, **kwargs)
 
@@ -1228,7 +1198,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
         return disabled
 
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
 
     opts['test'] = _get_test_value(test, **kwargs)
 
@@ -1376,7 +1346,7 @@ def top(topfn, test=None, queue=False, **kwargs):
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
     pillar_override = kwargs.get('pillar')
@@ -1455,7 +1425,7 @@ def show_highstate(queue=False, **kwargs):
             'is specified.'
         )
 
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     try:
         st_ = salt.state.HighState(opts,
                                    pillar_override,
@@ -1497,7 +1467,7 @@ def show_lowstate(queue=False, **kwargs):
         assert False
         return conflict
 
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     try:
         st_ = salt.state.HighState(opts,
                                    proxy=__proxy__,
@@ -1605,7 +1575,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
     # Since this is running a specific ID within a specific SLS file, fall back
@@ -1716,7 +1686,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
     # Since this is dealing with a specific SLS file (or files), fall back to
@@ -1802,7 +1772,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
 
     opts['test'] = _get_test_value(test, **kwargs)
 
@@ -1873,7 +1843,7 @@ def show_top(queue=False, **kwargs):
     if conflict is not None:
         return conflict
 
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     try:
         st_ = salt.state.HighState(opts,
                                    proxy=__proxy__,
@@ -1925,7 +1895,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
                    '__id__': name,
                    'name': name})
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
     pillar_override = kwargs.get('pillar')
@@ -2008,7 +1978,7 @@ def pkg(pkg_path,
         salt '*' state.pkg /tmp/salt_state.tgz 760a9353810e36f6d81416366fc426dc md5
     '''
     # TODO - Add ability to download from salt master or other source
-    popts = _get_opts(**kwargs)
+    popts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     if not os.path.isfile(pkg_path):
         return {}
     if not salt.utils.hashutils.get_hash(pkg_path, hash_type) == pkg_sum:

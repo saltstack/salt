@@ -35,7 +35,7 @@ module (formerly called **dockerng**) in the 2017.7.0 release.
     :ref:`here <docker-authentication>` for more information on how to
     configure access to docker registries in :ref:`Pillar <pillar>` data.
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -73,6 +73,8 @@ def present(name,
             sls=None,
             base='opensuse/python',
             saltenv='base',
+            pillarenv=None,
+            pillar=None,
             **kwargs):
     '''
     .. versionchanged:: Oxygen
@@ -178,13 +180,34 @@ def present(name,
         Base image with which to start :py:func:`docker.sls_build
         <salt.modules.dockermod.sls_build>`
 
-        .. versionadded: 2017.7.0
+        .. versionadded:: 2017.7.0
 
     saltenv
-        Environment from which to pull SLS files for :py:func:`docker.sls_build
-        <salt.modules.dockermod.sls_build>`
+        Specify the environment from which to retrieve the SLS indicated by the
+        `mods` parameter.
 
-        .. versionadded: 2017.7.0
+        .. versionadded:: 2017.7.0
+        .. versionchanged:: Oxygen
+            Now uses the effective saltenv if not explicitly passed. In earlier
+            versions, ``base`` was assumed as a default.
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+        .. versionadded:: Oxygen
+
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
+        .. versionadded:: Oxygen
     '''
     ret = {'name': name,
            'changes': {},
@@ -192,7 +215,7 @@ def present(name,
            'comment': ''}
 
     if not isinstance(name, six.string_types):
-        name = six.string_types(name)
+        name = six.text_type(name)
 
     # At most one of the args that result in an image being built can be used
     num_build_args = len([x for x in (build, load, sls) if x is not None])
@@ -209,7 +232,7 @@ def present(name,
             )
             return ret
         if not isinstance(tag, six.string_types):
-            tag = six.string_types(tag)
+            tag = six.text_type(tag)
         full_image = ':'.join((name, tag))
     else:
         if tag:
@@ -258,7 +281,8 @@ def present(name,
         try:
             # map values passed from the state to the build args
             build_args['path'] = build
-            build_args['image'] = full_image
+            build_args['repository'] = name
+            build_args['tag'] = tag
             build_args['dockerfile'] = dockerfile
             image_update = __salt__['docker.build'](**build_args)
         except Exception as exc:
@@ -272,12 +296,15 @@ def present(name,
             ret['changes'] = image_update
 
     elif sls:
+        _locals = locals()
+        sls_build_kwargs = {k: _locals[k] for k in ('saltenv', 'pillarenv', 'pillar')
+                            if _locals[k] is not None}
         try:
             image_update = __salt__['docker.sls_build'](repository=name,
                                                         tag=tag,
                                                         base=base,
                                                         mods=sls,
-                                                        saltenv=saltenv)
+                                                        **sls_build_kwargs)
         except Exception as exc:
             ret['comment'] = (
                 'Encountered error using SLS {0} for building {1}: {2}'
@@ -325,7 +352,7 @@ def present(name,
     try:
         __salt__['docker.inspect_image'](full_image)
         error = False
-    except CommandExecutionError:
+    except CommandExecutionError as exc:
         msg = exc.__str__()
         if '404' not in msg:
             error = 'Failed to inspect image \'{0}\' after it was {1}: {2}'.format(
