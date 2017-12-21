@@ -45,7 +45,10 @@ class DownloadArtifacts(object):
 
     def _do_download(self, remote, local):
         print('Copying from {0} to {1}'.format(remote, local))
-        self.client.get(remote, local)
+        try:
+            self.client.get(remote, local)
+        except IOError:
+            print('Failed to copy: {0}'.format(remote))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Jenkins Artifact Download Helper')
