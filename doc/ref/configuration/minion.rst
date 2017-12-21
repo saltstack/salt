@@ -1039,7 +1039,7 @@ restart.
 
 Default: ``0``
 
-Instructs the minion to ping its master(s) every n number of seconds. Used
+Instructs the minion to ping its master(s) every n number of minutes. Used
 primarily as a mitigation technique against minion disconnects.
 
 .. code-block:: yaml
