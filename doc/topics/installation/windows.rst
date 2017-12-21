@@ -111,16 +111,16 @@ Option                     Description
                            the master. Default value is 'salt'. You can pass a
                            single master or a comma-separated list of masters.
                            Setting the master will cause the installer to use
-                           the default config or a custom config if defined
+                           the default config or a custom config if defined.
 ``/minion-name=``          A string value to set the minion name. Default value
                            is 'hostname'. Setting the minion name causes the
                            installer to use the default config or a custom
-                           config if defined
+                           config if defined.
 ``/start-minion=``         Either a 1 or 0. '1' will start the salt-minion
                            service, '0' will not. Default is to start the
-                           service after installation
+                           service after installation.
 ``/start-minion-delayed``  Set the minion start type to
-                           ``Automatic (Delayed Start)``
+                           ``Automatic (Delayed Start)``.
 ``/default-config``        Overwrite the existing config if present with the
                            default config for salt. Default is to use the
                            existing config if present. If ``/master`` and/or
@@ -130,10 +130,10 @@ Option                     Description
                            file in the same path as the installer of the full
                            path to a custom config file. If ``/master`` and/or
                            ``/minion-name`` is passed, those values will be used
-                           to update the new custom config.j
+                           to update the new custom config.
 ``/S``                     Runs the installation silently. Uses the above
-                           settings or the defaults
-``/?``                     Displays command line help
+                           settings or the defaults.
+``/?``                     Displays command line help.
 =========================  =====================================================
 
 .. note::
