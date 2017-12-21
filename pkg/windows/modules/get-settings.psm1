@@ -35,7 +35,7 @@ Function Get-Settings {
 
         # Prerequisite software
         $Prerequisites = @{
-            "NSIS"           = "nsis-3.0b1-setup.exe"
+            "NSIS"           = "nsis-3.02.1-setup.exe"
             "VCforPython"    = "VCForPython27.msi"
             "VCppBuildTools" = "visualcppbuildtools_full.exe"
         }
