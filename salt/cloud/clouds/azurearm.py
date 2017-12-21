@@ -1834,3 +1834,62 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     storageservice.delete_blob(kwargs['container'], kwargs['blob'])
     return True
+
+def stop(name,resource_group = None, call = None):
+  '''
+    Stop a VM
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+         salt-cloud -a stop myminion
+  '''
+  if call == 'function':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+  if not compconn:
+        compconn = get_conn()
+  if resource_group is None:
+        for group in list_resource_groups():
+            try:
+                instance_stop = compconn.virtual_machines.deallocate(group, name)
+                instance_stop.wait()
+                resource_group = group
+            except CloudError:
+                continue
+  else:
+     instance_stop = compconn.virtual_machines.stop(resource_group, name)
+     instance_stop.wait()
+  return instance_stop
+
+def start(name,resource_group = None, call = None):
+  '''
+    Start a VM
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+         salt-cloud -a start myminion
+    '''
+  if call == 'function':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+  
+  if not compconn:
+        compconn = get_conn()
+  if resource_group is None:
+        for group in list_resource_groups():
+            try:
+                instance_start = compconn.virtual_machines.start(group, name)
+				instance_start.wait()
+                resource_group = group
+            except CloudError:
+                continue
+  else:
+  	instance_start = compconn.virtual_machines.start(resource_group, name)
+  	instance_start.wait()
+  return node_data
