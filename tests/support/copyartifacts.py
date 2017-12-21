@@ -17,7 +17,6 @@ class DownloadArtifacts(object):
         self.transport = self.setup_transport()
         self.sftpclient = paramiko.SFTPClient.from_transport(self.transport)
 
-
     def setup_transport(self):
         # pylint: disable=minimum-python-version
         config = yaml.load(subprocess.check_output(['bundle', 'exec', 'kitchen', 'diagnose', self.instance]))
