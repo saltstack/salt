@@ -36,6 +36,7 @@ from salt.ext.six.moves import range
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
+    SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
