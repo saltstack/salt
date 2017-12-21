@@ -1526,7 +1526,7 @@ def install(name=None,
                     # in ver, otherwise its a dict.
                     ver2 = ver['version'] if diff_attr else ver
                     ver2 = norm_epoch(ver2, version_num)
-                    if salt.utils.compare_versions(ver1=version_num,
+                    if salt.utils.versions.compare(ver1=version_num,
                                                    oper='==',
                                                    ver2=ver2,
                                                    cmp_func=version_cmp):
@@ -1543,7 +1543,7 @@ def install(name=None,
                         # in ver, otherwise its a dict.
                         ver2 = ver['version'] if diff_attr else ver
                         ver2 = norm_epoch(ver2, version_num)
-                        if salt.utils.compare_versions(ver1=version_num,
+                        if salt.utils.versions.compare(ver1=version_num,
                                                        oper='>=',
                                                        ver2=ver2,
                                                        cmp_func=version_cmp):
