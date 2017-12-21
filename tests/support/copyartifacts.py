@@ -14,7 +14,9 @@ class DownloadArtifacts(object):
     def __init__(self, instance, artifacts):
         self.instance = instance
         self.artifacts = artifacts
-        self.client = self.setup_transport()
+        self.transport = self.setup_transport()
+        self.sftpclient = paramiko.SFTPClient.from_transport(self.transport)
+
 
     def setup_transport(self):
         # pylint: disable=minimum-python-version
@@ -33,12 +35,20 @@ class DownloadArtifacts(object):
             username=state.get('username', tport.get('username', 'root')),
             pkey=pkey
         )
-        return paramiko.SFTPClient.from_transport(transport)
+        return transport
+
+    def _set_permissions(self):
+        '''
+        Make sure all xml files are readable by the world so that anyone can grab them
+        '''
+        for remote, _ in self.artifacts:
+            self.transport.open_session().exec_command('sudo chmod -R +r {}'.format(remote))
 
     def download(self):
+        self._set_permissions()
         for remote, local in self.artifacts:
             if remote.endswith('/'):
-                for fxml in self.client.listdir(remote):
+                for fxml in self.sftpclient.listdir(remote):
                     self._do_download(os.path.join(remote, fxml), os.path.join(local, os.path.basename(fxml)))
             else:
                 self._do_download(remote, os.path.join(local, os.path.basename(remote)))
@@ -46,7 +56,7 @@ class DownloadArtifacts(object):
     def _do_download(self, remote, local):
         print('Copying from {0} to {1}'.format(remote, local))
         try:
-            self.client.get(remote, local)
+            self.sftpclient.get(remote, local)
         except IOError:
             print('Failed to copy: {0}'.format(remote))
 
