@@ -42,6 +42,7 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 
@@ -379,7 +380,7 @@ def _find_cfgs(path, cfgs=None):
         if os.path.isdir(fi) and (i not in ignored):
             dirs.append(fi)
     for fpath in dirs:
-        for p, ids, ifs in os.walk(fpath):
+        for p, ids, ifs in salt.utils.path.os_walk(fpath):
             for i in ifs:
                 if i.endswith('.cfg'):
                     cfgs.append(os.path.join(p, i))

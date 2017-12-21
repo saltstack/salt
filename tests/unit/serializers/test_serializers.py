@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from textwrap import dedent
 
 # Import Salt Testing libs
@@ -18,6 +18,7 @@ import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
 import salt.serializers.msgpack as msgpack
 import salt.serializers.python as python
+import salt.serializers.toml as toml
 from salt.serializers.yaml import EncryptedString
 from salt.serializers import SerializationError
 from salt.utils.odict import OrderedDict
@@ -337,7 +338,8 @@ class TestSerializers(TestCase):
     def test_serialize_python(self):
         data = {'foo': 'bar'}
         serialized = python.serialize(data)
-        assert serialized == '{\'foo\': \'bar\'}', serialized
+        expected = "{u'foo': u'bar'}" if six.PY2 else "{'foo': 'bar'}"
+        assert serialized == expected, serialized
 
     @skipIf(not configparser.available, SKIP_MESSAGE % 'configparser')
     def test_configparser(self):
@@ -347,4 +349,15 @@ class TestSerializers(TestCase):
         assert serialized == "[foo]\nbar = baz", serialized
 
         deserialized = configparser.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+    @skipIf(not toml.available, SKIP_MESSAGE % 'toml')
+    def test_serialize_toml(self):
+        data = {
+            "foo": "bar"
+        }
+        serialized = toml.serialize(data)
+        assert serialized == 'foo = "bar"\n', serialized
+
+        deserialized = toml.deserialize(serialized)
         assert deserialized == data, deserialized

@@ -3,7 +3,7 @@
 This runner is designed to mirror the execution module config.py, but for
 master settings
 '''
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.data
 import salt.utils.sdb

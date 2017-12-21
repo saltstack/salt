@@ -60,7 +60,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return mongo --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging

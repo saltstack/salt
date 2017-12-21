@@ -730,7 +730,7 @@ def msi_conformant_version():
 
     Note that the commit count for tags is 0(zero)
     '''
-    year2 = int(str(__saltstack_version__.major)[2:])
+    year2 = int(six.text_type(__saltstack_version__.major)[2:])
     month = __saltstack_version__.minor
     minor = __saltstack_version__.bugfix
     commi = __saltstack_version__.noc
