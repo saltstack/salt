@@ -1887,6 +1887,7 @@ def append_domain():
         grain['append_domain'] = __opts__['append_domain']
     return grain
 
+
 def fqdns():
     '''
     Return all known FQDNs for the system by enumerating all interfaces and
@@ -1908,10 +1909,11 @@ def fqdns():
             fqdns.add(socket.gethostbyaddr(ip)[0])
         except (socket.error, socket.herror,
             socket.gaierror, socket.timeout) as e:
-                log.error("Exception during resolving address: " + str(e))
-    
+            log.error("Exception during resolving address: " + str(e))
+
     grains['fqdns'] = list(fqdns)
     return grains
+
 
 def ip_fqdn():
     '''
