@@ -1720,12 +1720,15 @@ class ClearFuncs(object):
         if token['name'] in self.opts['external_auth'][token['eauth']]:
             good = check_fun(self.opts['external_auth'][token['eauth']][token['name']], fun)
         elif any(key.endswith('%') for key in self.opts['external_auth'][token['eauth']]):
-            for group in self.opts['external_auth'][token['eauth']]:
-                if group.endswith('%'):
-                    for group in self.opts['external_auth'][token['eauth']]:
-                        good = check_fun(self.opts['external_auth'][token['eauth']][group], fun)
-                        if good:
-                            break
+            good = False
+            groups = token.get['groups']
+            if groups:
+                for group in self.opts['external_auth'][token['eauth']]:
+                    if group.endswith('%') and group[:-1] in groups:
+                        for group in self.opts['external_auth'][token['eauth']]:
+                            good = check_fun(self.opts['external_auth'][token['eauth']][group], fun)
+                            if good:
+                                break
         else:
             good = check_fun(self.opts['external_auth'][token['eauth']]['*'], fun)
         if not good:
@@ -1769,11 +1772,15 @@ class ClearFuncs(object):
         if name in self.opts['external_auth'][clear_load['eauth']]:
             good = check_fun(self.opts['external_auth'][clear_load['eauth']][name], clear_load['fun'])
         elif any(key.endswith('%') for key in self.opts['external_auth'][clear_load['eauth']]):
-            for group in self.opts['external_auth'][clear_load['eauth']]:
-                if group.endswith('%'):
-                    good = check_fun(self.opts['external_auth'][clear_load['eauth']][group], clear_load['fun'])
-                    if good:
-                        break
+            good = False
+            groups = self.loadauth.get_groups(clear_load)
+            log.debug('GROUPS: {0}'.format(groups))
+            if groups:
+                for group in self.opts['external_auth'][clear_load['eauth']]:
+                    if group.endswith('%') and group[:-1] in groups:
+                        good = check_fun(self.opts['external_auth'][clear_load['eauth']][group], clear_load['fun'])
+                        if good:
+                            break
         else:
             good = check_fun(self.opts['external_auth'][clear_load['eauth']]['*'], clear_load['fun'])
         if not good:
