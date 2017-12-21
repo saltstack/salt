@@ -13,12 +13,6 @@
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
 !define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
 
-# File Picker
-!define OFN_FILEMUSTEXIST 0x00001000
-!define OFN_DONTADDTOREC 0x02000000
-!define OPENFILENAME_SIZE_VERSION_400 76
-!define OPENFILENAME 'i,i,i,i,i,i,i,i,i,i,i,i,i,i,&i2,&i2,i,i,i,i'
-
 # Import Libraries
 !include "MUI2.nsh"
 !include "nsDialogs.nsh"
@@ -294,6 +288,11 @@ Function pageMinionConfig_OnChange
 
 FunctionEnd
 
+# File Picker Definitions
+!define OFN_FILEMUSTEXIST 0x00001000
+!define OFN_DONTADDTOREC 0x02000000
+!define OPENFILENAME_SIZE_VERSION_400 76
+!define OPENFILENAME 'i,i,i,i,i,i,i,i,i,i,i,i,i,i,&i2,&i2,i,i,i,i'
 Function pageCustomConfigBtn_OnClick
 
     Pop $0
@@ -588,21 +587,17 @@ Function .onInit
 FunctionEnd
 
 
+# Time Stamp Definition
+!define /date TIME_STAMP "%Y-%m-%d-%H-%M-%S"
 Function BackupExistingConfig
 
     ${If} $ExistingConfigFound == 1                     # If existing config found
     ${AndIfNot} $ConfigType_State == "Existing Config"  # If not using Existing Config
 
-        # Remove previous backups if they exist
-        IfFileExists "$INSTDIR\conf\minion.bak" 0 +2
-            Delete "$INSTDIR\conf\minion.bak"
-        IfFileExists "$INSTDIR\conf\minion.d.bak" 0 +2
-            RMDir /r "$INSTDIR\conf\minion.d.bak"
-
         # Backup the minion config
-        Rename "$INSTDIR\conf\minion" "$INSTDIR\conf\minion.bak"
+        Rename "$INSTDIR\conf\minion" "$INSTDIR\conf\minion-${TIME_STAMP}.bak"
         IfFileExists "$INSTDIR\conf\minion.d" 0 +2
-            Rename "$INSTDIR\conf\minion.d" "$INSTDIR\conf\minion.d.bak"
+            Rename "$INSTDIR\conf\minion.d" "$INSTDIR\conf\minion.d-{TIME_STAMP}$.bak"
 
     ${EndIf}
 
@@ -956,7 +951,7 @@ FunctionEnd
 #   Push "this is some string"
 #   Push "some"
 #   Call StrStr
-#   Pop $0 ; "some string"
+#   Pop $0 # "some string"
 #------------------------------------------------------------------------------
 !macro StrStr un
 Function ${un}StrStr
