@@ -867,7 +867,10 @@ def dacl(obj_name=None, obj_type='file'):
             '''
             # Get the principal from the sid (object sid)
             sid = win32security.ConvertSidToStringSid(ace[2])
-            principal = get_name(sid)
+            try:
+                principal = get_name(sid)
+            except CommandExecutionError:
+                principal = sid
 
             # Get the ace type
             ace_type = self.ace_type[ace[0][0]]
@@ -1170,17 +1173,17 @@ def get_owner(obj_name):
 
     except MemoryError:
         # Generic Memory Error (Windows Server 2003+)
-        owner_sid = 'S-1-1-0'
+        owner_sid = 'S-1-0-0'
 
     except pywintypes.error as exc:
         # Incorrect function error (Windows Server 2008+)
         if exc.winerror == 1 or exc.winerror == 50:
-            owner_sid = 'S-1-1-0'
+            owner_sid = 'S-1-0-0'
         else:
             raise CommandExecutionError(
                 'Failed to get owner: {0}'.format(exc.strerror))
 
-    return get_name(win32security.ConvertSidToStringSid(owner_sid))
+    return get_name(owner_sid)
 
 
 def get_primary_group(obj_name):
@@ -1210,12 +1213,12 @@ def get_primary_group(obj_name):
 
     except MemoryError:
         # Generic Memory Error (Windows Server 2003+)
-        primary_group_gid = 'S-1-1-0'
+        primary_group_gid = 'S-1-0-0'
 
     except pywintypes.error as exc:
         # Incorrect function error (Windows Server 2008+)
         if exc.winerror == 1 or exc.winerror == 50:
-            primary_group_gid = 'S-1-1-0'
+            primary_group_gid = 'S-1-0-0'
         else:
             raise CommandExecutionError(
                 'Failed to set permissions: {0}'.format(exc.strerror))
