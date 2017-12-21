@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
+# Import Python libs
 from __future__ import absolute_import
 import os
 import re
 import logging
-from salt.ext.six import iteritems
 import yaml
 from jinja2 import FileSystemLoader, Environment
+
+# Import Salt libs
+import salt.utils.path
+
+# Import 3rd-party libs
+from salt.ext.six import iteritems
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +46,7 @@ def get_class(_class, salt_data):
     sub_init = '{0}/classes/{1}/init.yml'.format(saltclass_path,
                                                  _class.replace('.', '/'))
 
-    for root, dirs, files in os.walk('{0}/classes'.format(saltclass_path)):
+    for root, dirs, files in salt.utils.path.os_walk('{0}/classes'.format(saltclass_path)):
         for l_file in files:
             l_files.append('{0}/{1}'.format(root, l_file))
 
@@ -104,11 +110,12 @@ def dict_search_and_replace(d, old, new, expanded):
 def find_value_to_expand(x, v):
     a = x
     for i in v[2:-1].split(':'):
+        if a is None:
+            return v
         if i in a:
             a = a.get(i)
         else:
-            a = v
-            return a
+            return v
     return a
 
 
@@ -213,7 +220,7 @@ def expanded_dict_from_minion(minion_id, salt_data):
     _file = ''
     saltclass_path = salt_data['path']
     # Start
-    for root, dirs, files in os.walk('{0}/nodes'.format(saltclass_path)):
+    for root, dirs, files in salt.utils.path.os_walk('{0}/nodes'.format(saltclass_path)):
         for minion_file in files:
             if minion_file == '{0}.yml'.format(minion_id):
                 _file = os.path.join(root, minion_file)

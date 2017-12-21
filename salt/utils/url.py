@@ -10,7 +10,7 @@ import sys
 
 # Import salt libs
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse  # pylint: disable=import-error,no-name-in-module
-import salt.utils
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
 from salt.utils.locales import sdecode
@@ -35,7 +35,7 @@ def parse(url):
         path, saltenv = resource, None
 
     if salt.utils.platform.is_windows():
-        path = salt.utils.sanitize_win_path_string(path)
+        path = salt.utils.path.sanitize_win_path(path)
 
     return path, saltenv
 
@@ -45,12 +45,12 @@ def create(path, saltenv=None):
     join `path` and `saltenv` into a 'salt://' URL.
     '''
     if salt.utils.platform.is_windows():
-        path = salt.utils.sanitize_win_path_string(path)
+        path = salt.utils.path.sanitize_win_path(path)
     path = sdecode(path)
 
-    query = u'saltenv={0}'.format(saltenv) if saltenv else ''
+    query = 'saltenv={0}'.format(saltenv) if saltenv else ''
     url = sdecode(urlunparse(('file', '', path, '', query, '')))
-    return u'salt://{0}'.format(url[len('file:///'):])
+    return 'salt://{0}'.format(url[len('file:///'):])
 
 
 def is_escaped(url):
@@ -82,13 +82,13 @@ def escape(url):
         if url.startswith('|'):
             return url
         else:
-            return u'|{0}'.format(url)
+            return '|{0}'.format(url)
     elif scheme == 'salt':
         path, saltenv = parse(url)
         if path.startswith('|'):
             return create(path, saltenv)
         else:
-            return create(u'|{0}'.format(path), saltenv)
+            return create('|{0}'.format(path), saltenv)
     else:
         return url
 

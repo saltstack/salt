@@ -72,7 +72,6 @@ import tornado.iostream
 # Import salt libs
 import salt.config
 import salt.payload
-import salt.utils
 import salt.utils.async
 import salt.utils.cache
 import salt.utils.dicttrim
@@ -421,7 +420,7 @@ class SaltEvent(object):
                     self.pulluri,
                     io_loop=self.io_loop
                 )
-            # For the async case, the connect will be defered to when
+            # For the async case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True
         return self.cpush
@@ -577,16 +576,17 @@ class SaltEvent(object):
                   auto_reconnect=False):
         '''
         Get a single publication.
-        IF no publication available THEN block for up to wait seconds
-        AND either return publication OR None IF no publication available.
+        If no publication is available, then block for up to ``wait`` seconds.
+        Return publication if it is available or ``None`` if no publication is
+        available.
 
-        IF wait is 0 then block forever.
+        If wait is 0, then block forever.
 
         tag
             Only return events matching the given tag. If not specified, or set
             to an empty string, all events are returned. It is recommended to
             always be selective on what is to be returned in the event that
-            multiple requests are being multiplexed
+            multiple requests are being multiplexed.
 
         match_type
             Set the function to match the search tag with event tags.
@@ -647,7 +647,8 @@ class SaltEvent(object):
             return ret['data']
 
     def get_event_noblock(self):
-        '''Get the raw event without blocking or any other niceties
+        '''
+        Get the raw event without blocking or any other niceties
         '''
         assert self._run_io_loop_sync
 
@@ -661,8 +662,9 @@ class SaltEvent(object):
         return {'data': data, 'tag': mtag}
 
     def get_event_block(self):
-        '''Get the raw event in a blocking fashion
-           Slower, but decreases the possibility of dropped events
+        '''
+        Get the raw event in a blocking fashion. This is slower, but it decreases the
+        possibility of dropped events.
         '''
         assert self._run_io_loop_sync
 
@@ -1078,7 +1080,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Bind the pub and pull sockets for events
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         self.io_loop = tornado.ioloop.IOLoop()
         with salt.utils.async.current_ioloop(self.io_loop):
             if self.opts['ipc_mode'] == 'tcp':
@@ -1243,7 +1245,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Spin up the multiprocess event returner
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         self.event = get_event('master', opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')

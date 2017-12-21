@@ -65,7 +65,8 @@ def exists(name, index=None):
     '''
     Add the directory to the system PATH at index location
 
-    index: where the directory should be placed in the PATH (default: None)
+    index: where the directory should be placed in the PATH (default: None).
+    This is 0-indexed, so 0 means to prepend at the very start of the PATH.
     [Note:  Providing no index will append directory to PATH and
     will not enforce its location within the PATH.]
 
@@ -96,7 +97,7 @@ def exists(name, index=None):
 
     try:
         currIndex = sysPath.index(path)
-        if index:
+        if index is not None:
             index = int(index)
             if index < 0:
                 index = len(sysPath) + index + 1
@@ -115,7 +116,7 @@ def exists(name, index=None):
     except ValueError:
         pass
 
-    if not index:
+    if index is None:
         index = len(sysPath)    # put it at the end
     ret['changes']['added'] = '{0} will be added at index {1}'.format(name, index)
     if __opts__['test']:

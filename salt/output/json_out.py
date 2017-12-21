@@ -29,11 +29,14 @@ single-line output format and to parse each line individually. Example output
     {"phill": {"en0": {"hwaddr": "02:1d:cc:a2:33:55", ...}}}
     {"stuart": {"en0": {"hwaddr": "02:9a:e0:ea:9e:3c", ...}}}
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import json
 import logging
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +79,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
 
     except UnicodeDecodeError as exc:
         log.error('Unable to serialize output to json')
-        return json.dumps({'error': 'Unable to serialize output to json', 'message': str(exc)})
+        return json.dumps({'error': 'Unable to serialize output to json', 'message': six.text_type(exc)})
 
     except TypeError:
         log.debug('An error occurred while outputting JSON', exc_info=True)

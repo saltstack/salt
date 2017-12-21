@@ -15,7 +15,7 @@ be in the :conf_master:`fileserver_backend` list to enable this backend.
 Fileserver environments are defined using the :conf_master:`file_roots`
 configuration option.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -24,11 +24,13 @@ import logging
 
 # Import salt libs
 import salt.fileserver
-import salt.utils  # Can be removed once is_bin_file and get_hash are moved
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.ext import six
 
@@ -127,7 +129,7 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -228,7 +230,7 @@ def file_hash(load, fnd):
     cache_path = os.path.join(__opts__['cachedir'],
                               'roots/hash',
                               load['saltenv'],
-                              u'{0}.hash.{1}'.format(fnd['rel'],
+                              '{0}.hash.{1}'.format(fnd['rel'],
                               __opts__['hash_type']))
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
@@ -258,7 +260,7 @@ def file_hash(load, fnd):
             return file_hash(load, fnd)
 
     # if we don't have a cache entry-- lets make one
-    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+    ret['hsum'] = salt.utils.hashutils.get_hash(path, __opts__['hash_type'])
     cache_dir = os.path.dirname(cache_path)
     # make cache directory if it doesn't exist
     if not os.path.exists(cache_dir):
@@ -351,6 +353,16 @@ def _file_lists(load, form):
                         'roots: %s symlink destination is %s',
                         abs_path, link_dest
                     )
+                    if salt.utils.platform.is_windows() \
+                            and link_dest.startswith('\\\\'):
+                        # Symlink points to a network path. Since you can't
+                        # join UNC and non-UNC paths, just assume the original
+                        # path.
+                        log.trace(
+                            'roots: %s is a UNC path, using %s instead',
+                            link_dest, abs_path
+                        )
+                        link_dest = abs_path
                     if link_dest.startswith('..'):
                         joined = os.path.join(abs_path, link_dest)
                     else:
@@ -374,7 +386,7 @@ def _file_lists(load, form):
                         ret['links'][rel_path] = link_dest
 
         for path in __opts__['file_roots'][load['saltenv']]:
-            for root, dirs, files in os.walk(
+            for root, dirs, files in salt.utils.path.os_walk(
                     path,
                     followlinks=__opts__['fileserver_followsymlinks']):
                 _add_to(ret['dirs'], path, root, dirs)

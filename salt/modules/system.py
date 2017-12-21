@@ -596,7 +596,7 @@ def set_computer_name(hostname):
 
     .. code-block:: bash
 
-        salt '*' system.set_conputer_name master.saltstack.com
+        salt '*' system.set_computer_name master.saltstack.com
     '''
     return __salt__['network.mod_hostname'](hostname)
 

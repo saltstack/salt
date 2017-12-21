@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-The networking module for Debian based distros
+The networking module for Debian-based distros
 
 References:
 
@@ -46,7 +46,7 @@ __virtualname__ = 'ip'
 
 def __virtual__():
     '''
-    Confine this module to Debian based distros
+    Confine this module to Debian-based distros
     '''
     if __grains__['os_family'] == 'Debian':
         return __virtualname__
@@ -1389,7 +1389,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     for opt in ['up_cmds', 'pre_up_cmds', 'post_up_cmds',
                 'down_cmds', 'pre_down_cmds', 'post_down_cmds']:
         if opt in opts:
-            iface_data['inet'][opt] = opts[opt]
+            iface_data[def_addrfam][opt] = opts[opt]
 
     for addrfam in ['inet', 'inet6']:
         if 'addrfam' in iface_data[addrfam] and iface_data[addrfam]['addrfam'] == addrfam:
@@ -1562,7 +1562,7 @@ def _read_temp_ifaces(iface, data):
         return ''
 
     ifcfg = template.render({'name': iface, 'data': data})
-    # Return as a array so the difflib works
+    # Return as an array so the difflib works
     return [item + '\n' for item in ifcfg.split('\n')]
 
 
@@ -1616,7 +1616,7 @@ def _write_file_ifaces(iface, data, **settings):
         else:
             fout.write(ifcfg)
 
-    # Return as a array so the difflib works
+    # Return as an array so the difflib works
     return saved_ifcfg.split('\n')
 
 
@@ -1646,7 +1646,7 @@ def _write_file_ppp_ifaces(iface, data):
     with salt.utils.files.fopen(filename, 'w') as fout:
         fout.write(ifcfg)
 
-    # Return as a array so the difflib works
+    # Return as an array so the difflib works
     return filename
 
 
@@ -1703,7 +1703,6 @@ def build_interface(iface, iface_type, enabled, **settings):
         salt '*' ip.build_interface eth0 eth <settings>
     '''
 
-    iface = iface.lower()
     iface_type = iface_type.lower()
 
     if iface_type not in _IFACE_TYPES:
@@ -1773,7 +1772,6 @@ def build_routes(iface, **settings):
         salt '*' ip.build_routes eth0 <settings>
     '''
 
-    iface = iface.lower()
     opts = _parse_routes(iface, settings)
     try:
         template = JINJA.get_template('route_eth.jinja')

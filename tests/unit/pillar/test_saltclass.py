@@ -34,10 +34,17 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
                            }}
 
     def _runner(self, expected_ret):
-        full_ret = saltclass.ext_pillar(fake_minion_id, fake_pillar, fake_args)
-        parsed_ret = full_ret['__saltclass__']['classes']
+        full_ret = {}
+        parsed_ret = []
+        try:
+            full_ret = saltclass.ext_pillar(fake_minion_id, fake_pillar, fake_args)
+            parsed_ret = full_ret['__saltclass__']['classes']
+        # Fail the test if we hit our NoneType error
+        except TypeError as err:
+            self.fail(err)
+        # Else give the parsed content result
         self.assertListEqual(parsed_ret, expected_ret)
 
     def test_succeeds(self):
-        ret = ['default.users', 'default.motd', 'default']
+        ret = ['default.users', 'default.motd', 'default', 'roles.app']
         self._runner(ret)

@@ -103,7 +103,7 @@ Example output with no special settings in configuration files:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import pprint
 import textwrap
 
@@ -173,25 +173,25 @@ def _format_host(host, data):
         # Data in this format is from saltmod.function,
         # so it is always a 'change'
         nchanges = 1
-        hstrs.append((u'{0}    {1}{2[ENDC]}'
+        hstrs.append(('{0}    {1}{2[ENDC]}'
                       .format(hcolor, data, colors)))
         hcolor = colors['CYAN']  # Print the minion name in cyan
     if isinstance(data, list):
         # Errors have been detected, list them in RED!
         hcolor = colors['LIGHT_RED']
-        hstrs.append((u'    {0}Data failed to compile:{1[ENDC]}'
+        hstrs.append(('    {0}Data failed to compile:{1[ENDC]}'
                       .format(hcolor, colors)))
         for err in data:
             if strip_colors:
                 err = salt.output.strip_esc_sequence(sdecode(err))
-            hstrs.append((u'{0}----------\n    {1}{2[ENDC]}'
+            hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
                           .format(hcolor, err, colors)))
     if isinstance(data, dict):
         # Verify that the needed data is present
         data_tmp = {}
         for tname, info in six.iteritems(data):
             if isinstance(info, dict) and tname is not 'changes' and info and '__run_num__' not in info:
-                err = (u'The State execution failed to record the order '
+                err = ('The State execution failed to record the order '
                        'in which all states were executed. The state '
                        'return missing data is:')
                 hstrs.insert(0, pprint.pformat(info))
@@ -221,6 +221,8 @@ def _format_host(host, data):
             tcolor = colors['GREEN']
             orchestration = ret.get('__orchestration__', False)
             schanged, ctext = _format_changes(ret['changes'], orchestration)
+            if not ctext and 'pchanges' in ret:
+                schanged, ctext = _format_changes(ret['pchanges'], orchestration)
             nchanges += 1 if schanged else 0
 
             # Skip this state if it was successful & diff output was requested
@@ -269,19 +271,19 @@ def _format_host(host, data):
                     'exclude', __opts__.get('state_output_exclude', [])
                 )
                 if isinstance(exclude, six.string_types):
-                    exclude = str(exclude).split(',')
+                    exclude = six.text_type(exclude).split(',')
 
                 terse = clikwargs.get(
                     'terse', __opts__.get('state_output_terse', [])
                 )
                 if isinstance(terse, six.string_types):
-                    terse = str(terse).split(',')
+                    terse = six.text_type(terse).split(',')
 
-                if str(ret['result']) in terse:
+                if six.text_type(ret['result']) in terse:
                     msg = _format_terse(tcolor, comps, ret, colors, tabular)
                     hstrs.append(msg)
                     continue
-                if str(ret['result']) in exclude:
+                if six.text_type(ret['result']) in exclude:
                     continue
 
             elif any((
@@ -295,26 +297,26 @@ def _format_host(host, data):
                 continue
 
             state_lines = [
-                u'{tcolor}----------{colors[ENDC]}',
-                u'    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
-                u'    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
-                u'    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
-                u'    {tcolor} Comment: {comment}{colors[ENDC]}',
+                '{tcolor}----------{colors[ENDC]}',
+                '    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
+                '    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
+                '    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
+                '    {tcolor} Comment: {comment}{colors[ENDC]}',
             ]
             if __opts__.get('state_output_profile', True) and 'start_time' in ret:
                 state_lines.extend([
-                    u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
-                    u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}',
+                    '    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
+                    '    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}',
                 ])
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
                 state_lines.insert(
-                    3, u'    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
+                    3, '    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
             # be sure that ret['comment'] is utf-8 friendly
             try:
                 if not isinstance(ret['comment'], six.text_type):
                     if six.PY2:
-                        ret['comment'] = str(ret['comment']).decode('utf-8')
+                        ret['comment'] = six.text_type(ret['comment']).decode('utf-8')
                     else:
                         ret['comment'] = salt.utils.stringutils.to_str(ret['comment'])
             except UnicodeDecodeError:
@@ -323,19 +325,19 @@ def _format_host(host, data):
             try:
                 comment = sdecode(ret['comment'])
                 comment = comment.strip().replace(
-                        u'\n',
-                        u'\n' + u' ' * 14)
+                        '\n',
+                        '\n' + ' ' * 14)
             except AttributeError:  # Assume comment is a list
                 try:
                     comment = ret['comment'].join(' ').replace(
-                        u'\n',
-                        u'\n' + u' ' * 13)
+                        '\n',
+                        '\n' + ' ' * 13)
                 except AttributeError:
                     # Comment isn't a list either, just convert to string
-                    comment = str(ret['comment'])
+                    comment = six.text_type(ret['comment'])
                     comment = comment.strip().replace(
-                        u'\n',
-                        u'\n' + u' ' * 14)
+                        '\n',
+                        '\n' + ' ' * 14)
             # If there is a data attribute, append it to the comment
             if 'data' in ret:
                 if isinstance(ret['data'], list):
@@ -347,9 +349,9 @@ def _format_host(host, data):
                 else:
                     comment = '{0} {1}'.format(comment, ret['data'])
             for detail in ['start_time', 'duration']:
-                ret.setdefault(detail, u'')
+                ret.setdefault(detail, '')
             if ret['duration'] != '':
-                ret['duration'] = u'{0} ms'.format(ret['duration'])
+                ret['duration'] = '{0} ms'.format(ret['duration'])
             svars = {
                 'tcolor': tcolor,
                 'comps': comps,
@@ -359,8 +361,8 @@ def _format_host(host, data):
                 'colors': colors
             }
             hstrs.extend([sline.format(**svars) for sline in state_lines])
-            changes = u'     Changes:   ' + ctext
-            hstrs.append((u'{0}{1}{2[ENDC]}'
+            changes = '     Changes:   ' + ctext
+            hstrs.append(('{0}{1}{2[ENDC]}'
                           .format(tcolor, changes, colors)))
 
             if 'warnings' in ret:
@@ -368,32 +370,32 @@ def _format_host(host, data):
                 rcounts['warnings'] += 1
                 wrapper = textwrap.TextWrapper(
                     width=80,
-                    initial_indent=u' ' * 14,
-                    subsequent_indent=u' ' * 14
+                    initial_indent=' ' * 14,
+                    subsequent_indent=' ' * 14
                 )
                 hstrs.append(
-                    u'   {colors[LIGHT_RED]} Warnings: {0}{colors[ENDC]}'.format(
+                    '   {colors[LIGHT_RED]} Warnings: {0}{colors[ENDC]}'.format(
                         wrapper.fill('\n'.join(ret['warnings'])).lstrip(),
                         colors=colors
                     )
                 )
 
         # Append result counts to end of output
-        colorfmt = u'{0}{1}{2[ENDC]}'
-        rlabel = {True: u'Succeeded', False: u'Failed', None: u'Not Run', 'warnings': u'Warnings'}
-        count_max_len = max([len(str(x)) for x in six.itervalues(rcounts)] or [0])
+        colorfmt = '{0}{1}{2[ENDC]}'
+        rlabel = {True: 'Succeeded', False: 'Failed', None: 'Not Run', 'warnings': 'Warnings'}
+        count_max_len = max([len(six.text_type(x)) for x in six.itervalues(rcounts)] or [0])
         label_max_len = max([len(x) for x in six.itervalues(rlabel)] or [0])
         line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
         hstrs.append(
             colorfmt.format(
                 colors['CYAN'],
-                u'\nSummary for {0}\n{1}'.format(host, '-' * line_max_len),
+                '\nSummary for {0}\n{1}'.format(host, '-' * line_max_len),
                 colors
             )
         )
 
         def _counts(label, count):
-            return u'{0}: {1:>{2}}'.format(
+            return '{0}: {1:>{2}}'.format(
                 label,
                 count,
                 line_max_len - (len(label) + 2)
@@ -406,7 +408,7 @@ def _format_host(host, data):
             changestats.append(
                 colorfmt.format(
                     colors['LIGHT_YELLOW'],
-                    u'unchanged={0}'.format(rcounts.get(None, 0)),
+                    'unchanged={0}'.format(rcounts.get(None, 0)),
                     colors
                 )
             )
@@ -414,14 +416,14 @@ def _format_host(host, data):
             changestats.append(
                 colorfmt.format(
                     colors['GREEN'],
-                    u'changed={0}'.format(nchanges),
+                    'changed={0}'.format(nchanges),
                     colors
                 )
             )
         if changestats:
-            changestats = u' ({0})'.format(', '.join(changestats))
+            changestats = ' ({0})'.format(', '.join(changestats))
         else:
-            changestats = u''
+            changestats = ''
         hstrs.append(
             colorfmt.format(
                 colors['GREEN'],
@@ -452,7 +454,7 @@ def _format_host(host, data):
                     colors
                 )
             )
-        totals = u'{0}\nTotal states run: {1:>{2}}'.format('-' * line_max_len,
+        totals = '{0}\nTotal states run: {1:>{2}}'.format('-' * line_max_len,
                                                sum(six.itervalues(rcounts)) - rcounts.get('warnings', 0),
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
@@ -464,15 +466,15 @@ def _format_host(host, data):
             if sum_duration > 999:
                 sum_duration /= 1000
                 duration_unit = 's'
-            total_duration = u'Total run time: {0} {1}'.format(
+            total_duration = 'Total run time: {0} {1}'.format(
                 '{0:.3f}'.format(sum_duration).rjust(line_max_len - 5),
                 duration_unit)
             hstrs.append(colorfmt.format(colors['CYAN'], total_duration, colors))
 
     if strip_colors:
         host = salt.output.strip_esc_sequence(host)
-    hstrs.insert(0, (u'{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
-    return u'\n'.join(hstrs), nchanges > 0
+    hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
+    return '\n'.join(hstrs), nchanges > 0
 
 
 def _nested_changes(changes):
@@ -485,8 +487,8 @@ def _nested_changes(changes):
     # Pass the __opts__ dict. The loader will splat this modules __opts__ dict
     # anyway so have to restore it after the other outputter is done
     if __opts__['color']:
-        __opts__['color'] = u'CYAN'
-    ret = u'\n'
+        __opts__['color'] = 'CYAN'
+    ret = '\n'
     ret += salt.output.out_format(
             changes,
             'nested',
@@ -501,21 +503,21 @@ def _format_changes(changes, orchestration=False):
     Format the changes dict based on what the data is
     '''
     if not changes:
-        return False, u''
+        return False, ''
 
     if orchestration:
         return True, _nested_changes(changes)
 
     if not isinstance(changes, dict):
-        return True, u'Invalid Changes data: {0}'.format(changes)
+        return True, 'Invalid Changes data: {0}'.format(changes)
 
     ret = changes.get('ret')
     if ret is not None and changes.get('out') == 'highstate':
-        ctext = u''
+        ctext = ''
         changed = False
         for host, hostdata in six.iteritems(ret):
             s, c = _format_host(host, hostdata)
-            ctext += u'\n' + u'\n'.join((u' ' * 14 + l) for l in s.splitlines())
+            ctext += '\n' + '\n'.join((' ' * 14 + l) for l in s.splitlines())
             changed = changed or c
     else:
         changed = True
@@ -527,35 +529,35 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
     '''
     Terse formatting of a message.
     '''
-    result = u'Clean'
+    result = 'Clean'
     if ret['changes']:
-        result = u'Changed'
+        result = 'Changed'
     if ret['result'] is False:
-        result = u'Failed'
+        result = 'Failed'
     elif ret['result'] is None:
-        result = u'Differs'
+        result = 'Differs'
     if tabular is True:
         fmt_string = ''
         if 'warnings' in ret:
-            fmt_string += u'{c[LIGHT_RED]}Warnings:\n{w}{c[ENDC]}\n'.format(
+            fmt_string += '{c[LIGHT_RED]}Warnings:\n{w}{c[ENDC]}\n'.format(
                 c=colors, w='\n'.join(ret['warnings'])
             )
-        fmt_string += u'{0}'
+        fmt_string += '{0}'
         if __opts__.get('state_output_profile', True) and 'start_time' in ret:
-            fmt_string += u'{6[start_time]!s} [{6[duration]!s:>7} ms] '
-        fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
+            fmt_string += '{6[start_time]!s} [{6[duration]!s:>7} ms] '
+        fmt_string += '{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, six.string_types):
         fmt_string = tabular
     else:
         fmt_string = ''
         if 'warnings' in ret:
-            fmt_string += u'{c[LIGHT_RED]}Warnings:\n{w}{c[ENDC]}'.format(
+            fmt_string += '{c[LIGHT_RED]}Warnings:\n{w}{c[ENDC]}'.format(
                 c=colors, w='\n'.join(ret['warnings'])
             )
-        fmt_string += u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
+        fmt_string += ' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
         if __opts__.get('state_output_profile', True) and 'start_time' in ret:
-            fmt_string += u' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
-        fmt_string += u'{5}'
+            fmt_string += ' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
+        fmt_string += '{5}'
 
     msg = fmt_string.format(tcolor,
                             comps[2],

@@ -33,6 +33,7 @@ from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
 # Import 3rd-party libs
 from salt.ext import six
+import salt.utils.platform
 try:
     from tests.support.ext import console
     WIDTH, HEIGHT = console.getTerminalSize()
@@ -384,6 +385,7 @@ class SaltTestingParser(optparse.OptionParser):
         if self.xml_output_dir is not None and self.options.xml_out:
             if not os.path.isdir(self.xml_output_dir):
                 os.makedirs(self.xml_output_dir)
+            os.environ['TESTS_XML_OUTPUT_DIR'] = self.xml_output_dir
             print(
                 ' * Generated unit test XML reports will be stored '
                 'at {0!r}'.format(self.xml_output_dir)
@@ -455,6 +457,10 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.INFO
             else:
                 logging_level = logging.ERROR
+            if salt.utils.platform.is_windows():
+                os.environ['TESTS_LOG_LEVEL'] = six.binary_type(self.options.verbosity)
+            else:
+                os.environ['TESTS_LOG_LEVEL'] = six.text_type(self.options.verbosity)
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
             log.info('Runtests logging has been setup')

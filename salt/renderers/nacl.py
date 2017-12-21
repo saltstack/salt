@@ -53,12 +53,11 @@ data like so:
 '''
 
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.stringio
 import salt.syspaths
 

@@ -7,7 +7,7 @@ Wrapper for rsync
 This data can also be passed into :ref:`pillar <pillar-walk-through>`.
 Options passed into opts will overwrite options passed into pillar.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import python libs
 import errno
@@ -184,7 +184,7 @@ def rsync(src,
             else:
                 raise CommandExecutionError('{0} does not exist'.format(src))
         else:
-            tmp_src = salt.utils.mkstemp()
+            tmp_src = salt.utils.files.mkstemp()
             file_src = __salt__['cp.get_file'](_src,
                                                tmp_src,
                                                saltenv)

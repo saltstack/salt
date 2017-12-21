@@ -10,7 +10,7 @@ Runner to interact with DNS server and create/delete/update DNS records
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os

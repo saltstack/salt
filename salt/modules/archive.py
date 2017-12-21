@@ -513,16 +513,16 @@ def tar(options, tarfile, sources=None, dest=None,
 
         .. code-block:: bash
 
-            salt '*' archive.tar -cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja
+            salt '*' archive.tar cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja
 
     CLI Examples:
 
     .. code-block:: bash
 
         # Create a tarfile
-        salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
+        salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
         # Create a tarfile using globbing (2017.7.0 and later)
-        salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 '/tmp/file_*'
+        salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 '/tmp/file_*'
         # Unpack a tarfile
         salt '*' archive.tar xf foo.tar dest=/target/directory
     '''
@@ -533,14 +533,14 @@ def tar(options, tarfile, sources=None, dest=None,
         raise SaltInvocationError('Tar options can not be empty')
 
     cmd = ['tar']
-    if dest:
-        cmd.extend(['-C', '{0}'.format(dest)])
-
     if options:
         cmd.extend(options.split())
 
     cmd.extend(['{0}'.format(tarfile)])
     cmd.extend(_expand_sources(sources))
+    if dest:
+        cmd.extend(['-C', '{0}'.format(dest)])
+
     return __salt__['cmd.run'](cmd,
                                cwd=cwd,
                                template=template,
@@ -797,7 +797,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
                     else:
                         rel_root = cwd if cwd is not None else '/'
                     if os.path.isdir(src):
-                        for dir_name, sub_dirs, files in os.walk(src):
+                        for dir_name, sub_dirs, files in salt.utils.path.os_walk(src):
                             if cwd and dir_name.startswith(cwd):
                                 arc_dir = os.path.relpath(dir_name, cwd)
                             else:

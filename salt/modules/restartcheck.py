@@ -20,6 +20,7 @@ import sys
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.path
 
 HAS_PSUTIL = False
 try:
@@ -158,7 +159,7 @@ def _deleted_files():
                     if os.path.isfile(readlink):
                         filenames.append(readlink)
                     elif os.path.isdir(readlink) and readlink != '/':
-                        for root, dummy_dirs, files in os.walk(readlink, followlinks=True):
+                        for root, dummy_dirs, files in salt.utils.path.os_walk(readlink, followlinks=True):
                             for name in files:
                                 filenames.append(os.path.join(root, name))
 

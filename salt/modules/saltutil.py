@@ -46,12 +46,13 @@ import salt.payload
 import salt.runner
 import salt.state
 import salt.transport
-import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.minion
+import salt.utils.path
 import salt.utils.process
 import salt.utils.url
 import salt.utils.versions
@@ -474,7 +475,7 @@ def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None, extmod_bla
     '''
     .. versionadded:: 0.10.0
 
-    Sync beacons from ``salt://_returners`` to the minion
+    Sync returners from ``salt://_returners`` to the minion
 
     saltenv
         The fileserver environment from which to sync. To sync from more than
@@ -585,6 +586,44 @@ def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blac
     return ret
 
 
+def sync_thorium(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Sync Thorium modules from ``salt://_thorium`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for engines to sync. If no top files are
+        found, then the ``base`` environment will be synced.
+
+    refresh: ``True``
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new Thorium modules are synced.
+        Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist
+        comma-seperated list of modules to sync
+
+    extmod_blacklist
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_thorium
+        salt '*' saltutil.sync_thorium saltenv=base,dev
+    '''
+    ret = _sync('thorium', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     Sync outputters from ``salt://_output`` to the minion
@@ -621,14 +660,14 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         refresh_modules()
     return ret
 
-sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
+sync_outputters = salt.utils.functools.alias_function(sync_output, 'sync_outputters')
 
 
 def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utility modules from ``salt://_cloud`` to the minion
+    Sync cloud modules from ``salt://_cloud`` to the minion
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -715,7 +754,7 @@ def list_extmods():
     mod_types = os.listdir(ext_dir)
     for mod_type in mod_types:
         ret[mod_type] = set()
-        for _, _, files in os.walk(os.path.join(ext_dir, mod_type)):
+        for _, _, files in salt.utils.path.os_walk(os.path.join(ext_dir, mod_type)):
             for fh_ in files:
                 ret[mod_type].add(fh_.split('.')[0])
         ret[mod_type] = list(ret[mod_type])
@@ -864,6 +903,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     ret['log_handlers'] = sync_log_handlers(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['engines'] = sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['thorium'] = sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
     if __opts__['file_client'] == 'local':
         ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
@@ -907,7 +947,7 @@ def refresh_pillar():
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
 
-pillar_refresh = salt.utils.alias_function(refresh_pillar, 'pillar_refresh')
+pillar_refresh = salt.utils.functools.alias_function(refresh_pillar, 'pillar_refresh')
 
 
 def refresh_modules(async=True):
@@ -988,7 +1028,7 @@ def clear_cache():
 
         salt '*' saltutil.clear_cache
     '''
-    for root, dirs, files in salt.utils.safe_walk(__opts__['cachedir'], followlinks=False):
+    for root, dirs, files in salt.utils.files.safe_walk(__opts__['cachedir'], followlinks=False):
         for name in files:
             try:
                 os.remove(os.path.join(root, name))
@@ -1014,7 +1054,7 @@ def clear_job_cache(hours=24):
         salt '*' saltutil.clear_job_cache hours=12
     '''
     threshold = time.time() - hours * 3600
-    for root, dirs, files in salt.utils.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
+    for root, dirs, files in salt.utils.files.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
                                                   followlinks=False):
         for name in dirs:
             try:

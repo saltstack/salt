@@ -86,7 +86,7 @@ To override individual configuration items, append
     implmentation's documentation to determine how to adjust this limit.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import python libs
@@ -148,10 +148,10 @@ def _verify_options(options):
 
     for opt_name, opt in bitwise_args:
         if not hasattr(syslog, opt):
-            log.error('syslog has no attribute {0}'.format(opt))
+            log.error('syslog has no attribute %s', opt)
             return False
         if not isinstance(getattr(syslog, opt), int):
-            log.error('{0} is not a valid syslog {1}'.format(opt, opt_name))
+            log.error('%s is not a valid syslog %s', opt, opt_name)
             return False
 
     # Sanity check tag

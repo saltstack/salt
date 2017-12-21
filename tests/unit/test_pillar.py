@@ -55,7 +55,7 @@ class PillarTestCase(TestCase):
                 'os': 'Ubuntu',
             }
             pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'dev')
-            self.assertEqual(pillar.opts['environment'], 'dev')
+            self.assertEqual(pillar.opts['saltenv'], 'dev')
             self.assertEqual(pillar.opts['pillarenv'], 'dev')
 
     def test_ext_pillar_no_extra_minion_data_val_dict(self):
@@ -416,7 +416,7 @@ class PillarTestCase(TestCase):
                 'state_top': '',
                 'pillar_roots': [],
                 'extension_modules': '',
-                'environment': 'base',
+                'saltenv': 'base',
                 'file_roots': [],
             }
             grains = {
@@ -439,7 +439,7 @@ class PillarTestCase(TestCase):
     def _setup_test_topfile_mocks(self, Matcher, get_file_client,
                                   nodegroup_order, glob_order):
         # Write a simple topfile and two pillar state files
-        self.top_file = tempfile.NamedTemporaryFile(dir=TMP)
+        self.top_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         s = '''
 base:
     group:
@@ -456,19 +456,19 @@ base:
 '''.format(nodegroup_order=nodegroup_order, glob_order=glob_order)
         self.top_file.write(salt.utils.stringutils.to_bytes(s))
         self.top_file.flush()
-        self.ssh_file = tempfile.NamedTemporaryFile(dir=TMP)
+        self.ssh_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         self.ssh_file.write(b'''
 ssh:
     foo
 ''')
         self.ssh_file.flush()
-        self.ssh_minion_file = tempfile.NamedTemporaryFile(dir=TMP)
+        self.ssh_minion_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         self.ssh_minion_file.write(b'''
 ssh:
     bar
 ''')
         self.ssh_minion_file.flush()
-        self.generic_file = tempfile.NamedTemporaryFile(dir=TMP)
+        self.generic_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         self.generic_file.write(b'''
 generic:
     key1:
@@ -478,7 +478,7 @@ generic:
         sub_key1: []
 ''')
         self.generic_file.flush()
-        self.generic_minion_file = tempfile.NamedTemporaryFile(dir=TMP)
+        self.generic_minion_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         self.generic_minion_file.write(b'''
 generic:
     key1:
@@ -507,7 +507,7 @@ generic:
         client.get_state.side_effect = get_state
 
     def _setup_test_include_mocks(self, Matcher, get_file_client):
-        self.top_file = top_file = tempfile.NamedTemporaryFile(dir=TMP)
+        self.top_file = top_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         top_file.write(b'''
 base:
     '*':
@@ -518,21 +518,21 @@ base:
         - test
 ''')
         top_file.flush()
-        self.init_sls = init_sls = tempfile.NamedTemporaryFile(dir=TMP)
+        self.init_sls = init_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         init_sls.write(b'''
 include:
    - test.sub1
    - test.sub2
 ''')
         init_sls.flush()
-        self.sub1_sls = sub1_sls = tempfile.NamedTemporaryFile(dir=TMP)
+        self.sub1_sls = sub1_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         sub1_sls.write(b'''
 p1:
    - value1_1
    - value1_2
 ''')
         sub1_sls.flush()
-        self.sub2_sls = sub2_sls = tempfile.NamedTemporaryFile(dir=TMP)
+        self.sub2_sls = sub2_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         sub2_sls.write(b'''
 p1:
    - value1_3
@@ -584,7 +584,7 @@ class RemotePillarTestCase(TestCase):
 
             salt.pillar.RemotePillar({}, self.grains, 'mocked-minion', 'dev')
         mock_get_extra_minion_data.assert_called_once_with(
-            {'environment': 'dev'})
+            {'saltenv': 'dev'})
 
     def test_multiple_keys_in_opts_added_to_pillar(self):
         opts = {
@@ -702,7 +702,7 @@ class AsyncRemotePillarTestCase(TestCase):
 
             salt.pillar.RemotePillar({}, self.grains, 'mocked-minion', 'dev')
         mock_get_extra_minion_data.assert_called_once_with(
-            {'environment': 'dev'})
+            {'saltenv': 'dev'})
 
     def test_pillar_send_extra_minion_data_from_config(self):
         opts = {

@@ -3,7 +3,7 @@
 Return data to local job cache
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import errno
@@ -20,6 +20,7 @@ import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.stringutils
 import salt.exceptions
 
 # Import 3rd-party libs
@@ -108,15 +109,13 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
 
     try:
         with salt.utils.files.fopen(os.path.join(jid_dir, 'jid'), 'wb+') as fn_:
-            if six.PY2:
-                fn_.write(jid)
-            else:
-                fn_.write(bytes(jid, 'utf-8'))
+            fn_.write(salt.utils.stringutils.to_bytes(jid))
         if nocache:
-            with salt.utils.files.fopen(os.path.join(jid_dir, 'nocache'), 'wb+') as fn_:
-                fn_.write(b'')
+            with salt.utils.files.fopen(os.path.join(jid_dir, 'nocache'), 'wb+'):
+                pass
     except IOError:
-        log.warning('Could not write out jid file for job {0}. Retrying.'.format(jid))
+        log.warning(
+            'Could not write out jid file for job %s. Retrying.', jid)
         time.sleep(0.1)
         return prep_jid(passed_jid=jid, nocache=nocache,
                         recurse_count=recurse_count+1)
@@ -146,16 +145,14 @@ def returner(load):
         if err.errno == errno.EEXIST:
             # Minion has already returned this jid and it should be dropped
             log.error(
-                'An extra return was detected from minion {0}, please verify '
-                'the minion, this could be a replay attack'.format(
-                    load['id']
-                )
+                'An extra return was detected from minion %s, please verify '
+                'the minion, this could be a replay attack', load['id']
             )
             return False
         elif err.errno == errno.ENOENT:
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
-                'that is not present in the local cache: {jid}'.format(**load)
+                '(%s) that is not present in the local cache', load['jid']
             )
             return False
         raise
@@ -280,8 +277,8 @@ def save_minions(jid, minions, syndic_id=None):
             serial.dump(minions, wfh)
     except IOError as exc:
         log.error(
-            'Failed to write minion list {0} to job cache file {1}: {2}'
-            .format(minions, minions_path, exc)
+            'Failed to write minion list %s to job cache file %s: %s',
+            minions, minions_path, exc
         )
 
 
@@ -294,9 +291,11 @@ def get_load(jid):
     if not os.path.exists(jid_dir) or not os.path.exists(load_fn):
         return {}
     serial = salt.payload.Serial(__opts__)
+    ret = {}
     with salt.utils.files.fopen(os.path.join(jid_dir, LOAD_P), 'rb') as rfh:
         ret = serial.load(rfh)
-
+    if ret is None:
+        ret = {}
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]
     minions_cache.extend(
         glob.glob(os.path.join(jid_dir, SYNDIC_MINIONS_P.format('*')))
@@ -349,7 +348,7 @@ def get_jid(jid):
                         with salt.utils.files.fopen(outp, 'rb') as rfh:
                             ret[fn_]['out'] = serial.load(rfh)
                 except Exception as exc:
-                    if 'Permission denied:' in str(exc):
+                    if 'Permission denied:' in six.text_type(exc):
                         raise
     return ret
 
@@ -457,9 +456,9 @@ def update_endtime(jid, time):
         if not os.path.exists(jid_dir):
             os.makedirs(jid_dir)
         with salt.utils.files.fopen(os.path.join(jid_dir, ENDTIME), 'w') as etfile:
-            etfile.write(time)
+            etfile.write(salt.utils.stringutils.to_str(time))
     except IOError as exc:
-        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+        log.warning('Could not write job invocation cache file: %s', exc)
 
 
 def get_endtime(jid):
@@ -473,7 +472,7 @@ def get_endtime(jid):
     if not os.path.exists(etpath):
         return False
     with salt.utils.files.fopen(etpath, 'r') as etfile:
-        endtime = etfile.read().strip('\n')
+        endtime = salt.utils.stringutils.to_unicode(etfile.read()).strip('\n')
     return endtime
 
 
@@ -502,7 +501,7 @@ def save_reg(data):
         with salt.utils.files.fopen(regfile, 'a') as fh_:
             msgpack.dump(data, fh_)
     except:
-        log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))
+        log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise
 
 
@@ -516,5 +515,5 @@ def load_reg():
         with salt.utils.files.fopen(regfile, 'r') as fh_:
             return msgpack.load(fh_)
     except:
-        log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))
+        log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise

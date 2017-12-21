@@ -29,7 +29,6 @@ import json
 import yaml
 # pylint: disable=no-name-in-module,import-error,redefined-builtin
 from salt.ext import six
-from salt.ext.six.moves import range
 from salt.ext.six.moves.urllib.error import HTTPError
 from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _urlopen
 # pylint: enable=no-name-in-module,import-error,redefined-builtin
@@ -38,9 +37,10 @@ from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _u
 import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
-import salt.utils
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.pkg
@@ -239,8 +239,8 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> fromrepo=unstable
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-    show_installed = salt.utils.is_true(kwargs.pop('show_installed', False))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
+    show_installed = salt.utils.data.is_true(kwargs.pop('show_installed', False))
     if 'repo' in kwargs:
         raise SaltInvocationError(
             'The \'repo\' argument is invalid, use \'fromrepo\' instead'
@@ -318,7 +318,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):
@@ -370,7 +370,7 @@ def refresh_db(cache_valid_time=0, failhard=False):
     '''
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
-    failhard = salt.utils.is_true(failhard)
+    failhard = salt.utils.data.is_true(failhard)
     ret = {}
     error_repos = list()
 
@@ -575,7 +575,7 @@ def install(name=None,
                        'new': '<new-version>'}}
     '''
     _refresh_db = False
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         _refresh_db = True
         if 'version' in kwargs and kwargs['version']:
             _refresh_db = False
@@ -819,7 +819,7 @@ def install(name=None,
 
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
-        ret = salt.utils.compare_dicts(old, new)
+        ret = salt.utils.data.compare_dicts(old, new)
 
         for pkgname in to_reinstall:
             if pkgname not in ret or pkgname in old:
@@ -878,10 +878,10 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     new = list_pkgs()
     new_removed = list_pkgs(removed=True)
 
-    changes = salt.utils.compare_dicts(old, new)
+    changes = salt.utils.data.compare_dicts(old, new)
     if action == 'purge':
         ret = {
-            'removed': salt.utils.compare_dicts(old_removed, new_removed),
+            'removed': salt.utils.data.compare_dicts(old_removed, new_removed),
             'installed': changes
         }
     else:
@@ -951,7 +951,7 @@ def autoremove(list_only=False, purge=False):
         __salt__['cmd.run'](cmd, python_shell=False)
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
-        return salt.utils.compare_dicts(old, new)
+        return salt.utils.data.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -1098,7 +1098,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         salt '*' pkg.upgrade
     '''
     cache_valid_time = kwargs.pop('cache_valid_time', 0)
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db(cache_valid_time)
 
     old = list_pkgs()
@@ -1130,7 +1130,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
                                      env=DPKG_ENV_VARS.copy())
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -1197,7 +1197,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         if not state:
             ret[target]['comment'] = ('Package {0} not currently held.'
                                       .format(target))
-        elif not salt.utils.is_true(state.get('hold', False)):
+        elif not salt.utils.data.is_true(state.get('hold', False)):
             if 'test' in __opts__ and __opts__['test']:
                 ret[target].update(result=None)
                 ret[target]['comment'] = ('Package {0} is set to be held.'
@@ -1271,7 +1271,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         if not state:
             ret[target]['comment'] = ('Package {0} does not have a state.'
                                       .format(target))
-        elif salt.utils.is_true(state.get('hold', False)):
+        elif salt.utils.data.is_true(state.get('hold', False)):
             if 'test' in __opts__ and __opts__['test']:
                 ret[target].update(result=None)
                 ret[target]['comment'] = ('Package {0} is set not to be '
@@ -1339,9 +1339,9 @@ def list_pkgs(versions_as_list=False,
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
-    removed = salt.utils.is_true(removed)
-    purge_desired = salt.utils.is_true(purge_desired)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
+    removed = salt.utils.data.is_true(removed)
+    purge_desired = salt.utils.data.is_true(purge_desired)
 
     if 'pkg.list_pkgs' in __context__:
         if removed:
@@ -1392,7 +1392,7 @@ def list_pkgs(versions_as_list=False,
                                                  version_num)
 
     # Check for virtual packages. We need dctrl-tools for this.
-    if not removed:
+    if not removed and not HAS_APT:
         try:
             virtpkgs_all = _get_virtual()
         except CommandExecutionError as cee:
@@ -1501,7 +1501,7 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
         salt '*' pkg.list_upgrades
     '''
     cache_valid_time = kwargs.pop('cache_valid_time', 0)
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db(cache_valid_time)
     return _get_upgradable(dist_upgrade, **kwargs)
 
@@ -1609,7 +1609,7 @@ def _consolidate_repo_sources(sources):
             combined_comps = set(repo.comps).union(set(combined.comps))
             consolidated[key].comps = list(combined_comps)
         else:
-            consolidated[key] = sourceslist.SourceEntry(_strip_uri(repo.line))
+            consolidated[key] = sourceslist.SourceEntry(salt.utils.pkg.deb.strip_uri(repo.line))
 
         if repo.file != base_file:
             delete_files.add(repo.file)
@@ -1717,7 +1717,7 @@ def list_repos():
         repo['dist'] = source.dist
         repo['type'] = source.type
         repo['uri'] = source.uri.rstrip('/')
-        repo['line'] = _strip_uri(source.line.strip())
+        repo['line'] = salt.utils.pkg.deb.strip_uri(source.line.strip())
         repo['architectures'] = getattr(source, 'architectures', [])
         repos.setdefault(source.uri, []).append(repo)
     return repos
@@ -2155,6 +2155,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
     key_text
         GPG key in string form to add to the APT GPG keyring
 
+        .. versionadded:: Oxygen
+
     consolidate : False
         If ``True``, will attempt to de-duplicate and consolidate sources
 
@@ -2386,7 +2388,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         kwargs['architectures'] = kwargs['architectures'].split(',')
 
     if 'disabled' in kwargs:
-        kwargs['disabled'] = salt.utils.is_true(kwargs['disabled'])
+        kwargs['disabled'] = salt.utils.data.is_true(kwargs['disabled'])
 
     kw_type = kwargs.get('type')
     kw_dist = kwargs.get('dist')
@@ -2474,18 +2476,6 @@ def file_dict(*packages):
     return __salt__['lowpkg.file_dict'](*packages)
 
 
-def _strip_uri(repo):
-    '''
-    Remove the trailing slash from the URI in a repo definition
-    '''
-    splits = repo.split()
-    for idx in range(len(splits)):
-        if any(splits[idx].startswith(x)
-               for x in ('http://', 'https://', 'ftp://')):
-            splits[idx] = splits[idx].rstrip('/')
-    return ' '.join(splits)
-
-
 def expand_repo_def(**kwargs):
     '''
     Take a repository definition and expand it to the full pkg repository dict
@@ -2501,7 +2491,7 @@ def expand_repo_def(**kwargs):
     _check_apt()
 
     sanitized = {}
-    repo = _strip_uri(kwargs['repo'])
+    repo = salt.utils.pkg.deb.strip_uri(kwargs['repo'])
     if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint', 'neon'):
         dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/', 1)

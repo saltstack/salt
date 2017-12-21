@@ -14,10 +14,10 @@ import fnmatch
 # Import salt libs
 import salt.minion
 import salt.fileclient
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.locales
+import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 import salt.crypt
@@ -50,7 +50,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
+        __opts__['saltenv'],
         pillar_override=pillar_override,
         pillarenv=pillarenv
     )
@@ -748,7 +748,7 @@ def stat_file(path, saltenv='base', octal=True):
     stat = _client().hash_and_stat_file(path, saltenv)[1]
     if stat is None:
         return stat
-    return salt.utils.st_mode_to_octal(stat[0]) if octal is True else stat[0]
+    return salt.utils.files.st_mode_to_octal(stat[0]) if octal is True else stat[0]
 
 
 def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
@@ -876,7 +876,7 @@ def push_dir(path, glob=None, upload_path=None):
         return push(path, upload_path=upload_path)
     else:
         filelist = []
-        for root, _, files in os.walk(path):
+        for root, _, files in salt.utils.path.os_walk(path):
             filelist += [os.path.join(root, tmpfile) for tmpfile in files]
         if glob is not None:
             filelist = [fi for fi in filelist if fnmatch.fnmatch(os.path.basename(fi), glob)]

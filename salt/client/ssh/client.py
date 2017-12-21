@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
 import logging
@@ -23,7 +23,7 @@ class SSHClient(object):
     .. versionadded:: 2015.5.0
     '''
     def __init__(self,
-                 c_path=os.path.join(syspaths.CONFIG_DIR, u'master'),
+                 c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
                  mopts=None,
                  disable_custom_roster=False):
         if mopts:
@@ -31,14 +31,14 @@ class SSHClient(object):
         else:
             if os.path.isdir(c_path):
                 log.warning(
-                    u'%s expects a file path not a directory path(%s) to '
-                    u'its \'c_path\' keyword argument',
+                    '%s expects a file path not a directory path(%s) to '
+                    'its \'c_path\' keyword argument',
                     self.__class__.__name__, c_path
                 )
             self.opts = salt.config.client_config(c_path)
 
         # Salt API should never offer a custom roster!
-        self.opts[u'__disable_custom_roster'] = disable_custom_roster
+        self.opts['__disable_custom_roster'] = disable_custom_roster
 
     def _prep_ssh(
             self,
@@ -46,30 +46,30 @@ class SSHClient(object):
             fun,
             arg=(),
             timeout=None,
-            tgt_type=u'glob',
+            tgt_type='glob',
             kwarg=None,
             **kwargs):
         '''
         Prepare the arguments
         '''
-        if u'expr_form' in kwargs:
+        if 'expr_form' in kwargs:
             salt.utils.versions.warn_until(
-                u'Fluorine',
-                u'The target type should be passed using the \'tgt_type\' '
-                u'argument instead of \'expr_form\'. Support for using '
-                u'\'expr_form\' will be removed in Salt Fluorine.'
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
             )
-            tgt_type = kwargs.pop(u'expr_form')
+            tgt_type = kwargs.pop('expr_form')
 
         opts = copy.deepcopy(self.opts)
         opts.update(kwargs)
         if timeout:
-            opts[u'timeout'] = timeout
+            opts['timeout'] = timeout
         arg = salt.utils.args.condition_input(arg, kwarg)
-        opts[u'argv'] = [fun] + arg
-        opts[u'selected_target_option'] = tgt_type
-        opts[u'tgt'] = tgt
-        opts[u'arg'] = arg
+        opts['argv'] = [fun] + arg
+        opts['selected_target_option'] = tgt_type
+        opts['tgt'] = tgt
+        opts['arg'] = arg
         return salt.client.ssh.SSH(opts)
 
     def cmd_iter(
@@ -78,8 +78,8 @@ class SSHClient(object):
             fun,
             arg=(),
             timeout=None,
-            tgt_type=u'glob',
-            ret=u'',
+            tgt_type='glob',
+            ret='',
             kwarg=None,
             **kwargs):
         '''
@@ -88,14 +88,14 @@ class SSHClient(object):
 
         .. versionadded:: 2015.5.0
         '''
-        if u'expr_form' in kwargs:
+        if 'expr_form' in kwargs:
             salt.utils.versions.warn_until(
-                u'Fluorine',
-                u'The target type should be passed using the \'tgt_type\' '
-                u'argument instead of \'expr_form\'. Support for using '
-                u'\'expr_form\' will be removed in Salt Fluorine.'
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
             )
-            tgt_type = kwargs.pop(u'expr_form')
+            tgt_type = kwargs.pop('expr_form')
 
         ssh = self._prep_ssh(
                 tgt,
@@ -105,7 +105,7 @@ class SSHClient(object):
                 tgt_type,
                 kwarg,
                 **kwargs)
-        for ret in ssh.run_iter(jid=kwargs.get(u'jid', None)):
+        for ret in ssh.run_iter(jid=kwargs.get('jid', None)):
             yield ret
 
     def cmd(self,
@@ -113,7 +113,7 @@ class SSHClient(object):
             fun,
             arg=(),
             timeout=None,
-            tgt_type=u'glob',
+            tgt_type='glob',
             kwarg=None,
             **kwargs):
         '''
@@ -122,14 +122,14 @@ class SSHClient(object):
 
         .. versionadded:: 2015.5.0
         '''
-        if u'expr_form' in kwargs:
+        if 'expr_form' in kwargs:
             salt.utils.versions.warn_until(
-                u'Fluorine',
-                u'The target type should be passed using the \'tgt_type\' '
-                u'argument instead of \'expr_form\'. Support for using '
-                u'\'expr_form\' will be removed in Salt Fluorine.'
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
             )
-            tgt_type = kwargs.pop(u'expr_form')
+            tgt_type = kwargs.pop('expr_form')
 
         ssh = self._prep_ssh(
                 tgt,
@@ -140,7 +140,7 @@ class SSHClient(object):
                 kwarg,
                 **kwargs)
         final = {}
-        for ret in ssh.run_iter(jid=kwargs.get(u'jid', None)):
+        for ret in ssh.run_iter(jid=kwargs.get('jid', None)):
             final.update(ret)
         return final
 
@@ -166,16 +166,16 @@ class SSHClient(object):
 
         kwargs = copy.deepcopy(low)
 
-        for ignore in [u'tgt', u'fun', u'arg', u'timeout', u'tgt_type', u'kwarg']:
+        for ignore in ['tgt', 'fun', 'arg', 'timeout', 'tgt_type', 'kwarg']:
             if ignore in kwargs:
                 del kwargs[ignore]
 
-        return self.cmd(low[u'tgt'],
-                        low[u'fun'],
-                        low.get(u'arg', []),
-                        low.get(u'timeout'),
-                        low.get(u'tgt_type'),
-                        low.get(u'kwarg'),
+        return self.cmd(low['tgt'],
+                        low['fun'],
+                        low.get('arg', []),
+                        low.get('timeout'),
+                        low.get('tgt_type'),
+                        low.get('kwarg'),
                         **kwargs)
 
     def cmd_async(self, low, timeout=None):
@@ -204,8 +204,8 @@ class SSHClient(object):
             fun,
             arg=(),
             timeout=None,
-            tgt_type=u'glob',
-            ret=u'',
+            tgt_type='glob',
+            ret='',
             kwarg=None,
             sub=3,
             **kwargs):
@@ -226,24 +226,24 @@ class SSHClient(object):
 
         .. versionadded:: 2017.7.0
         '''
-        if u'expr_form' in kwargs:
+        if 'expr_form' in kwargs:
             salt.utils.versions.warn_until(
-                u'Fluorine',
-                u'The target type should be passed using the \'tgt_type\' '
-                u'argument instead of \'expr_form\'. Support for using '
-                u'\'expr_form\' will be removed in Salt Fluorine.'
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
             )
-            tgt_type = kwargs.pop(u'expr_form')
+            tgt_type = kwargs.pop('expr_form')
         minion_ret = self.cmd(tgt,
-                              u'sys.list_functions',
+                              'sys.list_functions',
                               tgt_type=tgt_type,
                               **kwargs)
         minions = list(minion_ret)
         random.shuffle(minions)
         f_tgt = []
         for minion in minions:
-            if fun in minion_ret[minion][u'return']:
+            if fun in minion_ret[minion]['return']:
                 f_tgt.append(minion)
             if len(f_tgt) >= sub:
                 break
-        return self.cmd_iter(f_tgt, fun, arg, timeout, tgt_type=u'list', ret=ret, kwarg=kwarg, **kwargs)
+        return self.cmd_iter(f_tgt, fun, arg, timeout, tgt_type='list', ret=ret, kwarg=kwarg, **kwargs)

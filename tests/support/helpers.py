@@ -428,6 +428,7 @@ class ForceImportErrorOn(object):
                 self.__module_names[modname] = set(entry[1:])
             else:
                 self.__module_names[entry] = None
+        self.__original_import = builtins.__import__
         self.patcher = patch.object(builtins, '__import__', self.__fake_import__)
 
     def patch_import_function(self):
@@ -436,7 +437,12 @@ class ForceImportErrorOn(object):
     def restore_import_funtion(self):
         self.patcher.stop()
 
-    def __fake_import__(self, name, globals_, locals_, fromlist, level=-1):
+    def __fake_import__(self,
+                        name,
+                        globals_={} if six.PY2 else None,
+                        locals_={} if six.PY2 else None,
+                        fromlist=[] if six.PY2 else (),
+                        level=-1 if six.PY2 else 0):
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
@@ -452,7 +458,6 @@ class ForceImportErrorOn(object):
                         )
                     )
                 )
-
         return self.__original_import(name, globals_, locals_, fromlist, level)
 
     def __enter__(self):

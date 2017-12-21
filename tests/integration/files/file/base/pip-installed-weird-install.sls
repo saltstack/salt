@@ -29,7 +29,7 @@ setup_test_virtualenv:
 
 carbon-weird-setup:
   pip.installed:
-    - name: carbon
+    - name: 'carbon < 1.1'
     - no_deps: True
     - bin_env: {{ virtualenv_test }}
     - onchanges:

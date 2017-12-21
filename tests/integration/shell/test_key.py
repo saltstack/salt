@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import tempfile
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -13,6 +14,7 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import 3rd-party libs
 import yaml
+from salt.ext import six
 
 # Import Salt libs
 import salt.utils.files
@@ -41,7 +43,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_call('user.list_users')
-            self.assertIn(USERA, str(user_list))
+            self.assertIn(USERA, six.text_type(user_list))
         except AssertionError:
             self.run_call('user.delete {0} remove=True'.format(USERA))
             self.skipTest(
@@ -56,6 +58,36 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         for user in user_list:
             if USERA in user:
                 self.run_call('user.delete {0} remove=True'.format(USERA))
+
+    def test_remove_key(self):
+        '''
+        test salt-key -d usage
+        '''
+        min_name = 'minibar'
+        pki_dir = self.master_opts['pki_dir']
+        key = os.path.join(pki_dir, 'minions', min_name)
+
+        with salt.utils.files.fopen(key, 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     -----BEGIN PUBLIC KEY-----
+                     MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoqIZDtcQtqUNs0wC7qQz
+                     JwFhXAVNT5C8M8zhI+pFtF/63KoN5k1WwAqP2j3LquTG68WpxcBwLtKfd7FVA/Kr
+                     OF3kXDWFnDi+HDchW2lJObgfzLckWNRFaF8SBvFM2dys3CGSgCV0S/qxnRAjrJQb
+                     B3uQwtZ64ncJAlkYpArv3GwsfRJ5UUQnYPDEJwGzMskZ0pHd60WwM1gMlfYmNX5O
+                     RBEjybyNpYDzpda6e6Ypsn6ePGLkP/tuwUf+q9wpbRE3ZwqERC2XRPux+HX2rGP+
+                     mkzpmuHkyi2wV33A9pDfMgRHdln2CLX0KgfRGixUQhW1o+Kmfv2rq4sGwpCgLbTh
+                     NwIDAQAB
+                     -----END PUBLIC KEY-----
+                     '''))
+
+        check_key = self.run_key('-p {0}'.format(min_name))
+        self.assertIn('Accepted Keys:', check_key)
+        self.assertIn('minibar:  -----BEGIN PUBLIC KEY-----', check_key)
+
+        remove_key = self.run_key('-d {0} -y'.format(min_name))
+
+        check_key = self.run_key('-p {0}'.format(min_name))
+        self.assertEqual([], check_key)
 
     def test_list_accepted_args(self):
         '''

@@ -188,6 +188,7 @@ state modules
     openstack_config
     openvswitch_bridge
     openvswitch_port
+    opsgenie
     pagerduty
     pagerduty_escalation_policy
     pagerduty_schedule
@@ -267,6 +268,7 @@ state modules
     tuned
     uptime
     user
+    vagrant
     vault
     vbox_guest
     victorops

@@ -20,7 +20,7 @@ To use the Zabbix returner, append '--return zabbix' to the salt command. ex:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -56,7 +56,7 @@ def zbx():
 
 
 def zabbix_send(key, host, output):
-    with salt.utils.fopen(zbx()['zabbix_config'], 'r') as file_handle:
+    with salt.utils.files.fopen(zbx()['zabbix_config'], 'r') as file_handle:
         for line in file_handle:
             if "ServerActive" in line:
                 flag = "true"

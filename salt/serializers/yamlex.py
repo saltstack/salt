@@ -215,11 +215,11 @@ class Loader(BaseLoader):  # pylint: disable=W0232
 
             # !reset instruction applies on document only.
             # It tells to reset previous decoded value for this present key.
-            reset = key_node.tag == u'!reset'
+            reset = key_node.tag == '!reset'
 
             # even if !aggregate tag apply only to values and not keys
             # it's a reason to act as a such nazi.
-            if key_node.tag == u'!aggregate':
+            if key_node.tag == '!aggregate':
                 log.warning('!aggregate applies on values only, not on keys')
                 value_node.tag = key_node.tag
                 key_node.tag = self.resolve_sls_tag(key_node)[0]

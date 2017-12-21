@@ -398,7 +398,7 @@ def create_hosted_zone(Name, VPCId=None, VPCName=None, VPCRegion=None, CallerRef
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
-                retries -= 1
+                tries -= 1
                 continue
             log.error('Failed to create hosted zone {0}: {1}'.format(Name, str(e)))
             return []
@@ -448,7 +448,7 @@ def update_hosted_zone_comment(Id=None, Name=None, Comment=None, PrivateZone=Non
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
-                retries -= 1
+                tries -= 1
                 continue
             log.error('Failed to update comment on hosted zone {0}: {1}'.format(
                       Name or Id, str(e)))
@@ -547,7 +547,7 @@ def associate_vpc_with_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
-                retries -= 1
+                tries -= 1
                 continue
             log.error('Failed to associate VPC {0} with hosted zone {1}: {2}'.format(
                       VPCName or VPCId, Name or HostedZoneId, str(e)))
@@ -639,7 +639,7 @@ def diassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
-                retries -= 1
+                tries -= 1
                 continue
             log.error('Failed to associate VPC {0} with hosted zone {1}: {2}'.format(
                       VPCName or VPCId, Name or HostedZoneId, str(e)))
@@ -877,7 +877,7 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
             if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
-                retries -= 1
+                tries -= 1
                 continue
             log.error('Failed to apply requested changes to the hosted zone {0}: {1}'.format(
                     Name or HostedZoneId, str(e)))
