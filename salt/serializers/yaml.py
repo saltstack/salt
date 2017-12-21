@@ -9,7 +9,7 @@
     It also use C bindings if they are available.
 '''
 
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 
 import yaml
