@@ -173,6 +173,7 @@ TF_ROSTER_ATTRS = {'host': 's',
                    'cmd_umask': 'i'}
 MINION_ID = '_ID'
 
+
 def _handle_libvirt_resource(resource):
     '''
     Handles libvirt resources.
@@ -193,7 +194,7 @@ def _handle_libvirt_resource(resource):
             if addr:
                 ret['host'] = addr
                 return ret
-        log.warning("terraform: No adress for resource '{}' in state".format(name))
+        log.warning("terraform: No adress for resource '%s' in state", name)
     return None
 
 
@@ -214,7 +215,7 @@ def _handle_aws_resource(resource):
         ret['host'] = addr
         return ret
     else:
-        log.warning("terraform: No adress for resource '{}' in state".format(name))
+        log.warning("terraform: No adress for resource '%s' in state", name)
     return None
 
 
@@ -239,13 +240,16 @@ def _add_ssh_key(ret):
 
 
 def _cast_output_to_type(value, typ):
+    '''cast the value depending on the terraform type'''
     if typ == 'b':
         return bool(value)
     if typ == 'i':
         return int(value)
     return value
 
+
 def _parse_roster_output_vars(global_settings, resource_settings, module):
+    '''Parse the output vars from terraform'''
     outputs = module.get('outputs', [])
     for output_name, output in salt.ext.six.iteritems(outputs):
         if not output_name.startswith(TF_OUTPUT_PREFIX):
@@ -262,7 +266,8 @@ def _parse_roster_output_vars(global_settings, resource_settings, module):
             if attr in TF_ROSTER_ATTRS.keys():
                 if resource_name not in resource_settings:
                     resource_settings[resource_name] = {}
-                resource_settings[resource_name][attr] = _cast_output_to_type(output.get('value'), TF_ROSTER_ATTRS[attr])
+                resource_settings[resource_name][attr] = _cast_output_to_type(output.get('value'),
+                                                                              TF_ROSTER_ATTRS[attr])
 
 
 def _parse_state_file(state_file_path='terraform.tfstate'):
@@ -299,7 +304,7 @@ def _parse_state_file(state_file_path='terraform.tfstate'):
                 continue
 
             if MINION_ID in roster_entry:
-                del(roster_entry[MINION_ID])
+                del roster_entry[MINION_ID]
             _add_ssh_key(roster_entry)
             # override values for this resource (salt.roster.VAR.RESOURCE)
             if resource_name in resource_settings:
@@ -320,16 +325,16 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         roster_file = os.path.abspath(__opts__['roster_file'])
 
     if not os.path.isfile(roster_file):
-        log.error("Can't find terraform state file '{0}'".format(roster_file))
+        log.error("Can't find terraform state file '%s'", roster_file)
         return {}
 
-    log.debug('terraform roster: using {0} state file'.format(roster_file))
+    log.debug('terraform roster: using %s state file', roster_file)
 
     if not roster_file.endswith('.tfstate'):
         log.error("Terraform roster can only be used with terraform state files")
         return {}
 
     raw = _parse_state_file(roster_file)
-    log.debug('{0} hosts in terraform state file'.format(len(raw)))
+    log.debug('%s hosts in terraform state file', len(raw))
     rmatcher = RosterMatcher(raw, tgt, tgt_type, 'ipv4', opts=__opts__)
     return rmatcher.targets()
