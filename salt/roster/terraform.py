@@ -270,7 +270,7 @@ def _parse_state_file(state_file_path='terraform.tfstate'):
     Parses the terraform state file passing different resource types to the right handler
     '''
     ret = {}
-    with salt.utils.fopen(state_file_path, 'r') as fh_:
+    with salt.utils.files.fopen(state_file_path, 'r') as fh_:
         tfstate = json.load(fh_)
 
     modules = tfstate.get('modules')
