@@ -7,12 +7,13 @@ systems that cannot or should not host a minion agent.
 '''
 from __future__ import absolute_import
 
+import logging
+import os
+
 # Import salt libs
 import salt.loader
 import salt.syspaths
 
-import os
-import logging
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
@@ -104,9 +105,9 @@ class Roster(object):
             try:
                 targets.update(self.rosters[f_str](tgt, tgt_type))
             except salt.exceptions.SaltRenderError as exc:
-                log.error('Unable to render roster file: {0}'.format(exc))
+                log.error('Unable to render roster file: %s', exc)
             except IOError as exc:
-                log.error("Can't access roster for backend {0}: {1}".format(back, exc))
+                log.error("Can't access roster for backend %s: %s", back, exc)
 
-        log.debug('Matched minions: {0}'.format(targets))
+        log.debug('Matched minions: %s', targets)
         return targets
