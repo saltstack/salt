@@ -5,7 +5,7 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python libs
-from __future__ import absolute_import, with_statement, unicode_literals
+from __future__ import absolute_import, with_statement, print_function, unicode_literals
 import copy
 import ctypes
 import os
