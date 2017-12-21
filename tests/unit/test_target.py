@@ -15,7 +15,7 @@ import salt.utils.minions
 import salt.config
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from salttesting import TestCase, skipIf
 
 import logging
 
