@@ -43,7 +43,6 @@ from ctypes.util import find_library
 from salt.utils import get_group_list
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
-LIBPAM = CDLL(find_library('pam'))
 LIBC = CDLL(find_library('c'))
 
 CALLOC = LIBC.calloc
@@ -116,6 +115,7 @@ class PamConv(Structure):
 
 
 try:
+    LIBPAM = CDLL(find_library('pam'))
     PAM_START = LIBPAM.pam_start
     PAM_START.restype = c_int
     PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
