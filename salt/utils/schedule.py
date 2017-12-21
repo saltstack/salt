@@ -923,7 +923,8 @@ class Schedule(object):
 
             elif 'once' in data:
                 if data['_next_fire_time'] and \
-                        data['_next_fire_time'] != now and \
+                        data['_next_fire_time'] < now - self.opts['loop_interval'] and \
+                        data['_next_fire_time'] > now and \
                         not data['_splay']:
                     continue
 
@@ -939,7 +940,10 @@ class Schedule(object):
                         log.error('Date string could not be parsed: %s, %s',
                                   data['once'], once_fmt)
                         continue
-                    if data['_next_fire_time'] != now:
+                    # If _next_fire_time is less than now or greater
+                    # than now, continue.
+                    if data['_next_fire_time'] < now - self.opts['loop_interval'] and \
+                            data['_next_fire_time'] > now:
                         continue
 
             elif 'when' in data:
@@ -1007,7 +1011,7 @@ class Schedule(object):
 
                         if '_run' not in data:
                             # Prevent run of jobs from the past
-                            data['_run'] = bool(when >= now)
+                            data['_run'] = bool(when >= now - self.opts['loop_interval'])
 
                         if not data['_next_fire_time']:
                             data['_next_fire_time'] = when
@@ -1054,7 +1058,7 @@ class Schedule(object):
                             continue
                     when = int(time.mktime(when__.timetuple()))
 
-                    if when < now and \
+                    if when < now - self.opts['loop_interval'] and \
                             not data.get('_run', False) and \
                             not run and \
                             not data['_splay']:
@@ -1132,6 +1136,9 @@ class Schedule(object):
                 # and we should trigger the job run, then wait for the next one.
                 if seconds <= 0:
                     data['_next_fire_time'] = None
+                    run = True
+            elif 'once' in data:
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + self.opts['loop_interval']):
                     run = True
             elif seconds == 0:
                 run = True
