@@ -7,12 +7,14 @@
 from __future__ import absolute_import
 import random
 import string
+import os
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -147,6 +149,86 @@ class MacUserModuleTest(ModuleCase):
         except AssertionError:
             self.run_function('user.delete', [CHANGE_USER])
             raise
+
+    def test_mac_user_enable_auto_login(self):
+        '''
+        Tests mac_user functions that enable auto login
+        '''
+        # Make sure auto login is disabled before we start
+        if self.run_function('user.get_auto_login'):
+            self.skipTest('Auto login already enabled')
+
+        try:
+            # Does enable return True
+            self.assertTrue(
+                self.run_function('user.enable_auto_login',
+                                  ['Spongebob', 'Squarepants']))
+
+            # Did it set the user entry in the plist file
+            self.assertEqual(
+                self.run_function('user.get_auto_login'),
+                'Spongebob')
+
+            # Did it generate the `/etc/kcpassword` file
+            self.assertTrue(os.path.exists('/etc/kcpassword'))
+
+            # Are the contents of the file correct
+            test_data = b'.\xf8\'B\xa0\xd9\xad\x8b\xcd\xcdl'
+            with salt.utils.files.fopen('/etc/kcpassword', 'rb') as f:
+                file_data = f.read()
+            self.assertEqual(test_data, file_data)
+
+            # Does disable return True
+            self.assertTrue(self.run_function('user.disable_auto_login'))
+
+            # Does it remove the user entry in the plist file
+            self.assertFalse(self.run_function('user.get_auto_login'))
+
+            # Is the `/etc/kcpassword` file removed
+            self.assertFalse(os.path.exists('/etc/kcpassword'))
+
+        finally:
+            # Make sure auto_login is disabled
+            self.assertTrue(self.run_function('user.disable_auto_login'))
+
+            # Make sure autologin is disabled
+            if self.run_function('user.get_auto_login'):
+                raise Exception('Failed to disable auto login')
+
+    def test_mac_user_disable_auto_login(self):
+        '''
+        Tests mac_user functions that disable auto login
+        '''
+        # Make sure auto login is enabled before we start
+        # Is there an existing setting
+        if self.run_function('user.get_auto_login'):
+            self.skipTest('Auto login already enabled')
+
+        try:
+            # Enable auto login for the test
+            self.run_function('user.enable_auto_login',
+                              ['Spongebob', 'Squarepants'])
+
+            # Make sure auto login got set up
+            if not self.run_function('user.get_auto_login') == 'Spongebob':
+                raise Exception('Failed to enable auto login')
+
+            # Does disable return True
+            self.assertTrue(self.run_function('user.disable_auto_login'))
+
+            # Does it remove the user entry in the plist file
+            self.assertFalse(self.run_function('user.get_auto_login'))
+
+            # Is the `/etc/kcpassword` file removed
+            self.assertFalse(os.path.exists('/etc/kcpassword'))
+
+        finally:
+            # Make sure auto login is disabled
+            self.assertTrue(self.run_function('user.disable_auto_login'))
+
+            # Make sure auto login is disabled
+            if self.run_function('user.get_auto_login'):
+                raise Exception('Failed to disable auto login')
 
     def tearDown(self):
         '''

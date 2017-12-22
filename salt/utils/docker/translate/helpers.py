@@ -4,7 +4,7 @@ Functions to translate input in the docker CLI format to the format desired by
 by the API.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt libs
@@ -148,7 +148,7 @@ def validate_subnet(val):
 
 
 def translate_str(val):
-    return str(val) if not isinstance(val, six.string_types) else val
+    return six.text_type(val) if not isinstance(val, six.string_types) else val
 
 
 def translate_int(val):
@@ -183,10 +183,10 @@ def translate_command(val):
     elif isinstance(val, list):
         for idx in range(len(val)):
             if not isinstance(val[idx], six.string_types):
-                val[idx] = str(val[idx])
+                val[idx] = six.text_type(val[idx])
     else:
         # Make sure we have a string
-        val = str(val)
+        val = six.text_type(val)
     return val
 
 
@@ -199,7 +199,7 @@ def translate_bytes(val):
         val = int(val)
     except (TypeError, ValueError):
         if not isinstance(val, six.string_types):
-            val = str(val)
+            val = six.text_type(val)
     return val
 
 
@@ -215,10 +215,10 @@ def translate_stringlist(val):
         try:
             val = split(val)
         except AttributeError:
-            val = split(str(val))
+            val = split(six.text_type(val))
     for idx in range(len(val)):
         if not isinstance(val[idx], six.string_types):
-            val[idx] = str(val[idx])
+            val[idx] = six.text_type(val[idx])
     return val
 
 
@@ -300,9 +300,9 @@ def translate_labels(val):
                     key = item
                     val = ''
             if not isinstance(key, six.string_types):
-                key = str(key)
+                key = six.text_type(key)
             if not isinstance(val, six.string_types):
-                val = str(val)
+                val = six.text_type(val)
             new_val[key] = val
         val = new_val
     return val

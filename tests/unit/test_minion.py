@@ -178,3 +178,51 @@ class MinionTestCase(TestCase):
                 self.assertEqual(len(minion.jid_queue), process_count_max + 1)
             finally:
                 minion.destroy()
+
+    def test_beacons_before_connect(self):
+        '''
+        Tests that the 'beacons_before_connect' option causes the beacons to be initialized before connect.
+        '''
+        with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
+                patch('salt.minion.Minion.sync_connect_master', MagicMock(side_effect=RuntimeError('stop execution'))), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
+            mock_opts = copy.copy(salt.config.DEFAULT_MINION_OPTS)
+            mock_opts['beacons_before_connect'] = True
+            try:
+                minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
+
+                try:
+                    minion.tune_in(start=True)
+                except RuntimeError:
+                    pass
+
+                # Make sure beacons are initialized but the sheduler is not
+                self.assertTrue('beacons' in minion.periodic_callbacks)
+                self.assertTrue('schedule' not in minion.periodic_callbacks)
+            finally:
+                minion.destroy()
+
+    def test_scheduler_before_connect(self):
+        '''
+        Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
+        '''
+        with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
+                patch('salt.minion.Minion.sync_connect_master', MagicMock(side_effect=RuntimeError('stop execution'))), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
+            mock_opts = copy.copy(salt.config.DEFAULT_MINION_OPTS)
+            mock_opts['scheduler_before_connect'] = True
+            try:
+                minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
+
+                try:
+                    minion.tune_in(start=True)
+                except RuntimeError:
+                    pass
+
+                # Make sure the scheduler is initialized but the beacons are not
+                self.assertTrue('schedule' in minion.periodic_callbacks)
+                self.assertTrue('beacons' not in minion.periodic_callbacks)
+            finally:
+                minion.destroy()

@@ -207,7 +207,7 @@ def update():
         # Walk the cache directory searching for deletions
         blob_names = [blob.name for blob in blob_list]
         blob_set = set(blob_names)
-        for root, dirs, files in os.walk(path):
+        for root, dirs, files in salt.utils.path.os_walk(path):
             for f in files:
                 fname = os.path.join(root, f)
                 relpath = os.path.relpath(fname, path)

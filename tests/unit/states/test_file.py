@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from datetime import datetime
 import os
 import json
@@ -577,7 +577,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                              'file.copy': mock_cp,
                              'file.manage_file': mock_ex,
                              'cmd.run_all': mock_cmd_fail}):
-                comt = ('Must provide name to file.managed')
+                comt = ('Destination file name is required')
                 ret.update({'comment': comt, 'name': '', 'pchanges': {}})
                 self.assertDictEqual(filestate.managed(''), ret)
 
@@ -743,7 +743,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_check = MagicMock(return_value=(
             None,
             'The directory "{0}" will be changed'.format(name),
-            {'directory': 'new'}))
+            {name: {'directory': 'new'}}))
         mock_error = CommandExecutionError
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -801,16 +801,15 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                                  group=group),
                                              ret)
 
-                with patch.object(os.path, 'isfile', mock_f):
+                with patch.object(os.path, 'isdir', mock_f):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         if salt.utils.platform.is_windows():
                             comt = 'The directory "{0}" will be changed' \
                                    ''.format(name)
-                            p_chg = {'directory': 'new'}
                         else:
                             comt = ('The following files will be changed:\n{0}:'
                                     ' directory - new\n'.format(name))
-                            p_chg = {'/etc/grub.conf': {'directory': 'new'}}
+                        p_chg = {'/etc/grub.conf': {'directory': 'new'}}
                         ret.update({
                             'comment': comt,
                             'result': None,
