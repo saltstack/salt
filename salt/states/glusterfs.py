@@ -305,6 +305,8 @@ def add_volume_bricks(name, bricks):
 
 def op_version(name, version):
     '''
+    .. versionadded:: Fluorine
+
     Add brick(s) to an existing volume
 
     name
@@ -325,11 +327,20 @@ def op_version(name, version):
            'comment': '',
            'result': False}
 
-    current = __salt__['glusterfs.get_op_version'](name)
+    try:
+        current = int(__salt__['glusterfs.get_op_version'](name))
+    except TypeError:
+        ret['result'] = False
+        ret['comment'] = __salt__['glusterfs.get_op_version'](name)[1]
+        return ret
 
     if current == version:
         ret['comment'] = 'Glusterfs cluster.op-version for {0} already set to {1}'.format(name, version)
         ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'An attempt would be made to set the cluster.op-version for {0} to {1}.'.format(name, version)
+        ret['result'] = None
         return ret
 
     result = __salt__['glusterfs.set_op_version'](version)
@@ -346,6 +357,8 @@ def op_version(name, version):
 
 def max_op_version(name):
     '''
+    .. versionadded:: Fluorine
+
     Add brick(s) to an existing volume
 
     name
@@ -363,12 +376,27 @@ def max_op_version(name):
            'comment': '',
            'result': False}
 
-    current = int(__salt__['glusterfs.get_op_version'](name))
-    max_version = int(__salt__['glusterfs.get_max_op_version']())
+    try:
+        current = int(__salt__['glusterfs.get_op_version'](name))
+    except TypeError:
+        ret['result'] = False
+        ret['comment'] = __salt__['glusterfs.get_op_version'](name)[1]
+        return ret
+
+    try:
+        max_version = int(__salt__['glusterfs.get_max_op_version']())
+    except TypeError:
+        ret['result'] = False
+        ret['comment'] = __salt__['glusterfs.get_max_op_version']()[1]
+        return ret
 
     if current == max_version:
         ret['comment'] = 'The cluster.op-version is already set to the cluster.max-op-version of {0}'.format(current)
         ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'An attempt would be made to set the cluster.op-version to {0}.'.format(max_version)
+        ret['result'] = None
         return ret
 
     result = __salt__['glusterfs.set_op_version'](max_version)
