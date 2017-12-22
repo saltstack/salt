@@ -83,16 +83,16 @@ queries based on the internal schema of said version.
 # Import Python Libs
 from __future__ import absolute_import
 import logging
-import json
 import re
 import ssl
 
 # Import Salt Libs
+import salt.utils.json
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
-
-SSL_VERSION = 'ssl_version'
 
 SSL_VERSION = 'ssl_version'
 
@@ -728,7 +728,7 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
         if replication_datacenters:
             if isinstance(replication_datacenters, six.string_types):
                 try:
-                    replication_datacenter_map = json.loads(replication_datacenters)
+                    replication_datacenter_map = salt.utils.json.loads(replication_datacenters)
                     replication_map.update(**replication_datacenter_map)
                 except BaseException:  # pylint: disable=W0703
                     log.error("Could not load json replication_datacenters.")

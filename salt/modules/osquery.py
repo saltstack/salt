@@ -7,13 +7,13 @@ Support for OSQuery - https://osquery.io.
 from __future__ import absolute_import
 
 # Import python libs
-import json
+import logging
 
 # Import Salt libs
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -41,7 +41,7 @@ def _table_attrs(table):
     res = __salt__['cmd.run_all'](cmd)
     if res['retcode'] == 0:
         attrs = []
-        text = json.loads(res['stdout'])
+        text = salt.utils.json.loads(res['stdout'])
         for item in text:
             attrs.append(item['name'])
         return attrs
@@ -62,7 +62,7 @@ def _osquery(sql, format='json'):
         ret['result'] = False
         ret['error'] = res['stderr']
     else:
-        ret['data'] = json.loads(res['stdout'])
+        ret['data'] = salt.utils.json.loads(res['stdout'])
     return ret
 
 
