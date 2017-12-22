@@ -1879,7 +1879,7 @@ def start(name, resource_group=None, call=None):
     if call == 'function':
         raise SaltCloudSystemExit(
             'The start action must be called with -a or --action.'
-        )  
+        )
     if not compconn:
         compconn = get_conn()
     if resource_group is None:
