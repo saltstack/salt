@@ -369,7 +369,7 @@ def upgraded(name,
 
         if version:
             # If installed version and new version are the same
-            if salt.utils.compare_versions(
+            if salt.utils.versions.compare(
                     ver1=installed_version,
                     oper="==",
                     ver2=version):
@@ -383,7 +383,7 @@ def upgraded(name,
                                      ''.format(name, installed_version)
             else:
                 # If installed version is older than new version
-                if salt.utils.compare_versions(
+                if salt.utils.versions.compare(
                         ver1=installed_version, oper="<", ver2=version):
                     ret['pchanges'] = {
                         name: 'Version {0} will be upgraded to Version {1} '
@@ -429,6 +429,6 @@ def upgraded(name,
     # Get list of installed packages after 'chocolatey.install'
     post_install = __salt__['chocolatey.list'](local_only=True)
 
-    ret['changes'] = salt.utils.compare_dicts(pre_install, post_install)
+    ret['changes'] = salt.utils.data.compare_dicts(pre_install, post_install)
 
     return ret

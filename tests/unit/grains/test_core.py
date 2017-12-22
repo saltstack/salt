@@ -5,6 +5,7 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import logging
 import os
 
 # Import Salt Testing Libs
@@ -24,10 +25,16 @@ import salt.grains.core as core
 
 # Import 3rd-party libs
 from salt.ext import six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
+
+log = logging.getLogger(__name__)
 
 # Globals
-IPv4Address = salt.ext.ipaddress.IPv4Address
-IPv6Address = salt.ext.ipaddress.IPv6Address
+IPv4Address = ipaddress.IPv4Address
+IPv6Address = ipaddress.IPv6Address
 IP4_LOCAL = '127.0.0.1'
 IP4_ADD1 = '10.0.0.1'
 IP4_ADD2 = '10.0.0.2'
@@ -678,6 +685,26 @@ SwapTotal:       4789244 kB'''
 
         self.assertEqual(os_grains.get('mem_total'), 2023)
         self.assertEqual(os_grains.get('swap_total'), 400)
+
+    def test_docker_virtual(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        '''
+        with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
+            with patch.object(os.path,
+                              'isfile',
+                              MagicMock(side_effect=lambda x: True if x == '/proc/1/cgroup' else False)):
+                for cgroup_substr in (':/system.slice/docker', ':/docker/',
+                                       ':/docker-ce/'):
+                    cgroup_data = \
+                        '10:memory{0}a_long_sha256sum'.format(cgroup_substr)
+                    log.debug(
+                        'Testing Docker cgroup substring \'%s\'', cgroup_substr)
+                    with patch('salt.utils.fopen', mock_open(read_data=cgroup_data)):
+                        self.assertEqual(
+                            core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                            'Docker'
+                        )
 
     def _check_ipaddress(self, value, ip_v):
         '''

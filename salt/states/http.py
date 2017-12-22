@@ -132,8 +132,18 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
     Like query but, repeat and wait until match/match_type or status is fulfilled. State returns result from last
     query state in case of success or if no successful query was made within wait_for timeout.
 
+    name
+        The name of the query.
+
+    wait_for
+        Total time to wait for requests that succeed.
+
     request_interval
         Optional interval to delay requests by N seconds to reduce the number of requests sent.
+
+    .. note::
+
+        All other arguements are passed to the http.query state.
     '''
     starttime = time.time()
 
@@ -141,7 +151,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
         caught_exception = None
         ret = None
         try:
-            ret = query(name, wait_for=wait_for, **kwargs)
+            ret = query(name, **kwargs)
             if ret['result']:
                 return ret
         except Exception as exc:

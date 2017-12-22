@@ -7,9 +7,11 @@ Utility functions for state functions
 
 # Import Python Libs
 from __future__ import absolute_import
+import copy
 
 # Import Salt libs
 from salt.ext import six
+from salt.exceptions import CommandExecutionError
 import salt.state
 
 _empty = object()
@@ -215,3 +217,33 @@ def merge_subreturn(original_return, sub_return, subkey=None):
         original_return['pchanges'][subkey] = sub_return['pchanges']
 
     return original_return
+
+
+def get_sls_opts(opts, **kwargs):
+    '''
+    Return a copy of the opts for use, optionally load a local config on top
+    '''
+    opts = copy.deepcopy(opts)
+
+    if 'localconfig' in kwargs:
+        return salt.config.minion_config(kwargs['localconfig'], defaults=opts)
+
+    if 'saltenv' in kwargs:
+        saltenv = kwargs['saltenv']
+        if saltenv is not None:
+            if not isinstance(saltenv, six.string_types):
+                saltenv = six.text_type(saltenv)
+            if opts['lock_saltenv'] and saltenv != opts['saltenv']:
+                raise CommandExecutionError(
+                    'lock_saltenv is enabled, saltenv cannot be changed'
+                )
+            opts['saltenv'] = kwargs['saltenv']
+
+    if 'pillarenv' in kwargs or opts.get('pillarenv_from_saltenv', False):
+        pillarenv = kwargs.get('pillarenv') or kwargs.get('saltenv')
+        if pillarenv is not None and not isinstance(pillarenv, six.string_types):
+            opts['pillarenv'] = str(pillarenv)
+        else:
+            opts['pillarenv'] = pillarenv
+
+    return opts
