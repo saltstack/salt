@@ -232,7 +232,7 @@ To use it, one may pass it like this. Example:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import copy
@@ -243,7 +243,7 @@ import logging
 import salt.utils.args
 import salt.utils.functools
 from salt.exceptions import CommandExecutionError, SaltRenderError
-from salt.ext.six import string_types
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -317,9 +317,9 @@ def _failout(state, msg):
 
 
 def _is_true(val):
-    if val and str(val).lower() in ('true', 'yes', '1'):
+    if val and six.text_type(val).lower() in ('true', 'yes', '1'):
         return True
-    elif str(val).lower() in ('false', 'no', '0'):
+    elif six.text_type(val).lower() in ('false', 'no', '0'):
         return False
     raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
@@ -339,7 +339,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     cmd_kwargs['bg'] = False
 
     if onlyif is not None:
-        if isinstance(onlyif, string_types):
+        if isinstance(onlyif, six.string_types):
             cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs)
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd != 0:
@@ -354,7 +354,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
                     return {'comment': 'onlyif condition is false: {0}'.format(entry),
                             'skip_watch': True,
                             'result': True}
-        elif not isinstance(onlyif, string_types):
+        elif not isinstance(onlyif, six.string_types):
             if not onlyif:
                 log.debug('Command not run: onlyif did not evaluate to string_type')
                 return {'comment': 'onlyif condition is false',
@@ -362,7 +362,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
                         'result': True}
 
     if unless is not None:
-        if isinstance(unless, string_types):
+        if isinstance(unless, six.string_types):
             cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, python_shell=True, **cmd_kwargs)
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd == 0:
@@ -378,14 +378,14 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
                 return {'comment': 'unless condition is true',
                         'skip_watch': True,
                         'result': True}
-        elif not isinstance(unless, string_types):
+        elif not isinstance(unless, six.string_types):
             if unless:
                 log.debug('Command not run: unless did not evaluate to string_type')
                 return {'comment': 'unless condition is true',
                         'skip_watch': True,
                         'result': True}
 
-    if isinstance(creates, string_types) and os.path.exists(creates):
+    if isinstance(creates, six.string_types) and os.path.exists(creates):
         return {'comment': '{0} exists'.format(creates),
                 'result': True}
     elif isinstance(creates, list) and all([
@@ -409,6 +409,7 @@ def wait(name,
          stateful=False,
          umask=None,
          output_loglevel='debug',
+         hide_output=False,
          use_vt=False,
          **kwargs):
     '''
@@ -493,10 +494,22 @@ def wait(name,
 
         .. versionadded:: 2014.7.0
 
-    output_loglevel
-        Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged (loglevel: DEBUG)
-        regardless, unless ``quiet`` is used for this value.
+    output_loglevel : debug
+        Control the loglevel at which the output from the command is logged to
+        the minion log.
+
+        .. note::
+            The command being run will still be logged at the ``debug``
+            loglevel regardless, unless ``quiet`` is used for this value.
+
+    hide_output : False
+        Suppress stdout and stderr in the state's results.
+
+        .. note::
+            This is separate from ``output_loglevel``, which only handles how
+            Salt logs to the minion log.
+
+        .. versionadded:: Oxygen
 
     use_vt
         Use VT utils (saltstack) to stream the command output more
@@ -527,6 +540,7 @@ def wait_script(name,
                 umask=None,
                 use_vt=False,
                 output_loglevel='debug',
+                hide_output=False,
                 **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
@@ -617,11 +631,22 @@ def wait_script(name,
         interactively to the console and the logs.
         This is experimental.
 
-     output_loglevel
-        Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged (loglevel: DEBUG)
-        regardless, unless ``quiet`` is used for this value.
+    output_loglevel : debug
+        Control the loglevel at which the output from the command is logged to
+        the minion log.
 
+        .. note::
+            The command being run will still be logged at the ``debug``
+            loglevel regardless, unless ``quiet`` is used for this value.
+
+    hide_output : False
+        Suppress stdout and stderr in the state's results.
+
+        .. note::
+            This is separate from ``output_loglevel``, which only handles how
+            Salt logs to the minion log.
+
+        .. versionadded:: Oxygen
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -642,7 +667,7 @@ def run(name,
         stateful=False,
         umask=None,
         output_loglevel='debug',
-        quiet=False,
+        hide_output=False,
         timeout=None,
         ignore_timeout=False,
         use_vt=False,
@@ -657,11 +682,11 @@ def run(name,
 
     onlyif
         A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
+        passed to the ``onlyif`` option returns a zero exit status
 
     unless
         A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
+        passed to the ``unless`` option returns a non-zero exit status
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -726,16 +751,29 @@ def run(name,
     umask
         The umask (in octal) to use when running the command.
 
-    output_loglevel
-        Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged (loglevel: DEBUG)
-        regardless, unless ``quiet`` is used for this value.
+    output_loglevel : debug
+        Control the loglevel at which the output from the command is logged to
+        the minion log.
+
+        .. note::
+            The command being run will still be logged at the ``debug``
+            loglevel regardless, unless ``quiet`` is used for this value.
+
+    hide_output : False
+        Suppress stdout and stderr in the state's results.
+
+        .. note::
+            This is separate from ``output_loglevel``, which only handles how
+            Salt logs to the minion log.
+
+        .. versionadded:: Oxygen
 
     quiet
-        The command will be executed quietly, meaning no log entries of the
-        actual command or its return data. This is deprecated as of the
-        **2014.1.0** release, and is being replaced with
-        ``output_loglevel: quiet``.
+        This option no longer has any functionality and will be removed, please
+        set ``output_loglevel`` to ``quiet`` to suppress logging of the
+        command.
+
+        .. deprecated:: 2014.1.0
 
     timeout
         If the command has not terminated after timeout seconds, send the
@@ -752,13 +790,13 @@ def run(name,
 
         .. versionadded:: 2014.7.0
 
-    use_vt
+    use_vt : False
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
         This is experimental.
 
-    bg
-        If ``True``, run command in background and do not await or deliver it's
+    bg : False
+        If ``True``, run command in background and do not await or deliver its
         results.
 
         .. versionadded:: 2016.3.6
@@ -788,6 +826,23 @@ def run(name,
     ###       definition, otherwise the use of unsupported arguments in a
     ###       ``cmd.run`` state will result in a traceback.
 
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    if 'quiet' in kwargs:
+        quiet = kwargs.pop('quiet')
+        msg = (
+            'The \'quiet\' argument for cmd.run has been deprecated since '
+            '2014.1.0 and will be removed as of the Neon release. Please set '
+            '\'output_loglevel\' to \'quiet\' instead.'
+        )
+        salt.utils.versions.warn_until('Neon', msg)
+        ret.setdefault('warnings', []).append(msg)
+    else:
+        quiet = False
+
     test_name = None
     if not isinstance(stateful, list):
         stateful = stateful is True
@@ -795,11 +850,6 @@ def run(name,
         test_name = stateful[0]['test_name']
     if __opts__['test'] and test_name:
         name = test_name
-
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
 
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
@@ -817,6 +867,7 @@ def run(name,
                        'prepend_path': prepend_path,
                        'umask': umask,
                        'output_loglevel': output_loglevel,
+                       'hide_output': hide_output,
                        'quiet': quiet})
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
@@ -842,12 +893,12 @@ def run(name,
             name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
     except CommandExecutionError as err:
-        ret['comment'] = str(err)
+        ret['comment'] = six.text_type(err)
         return ret
 
     ret['changes'] = cmd_all
     ret['result'] = not bool(cmd_all['retcode'])
-    ret['comment'] = u'Command "{0}" run'.format(name)
+    ret['comment'] = 'Command "{0}" run'.format(name)
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:
@@ -878,6 +929,7 @@ def script(name,
            timeout=None,
            use_vt=False,
            output_loglevel='debug',
+           hide_output=False,
            defaults=None,
            context=None,
            **kwargs):
@@ -996,11 +1048,22 @@ def script(name,
 
         Default context passed to the template.
 
-    output_loglevel
-        Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged (loglevel: DEBUG)
-        regardless, unless ``quiet`` is used for this value.
+    output_loglevel : debug
+        Control the loglevel at which the output from the command is logged to
+        the minion log.
 
+        .. note::
+            The command being run will still be logged at the ``debug``
+            loglevel regardless, unless ``quiet`` is used for this value.
+
+    hide_output : False
+        Suppress stdout and stderr in the state's results.
+
+        .. note::
+            This is separate from ``output_loglevel``, which only handles how
+            Salt logs to the minion log.
+
+        .. versionadded:: Oxygen
     '''
     test_name = None
     if not isinstance(stateful, list):
@@ -1046,6 +1109,7 @@ def script(name,
                        'umask': umask,
                        'timeout': timeout,
                        'output_loglevel': output_loglevel,
+                       'hide_output': hide_output,
                        'use_vt': use_vt,
                        'context': tmpctx,
                        'saltenv': __env__})
@@ -1088,7 +1152,7 @@ def script(name,
     try:
         cmd_all = __salt__['cmd.script'](source, python_shell=True, **cmd_kwargs)
     except (CommandExecutionError, SaltRenderError, IOError) as err:
-        ret['comment'] = str(err)
+        ret['comment'] = six.text_type(err)
         return ret
 
     ret['changes'] = cmd_all
@@ -1116,6 +1180,7 @@ def call(name,
          unless=None,
          creates=None,
          output_loglevel='debug',
+         hide_output=False,
          use_vt=False,
          **kwargs):
     '''
@@ -1147,7 +1212,7 @@ def call(name,
             'name': name
             'changes': {'retval': result},
             'result': True if result is None else bool(result),
-            'comment': result if isinstance(result, string_types) else ''
+            'comment': result if isinstance(result, six.string_types) else ''
         }
     '''
     ret = {'name': name,
@@ -1161,6 +1226,7 @@ def call(name,
                   'env': kwargs.get('env'),
                   'use_vt': use_vt,
                   'output_loglevel': output_loglevel,
+                  'hide_output': hide_output,
                   'umask': kwargs.get('umask')}
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
@@ -1178,7 +1244,7 @@ def call(name,
         # result must be JSON serializable else we get an error
         ret['changes'] = {'retval': result}
         ret['result'] = True if result is None else bool(result)
-        if isinstance(result, string_types):
+        if isinstance(result, six.string_types):
             ret['comment'] = result
         return ret
 
@@ -1193,6 +1259,7 @@ def wait_call(name,
               stateful=False,
               use_vt=False,
               output_loglevel='debug',
+              hide_output=False,
               **kwargs):
     # Ignoring our arguments is intentional.
     return {'name': name,

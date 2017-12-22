@@ -16,6 +16,17 @@ if os.name == 'nt':
     TESTS_DIR = TESTS_DIR.replace('\\', '\\\\')
 CODE_DIR = os.path.dirname(TESTS_DIR)
 
+if sys.version_info.major == 3:
+    # Clean up any Python 2 byte-compiled files, as they will cause problems
+    # when Python 3 tries to import modules.
+    for root, _, files in os.walk(os.path.dirname(TESTS_DIR)):
+        if os.path.basename(root) == '__pycache__':
+            # Ignore byte-compiled files in Python 3 __pycache__ dirs
+            continue
+        for filename in files:
+            if filename.endswith('.pyc'):
+                os.remove(os.path.join(root, filename))
+
 # Let's inject CODE_DIR so salt is importable if not there already
 if '' in sys.path:
     sys.path.remove('')
@@ -169,6 +180,12 @@ TEST_SUITES = {
     'external_api':
         {'display_name': 'ExternalAPIs',
          'path': 'integration/externalapi'},
+    'daemons':
+        {'display_name': 'Daemon',
+         'path': 'integration/daemons'},
+    'scheduler':
+        {'display_name': 'Scheduler',
+         'path': 'integration/scheduler'},
 }
 
 
@@ -467,6 +484,21 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             default=False,
             help='Run venafi runner tests'
+        )
+        self.test_selection_group.add_option(
+            '--daemons',
+            '--daemon-tests',
+            dest='daemons',
+            action='store_true',
+            default=False,
+            help='Run salt/daemons/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '--scheduler',
+            dest='scheduler',
+            action='store_true',
+            default=False,
+            help='Run scheduler integration tests'
         )
 
     def validate_options(self):

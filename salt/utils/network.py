@@ -263,6 +263,33 @@ def is_ipv6(ip):
         return False
 
 
+def is_subnet(cidr):
+    '''
+    Returns a bool telling if the passed string is an IPv4 or IPv6 subnet
+    '''
+    return is_ipv4_subnet(cidr) or is_ipv6_subnet(cidr)
+
+
+def is_ipv4_subnet(cidr):
+    '''
+    Returns a bool telling if the passed string is an IPv4 subnet
+    '''
+    try:
+        return '/' in cidr and bool(ipaddress.IPv4Network(cidr))
+    except Exception:
+        return False
+
+
+def is_ipv6_subnet(cidr):
+    '''
+    Returns a bool telling if the passed string is an IPv6 subnet
+    '''
+    try:
+        return '/' in cidr and bool(ipaddress.IPv6Network(cidr))
+    except Exception:
+        return False
+
+
 @jinja_filter('is_ip')
 def is_ip_filter(ip, options=None):
     '''

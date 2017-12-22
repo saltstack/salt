@@ -52,6 +52,7 @@ import salt.utils.extmods
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.minion
+import salt.utils.path
 import salt.utils.process
 import salt.utils.url
 import salt.utils.versions
@@ -753,7 +754,7 @@ def list_extmods():
     mod_types = os.listdir(ext_dir)
     for mod_type in mod_types:
         ret[mod_type] = set()
-        for _, _, files in os.walk(os.path.join(ext_dir, mod_type)):
+        for _, _, files in salt.utils.path.os_walk(os.path.join(ext_dir, mod_type)):
             for fh_ in files:
                 ret[mod_type].add(fh_.split('.')[0])
         ret[mod_type] = list(ret[mod_type])

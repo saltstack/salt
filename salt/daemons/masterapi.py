@@ -38,6 +38,7 @@ import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
@@ -144,7 +145,7 @@ def clean_pub_auth(opts):
         if not os.path.exists(auth_cache):
             return
         else:
-            for (dirpath, dirnames, filenames) in os.walk(auth_cache):
+            for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(auth_cache):
                 for auth_file in filenames:
                     auth_file_path = os.path.join(dirpath, auth_file)
                     if not os.path.isfile(auth_file_path):
@@ -334,7 +335,7 @@ class AutoKey(object):
         expire_minutes = self.opts.get('autosign_timeout', 120)
         if expire_minutes > 0:
             min_time = time.time() - (60 * int(expire_minutes))
-            for root, dirs, filenames in os.walk(autosign_dir):
+            for root, dirs, filenames in salt.utils.path.os_walk(autosign_dir):
                 for f in filenames:
                     stub_file = os.path.join(autosign_dir, f)
                     mtime = os.path.getmtime(stub_file)
@@ -348,6 +349,33 @@ class AutoKey(object):
         os.remove(stub_file)
         return True
 
+    def check_autosign_grains(self, autosign_grains):
+        '''
+        Check for matching grains in the autosign_grains_dir.
+        '''
+        if not autosign_grains or u'autosign_grains_dir' not in self.opts:
+            return False
+
+        autosign_grains_dir = self.opts[u'autosign_grains_dir']
+        for root, dirs, filenames in os.walk(autosign_grains_dir):
+            for grain in filenames:
+                if grain in autosign_grains:
+                    grain_file = os.path.join(autosign_grains_dir, grain)
+
+                    if not self.check_permissions(grain_file):
+                        message = 'Wrong permissions for {0}, ignoring content'
+                        log.warning(message.format(grain_file))
+                        continue
+
+                    with salt.utils.files.fopen(grain_file, u'r') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line.startswith(u'#'):
+                                continue
+                            if autosign_grains[grain] == line:
+                                return True
+        return False
+
     def check_autoreject(self, keyid):
         '''
         Checks if the specified keyid should automatically be rejected.
@@ -357,7 +385,7 @@ class AutoKey(object):
             self.opts.get('autoreject_file', None)
         )
 
-    def check_autosign(self, keyid):
+    def check_autosign(self, keyid, autosign_grains=None):
         '''
         Checks if the specified keyid should automatically be signed.
         '''
@@ -366,6 +394,8 @@ class AutoKey(object):
         if self.check_signing_file(keyid, self.opts.get('autosign_file', None)):
             return True
         if self.check_autosign_dir(keyid):
+            return True
+        if self.check_autosign_grains(autosign_grains):
             return True
         return False
 

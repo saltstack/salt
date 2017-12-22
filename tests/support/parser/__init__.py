@@ -33,6 +33,7 @@ from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
 # Import 3rd-party libs
 from salt.ext import six
+import salt.utils.platform
 try:
     from tests.support.ext import console
     WIDTH, HEIGHT = console.getTerminalSize()
@@ -456,7 +457,10 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.INFO
             else:
                 logging_level = logging.ERROR
-            os.environ['TESTS_LOG_LEVEL'] = six.text_type(self.options.verbosity)
+            if salt.utils.platform.is_windows():
+                os.environ['TESTS_LOG_LEVEL'] = six.binary_type(self.options.verbosity)
+            else:
+                os.environ['TESTS_LOG_LEVEL'] = six.text_type(self.options.verbosity)
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
             log.info('Runtests logging has been setup')

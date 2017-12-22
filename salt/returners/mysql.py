@@ -138,7 +138,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return mysql --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
@@ -229,7 +229,7 @@ def _get_serv(ret=None, commit=False):
             conn.ping()
             connect = False
         except MySQLdb.connections.OperationalError as exc:
-            log.debug('OperationalError on ping: {0}'.format(exc))
+            log.debug('OperationalError on ping: %s', exc)
 
     if connect:
         log.debug('Generating new MySQL connection pool')
@@ -263,7 +263,7 @@ def _get_serv(ret=None, commit=False):
         yield cursor
     except MySQLdb.DatabaseError as err:
         error = err.args
-        sys.stderr.write(str(error))
+        sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
         raise err
     else:
@@ -476,8 +476,8 @@ def _purge_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to delete contents of table \'jids\'')
-            log.error(str(e))
-            raise salt.exceptions.Salt(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
             sql = 'delete from `salt_returns` where alter_time < %s'
@@ -485,8 +485,8 @@ def _purge_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to delete contents of table \'salt_returns\'')
-            log.error(str(e))
-            raise salt.exceptions.Salt(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
             sql = 'delete from `salt_events` where alter_time < %s'
@@ -494,8 +494,8 @@ def _purge_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to delete contents of table \'salt_events\'')
-            log.error(str(e))
-            raise salt.exceptions.Salt(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
     return True
 
@@ -521,8 +521,8 @@ def _archive_jobs(timestamp):
                 target_tables[table_name] = tmp_table_name
             except MySQLdb.Error as e:
                 log.error('mysql returner archiver was unable to create the archive tables.')
-                log.error(str(e))
-                raise salt.exceptions.SaltRunnerError(str(e))
+                log.error(six.text_type(e))
+                raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
             sql = 'insert into `{0}` select * from `{1}` where jid in (select distinct jid from salt_returns where alter_time < %s)'.format(target_tables['jids'], 'jids')
@@ -530,8 +530,8 @@ def _archive_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to copy contents of table \'jids\'')
-            log.error(str(e))
-            raise salt.exceptions.SaltRunnerError(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
         except Exception as e:
             log.error(e)
             raise
@@ -542,8 +542,8 @@ def _archive_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to copy contents of table \'salt_returns\'')
-            log.error(str(e))
-            raise salt.exceptions.SaltRunnerError(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
             sql = 'insert into `{0}` select * from `{1}` where alter_time < %s'.format(target_tables['salt_events'], 'salt_events')
@@ -551,8 +551,8 @@ def _archive_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to copy contents of table \'salt_events\'')
-            log.error(str(e))
-            raise salt.exceptions.SaltRunnerError(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
     return _purge_jobs(timestamp)
 
@@ -577,5 +577,5 @@ def clean_old_jobs():
                 _purge_jobs(stamp)
         except MySQLdb.Error as e:
             log.error('Mysql returner was unable to get timestamp for purge/archive of jobs')
-            log.error(str(e))
-            raise salt.exceptions.Salt(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))

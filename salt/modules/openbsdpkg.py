@@ -4,7 +4,8 @@ Package support for OpenBSD
 
 .. note::
 
-    The package repository is configured on each host using ``/etc/pkg.conf``
+    The package repository is configured on each host using ``/etc/installurl``
+    from OpenBSD 6.1 onwards. Earlier releases relied on ``/etc/pkg.conf``.
 
 .. versionchanged:: 2016.3.5
 
@@ -220,7 +221,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     return ret
 
 
-def remove(name=None, pkgs=None, **kwargs):
+def remove(name=None, pkgs=None, purge=False, **kwargs):
     '''
     Remove a single package with pkg_delete
 
@@ -254,7 +255,12 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
 
-    cmd = 'pkg_delete -xD dependencies {0}'.format(' '.join(targets))
+    cmd = ['pkg_delete', '-Ix', '-Ddependencies']
+
+    if purge:
+        cmd.append('-cqq')
+
+    cmd.extend(targets)
 
     out = __salt__['cmd.run_all'](
         cmd,
@@ -281,8 +287,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     '''
-    Package purges are not supported, this function is identical to
-    ``remove()``.
+    Remove a package and extra configuration files.
 
     name
         The name of the package to be deleted.
@@ -307,4 +312,4 @@ def purge(name=None, pkgs=None, **kwargs):
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name=name, pkgs=pkgs)
+    return remove(name=name, pkgs=pkgs, purge=True)

@@ -321,6 +321,20 @@ option on the Salt master.
 
     master_port: 4506
 
+.. conf_minion:: publish_port
+
+``publish_port``
+---------------
+
+Default: ``4505``
+
+The port of the master publish server, this needs to coincide with the publish_port
+option on the Salt master.
+
+.. code-block:: yaml
+
+    publish_port: 4505
+
 .. conf_minion:: source_interface_name
 
 ``source_interface_name``
@@ -605,6 +619,19 @@ This directory may contain sensitive data and should be protected accordingly.
 .. code-block:: yaml
 
     cachedir: /var/cache/salt/minion
+
+.. conf_master:: color_theme
+
+``color_theme``
+---------
+
+Default: ``""``
+
+Specifies a path to the color theme to use for colored command line output.
+
+.. code-block:: yaml
+
+    color_theme: /etc/salt/color_theme
 
 .. conf_minion:: append_minionid_config_dirs
 
@@ -1292,8 +1319,42 @@ The password used for HTTP proxy access.
 
     proxy_password: obolus
 
+.. conf_minion:: docker.compare_container_networks
+
+``docker.compare_container_networks``
+-------------------------------------
+
+.. versionadded:: Oxygen
+
+Default: ``{'static': ['Aliases', 'Links', 'IPAMConfig'], 'automatic': ['IPAddress', 'Gateway', 'GlobalIPv6Address', 'IPv6Gateway']}``
+
+Specifies which keys are examined by
+:py:func:`docker.compare_container_networks
+<salt.modules.dockermod.compare_container_networks>`.
+
+.. note::
+    This should not need to be modified unless new features added to Docker
+    result in new keys added to the network configuration which must be
+    compared to determine if two containers have different network configs.
+    This config option exists solely as a way to allow users to continue using
+    Salt to manage their containers after an API change, without waiting for a
+    new Salt release to catch up to the changes in the Docker API.
+
+.. code-block:: yaml
+
+    docker.compare_container_networks:
+      static:
+        - Aliases
+        - Links
+        - IPAMConfig
+      automatic:
+        - IPAddress
+        - Gateway
+        - GlobalIPv6Address
+        - IPv6Gateway
+
 Minion Execution Module Management
-========================
+==================================
 
 .. conf_minion:: disable_modules
 
@@ -1303,7 +1364,7 @@ Minion Execution Module Management
 Default: ``[]`` (all execution modules are enabled by default)
 
 The event may occur in which the administrator desires that a minion should not
-be able to execute a certain module. 
+be able to execute a certain module.
 
 However, the ``sys`` module is built into the minion and cannot be disabled.
 
@@ -2388,6 +2449,27 @@ minion's pki directory.
 .. code-block:: yaml
 
     master_sign_key_name: <filename_without_suffix>
+
+.. conf_minion:: autosign_grains
+
+``autosign_grains``
+-------------------
+
+.. versionadded:: Oxygen
+
+Default: ``not defined``
+
+The grains that should be sent to the master on authentication to decide if
+the minion's key should be accepted automatically.
+
+Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
+documentation for more infomation.
+
+.. code-block:: yaml
+
+    autosign_grains:
+      - uuid
+      - server_id
 
 .. conf_minion:: always_verify_signature
 

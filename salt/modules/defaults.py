@@ -5,6 +5,7 @@ Module to work with salt formula defaults files
 '''
 
 from __future__ import absolute_import
+import copy
 import json
 import logging
 import os
@@ -107,10 +108,17 @@ def get(key, default=''):
         return defaults
 
 
-def merge(dest, upd):
+def merge(dest, src, merge_lists=False, in_place=True):
     '''
     defaults.merge
         Allows deep merging of dicts in formulas.
+
+    merge_lists : False
+        If True, it will also merge lists instead of replace their items.
+
+    in_place : True
+        If True, it will merge into dest dict,
+        if not it will make a new copy from that dict and return it.
 
         CLI Example:
         .. code-block:: bash
@@ -120,4 +128,84 @@ def merge(dest, upd):
     It is more typical to use this in a templating language in formulas,
     instead of directly on the command-line.
     '''
-    return dictupdate.update(dest, upd)
+    if in_place:
+        merged = dest
+    else:
+        merged = copy.deepcopy(dest)
+    return dictupdate.update(merged, src, merge_lists=merge_lists)
+
+
+def deepcopy(source):
+    '''
+    defaults.deepcopy
+        Allows deep copy of objects in formulas.
+
+        By default, Python does not copy objects,
+        it creates bindings between a target and an object.
+
+    It is more typical to use this in a templating language in formulas,
+    instead of directly on the command-line.
+    '''
+    return copy.deepcopy(source)
+
+
+def update(dest, defaults, merge_lists=True, in_place=True):
+    '''
+    defaults.update
+        Allows to set defaults for group of data set e.g. group for nodes.
+
+        This function is a combination of defaults.merge
+        and defaults.deepcopy to avoid redundant in jinja.
+
+        Example:
+        .. code-block:: yaml
+
+        group01:
+          defaults:
+            enabled: True
+            extra:
+              - test
+              - stage
+          nodes:
+            host01:
+              index: foo
+              upstream: bar
+            host02:
+              index: foo2
+              upstream: bar2
+
+        .. code-block::
+        {% do salt['defaults.update'](group01.nodes, group01.defaults) %}
+
+        Each node will look like the following:
+        .. code-block:: yaml
+        host01:
+          enabled: True
+          index: foo
+          upstream: bar
+          extra:
+            - test
+            - stage
+
+    merge_lists : True
+        If True, it will also merge lists instead of replace their items.
+
+    in_place : True
+        If True, it will merge into dest dict.
+        if not it will make a new copy from that dict and return it.
+
+    It is more typical to use this in a templating language in formulas,
+    instead of directly on the command-line.
+    '''
+
+    if in_place:
+        nodes = dest
+    else:
+        nodes = deepcopy(dest)
+
+    for node_name, node_vars in nodes.items():
+        defaults_vars = deepcopy(defaults)
+        node_vars = merge(defaults_vars, node_vars, merge_lists=merge_lists)
+        nodes[node_name] = node_vars
+
+    return nodes

@@ -6,7 +6,7 @@ For Jinja usage information see :ref:`Understanding Jinja <understanding-jinja>`
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -53,7 +53,7 @@ def render(template_file, saltenv='base', sls='', argline='',
     from_str = argline == '-s'
     if not from_str and argline:
         raise SaltRenderError(
-                'Unknown renderer option: {opt}'.format(opt=argline)
+            'Unknown renderer option: {opt}'.format(opt=argline)
         )
 
     tmp_data = salt.utils.templates.JINJA(template_file,

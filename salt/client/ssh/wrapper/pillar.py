@@ -2,7 +2,7 @@
 '''
 Extract the pillar data for this minion
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import collections
@@ -14,7 +14,7 @@ import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 
 
-def get(key, default=u'', merge=False, delimiter=DEFAULT_TARGET_DELIM):
+def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.14
 
@@ -132,10 +132,10 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
         __pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:
-        raise KeyError(u"Pillar key not found: {0}".format(key))
+        raise KeyError("Pillar key not found: {0}".format(key))
 
     if not isinstance(ret, dict):
-        raise ValueError(u"Pillar value in key {0} is not a dict".format(key))
+        raise ValueError("Pillar value in key {0} is not a dict".format(key))
 
     return ret.keys()
 

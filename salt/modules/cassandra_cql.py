@@ -4,6 +4,9 @@ Cassandra Database Module
 
 .. versionadded:: 2015.5.0
 
+This module works with Cassandra v2 and v3 and hence generates
+queries based on the internal schema of said version.
+
 :depends: DataStax Python Driver for Apache Cassandra
           https://github.com/datastax/python-driver
           pip install cassandra-driver
@@ -81,6 +84,7 @@ Cassandra Database Module
 from __future__ import absolute_import
 import logging
 import json
+import re
 import ssl
 
 # Import Salt Libs
@@ -300,7 +304,7 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
 
     .. code-block:: bash
 
-         salt '*' cql_query "SELECT * FROM users_by_name WHERE first_name = 'jane'"
+         salt 'cassandra-server' cassandra_cql.cql_query "SELECT * FROM users_by_name WHERE first_name = 'jane'"
     '''
     try:
         cluster, session = _connect(contact_points=contact_points, port=port, cql_user=cql_user, cql_pass=cql_pass)
@@ -313,6 +317,26 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
 
     session.row_factory = dict_factory
     ret = []
+
+    # Cassandra changed their internal schema from v2 to v3
+    # If the query contains a dictionary sorted by versions
+    # Find the query for the current cluster version.
+    # https://issues.apache.org/jira/browse/CASSANDRA-6717
+    if isinstance(query, dict):
+        cluster_version = version(contact_points=contact_points,
+                                  port=port,
+                                  cql_user=cql_user,
+                                  cql_pass=cql_pass)
+        match = re.match(r'^(\d+)\.(\d+)(?:\.(\d+))?', cluster_version)
+        major, minor, point = match.groups()
+        # try to find the specific version in the query dictionary
+        # then try the major version
+        # otherwise default to the highest version number
+        try:
+            query = query[cluster_version]
+        except KeyError:
+            query = query.get(major, max(query))
+        log.debug('New query is: {0}'.format(query))
 
     try:
         results = session.execute(query)
@@ -548,8 +572,10 @@ def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None)
 
         salt 'minion1' cassandra_cql.list_keyspaces contact_points=minion1 port=9000
     '''
-    query = '''select keyspace_name
-                 from system.schema_keyspaces;'''
+    query = {
+        '2': 'select keyspace_name from system.schema_keyspaces;',
+        '3': 'select keyspace_name from system_schema.keyspaces;',
+    }
 
     ret = {}
 
@@ -594,9 +620,12 @@ def list_column_families(keyspace=None, contact_points=None, port=None, cql_user
     '''
     where_clause = "where keyspace_name = '{0}'".format(keyspace) if keyspace else ""
 
-    query = '''select columnfamily_name
-                 from system.schema_columnfamilies
-                {0};'''.format(where_clause)
+    query = {
+        '2': '''select columnfamily_name from system.schema_columnfamilies
+                {0};'''.format(where_clause),
+        '3': '''select column_name from system_schema.columns
+                {0};'''.format(where_clause),
+    }
 
     ret = {}
 
@@ -634,14 +663,13 @@ def keyspace_exists(keyspace, contact_points=None, port=None, cql_user=None, cql
     .. code-block:: bash
 
         salt 'minion1' cassandra_cql.keyspace_exists keyspace=system
-
-        salt 'minion1' cassandra_cql.list_keyspaces keyspace=system contact_points=minion1
     '''
-    # Only project the keyspace_name to make the query efficien.
-    # Like an echo
-    query = '''select keyspace_name
-                 from system.schema_keyspaces
-                where keyspace_name = '{0}';'''.format(keyspace)
+    query = {
+        '2': '''select keyspace_name from system.schema_keyspaces
+                where keyspace_name = '{0}';'''.format(keyspace),
+        '3': '''select keyspace_name from system_schema.keyspaces
+                where keyspace_name = '{0}';'''.format(keyspace),
+    }
 
     try:
         ret = cql_query(query, contact_points, port, cql_user, cql_pass)

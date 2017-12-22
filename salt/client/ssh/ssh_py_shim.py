@@ -8,7 +8,7 @@ helper script used by salt.client.ssh.Single.  It is here, in a
 separate file, for convenience of development.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import tarfile
@@ -18,8 +18,8 @@ import os
 import stat
 import subprocess
 
-THIN_ARCHIVE = u'salt-thin.tgz'
-EXT_ARCHIVE = u'salt-ext_mods.tgz'
+THIN_ARCHIVE = 'salt-thin.tgz'
+EXT_ARCHIVE = 'salt-ext_mods.tgz'
 
 # Keep these in sync with salt/defaults/exitcodes.py
 EX_THIN_DEPLOY = 11
@@ -54,7 +54,7 @@ def get_system_encoding():
     # and reset to None
     encoding = None
 
-    if not sys.platform.startswith(u'win') and sys.stdin is not None:
+    if not sys.platform.startswith('win') and sys.stdin is not None:
         # On linux we can rely on sys.stdin for the encoding since it
         # most commonly matches the filesystem encoding. This however
         # does not apply to windows
@@ -80,16 +80,16 @@ def get_system_encoding():
             # the way back to ascii
             encoding = sys.getdefaultencoding()
         if not encoding:
-            if sys.platform.startswith(u'darwin'):
+            if sys.platform.startswith('darwin'):
                 # Mac OS X uses UTF-8
-                encoding = u'utf-8'
-            elif sys.platform.startswith(u'win'):
+                encoding = 'utf-8'
+            elif sys.platform.startswith('win'):
                 # Windows uses a configurable encoding; on Windows, Python uses the name "mbcs"
                 # to refer to whatever the currently configured encoding is.
-                encoding = u'mbcs'
+                encoding = 'mbcs'
             else:
                 # On linux default to ascii as a last resort
-                encoding = u'ascii'
+                encoding = 'ascii'
     return encoding
 
 
@@ -97,7 +97,7 @@ def is_windows():
     '''
     Simple function to return if a host is Windows or not
     '''
-    return sys.platform.startswith(u'win')
+    return sys.platform.startswith('win')
 
 
 def need_deployment():
@@ -121,35 +121,35 @@ def need_deployment():
             # Attack detected
             need_deployment()
         # If SUDOing then also give the super user group write permissions
-        sudo_gid = os.environ.get(u'SUDO_GID')
+        sudo_gid = os.environ.get('SUDO_GID')
         if sudo_gid:
             try:
                 os.chown(OPTIONS.saltdir, -1, int(sudo_gid))
                 stt = os.stat(OPTIONS.saltdir)
                 os.chmod(OPTIONS.saltdir, stt.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
             except OSError:
-                sys.stdout.write(u'\n\nUnable to set permissions on thin directory.\nIf sudo_user is set '
-                        u'and is not root, be certain the user is in the same group\nas the login user')
+                sys.stdout.write('\n\nUnable to set permissions on thin directory.\nIf sudo_user is set '
+                        'and is not root, be certain the user is in the same group\nas the login user')
                 sys.exit(1)
 
     # Delimiter emitted on stdout *only* to indicate shim message to master.
-    sys.stdout.write(u"{0}\ndeploy\n".format(OPTIONS.delimiter))
+    sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
     sys.exit(EX_THIN_DEPLOY)
 
 
 # Adapted from salt.utils.hashutils.get_hash()
-def get_hash(path, form=u'sha1', chunk_size=4096):
+def get_hash(path, form='sha1', chunk_size=4096):
     '''
     Generate a hash digest string for a file.
     '''
     try:
         hash_type = getattr(hashlib, form)
     except AttributeError:
-        raise ValueError(u'Invalid hash type: {0}'.format(form))
-    with open(path, u'rb') as ifile:
+        raise ValueError('Invalid hash type: {0}'.format(form))
+    with open(path, 'rb') as ifile:
         hash_obj = hash_type()
         # read the file in in chunks, not the entire file
-        for chunk in iter(lambda: ifile.read(chunk_size), b''):  # future lint: disable=non-unicode-string
+        for chunk in iter(lambda: ifile.read(chunk_size), b''):
             hash_obj.update(chunk)
         return hash_obj.hexdigest()
 
@@ -170,7 +170,7 @@ def need_ext():
     '''
     Signal that external modules need to be deployed.
     '''
-    sys.stdout.write(u"{0}\next_mods\n".format(OPTIONS.delimiter))
+    sys.stdout.write("{0}\next_mods\n".format(OPTIONS.delimiter))
     sys.exit(EX_MOD_DEPLOY)
 
 
@@ -180,20 +180,20 @@ def unpack_ext(ext_path):
     '''
     modcache = os.path.join(
             OPTIONS.saltdir,
-            u'running_data',
-            u'var',
-            u'cache',
-            u'salt',
-            u'minion',
-            u'extmods')
+            'running_data',
+            'var',
+            'cache',
+            'salt',
+            'minion',
+            'extmods')
     tfile = tarfile.TarFile.gzopen(ext_path)
     old_umask = os.umask(0o077)
     tfile.extractall(path=modcache)
     tfile.close()
     os.umask(old_umask)
     os.unlink(ext_path)
-    ver_path = os.path.join(modcache, u'ext_version')
-    ver_dst = os.path.join(OPTIONS.saltdir, u'ext_version')
+    ver_path = os.path.join(modcache, 'ext_version')
+    ver_dst = os.path.join(OPTIONS.saltdir, 'ext_version')
     shutil.move(ver_path, ver_dst)
 
 
@@ -208,8 +208,8 @@ def main(argv):  # pylint: disable=W0613
         unpack_thin(thin_path)
         # Salt thin now is available to use
     else:
-        if not sys.platform.startswith(u'win'):
-            scpstat = subprocess.Popen([u'/bin/sh', u'-c', u'command -v scp']).wait()
+        if not sys.platform.startswith('win'):
+            scpstat = subprocess.Popen(['/bin/sh', '-c', 'command -v scp']).wait()
             if scpstat != 0:
                 sys.exit(EX_SCP_NOT_FOUND)
 
@@ -218,46 +218,46 @@ def main(argv):  # pylint: disable=W0613
 
         if not os.path.isdir(OPTIONS.saltdir):
             sys.stderr.write(
-                u'ERROR: salt path "{0}" exists but is'
-                u' not a directory\n'.format(OPTIONS.saltdir)
+                'ERROR: salt path "{0}" exists but is'
+                ' not a directory\n'.format(OPTIONS.saltdir)
             )
             sys.exit(EX_CANTCREAT)
 
-        version_path = os.path.normpath(os.path.join(OPTIONS.saltdir, u'version'))
+        version_path = os.path.normpath(os.path.join(OPTIONS.saltdir, 'version'))
         if not os.path.exists(version_path) or not os.path.isfile(version_path):
             sys.stderr.write(
-                u'WARNING: Unable to locate current thin '
-                u' version: {0}.\n'.format(version_path)
+                'WARNING: Unable to locate current thin '
+                ' version: {0}.\n'.format(version_path)
             )
             need_deployment()
-        with open(version_path, u'r') as vpo:
+        with open(version_path, 'r') as vpo:
             cur_version = vpo.readline().strip()
         if cur_version != OPTIONS.version:
             sys.stderr.write(
-                u'WARNING: current thin version {0}'
-                u' is not up-to-date with {1}.\n'.format(
+                'WARNING: current thin version {0}'
+                ' is not up-to-date with {1}.\n'.format(
                     cur_version, OPTIONS.version
                 )
             )
             need_deployment()
         # Salt thin exists and is up-to-date - fall through and use it
 
-    salt_call_path = os.path.join(OPTIONS.saltdir, u'salt-call')
+    salt_call_path = os.path.join(OPTIONS.saltdir, 'salt-call')
     if not os.path.isfile(salt_call_path):
-        sys.stderr.write(u'ERROR: thin is missing "{0}"\n'.format(salt_call_path))
+        sys.stderr.write('ERROR: thin is missing "{0}"\n'.format(salt_call_path))
         need_deployment()
 
-    with open(os.path.join(OPTIONS.saltdir, u'minion'), u'w') as config:
-        config.write(OPTIONS.config + u'\n')
+    with open(os.path.join(OPTIONS.saltdir, 'minion'), 'w') as config:
+        config.write(OPTIONS.config + '\n')
     if OPTIONS.ext_mods:
         ext_path = os.path.join(OPTIONS.saltdir, EXT_ARCHIVE)
         if os.path.exists(ext_path):
             unpack_ext(ext_path)
         else:
-            version_path = os.path.join(OPTIONS.saltdir, u'ext_version')
+            version_path = os.path.join(OPTIONS.saltdir, 'ext_version')
             if not os.path.exists(version_path) or not os.path.isfile(version_path):
                 need_ext()
-            with open(version_path, u'r') as vpo:
+            with open(version_path, 'r') as vpo:
                 cur_version = vpo.readline().strip()
             if cur_version != OPTIONS.ext_mods:
                 need_ext()
@@ -270,38 +270,38 @@ def main(argv):  # pylint: disable=W0613
     salt_argv = [
         sys.executable,
         salt_call_path,
-        u'--retcode-passthrough',
-        u'--local',
-        u'--metadata',
-        u'--out', u'json',
-        u'-l', u'quiet',
-        u'-c', OPTIONS.saltdir
+        '--retcode-passthrough',
+        '--local',
+        '--metadata',
+        '--out', 'json',
+        '-l', 'quiet',
+        '-c', OPTIONS.saltdir
     ]
 
     try:
-        if argv_prepared[-1].startswith(u'--no-parse='):
+        if argv_prepared[-1].startswith('--no-parse='):
             salt_argv.append(argv_prepared.pop(-1))
     except (IndexError, TypeError):
         pass
 
-    salt_argv.append(u'--')
+    salt_argv.append('--')
     salt_argv.extend(argv_prepared)
 
-    sys.stderr.write(u'SALT_ARGV: {0}\n'.format(salt_argv))
+    sys.stderr.write('SALT_ARGV: {0}\n'.format(salt_argv))
 
     # Only emit the delimiter on *both* stdout and stderr when completely successful.
     # Yes, the flush() is necessary.
-    sys.stdout.write(OPTIONS.delimiter + u'\n')
+    sys.stdout.write(OPTIONS.delimiter + '\n')
     sys.stdout.flush()
     if not OPTIONS.tty:
-        sys.stderr.write(OPTIONS.delimiter + u'\n')
+        sys.stderr.write(OPTIONS.delimiter + '\n')
         sys.stderr.flush()
     if OPTIONS.cmd_umask is not None:
         old_umask = os.umask(OPTIONS.cmd_umask)
     if OPTIONS.tty:
         # Returns bytes instead of string on python 3
         stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-        sys.stdout.write(stdout.decode(encoding=get_system_encoding(), errors=u"replace"))
+        sys.stdout.write(stdout.decode(encoding=get_system_encoding(), errors="replace"))
         sys.stdout.flush()
         if OPTIONS.wipe:
             shutil.rmtree(OPTIONS.saltdir)
@@ -313,5 +313,5 @@ def main(argv):  # pylint: disable=W0613
     if OPTIONS.cmd_umask is not None:
         os.umask(old_umask)
 
-if __name__ == u'__main__':
+if __name__ == '__main__':
     sys.exit(main(sys.argv))

@@ -5,7 +5,7 @@ Tests for the file state
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import glob
 import logging
@@ -69,17 +69,16 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
     '''
     DRY helper function to run the same test with a local or remote path
     '''
-    rel_path = 'grail/scene33'
-    name = os.path.join(TMP, os.path.basename(rel_path))
-    grail_fs_path = os.path.join(FILES, 'file', 'base', rel_path)
-    grail = 'salt://' + rel_path if not local else grail_fs_path
+    name = os.path.join(TMP, 'scene33')
+    grail_fs_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene33')
+    grail = 'salt://grail/scene33' if not local else grail_fs_path
 
     # Get the current mode so that we can put the file back the way we
     # found it when we're done.
-    grail_fs_mode = os.stat(grail_fs_path).st_mode
-    initial_mode = 504    # 0770 octal
-    new_mode_1 = 384      # 0600 octal
-    new_mode_2 = 420      # 0644 octal
+    grail_fs_mode = int(testcase.run_function('file.get_mode', [grail_fs_path]), 8)
+    initial_mode = 0o770
+    new_mode_1 = 0o600
+    new_mode_2 = 0o644
 
     # Set the initial mode, so we can be assured that when we set the mode
     # to "keep", we're actually changing the permissions of the file to the
@@ -570,6 +569,84 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.exists('/tmp/sudoers'):
                 os.remove('/tmp/sudoers')
 
+    def test_managed_local_source_with_source_hash(self):
+        '''
+        Make sure that we enforce the source_hash even with local files
+        '''
+        name = os.path.join(TMP, 'local_source_with_source_hash')
+        local_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene33')
+        actual_hash = '567fd840bf1548edc35c48eb66cdd78bfdfcccff'
+        # Reverse the actual hash
+        bad_hash = actual_hash[::-1]
+
+        def remove_file():
+            try:
+                os.remove(name)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise
+
+        def do_test(clean=False):
+            for proto in ('file://', ''):
+                source = proto + local_path
+                log.debug('Trying source %s', source)
+                try:
+                    ret = self.run_state(
+                        'file.managed',
+                        name=name,
+                        source=source,
+                        source_hash='sha1={0}'.format(bad_hash))
+                    self.assertSaltFalseReturn(ret)
+                    ret = ret[next(iter(ret))]
+                    # Shouldn't be any changes
+                    self.assertFalse(ret['changes'])
+                    # Check that we identified a hash mismatch
+                    self.assertIn(
+                        'does not match actual checksum', ret['comment'])
+
+                    ret = self.run_state(
+                        'file.managed',
+                        name=name,
+                        source=source,
+                        source_hash='sha1={0}'.format(actual_hash))
+                    self.assertSaltTrueReturn(ret)
+                finally:
+                    if clean:
+                        remove_file()
+
+        remove_file()
+        log.debug('Trying with nonexistant destination file')
+        do_test()
+        log.debug('Trying with destination file already present')
+        with salt.utils.files.fopen(name, 'w'):
+            pass
+        try:
+            do_test(clean=False)
+        finally:
+            remove_file()
+
+    def test_managed_local_source_does_not_exist(self):
+        '''
+        Make sure that we exit gracefully when a local source doesn't exist
+        '''
+        name = os.path.join(TMP, 'local_source_does_not_exist')
+        local_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene99')
+
+        for proto in ('file://', ''):
+            source = proto + local_path
+            log.debug('Trying source %s', source)
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=source)
+            self.assertSaltFalseReturn(ret)
+            ret = ret[next(iter(ret))]
+            # Shouldn't be any changes
+            self.assertFalse(ret['changes'])
+            # Check that we identified a hash mismatch
+            self.assertIn(
+                'does not exist', ret['comment'])
+
     def test_directory(self):
         '''
         file.directory
@@ -587,19 +664,29 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             tmp_dir = os.path.join(TMP, 'pgdata')
             sym_dir = os.path.join(TMP, 'pg_data')
-            os.mkdir(tmp_dir, 0o700)
-            os.symlink(tmp_dir, sym_dir)
 
-            ret = self.run_state(
-                'file.directory', test=True, name=sym_dir, follow_symlinks=True,
-                mode=700
-            )
+            if IS_WINDOWS:
+                self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
+            else:
+                os.mkdir(tmp_dir, 0o700)
+
+            self.run_function('file.symlink', [tmp_dir, sym_dir])
+
+            if IS_WINDOWS:
+                ret = self.run_state(
+                    'file.directory', test=True, name=sym_dir,
+                    follow_symlinks=True, win_owner='Administrators')
+            else:
+                ret = self.run_state(
+                    'file.directory', test=True, name=sym_dir,
+                    follow_symlinks=True, mode=700)
+
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isdir(tmp_dir):
-                shutil.rmtree(tmp_dir)
+                self.run_function('file.remove', [tmp_dir])
             if os.path.islink(sym_dir):
-                os.unlink(sym_dir)
+                self.run_function('file.remove', [sym_dir])
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Mode not available in Windows')
@@ -1594,25 +1681,24 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         fname = 'append_issue_1864_makedirs'
         name = os.path.join(TMP, fname)
-        try:
-            self.assertFalse(os.path.exists(name))
-        except AssertionError:
-            os.remove(name)
+
+        # Make sure the file is not there to begin with
+        if os.path.isfile(name):
+            self.run_function('file.remove', [name])
+
         try:
             # Non existing file get's touched
-            if os.path.isfile(name):
-                # left over
-                os.remove(name)
             ret = self.run_state(
                 'file.append', name=name, text='cheese', makedirs=True
             )
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isfile(name):
-                os.remove(name)
+                self.run_function('file.remove', [name])
 
         # Nested directory and file get's touched
         name = os.path.join(TMP, 'issue_1864', fname)
+
         try:
             ret = self.run_state(
                 'file.append', name=name, text='cheese', makedirs=True
@@ -1620,20 +1706,17 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isfile(name):
-                os.remove(name)
+                self.run_function('file.remove', [name])
 
+        # Parent directory exists but file does not and makedirs is False
         try:
-            # Parent directory exists but file does not and makedirs is False
             ret = self.run_state(
                 'file.append', name=name, text='cheese'
             )
             self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isfile(name))
         finally:
-            shutil.rmtree(
-                os.path.join(TMP, 'issue_1864'),
-                ignore_errors=True
-            )
+            self.run_function('file.remove', [os.path.join(TMP, 'issue_1864')])
 
     def test_prepend_issue_27401_makedirs(self):
         '''
@@ -1970,17 +2053,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertSaltTrueReturn({name: step})
             with salt.utils.files.fopen(testcase_filedest) as fp_:
                 contents = fp_.read().split(os.linesep)
-            self.assertEqual(
-                ['#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
-                 'foo',
-                 '#-- end salt managed zonestart --',
-                 '#',
-                 '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
-                 'bar',
-                 '#-- end salt managed zoneend --',
-                 ''],
-                contents
-            )
+
+            expected = [
+                '#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
+                'foo',
+                '#-- end salt managed zonestart --',
+                '#',
+                '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
+                'bar',
+                '#-- end salt managed zoneend --',
+                '']
+
+            self.assertEqual(expected, contents)
         finally:
             if os.path.isdir(testcase_filedest):
                 os.unlink(testcase_filedest)
@@ -2050,64 +2134,61 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
                 os.unlink(filename)
 
-    @skipIf(six.PY3, 'This test will have a LOT of rewriting to support both Py2 and Py3')
-    # And I'm more comfortable with the author doing it - s0undt3ch
-    @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
     def test_issue_8947_utf8_sls(self):
         '''
         Test some file operation with utf-8 characters on the sls
 
         This is more generic than just a file test. Feel free to move
         '''
-        korean_1 = u'한국어 시험'
-        korean_2 = u'첫 번째 행'
-        korean_3 = u'마지막 행'
+        korean_1 = '한국어 시험'
+        korean_2 = '첫 번째 행'
+        korean_3 = '마지막 행'
         test_file = os.path.join(
             TMP,
-            u'salt_utf8_tests',
-            u'{0}.txt'.format(korean_1)
+            'salt_utf8_tests',
+            '{0}.txt'.format(korean_1)
         )
         test_file_encoded = salt.utils.stringutils.to_str(test_file)
         template_path = os.path.join(TMP_STATE_TREE, 'issue-8947.sls')
         # create the sls template
         template_lines = [
-            u'# -*- coding: utf-8 -*-',
-            u'some-utf8-file-create:',
-            u'  file.managed:',
-            u"    - name: '{0}'".format(test_file),
-            u"    - contents: {0}".format(korean_1),
-            u'    - makedirs: True',
-            u'    - replace: True',
-            u'    - show_diff: True',
-            u'some-utf8-file-create2:',
-            u'  file.managed:',
-            u"    - name: '{0}'".format(test_file),
-            u'    - contents: |',
-            u'       {0}'.format(korean_2),
-            u'       {0}'.format(korean_1),
-            u'       {0}'.format(korean_3),
-            u'    - replace: True',
-            u'    - show_diff: True',
-            u'some-utf8-file-exists:',
-            u'  file.exists:',
-            u"    - name: '{0}'".format(test_file),
-            u'    - require:',
-            u'      - file: some-utf8-file-create2',
-            u'some-utf8-file-content-test:',
-            u'  cmd.run:',
-            u'    - name: \'cat "{0}"\''.format(test_file),
-            u'    - require:',
-            u'      - file: some-utf8-file-exists',
-            u'some-utf8-file-content-remove:',
-            u'  cmd.run:',
-            u'    - name: \'rm -f "{0}"\''.format(test_file),
-            u'    - require:',
-            u'      - cmd: some-utf8-file-content-test',
-            u'some-utf8-file-removed:',
-            u'  file.missing:',
-            u"    - name: '{0}'".format(test_file),
-            u'    - require:',
-            u'      - cmd: some-utf8-file-content-remove',
+            '# -*- coding: utf-8 -*-',
+            'some-utf8-file-create:',
+            '  file.managed:',
+            "    - name: '{0}'".format(test_file),
+            "    - contents: {0}".format(korean_1),
+            '    - makedirs: True',
+            '    - replace: True',
+            '    - show_diff: True',
+            'some-utf8-file-create2:',
+            '  file.managed:',
+            "    - name: '{0}'".format(test_file),
+            '    - contents: |',
+            '       {0}'.format(korean_2),
+            '       {0}'.format(korean_1),
+            '       {0}'.format(korean_3),
+            '    - replace: True',
+            '    - show_diff: True',
+            'some-utf8-file-exists:',
+            '  file.exists:',
+            "    - name: '{0}'".format(test_file),
+            '    - require:',
+            '      - file: some-utf8-file-create2',
+            'some-utf8-file-content-test:',
+            '  cmd.run:',
+            '    - name: \'cat "{0}"\''.format(test_file),
+            '    - require:',
+            '      - file: some-utf8-file-exists',
+            'some-utf8-file-content-remove:',
+            '  cmd.run:',
+            '    - name: \'rm -f "{0}"\''.format(test_file),
+            '    - require:',
+            '      - cmd: some-utf8-file-content-test',
+            'some-utf8-file-removed:',
+            '  file.missing:',
+            "    - name: '{0}'".format(test_file),
+            '    - require:',
+            '      - cmd: some-utf8-file-content-remove',
         ]
         with salt.utils.files.fopen(template_path, 'wb') as fp_:
             fp_.write(
@@ -2124,57 +2205,59 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 )
             # difflib produces different output on python 2.6 than on >=2.7
             if sys.version_info < (2, 7):
-                utf_diff = '---  \n+++  \n@@ -1,1 +1,3 @@\n'
+                diff = '---  \n+++  \n@@ -1,1 +1,3 @@\n'
             else:
-                utf_diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
-            #utf_diff += '+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
-            utf_diff += salt.utils.stringutils.to_str(
-                u'+첫 번째 행\n'
-                u' 한국어 시험\n'
-                u'+마지막 행\n'
+                diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
+            diff += (
+                '+첫 번째 행\n'
+                ' 한국어 시험\n'
+                '+마지막 행\n'
             )
+            diff = salt.utils.stringutils.to_str(diff)
             # using unicode.encode('utf-8') we should get the same as
             # an utf-8 string
+            # future_lint: disable=blacklisted-function
             expected = {
-                'file_|-some-utf8-file-create_|-{0}_|-managed'.format(test_file_encoded): {
-                    'name': '{0}'.format(test_file_encoded),
+                str('file_|-some-utf8-file-create_|-{0}_|-managed').format(test_file_encoded): {
+                    'name': test_file_encoded,
                     '__run_num__': 0,
-                    'comment': 'File {0} updated'.format(test_file_encoded),
+                    'comment': str('File {0} updated').format(test_file_encoded),
                     'diff': 'New file'
                 },
-                'file_|-some-utf8-file-create2_|-{0}_|-managed'.format(test_file_encoded): {
-                    'name': '{0}'.format(test_file_encoded),
+                str('file_|-some-utf8-file-create2_|-{0}_|-managed').format(test_file_encoded): {
+                    'name': test_file_encoded,
                     '__run_num__': 1,
-                    'comment': 'File {0} updated'.format(test_file_encoded),
-                    'diff': utf_diff
+                    'comment': str('File {0} updated').format(test_file_encoded),
+                    'diff': diff
                 },
-                'file_|-some-utf8-file-exists_|-{0}_|-exists'.format(test_file_encoded): {
-                    'name': '{0}'.format(test_file_encoded),
+                str('file_|-some-utf8-file-exists_|-{0}_|-exists').format(test_file_encoded): {
+                    'name': test_file_encoded,
                     '__run_num__': 2,
-                    'comment': 'Path {0} exists'.format(test_file_encoded)
+                    'comment': str('Path {0} exists').format(test_file_encoded)
                 },
-                'cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run'.format(test_file_encoded): {
-                    'name': 'cat "{0}"'.format(test_file_encoded),
+                str('cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run').format(test_file_encoded): {
+                    'name': str('cat "{0}"').format(test_file_encoded),
                     '__run_num__': 3,
-                    'comment': 'Command "cat "{0}"" run'.format(test_file_encoded),
-                    'stdout': '{0}\n{1}\n{2}'.format(
+                    'comment': str('Command "cat "{0}"" run').format(test_file_encoded),
+                    'stdout': str('{0}\n{1}\n{2}').format(
                         salt.utils.stringutils.to_str(korean_2),
                         salt.utils.stringutils.to_str(korean_1),
                         salt.utils.stringutils.to_str(korean_3),
                     )
                 },
-                'cmd_|-some-utf8-file-content-remove_|-rm -f "{0}"_|-run'.format(test_file_encoded): {
-                    'name': 'rm -f "{0}"'.format(test_file_encoded),
+                str('cmd_|-some-utf8-file-content-remove_|-rm -f "{0}"_|-run').format(test_file_encoded): {
+                    'name': str('rm -f "{0}"').format(test_file_encoded),
                     '__run_num__': 4,
-                    'comment': 'Command "rm -f "{0}"" run'.format(test_file_encoded),
+                    'comment': str('Command "rm -f "{0}"" run').format(test_file_encoded),
                     'stdout': ''
                 },
-                'file_|-some-utf8-file-removed_|-{0}_|-missing'.format(test_file_encoded): {
-                    'name': '{0}'.format(test_file_encoded),
+                str('file_|-some-utf8-file-removed_|-{0}_|-missing').format(test_file_encoded): {
+                    'name': test_file_encoded,
                     '__run_num__': 5,
-                    'comment': 'Path {0} is missing'.format(test_file_encoded),
+                    'comment': str('Path {0} is missing').format(test_file_encoded),
                 }
             }
+            # future_lint: enable=blacklisted-function
             result = {}
             for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
@@ -2192,12 +2275,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.maxDiff = None
 
             self.assertEqual(expected, result)
-            cat_id = 'cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run'.format(test_file_encoded)
+            # future_lint: disable=blacklisted-function
+            cat_id = str('cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run').format(test_file_encoded)
+            # future_lint: enable=blacklisted-function
             self.assertEqual(
-                result[cat_id]['stdout'],
-                salt.utils.stringutils.to_str(
-                    korean_2 + '\n' + korean_1 + '\n' + korean_3
-                )
+                salt.utils.stringutils.to_unicode(result[cat_id]['stdout']),
+                korean_2 + '\n' + korean_1 + '\n' + korean_3
             )
         finally:
             if os.path.isdir(test_file):

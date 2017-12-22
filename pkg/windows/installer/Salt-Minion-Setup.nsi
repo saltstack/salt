@@ -362,7 +362,7 @@ Section -Prerequisites
             # /qb! used by 2008 installer
             # It just ignores the unrecognized switches...
             ClearErrors
-            ExecWait '"$INSTDIR\vcredist.exe" /qb! /passive /norestart' $0
+            ExecWait '"$INSTDIR\vcredist.exe" /qb! /quiet /norestart' $0
             IfErrors 0 CheckVcRedistErrorCode
                 MessageBox MB_OK \
                     "$VcRedistName failed to install. Try installing the package manually." \

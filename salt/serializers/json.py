@@ -8,7 +8,7 @@
     It's just a wrapper around json (or simplejson if available).
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import simplejson as json

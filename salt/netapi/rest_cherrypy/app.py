@@ -618,6 +618,7 @@ import salt.utils.event
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.ext import six
+from salt.ext.six import BytesIO
 
 # Import salt-api libs
 import salt.netapi
@@ -950,18 +951,6 @@ def urlencoded_processor(entity):
 
     :param entity: raw POST data
     '''
-    if six.PY3:
-        # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
-        entity.fp.read(fp_out=contents)
-        contents.seek(0)
-        body_str = contents.read()
-        body_bytes = salt.utils.stringutils.to_bytes(body_str)
-        body_bytes = six.BytesIO(body_bytes)
-        body_bytes.seek(0)
-        # Patch fp
-        entity.fp = body_bytes
-        del contents
     # First call out to CherryPy's default processor
     cherrypy._cpreqbody.process_urlencoded(entity)
     cherrypy._cpreqbody.process_urlencoded(entity)
@@ -980,10 +969,10 @@ def json_processor(entity):
         body = entity.fp.read()
     else:
         # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
+        contents = BytesIO()
         body = entity.fp.read(fp_out=contents)
         contents.seek(0)
-        body = contents.read()
+        body = salt.utils.stringutils.to_unicode(contents.read())
         del contents
     try:
         cherrypy.serving.request.unserialized_data = json.loads(body)
@@ -1004,10 +993,10 @@ def yaml_processor(entity):
         body = entity.fp.read()
     else:
         # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
+        contents = BytesIO()
         body = entity.fp.read(fp_out=contents)
         contents.seek(0)
-        body = contents.read()
+        body = salt.utils.stringutils.to_unicode(contents.read())
     try:
         cherrypy.serving.request.unserialized_data = yaml.safe_load(body)
     except ValueError:
@@ -1030,10 +1019,10 @@ def text_processor(entity):
         body = entity.fp.read()
     else:
         # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
+        contents = BytesIO()
         body = entity.fp.read(fp_out=contents)
         contents.seek(0)
-        body = contents.read()
+        body = salt.utils.stringutils.to_unicode(contents.read())
     try:
         cherrypy.serving.request.unserialized_data = json.loads(body)
     except ValueError:
@@ -1175,10 +1164,6 @@ class LowDataAdapter(object):
         for chunk in lowstate:
             if token:
                 chunk['token'] = token
-                if cherrypy.session.get('user'):
-                    chunk['__current_eauth_user'] = cherrypy.session.get('user')
-                if cherrypy.session.get('groups'):
-                    chunk['__current_eauth_groups'] = cherrypy.session.get('groups')
 
             if client:
                 chunk['client'] = client
@@ -1878,9 +1863,6 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
-        cherrypy.session['user'] = token['name']
-        if 'groups' in token:
-            cherrypy.session['groups'] = token['groups']
 
         # Grab eauth config for the current backend for the current user
         try:

@@ -9,7 +9,7 @@
     It also use C bindings if they are available.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 
 import yaml
@@ -79,7 +79,7 @@ def serialize(obj, **options):
 
 class EncryptedString(str):
 
-    yaml_tag = u'!encrypted'
+    yaml_tag = '!encrypted'
 
     @staticmethod
     def yaml_constructor(loader, tag, node):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import tempfile
@@ -28,6 +28,7 @@ import salt.modules.file as filemod
 import salt.modules.config as configmod
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 SED_CONTENT = '''test
 some
@@ -88,7 +89,10 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', backup=False)
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
-            self.assertIn('Salticus', fp.read())
+            self.assertIn(
+                'Salticus',
+                salt.utils.stringutils.to_unicode(fp.read())
+            )
 
     def test_replace_append_if_not_found(self):
         '''
@@ -108,7 +112,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         filemod.replace(tfile.name, **args)
         expected = os.linesep.join([base, 'baz=\\g<value>']) + os.linesep
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
         os.remove(tfile.name)
 
         # File not ending with a newline, no match
@@ -117,7 +122,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
             tfile.flush()
         filemod.replace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
         os.remove(tfile.name)
 
         # A newline should not be added in empty files
@@ -126,7 +132,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         filemod.replace(tfile.name, **args)
         expected = args['repl'] + os.linesep
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
         os.remove(tfile.name)
 
         # Using not_found_content, rather than repl
@@ -137,7 +144,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         expected = os.linesep.join([base, 'baz=3']) + os.linesep
         filemod.replace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
         os.remove(tfile.name)
 
         # not appending if matches
@@ -148,7 +156,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         expected = base
         filemod.replace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
 
     def test_backup(self):
         fext = '.bak'
@@ -303,9 +312,10 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             backup=False
         )
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
-            self.assertNotIn('#-- START BLOCK 2'
-                             + "\n" + new_content
-                             + '#-- END BLOCK 2', fp.read())
+            self.assertNotIn(
+                '#-- START BLOCK 2' + "\n" + new_content + '#-- END BLOCK 2',
+                salt.utils.stringutils.to_unicode(fp.read())
+            )
 
         filemod.blockreplace(self.tfile.name,
                              '#-- START BLOCK 2',
@@ -341,7 +351,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         filemod.blockreplace(tfile.name, **args)
         expected = os.linesep.join([base, block])
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
         os.remove(tfile.name)
 
         # File not ending with a newline
@@ -350,7 +361,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             tfile.flush()
         filemod.blockreplace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
         os.remove(tfile.name)
 
         # A newline should not be added in empty files
@@ -358,7 +370,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             pass
         filemod.blockreplace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), block)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), block)
         os.remove(tfile.name)
 
     def test_replace_prepend(self):
@@ -402,7 +415,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                              backup=False)
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
-            filecontent = fp.read()
+            filecontent = salt.utils.stringutils.to_unicode(fp.read())
         self.assertIn('new content 1', filecontent)
         self.assertNotIn('to be removed', filecontent)
         self.assertIn('first part of start line', filecontent)
@@ -545,7 +558,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             with salt.utils.files.fopen(path, 'r') as newfile:
                 self.assertEqual(
                     SED_CONTENT.replace(before, ''),
-                    newfile.read()
+                    salt.utils.stringutils.to_unicode(newfile.read())
                 )
 
     def test_append_newline_at_eof(self):
@@ -554,27 +567,32 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         newlines at end of file.
         '''
         # File ending with a newline
-        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.stringutils.to_bytes('foo' + os.linesep))
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_str('foo' + os.linesep))
             tfile.flush()
         filemod.append(tfile.name, 'bar')
         expected = os.linesep.join(['foo', 'bar']) + os.linesep
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
 
         # File not ending with a newline
-        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.stringutils.to_bytes('foo'))
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_str('foo'))
             tfile.flush()
         filemod.append(tfile.name, 'bar')
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
 
         # A newline should be added in empty files
-        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            filemod.append(tfile.name, 'bar')
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tfile:
+            filemod.append(tfile.name, salt.utils.stringutils.to_str('bar'))
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), 'bar' + os.linesep)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()),
+                'bar' + os.linesep
+            )
 
     def test_extract_hash(self):
         '''
@@ -809,7 +827,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         for mode, err_msg in [(None, 'How to process the file'), ('nonsense', 'Unknown mode')]:
             with pytest.raises(CommandExecutionError) as cmd_err:
                 filemod.line('foo', mode=mode)
-            assert err_msg in str(cmd_err)
+            assert err_msg in six.text_type(cmd_err)
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -821,7 +839,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         for mode in ['insert', 'ensure', 'replace']:
             with pytest.raises(CommandExecutionError) as cmd_err:
                 filemod.line('foo', mode=mode)
-            assert 'Content can only be empty if mode is "delete"' in str(cmd_err)
+            assert 'Content can only be empty if mode is "delete"' in six.text_type(cmd_err)
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -835,7 +853,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.files.fopen', files_fopen):
             with pytest.raises(CommandExecutionError) as cmd_err:
                 filemod.line('foo', content='test content', mode='insert')
-            assert '"location" or "before/after"' in str(cmd_err)
+            assert '"location" or "before/after"' in six.text_type(cmd_err)
 
     def test_util_starts_till(self):
         '''
@@ -1082,7 +1100,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
                     with pytest.raises(CommandExecutionError) as cmd_err:
                         filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
-                    assert 'Found more than one line between boundaries "before" and "after"' in str(cmd_err)
+                    assert 'Found more than one line between boundaries "before" and "after"' in six.text_type(cmd_err)
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1154,7 +1172,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(delattr, self, 'tfile')
         self.myfile = os.path.join(TMP, 'myfile')
         with salt.utils.files.fopen(self.myfile, 'w+') as fp:
-            fp.write('Hello\n')
+            fp.write(salt.utils.stringutils.to_str('Hello\n'))
         self.addCleanup(os.remove, self.myfile)
         self.addCleanup(delattr, self, 'myfile')
 
