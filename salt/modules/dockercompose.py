@@ -106,6 +106,7 @@ import inspect
 import logging
 import os
 import re
+import yaml
 
 import salt.utils.files
 import salt.utils.stringutils
@@ -113,6 +114,9 @@ import salt.utils.stringutils
 from salt.ext import six
 
 from operator import attrgetter
+
+from salt.serializers import json
+
 try:
     import compose
     from compose.cli.command import get_project
@@ -214,9 +218,65 @@ def __read_docker_compose_file(file_path):
                                 result, None)
 
 
+def __load_docker_compose(path):
+    '''
+    Read the compose file and load its' contents
+
+    :param path:
+    :return:
+    '''
+    file_path = __get_docker_file_path(path)
+    if file_path is None:
+        msg = 'Could not find docker-compose file at {0}'.format(path)
+        return None, __standardize_result(False, msg,
+                                          None, None)
+    if not os.path.isfile(file_path):
+        return None, __standardize_result(False,
+                                    'Path {} is not present'.format(file_path),
+                                    None, None)
+    try:
+        with salt.utils.files.fopen(file_path, 'r') as fl:
+            loaded = yaml.load(fl)
+    except EnvironmentError:
+        return None, __standardize_result(False,
+                                    'Could not read {0}'.format(file_path),
+                                    None, None)
+    except yaml.YAMLError as yerr:
+        msg = 'Could not parse {0} {1}'.format(file_path, yerr)
+        return None, __standardize_result(False, msg,
+                                    None, None)
+    if not loaded:
+        msg = 'Got empty compose file at {0}'.format(file_path)
+        return None, __standardize_result(False, msg,
+                                          None, None)
+    if 'services' not in loaded:
+        loaded['services'] = {}
+    result = {
+         'compose_content': loaded,
+         'file_name': os.path.basename(file_path)
+    }
+    return result, None
+
+
+def __dump_docker_compose(path, content):
+    '''
+
+    :param path:
+    :param content: the not-yet dumped content
+    :return:
+    '''
+    try:
+        dumped = yaml.dump(content, indent=2, default_flow_style=False)
+        return __write_docker_compose(path, dumped)
+    except TypeError as t_err:
+        msg = 'Could not dump {0} {1}'.format(content, t_err)
+        return __standardize_result(False, msg,
+                                    None, None)
+
+
 def __write_docker_compose(path, docker_compose):
     '''
-    Write docker-compose to a temp directory
+    Write docker-compose to a path
     in order to use it with docker-compose ( config check )
 
     :param path:
@@ -277,6 +337,55 @@ def __load_project_from_file_path(file_path):
     except Exception as inst:
         return __handle_except(inst)
     return project
+
+
+def __load_compose_definitions(path, definition):
+    '''
+    Will load the compose file located at path
+    Then determines the format/contents of the sent definition
+
+    err or results are only set if there were any
+
+    :param path:
+    :param definition:
+    :return tuple(compose_result, loaded_definition, err):
+    '''
+    compose_result, err = __load_docker_compose(path)
+    if err:
+        return None, None, err
+    if isinstance(definition, dict):
+        return compose_result, definition, None
+    elif definition.strip().startswith('{'):
+        try:
+            loaded_definition = json.deserialize(definition)
+        except json.DeserializationError as jerr:
+            msg = 'Could not parse {0} {1}'.format(definition, jerr)
+            return None, None, __standardize_result(False, msg,
+                                              None, None)
+    else:
+        try:
+            loaded_definition = yaml.load(definition)
+        except yaml.YAMLError as yerr:
+            msg = 'Could not parse {0} {1}'.format(definition, yerr)
+            return None, None, __standardize_result(False, msg,
+                                              None, None)
+    return compose_result, loaded_definition, None
+
+
+def __dump_compose_file(path, compose_result, success_msg):
+    '''
+    Utility function to dump the compose result to a file.
+
+    :param path:
+    :param compose_result:
+    :param success_msg: the message to give upon success
+    :return:
+    '''
+    ret = __dump_docker_compose(path, compose_result['compose_content'])
+    if isinstance(ret, dict):
+        return ret
+    return __standardize_result(True, success_msg,
+                                compose_result, None)
 
 
 def __handle_except(inst):
@@ -769,3 +878,133 @@ def up(path, service_names=None):
         except Exception as inst:
             return __handle_except(inst)
     return __standardize_result(True, 'Adding containers via docker-compose', result, debug_ret)
+
+
+def service_create(path, service_name, definition):
+    '''
+    Create the definition of a docker-compose service
+    This fails when the service already exists
+    This does not pull or up the service
+    This wil re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
+
+    path
+        Path where the docker-compose file is stored on the server
+    service_name
+        Name of the service to create
+    definition
+        Service definition as yaml or json string
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockercompose.service_create /path/where/docker-compose/stored service_name definition
+    '''
+    compose_result, loaded_definition, err = __load_compose_definitions(path, definition)
+    if err:
+        return err
+    services = compose_result['compose_content']['services']
+    if service_name in services:
+        msg = 'Service {0} already exists'.format(service_name)
+        return __standardize_result(False, msg, None, None)
+    services[service_name] = loaded_definition
+    return __dump_compose_file(path, compose_result,
+                               'Service {0} created'.format(service_name))
+
+
+def service_upsert(path, service_name, definition):
+    '''
+    Create or update the definition of a docker-compose service
+    This does not pull or up the service
+    This wil re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
+
+    path
+        Path where the docker-compose file is stored on the server
+    service_name
+        Name of the service to create
+    definition
+        Service definition as yaml or json string
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockercompose.service_upsert /path/where/docker-compose/stored service_name definition
+    '''
+    compose_result, loaded_definition, err = __load_compose_definitions(path, definition)
+    if err:
+        return err
+    services = compose_result['compose_content']['services']
+    if service_name in services:
+        msg = 'Service {0} already exists'.format(service_name)
+        return __standardize_result(False, msg, None, None)
+    services[service_name] = loaded_definition
+    return __dump_compose_file(path, compose_result,
+                               'Service definition for {0} is set'.format(service_name))
+
+
+def service_remove(path, service_name):
+    '''
+    Remove the definition of a docker-compose service
+    This does not rm the container
+    This wil re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
+
+    path
+        Path where the docker-compose file is stored on the server
+    service_name
+        Name of the service to remove
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockercompose.service_remove /path/where/docker-compose/stored service_name
+    '''
+    compose_result, err = __load_docker_compose(path)
+    if err:
+        return err
+    services = compose_result['compose_content']['services']
+    if service_name not in services:
+        return __standardize_result(False,
+                                    'Service {0} did not exists'.format(service_name),
+                                    None, None)
+    del services[service_name]
+    return __dump_compose_file(path, compose_result,
+                               'Service {0} is removed from {1}'.format(service_name, path))
+
+
+def service_set_tag(path, service_name, tag):
+    '''
+    Change the tag of a docker-compose service
+    This does not pull or up the service
+    This wil re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
+
+    path
+        Path where the docker-compose file is stored on the server
+    service_name
+        Name of the service to remove
+    tag
+        Name of the tag (often used as version) that the service image should have
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockercompose.service_create /path/where/docker-compose/stored service_name tag
+    '''
+    compose_result, err = __load_docker_compose(path)
+    if err:
+        return err
+    services = compose_result['compose_content']['services']
+    if service_name not in services:
+        return __standardize_result(False,
+                                    'Service {0} did not exists'.format(service_name),
+                                    None, None)
+    if 'image' not in services[service_name]:
+        return __standardize_result(False,
+                                    'Service {0} did not contain the variable "image"'.format(service_name),
+                                    None, None)
+    image = services[service_name]['image'].split(':')[0]
+    services[service_name]['image'] = '{0}:{1}'.format(image, tag)
+    return __dump_compose_file(path, compose_result,
+                               'Service {0} is set to tag {1}'.format(service_name, tag))
