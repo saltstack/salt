@@ -6,12 +6,11 @@ uWSGI stats server https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html
 :maturity:   new
 :platform:   all
 '''
+# Import Python libs
 from __future__ import absolute_import
 
-# Import Python libs
-import json
-
 # Import Salt libs
+import salt.utils.json
 import salt.utils.path
 
 
@@ -43,4 +42,4 @@ def stats(socket):
 
     cmd = ['uwsgi', '--connect-and-read', '{0}'.format(socket)]
     out = __salt__['cmd.run'](cmd, python_shell=False)
-    return json.loads(out)
+    return salt.utils.json.loads(out)

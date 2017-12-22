@@ -5,7 +5,6 @@
 # Import Python libs
 from __future__ import absolute_import
 import textwrap
-import json
 try:
     import dns.query
     import dns.tsigkeyring
@@ -26,6 +25,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.json
 import salt.modules.ddns as ddns
 
 
@@ -109,7 +109,7 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to delete a DNS record.
         '''
-        file_data = json.dumps({'A': 'B'})
+        file_data = salt.utils.json.dumps({'A': 'B'})
 
         class MockAnswer(object):
             def __init__(self, *args, **kwargs):

@@ -3,11 +3,10 @@
 Create ssh executor system
 '''
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import, print_function
 import base64
 import copy
 import getpass
-import json
 import logging
 import multiprocessing
 import subprocess
@@ -1017,7 +1016,7 @@ class Single(object):
             if '_error' in opts_pkg:
                 #Refresh failed
                 retcode = opts_pkg['retcode']
-                ret = json.dumps({'local': opts_pkg})
+                ret = salt.utils.json.dumps({'local': opts_pkg})
                 return ret, retcode
 
             opts_pkg['file_roots'] = self.opts['file_roots']
@@ -1139,9 +1138,9 @@ class Single(object):
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if isinstance(result, dict) and 'local' in result:
-            ret = json.dumps({'local': result['local']})
+            ret = salt.utils.json.dumps({'local': result['local']})
         else:
-            ret = json.dumps({'local': {'return': result}})
+            ret = salt.utils.json.dumps({'local': {'return': result}})
         return ret, retcode
 
     def _cmd_str(self):
@@ -1176,16 +1175,16 @@ OPTIONS.wipe = {7}
 OPTIONS.tty = {8}
 OPTIONS.cmd_umask = {9}
 ARGS = {10}\n'''.format(self.minion_config,
-                         RSTR,
-                         self.thin_dir,
-                         thin_sum,
-                         'sha1',
-                         salt.version.__version__,
-                         self.mods.get('version', ''),
-                         self.wipe,
-                         self.tty,
-                         self.cmd_umask,
-                         self.argv)
+                        RSTR,
+                        self.thin_dir,
+                        thin_sum,
+                        'sha1',
+                        salt.version.__version__,
+                        self.mods.get('version', ''),
+                        self.wipe,
+                        self.tty,
+                        self.cmd_umask,
+                        self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         if six.PY2:
             py_code_enc = py_code.encode('base64')

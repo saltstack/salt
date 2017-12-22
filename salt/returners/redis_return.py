@@ -84,15 +84,14 @@ cluster.skip_full_coverage_check: ``False``
 
 
 '''
-
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import json
 import logging
 
 # Import Salt libs
 import salt.returners
 import salt.utils.jid
+import salt.utils.json
 import salt.utils.platform
 
 # Import 3rd-party libs
@@ -198,7 +197,7 @@ def returner(ret):
     serv = _get_serv(ret)
     pipeline = serv.pipeline(transaction=False)
     minion, jid = ret['id'], ret['jid']
-    pipeline.hset('ret:{0}'.format(jid), minion, json.dumps(ret))
+    pipeline.hset('ret:{0}'.format(jid), minion, salt.utils.json.dumps(ret))
     pipeline.expire('ret:{0}'.format(jid), _get_ttl())
     pipeline.set('{0}:{1}'.format(minion, ret['fun']), jid)
     pipeline.sadd('minions', minion)
@@ -210,7 +209,7 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid
     '''
     serv = _get_serv(ret=None)
-    serv.setex('load:{0}'.format(jid), _get_ttl(), json.dumps(load))
+    serv.setex('load:{0}'.format(jid), _get_ttl(), salt.utils.json.dumps(load))
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
@@ -227,7 +226,7 @@ def get_load(jid):
     serv = _get_serv(ret=None)
     data = serv.get('load:{0}'.format(jid))
     if data:
-        return json.loads(data)
+        return salt.utils.json.loads(data)
     return {}
 
 
@@ -239,7 +238,7 @@ def get_jid(jid):
     ret = {}
     for minion, data in six.iteritems(serv.hgetall('ret:{0}'.format(jid))):
         if data:
-            ret[minion] = json.loads(data)
+            ret[minion] = salt.utils.json.loads(data)
     return ret
 
 
@@ -259,7 +258,7 @@ def get_fun(fun):
             continue
         data = serv.get('{0}:{1}'.format(minion, jid))
         if data:
-            ret[minion] = json.loads(data)
+            ret[minion] = salt.utils.json.loads(data)
     return ret
 
 
@@ -272,7 +271,7 @@ def get_jids():
     for s in serv.mget(serv.keys('load:*')):
         if s is None:
             continue
-        load = json.loads(s)
+        load = salt.utils.json.loads(s)
         jid = load['jid']
         ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
     return ret

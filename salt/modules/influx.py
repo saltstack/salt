@@ -36,10 +36,10 @@ except ImportError:
     HAS_INFLUXDB = False
 
 import collections
-import json
 import logging
 
 # Import salt libs
+import salt.utils.json
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 log = logging.getLogger(__name__)
@@ -678,7 +678,7 @@ def _pull_query_results(resultset):
     for _header, _values in resultset.items():
         _header, _group_tags = _header
         if _group_tags:
-            _results[_header][json.dumps(_group_tags)] = [_value for _value in _values]
+            _results[_header][salt.utils.json.dumps(_group_tags)] = [_value for _value in _values]
         else:
             _results[_header] = [_value for _value in _values]
     return dict(sorted(_results.items()))

@@ -77,9 +77,9 @@ Additionally you can define cross account sqs:
 from __future__ import absolute_import
 import logging
 import time
-import json
 
 # Import salt libs
+import salt.utils.json
 import salt.utils.event
 
 # Import third party libs
@@ -140,7 +140,7 @@ def _process_queue(q, q_name, fire_master, tag='salt/engine/sqs', owner_acct_id=
         msgs = q.get_messages(wait_time_seconds=20)
         for msg in msgs:
             if message_format == "json":
-                fire_master(tag=tag, data={'message': json.loads(msg.get_body())})
+                fire_master(tag=tag, data={'message': salt.utils.json.loads(msg.get_body())})
             else:
                 fire_master(tag=tag, data={'message': msg.get_body()})
             msg.delete()

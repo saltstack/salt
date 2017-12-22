@@ -15,13 +15,13 @@ Requires an ``api_key`` in ``/etc/salt/minion``:
 # Import python libs
 from __future__ import absolute_import, print_function
 import datetime
-import json
 import logging
 import time
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 import salt.utils.http
+import salt.utils.json
 
 log = logging.getLogger(__name__)
 
@@ -205,7 +205,7 @@ def create_event(message_type=None, routing_key='everybody', **kwargs):
 
     status, result = _query(action='alert',
                             routing_key=routing_key,
-                            data=json.dumps(data),
+                            data=salt.utils.json.dumps(data),
                             method='POST'
                             )
     return result

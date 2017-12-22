@@ -14,7 +14,6 @@ states themselves.
 # Import python libs
 from __future__ import absolute_import, print_function
 import fnmatch
-import json
 import logging
 import os
 import shutil
@@ -34,8 +33,10 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.jid
+import salt.utils.json
 import salt.utils.platform
 import salt.utils.state
+import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -1996,7 +1997,7 @@ def pkg(pkg_path,
     s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.files.fopen(lowstate_json, 'r') as fp_:
-        lowstate = json.load(fp_, object_hook=salt.utils.data.encode_dict)
+        lowstate = salt.utils.json.load(fp_)
     # Check for errors in the lowstate
     for chunk in lowstate:
         if not isinstance(chunk, dict):
@@ -2004,14 +2005,14 @@ def pkg(pkg_path,
     pillar_json = os.path.join(root, 'pillar.json')
     if os.path.isfile(pillar_json):
         with salt.utils.files.fopen(pillar_json, 'r') as fp_:
-            pillar_override = json.load(fp_)
+            pillar_override = salt.utils.json.load(fp_)
     else:
         pillar_override = None
 
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = json.load(fp_, object_hook=salt.utils.data.encode_dict)
+            roster_grains = salt.utils.json.load(fp_, object_hook=salt.utils.data.encode_dict)
 
     if os.path.isfile(roster_grains_json):
         popts['grains'] = roster_grains
@@ -2237,12 +2238,15 @@ def event(tagmatch='*',
 
         if fnmatch.fnmatch(ret['tag'], tagmatch):
             if not quiet:
-                print('{0}\t{1}'.format(
-                    ret['tag'],
-                    json.dumps(
-                        ret['data'],
-                        sort_keys=pretty,
-                        indent=None if not pretty else 4)))
+                salt.utils.stringutils.print_cli(
+                    str('{0}\t{1}').format(  # future lint: blacklisted-function
+                        salt.utils.stringutils.to_str(ret['tag']),
+                        salt.utils.json.dumps(
+                            ret['data'],
+                            sort_keys=pretty,
+                            indent=None if not pretty else 4)
+                    )
+                )
                 sys.stdout.flush()
 
             count -= 1

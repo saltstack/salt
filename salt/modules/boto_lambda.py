@@ -82,7 +82,6 @@ The dependencies listed above can be installed via package or pip.
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import json
 import time
 import random
 
@@ -90,6 +89,7 @@ import random
 from salt.ext import six
 import salt.utils.compat
 import salt.utils.files
+import salt.utils.json
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range  # pylint: disable=import-error
@@ -207,7 +207,7 @@ def _filedata(infile):
 
 def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
     if isinstance(conf, six.string_types):
-        conf = json.loads(conf)
+        conf = salt.utils.json.loads(conf)
     if not conf:
         return None
     if not isinstance(conf, dict):
@@ -583,7 +583,7 @@ def get_permissions(FunctionName, Qualifier=None,
                                  **kwargs)
         policy = policy.get('Policy', {})
         if isinstance(policy, six.string_types):
-            policy = json.loads(policy)
+            policy = salt.utils.json.loads(policy)
         if policy is None:
             policy = {}
         permissions = {}

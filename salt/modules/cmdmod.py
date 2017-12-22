@@ -10,7 +10,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import functools
 import glob
-import json
 import logging
 import os
 import shutil
@@ -27,6 +26,7 @@ import tempfile
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.powershell
@@ -3272,7 +3272,7 @@ def powershell(cmd,
                    **kwargs)
 
     try:
-        return json.loads(response)
+        return salt.utils.json.loads(response)
     except Exception:
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
@@ -3578,7 +3578,7 @@ def powershell_all(cmd,
 
     # If we fail to parse stdoutput we will raise an exception
     try:
-        result = json.loads(stdoutput)
+        result = salt.utils.json.loads(stdoutput)
     except Exception:
         err_msg = "cmd.powershell_all " + \
                   "cannot parse the Powershell output."
