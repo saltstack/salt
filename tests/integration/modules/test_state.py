@@ -211,12 +211,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
                 debian_chroot=$(cat /etc/debian_chroot)
             fi
-            ''')
-
-        if not salt.utils.platform.is_windows():
-            contents += os.linesep
-
-        contents += textwrap.dedent('''\
+            
             # enable bash completion in interactive shells
             if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
                 . /etc/bash_completion
@@ -1290,7 +1285,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertIn('Gromit', data)
                 self.assertIn('Comte', data)
         finally:
-            os.unlink(tgt)
+            if os.path.islink(tgt):
+                os.unlink(tgt)
 
     # onchanges tests
 
@@ -1671,10 +1667,12 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         to true in pillar data
         '''
         self._add_runtime_pillar(pillar={'test': True})
+        testfile = os.path.join(TMP, 'testfile')
+        comment = 'The file {0} is set to be changed'.format(testfile)
         ret = self.run_function('state.sls', ['core'])
 
         for key, val in ret.items():
-            self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is set to be changed')
+            self.assertEqual(val['comment'], comment)
             self.assertEqual(val['changes'], {})
 
     def test_state_sls_id_test_state_test_post_run(self):

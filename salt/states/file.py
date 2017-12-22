@@ -2390,15 +2390,19 @@ def managed(name,
                     **kwargs
                 )
 
-                if salt.utils.platform.is_windows():
-                    ret = __salt__['file.check_perms'](
-                        path=name,
-                        ret=ret,
-                        owner=win_owner,
-                        grant_perms=win_perms,
-                        deny_perms=win_deny_perms,
-                        inheritance=win_inheritance,
-                        reset=win_perms_reset)
+                try:
+                    if salt.utils.platform.is_windows():
+                        ret = __salt__['file.check_perms'](
+                            path=name,
+                            ret=ret,
+                            owner=win_owner,
+                            grant_perms=win_perms,
+                            deny_perms=win_deny_perms,
+                            inheritance=win_inheritance,
+                            reset=win_perms_reset)
+                except CommandExecutionError as exc:
+                    if exc.strerror.startswith('Path not found'):
+                        ret['pchanges'] = '{0} will be created'.format(name)
 
             if isinstance(ret['pchanges'], tuple):
                 ret['result'], ret['comment'] = ret['pchanges']
