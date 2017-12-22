@@ -668,6 +668,8 @@ def list_quota_volume(name):
 
 def get_op_version(name):
     '''
+    .. versionadded:: Fluorine
+
     Returns the glusterfs volume op-version
     name
         Name of the glusterfs volume
@@ -678,7 +680,7 @@ def get_op_version(name):
     '''
 
     version = ''
-    cmd = 'gluster volume get {0} cluster.op-version'.format(name)
+    cmd = ['gluster', 'volume', 'get', name, 'cluster.op-version']
     result = __salt__['cmd.run'](cmd).splitlines()
 
     for line in result:
@@ -693,17 +695,24 @@ def get_op_version(name):
 
 def get_max_op_version():
     '''
+    .. versionadded:: Fluorine
+
     Returns the glusterfs volume's max op-version value
     Requires Glusterfs version > 3.9
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.get_max_op_version
     '''
 
     version = ''
     minor_version = _get_minor_version()
 
     if int(minor_version) < 10:
-        return False, 'Glusterfs version must be 3.10.x or greater.  Version is {0}'.format(minor_version)
+        return False, 'Glusterfs version must be 3.10+.  Your version is {0}.'.format('.'.join(_get_version()))
 
-    cmd = 'gluster volume get all cluster.max-op-version'
+    cmd = ['gluster', 'volume', 'get', 'all', 'cluster.max-op-version']
     result = __salt__['cmd.run'](cmd).splitlines()
 
     for line in result:
@@ -718,6 +727,8 @@ def get_max_op_version():
 
 def set_op_version(version):
     '''
+    .. versionadded:: Fluorine
+
     Set the glusterfs volume op-version
     version
         Version to set the glusterfs volume op-version
@@ -727,7 +738,7 @@ def set_op_version(version):
         salt '*' glusterfs.set_op_version <volume>
     '''
 
-    cmd = 'gluster volume set all cluster.op-version {0}'.format(version)
+    cmd = ['gluster', 'volume', 'set', 'all', 'cluster.op-version', version]
     result = __salt__['cmd.run'](cmd)
 
     if 'failed' in result:
@@ -739,7 +750,13 @@ def set_op_version(version):
 
 def get_version():
     '''
+    .. versionadded:: Fluorine
+
     Returns the version of glusterfs.
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.get_version
     '''
 
     return '.'.join(_get_version())
