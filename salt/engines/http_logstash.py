@@ -32,12 +32,12 @@ them onto a logstash endpoint via HTTP requests.
 from __future__ import absolute_import
 
 # Import python lib
-import json
 import fnmatch
 
 # Import salt libs
 import salt.utils.http
 import salt.utils.event
+import salt.utils.json
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -62,7 +62,7 @@ def _logstash(url, data):
         url,
         'POST',
         header_dict=_HEADERS,
-        data=json.dumps(data),
+        data=salt.utils.json.dumps(data),
         decode=True,
         status=True,
         opts=__opts__

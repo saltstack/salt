@@ -42,10 +42,10 @@ Use the following Pg database schema:
 # Import python libs
 from __future__ import absolute_import
 from contextlib import contextmanager
-import json
 import sys
 
 # import salt libs
+import salt.utils.json
 from salt.ext import six
 from salt.exceptions import SaltInvocationError, SaltMasterError
 
@@ -189,27 +189,23 @@ def insert(queue, items):
 
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
-            items = json.dumps(items)
-            cmd = '''INSERT INTO {0}(data) VALUES('{1}')'''.format(queue, items)
+            items = salt.utils.json.dumps(items)
+            cmd = str('''INSERT INTO {0}(data) VALUES('{1}')''').format(queue, items)  # future lint: disable=blacklisted-function
             log.debug('SQL Query: {0}'.format(cmd))
             try:
                 cur.execute(cmd)
             except psycopg2.IntegrityError as esc:
-                return('Item already exists in this queue. '
-                       'sqlite error: {0}'.format(esc))
+                return ('Item already exists in this queue. '
+                        'postgres error: {0}'.format(esc))
         if isinstance(items, list):
-            items = [json.dumps(el) for el in items]
-            cmd = "INSERT INTO {0}(data) VALUES (%s)".format(queue)
+            items = [(salt.utils.json.dumps(el),) for el in items]
+            cmd = str("INSERT INTO {0}(data) VALUES (%s)").format(queue)  # future lint: disable=blacklisted-function
             log.debug('SQL Query: {0}'.format(cmd))
-            newitems = []
-            for item in items:
-                newitems.append((item,))
-                # we need a list of one item tuples here
             try:
-                cur.executemany(cmd, newitems)
+                cur.executemany(cmd, items)
             except psycopg2.IntegrityError as esc:
-                return('One or more items already exists in this queue. '
-                       'sqlite error: {0}'.format(esc))
+                return ('One or more items already exists in this queue. '
+                        'postgres error: {0}'.format(esc))
     return True
 
 
@@ -219,19 +215,17 @@ def delete(queue, items):
     '''
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
-            cmd = """DELETE FROM {0} WHERE data = '{1}'""".format(queue, json.dumps(items))
+            cmd = str("""DELETE FROM {0} WHERE data = '{1}'""").format(  # future lint: disable=blacklisted-function
+                queue,
+                salt.utils.json.dumps(items))
             log.debug('SQL Query: {0}'.format(cmd))
             cur.execute(cmd)
             return True
         if isinstance(items, list):
-            items = [json.dumps(el) for el in items]
+            items = [(salt.utils.json.dumps(el),) for el in items]
             cmd = 'DELETE FROM {0} WHERE data = %s'.format(queue)
             log.debug('SQL Query: {0}'.format(cmd))
-            newitems = []
-            for item in items:
-                newitems.append((item,))
-                # we need a list of one item tuples here
-            cur.executemany(cmd, newitems)
+            cur.executemany(cmd, items)
     return True
 
 

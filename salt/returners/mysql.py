@@ -145,12 +145,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 from contextlib import contextmanager
 import sys
-import json
 import logging
 
 # Import salt libs
 import salt.returners
 import salt.utils.jid
+import salt.utils.json
 import salt.exceptions
 
 # Import 3rd-party libs
@@ -285,14 +285,14 @@ def returner(ret):
     try:
         with _get_serv(ret, commit=True) as cur:
             sql = '''INSERT INTO `salt_returns`
-                    (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
-                    VALUES (%s, %s, %s, %s, %s, %s)'''
+                     (`fun`, `jid`, `return`, `id`, `success`, `full_ret`)
+                     VALUES (%s, %s, %s, %s, %s, %s)'''
 
             cur.execute(sql, (ret['fun'], ret['jid'],
-                              json.dumps(ret['return']),
+                              salt.utils.json.dumps(ret['return']),
                               ret['id'],
                               ret.get('success', False),
-                              json.dumps(ret)))
+                              salt.utils.json.dumps(ret)))
     except salt.exceptions.SaltMasterError as exc:
         log.critical(exc)
         log.critical('Could not store return with MySQL returner. MySQL server unavailable.')
@@ -309,9 +309,9 @@ def event_return(events):
         for event in events:
             tag = event.get('tag', '')
             data = event.get('data', '')
-            sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id` )
+            sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id`)
                      VALUES (%s, %s, %s)'''
-            cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
+            cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__['id']))
 
 
 def save_load(jid, load, minions=None):
@@ -320,12 +320,10 @@ def save_load(jid, load, minions=None):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''INSERT INTO `jids`
-               (`jid`, `load`)
-                VALUES (%s, %s)'''
+        sql = '''INSERT INTO `jids` (`jid`, `load`) VALUES (%s, %s)'''
 
         try:
-            cur.execute(sql, (jid, json.dumps(load)))
+            cur.execute(sql, (jid, salt.utils.json.dumps(load)))
         except MySQLdb.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
             # Without this try:except: we get tons of duplicate entry errors
@@ -350,7 +348,7 @@ def get_load(jid):
         cur.execute(sql, (jid,))
         data = cur.fetchone()
         if data:
-            return json.loads(data[0])
+            return salt.utils.json.loads(data[0])
         return {}
 
 
@@ -368,7 +366,7 @@ def get_jid(jid):
         ret = {}
         if data:
             for minion, full_ret in data:
-                ret[minion] = json.loads(full_ret)
+                ret[minion] = salt.utils.json.loads(full_ret)
         return ret
 
 
@@ -392,7 +390,7 @@ def get_fun(fun):
         ret = {}
         if data:
             for minion, _, full_ret in data:
-                ret[minion] = json.loads(full_ret)
+                ret[minion] = salt.utils.json.loads(full_ret)
         return ret
 
 
@@ -409,8 +407,9 @@ def get_jids():
         data = cur.fetchall()
         ret = {}
         for jid in data:
-            ret[jid[0]] = salt.utils.jid.format_jid_instance(jid[0],
-                                                             json.loads(jid[1]))
+            ret[jid[0]] = salt.utils.jid.format_jid_instance(
+                jid[0],
+                salt.utils.json.loads(jid[1]))
         return ret
 
 
@@ -434,8 +433,9 @@ def get_jids_filter(count, filter_find_job=True):
         data = cur.fetchall()
         ret = []
         for jid in data:
-            ret.append(salt.utils.jid.format_jid_instance_ext(jid[0],
-                                                              json.loads(jid[1])))
+            ret.append(salt.utils.jid.format_jid_instance_ext(
+                jid[0],
+                salt.utils.json.loads(jid[1])))
         return ret
 
 

@@ -64,15 +64,14 @@ config:
 from __future__ import absolute_import
 import logging
 import os
-import os.path
 import hashlib
-import json
 
 # Import Salt Libs
 from salt.ext import six
 import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
+import salt.utils.json
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -208,7 +207,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
 
     if Permissions is not None:
         if isinstance(Permissions, six.string_types):
-            Permissions = json.loads(Permissions)
+            Permissions = salt.utils.json.loads(Permissions)
         required_keys = set(('Action', 'Principal'))
         optional_keys = set(('SourceArn', 'SourceAccount', 'Qualifier'))
         for sid, permission in six.iteritems(Permissions):
@@ -321,7 +320,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
     if isinstance(conf, six.string_types):
-        conf = json.loads(conf)
+        conf = salt.utils.json.loads(conf)
     if not conf:
         # if the conf is None, we should explicitly set the VpcConfig to
         # {'SubnetIds': [], 'SecurityGroupIds': []} to take the lambda out of

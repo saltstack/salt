@@ -8,9 +8,10 @@ State module to manage Elasticsearch.
 # Import python libs
 from __future__ import absolute_import
 import logging
-import json
 
 # Import salt libs
+import salt.utils.json
+
 log = logging.getLogger(__name__)
 
 
@@ -273,7 +274,7 @@ def index_template_present(name, definition, check_definition=False):
                     ret['comment'] = 'Cannot create index template {0}, {1}'.format(name, output)
         else:
             if check_definition:
-                definition_parsed = json.loads(definition)
+                definition_parsed = salt.utils.json.loads(definition)
                 current_template = __salt__['elasticsearch.index_template_get'](name=name)[name]
                 diff = __utils__['dictdiffer.deep_diff'](current_template, definition_parsed)
                 if len(diff) != 0:
@@ -407,13 +408,13 @@ def search_template_absent(name):
         if template:
             if __opts__['test']:
                 ret['comment'] = 'Search template {0} will be removed'.format(name)
-                ret['changes']['old'] = json.loads(template["template"])
+                ret['changes']['old'] = salt.utils.json.loads(template["template"])
                 ret['result'] = None
             else:
                 ret['result'] = __salt__['elasticsearch.search_template_delete'](id=name)
                 if ret['result']:
                     ret['comment'] = 'Successfully removed search template {0}'.format(name)
-                    ret['changes']['old'] = json.loads(template["template"])
+                    ret['changes']['old'] = salt.utils.json.loads(template["template"])
                 else:
                     ret['comment'] = 'Failed to remove search template {0} for unknown reasons'.format(name)
         else:
@@ -452,7 +453,7 @@ def search_template_present(name, definition):
 
         old = {}
         if template:
-            old = json.loads(template["template"])
+            old = salt.utils.json.loads(template["template"])
 
         ret['changes'] = __utils__['dictdiffer.deep_diff'](old, definition)
 

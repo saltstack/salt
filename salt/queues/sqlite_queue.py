@@ -12,16 +12,14 @@ to another location::
 
     sqlite_queue_dir: /home/myuser/salt/master/queues
 '''
-
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import glob
 import logging
 import os
-import json
 import re
-import sqlite3 as lite
+import sqlite3
+import salt.utils.json
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
@@ -47,7 +45,7 @@ def _conn(queue):
     db = os.path.join(queue_dir, '{0}.db'.format(queue))
     log.debug('Connecting to:  {0}'.format(db))
 
-    con = lite.connect(db)
+    con = sqlite3.connect(db)
     tables = _list_tables(con)
     if queue not in tables:
         _create_table(con, queue)
@@ -149,7 +147,7 @@ def insert(queue, items):
             log.debug('SQL Query: {0}'.format(cmd))
             try:
                 cur.execute(cmd)
-            except lite.IntegrityError as esc:
+            except sqlite3.IntegrityError as esc:
                 return('Item already exists in this queue. '
                        'sqlite error: {0}'.format(esc))
         if isinstance(items, list):
@@ -162,17 +160,17 @@ def insert(queue, items):
                 # we need a list of one item tuples here
             try:
                 cur.executemany(cmd, newitems)
-            except lite.IntegrityError as esc:
+            except sqlite3.IntegrityError as esc:
                 return('One or more items already exists in this queue. '
                        'sqlite error: {0}'.format(esc))
         if isinstance(items, dict):
-            items = json.dumps(items).replace('"', "'")
+            items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = '''INSERT INTO {0}(name) VALUES('{1}')'''.format(queue, items)
+            cmd = str('''INSERT INTO {0}(name) VALUES('{1}')''').format(queue, items)  # future lint: disable=blacklisted-function
             log.debug('SQL Query: {0}'.format(cmd))
             try:
                 cur.execute(cmd)
-            except lite.IntegrityError as esc:
+            except sqlite3.IntegrityError as esc:
                 return('Item already exists in this queue. '
                        'sqlite error: {0}'.format(esc))
     return True
@@ -201,9 +199,9 @@ def delete(queue, items):
                 # we need a list of one item tuples here
             cur.executemany(cmd, newitems)
         if isinstance(items, dict):
-            items = json.dumps(items).replace('"', "'")
+            items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = """DELETE FROM {0} WHERE name = '{1}'""".format(queue, items)
+            cmd = ("""DELETE FROM {0} WHERE name = '{1}'""").format(queue, items)  # future lint: disable=blacklisted-function
             log.debug('SQL Query: {0}'.format(cmd))
             cur.execute(cmd)
             return True
@@ -241,6 +239,6 @@ def pop(queue, quantity=1, is_runner=False):
             cur.execute(del_cmd)
         con.commit()
     if is_runner:
-        items = [json.loads(item[0].replace("'", '"')) for item in result]
+        items = [salt.utils.json.loads(item[0].replace("'", '"')) for item in result]
     log.info(items)
     return items

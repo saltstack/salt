@@ -8,8 +8,6 @@ Commands for working with travisci.
 # Import python libraries
 from __future__ import absolute_import
 import base64
-import json
-
 
 try:
     import OpenSSL
@@ -19,6 +17,7 @@ except ImportError:
     HAS_OPENSSL = False
 
 # Import Salt libraries
+import salt.utils.json
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext.six.moves.urllib.parse import parse_qs  # pylint: disable=import-error,no-name-in-module
 
@@ -65,7 +64,7 @@ def verify_webhook(signature, body):
     signature = base64.b64decode(signature)
 
     # parse the urlencoded payload from travis
-    payload = json.loads(parse_qs(body)['payload'][0])
+    payload = salt.utils.json.loads(parse_qs(body)['payload'][0])
 
     try:
         OpenSSL.crypto.verify(certificate, signature, payload, str('sha1'))
