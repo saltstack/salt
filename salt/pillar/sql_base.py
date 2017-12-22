@@ -168,7 +168,7 @@ More complete example for MySQL (to also show configuration)
             as_list: True
             with_lists: [1,3]
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
@@ -275,7 +275,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 # May set 'as_list' from qb[1][2].
             else:
                 defaults.update(qb[1])
-                if defaults['with_lists']:
+                if defaults['with_lists'] and isinstance(defaults['with_lists'], six.string_types):
                     defaults['with_lists'] = [
                         int(i) for i in defaults['with_lists'].split(',')
                     ]
@@ -437,8 +437,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 cursor.execute(details['query'], (minion_id,))
 
                 # Extract the field names the db has returned and process them
-                self.process_fields([row[0] for row in cursor.description],
-                                           details['depth'])
+                self.process_fields([row[0] for row in cursor.description], details['depth'])
                 self.enter_root(root)
                 self.as_list = details['as_list']
                 if details['with_lists']:
