@@ -1885,11 +1885,11 @@ def start(name,resource_group = None, call = None):
         for group in list_resource_groups():
             try:
                 instance_start = compconn.virtual_machines.start(group, name)
-				instance_start.wait()
+                instance_start.wait()
                 resource_group = group
             except CloudError:
                 continue
   else:
-  	instance_start = compconn.virtual_machines.start(resource_group, name)
-  	instance_start.wait()
+        instance_start = compconn.virtual_machines.start(resource_group, name)
+        instance_start.wait()
   return node_data
