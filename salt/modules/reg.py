@@ -234,7 +234,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
         for i in range(win32api.RegQueryInfoKey(handle)[0]):
             subkey = win32api.RegEnumKey(handle, i)
             if PY2:
-                subkeys.append(_to_unicode(subkey))
+                subkeys.append(_to_mbcs(subkey))
             else:
                 subkeys.append(subkey)
 
