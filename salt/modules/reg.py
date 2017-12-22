@@ -240,7 +240,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
         handle.Close()
 
-    except WindowsError as exc:  # pylint: disable=E0602
+    except pywintypes.error as exc:  # pylint: disable=E0602
         log.debug(exc)
         log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
         return False, 'Cannot find key: {0}\\{1}'.format(hive, key)
@@ -300,7 +300,7 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
                      'vtype':  registry.vtype_reverse[vtype],
                      'success': True}
             values.append(value)
-    except WindowsError as exc:  # pylint: disable=E0602
+    except pywintypes.error as exc:  # pylint: disable=E0602
         log.debug(exc)
         log.debug(r'Cannot find key: {0}\{1}'.format(hive, key))
         return False, r'Cannot find key: {0}\{1}'.format(hive, key)
