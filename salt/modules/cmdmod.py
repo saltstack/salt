@@ -2146,6 +2146,9 @@ def script(source,
     if not salt.utils.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
+
+    path = _cmd_quote(path)
+
     ret = _run(path + ' ' + str(args) if args else path,
                cwd=cwd,
                stdin=stdin,
