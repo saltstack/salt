@@ -228,7 +228,7 @@ class CkMinions(object):
         Retreive complete minion list from PKI dir.
         Respects cache if configured
         '''
-        if self.opts.get('__role') == 'master':
+        if self.opts.get('__role') == 'master' and self.opts.get('__cli') == 'salt-run':
             # Compiling pillar directly on the master, just return the master's
             # ID as that is the only one that is available.
             return [self.opts['id']]
