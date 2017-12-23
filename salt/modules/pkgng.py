@@ -77,7 +77,7 @@ def __virtual__():
         log.debug('__opts__.providers: {0}'.format(providers))
         if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
             log.debug('Configuration option \'providers:pkg\' is set to '
-                '\'pkgng\', using \'pkgng\' in favor of \'freebsdpkg\'.')
+                      '\'pkgng\', using \'pkgng\' in favor of \'freebsdpkg\'.')
             return __virtualname__
     return (False,
             'The pkgng execution module cannot be loaded: only available '
@@ -216,6 +216,7 @@ def version(*names, **kwargs):
         for x, y in six.iteritems(ret)
     ])
 
+
 # Support pkg.info get version info, since this is the CLI usage
 info = salt.utils.functools.alias_function(version, 'info')
 
@@ -304,7 +305,6 @@ def latest_version(*names, **kwargs):
     else:
         quiet = False
 
-    cmd_prefix = _pkg(jail, chroot, root) + ['search']
     for name in names:
         # FreeBSD supports packages in format java/openjdk7
         if '/' in name:
@@ -849,6 +849,8 @@ def install(name=None,
                 targets.append(param)
             else:
                 targets.append('{0}-{1}'.format(param, version_num))
+    else:
+        raise CommandExecutionError('Problem encountered installing package(s)')
 
     cmd = _pkg(jail, chroot, root)
     cmd.append(pkg_cmd)
@@ -859,7 +861,7 @@ def install(name=None,
     cmd.extend(targets)
 
     if pkg_cmd == 'add' and salt.utils.data.is_true(dryrun):
-        # pkg add doesn't have a dryrun mode, so echo out what will be run
+        # pkg add doesn't have a dry-run mode, so echo out what will be run
         return ' '.join(cmd)
 
     out = __salt__['cmd.run_all'](
@@ -994,6 +996,8 @@ def remove(name=None,
 
             salt '*' pkg.remove <extended regular expression> pcre=True
     '''
+    del kwargs  # Unused parameter
+
     try:
         pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     except MinionError as exc:
@@ -1060,6 +1064,7 @@ def remove(name=None,
         )
 
     return ret
+
 
 # Support pkg.delete to remove packages, since this is the CLI usage
 delete = salt.utils.functools.alias_function(remove, 'delete')
@@ -1879,6 +1884,8 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
 
         salt '*' pkg.version_cmp '2.1.11' '2.1.12'
     '''
+    del ignore_epoch  # Unused parameter
+
     # Don't worry about ignore_epoch since we're shelling out to pkg.
     sym = {
         '<': -1,
@@ -1888,12 +1895,13 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
     try:
         cmd = ['pkg', 'version', '--test-version', pkg1, pkg2]
         ret = __salt__['cmd.run_all'](cmd,
-                                            output_loglevel='trace',
-                                            python_shell=False,
-                                            ignore_retcode=True)
+                                      output_loglevel='trace',
+                                      python_shell=False,
+                                      ignore_retcode=True)
+        if ret['stdout'] in sym:
+            return sym[ret['stdout']]
+
     except Exception as exc:
         log.error(exc)
 
-    if ret['stdout'] in sym:
-        return sym[ret['stdout']]
     return None
