@@ -1154,6 +1154,7 @@ def upgrade(*names, **kwargs):
     force = kwargs.pop('force', False)
     local = kwargs.pop('local', False)
     dryrun = kwargs.pop('dryrun', False)
+    pkgs = kwargs.pop('pkgs', [])
     opts = ''
     if force:
         opts += 'f'
@@ -1168,7 +1169,10 @@ def upgrade(*names, **kwargs):
     cmd.append('upgrade')
     if opts:
         cmd.append('-' + opts)
-    cmd.extend(names)
+    if names:
+        cmd.extend(names)
+    if pkgs:
+        cmd.extend(pkgs)
 
     old = list_pkgs()
     result = __salt__['cmd.run_all'](cmd,
