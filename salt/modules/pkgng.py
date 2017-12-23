@@ -1876,6 +1876,136 @@ def updating(name,
     )
 
 
+def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
+    '''
+    Version-lock packages
+
+    .. note::
+        This function is provided primarily for compatibilty with some
+        parts of :py:module:`states.pkg <salt.states.pkg>`.
+        Consider using Consider using :py:func:`pkg.lock <salt.modules.pkgng.lock>` instead. instead.
+
+    name
+        The name of the package to be held.
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to hold. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.hold <package name>
+        salt '*' pkg.hold pkgs='["foo", "bar"]'
+    '''
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    else:
+        targets.append(name)
+
+    ret = {}
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(six.iterkeys(target))
+
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
+
+        if not locked(target, **kwargs):
+            if 'test' in __opts__ and __opts__['test']:
+                ret[target].update(result=None)
+                ret[target]['comment'] = ('Package {0} is set to be held.'
+                                          .format(target))
+            else:
+                if lock(target, **kwargs):
+                    ret[target].update(result=True)
+                    ret[target]['comment'] = ('Package {0} is now being held.'
+                                              .format(target))
+                    ret[target]['changes']['new'] = 'hold'
+                    ret[target]['changes']['old'] = ''
+                else:
+                    ret[target]['comment'] = ('Package {0} was unable to be held.'
+                                              .format(target))
+        else:
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is already set to be held.'
+                                      .format(target))
+    return ret
+
+
+def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
+    '''
+    Remove version locks
+
+    .. note::
+        This function is provided primarily for compatibilty with some
+        parts of :py:module:`states.pkg <salt.states.pkg>`.
+        Consider using :py:func:`pkg.unlock <salt.modules.pkgng.unlock>` instead.
+
+    name
+        The name of the package to be unheld
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to unhold. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.unhold <package name>
+        salt '*' pkg.unhold pkgs='["foo", "bar"]'
+    '''
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    else:
+        targets.append(name)
+
+    ret = {}
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(six.iterkeys(target))
+
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
+
+        if locked(target, **kwargs):
+            if __opts__['test']:
+                ret[target].update(result=None)
+                ret[target]['comment'] = ('Package {0} is set to be unheld.'
+                                          .format(target))
+            else:
+                if unlock(target, **kwargs):
+                    ret[target].update(result=True)
+                    ret[target]['comment'] = ('Package {0} is no longer held.'
+                                              .format(target))
+                    ret[target]['changes']['new'] = ''
+                    ret[target]['changes']['old'] = 'hold'
+                else:
+                    ret[target]['comment'] = ('Package {0} was unable to be '
+                                              'unheld.'.format(target))
+        else:
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is not being held.'
+                                      .format(target))
+    return ret
+
+
 def list_locked(**kwargs):
     '''
     Query the package database those packages which are
