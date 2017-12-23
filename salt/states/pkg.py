@@ -2846,10 +2846,10 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
             expected = {pkgname: {'new': pkgver, 'old': __salt__['pkg.version'](pkgname)}
-                        for pkgname, pkgver in six.iteritems(packages)}
+                        for pkgname, pkgver in packages.iteritems()}
             if isinstance(pkgs, list):
                 packages = [pkg for pkg in packages if pkg in pkgs]
-                expected = {pkgname: pkgver for pkgname, pkgver in six.iteritems(expected) if pkgname in pkgs}
+                expected = {pkgname: pkgver for pkgname, pkgver in expected.iteritems() if pkgname in pkgs}
         except Exception as exc:
             ret['comment'] = str(exc)
             return ret
@@ -2880,8 +2880,17 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
                               'packages: {0}'.format(exc))
         return ret
 
-    ret['comment'] = 'Upgrade ran successfully'
-    ret['result'] = True
+    # If a package list was provided, ensure those packages were updated
+    missing = []
+    if isinstance(pkgs, list):
+        missing = [pkg for pkg in six.iterkeys(expected) if pkg not in ret['changes']]
+
+    if missing:
+        ret['comment'] = 'The following package(s) failed to update: {0}'.format(', '.join(missing))
+        ret['result'] = False
+    else:
+        ret['comment'] = 'Upgrade ran successfully'
+        ret['result'] = True
 
     return ret
 
