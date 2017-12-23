@@ -2060,6 +2060,86 @@ def _lockcmd(subcmd, pkgname=None, **kwargs):
     return locked_pkgs
 
 
+def list_upgrades(refresh=True, **kwargs):
+    '''
+    List those packages for which an upgrade is available
+
+    The ``fromrepo``, ``enablerepo``, and ``disablerepo`` arguments are
+    supported, as used in pkg states, and the ``disableexcludes`` option is
+    also supported.
+
+    .. versionadded:: 2014.7.0
+        Support for the ``disableexcludes`` option
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_upgrades
+
+    jail
+        List upgrades within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_upgrades jail=<jail name or id>
+
+    chroot
+        List upgrades within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_upgrades chroot=/path/to/chroot
+
+    root
+        List upgrades within the specified root (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_upgrades root=/path/to/chroot
+
+    '''
+    jail = kwargs.pop('jail', None)
+    chroot = kwargs.pop('chroot', None)
+    root = kwargs.pop('root', None)
+
+    result = {}
+
+    cmd = _pkg(jail, chroot, root)
+    cmd.extend(['version', '--like', '<', '--verbose', '--quiet', '-R'])
+
+    if not refresh:
+        cmd.append('--no-repo-update')
+
+    out = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
+
+    if out['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered listing packages',
+            info={'result': out}
+        )
+
+    for line in salt.utils.itertools.split(out['stdout'], '\n'):
+        if not line:
+            continue
+        try:
+            ver = line[:-1].split()
+            pkgname = ver[0].rsplit('-', 1)[0]
+            result[pkgname] = ver[-1]
+        except ValueError:
+            continue
+
+    return result
+
+
 def version_cmp(pkg1, pkg2, ignore_epoch=False):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
