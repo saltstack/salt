@@ -1876,6 +1876,53 @@ def updating(name,
     )
 
 
+def list_locked(**kwargs):
+    '''
+    Query the package database those packages which are
+    locked against reinstallation, modification or deletion.
+
+    Returns returns a list of package names with version strings
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_locked
+
+    jail
+        List locked packages within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_locked jail=<jail name or id>
+
+    chroot
+        List locked packages within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_locked chroot=/path/to/chroot
+
+    root
+        List locked packages within the specified root (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_locked root=/path/to/chroot
+
+    '''
+    return ['{0}-{1}'.format(pkgname, version(pkgname, **kwargs))
+            for pkgname in _lockcmd('lock', name=None, **kwargs)]
+
+
 def locked(name, **kwargs):
     '''
     Query the package database to determine if the named package
