@@ -700,7 +700,7 @@ SwapTotal:       4789244 kB'''
                         '10:memory{0}a_long_sha256sum'.format(cgroup_substr)
                     log.debug(
                         'Testing Docker cgroup substring \'%s\'', cgroup_substr)
-                    with patch('salt.utils.fopen', mock_open(read_data=cgroup_data)):
+                    with patch('salt.utils.files.fopen', mock_open(read_data=cgroup_data)):
                         self.assertEqual(
                             core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
                             'Docker'
