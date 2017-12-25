@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import tempfile
@@ -14,6 +14,7 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import 3rd-party libs
 import yaml
+from salt.ext import six
 
 # Import Salt libs
 import salt.utils.files
@@ -42,7 +43,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_call('user.list_users')
-            self.assertIn(USERA, str(user_list))
+            self.assertIn(USERA, six.text_type(user_list))
         except AssertionError:
             self.run_call('user.delete {0} remove=True'.format(USERA))
             self.skipTest(

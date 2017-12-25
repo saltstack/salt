@@ -5,6 +5,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
@@ -488,6 +489,32 @@ class LogSettingsParserTests(TestCase):
         # Check log file logger
         self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
+    def test_log_created(self):
+        '''
+        Tests that log file is created
+        '''
+        args = self.args
+        log_file = self.log_file
+        log_file_name = self.logfile_config_setting_name
+        opts = self.default_config.copy()
+        opts.update({'log_file': log_file})
+        if log_file_name is not 'log_file':
+            opts.update({log_file_name:
+                         getattr(self, log_file_name)})
+
+        if log_file_name is 'key_logfile':
+            self.skipTest('salt-key creates log file outside of parse_args.')
+
+        parser = self.parser()
+        with patch(self.config_func, MagicMock(return_value=opts)):
+            parser.parse_args(args)
+
+        if log_file_name is 'log_file':
+            self.assertEqual(os.path.getsize(log_file), 0)
+        else:
+            self.assertEqual(os.path.getsize(getattr(self, log_file_name)), 0)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
@@ -589,6 +616,7 @@ class SyndicOptionParserTestCase(LogSettingsParserTests):
 
         # Log file
         self.log_file = '/tmp/salt_syndic_parser_test'
+        self.syndic_log_file = '/tmp/salt_syndic_log'
         # Function to patch
         self.config_func = 'salt.config.syndic_config'
 
@@ -678,6 +706,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
 
         # Log file
         self.log_file = '/tmp/salt_key_parser_test'
+        self.key_logfile = '/tmp/key_logfile'
         # Function to patch
         self.config_func = 'salt.config.master_config'
 
@@ -853,6 +882,7 @@ class SaltSSHOptionParserTestCase(LogSettingsParserTests):
 
         # Log file
         self.log_file = '/tmp/salt_ssh_parser_test'
+        self.ssh_log_file = '/tmp/ssh_logfile'
         # Function to patch
         self.config_func = 'salt.config.master_config'
 
@@ -919,6 +949,7 @@ class SPMParserTestCase(LogSettingsParserTests):
 
         # Log file
         self.log_file = '/tmp/spm_parser_test'
+        self.spm_logfile = '/tmp/spm_logfile'
         # Function to patch
         self.config_func = 'salt.config.spm_config'
 
@@ -952,6 +983,7 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
 
         # Log file
         self.log_file = '/tmp/salt_api_parser_test'
+        self.api_logfile = '/tmp/api_logfile'
         # Function to patch
         self.config_func = 'salt.config.api_config'
 

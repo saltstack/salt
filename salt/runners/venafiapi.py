@@ -29,17 +29,22 @@ file and set the ``api_key`` to it:
     venafi:
       api_key: abcdef01-2345-6789-abcd-ef0123456789
 '''
-from __future__ import absolute_import
-import os
+from __future__ import absolute_import, print_function, unicode_literals
+import json
 import logging
+import os
 import tempfile
 from Crypto.PublicKey import RSA
-import json
-import salt.syspaths as syspaths
+
+# Import Salt libs
 import salt.cache
+import salt.syspaths as syspaths
 import salt.utils.files
-from salt.ext import six
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'venafi'
 log = logging.getLogger(__name__)
@@ -189,7 +194,7 @@ def gen_csr(
     tmppriv = '{0}/priv'.format(tmpdir)
     tmpcsr = '{0}/csr'.format(tmpdir)
     with salt.utils.files.fopen(tmppriv, 'w') as if_:
-        if_.write(data['private_key'])
+        if_.write(salt.utils.stringutils.to_str(data['private_key']))
 
     if country is None:
         country = __opts__.get('venafi', {}).get('country')
@@ -233,7 +238,7 @@ def gen_csr(
         )
 
     with salt.utils.files.fopen(tmpcsr, 'r') as of_:
-        csr = of_.read()
+        csr = salt.utils.stringutils.to_unicode(of_.read())
 
     data['minion_id'] = minion_id
     data['csr'] = csr
@@ -386,7 +391,7 @@ def register(email):
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -413,7 +418,7 @@ def show_company(domain):
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -440,7 +445,7 @@ def show_csrs():
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -468,7 +473,7 @@ def get_zone_id(zone_name):
     )
 
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -495,7 +500,7 @@ def show_policies():
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -522,7 +527,7 @@ def show_zones():
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -550,7 +555,7 @@ def show_cert(id_):
         header_dict={'tppl-api-key': _api_key()},
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -563,7 +568,7 @@ def show_cert(id_):
         header_dict={'tppl-api-key': _api_key()},
     )
     status = csr_data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(csr_data['error'])
         )

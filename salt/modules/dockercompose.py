@@ -100,7 +100,7 @@ Detailed Function Documentation
 -------------------------------
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 import logging
@@ -108,6 +108,9 @@ import os
 import re
 
 import salt.utils.files
+import salt.utils.stringutils
+
+from salt.ext import six
 
 from operator import attrgetter
 try:
@@ -136,7 +139,7 @@ DEFAULT_DC_FILENAMES = ('docker-compose.yml', 'docker-compose.yaml')
 
 def __virtual__():
     if HAS_DOCKERCOMPOSE:
-        match = re.match(VERSION_RE, str(compose.__version__))
+        match = re.match(VERSION_RE, six.text_type(compose.__version__))
         if match:
             version = tuple([int(x) for x in match.group(1).split('.')])
             if version >= MIN_DOCKERCOMPOSE:
@@ -201,7 +204,7 @@ def __read_docker_compose_file(file_path):
             file_name = os.path.basename(file_path)
             result = {file_name: ''}
             for line in fl:
-                result[file_name] += line
+                result[file_name] += salt.utils.stringutils.to_unicode(line)
     except EnvironmentError:
         return __standardize_result(False,
                                     'Could not read {0}'.format(file_path),
@@ -233,7 +236,7 @@ def __write_docker_compose(path, docker_compose):
         os.mkdir(dir_name)
     try:
         with salt.utils.files.fopen(file_path, 'w') as fl:
-            fl.write(docker_compose)
+            fl.write(salt.utils.stringutils.to_str(docker_compose))
     except EnvironmentError:
         return __standardize_result(False,
                                     'Could not write {0}'.format(file_path),

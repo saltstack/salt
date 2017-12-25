@@ -51,6 +51,7 @@ class TestModulesGrains(ModuleCase):
             'cpuarch',
             'domain',
             'fqdn',
+            'fqdns',
             'gid',
             'groupname',
             'host',

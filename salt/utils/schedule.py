@@ -1,344 +1,13 @@
 # -*- coding: utf-8 -*-
+
+# See doc/topics/jobs/index.rst
 '''
 Scheduling routines are located here. To activate the scheduler make the
-schedule option available to the master or minion configurations (master config
-file or for the minion via config or pillar)
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-
-This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
-(every hour).
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-        splay: 15
-
-This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
-(every hour) splaying the time between 0 and 15 seconds.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-        splay:
-          start: 10
-          end: 15
-
-This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
-(every hour) splaying the time between 10 and 15 seconds.
-
-.. versionadded:: 2014.7.0
-
-Frequency of jobs can also be specified using date strings supported by
-the Python ``dateutil`` library. This requires the Python ``dateutil`` library
-to be installed.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        args:
-          - httpd
-        kwargs:
-          test: True
-        when: 5:00pm
-
-This will schedule the command: ``state.sls httpd test=True`` at 5:00 PM minion
-localtime.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        args:
-          - httpd
-        kwargs:
-          test: True
-        when:
-          - Monday 5:00pm
-          - Tuesday 3:00pm
-          - Wednesday 5:00pm
-          - Thursday 3:00pm
-          - Friday 5:00pm
-
-This will schedule the command: ``state.sls httpd test=True`` at 5:00 PM on
-Monday, Wednesday and Friday, and 3:00 PM on Tuesday and Thursday.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        args:
-          - httpd
-        kwargs:
-          test: True
-        when:
-          - 'tea time'
-
-.. code-block:: yaml
-
-    whens:
-      tea time: 1:40pm
-      deployment time: Friday 5:00pm
-
-The Salt scheduler also allows custom phrases to be used for the `when`
-parameter.  These `whens` can be stored as either pillar values or
-grain values.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-        range:
-          start: 8:00am
-          end: 5:00pm
-
-This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
-(every hour) between the hours of 8:00 AM and 5:00 PM. The range parameter must
-be a dictionary with the date strings using the ``dateutil`` format.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-        range:
-          invert: True
-          start: 8:00am
-          end: 5:00pm
-
-Using the invert option for range, this will schedule the command
-``state.sls httpd test=True`` every 3600 seconds (every hour) until the current
-time is between the hours of 8:00 AM and 5:00 PM. The range parameter must be
-a dictionary with the date strings using the ``dateutil`` format.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: pkg.install
-        kwargs:
-          pkgs: [{'bar': '>1.2.3'}]
-          refresh: true
-        once: '2016-01-07T14:30:00'
-
-This will schedule the function ``pkg.install`` to be executed once at the
-specified time. The schedule entry ``job1`` will not be removed after the job
-completes, therefore use ``schedule.delete`` to manually remove it afterwards.
-
-The default date format is ISO 8601 but can be overridden by also specifying the
-``once_fmt`` option, like this:
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: test.ping
-        once: 2015-04-22T20:21:00
-        once_fmt: '%Y-%m-%dT%H:%M:%S'
-
-.. versionadded:: 2014.7.0
-
-The scheduler also supports ensuring that there are no more than N copies of
-a particular routine running.  Use this for jobs that may be long-running
-and could step on each other or pile up in case of infrastructure outage.
-
-The default for ``maxrunning`` is 1.
-
-.. code-block:: yaml
-
-    schedule:
-      long_running_job:
-        function: big_file_transfer
-        jid_include: True
-        maxrunning: 1
-
-.. versionadded:: 2014.7.0
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        cron: '*/15 * * * *'
-        args:
-          - httpd
-        kwargs:
-          test: True
-
-The scheduler also supports scheduling jobs using a cron like format.
-This requires the Python ``croniter`` library.
-
-.. versionadded:: 2015.5.0
-
-By default, data about jobs runs from the Salt scheduler is returned to the
-master. Setting the ``return_job`` parameter to False will prevent the data
-from being sent back to the Salt master.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: scheduled_job_function
-        return_job: False
-
-.. versionadded:: 2015.5.0
-
-It can be useful to include specific data to differentiate a job from other
-jobs. Using the metadata parameter special values can be associated with
-a scheduled job. These values are not used in the execution of the job,
-but can be used to search for specific jobs later if combined with the
-``return_job`` parameter. The metadata parameter must be specified as a
-dictionary, othewise it will be ignored.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: scheduled_job_function
-        metadata:
-          foo: bar
-
-.. versionadded:: 2015.5.0
-
-By default any job scheduled based on the startup time of the minion will run
-the scheduled job when the minion starts up. Sometimes this is not the desired
-situation. Using the ``run_on_start`` parameter set to ``False`` will cause the
-scheduler to skip this first run and wait until the next scheduled run:
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        run_on_start: False
-        args:
-          - httpd
-        kwargs:
-          test: True
-
-.. versionadded:: 2015.8.0
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 15
-        until: '12/31/2015 11:59pm'
-        args:
-          - httpd
-        kwargs:
-          test: True
-
-Using the until argument, the Salt scheduler allows you to specify
-an end time for a scheduled job. If this argument is specified, jobs
-will not run once the specified time has passed. Time should be specified
-in a format supported by the ``dateutil`` library.
-This requires the Python ``dateutil`` library to be installed.
-
-.. versionadded:: 2015.8.0
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 15
-        after: '12/31/2015 11:59pm'
-        args:
-          - httpd
-        kwargs:
-          test: True
-
-Using the after argument, the Salt scheduler allows you to specify
-an start time for a scheduled job.  If this argument is specified, jobs
-will not run until the specified time has passed. Time should be specified
-in a format supported by the ``dateutil`` library.
-This requires the Python ``dateutil`` library to be installed.
-
-The scheduler also supports ensuring that there are no more than N copies of
-a particular routine running.  Use this for jobs that may be long-running
-and could step on each other or pile up in case of infrastructure outage.
-
-The default for maxrunning is 1.
-
-.. code-block:: yaml
-
-    schedule:
-      long_running_job:
-          function: big_file_transfer
-          jid_include: True
-          maxrunning: 1
-
-By default, data about jobs runs from the Salt scheduler is returned to the
-master.  Setting the ``return_job`` parameter to False will prevent the data
-from being sent back to the Salt master.
-
-.. versionadded:: 2015.5.0
-
-    schedule:
-      job1:
-          function: scheduled_job_function
-          return_job: False
-
-Setting the ``return_job`` parameter to 'nocache' prevents the salt master
-from storing the job in the master cache. Still, an event is fired on the
-master event bus in the form 'salt/job/nocache/ret/myminion'.
-
-It can be useful to include specific data to differentiate a job from other
-jobs.  Using the metadata parameter special values can be associated with
-a scheduled job.  These values are not used in the execution of the job,
-but can be used to search for specific jobs later if combined with the
-return_job parameter.  The metadata parameter must be specified as a
-dictionary, othewise it will be ignored.
-
-.. versionadded:: 2015.5.0
-
-    schedule:
-      job1:
-          function: scheduled_job_function
-          metadata:
-            foo: bar
-
+``schedule`` option available to the master or minion configurations (master
+config file or for the minion via config or pillar).
+
+Detailed tutorial about scheduling jobs can be found :ref:`here
+<scheduling-jobs>`.
 '''
 
 # Import python libs
@@ -354,6 +23,7 @@ import threading
 import logging
 import errno
 import random
+import weakref
 import yaml
 
 # Import Salt libs
@@ -367,6 +37,7 @@ import salt.utils.minion
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.user
 import salt.loader
 import salt.minion
 import salt.payload
@@ -431,6 +102,7 @@ class Schedule(object):
         self.functions = functions
         self.standalone = standalone
         self.skip_function = None
+        self.skip_during_range = None
         if isinstance(intervals, dict):
             self.intervals = intervals
         else:
@@ -818,17 +490,26 @@ class Schedule(object):
 
     def get_next_fire_time(self, name):
         '''
-        Disable a job in the scheduler. Ignores jobs from pillar
+        Return the  next fire time for the specified job
         '''
 
         schedule = self._get_schedule()
+        _next_fire_time = None
         if schedule:
-            _next_fire_time = schedule[name]['_next_fire_time']
+            _next_fire_time = schedule.get(name, {}).get('_next_fire_time', None)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'next_fire_time': _next_fire_time},
                        tag='/salt/minion/minion_schedule_next_fire_time_complete')
+
+    def job_status(self, name):
+        '''
+        Return the specified schedule item
+        '''
+
+        schedule = self._get_schedule()
+        return schedule.get(name, {})
 
     def handle_func(self, multiprocessing_enabled, func, data):
         '''
@@ -940,6 +621,47 @@ class Schedule(object):
                     if key is not 'kwargs':
                         kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
+            # Only include these when running runner modules
+            if self.opts['__role'] == 'master':
+                jid = salt.utils.jid.gen_jid(self.opts)
+                tag = salt.utils.event.tagify(jid, prefix='salt/scheduler/')
+
+                event = salt.utils.event.get_event(
+                        self.opts['__role'],
+                        self.opts['sock_dir'],
+                        self.opts['transport'],
+                        opts=self.opts,
+                        listen=False)
+
+                namespaced_event = salt.utils.event.NamespacedEvent(
+                    event,
+                    tag,
+                    print_func=None
+                )
+
+                func_globals = {
+                    '__jid__': jid,
+                    '__user__': salt.utils.user.get_user(),
+                    '__tag__': tag,
+                    '__jid_event__': weakref.proxy(namespaced_event),
+                }
+                self_functions = copy.copy(self.functions)
+                salt.utils.lazy.verify_fun(self_functions, func)
+
+                # Inject some useful globals to *all* the function's global
+                # namespace only once per module-- not per func
+                completed_funcs = []
+
+                for mod_name in six.iterkeys(self_functions):
+                    if '.' not in mod_name:
+                        continue
+                    mod, _ = mod_name.split('.', 1)
+                    if mod in completed_funcs:
+                        continue
+                    completed_funcs.append(mod)
+                    for global_key, value in six.iteritems(func_globals):
+                        self.functions[mod_name].__globals__[global_key] = value
+
             ret['return'] = self.functions[func](*args, **kwargs)
 
             if not self.standalone:
@@ -1041,7 +763,7 @@ class Schedule(object):
 
         '''
 
-        log.trace('==== evaluating schedule =====')
+        log.trace('==== evaluating schedule now {} ====='.format(now))
 
         def _splay(splaytime):
             '''
@@ -1066,11 +788,18 @@ class Schedule(object):
             return
         if 'skip_function' in schedule:
             self.skip_function = schedule['skip_function']
+        if 'skip_during_range' in schedule:
+            self.skip_during_range = schedule['skip_during_range']
+
+        _hidden = ['enabled',
+                   'skip_function',
+                   'skip_during_range']
         for job, data in six.iteritems(schedule):
-            if job == 'enabled' or not data:
+            run = False
+
+            if job in _hidden and not data:
                 continue
-            if job == 'skip_function' or not data:
-                continue
+
             if not isinstance(data, dict):
                 log.error('Scheduled job "{0}" should have a dict value, not {1}'.format(job, type(data)))
                 continue
@@ -1163,17 +892,17 @@ class Schedule(object):
             if 'run_explicit' in data:
                 _run_explicit = data['run_explicit']
 
-                if isinstance(_run_explicit, six.string_types):
+                if isinstance(_run_explicit, six.integer_types):
                     _run_explicit = [_run_explicit]
 
                 # Copy the list so we can loop through it
                 for i in copy.deepcopy(_run_explicit):
                     if len(_run_explicit) > 1:
-                        if i < now - self.opts['loop_interval']:
+                        if int(i) < now - self.opts['loop_interval']:
                             _run_explicit.remove(i)
 
                 if _run_explicit:
-                    if _run_explicit[0] <= now < (_run_explicit[0] + self.opts['loop_interval']):
+                    if int(_run_explicit[0]) <= now < int(_run_explicit[0] + self.opts['loop_interval']):
                         run = True
                         data['_next_fire_time'] = _run_explicit[0]
 
@@ -1194,7 +923,8 @@ class Schedule(object):
 
             elif 'once' in data:
                 if data['_next_fire_time'] and \
-                        data['_next_fire_time'] != now and \
+                        data['_next_fire_time'] < now - self.opts['loop_interval'] and \
+                        data['_next_fire_time'] > now and \
                         not data['_splay']:
                     continue
 
@@ -1210,7 +940,10 @@ class Schedule(object):
                         log.error('Date string could not be parsed: %s, %s',
                                   data['once'], once_fmt)
                         continue
-                    if data['_next_fire_time'] != now:
+                    # If _next_fire_time is less than now or greater
+                    # than now, continue.
+                    if data['_next_fire_time'] < now - self.opts['loop_interval'] and \
+                            data['_next_fire_time'] > now:
                         continue
 
             elif 'when' in data:
@@ -1278,12 +1011,13 @@ class Schedule(object):
 
                         if '_run' not in data:
                             # Prevent run of jobs from the past
-                            data['_run'] = bool(when >= now)
+                            data['_run'] = bool(when >= now - self.opts['loop_interval'])
 
                         if not data['_next_fire_time']:
                             data['_next_fire_time'] = when
 
                         if data['_next_fire_time'] < when and \
+                                not run and \
                                 not data['_run']:
                             data['_next_fire_time'] = when
                             data['_run'] = True
@@ -1324,8 +1058,9 @@ class Schedule(object):
                             continue
                     when = int(time.mktime(when__.timetuple()))
 
-                    if when < now and \
+                    if when < now - self.opts['loop_interval'] and \
                             not data.get('_run', False) and \
+                            not run and \
                             not data['_splay']:
                         data['_next_fire_time'] = None
                         continue
@@ -1367,10 +1102,28 @@ class Schedule(object):
             else:
                 continue
 
-            run = False
             seconds = data['_next_fire_time'] - now
-            if data['_splay']:
-                seconds = data['_splay'] - now
+
+            if 'splay' in data:
+                # Got "splay" configured, make decision to run a job based on that
+                if not data['_splay']:
+                    # Try to add "splay" time only if next job fire time is
+                    # still in the future. We should trigger job run
+                    # immediately otherwise.
+                    splay = _splay(data['splay'])
+                    if now < data['_next_fire_time'] + splay:
+                        log.debug('schedule.handle_func: Adding splay of '
+                                  '{0} seconds to next run.'.format(splay))
+                        data['_splay'] = data['_next_fire_time'] + splay
+                        if 'when' in data:
+                            data['_run'] = True
+                    else:
+                        run = True
+
+                if data['_splay']:
+                    # The "splay" configuration has been already processed, just use it
+                    seconds = data['_splay'] - now
+
             if '_seconds' in data:
                 if seconds <= 0:
                     run = True
@@ -1384,6 +1137,9 @@ class Schedule(object):
                 if seconds <= 0:
                     data['_next_fire_time'] = None
                     run = True
+            elif 'once' in data:
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + self.opts['loop_interval']):
+                    run = True
             elif seconds == 0:
                 run = True
 
@@ -1391,16 +1147,6 @@ class Schedule(object):
                 run = True
                 data['_run_on_start'] = False
             elif run:
-                if 'splay' in data and not data['_splay']:
-                    splay = _splay(data['splay'])
-                    if now < data['_next_fire_time'] + splay:
-                        log.debug('schedule.handle_func: Adding splay of '
-                                  '{0} seconds to next run.'.format(splay))
-                        run = False
-                        data['_splay'] = data['_next_fire_time'] + splay
-                        if 'when' in data:
-                            data['_run'] = True
-
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
@@ -1441,7 +1187,12 @@ class Schedule(object):
                                      Ignoring job {0}.'.format(job))
                             continue
 
-                if 'skip_during_range' in data:
+                # If there is no job specific skip_during_range available,
+                # grab the global which defaults to None.
+                if 'skip_during_range' not in data:
+                    data['skip_during_range'] = self.skip_during_range
+
+                if 'skip_during_range' in data and data['skip_during_range']:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
                         continue
@@ -1458,6 +1209,19 @@ class Schedule(object):
                                 log.error('Invalid date string for end in skip_during_range. Ignoring job {0}.'.format(job))
                                 log.error(data)
                                 continue
+
+                            # Check to see if we should run the job immediately
+                            # after the skip_during_range is over
+                            if 'run_after_skip_range' in data and \
+                               data['run_after_skip_range']:
+                                if 'run_explicit' not in data:
+                                    data['run_explicit'] = []
+                                # Add a run_explicit for immediately after the
+                                # skip_during_range ends
+                                _run_immediate = end + self.opts['loop_interval']
+                                if _run_immediate not in data['run_explicit']:
+                                    data['run_explicit'].append(_run_immediate)
+
                             if end > start:
                                 if start <= now <= end:
                                     if self.skip_function:

@@ -6,7 +6,7 @@ plugin interfaces used by Salt.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import time
@@ -989,7 +989,7 @@ def _generate_module(name):
 
     code = u"'''Salt loaded {0} parent module'''".format(name.split('.')[-1])
     # ModuleType can't accept a unicode type on PY2
-    module = types.ModuleType(str(name))
+    module = types.ModuleType(str(name))  # future lint: disable=blacklisted-function
     exec(code, module.__dict__)
     sys.modules[name] = module
 
@@ -1436,7 +1436,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         except IOError:
             raise
         except ImportError as exc:
-            if 'magic number' in str(exc):
+            if 'magic number' in six.text_type(exc):
                 error_msg = 'Failed to import {0} {1}. Bad magic number. If migrating from Python2 to Python3, remove all .pyc files and try again.'.format(self.tag, name)
                 log.warning(error_msg)
                 self.missing_modules[name] = error_msg

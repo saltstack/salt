@@ -3,7 +3,7 @@
 Functions to translate input for container creation
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt libs
@@ -375,14 +375,14 @@ def port_bindings(val, **kwargs):
             try:
                 val = helpers.split(val)
             except AttributeError:
-                val = helpers.split(str(val))
+                val = helpers.split(six.text_type(val))
 
         for idx in range(len(val)):
             if not isinstance(val[idx], six.string_types):
-                val[idx] = str(val[idx])
+                val[idx] = six.text_type(val[idx])
 
         def _format_port(port_num, proto):
-            return str(port_num) + '/udp' if proto.lower() == 'udp' else port_num
+            return six.text_type(port_num) + '/udp' if proto.lower() == 'udp' else port_num
 
         bindings = {}
         for binding in val:
@@ -391,7 +391,7 @@ def port_bindings(val, **kwargs):
             if num_bind_parts == 1:
                 # Single port or port range being passed through (no
                 # special mapping)
-                container_port = str(bind_parts[0])
+                container_port = six.text_type(bind_parts[0])
                 if container_port == '':
                     raise SaltInvocationError(
                         'Empty port binding definition found'

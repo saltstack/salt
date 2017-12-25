@@ -4,7 +4,7 @@ Functions for manipulating, inspecting, or otherwise working with data types
 and data structures.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import collections
@@ -67,17 +67,16 @@ def compare_lists(old=None, new=None):
     return ret
 
 
-@jinja_filter('json_decode_dict')
 def decode_dict(data):
     '''
-    JSON decodes as unicode, Jinja needs bytes...
+    Decode all values to Unicode
     '''
     rv = {}
     for key, value in six.iteritems(data):
-        if isinstance(key, six.text_type) and six.PY2:
-            key = key.encode('utf-8')
-        if isinstance(value, six.text_type) and six.PY2:
-            value = value.encode('utf-8')
+        if six.PY2 and isinstance(key, str):
+            key = key.decode(__salt_system_encoding__)
+        if six.PY2 and isinstance(value, str):
+            value = value.decode(__salt_system_encoding__)
         elif isinstance(value, list):
             value = decode_list(value)
         elif isinstance(value, dict):
@@ -86,19 +85,56 @@ def decode_dict(data):
     return rv
 
 
-@jinja_filter('json_decode_list')
 def decode_list(data):
     '''
-    JSON decodes as unicode, Jinja needs bytes...
+    Decode all values to Unicode
     '''
     rv = []
     for item in data:
-        if isinstance(item, six.text_type) and six.PY2:
-            item = item.encode('utf-8')
+        if six.PY2 and isinstance(item, six.text_type):
+            item = item.decode(__salt_system_encoding__)
         elif isinstance(item, list):
             item = decode_list(item)
         elif isinstance(item, dict):
             item = decode_dict(item)
+        rv.append(item)
+    return rv
+
+
+@jinja_filter('json_decode_dict')  # Remove this for Neon
+@jinja_filter('json_encode_dict')
+def encode_dict(data):
+    '''
+    Encode all values to bytes
+    '''
+    rv = {}
+    for key, value in six.iteritems(data):
+        if six.PY2 and isinstance(key, six.text_type):
+            key = key.encode(__salt_system_encoding__)
+        if six.PY2 and isinstance(value, six.text_type):
+            value = value.encode(__salt_system_encoding__)
+        elif isinstance(value, list):
+            value = encode_list(value)
+        elif isinstance(value, dict):
+            value = encode_dict(value)
+        rv[key] = value
+    return rv
+
+
+@jinja_filter('json_decode_list')  # Remove this for Neon
+@jinja_filter('json_encode_list')
+def encode_list(data):
+    '''
+    Encode all values to bytes
+    '''
+    rv = []
+    for item in data:
+        if isinstance(item, six.text_type) and six.PY2:
+            item = item.encode(__salt_system_encoding__)
+        elif isinstance(item, list):
+            item = encode_list(item)
+        elif isinstance(item, dict):
+            item = encode_dict(item)
         rv.append(item)
     return rv
 
@@ -138,8 +174,10 @@ def filter_by(lookup_dict,
     # lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
         for key in lookup_dict:
-            test_key = key if isinstance(key, six.string_types) else str(key)
-            test_each = each if isinstance(each, six.string_types) else str(each)
+            test_key = key if isinstance(key, six.string_types) \
+                else six.text_type(key)
+            test_each = each if isinstance(each, six.string_types) \
+                else six.text_type(each)
             if fnmatch.fnmatchcase(test_each, test_key):
                 ret = lookup_dict[key]
                 break
@@ -246,14 +284,14 @@ def subdict_match(data,
     def _match(target, pattern, regex_match=False, exact_match=False):
         if regex_match:
             try:
-                return re.match(pattern.lower(), str(target).lower())
+                return re.match(pattern.lower(), six.text_type(target).lower())
             except Exception:
                 log.error('Invalid regex \'{0}\' in match'.format(pattern))
                 return False
         elif exact_match:
-            return str(target).lower() == pattern.lower()
+            return six.text_type(target).lower() == pattern.lower()
         else:
-            return fnmatch.fnmatch(str(target).lower(), pattern.lower())
+            return fnmatch.fnmatch(six.text_type(target).lower(), pattern.lower())
 
     def _dict_match(target, pattern, regex_match=False, exact_match=False):
         wildcard = pattern.startswith('*:')
@@ -497,7 +535,7 @@ def is_true(value=None):
     if isinstance(value, (six.integer_types, float)):
         return value > 0
     elif isinstance(value, six.string_types):
-        return str(value).lower() == 'true'
+        return six.text_type(value).lower() == 'true'
     else:
         return bool(value)
 

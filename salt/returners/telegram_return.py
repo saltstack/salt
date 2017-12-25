@@ -22,7 +22,7 @@ To use the Telegram return, append '--return telegram' to the salt command.
     salt '*' test.ping --return telegram
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -60,7 +60,7 @@ def _get_options(ret=None):
                                                    attrs,
                                                    __salt__=__salt__,
                                                    __opts__=__opts__)
-    log.debug('Options: {0}'.format(_options))
+    log.debug('Options: %s', _options)
     return _options
 
 
