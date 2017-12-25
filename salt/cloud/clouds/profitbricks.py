@@ -99,7 +99,7 @@ import logging
 import os
 import pprint
 import time
-from distutils.version import LooseVersion
+from salt.utils.versions import LooseVersion
 
 # Import salt libs
 import salt.utils.cloud
@@ -272,9 +272,9 @@ def list_images(call=None, kwargs=None):
         return ret
 
     for item in conn.list_locations(3)['items']:
-        ret[item['id']] = {'image_alias': item['properties']['imageAliases']}   
+        ret[item['id']] = {'image_alias': item['properties']['imageAliases']}
 
-    return ret    
+    return ret
 
 
 def avail_sizes(call=None):
