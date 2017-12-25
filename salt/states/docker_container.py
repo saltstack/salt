@@ -45,7 +45,7 @@ configuration remains unchanged.
     :ref:`here <docker-authentication>` for more information on how to
     configure access to docker registries in :ref:`Pillar <pillar>` data.
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import os
@@ -2253,6 +2253,7 @@ def run(name,
             force=force,
             **kwargs)
     except Exception as exc:
+        log.exception('Encountered error running container')
         ret['result'] = False
         ret['comment'] = 'Encountered error running container: {0}'.format(exc)
     else:

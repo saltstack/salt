@@ -172,3 +172,37 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertFalse(src == dist)
         self.assertTrue(dist == result)
+
+    def test_update_in_place(self):
+        '''
+        Test update with defaults values in place.
+        '''
+
+        group01 = {
+            'defaults': {
+                'enabled': True,
+                'extra': [
+                    'test',
+                    'stage'
+                ]
+            },
+            'nodes': {
+                'host01': {
+                    'index': 'foo',
+                    'upstream': 'bar'
+                }
+            }
+        }
+
+        host01 = {
+            'enabled': True,
+            'index': 'foo',
+            'upstream': 'bar',
+            'extra': [
+                'test',
+                'stage'
+            ],
+        }
+
+        defaults.update(group01['nodes'], group01['defaults'])
+        self.assertEqual(group01['nodes']['host01'], host01)

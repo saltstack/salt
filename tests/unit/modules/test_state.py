@@ -24,6 +24,7 @@ import salt.loader
 import salt.utils.hashutils
 import salt.utils.odict
 import salt.utils.platform
+import salt.utils.state
 import salt.modules.state as state
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.modules.config as config
@@ -423,7 +424,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(state.high({"vim": {"pkg": ["installed"]}}))
 
             mock = MagicMock(return_value={"test": True})
-            with patch.object(state, '_get_opts', mock):
+            with patch.object(salt.utils.state, 'get_sls_opts', mock):
                 self.assertTrue(state.high({"vim": {"pkg": ["installed"]}}))
 
     def test_template(self):
@@ -539,7 +540,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(state.__opts__, {"test": "install"}):
                 mock = MagicMock(return_value={"test": ""})
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
@@ -643,7 +644,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     return_value={'test': True,
                                   'saltenv': None}
                 )
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
                         MockState.State.flag = True
@@ -670,7 +671,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     return_value={'test': True,
                                   'saltenv': None}
                 )
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     MockState.State.flag = True
                     MockState.HighState.flag = True
                     self.assertEqual(state.show_low_sls("foo"), 2)
@@ -692,7 +693,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     return_value={'test': True,
                                   'saltenv': None}
                 )
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
@@ -723,7 +724,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(state.__opts__, {"test": "A"}):
                     mock = MagicMock(return_value={'test': True})
-                    with patch.object(state, '_get_opts', mock):
+                    with patch.object(salt.utils.state, 'get_sls_opts', mock):
                         mock = MagicMock(return_value=True)
                         with patch.object(salt.utils, 'test_mode', mock):
                             self.assertRaises(SaltInvocationError,
@@ -764,7 +765,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(state.__opts__, {"test": "A"}):
                     mock = MagicMock(return_value={'test': True})
-                    with patch.object(state, '_get_opts', mock):
+                    with patch.object(salt.utils.state, 'get_sls_opts', mock):
                         self.assertRaises(SaltInvocationError,
                                           state.highstate,
                                           "whitelist=sls1.sls",
@@ -887,7 +888,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(state.__opts__, {"test": None}):
                         mock = MagicMock(return_value={"test": "",
                                                        "saltenv": None})
-                        with patch.object(state, '_get_opts', mock):
+                        with patch.object(salt.utils.state, 'get_sls_opts', mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(salt.utils,
                                               'test_mode',
