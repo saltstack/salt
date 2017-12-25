@@ -210,8 +210,10 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False):
+        arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
+                                                    self.get_config_dir(), arg_str)
+
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
@@ -549,11 +551,12 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                catch_stderr=catch_stderr,
                                timeout=60)
 
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False):
         '''
         Execute salt-call.
         '''
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
+                                                    self.get_config_dir(), arg_str)
         return self.run_script('salt-call',
                                arg_str,
                                with_retcode=with_retcode,
@@ -626,7 +629,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
                      description: Formula for installing Apache
                      '''))
 
-    def _spm_config(self):
+    def _spm_config(self, assume_yes=True):
         self._tmp_spm = tempfile.mkdtemp()
         config = self.get_temp_config('minion', **{
             'spm_logfile': os.path.join(self._tmp_spm, 'log'),
@@ -639,10 +642,10 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
             'spm_db': os.path.join(self._tmp_spm, 'packages.db'),
             'extension_modules': os.path.join(self._tmp_spm, 'modules'),
             'file_roots': {'base': [self._tmp_spm, ]},
-            'formula_path': os.path.join(self._tmp_spm, 'spm'),
+            'formula_path': os.path.join(self._tmp_spm, 'salt'),
             'pillar_path': os.path.join(self._tmp_spm, 'pillar'),
             'reactor_path': os.path.join(self._tmp_spm, 'reactor'),
-            'assume_yes': True,
+            'assume_yes': True if assume_yes else False,
             'force': False,
             'verbose': False,
             'cache': 'localfs',
@@ -650,6 +653,16 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
             'spm_repo_dups': 'ignore',
             'spm_share_dir': os.path.join(self._tmp_spm, 'share'),
         })
+
+        import salt.utils.files
+        import yaml
+
+        if not os.path.isdir(config['formula_path']):
+            os.makedirs(config['formula_path'])
+
+        with salt.utils.files.fopen(os.path.join(self._tmp_spm, 'spm'), 'w') as fp:
+            fp.write(yaml.dump(config))
+
         return config
 
     def _spm_create_update_repo(self, config):
@@ -811,6 +824,8 @@ class SSHCase(ShellCase):
         '''
         ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout,
                            wipe=wipe, raw=raw)
+        log.debug('SSHCase run_function executed %s with arg %s', function, arg)
+        log.debug('SSHCase JSON return: %s', ret)
         try:
             return json.loads(ret)['localhost']
         except Exception:

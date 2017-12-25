@@ -4,7 +4,8 @@ Package support for OpenBSD
 
 .. note::
 
-    The package repository is configured on each host using ``/etc/pkg.conf``
+    The package repository is configured on each host using ``/etc/installurl``
+    from OpenBSD 6.1 onwards. Earlier releases relied on ``/etc/pkg.conf``.
 
 .. versionchanged:: 2016.3.5
 
@@ -99,7 +100,12 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
 def latest_version(*names, **kwargs):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example:
 
@@ -115,19 +121,42 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
 
-    cmd = 'pkg_info -q -I {0}'.format(' '.join(names))
-    out = __salt__['cmd.run_stdout'](cmd, python_shell=False, output_loglevel='trace')
-    for line in out.splitlines():
-        try:
-            pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
-        except AttributeError:
-            continue
-        pkgname += '--{0}'.format(flavor) if flavor else ''
-        cur = pkgs.get(pkgname, '')
-        if not cur or salt.utils.versions.compare(ver1=cur,
-                                                  oper='<',
-                                                  ver2=pkgver):
-            ret[pkgname] = pkgver
+        # Query the repository for the package name
+        cmd = 'pkg_info -Q {0}'.format(name)
+        out = __salt__['cmd.run_stdout'](cmd, python_shell=False, output_loglevel='trace')
+
+        # Since we can only query instead of request the specific package
+        # we'll have to go through the returned list and find what we
+        # were looking for.
+        # Keep in mind the match may be flavored.
+        for line in out.splitlines():
+            try:
+                pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
+            except AttributeError:
+                continue
+
+            match = re.match(r'.*\(installed\)$', pkgver)
+            if match:
+                # Package is explicitly marked as installed already,
+                # so skip any further comparison and move on to the
+                # next package to compare (if provided).
+                break
+
+            # First check if we need to look for flavors before
+            # looking at unflavored packages.
+            if "{0}--{1}".format(pkgname, flavor) == name:
+                pkgname += '--{0}'.format(flavor)
+            elif pkgname == name:
+                pass
+            else:
+                # No match just move on.
+                continue
+
+            cur = pkgs.get(pkgname, '')
+            if not cur or salt.utils.compare_versions(ver1=cur,
+                                                      oper='<',
+                                                      ver2=pkgver):
+                ret[pkgname] = pkgver
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -220,7 +249,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     return ret
 
 
-def remove(name=None, pkgs=None, **kwargs):
+def remove(name=None, pkgs=None, purge=False, **kwargs):
     '''
     Remove a single package with pkg_delete
 
@@ -254,7 +283,12 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
 
-    cmd = 'pkg_delete -xD dependencies {0}'.format(' '.join(targets))
+    cmd = ['pkg_delete', '-Ix', '-Ddependencies']
+
+    if purge:
+        cmd.append('-cqq')
+
+    cmd.extend(targets)
 
     out = __salt__['cmd.run_all'](
         cmd,
@@ -281,8 +315,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     '''
-    Package purges are not supported, this function is identical to
-    ``remove()``.
+    Remove a package and extra configuration files.
 
     name
         The name of the package to be deleted.
@@ -307,4 +340,4 @@ def purge(name=None, pkgs=None, **kwargs):
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name=name, pkgs=pkgs)
+    return remove(name=name, pkgs=pkgs, purge=True)

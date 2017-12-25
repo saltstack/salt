@@ -8,7 +8,7 @@
     Implements a Python serializer (via pprint.format)
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import simplejson as json
@@ -16,7 +16,6 @@ except ImportError:
     import json
 
 import pprint
-import salt.utils.data
 
 __all__ = ['serialize', 'available']
 
@@ -35,10 +34,4 @@ def serialize(obj, **options):
     # there's probably a more performant way to do this...
     # TODO remove json round-trip when all dataset will use
     # serializers
-    return pprint.pformat(
-        json.loads(
-            json.dumps(obj),
-            object_hook=salt.utils.data.decode_dict
-        ),
-        **options
-    )
+    return pprint.pformat(json.loads(json.dumps(obj)), **options)
