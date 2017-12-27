@@ -1520,6 +1520,7 @@ DEFAULT_MASTER_OPTS = {
     'env_order': [],
     'saltenv': None,
     'lock_saltenv': False,
+    'pillarenv': None,
     'default_top': 'base',
     'file_client': 'local',
     'git_pillar_base': 'master',
