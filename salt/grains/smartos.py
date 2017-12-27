@@ -15,11 +15,11 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import re
-import json
 import logging
 
 # Import salt libs
 import salt.utils.dictupdate
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 from salt.ext.six.moves import zip
@@ -84,7 +84,7 @@ def _smartos_computenode_data():
         grains['computenode_vms_type'][vms[vm]['type']] += 1
 
     # sysinfo derived grains
-    sysinfo = json.loads(__salt__['cmd.run']('sysinfo'))
+    sysinfo = salt.utils.json.loads(__salt__['cmd.run']('sysinfo'))
     grains['computenode_sdc_version'] = sysinfo['SDC Version']
     grains['computenode_vm_capable'] = sysinfo['VM Capable']
     if sysinfo['VM Capable']:

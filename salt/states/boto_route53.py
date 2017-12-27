@@ -73,13 +73,14 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 # Import Python Libs
 from __future__ import absolute_import
-import json
+import logging
 import uuid
 
 # Import Salt Libs
-from salt.utils import exactly_one
+import salt.utils.data
+import salt.utils.json
 from salt.exceptions import SaltInvocationError
-import logging
+
 log = logging.getLogger(__name__)
 
 
@@ -406,7 +407,7 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=N
 
     # First translaste vpc_name into a vpc_id if possible
     if private_zone:
-        if not exactly_one((vpc_name, vpc_id)):
+        if not salt.utils.data.exactly_one((vpc_name, vpc_id)):
             raise SaltInvocationError('Either vpc_name or vpc_id is required when creating a '
                                       'private zone.')
         vpcs = __salt__['boto_vpc.describe_vpcs'](
@@ -440,7 +441,7 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=N
     if not deets:
         create = True
     else:  # Something exists - now does it match our criteria?
-        if (json.loads(deets['HostedZone']['Config']['PrivateZone']) !=
+        if (salt.utils.json.loads(deets['HostedZone']['Config']['PrivateZone']) !=
                 private_zone):
             create = True
         else:
