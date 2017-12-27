@@ -143,3 +143,36 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
                 ret = pkg.uptodate('dummy', test=True, pkgs=[pkgname for pkgname in six.iterkeys(self.pkgs)])
                 self.assertTrue(ret['result'])
                 self.assertDictEqual(ret['changes'], {})
+
+    def test_uptodate_with_failed_changes(self):
+        '''
+        Test pkg.uptodate with simulated failed changes
+        '''
+
+        pkgs = {
+            'pkga': {'old': '1.0.1', 'new': '2.0.1'},
+            'pkgb': {'old': '1.0.2', 'new': '2.0.2'},
+            'pkgc': {'old': '1.0.3', 'new': '2.0.3'}
+        }
+
+        list_upgrades = MagicMock(return_value={
+            pkgname: pkgver['new'] for pkgname, pkgver in six.iteritems(self.pkgs)
+        })
+        upgrade = MagicMock(return_value={})
+        version = MagicMock(side_effect=lambda pkgname: pkgs[pkgname]['old'])
+
+        with patch.dict(pkg.__salt__,
+                        {'pkg.list_upgrades': list_upgrades,
+                         'pkg.upgrade': upgrade,
+                         'pkg.version': version}):
+            # Run state with test=false
+            with patch.dict(pkg.__opts__, {'test': False}):
+                ret = pkg.uptodate('dummy', test=True, pkgs=[pkgname for pkgname in six.iterkeys(self.pkgs)])
+                self.assertFalse(ret['result'])
+                self.assertDictEqual(ret['changes'], {})
+
+            # Run state with test=true
+            with patch.dict(pkg.__opts__, {'test': True}):
+                ret = pkg.uptodate('dummy', test=True, pkgs=[pkgname for pkgname in six.iterkeys(self.pkgs)])
+                self.assertIsNone(ret['result'])
+                self.assertDictEqual(ret['changes'], pkgs)
