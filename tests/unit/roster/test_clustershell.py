@@ -13,8 +13,16 @@ from tests.support.mock import (
         MagicMock,
         patch)
 
+# Import third-party libs
+try:
+    from ClusterShell.NodeSet import NodeSet
+    HAS_CLUSTERSHELL = True
+except (ImportError, OSError) as e:
+    HAS_CLUSTERSHELL = False
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_CLUSTERSHELL is False, 'Install Python Clustershell bindings before running these tests.')
 class ClusterShellTestCase(TestCase):
     '''
     Test cases for clustershell roster
