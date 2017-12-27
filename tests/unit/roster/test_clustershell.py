@@ -15,7 +15,7 @@ from tests.support.mock import (
 
 # Import third-party libs
 try:
-    from ClusterShell.NodeSet import NodeSet
+    from ClusterShell.NodeSet import NodeSet  # pylint: disable=unused-import
     HAS_CLUSTERSHELL = True
 except (ImportError, OSError) as e:
     HAS_CLUSTERSHELL = False
