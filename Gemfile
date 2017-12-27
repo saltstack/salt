@@ -22,3 +22,7 @@ group :windows do
   gem 'winrm', '~>2.0'
   gem 'winrm-fs', '~>1.0'
 end
+
+group :ec2 do
+  gem 'kitchen-ec2'
+end

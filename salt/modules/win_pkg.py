@@ -280,7 +280,7 @@ def list_available(*names, **kwargs):
     refresh = salt.utils.data.is_true(kwargs.get('refresh', False))
     _refresh_db_conditional(saltenv, force=refresh)
     return_dict_always = \
-        salt.utils.is_true(kwargs.get('return_dict_always', False))
+        salt.utils.data.is_true(kwargs.get('return_dict_always', False))
     if len(names) == 1 and not return_dict_always:
         pkginfo = _get_package_info(names[0], saltenv=saltenv)
         if not pkginfo:

@@ -42,6 +42,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
             functions = {'test.ping': ping}
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
+        self.schedule.opts['loop_interval'] = 1
 
     def test_skip(self):
         '''
