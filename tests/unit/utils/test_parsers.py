@@ -490,7 +490,7 @@ class LogSettingsParserTests(TestCase):
         # Check log file logger
         self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
 
-    @skipIf(salt.utils.is_windows(), 'Windows uses a logging listener')
+    @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
     def test_log_created(self):
         '''
         Tests that log file is created
