@@ -18,7 +18,6 @@ from __future__ import absolute_import
 
 import os
 import re
-import json
 import logging as logger
 import base64
 from salt.ext import six
@@ -28,6 +27,7 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: dis
 
 import salt.utils.files
 import salt.utils.http as http
+import salt.utils.json
 
 __virtualname__ = 'k8s'
 
@@ -74,12 +74,15 @@ def _kpost(url, data):
     headers = {"Content-Type": "application/json"}
     # Make request
     log.trace("url is: {0}, data is: {1}".format(url, data))
-    ret = http.query(url, method='POST', header_dict=headers, data=json.dumps(data))
+    ret = http.query(url,
+                     method='POST',
+                     header_dict=headers,
+                     data=salt.utils.json.dumps(data))
     # Check requests status
     if ret.get('error'):
         return ret
     else:
-        return json.loads(ret.get('body'))
+        return salt.utils.json.loads(ret.get('body'))
 
 
 def _kput(url, data):
@@ -88,12 +91,15 @@ def _kput(url, data):
     # Prepare headers
     headers = {"Content-Type": "application/json"}
     # Make request
-    ret = http.query(url, method='PUT', header_dict=headers, data=json.dumps(data))
+    ret = http.query(url,
+                     method='PUT',
+                     header_dict=headers,
+                     data=salt.utils.json.dumps(data))
     # Check requests status
     if ret.get('error'):
         return ret
     else:
-        return json.loads(ret.get('body'))
+        return salt.utils.json.loads(ret.get('body'))
 
 
 def _kpatch(url, data):
@@ -103,13 +109,13 @@ def _kpatch(url, data):
     headers = {"Content-Type": "application/json-patch+json"}
     # Make request
     ret = http.query(url, method='PATCH', header_dict=headers,
-                     data=json.dumps(data))
+                     data=salt.utils.json.dumps(data))
     # Check requests status
     if ret.get('error'):
         log.error("Got an error: {0}".format(ret.get("error")))
         return ret
     else:
-        return json.loads(ret.get('body'))
+        return salt.utils.json.loads(ret.get('body'))
 
 
 def _kname(obj):
@@ -179,7 +185,7 @@ def _get_labels(node, apiserver_url):
     ret = http.query(url)
     # Check requests status
     if 'body' in ret:
-        ret = json.loads(ret.get('body'))
+        ret = salt.utils.json.loads(ret.get('body'))
     elif ret.get('status', 0) == 404:
         return "Node {0} doesn't exist".format(node)
     else:
@@ -387,7 +393,7 @@ def _get_namespaces(apiserver_url, name=""):
     # Make request
     ret = http.query(url)
     if ret.get("body"):
-        return json.loads(ret.get("body"))
+        return salt.utils.json.loads(ret.get("body"))
     else:
         return None
 
@@ -493,7 +499,7 @@ def _get_secrets(namespace, name, apiserver_url):
     # Make request
     ret = http.query(url)
     if ret.get("body"):
-        return json.loads(ret.get("body"))
+        return salt.utils.json.loads(ret.get("body"))
     else:
         return None
 

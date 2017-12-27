@@ -123,13 +123,13 @@ Usage examples
 '''
 from __future__ import absolute_import
 import errno
-import json
 import logging
 import os
 
 # Import salt libs
 import salt
 import salt.netapi
+import salt.utils.json
 
 # HTTP response codes to response headers map
 H = {
@@ -198,7 +198,7 @@ def get_json(environ):
         raise HTTPError(406, 'JSON required')
 
     try:
-        return json.loads(read_body(environ))
+        return salt.utils.json.loads(read_body(environ))
     except ValueError as exc:
         raise HTTPError(400, exc)
 
@@ -283,10 +283,10 @@ def application(environ, start_response):
 
     # Convert the response to JSON
     try:
-        ret = json.dumps({'return': resp})
+        ret = salt.utils.json.dumps({'return': resp})
     except TypeError as exc:
         code = 500
-        ret = str(exc)
+        ret = str(exc)  # future lint: disable=blacklisted-function
 
     # Return the response
     start_response(H[code], get_headers(ret, {

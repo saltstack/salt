@@ -11,11 +11,11 @@ available.
 from __future__ import absolute_import
 
 # Import python libs
-import json
 import logging
 import shlex
 
 # Import salt libs
+import salt.utils.json
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -129,7 +129,7 @@ def install(pkg,
         raise CommandExecutionError(result['stderr'])
 
     # If package is already installed, Bower will emit empty dict to STDOUT
-    stdout = json.loads(result['stdout'])
+    stdout = salt.utils.json.loads(result['stdout'])
     return stdout != {}
 
 
@@ -174,7 +174,7 @@ def uninstall(pkg, dir, runas=None, env=None):
         raise CommandExecutionError(result['stderr'])
 
     # If package is not installed, Bower will emit empty dict to STDOUT
-    stdout = json.loads(result['stdout'])
+    stdout = salt.utils.json.loads(result['stdout'])
     return stdout != {}
 
 
@@ -214,7 +214,7 @@ def list_(dir, runas=None, env=None):
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
 
-    return json.loads(result['stdout'])['dependencies']
+    return salt.utils.json.loads(result['stdout'])['dependencies']
 
 
 def prune(dir, runas=None, env=None):
@@ -255,4 +255,4 @@ def prune(dir, runas=None, env=None):
         raise CommandExecutionError(result['stderr'])
 
     # Bower returns an empty dictionary if nothing was pruned
-    return json.loads(result['stdout'])
+    return salt.utils.json.loads(result['stdout'])

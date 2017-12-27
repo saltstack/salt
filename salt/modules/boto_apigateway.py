@@ -78,13 +78,13 @@ Connection module for Amazon APIGateway
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import json
 import datetime
 
 # Import Salt libs
 from salt.ext import six
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.json
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -1161,7 +1161,7 @@ def update_api_model_schema(restApiId, modelName, schema, region=None, key=None,
 
     '''
     try:
-        schema_json = json.dumps(schema) if isinstance(schema, dict) else schema
+        schema_json = salt.utils.json.dumps(schema) if isinstance(schema, dict) else schema
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         response = _api_model_patch_replace(conn, restApiId, modelName, '/schema', schema_json)
         return {'updated': True, 'model': _convert_datetime_str(response)}
@@ -1202,7 +1202,7 @@ def create_api_model(restApiId, modelName, modelDescription, schema, contentType
 
     '''
     try:
-        schema_json = json.dumps(schema) if isinstance(schema, dict) else schema
+        schema_json = salt.utils.json.dumps(schema) if isinstance(schema, dict) else schema
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         model = conn.create_model(restApiId=restApiId, name=modelName, description=modelDescription,
                                   schema=schema_json, contentType=contentType)

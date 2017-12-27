@@ -7,8 +7,7 @@ This is not intended to be instantiated as a module, rather it is a
 helper script used by salt.client.ssh.Single.  It is here, in a
 separate file, for convenience of development.
 '''
-
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import, print_function
 
 import hashlib
 import tarfile

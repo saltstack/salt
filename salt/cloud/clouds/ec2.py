@@ -84,7 +84,6 @@ import binascii
 import datetime
 import base64
 import msgpack
-import json
 import re
 import decimal
 
@@ -92,6 +91,7 @@ import decimal
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.json
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
@@ -4845,7 +4845,7 @@ def _parse_pricing(url, name):
 
     # Turn the data into something that's easier/faster to process
     regions = {}
-    price_json = json.loads(price_js)
+    price_json = salt.utils.json.loads(price_js)
     for region in price_json['config']['regions']:
         sizes = {}
         for itype in region['instanceTypes']:

@@ -13,7 +13,6 @@ import glob
 import os
 import re
 import sys
-import json
 import time
 import shutil
 import optparse
@@ -22,6 +21,7 @@ import random
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.json
 import salt.utils.stringutils
 try:
     from salt.utils.nb_popen import NonBlockingPopen
@@ -472,7 +472,7 @@ def run(opts):
             sys.exit(retcode)
 
         try:
-            version_info = json.loads(outstr)
+            version_info = salt.utils.json.loads(outstr)
             bootstrap_minion_version = os.environ.get(
                 'SALT_MINION_BOOTSTRAP_RELEASE',
                 opts.bootstrap_salt_commit[:7]
@@ -657,7 +657,7 @@ def run(opts):
             sys.exit(retcode)
 
         try:
-            remotes_info = json.loads(stdout.strip())
+            remotes_info = salt.utils.json.loads(stdout.strip())
             if remotes_info is None or remotes_info[vm_name] is None or opts.test_git_url not in remotes_info[vm_name]:
                 print('The cloned repository remote is not the desired one:')
                 print(' \'{0}\' is not in {1}'.format(opts.test_git_url, remotes_info))
@@ -704,7 +704,7 @@ def run(opts):
             sys.exit(retcode)
 
         try:
-            revision_info = json.loads(stdout.strip())
+            revision_info = salt.utils.json.loads(stdout.strip())
             if revision_info[vm_name][7:] != opts.test_git_commit[7:]:
                 print('The cloned repository commit is not the desired one:')
                 print(' \'{0}\' != \'{1}\''.format(revision_info[vm_name][:7], opts.test_git_commit[:7]))

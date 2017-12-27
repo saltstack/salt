@@ -47,7 +47,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
-import json
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -57,6 +56,7 @@ import salt.ext.six.moves.http_client
 
 # Import Salt Libs
 import salt.returners
+import salt.utils.json
 import salt.utils.mattermost
 
 log = logging.getLogger(__name__)
@@ -184,9 +184,10 @@ def post_message(channel,
         parameters['username'] = username
     parameters['text'] = '```' + message + '```'  # pre-formatted, fixed-width text
     log.debug('Parameters: %s', parameters)
-    result = salt.utils.mattermost.query(api_url=api_url,
-                                         hook=hook,
-                                         data='payload={0}'.format(json.dumps(parameters)))
+    result = salt.utils.mattermost.query(
+        api_url=api_url,
+        hook=hook,
+        data=str('payload={0}').format(salt.utils.json.dumps(parameters)))  # future lint: disable=blacklisted-function
 
     log.debug('result %s', result)
     return bool(result)
