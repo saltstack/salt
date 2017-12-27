@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -38,7 +38,7 @@ SIMPLE_DICT = {'key1': {'key2': 'val1'}}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not consul_pillar.HAS_CONSUL, 'no consul-python')
+@skipIf(not consul_pillar.HAS_CONSUL, 'python-consul not installed')
 class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.pillar.consul_pillar

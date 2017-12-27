@@ -2,47 +2,54 @@
 '''
 A module for testing the logic of states and highstates
 
-Saltcheck provides unittest like functionality requiring only the knowledge of salt module execution and yaml.
+Saltcheck provides unittest like functionality requiring only the knowledge of
+salt module execution and yaml.
 
-In order to run state and highstate saltcheck tests a sub-folder of a state must be creaed and named "saltcheck-tests".
+In order to run state and highstate saltcheck tests a sub-folder of a state
+must be creaed and named "saltcheck-tests".
 
-Tests for a state should be created in files ending in *.tst and placed in the saltcheck-tests folder.
+Tests for a state should be created in files ending in *.tst and placed in the
+saltcheck-tests folder.
 
-Multiple tests can be created in a file.
-Multiple *.tst files can be created in the saltcheck-tests folder.
-Salt rendering is supported in test files e.g. yaml + jinja.
-The "id" of a test works in the same manner as in salt state files.
-They should be unique and descriptive.
+Multiple tests can be created in a file. Multiple *.tst files can be created in
+the saltcheck-tests folder. Salt rendering is supported in test files e.g.
+yaml + jinja. The "id" of a test works in the same manner as in salt state
+files.  They should be unique and descriptive.
 
 Example file system layout:
-/srv/salt/apache/
-                 init.sls
-                 config.sls
-                 saltcheck-tests/
-                                 pkg_and_mods.tst
-                                 config.tst
+
+.. code_block:: text
+
+    /srv/salt/apache/
+                     init.sls
+                     config.sls
+                     saltcheck-tests/
+                                     pkg_and_mods.tst
+                                     config.tst
 
 
 Saltcheck Test Syntax:
 
-Unique-ID:
-  module_and_function:
-  args:
-  kwargs:
-  assertion:
-  expected-return:
+.. code_block:: yaml
 
+    Unique-ID:
+      module_and_function:
+      args:
+      kwargs:
+      assertion:
+      expected-return:
 
 Example test 1:
 
-echo-test-hello:
-  module_and_function: test.echo
-  args:
-    - "hello"
-  kwargs:
-  assertion: assertEqual
-  expected-return:  'hello'
+.. code_block:: yaml
 
+    echo-test-hello:
+      module_and_function: test.echo
+      args:
+        - "hello"
+      kwargs:
+      assertion: assertEqual
+      expected-return:  'hello'
 
 :codeauthor:    William Cannon <william.cannon@gmail.com>
 :maturity:      new
@@ -51,8 +58,8 @@ from __future__ import absolute_import
 import logging
 import os
 import time
-from json import loads, dumps
-import yaml
+import json
+import salt.utils.yaml
 try:
     import salt.utils.files
     import salt.utils.path
@@ -557,7 +564,7 @@ class StateTestLoader(object):
             with __utils__['files.fopen'](filepath, 'r') as myfile:
                 # with salt.utils.files.fopen(filepath, 'r') as myfile:
                 # with open(filepath, 'r') as myfile:
-                contents_yaml = yaml.load(myfile)
+                contents_yaml = salt.utils.yaml.safe_load(myfile)
                 for key, value in contents_yaml.items():
                     self.test_dict[key] = value
         except:
@@ -571,7 +578,7 @@ class StateTestLoader(object):
         # use the salt renderer module to interpret jinja and etc
         tests = _render_file(filepath)
         # use json as a convenient way to convert the OrderedDicts from salt renderer
-        mydict = loads(dumps(tests))
+        mydict = json.loads(json.dumps(tests))
         for key, value in mydict.items():
             self.test_dict[key] = value
         return

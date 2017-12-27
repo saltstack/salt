@@ -12,6 +12,7 @@ import os
 from salt.ext import six
 from salt.textformat import TextFormat
 import salt.utils.files
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -21,13 +22,12 @@ def get_color_theme(theme):
     Return the color theme to use
     '''
     # Keep the heavy lifting out of the module space
-    import yaml
     if not os.path.isfile(theme):
         log.warning('The named theme {0} if not available'.format(theme))
 
     try:
         with salt.utils.files.fopen(theme, 'rb') as fp_:
-            colors = yaml.safe_load(fp_.read())
+            colors = salt.utils.yaml.safe_load(fp_.read())
             ret = {}
             for color in colors:
                 ret[color] = '\033[{0}m'.format(colors[color])

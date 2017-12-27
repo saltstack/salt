@@ -6,7 +6,7 @@ Parses roster entries out of Host directives from SSH config
 
     salt-ssh --roster sshconfig '*' -r "echo hi"
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -16,7 +16,7 @@ import re
 
 # Import Salt libs
 import salt.utils.files
-from salt.ext.six import string_types
+from salt.ext import six
 
 import logging
 log = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ class RosterMatcher(object):
         '''
         Return the configured ip
         '''
-        if isinstance(self.raw[minion], string_types):
+        if isinstance(self.raw[minion], six.string_types):
             return {'host': self.raw[minion]}
         if isinstance(self.raw[minion], dict):
             return self.raw[minion]

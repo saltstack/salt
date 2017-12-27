@@ -218,12 +218,11 @@ Some `replace_text_regex` values that might be helpfull.
 from __future__ import absolute_import
 
 import re
-import yaml
 import logging
 
 import salt.utils.files
 import salt.utils.templates as tpl
-from salt.utils.yamldumper import OrderedDumper
+import salt.utils.yaml
 
 
 __virtualname__ = 'highstate_doc'
@@ -506,7 +505,7 @@ def _state_data_to_yaml_string(data, whitelist=None, blacklist=None):
     '''
     return a data dict in yaml string format.
     '''
-    y = {}
+    ret = {}
     if blacklist is None:
         # TODO: use salt defined STATE_REQUISITE_IN_KEYWORDS  STATE_RUNTIME_KEYWORDS  STATE_INTERNAL_KEYWORDS
         blacklist = ['__env__', '__id__', '__sls__', 'fun', 'name', 'context', 'order', 'state', 'require', 'require_in', 'watch', 'watch_in']
@@ -516,11 +515,13 @@ def _state_data_to_yaml_string(data, whitelist=None, blacklist=None):
     if whitelist:
         kset &= set(whitelist)
     for k in kset:
-        y[k] = data[k]
-    if len(y) == 0:
+        ret[k] = data[k]
+    if len(ret) == 0:
         return None
-    y = yaml.dump(y, Dumper=OrderedDumper, default_flow_style=False)
-    return y
+    return salt.utils.yaml.dump(
+        ret,
+        Dumper=salt.utils.yaml.OrderedDumper,
+        default_flow_style=False)
 
 
 def _md_fix(text):

@@ -14,7 +14,7 @@ import yaml
 # Import salt libs
 import salt.config
 import salt.utils.files
-from salt.utils.yamldumper import SafeOrderedDumper
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -45,11 +45,9 @@ def apply(key, value):
     data[key] = value
     with salt.utils.files.fopen(path, 'w+') as fp_:
         fp_.write(
-            yaml.dump(
+            salt.utils.yaml.safe_dump(
                 data,
-                default_flow_style=False,
-                Dumper=SafeOrderedDumper
-            )
+                default_flow_style=False)
         )
 
 
@@ -84,7 +82,9 @@ def update_config(file_name, yaml_contents):
     dir_path = os.path.join(__opts__['config_dir'],
                             os.path.dirname(__opts__['default_include']))
     try:
-        yaml_out = yaml.safe_dump(yaml_contents, default_flow_style=False)
+        yaml_out = salt.utils.yaml.safe_dump(
+            yaml_contents,
+            default_flow_style=False)
 
         if not os.path.exists(dir_path):
             log.debug('Creating directory %s', dir_path)

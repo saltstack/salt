@@ -28,6 +28,9 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
             whitelist=['boto3', 'yamldumper'],
             context={}
         )
+        # Force the LazyDict to populate its references. Otherwise the lookup
+        # will fail inside the unit tests.
+        list(utils)
         return {
             boto_sqs: {
                 '__utils__': utils,
@@ -79,12 +82,22 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 })
                 self.assertDictEqual(boto_sqs.present(name), ret)
                 diff = textwrap.dedent('''\
-                    --- 
-                    +++ 
+                    ---
+                    +++
                     @@ -1 +1 @@
                     -{}
-                    +DelaySeconds: 20
-                ''')
+                    +DelaySeconds: 20''').splitlines()
+                # difflib.unified_diff adds an extra space after the +++ and
+                # --- lines at the beginning of the diff. Rather than include
+                # the spaces above in the diff, add them here. This is because
+                # there are vim plugins which will automatically remove
+                # trailing whitespace when a file is saved, and we don't want
+                # the trailing spaces to be accidentally removed and cause the
+                # test to fail.
+                diff[0] += ' '
+                diff[1] += ' '
+                diff = '\n'.join(diff) + '\n'
+
                 comt = [
                     'SQS queue mysqs present.',
                     'Attribute(s) DelaySeconds set to be updated:\n{0}'.format(

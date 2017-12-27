@@ -5,7 +5,7 @@ This module allows SPM to use sqlite3 as the backend for SPM's package database.
 .. versionadded:: 2015.8.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 import logging
 import sqlite3
@@ -22,11 +22,11 @@ def init():
     Get an sqlite3 connection, and initialize the package database if necessary
     '''
     if not os.path.exists(__opts__['spm_cache_dir']):
-        log.debug('Creating SPM cache directory at {0}'.format(__opts__['spm_db']))
+        log.debug('Creating SPM cache directory at %s', __opts__['spm_db'])
         os.makedirs(__opts__['spm_cache_dir'])
 
     if not os.path.exists(__opts__['spm_db']):
-        log.debug('Creating new package database at {0}'.format(__opts__['spm_db']))
+        log.debug('Creating new package database at %s', __opts__['spm_db'])
 
     sqlite3.enable_callback_tracebacks(True)
     conn = sqlite3.connect(__opts__['spm_db'], isolation_level=None)

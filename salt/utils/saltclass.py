@@ -4,11 +4,11 @@ from __future__ import absolute_import
 import os
 import re
 import logging
-import yaml
 from jinja2 import FileSystemLoader, Environment
 
 # Import Salt libs
 import salt.utils.path
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext.six import iteritems
@@ -32,7 +32,7 @@ def render_jinja(_file, salt_data):
 
 # Renders yaml from rendered jinja
 def render_yaml(_file, salt_data):
-    return yaml.safe_load(render_jinja(_file, salt_data))
+    return salt.utils.yaml.safe_load(render_jinja(_file, salt_data))
 
 
 # Returns a dict from a class yaml definition

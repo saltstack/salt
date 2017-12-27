@@ -34,7 +34,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
-import salt.utils.yamlloader as yamlloader
+import salt.utils.yaml
 import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
@@ -2092,10 +2092,7 @@ def _read_conf_file(path):
     log.debug('Reading configuration from {0}'.format(path))
     with salt.utils.files.fopen(path, 'r') as conf_file:
         try:
-            conf_opts = yamlloader.load(
-                conf_file.read(),
-                Loader=yamlloader.SaltYamlSafeLoader,
-            ) or {}
+            conf_opts = salt.utils.yaml.safe_load(conf_file.read()) or {}
         except yaml.YAMLError as err:
             message = 'Error parsing configuration file: {0} - {1}'.format(path, err)
             log.error(message)

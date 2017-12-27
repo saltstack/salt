@@ -51,14 +51,13 @@ included:
 # pylint: disable=invalid-name,function-redefined
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import json
 import logging
 import base64
 import pprint
 import inspect
-import yaml
 import datetime
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
@@ -70,6 +69,8 @@ from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-na
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.http
+import salt.utils.stringutils
+import salt.utils.yaml
 import salt.config as config
 from salt.cloud.libcloudfuncs import node_state
 from salt.exceptions import (
@@ -138,7 +139,7 @@ def get_image(vm_):
 
     vm_image = config.get_cloud_config_value('image', vm_, __opts__)
 
-    if vm_image and str(vm_image) in images:
+    if vm_image and six.text_type(vm_image) in images:
         images[vm_image]['name'] = images[vm_image]['id']
         return images[vm_image]
 
@@ -156,7 +157,7 @@ def get_size(vm_):
     if not vm_size:
         raise SaltCloudNotFound('No size specified for this VM.')
 
-    if vm_size and str(vm_size) in sizes:
+    if vm_size and six.text_type(vm_size) in sizes:
         return sizes[vm_size]
 
     raise SaltCloudNotFound(
@@ -196,13 +197,11 @@ def query_instance(vm_=None, call=None):
             return False
 
         if isinstance(data, dict) and 'error' in data:
-            log.warning(
-                'There was an error in the query {0}'.format(data.get('error'))
-            )
+            log.warning('There was an error in the query %s', data.get('error'))
             # Trigger a failure in the wait for IP function
             return False
 
-        log.debug('Returned query data: {0}'.format(data))
+        log.debug('Returned query data: %s', data)
 
         if 'primaryIp' in data[1]:
             # Wait for SSH to be fully configured on the remote side
@@ -227,7 +226,7 @@ def query_instance(vm_=None, call=None):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     return data
 
@@ -266,10 +265,8 @@ def create(vm_):
     )
 
     log.info(
-        'Creating Cloud VM {0} in {1}'.format(
-            vm_['name'],
-            vm_.get('location', DEFAULT_LOCATION)
-        )
+        'Creating Cloud VM %s in %s',
+        vm_['name'], vm_.get('location', DEFAULT_LOCATION)
     )
 
     # added . for fqdn hostnames
@@ -298,7 +295,7 @@ def create(vm_):
 
     data = create_node(**kwargs)
     if data == {}:
-        log.error('Error creating {0} on JOYENT'.format(vm_['name']))
+        log.error('Error creating %s on JOYENT', vm_['name'])
         return False
 
     query_instance(vm_)
@@ -364,9 +361,7 @@ def create_node(**kwargs):
     if ret[0] in VALID_RESPONSE_CODES:
         return ret[1]
     else:
-        log.error(
-            'Failed to create node {0}: {1}'.format(name, ret[1])
-        )
+        log.error('Failed to create node %s: %s', name, ret[1])
 
     return {}
 
@@ -510,13 +505,13 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
 
         ret = query(command=command, data=data, method=method,
                     location=location)
-        log.info('Success {0} for node {1}'.format(caller, name))
+        log.info('Success %s for node %s', caller, name)
     except Exception as exc:
-        if 'InvalidState' in str(exc):
+        if 'InvalidState' in six.text_type(exc):
             ret = [200, {}]
         else:
             log.error(
-                'Failed to invoke {0} node {1}: {2}'.format(caller, name, exc),
+                'Failed to invoke %s node %s: %s', caller, name, exc,
                 # Show the traceback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
@@ -595,11 +590,7 @@ def has_method(obj, method_name):
     if method_name in dir(obj):
         return True
 
-    log.error(
-        'Method \'{0}\' not yet supported!'.format(
-            method_name
-        )
-    )
+    log.error('Method \'%s\' not yet supported!', method_name)
     return False
 
 
@@ -746,7 +737,10 @@ def list_nodes(full=False, call=None):
                         node['location'] = location
                         ret[node['name']] = reformat_node(item=node, full=full)
             else:
-                log.error('Invalid response when listing Joyent nodes: {0}'.format(result[1]))
+                log.error(
+                    'Invalid response when listing Joyent nodes: %s',
+                    result[1]
+                )
 
     else:
         location = get_location()
@@ -947,13 +941,11 @@ def import_key(kwargs=None, call=None):
         return False
 
     if not os.path.isfile(kwargs['keyfile']):
-        log.error('The specified keyfile ({0}) does not exist.'.format(
-            kwargs['keyfile']
-        ))
+        log.error('The specified keyfile (%s) does not exist.', kwargs['keyfile'])
         return False
 
     with salt.utils.files.fopen(kwargs['keyfile'], 'r') as fp_:
-        kwargs['key'] = fp_.read()
+        kwargs['key'] = salt.utils.stringutils.to_unicode(fp_.read())
 
     send_data = {'name': kwargs['keyname'], 'key': kwargs['key']}
     kwargs['data'] = json.dumps(send_data)
@@ -1064,7 +1056,7 @@ def query(action=None,
     if command:
         path += '/{0}'.format(command)
 
-    log.debug('User: \'{0}\' on PATH: {1}'.format(user, path))
+    log.debug('User: \'%s\' on PATH: %s', user, path)
 
     if (not user) or (not ssh_keyfile) or (not ssh_keyname) or (not location):
         return None
@@ -1111,16 +1103,12 @@ def query(action=None,
         verify_ssl=verify_ssl,
         opts=__opts__,
     )
-    log.debug(
-        'Joyent Response Status Code: {0}'.format(
-            result['status']
-        )
-    )
+    log.debug('Joyent Response Status Code: %s', result['status'])
     if 'headers' not in result:
         return [result['status'], result['error']]
 
     if 'Content-Length' in result['headers']:
         content = result['text']
-        return_content = yaml.safe_load(content)
+        return_content = salt.utils.yaml.safe_load(content)
 
     return [result['status'], return_content]

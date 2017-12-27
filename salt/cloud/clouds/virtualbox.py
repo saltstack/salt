@@ -18,7 +18,7 @@ Dicts provided by salt:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -200,7 +200,7 @@ def create(vm_info):
 
         if len(ips):
             ip = ips[interface_index]
-            log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
+            log.info("[ %s ] IPv4 is: %s", vm_name, ip)
             # ssh or smb using ip and install salt only if deploy is True
             if deploy:
                 vm_info['key_filename'] = key_filename

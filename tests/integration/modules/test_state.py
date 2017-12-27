@@ -1650,10 +1650,10 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         helper class to add pillar data at runtime
         '''
-        import yaml
+        import salt.utils.yaml
         with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE,
                                                  'pillar.sls'), 'w') as fp:
-            fp.write(yaml.dump(pillar))
+            salt.utils.yaml.safe_dump(pillar, fp)
 
         with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
             fp.write(textwrap.dedent('''\

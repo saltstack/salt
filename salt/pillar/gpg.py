@@ -17,10 +17,17 @@ Set ``gpg_keydir`` in your config to adjust the homedir the renderer uses.
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import salt.loader
+
+log = logging.getLogger(__name__)
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
-    render_function = salt.loader.render(__opts__, __salt__).get("gpg")
-    return render_function(pillar)
+    render_function = salt.loader.render(__opts__, __salt__).get('gpg')
+    try:
+        return render_function(pillar)
+    except Exception as exc:
+        log.critical('Failed to compile gpg pillar data: %s', exc)
+        return {}

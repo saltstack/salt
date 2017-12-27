@@ -1,7 +1,9 @@
 # coding: utf-8
 
 # Import python libs
-from __future__ import absolute_import
+# NOTE: CherryPy does not work well with unicode, so unicode_literals is not
+# being imported here.
+from __future__ import absolute_import, print_function
 import json
 
 # Import salt libs
@@ -11,6 +13,7 @@ import salt.utils.stringutils
 import tests.support.cherrypy_testclasses as cptc
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
 
 
@@ -254,5 +257,5 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         })
 
         resp = json.loads(salt.utils.stringutils.to_str(response.body[0]))
-        self.assertIn('test.ping', str(resp['return']))
+        self.assertIn('test.ping', six.text_type(resp['return']))
         self.assertEqual(response.status, '200 OK')

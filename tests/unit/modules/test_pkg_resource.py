@@ -19,6 +19,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils.data
+import salt.utils.yaml
 import salt.modules.pkg_resource as pkg_resource
 from salt.ext import six
 
@@ -36,7 +37,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             Test to accepts list of dicts (or a string representing a
             list of dicts) and packs the key/value pairs into a single dict.
         '''
-        with patch.object(yaml,
+        with patch.object(salt.utils.yaml,
                           'safe_load',
                           MagicMock(side_effect=yaml.parser.ParserError('f'))):
             with patch.dict(pkg_resource.__salt__,

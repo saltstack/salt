@@ -11,7 +11,6 @@ import os
 import pprint
 import re
 import tempfile
-import yaml
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
@@ -43,6 +42,7 @@ from salt.utils.templates import (
 import salt.utils.dateutils  # pylint: disable=unused-import
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.yaml
 
 # Import 3rd party libs
 try:
@@ -643,7 +643,7 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
-        self.assertEqual(dataset, yaml.load(rendered))
+        self.assertEqual(dataset, salt.utils.yaml.load(rendered))
 
     def test_serialize_yaml_str(self):
         dataset = "str value"

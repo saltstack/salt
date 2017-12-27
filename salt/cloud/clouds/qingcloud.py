@@ -27,7 +27,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import json
 import pprint
@@ -39,6 +39,7 @@ from hashlib import sha256
 # Import Salt Libs
 from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves import range
+from salt.ext import six
 import salt.utils.cloud
 import salt.utils.data
 import salt.config as config
@@ -114,7 +115,7 @@ def _compute_signature(parameters, access_key_secret, method, path):
     keys = sorted(parameters.keys())
     pairs = []
     for key in keys:
-        val = str(parameters[key]).encode('utf-8')
+        val = six.text_type(parameters[key]).encode('utf-8')
         pairs.append(_quote(key, safe='') + '=' + _quote(val, safe='-_~'))
     qs = '&'.join(pairs)
     string_to_sign += qs
@@ -227,7 +228,7 @@ def avail_locations(call=None):
     for region in items['zone_set']:
         result[region['zone_id']] = {}
         for key in region:
-            result[region['zone_id']][key] = str(region[key])
+            result[region['zone_id']][key] = six.text_type(region[key])
 
     return result
 
@@ -238,7 +239,7 @@ def _get_location(vm_=None):
     '''
     locations = avail_locations()
 
-    vm_location = str(config.get_cloud_config_value(
+    vm_location = six.text_type(config.get_cloud_config_value(
         'zone', vm_, __opts__, search_global=False
     ))
 
@@ -309,7 +310,7 @@ def _get_image(vm_):
     Return the VM's image. Used by create().
     '''
     images = avail_images()
-    vm_image = str(config.get_cloud_config_value(
+    vm_image = six.text_type(config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
     ))
 
@@ -430,7 +431,7 @@ def _get_size(vm_):
     '''
     sizes = avail_sizes()
 
-    vm_size = str(config.get_cloud_config_value(
+    vm_size = six.text_type(config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
     ))
 
@@ -497,9 +498,7 @@ def list_nodes_full(call=None):
     }
     items = query(params=params)
 
-    log.debug('Total {0} instances found in zone {1}'.format(
-        items['total_count'], zone)
-    )
+    log.debug('Total %s instances found in zone %s', items['total_count'], zone)
 
     result = {}
 
@@ -676,7 +675,7 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
 
     # params
     params = {
@@ -722,23 +721,22 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     private_ip = data['private_ips'][0]
 
-    log.debug('VM {0} is now running'.format(private_ip))
+    log.debug('VM %s is now running', private_ip)
 
     vm_['ssh_host'] = private_ip
 
     # The instance is booted and accessible, let's Salt it!
     __utils__['cloud.bootstrap'](vm_, __opts__)
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
 
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data)
     )
 
     __utils__['cloud.fire_event'](
@@ -784,7 +782,7 @@ def start(instance_id, call=None):
             'The stop action must be called with -a or --action.'
         )
 
-    log.info('Starting instance {0}'.format(instance_id))
+    log.info('Starting instance %s', instance_id)
 
     params = {
         'action': 'StartInstances',
@@ -812,7 +810,7 @@ def stop(instance_id, force=False, call=None):
             'The stop action must be called with -a or --action.'
         )
 
-    log.info('Stopping instance {0}'.format(instance_id))
+    log.info('Stopping instance %s', instance_id)
 
     params = {
         'action': 'StopInstances',
@@ -840,7 +838,7 @@ def reboot(instance_id, call=None):
             'The stop action must be called with -a or --action.'
         )
 
-    log.info('Rebooting instance {0}'.format(instance_id))
+    log.info('Rebooting instance %s', instance_id)
 
     params = {
         'action': 'RestartInstances',

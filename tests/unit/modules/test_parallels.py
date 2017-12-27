@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import textwrap
 
 # Import Salt Libs
@@ -408,25 +408,25 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
 
         # Validate singly-valued name
         with patch.object(parallels, 'prlctl', mock_guids):
-            mock_one_name = MagicMock(side_effect=[u'', u'ν_e'])
+            mock_one_name = MagicMock(side_effect=['', 'ν_e'])
             with patch.object(parallels, 'snapshot_id_to_name', mock_one_name):
-                self.assertEqual(parallels.snapshot_name_to_id(name, u'ν_e'), snap_ids[1])
+                self.assertEqual(parallels.snapshot_name_to_id(name, 'ν_e'), snap_ids[1])
 
         # Validate multiply-valued name
         with patch.object(parallels, 'prlctl', mock_guids):
-            mock_many_names = MagicMock(side_effect=[u'J/Ψ', u'J/Ψ'])
+            mock_many_names = MagicMock(side_effect=['J/Ψ', 'J/Ψ'])
             with patch.object(parallels, 'snapshot_id_to_name', mock_many_names):
-                self.assertEqual(sorted(parallels.snapshot_name_to_id(name, u'J/Ψ')),
+                self.assertEqual(sorted(parallels.snapshot_name_to_id(name, 'J/Ψ')),
                                  sorted(snap_ids))
 
         # Raise error for multiply-valued name
         with patch.object(parallels, 'prlctl', mock_guids):
-            mock_many_names = MagicMock(side_effect=[u'J/Ψ', u'J/Ψ'])
+            mock_many_names = MagicMock(side_effect=['J/Ψ', 'J/Ψ'])
             with patch.object(parallels, 'snapshot_id_to_name', mock_many_names):
                 self.assertRaises(SaltInvocationError,
                                   parallels.snapshot_name_to_id,
                                   name,
-                                  u'J/Ψ',
+                                  'J/Ψ',
                                   strict=True)
 
     def test__validate_snap_name(self):
@@ -442,8 +442,8 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         # Validate an unicode name
         mock_snap_symb = MagicMock(return_value=snap_id)
         with patch.object(parallels, 'snapshot_name_to_id', mock_snap_symb):
-            self.assertEqual(parallels._validate_snap_name(name, u'π'), snap_id)
-            mock_snap_symb.assert_called_once_with(name, u'π', strict=True, runas=None)
+            self.assertEqual(parallels._validate_snap_name(name, 'π'), snap_id)
+            mock_snap_symb.assert_called_once_with(name, 'π', strict=True, runas=None)
 
         # Validate an ascii name
         mock_snap_name = MagicMock(return_value=snap_id)
@@ -455,13 +455,13 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         mock_snap_numb = MagicMock(return_value=snap_id)
         with patch.object(parallels, 'snapshot_name_to_id', mock_snap_numb):
             self.assertEqual(parallels._validate_snap_name(name, '3.14159'), snap_id)
-            mock_snap_numb.assert_called_once_with(name, u'3.14159', strict=True, runas=None)
+            mock_snap_numb.assert_called_once_with(name, '3.14159', strict=True, runas=None)
 
         # Validate not strict (think neutrino oscillation)
         mock_snap_non_strict = MagicMock(return_value=snap_id)
         with patch.object(parallels, 'snapshot_name_to_id', mock_snap_non_strict):
-            self.assertEqual(parallels._validate_snap_name(name, u'e_ν', strict=False), snap_id)
-            mock_snap_non_strict.assert_called_once_with(name, u'e_ν', strict=False, runas=None)
+            self.assertEqual(parallels._validate_snap_name(name, 'e_ν', strict=False), snap_id)
+            mock_snap_non_strict.assert_called_once_with(name, 'e_ν', strict=False, runas=None)
 
     def test_list_snapshots(self):
         '''

@@ -121,7 +121,7 @@ Usage examples
 :status 401: authentication required
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import json
 import logging
@@ -130,6 +130,9 @@ import os
 # Import salt libs
 import salt
 import salt.netapi
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # HTTP response codes to response headers map
 H = {
@@ -209,7 +212,7 @@ def get_headers(data, extra_headers=None):
     tuple of tuples of headers suitable for passing to start_response()
     '''
     response_headers = {
-        'Content-Length': str(len(data)),
+        'Content-Length': six.text_type(len(data)),
     }
 
     if extra_headers:
@@ -273,20 +276,20 @@ def application(environ, start_response):
         code = 200
     except HTTPError as exc:
         code = exc.code
-        resp = str(exc)
+        resp = six.text_type(exc)
     except salt.exceptions.EauthAuthenticationError as exc:
         code = 401
-        resp = str(exc)
+        resp = six.text_type(exc)
     except Exception as exc:
         code = 500
-        resp = str(exc)
+        resp = six.text_type(exc)
 
     # Convert the response to JSON
     try:
         ret = json.dumps({'return': resp})
     except TypeError as exc:
         code = 500
-        ret = str(exc)
+        ret = six.text_type(exc)
 
     # Return the response
     start_response(H[code], get_headers(ret, {

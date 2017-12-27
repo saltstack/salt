@@ -33,10 +33,10 @@ import os
 import sys
 import logging
 import importlib
-import yaml
 import fnmatch
 import subprocess
 import json
+import salt.utils.yaml
 
 from salt.exceptions import LoaderError, CommandExecutionError
 from salt.utils import timed_subprocess
@@ -243,7 +243,7 @@ def help(module=None, *args):
     ret = {}
     for docset in module.DOCUMENTATION.split('---'):
         try:
-            docset = yaml.load(docset)
+            docset = salt.utils.yaml.safe_load(docset)
             if docset:
                 doc.update(docset)
         except Exception as err:

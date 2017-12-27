@@ -33,9 +33,6 @@ from salt.exceptions import (
     SaltCloudConfigError
 )
 
-# Import Third-Party Libs
-import yaml
-
 log = logging.getLogger(__name__)
 
 # mock hostname should be more complex than the systems FQDN
@@ -1133,7 +1130,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             default_config = sconfig.cloud_config(config_file_path)
             default_config['deploy_scripts_search_path'] = deploy_dir_path
             with salt.utils.files.fopen(config_file_path, 'w') as cfd:
-                cfd.write(yaml.dump(default_config, default_flow_style=False))
+                salt.utils.yamldumper.safe_dump(
+                    default_config,
+                    cfd,
+                    default_flow_style=False)
 
             default_config = sconfig.cloud_config(config_file_path)
 

@@ -2,13 +2,12 @@
 '''test for pillar hg_pillar.py'''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import tempfile
 import shutil
 import subprocess
-import yaml
 
 # Import Salt Testing libs
 from tests.integration import AdaptedConfigurationTestCaseMixin
@@ -28,6 +27,7 @@ FILE_DATA = {
 
 # Import Salt Libs
 import salt.utils.files
+import salt.utils.yaml
 import salt.pillar.hg_pillar as hg_pillar
 HGLIB = hg_pillar.hglib
 
@@ -50,6 +50,8 @@ class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModule
                     'cachedir': cachedir,
                     'pillar_roots': {},
                     'file_roots': {},
+                    'file_ignore_glob': [],
+                    'file_ignore_regex': [],
                     'state_top': 'top.sls',
                     'extension_modules': '',
                     'renderer': 'yaml_jinja',
@@ -67,7 +69,7 @@ class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModule
         subprocess.check_call(['hg', 'init', hg_repo])
         for filename in FILE_DATA:
             with salt.utils.files.fopen(os.path.join(hg_repo, filename), 'w') as data_file:
-                yaml.dump(FILE_DATA[filename], data_file)
+                salt.utils.yaml.safe_dump(FILE_DATA[filename], data_file)
         subprocess.check_call(['hg', 'ci', '-A', '-R', hg_repo, '-m', 'first commit', '-u', COMMIT_USER_NAME])
         return hg_repo
 

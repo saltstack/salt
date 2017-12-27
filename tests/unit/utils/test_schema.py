@@ -7,13 +7,13 @@
 from __future__ import absolute_import
 import copy
 import json
-import yaml
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
 import salt.utils.schema as schema
+import salt.utils.yaml
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
@@ -2112,7 +2112,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(complex_obj.get_definition(), expected_def)
 
     def test_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(self.schema.serialize()))
+        serialized = salt.utils.yaml.safe_load(json.dumps(self.schema.serialize()))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
             'title': 'Test Complex Definition Schema',
@@ -2134,7 +2134,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(serialized, expected)
 
     def test_one_of_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(self.one_of_schema.serialize()))
+        serialized = salt.utils.yaml.safe_load(json.dumps(self.one_of_schema.serialize()))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
             'title': 'Test OneOf Complex Definitions Schema',
@@ -2157,7 +2157,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(serialized, expected)
 
     def test_array_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(self.array_schema.serialize()))
+        serialized = salt.utils.yaml.safe_load(json.dumps(self.array_schema.serialize()))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
             'title': 'Test Array Complex Definitions Schema',
@@ -2181,7 +2181,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(serialized, expected)
 
     def test_dict_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(self.dict_schema.serialize()))
+        serialized = salt.utils.yaml.safe_load(json.dumps(self.dict_schema.serialize()))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
             'title': 'Test Dict Complex Definitions Schema',
@@ -2210,7 +2210,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(serialized, expected)
 
     def test_complex_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(
+        serialized = salt.utils.yaml.safe_load(json.dumps(
             self.complex_schema.serialize()))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',

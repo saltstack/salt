@@ -9,16 +9,15 @@ and the like, but also useful for basic HTTP testing.
 # Import python libs
 from __future__ import absolute_import
 import cgi
+import gzip
+import io
 import json
 import logging
 import os.path
 import pprint
-import socket
-import yaml
-import io
-import zlib
-import gzip
 import re
+import socket
+import zlib
 
 import ssl
 try:
@@ -47,8 +46,9 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.version
 import salt.utils.xmlutil as xml
+import salt.utils.yaml
+import salt.version
 from salt._compat import ElementTree as ET
 from salt.template import compile_template
 from salt.utils.decorators.jinja import jinja_filter
@@ -655,7 +655,7 @@ def query(url,
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
         elif decode_type == 'yaml':
-            ret['dict'] = yaml.safe_load(result_text)
+            ret['dict'] = salt.utils.yaml.safe_load(result_text)
         else:
             text = True
 

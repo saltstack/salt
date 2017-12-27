@@ -5,9 +5,9 @@ Utilities for managing Debian preseed
 .. versionadded:: Beryllium
 '''
 from __future__ import absolute_import
-import yaml
 import shlex
 import salt.utils.files
+import salt.utils.yaml
 
 
 def mksls(src, dst=None):
@@ -71,8 +71,9 @@ def mksls(src, dst=None):
         sls[iface]['ipaddress'] = ps_opts['d-i']['netcfg']['get_ipaddress']['argument']
         sls[iface]['nameservers'] = ps_opts['d-i']['netcfg']['get_nameservers']['argument']
 
+    ret = salt.utils.yaml.safe_dump(sls, default_flow_style=False)
     if dst is not None:
         with salt.utils.files.fopen(dst, 'w') as fh_:
-            fh_.write(yaml.safe_dump(sls, default_flow_style=False))
+            fh_.write(ret)
     else:
-        return yaml.safe_dump(sls, default_flow_style=False)
+        return ret

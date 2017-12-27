@@ -23,6 +23,7 @@ import random
 # Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.yaml
 try:
     from salt.utils.nb_popen import NonBlockingPopen
 except ImportError:
@@ -44,7 +45,6 @@ except ImportError:
         from nb_popen import NonBlockingPopen
 
 # Import 3rd-party libs
-import yaml
 try:
     import requests
     HAS_REQUESTS = True
@@ -77,7 +77,11 @@ def build_pillar_data(options):
         pillar['package_artifact_dir'] = options.package_artifact_dir
     if options.pillar:
         pillar.update(dict(options.pillar))
-    return yaml.dump(pillar, default_flow_style=True, indent=0, width=sys.maxint).rstrip()
+    return salt.utils.yaml.safe_dump(
+        pillar,
+        default_flow_style=True,
+        indent=0,
+        width=sys.maxint).rstrip()
 
 
 def build_minion_target(options, vm_name):

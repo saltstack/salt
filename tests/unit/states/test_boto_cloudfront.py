@@ -29,6 +29,9 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
             whitelist=['boto3', 'dictdiffer', 'yamldumper'],
             context={},
         )
+        # Force the LazyDict to populate its references. Otherwise the lookup
+        # will fail inside the unit tests.
+        list(utils)
         return {
             boto_cloudfront: {
                 '__utils__': utils,
@@ -161,8 +164,8 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
         }})
 
         diff = textwrap.dedent('''\
-            --- 
-            +++ 
+            ---
+            +++
             @@ -1,5 +1,5 @@
              config:
             -  Comment: to be removed
@@ -171,8 +174,17 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
             +  HttpVersion: http2
              tags:
             -  bad existing tag: also to be removed
-            +  test_tag1: value1
-        ''')
+            +  test_tag1: value1''').splitlines()
+
+        # difflib.unified_diff adds an extra space after the +++ and --- lines
+        # at the beginning of the diff. Rather than include the spaces above in
+        # the diff, add them here. This is because there are vim plugins which
+        # will automatically remove trailing whitespace when a file is saved,
+        # and we don't want the trailing spaces to be accidentally removed and
+        # cause the test to fail.
+        diff[0] += ' '
+        diff[1] += ' '
+        diff = '\n'.join(diff) + '\n'
 
         with patch.multiple(boto_cloudfront,
             __salt__={'boto_cloudfront.get_distribution': mock_get},

@@ -1,6 +1,4 @@
 # encoding: utf-8
-from __future__ import absolute_import, print_function
-
 '''
 A non-blocking REST API for Salt
 ================================
@@ -188,6 +186,7 @@ a return like::
 .. |500| replace:: internal server error
 '''  # pylint: disable=W0105
 # pylint: disable=W0232
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import time
@@ -198,7 +197,6 @@ from collections import defaultdict
 
 # pylint: disable=import-error
 import cgi
-import yaml
 import tornado.escape
 import tornado.httpserver
 import tornado.ioloop
@@ -217,6 +215,7 @@ import salt.netapi
 import salt.utils.args
 import salt.utils.event
 import salt.utils.json
+import salt.utils.yaml
 from salt.utils.event import tagify
 import salt.client
 import salt.runner
@@ -392,7 +391,7 @@ class EventListener(object):
 class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylint: disable=W0223
     ct_out_map = (
         ('application/json', json.dumps),
-        ('application/x-yaml', yaml.safe_dump),
+        ('application/x-yaml', salt.utils.yaml.safe_dump),
     )
 
     def _verify_client(self, low):
@@ -516,8 +515,8 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         ct_in_map = {
             'application/x-www-form-urlencoded': self._form_loader,
             'application/json': json.loads,
-            'application/x-yaml': yaml.safe_load,
-            'text/yaml': yaml.safe_load,
+            'application/x-yaml': salt.utils.yaml.safe_load,
+            'text/yaml': salt.utils.yaml.safe_load,
             # because people are terrible and don't mean what they say
             'text/plain': json.loads
         }
@@ -727,9 +726,11 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             return
 
         except (AttributeError, IndexError):
-            logging.debug("Configuration for external_auth malformed for "
-                          "eauth '{0}', and user '{1}'."
-                          .format(token.get('eauth'), token.get('name')), exc_info=True)
+            logging.debug(
+                'Configuration for external_auth malformed for eauth \'%s\', '
+                'and user \'%s\'.',
+                token.get('eauth'), token.get('name'), exc_info=True
+            )
             # TODO better error -- 'Configuration for external_auth could not be read.'
             self.send_error(500)
             return
@@ -1479,14 +1480,14 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.set_header('Cache-Control', 'no-cache')
         self.set_header('Connection', 'keep-alive')
 
-        self.write(u'retry: {0}\n'.format(400))
+        self.write('retry: {0}\n'.format(400))
         self.flush()
 
         while True:
             try:
                 event = yield self.application.event_listener.get_event(self)
-                self.write(u'tag: {0}\n'.format(event.get('tag', '')))
-                self.write(u'data: {0}\n\n'.format(json.dumps(event)))
+                self.write('tag: {0}\n'.format(event.get('tag', '')))
+                self.write('data: {0}\n\n'.format(json.dumps(event)))
                 self.flush()
             except TimeoutException:
                 break

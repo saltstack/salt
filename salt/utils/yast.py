@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from salt._compat import ElementTree as ET
 import salt.utils.xmlutil as xml
 import salt.utils.files
-import yaml
+import salt.utils.yaml
 
 
 def mksls(src, dst=None):
@@ -18,8 +18,9 @@ def mksls(src, dst=None):
     with salt.utils.files.fopen(src, 'r') as fh_:
         ps_opts = xml.to_dict(ET.fromstring(fh_.read()))
 
+    ret = salt.utils.yaml.safe_dump(ps_opts, default_flow_style=False)
     if dst is not None:
         with salt.utils.files.fopen(dst, 'w') as fh_:
-            fh_.write(yaml.safe_dump(ps_opts, default_flow_style=False))
+            fh_.write(ret)
     else:
-        return yaml.safe_dump(ps_opts, default_flow_style=False)
+        return ret
