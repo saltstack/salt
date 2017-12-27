@@ -101,3 +101,20 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                 ['pkg', 'lock', '-y', '--quiet', '--show-locked'],
                 output_loglevel='trace', python_shell=False
             )
+
+    def test_list_upgrades(self):
+        '''
+        Test pkgng.list_upgrades
+        '''
+        pkg_cmd = MagicMock(return_value={
+            'stdout': 'pkga-1.0 < (port has 1.1)\npkgb-2.0 < (port has 2.1)\n',
+            'retcode': 0
+        })
+        with patch.dict(pkgng.__salt__, {'cmd.run_all': pkg_cmd}):
+
+            result = pkgng.list_upgrades()
+            self.assertDictEqual(result, {'pkga': '1.1', 'pkgb': '2.1'})
+            pkg_cmd.assert_called_with(
+                ['pkg', 'version', '--like', '<', '--verbose', '--quiet', '-R'],
+                output_loglevel='trace', python_shell=False
+            )
