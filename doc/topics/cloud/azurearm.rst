@@ -184,8 +184,13 @@ ssh_username
 Required for Linux. The admin user to add on the instance. It is also used to log
 into the newly-created VM to install Salt.
 
+ssh_keyfile
+-----------
+Required if using SSH key authentication. The path on the Salt master to the SSH private
+key used during the minion bootstrap process.
+
 ssh_publickeyfile
-------------
+-----------------
 Use either ``ssh_publickeyfile`` or ``ssh_password``. The path on the Salt master to the
 SSH public key which will be pushed to the Linux VM.
 
