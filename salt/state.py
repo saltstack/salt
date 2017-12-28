@@ -2070,6 +2070,7 @@ class State(object):
                ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
+                arg = sdecode(arg)
                 if not isinstance(arg, six.string_types) or not arg.startswith('__slot__:'):
                     # Not a slot, skip it
                     continue
