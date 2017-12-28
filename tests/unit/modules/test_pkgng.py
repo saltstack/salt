@@ -35,7 +35,8 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkgng.lock
         '''
         lock_cmd = MagicMock(return_value={
-            'stdout': 'pkga-1.0\npkgb-2.0\n',
+            'stdout': ('pkga-1.0\n'
+                       'pkgb-2.0\n'),
             'retcode': 0
         })
         with patch.dict(pkgng.__salt__, {'cmd.run_all': lock_cmd}):
@@ -59,7 +60,8 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkgng.unlock
         '''
         unlock_cmd = MagicMock(return_value={
-            'stdout': 'pkga-1.0\npkgb-2.0\n',
+            'stdout': ('pkga-1.0\n'
+                       'pkgb-2.0\n'),
             'retcode': 0
         })
         with patch.dict(pkgng.__salt__, {'cmd.run_all': unlock_cmd}):
@@ -83,7 +85,8 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkgng.unlock
         '''
         lock_cmd = MagicMock(return_value={
-            'stdout': 'pkga-1.0\npkgb-2.0\n',
+            'stdout': ('pkga-1.0\n'
+                       'pkgb-2.0\n'),
             'retcode': 0
         })
         with patch.dict(pkgng.__salt__, {'cmd.run_all': lock_cmd}):
@@ -107,7 +110,8 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkgng.list_upgrades
         '''
         pkg_cmd = MagicMock(return_value={
-            'stdout': 'pkga-1.0 < (port has 1.1)\npkgb-2.0 < (port has 2.1)\n',
+            'stdout': ('pkga-1.0 < (port has 1.1)\n'
+                       'pkgb-2.0 < (port has 2.1)\n'),
             'retcode': 0
         })
         with patch.dict(pkgng.__salt__, {'cmd.run_all': pkg_cmd}):
