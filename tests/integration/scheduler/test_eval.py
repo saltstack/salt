@@ -16,12 +16,19 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
+from tests.support.unit import skipIf
 import tests.integration as integration
 
 # Import Salt libs
 import salt.utils.schedule
 
 from salt.modules.test import ping as ping
+
+try:
+    import croniter  # pylint: disable=W0611
+    HAS_CRONITER = True
+except ImportError:
+    HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
@@ -215,6 +222,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
 
+    @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
     def test_eval_cron(self):
         '''
         verify that scheduled job runs
@@ -238,6 +246,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
 
+    @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
     def test_eval_cron_loop_interval(self):
         '''
         verify that scheduled job runs
