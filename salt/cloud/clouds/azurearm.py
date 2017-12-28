@@ -34,6 +34,7 @@ The Azure ARM cloud module is used to control access to Microsoft Azure Resource
       * ``AZURE_CHINA_CLOUD``
       * ``AZURE_US_GOV_CLOUD``
       * ``AZURE_GERMAN_CLOUD``
+      * HTTP base URL for a custom endpoint, such as Azure Stack. The ``/metadata/endpoints`` path will be added to the URL.
 
     **userdata** and **userdata_file**:
       Azure Resource Manager uses a separate VirtualMachineExtension object to pass userdata scripts to the virtual

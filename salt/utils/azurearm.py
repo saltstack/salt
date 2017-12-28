@@ -32,6 +32,10 @@ try:
         UserPassCredentials,
         ServicePrincipalCredentials,
     )
+    from msrestazure.azure_cloud import (
+        MetadataEndpointError,
+        get_cloud_from_metadata_endpoint,
+    )
     from msrestazure.azure_exceptions import CloudError
     HAS_AZURE = True
 except ImportError:
@@ -62,10 +66,13 @@ def _determine_auth(**kwargs):
     user_pass_creds_kwargs = ['username', 'password']
 
     try:
-        cloud_env_module = importlib.import_module('msrestazure.azure_cloud')
-        cloud_env = getattr(cloud_env_module, kwargs.get('cloud_environment', 'AZURE_PUBLIC_CLOUD'))
-    except (AttributeError, ImportError):
-        raise sys.exit('The azure {0} cloud environment is not available.'.format(kwargs['cloud_environment']))
+        if kwargs.get('cloud_environment') and kwargs.get('cloud_environment').startswith('http'):
+            cloud_env = get_cloud_from_metadata_endpoint(kwargs['cloud_environment'])
+        else:
+            cloud_env_module = importlib.import_module('msrestazure.azure_cloud')
+            cloud_env = getattr(cloud_env_module, kwargs.get('cloud_environment', 'AZURE_PUBLIC_CLOUD'))
+    except (AttributeError, ImportError, MetadataEndpointError):
+        raise sys.exit('The Azure cloud environment {0} is not available.'.format(kwargs['cloud_environment']))
 
     if set(service_principal_creds_kwargs).issubset(kwargs):
         credentials = ServicePrincipalCredentials(kwargs['client_id'],
