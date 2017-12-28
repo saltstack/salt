@@ -13,6 +13,7 @@ from tests.support.unit import TestCase, skipIf
 # Import Salt libs
 import salt.auth
 import salt.utils.json
+import salt.utils.yaml
 from salt.ext.six.moves import map  # pylint: disable=import-error
 try:
     import salt.netapi.rest_tornado as rest_tornado
@@ -22,7 +23,6 @@ except ImportError:
     HAS_TORNADO = False
 
 # Import 3rd-party libs
-import yaml
 # pylint: disable=import-error
 try:
     import tornado.escape
@@ -187,7 +187,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         # Request application/x-yaml
         response = self.fetch('/', headers={'Accept': self.content_type_map['yaml']})
         self.assertEqual(response.headers['Content-Type'], self.content_type_map['yaml'])
-        self.assertEqual(type(yaml.load(response.body)), dict)
+        self.assertEqual(type(salt.utils.yaml.safe_load(response.body)), dict)
 
         # Request not supported content-type
         response = self.fetch('/', headers={'Accept': self.content_type_map['xml']})
@@ -203,7 +203,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         accept_header = self.content_type_map['real-accept-header-yaml']
         response = self.fetch('/', headers={'Accept': accept_header})
         self.assertEqual(response.headers['Content-Type'], self.content_type_map['yaml'])
-        self.assertEqual(type(yaml.load(response.body)), dict)
+        self.assertEqual(type(salt.utils.yaml.safe_load(response.body)), dict)
 
     def test_token(self):
         '''
@@ -256,14 +256,14 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         # send yaml as json (should break)
         response = self.fetch('/',
                               method='POST',
-                              body=yaml.dump(valid_lowstate),
+                              body=salt.utils.yaml.safe_dump(valid_lowstate),
                               headers={'Content-Type': self.content_type_map['json']})
         self.assertEqual(response.code, 400)
 
         # send as yaml
         response = self.fetch('/',
                               method='POST',
-                              body=yaml.dump(valid_lowstate),
+                              body=salt.utils.yaml.safe_dump(valid_lowstate),
                               headers={'Content-Type': self.content_type_map['yaml']})
         self.assertEqual(valid_lowstate, salt.utils.json.loads(response.body)['lowstate'])
 
@@ -369,7 +369,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         # send as yaml
         response = self.fetch('/',
                               method='POST',
-                              body=yaml.dump(request_lowstate),
+                              body=salt.utils.yaml.safe_dump(request_lowstate),
                               headers={'Content-Type': self.content_type_map['yaml']})
         self.assertEqual(valid_lowstate, salt.utils.json.loads(response.body)['lowstate'])
 
@@ -552,7 +552,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         # Test in YAML
         response = self.fetch('/login',
                                method='POST',
-                               body=yaml.dump(self.auth_creds_dict),
+                               body=salt.utils.yaml.safe_dump(self.auth_creds_dict),
                                headers={'Content-Type': self.content_type_map['yaml']})
 
         self.assertEqual(response.code, 200)

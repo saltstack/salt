@@ -44,12 +44,12 @@ import copy
 import logging
 import pprint
 import time
-import yaml
 
 # Import salt libs
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -711,7 +711,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         kwargs = {}
 
     if isinstance(kwargs['volumes'], six.string_types):
-        volumes = yaml.safe_load(kwargs['volumes'])
+        volumes = salt.utils.yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
 
@@ -805,7 +805,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         kwargs = {}
 
     if isinstance(kwargs['volumes'], six.string_types):
-        volumes = yaml.safe_load(kwargs['volumes'])
+        volumes = salt.utils.yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
 
@@ -2731,7 +2731,7 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
 
-    x_ms_meta_name_values = yaml.safe_load(
+    x_ms_meta_name_values = salt.utils.yaml.safe_load(
         kwargs.get('meta_name_values', '')
     )
 

@@ -13,7 +13,6 @@ import logging
 import os
 import pprint
 import socket
-import yaml
 import io
 import zlib
 import gzip
@@ -47,6 +46,7 @@ import salt.utils.json
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.version
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
@@ -657,7 +657,7 @@ def query(url,
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
         elif decode_type == 'yaml':
-            ret['dict'] = yaml.safe_load(result_text)
+            ret['dict'] = salt.utils.yaml.safe_load(result_text)
         else:
             text = True
 
