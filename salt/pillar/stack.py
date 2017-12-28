@@ -376,20 +376,19 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 
 # Import Python libs
 from __future__ import absolute_import
+import functools
+import glob
 import os
 import posixpath
 import logging
-from functools import partial
-from glob import glob
 
-import yaml
 from jinja2 import FileSystemLoader, Environment
 
 # Import Salt libs
 from salt.ext import six
 import salt.utils.data
 import salt.utils.jinja
-
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 strategies = ('overwrite', 'merge-first', 'merge-last', 'remove')
@@ -399,9 +398,9 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     stack = {}
     stack_config_files = list(args)
     traverse = {
-        'pillar': partial(salt.utils.data.traverse_dict_and_list, pillar),
-        'grains': partial(salt.utils.data.traverse_dict_and_list, __grains__),
-        'opts': partial(salt.utils.data.traverse_dict_and_list, __opts__),
+        'pillar': functools.partial(salt.utils.data.traverse_dict_and_list, pillar),
+        'grains': functools.partial(salt.utils.data.traverse_dict_and_list, __grains__),
+        'opts': functools.partial(salt.utils.data.traverse_dict_and_list, __opts__),
         }
     for matcher, matchs in six.iteritems(kwargs):
         t, matcher = matcher.split(':', 1)
@@ -432,7 +431,6 @@ def _construct_unicode(loader, node):
 def _process_stack_cfg(cfg, stack, minion_id, pillar):
     log.debug('Config: {0}'.format(cfg))
     basedir, filename = os.path.split(cfg)
-    yaml.SafeLoader.add_constructor("tag:yaml.org,2002:python/unicode", _construct_unicode)
     jenv = Environment(loader=FileSystemLoader(basedir), extensions=['jinja2.ext.do', salt.utils.jinja.SerializerExtension])
     jenv.globals.update({
         "__opts__": __opts__,
@@ -448,7 +446,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             jenv.get_template(filename).render(stack=stack)):
         if not item.strip():
             continue  # silently ignore whitespace or empty lines
-        paths = glob(os.path.join(basedir, item))
+        paths = glob.glob(os.path.join(basedir, item))
         if not paths:
             log.warning('Ignoring pillar stack template "{0}": can\'t find from '
                      'root dir "{1}"'.format(item, basedir))
@@ -457,7 +455,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             log.debug('YAML: basedir={0}, path={1}'.format(basedir, path))
             # FileSystemLoader always expects unix-style paths
             unix_path = _to_unix_slashes(os.path.relpath(path, basedir))
-            obj = yaml.safe_load(jenv.get_template(unix_path).render(stack=stack))
+            obj = salt.utils.yaml.safe_load(jenv.get_template(unix_path).render(stack=stack))
             if not isinstance(obj, dict):
                 log.info('Ignoring pillar stack template "{0}": Can\'t parse '
                          'as a valid yaml dictionary'.format(path))
@@ -535,7 +533,7 @@ def _parse_stack_cfg(content):
     Allow top level cfg to be YAML
     '''
     try:
-        obj = yaml.safe_load(content)
+        obj = salt.utils.yaml.safe_load(content)
         if isinstance(obj, list):
             return obj
     except Exception as e:

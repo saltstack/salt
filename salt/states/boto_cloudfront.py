@@ -49,8 +49,6 @@ from __future__ import absolute_import
 import difflib
 import logging
 
-import yaml
-
 log = logging.getLogger(__name__)
 
 
@@ -176,14 +174,16 @@ def present(
         )
 
         def _yaml_safe_dump(attrs):
-            '''Safely dump YAML using a readable flow style'''
+            '''
+            Safely dump YAML using a readable flow style
+            '''
             dumper_name = 'IndentedSafeOrderedDumper'
-            dumper = __utils__['yamldumper.get_dumper'](dumper_name)
-            return yaml.dump(
+            dumper = __utils__['yaml.get_dumper'](dumper_name)
+            return __utils__['yaml.dump'](
                 attrs,
                 default_flow_style=False,
-                Dumper=dumper,
-            )
+                Dumper=dumper)
+
         changes_diff = ''.join(difflib.unified_diff(
             _yaml_safe_dump(full_config_old).splitlines(True),
             _yaml_safe_dump(full_config_new).splitlines(True),

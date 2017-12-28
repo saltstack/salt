@@ -24,11 +24,11 @@ from __future__ import absolute_import
 import re
 import logging
 import shlex
-import yaml
 
 # Import salt libs
 import salt.utils.locales
 import salt.utils.path
+import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd party libs
@@ -476,8 +476,8 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
 
     # Try to interpret the information
     try:
-        data = yaml.safe_load(info)
-    except yaml.YAMLError as err:
+        data = salt.utils.yaml.safe_load(info)
+    except salt.utils.yaml.YAMLError as err:
         log.warning(
             'Could not interpret snapshot data returned from prlctl: '
             '{0}'.format(err)

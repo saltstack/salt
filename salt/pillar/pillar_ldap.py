@@ -113,8 +113,7 @@ TODO: see also ``_result_to_dict()`` documentation
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import logging
 
@@ -122,7 +121,6 @@ import logging
 from salt.exceptions import SaltInvocationError
 
 # Import third party libs
-import yaml
 from jinja2 import Environment, FileSystemLoader
 try:
     import ldap  # pylint: disable=W0611
@@ -278,10 +276,11 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     Execute LDAP searches and return the aggregated data
     '''
     if os.path.isfile(config_file):
+        import salt.utils.yaml
         try:
             #open(config_file, 'r') as raw_config:
             config = _render_template(config_file) or {}
-            opts = yaml.safe_load(config) or {}
+            opts = salt.utils.yaml.safe_load(config) or {}
             opts['conf_file'] = config_file
         except Exception as err:
             import salt.log

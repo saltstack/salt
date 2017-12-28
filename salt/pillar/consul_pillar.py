@@ -125,12 +125,11 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import re
-import yaml
 
 from salt.exceptions import CommandExecutionError
 from salt.utils.dictupdate import update as dict_merge
 import salt.utils.minions
-from salt.utils.yamlloader import SaltYamlSafeLoader
+import salt.utils.yaml
 
 # Import third party libs
 try:
@@ -253,10 +252,7 @@ def pillar_format(ret, keys, value):
     # If value is not None then it's a string
     # Use YAML to parse the data
     # YAML strips whitespaces unless they're surrounded by quotes
-    pillar_value = yaml.load(
-        value,
-        Loader=SaltYamlSafeLoader
-    )
+    pillar_value = salt.utils.yaml.safe_load(value)
 
     keyvalue = keys.pop()
     pil = {keyvalue: pillar_value}

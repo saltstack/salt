@@ -375,12 +375,14 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 
 # Import Python libs
 from __future__ import absolute_import
+import functools
 import os
 import logging
-from functools import partial
-import yaml
 
 # Import Salt libs
+import salt.utils.yaml
+
+# Import 3rd-party libs
 from salt.ext import six
 
 try:
@@ -411,9 +413,9 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     stack = {}
     stack_config_files = list(args)
     traverse = {
-        'pillar': partial(salt.utils.data.traverse_dict_and_list, pillar),
-        'grains': partial(salt.utils.data.traverse_dict_and_list, __grains__),
-        'opts': partial(salt.utils.data.traverse_dict_and_list, __opts__),
+        'pillar': functools.partial(salt.utils.data.traverse_dict_and_list, pillar),
+        'grains': functools.partial(salt.utils.data.traverse_dict_and_list, __grains__),
+        'opts': functools.partial(salt.utils.data.traverse_dict_and_list, __opts__),
         }
     for matcher, matchs in six.iteritems(kwargs):
         t, matcher = matcher.split(':', 1)
@@ -456,7 +458,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace):
                                                  __grains__=__grains__,
                                                  minion_id=minion_id,
                                                  pillar=pillar, stack=stack)
-            obj = yaml.safe_load(p)
+            obj = salt.utils.yaml.safe_load(p)
             if not isinstance(obj, dict):
                 log.info('Ignoring Stack template "{0}": Can\'t parse '
                          'as a valid yaml dictionary'.format(path))
@@ -541,9 +543,11 @@ def _merge_list(stack, obj):
 
 
 def _parse_top_cfg(content):
-    """Allow top_cfg to be YAML"""
+    '''
+    Allow top_cfg to be YAML
+    '''
     try:
-        obj = yaml.safe_load(content)
+        obj = salt.utils.yaml.safe_load(content)
         if isinstance(obj, list):
             return obj
     except Exception as e:

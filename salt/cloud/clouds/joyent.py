@@ -57,7 +57,6 @@ import logging
 import base64
 import pprint
 import inspect
-import yaml
 import datetime
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
@@ -70,6 +69,7 @@ import salt.utils.cloud
 import salt.utils.files
 import salt.utils.http
 import salt.utils.json
+import salt.utils.yaml
 import salt.config as config
 from salt.cloud.libcloudfuncs import node_state
 from salt.exceptions import (
@@ -1121,6 +1121,6 @@ def query(action=None,
 
     if 'Content-Length' in result['headers']:
         content = result['text']
-        return_content = yaml.safe_load(content)
+        return_content = salt.utils.yaml.safe_load(content)
 
     return [result['status'], return_content]
