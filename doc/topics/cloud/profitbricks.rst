@@ -202,7 +202,7 @@ public_lan
 public_firewall_rules
     This option allows for a list of firewall rules assigned to the public
     network interface.
-     
+
     Firewall Rule Name:
       protocol: <protocol> (TCP, UDP, ICMP)
       source_mac: <source-mac>
@@ -212,12 +212,12 @@ public_firewall_rules
       port_range_end: <port-range-end>
       icmp_type: <icmp-type>
       icmp_code: <icmp-code>
-    
+
 private_lan
     This option will connect the server to the specified private LAN. If no
     LAN exists, then a new private LAN will be created. The value accepts a LAN
     ID (integer).
-    
+
 private_firewall_rules
     This option allows for a list of firewall rules assigned to the private
     network interface.
@@ -259,5 +259,5 @@ wait_for_timeout
     The timeout to wait in seconds for provisioning resources such as servers.
     The default wait_for_timeout is 15 minutes.
 
-For more information concerning cloud profiles, see :doc:`here
+For more information concerning cloud profiles, see :ref:`here
 </topics/cloud/profiles>`.
