@@ -19,6 +19,7 @@ import logging
 import collections
 import multiprocessing
 import salt.serializers.msgpack
+import threading
 
 # Import third party libs
 try:
@@ -49,6 +50,7 @@ import tornado.gen  # pylint: disable=F0401
 # Import salt libs
 import salt.crypt
 import salt.client
+import salt.client.ssh.client
 import salt.payload
 import salt.pillar
 import salt.state
@@ -1957,6 +1959,7 @@ class ClearFuncs(object):
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         # Send it!
+        minions.extend(self._send_ssh_pub(payload))
         self._send_pub(payload)
 
         return {
@@ -2018,6 +2021,21 @@ class ClearFuncs(object):
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.PubServerChannel.factory(opts)
             chan.publish(load)
+
+    def _send_ssh_pub(self, load):
+        '''
+        Take a load and send it across the network to connected minions
+        '''
+        minions = []
+        if self.opts['enable_ssh_minions'] is True and isinstance(load['tgt'], six.string_types):
+            # The isinstances makes sure that syndics work
+            log.debug('Use SSHClient for rostered minions')
+            ssh = salt.client.ssh.client.SSHClient()
+            ssh_minions = ssh._prep_ssh(**load).targets.keys()
+            if ssh_minions:
+                minions.extend(ssh_minions)
+                threading.Thread(target=ssh.cmd, kwargs=load).start()
+        return minions
 
     def _prep_pub(self, minions, jid, clear_load, extra, missing):
         '''

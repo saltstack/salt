@@ -214,7 +214,7 @@ class SSH(object):
     def __init__(self, opts):
         self.__parsed_rosters = {SSH.ROSTER_UPDATE_FLAG: True}
         pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
-        if os.path.isfile(pull_sock) and HAS_ZMQ:
+        if os.path.exists(pull_sock) and HAS_ZMQ:
             self.event = salt.utils.event.get_event(
                     'master',
                     opts['sock_dir'],
@@ -662,11 +662,13 @@ class SSH(object):
             host = next(six.iterkeys(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
+                _, data = next(six.iteritems(ret))
+                data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
                 self.event.fire_event(
-                        ret,
-                        salt.utils.event.tagify(
-                            [jid, 'ret', host],
-                            'job'))
+                    data,
+                    salt.utils.event.tagify(
+                        [jid, 'ret', host],
+                        'job'))
             yield ret
 
     def cache_job(self, jid, id_, ret, fun):
@@ -771,11 +773,13 @@ class SSH(object):
                         outputter,
                         self.opts)
             if self.event:
+                _, data = next(six.iteritems(ret))
+                data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
                 self.event.fire_event(
-                        ret,
-                        salt.utils.event.tagify(
-                            [jid, 'ret', host],
-                            'job'))
+                    data,
+                    salt.utils.event.tagify(
+                        [jid, 'ret', host],
+                        'job'))
         if self.opts.get('static'):
             salt.output.display_output(
                     sret,
@@ -1262,7 +1266,7 @@ ARGS = {10}\n'''.format(self.minion_config,
         self.argv = _convert_args(self.argv)
         log.debug(
             'Performing shimmed, blocking command as follows:\n%s',
-            ' '.join(self.argv)
+            ' '.join([six.text_type(arg) for arg in self.argv])
         )
         cmd_str = self._cmd_str()
         stdout, stderr, retcode = self.shim_cmd(cmd_str)
