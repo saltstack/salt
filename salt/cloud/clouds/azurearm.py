@@ -971,7 +971,7 @@ def request_instance(vm_):
 
     ssh_publickeyfile_contents = None
     ssh_publickeyfile = config.get_cloud_config_value(
-        'ssh_publickeyfile',
+        'ssh_key_file',
         vm_,
         __opts__,
         search_global=False,
