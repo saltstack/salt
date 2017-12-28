@@ -129,7 +129,7 @@ class AESReqServerMixin(object):
 
         pret = {}
         if HAS_M2:
-            pret['key'] = pub.encrypt(six.b(key), RSA.pkcs1_oaep_padding)
+            pret['key'] = pub.public_encrypt(six.b(key), RSA.pkcs1_oaep_padding)
         else:
             cipher = PKCS1_OAEP.new(pub)
             if six.PY2:
