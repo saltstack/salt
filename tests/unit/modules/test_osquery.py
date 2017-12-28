@@ -50,7 +50,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
                           MagicMock(return_value=_table_attrs_results)):
             with patch.object(osquery, '_osquery',
                               MagicMock(return_value=_os_query_results)):
-                    self.assertEqual(osquery.version(), u'2.6.1')
+                self.assertEqual(osquery.version(), u'2.6.1')
 
     def test_deb_packages(self):
         '''
@@ -215,4 +215,3 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(osquery.osquery_info(attrs=['build_platform',
                                                                  'start_time']),
                                      _os_query_results)
-
