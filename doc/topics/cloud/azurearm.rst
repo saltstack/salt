@@ -97,7 +97,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       size: Standard_D1_v2
       location: eastus
       ssh_username: azureuser
-      ssh_key_file: /path/to/ssh_public_key.pub
+      ssh_publickeyfile: /path/to/ssh_public_key.pub
 
     azure-win2012:
       provider: my-azure-config
@@ -184,14 +184,14 @@ ssh_username
 Required for Linux. The admin user to add on the instance. It is also used to log
 into the newly-created VM to install Salt.
 
-ssh_key_file
+ssh_publickeyfile
 ------------
-Use either ``ssh_key_file`` or ``ssh_password``. The path on the Salt master to the
+Use either ``ssh_publickeyfile`` or ``ssh_password``. The path on the Salt master to the
 SSH public key which will be pushed to the Linux VM.
 
 ssh_password
 ------------
-Use either ``ssh_key_file`` or ``ssh_password``. The password for the admin user on
+Use either ``ssh_publickeyfile`` or ``ssh_password``. The password for the admin user on
 the newly-created Linux virtual machine.
 
 win_username
