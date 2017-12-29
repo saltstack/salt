@@ -710,7 +710,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         '''
         Test to ensure that a named directory is present and has the right perms
         '''
-        name = '/etc/grub.conf'
+        name = '/etc/testdir'
         user = 'salt'
         group = 'saltstack'
 
@@ -809,7 +809,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         else:
                             comt = ('The following files will be changed:\n{0}:'
                                     ' directory - new\n'.format(name))
-                        p_chg = {'/etc/grub.conf': {'directory': 'new'}}
+                        p_chg = {'/etc/testdir': {'directory': 'new'}}
                         ret.update({
                             'comment': comt,
                             'result': None,
