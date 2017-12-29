@@ -42,6 +42,7 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
+import re
 
 # Import salt libs
 import salt.utils.data
@@ -2245,12 +2246,7 @@ def list_upgrades(refresh=True, **kwargs):
     '''
     List those packages for which an upgrade is available
 
-    The ``fromrepo``, ``enablerepo``, and ``disablerepo`` arguments are
-    supported, as used in pkg states, and the ``disableexcludes`` option is
-    also supported.
-
-    .. versionadded:: 2014.7.0
-        Support for the ``disableexcludes`` option
+    The ``fromrepo`` argument is also supported, as used in pkg states.
 
     CLI Example:
 
@@ -2291,32 +2287,88 @@ def list_upgrades(refresh=True, **kwargs):
     jail = kwargs.pop('jail', None)
     chroot = kwargs.pop('chroot', None)
     root = kwargs.pop('root', None)
-
-    result = {}
+    fromrepo = kwargs.pop('fromrepo', None)
 
     cmd = _pkg(jail, chroot, root)
-    cmd.extend(['version', '--like', '<', '--verbose', '--quiet', '-R'])
+    cmd.extend(['upgrade', '--dry-run', '--quiet'])
 
     if not refresh:
         cmd.append('--no-repo-update')
+    if fromrepo:
+        cmd.extend(['--repository', fromrepo])
 
-    out = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace', python_shell=False, ignore_retcode=True)
 
-    if out['retcode'] != 0:
-        raise CommandExecutionError(
-            'Problem encountered listing packages',
-            info={'result': out}
-        )
+    return {pkgname: pkgstat['version']['new'] for pkgname, pkgstat
+            in six.iteritems(_parse_upgrade(out)['upgrade'])}
 
-    for line in salt.utils.itertools.split(out['stdout'], '\n'):
+
+def _parse_upgrade(stdout):
+    '''
+    Parse the output from the ``pkg update --dry-run`` command
+
+    Returns a dictionary of the expected actions:
+
+    .. code-block:: yaml
+
+        'upgrade':
+          pkgname:
+            'repo': repository
+            'version':
+              'current': n.n.n
+              'new': n.n.n
+        'reinstall':
+          pkgname:
+            'repo': repository
+            'version':
+              'current': n.n.n
+
+    '''
+    # Match strings like 'python36: 3.6.3 -> 3.6.4 [FreeBSD]'
+    upgrade_regex = re.compile(r'^\s+([^:]+):\s([0-9p_,.]+)\s+->\s+([0-9p_,.]+)\s+\[([^]]+)\]')
+    # Match strings like 'py27-yaml-3.11_2 [FreeBSD] (direct dependency changed: py27-setuptools)'
+    reinstall_regex = re.compile(r'^\s+(\S+)-(?<=-)([0-9p_,.]+)\s+\[([^]]+)\]')
+
+    result = {'upgrade': {}, 'reinstall': {}}
+    section = None
+    for line in salt.utils.itertools.split(stdout, '\n'):
+
         if not line:
+            section = None
             continue
-        try:
-            ver = line[:-1].split()
-            pkgname = ver[0].rsplit('-', 1)[0]
-            result[pkgname] = ver[-1]
-        except ValueError:
+
+        if line == 'Installed packages to be UPGRADED:':
+            section = 'upgrade'
             continue
+
+        if line == 'Installed packages to be REINSTALLED:':
+            section = 'reinstall'
+            continue
+
+        if section == 'upgrade':
+            match = upgrade_regex.match(line)
+            if match:
+                result[section][match.group(1)] = {
+                    'version': {
+                        'current': match.group(2),
+                        'new': match.group(3)
+                    },
+                    'repo': match.group(4)
+                }
+            else:
+                log.error('Unable to parse upgrade: \'{0}\''.format(line))
+
+        if section == 'reinstall':
+            match = reinstall_regex.match(line)
+            if match:
+                result[section][match.group(1)] = {
+                    'version': {
+                        'current': match.group(2)
+                    },
+                    'repo': match.group(3)
+                }
+            else:
+                log.error('Unable to parse reinstall: \'{0}\''.format(line))
 
     return result
 
