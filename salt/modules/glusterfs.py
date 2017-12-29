@@ -679,18 +679,23 @@ def get_op_version(name):
         salt '*' glusterfs.get_op_version <volume>
     '''
 
-    version = ''
-    cmd = ['gluster', 'volume', 'get', name, 'cluster.op-version']
-    result = __salt__['cmd.run'](cmd).splitlines()
+    cmd = 'volume get {0} cluster.op-version'.format(name)
+    root = _gluster_xml(cmd)
 
-    for line in result:
-        if line.startswith('cluster'):
-            version = int(line.split()[1])
+    if not _gluster_ok(root):
+        return False, root.find('opErrstr').text
 
-    if isinstance(version, int):
-        return version
+    result = {}
+    for op_version in _iter(root, 'volGetopts'):
+        for item in op_version:
+            if item.tag == 'Value':
+                result = item.text
+            elif item.tag == 'Opt':
+                for child in item:
+                    if child.tag == 'Value':
+                        result = child.text
 
-    return False, 'Unable to determine cluster.op-version'
+    return result
 
 
 def get_max_op_version():
@@ -706,23 +711,28 @@ def get_max_op_version():
         salt '*' glusterfs.get_max_op_version
     '''
 
-    version = ''
     minor_version = _get_minor_version()
 
     if int(minor_version) < 10:
-        return False, 'Glusterfs version must be 3.10+.  Your version is {0}.'.format('.'.join(_get_version()))
+        return False, 'Glusterfs version must be 3.10+.  Your version is {0}.'.format(str('.'.join(_get_version())))
 
-    cmd = ['gluster', 'volume', 'get', 'all', 'cluster.max-op-version']
-    result = __salt__['cmd.run'](cmd).splitlines()
+    cmd = 'volume get all cluster.max-op-version'
+    root = _gluster_xml(cmd)
 
-    for line in result:
-        if line.startswith('cluster'):
-            version = int(line.split()[1])
+    if not _gluster_ok(root):
+        return False, root.find('opErrstr').text
 
-    if isinstance(version, int):
-        return version
+    result = {}
+    for max_op_version in _iter(root, 'volGetopts'):
+        for item in max_op_version:
+            if item.tag == 'Value':
+                result = item.text
+            elif item.tag == 'Opt':
+                for child in item:
+                    if child.tag == 'Value':
+                        result = child.text
 
-    return False, 'Unable to determine cluster.max-op-version'
+    return result
 
 
 def set_op_version(version):
@@ -738,14 +748,13 @@ def set_op_version(version):
         salt '*' glusterfs.set_op_version <volume>
     '''
 
-    cmd = ['gluster', 'volume', 'set', 'all', 'cluster.op-version', version]
-    result = __salt__['cmd.run'](cmd)
+    cmd = 'volume set all cluster.op-version {0}'.format(version)
+    root = _gluster_xml(cmd)
 
-    if 'failed' in result:
-        error = str(result.split(': ')[2])
-        return False, error
+    if not _gluster_ok(root):
+        return False, root.find('opErrstr').text
 
-    return result
+    return root.find('output').text
 
 
 def get_version():
