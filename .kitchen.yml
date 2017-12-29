@@ -53,7 +53,6 @@ provisioner:
     base:
       "*":
         - git.salt
-        - kitchen
 <% if File.exists?(platformsfile) %>
 <%= ERB.new(File.read(platformsfile)).result %>
 <% else %>
@@ -198,6 +197,11 @@ verifier:
   transport: zeromq
   types:
     - ssh
-  xml: /tmp/xml-unittests
+  xml: /tmp/xml-unittests-output/
   coverage_xml: /tmp/coverage.xml
+  save:
+    /tmp/xml-unittests-output/: artifacts/unittests
+    /tmp/coverage.xml: artifacts/coverage/coverage.xml
+    /var/log/salt/minion: artifacts/logs/minion
+    /tmp/salt-runtests.log: artifacts/logs/salt-runtests.log
 <% end %>

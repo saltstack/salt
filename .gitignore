@@ -97,3 +97,4 @@ tests/integration/cloud/providers/pki/minions
 .kitchen/
 .bundle/
 Gemfile.lock
+/artifacts/
