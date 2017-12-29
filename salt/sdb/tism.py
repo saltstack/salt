@@ -29,12 +29,13 @@ configuration.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
 import salt.utils.json
 import salt.utils.http as http
+from salt.ext import six
 from salt.exceptions import SaltConfigurationError
 
 log = logging.getLogger(__name__)
@@ -68,7 +69,10 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
     decrypted = result.get('body')
 
     if not decrypted:
-        log.warning('tism.get sdb decryption request failed with error {0}'.format(result.get('error', 'unknown')))
-        return "ERROR"+str(result.get('status', 'unknown'))
+        log.warning(
+            'tism.get sdb decryption request failed with error %s',
+            result.get('error', 'unknown')
+        )
+        return 'ERROR' + six.text_type(result.get('status', 'unknown'))
 
     return decrypted
