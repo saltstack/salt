@@ -107,7 +107,7 @@ def _publish(
 
     log.info('Publishing \'{0}\' to {1}'.format(fun, master_uri))
     auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token('salt')
+    tok = auth.gen_token(b'salt')
     load = {'cmd': 'minion_pub',
             'fun': fun,
             'arg': arg,
@@ -338,7 +338,7 @@ def runner(fun, arg=None, timeout=5):
         return 'No access to master. If using salt-call with --local, please remove.'
     log.info('Publishing runner \'{0}\' to {master_uri}'.format(fun, **__opts__))
     auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token('salt')
+    tok = auth.gen_token(b'salt')
     load = {'cmd': 'minion_runner',
             'fun': fun,
             'arg': arg,

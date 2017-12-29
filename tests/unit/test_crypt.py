@@ -199,3 +199,10 @@ class M2CryptTestCase(TestCase):
         key = M2Crypto.RSA.load_pub_key_bio(M2Crypto.BIO.MemoryBuffer(six.b(PUBKEY_DATA)))
         with patch('M2Crypto.RSA.load_pub_key', return_value=key):
             self.assertTrue(crypt.verify_signature('/keydir/keyname.pub', MSG, SIG))
+
+    def test_encrypt_decrypt_bin(self):
+        priv_key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        pub_key = M2Crypto.RSA.load_pub_key_bio(M2Crypto.BIO.MemoryBuffer(six.b(PUBKEY_DATA)))
+        encrypted = salt.crypt.private_encrypt(priv_key, b'salt')
+        decrypted = salt.crypt.public_decrypt(pub_key, encrypted)
+        self.assertEqual(b'salt', decrypted)

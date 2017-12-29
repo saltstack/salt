@@ -500,7 +500,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
     def connect(self):
         try:
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
-            self.tok = self.auth.gen_token('salt')
+            self.tok = self.auth.gen_token(b'salt')
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
             if self.auth.authenticated:
