@@ -3,6 +3,7 @@
 <% version = '2017.7.1' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
+<% verifierfile = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
 
 <% if File.exists?(driverfile) %>
 <%= ERB.new(File.read(driverfile)).result %>
@@ -156,6 +157,8 @@ platforms:
 <% end %>
 suites:
   - name: py2
+    verifier:
+      python_bin: python2.7
     provisioner:
       pillars:
         top.sls:
@@ -170,6 +173,8 @@ suites:
     excludes:
       - centos-6
       - ubuntu-14.04
+    verifier:
+      python_bin: python3
     provisioner:
       pillars:
         top.sls:
@@ -181,12 +186,18 @@ suites:
           clone_repo: false
           py3: true
           salttesting_namespec: salttesting==2017.6.1
-verifier:
-  name: shell
-  remote_exec: true
-  live_stream: {}
-<% if ENV['TESTOPTS'].nil? %>
-  command: 'sudo -E $(kitchen) /tmp/kitchen/testing/tests/runtests.py -v --run-destructive --sysinfo --transport=zeromq --output-columns=80 --ssh --coverage-xml=/tmp/coverage.xml --xml=/tmp/xml-unittests-output'
+
+<% if File.exists?(verifierfile) %>
+<%= ERB.new(File.read(verifierfile)).result %>
 <% else %>
-  command: 'sudo -E $(kitchen) /tmp/kitchen/testing/tests/runtests.py -v --run-destructive --output-columns 80 <%= ENV["TESTOPTS"] %>'
+verifier:
+  name: runtests
+  sudo: true
+  verbose: true
+  run_destructive: true
+  transport: zeromq
+  types:
+    - ssh
+  xml: /tmp/xml-unittests
+  coverage_xml: /tmp/coverage.xml
 <% end %>
