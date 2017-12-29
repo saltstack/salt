@@ -121,7 +121,7 @@ def version():
         salt '*' osquery.version
     '''
     _false_return = {'result': False,
-                     'comment': 'OSQuuery version unavailable.'}
+                     'comment': 'OSQuery version unavailable.'}
     res = _osquery_cmd(table='osquery_info', attrs=['version'])
     if 'result' in res and res['result']:
         if 'data' in res and isinstance(res['data'], list):
@@ -141,7 +141,8 @@ def rpm_packages(attrs=None, where=None):
     '''
     if __grains__['os_family'] == 'RedHat':
         return _osquery_cmd(table='rpm_packages', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on Red Hat based systems.'}
+    return {'result': False,
+            'comment': 'Only available on Red Hat based systems.'}
 
 
 def kernel_integrity(attrs=None, where=None):
