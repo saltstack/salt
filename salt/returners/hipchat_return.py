@@ -96,7 +96,6 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import json
 import pprint
 import logging
 
@@ -109,6 +108,7 @@ import salt.ext.six.moves.http_client
 
 # Import Salt Libs
 import salt.returners
+import salt.utils.json
 
 
 log = logging.getLogger(__name__)
@@ -241,7 +241,7 @@ def _query(function,
         headers['Content-Type'] = 'application/json'
         headers['Authorization'] = 'Bearer {0}'.format(api_key)
         if data:
-            data = json.dumps(data)
+            data = salt.utils.json.dumps(data)
     else:
         log.error('Unsupported HipChat API version')
         return False

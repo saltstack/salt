@@ -8,9 +8,9 @@ Currently this only works when run through a proxy minion.
 '''
 from __future__ import absolute_import
 
-import json
 import logging
 import salt.utils.http
+import salt.utils.json
 import salt.utils.platform
 from salt.exceptions import get_error_message
 
@@ -114,7 +114,7 @@ def update_app(id, config):
     # mirror marathon-ui handling for uris deprecation (see
     # mesosphere/marathon-ui#594 for more details)
     config.pop('fetch', None)
-    data = json.dumps(config)
+    data = salt.utils.json.dumps(config)
     try:
         response = salt.utils.http.query(
             "{0}/v2/apps/{1}?force=true".format(_base_url(), id),

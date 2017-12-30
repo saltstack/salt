@@ -5,7 +5,6 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import json
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,6 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.json
 import salt.modules.npm as npm
 from salt.exceptions import CommandExecutionError
 
@@ -49,14 +49,14 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
                                        'stdout': '{"salt": ["SALT"]}'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             mock_err = MagicMock(return_value='SALT')
-            with patch.object(json, 'loads', mock_err):
+            with patch.object(salt.utils.json, 'loads', mock_err):
                 self.assertEqual(npm.install('coffee-script'), 'SALT')
 
         mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
                                        'stdout': '{"salt": ["SALT"]}'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             mock_err = MagicMock(side_effect=ValueError())
-            with patch.object(json, 'loads', mock_err):
+            with patch.object(salt.utils.json, 'loads', mock_err):
                 self.assertEqual(npm.install('coffee-script'),
                                  '{"salt": ["SALT"]}')
 
@@ -88,7 +88,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
                                        'stdout': '{"salt": ["SALT"]}'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             mock_err = MagicMock(return_value={'dependencies': 'SALT'})
-            with patch.object(json, 'loads', mock_err):
+            with patch.object(salt.utils.json, 'loads', mock_err):
                 self.assertEqual(npm.list_('coffee-script'), 'SALT')
 
     # 'cache_clean' function tests: 1

@@ -13,7 +13,7 @@ import os
 import modulefinder
 import pprint
 import yaml
-import json
+import salt.utils.json
 
 
 def parse():
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         if opts['format'] == 'yaml':
             print(yaml.dump(scand))
         if opts['format'] == 'json':
-            print(json.dumps(scand))
+            print(salt.utils.json.dumps(scand))
         else:
             pprint.pprint(scand)
         exit(0)

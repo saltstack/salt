@@ -48,9 +48,9 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
 import yaml
 
+import salt.utils.json
 import salt.utils.odict as odict
 
 log = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
+from salt.ext import six
 
 
 def __virtual__():
@@ -220,16 +220,16 @@ def create_or_update_alarm(
         period = int(period)
     if evaluation_periods:
         evaluation_periods = int(evaluation_periods)
-    if isinstance(dimensions, string_types):
-        dimensions = json.loads(dimensions)
+    if isinstance(dimensions, six.string_types):
+        dimensions = salt.utils.json.loads(dimensions)
         if not isinstance(dimensions, dict):
             log.error("could not parse dimensions argument: must be json encoding of a dict: '{0}'".format(dimensions))
             return False
-    if isinstance(alarm_actions, string_types):
+    if isinstance(alarm_actions, six.string_types):
         alarm_actions = alarm_actions.split(",")
-    if isinstance(insufficient_data_actions, string_types):
+    if isinstance(insufficient_data_actions, six.string_types):
         insufficient_data_actions = insufficient_data_actions.split(",")
-    if isinstance(ok_actions, string_types):
+    if isinstance(ok_actions, six.string_types):
         ok_actions = ok_actions.split(",")
 
     # convert provided action names into ARN's

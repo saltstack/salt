@@ -8,9 +8,9 @@ Currently this only works when run through a proxy minion.
 '''
 from __future__ import absolute_import
 
-import json
 import logging
 import salt.utils.http
+import salt.utils.json
 import salt.utils.platform
 from salt.exceptions import get_error_message
 
@@ -105,7 +105,7 @@ def update_job(name, config):
     '''
     if 'name' not in config:
         config['name'] = name
-    data = json.dumps(config)
+    data = salt.utils.json.dumps(config)
     try:
         response = salt.utils.http.query(
             "{0}/scheduler/iso8601".format(_base_url()),
