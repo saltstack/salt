@@ -18,7 +18,7 @@ from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
 try:
-    import shade # pylint: disable=unused-import
+    import shade  # pylint: disable=unused-import
     HAS_SHADE = True
 except ImportError:
     HAS_SHADE = False
