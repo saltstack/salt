@@ -6,13 +6,13 @@ Aptly Debian repository manager.
 '''
 # Import python libs
 from __future__ import absolute_import
-import json
 import logging
 import os
 import re
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
+import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils as stringutils
 
@@ -123,7 +123,7 @@ def get_config(config_path=_DEFAULT_CONFIG_PATH):
 
     cmd_ret = _cmd_run(cmd)
 
-    return json.loads(cmd_ret)
+    return salt.utils.json.loads(cmd_ret)
 
 
 def list_repos(config_path=_DEFAULT_CONFIG_PATH, with_packages=False):

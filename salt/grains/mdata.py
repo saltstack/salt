@@ -14,11 +14,11 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import json
 import logging
 
 # Import salt libs
 import salt.utils.dictupdate
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 
@@ -119,7 +119,7 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
             mdata_grain = mdata_grain.replace('-', '_')
             mdata_grain = mdata_grain.replace(':', '_')
             if mdata_grain in sdc_json_keys:
-                grains['mdata']['sdc'][mdata_grain] = json.loads(mdata_value)
+                grains['mdata']['sdc'][mdata_grain] = salt.utils.json.loads(mdata_value)
             else:
                 grains['mdata']['sdc'][mdata_grain] = mdata_value
 

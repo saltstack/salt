@@ -84,11 +84,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
-import json
 import datetime
 
 # Import Salt libs
 import salt.utils.jid
+import salt.utils.json
 import salt.returners
 
 # Import 3rd-party libs
@@ -174,7 +174,7 @@ def returner(ret):
                  'id': ret['id'],
                  'fun_args': six.text_type(ret['fun_args']) if ret.get('fun_args') else None,
                  'date': six.text_type(datetime.datetime.now()),
-                 'full_ret': json.dumps(ret['return']),
+                 'full_ret': salt.utils.json.dumps(ret['return']),
                  'success': ret.get('success', '')})
     _close_conn(conn)
 
@@ -189,7 +189,7 @@ def save_load(jid, load, minions=None):
     sql = '''INSERT INTO jids (jid, load) VALUES (:jid, :load)'''
     cur.execute(sql,
                 {'jid': jid,
-                 'load': json.dumps(load)})
+                 'load': salt.utils.json.dumps(load)})
     _close_conn(conn)
 
 
@@ -212,7 +212,7 @@ def get_load(jid):
                 {'jid': jid})
     data = cur.fetchone()
     if data:
-        return json.loads(data[0].encode())
+        return salt.utils.json.loads(data[0].encode())
     _close_conn(conn)
     return {}
 
@@ -231,7 +231,7 @@ def get_jid(jid):
     log.debug('query result: %s', data)
     ret = {}
     if data and len(data) > 1:
-        ret = {six.text_type(data[0]): {u'return': json.loads(data[1])}}
+        ret = {six.text_type(data[0]): {'return': salt.utils.json.loads(data[1])}}
         log.debug('ret: %s', ret)
     _close_conn(conn)
     return ret
@@ -260,7 +260,7 @@ def get_fun(fun):
         # pylint score :-)
         data.pop()
         for minion, ret in data:
-            ret[minion] = json.loads(ret)
+            ret[minion] = salt.utils.json.loads(ret)
     _close_conn(conn)
     return ret
 
@@ -277,7 +277,7 @@ def get_jids():
     data = cur.fetchall()
     ret = {}
     for jid, load in data:
-        ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, salt.utils.json.loads(load))
     _close_conn(conn)
     return ret
 

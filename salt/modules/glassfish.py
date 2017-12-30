@@ -12,9 +12,9 @@ except ImportError:  # python3
     from urllib.parse import quote, unquote
 
 try:
-    import json
     import requests
     import salt.defaults.exitcodes
+    import salt.utils.json
     from salt.exceptions import CommandExecutionError
     HAS_LIBS = True
 except ImportError:
@@ -97,7 +97,7 @@ def _api_response(response):
         raise CommandExecutionError('Bad username or password')
     elif response.status_code == 200 or response.status_code == 500:
         try:
-            data = json.loads(response.content)
+            data = salt.utils.json.loads(response.content)
             if data['exit_code'] != 'SUCCESS':
                 __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
                 raise CommandExecutionError(data['message'])
@@ -132,7 +132,7 @@ def _api_post(path, data, server=None):
             url=_get_url(server['ssl'], server['url'], server['port'], path),
             auth=_get_auth(server['user'], server['password']),
             headers=_get_headers(),
-            data=json.dumps(data),
+            data=salt.utils.json.dumps(data),
             verify=False
     )
     return _api_response(response)

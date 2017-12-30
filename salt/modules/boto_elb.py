@@ -48,18 +48,17 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
 import time
 
 log = logging.getLogger(__name__)
 
 # Import Salt libs
+import salt.utils.json
 import salt.utils.odict as odict
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
 from salt.ext import six
-from salt.ext.six import string_types
 try:
     import boto
     import boto.ec2  # pylint: enable=unused-import
@@ -254,11 +253,11 @@ def create(name, availability_zones, listeners, subnets=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if exists(name, region, key, keyid, profile):
         return True
-    if isinstance(availability_zones, string_types):
-        availability_zones = json.loads(availability_zones)
+    if isinstance(availability_zones, six.string_types):
+        availability_zones = salt.utils.json.loads(availability_zones)
 
-    if isinstance(listeners, string_types):
-        listeners = json.loads(listeners)
+    if isinstance(listeners, six.string_types):
+        listeners = salt.utils.json.loads(listeners)
 
     _complex_listeners = []
     for listener in listeners:
@@ -321,8 +320,8 @@ def create_listeners(name, listeners, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(listeners, string_types):
-        listeners = json.loads(listeners)
+    if isinstance(listeners, six.string_types):
+        listeners = salt.utils.json.loads(listeners)
 
     _complex_listeners = []
     for listener in listeners:
@@ -352,8 +351,8 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(ports, string_types):
-        ports = json.loads(ports)
+    if isinstance(ports, six.string_types):
+        ports = salt.utils.json.loads(ports)
     try:
         conn.delete_load_balancer_listeners(name, ports)
         msg = 'Deleted ELB listeners on {0}'.format(name)
@@ -379,8 +378,8 @@ def apply_security_groups(name, security_groups, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(security_groups, string_types):
-        security_groups = json.loads(security_groups)
+    if isinstance(security_groups, six.string_types):
+        security_groups = salt.utils.json.loads(security_groups)
     try:
         conn.apply_security_groups_to_lb(name, security_groups)
         msg = 'Applied security_groups on ELB {0}'.format(name)
@@ -407,8 +406,8 @@ def enable_availability_zones(name, availability_zones, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(availability_zones, string_types):
-        availability_zones = json.loads(availability_zones)
+    if isinstance(availability_zones, six.string_types):
+        availability_zones = salt.utils.json.loads(availability_zones)
     try:
         conn.enable_availability_zones(name, availability_zones)
         msg = 'Enabled availability_zones on ELB {0}'.format(name)
@@ -434,8 +433,8 @@ def disable_availability_zones(name, availability_zones, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(availability_zones, string_types):
-        availability_zones = json.loads(availability_zones)
+    if isinstance(availability_zones, six.string_types):
+        availability_zones = salt.utils.json.loads(availability_zones)
     try:
         conn.disable_availability_zones(name, availability_zones)
         msg = 'Disabled availability_zones on ELB {0}'.format(name)
@@ -461,8 +460,8 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(subnets, string_types):
-        subnets = json.loads(subnets)
+    if isinstance(subnets, six.string_types):
+        subnets = salt.utils.json.loads(subnets)
     try:
         conn.attach_lb_to_subnets(name, subnets)
         msg = 'Attached ELB {0} on subnets.'.format(name)
@@ -488,8 +487,8 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(subnets, string_types):
-        subnets = json.loads(subnets)
+    if isinstance(subnets, six.string_types):
+        subnets = salt.utils.json.loads(subnets)
     try:
         conn.detach_lb_from_subnets(name, subnets)
         msg = 'Detached ELB {0} from subnets.'.format(name)

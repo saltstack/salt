@@ -30,7 +30,6 @@ file and set the ``api_key`` to it:
       api_key: abcdef01-2345-6789-abcd-ef0123456789
 '''
 from __future__ import absolute_import, print_function, unicode_literals
-import json
 import logging
 import os
 import tempfile
@@ -40,6 +39,7 @@ from Crypto.PublicKey import RSA
 import salt.cache
 import salt.syspaths as syspaths
 import salt.utils.files
+import salt.utils.json
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
@@ -305,7 +305,7 @@ def request(
         password=password,
     )
 
-    pdata = json.dumps({
+    pdata = salt.utils.json.dumps({
         'zoneId': zone_id,
         'certificateSigningRequest': csr,
     })
@@ -379,7 +379,7 @@ def register(email):
     data = __utils__['http.query'](
         '{0}/useraccounts'.format(_base_url()),
         method='POST',
-        data=json.dumps({
+        data=salt.utils.json.dumps({
             'username': email,
             'userAccountType': 'API',
         }),

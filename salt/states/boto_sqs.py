@@ -61,9 +61,11 @@ from __future__ import absolute_import
 
 # Import Python libs
 import difflib
-import json
 import logging
 import yaml
+
+# Import Salt libs
+import salt.utils.json
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -183,12 +185,12 @@ def present(
         if attr == 'Policy':
             # Normalize by brute force
             if isinstance(_val, six.string_types):
-                _val = json.loads(_val)
+                _val = salt.utils.json.loads(_val)
             if isinstance(val, six.string_types):
-                val = json.loads(val)
+                val = salt.utils.json.loads(val)
             if _val != val:
                 log.debug('Policies differ:\n{0}\n{1}'.format(_val, val))
-                attrs_to_set[attr] = json.dumps(val, sort_keys=True)
+                attrs_to_set[attr] = salt.utils.json.dumps(val, sort_keys=True)
         elif str(_val) != str(val):
             log.debug('Attributes differ:\n{0}\n{1}'.format(_val, val))
             attrs_to_set[attr] = val

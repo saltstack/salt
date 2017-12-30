@@ -25,7 +25,6 @@ the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 # Import Python Libs
 from __future__ import absolute_import
-import json
 import logging
 import pprint
 import os
@@ -34,6 +33,7 @@ import time
 # Import Salt Libs
 from salt.ext.six.moves import range
 import salt.utils.cloud
+import salt.utils.json
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -363,7 +363,7 @@ def query(method='servers', server_id=None, command=None, args=None,
         'token', get_configured_provider(), __opts__, search_global=False
     )
 
-    data = json.dumps(args)
+    data = salt.utils.json.dumps(args)
 
     requester = getattr(requests, http_method)
     request = requester(
