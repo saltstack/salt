@@ -9,15 +9,14 @@ Microsoft IIS site management via WebAdministration powershell module
 
 .. versionadded:: 2016.3.0
 '''
-
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import json
+import decimal
 import logging
 import os
-import decimal
 
 # Import salt libs
+import salt.utils.json
 import salt.utils.platform
 from salt.ext.six.moves import range
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -93,7 +92,7 @@ def _list_certs(certificate_store='My'):
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
+        items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
     except ValueError:
         raise CommandExecutionError('Unable to parse return data as Json.')
 
@@ -118,7 +117,7 @@ def _iisVersion():
     cmd_ret = _srvmgr(pscmd, return_json=True)
 
     try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
+        items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
     except ValueError:
         log.error('Unable to parse return data as Json.')
         return -1
@@ -181,7 +180,7 @@ def list_sites():
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
+        items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
     except ValueError:
         raise CommandExecutionError('Unable to parse return data as Json.')
 
@@ -979,7 +978,7 @@ def list_apppools():
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
+        items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
     except ValueError:
         raise CommandExecutionError('Unable to parse return data as Json.')
 
@@ -1223,7 +1222,7 @@ def get_container_setting(name, container, settings):
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
+        items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
 
         if isinstance(items, list):
             ret.update(items[0])
@@ -1351,7 +1350,7 @@ def list_apps(site):
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
+        items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
     except ValueError:
         raise CommandExecutionError('Unable to parse return data as Json.')
 
@@ -1515,7 +1514,7 @@ def list_vdirs(site, app=_DEFAULT_APP):
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
+        items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
     except ValueError:
         raise CommandExecutionError('Unable to parse return data as Json.')
 
@@ -1672,7 +1671,7 @@ def list_backups():
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
+        items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
     except ValueError:
         raise CommandExecutionError('Unable to parse return data as Json.')
 
@@ -1786,7 +1785,7 @@ def list_worker_processes(apppool):
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
     try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
+        items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
     except ValueError:
         raise CommandExecutionError('Unable to parse return data as Json.')
 
@@ -1854,7 +1853,7 @@ def get_webapp_settings(name, site, settings):
 
     # Update dict var to return data
     try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
+        items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
 
         if isinstance(items, list):
             ret.update(items[0])
