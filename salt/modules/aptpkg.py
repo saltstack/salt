@@ -2205,12 +2205,18 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 if repo_info:
                     return {repo: repo_info}
                 else:
+                    env = None
+                    http_proxy_url = _get_http_proxy_url()
+                    if http_proxy_url:
+                        env = {'http_proxy': http_proxy_url,
+                               'https_proxy': http_proxy_url}
                     if float(__grains__['osrelease']) < 12.04:
                         cmd = ['apt-add-repository', repo]
                     else:
                         cmd = ['apt-add-repository', '-y', repo]
                     out = __salt__['cmd.run_all'](cmd,
                                                   python_shell=False,
+                                                  env=env,
                                                   **kwargs)
                     if out['retcode']:
                         raise CommandExecutionError(
