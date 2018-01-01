@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import json
 import time
 import threading
 
 # Import Salt Libs
-import salt.utils
 import salt.utils.stringutils
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion

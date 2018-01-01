@@ -7,7 +7,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import inspect
 import logging
 import tempfile
@@ -83,7 +83,7 @@ class LazyLoaderTest(TestCase):
         self.module_file = os.path.join(self.module_dir,
                                         '{0}.py'.format(self.module_name))
         with salt.utils.files.fopen(self.module_file, 'w') as fh:
-            fh.write(loader_template)
+            fh.write(salt.utils.stringutils.to_str(loader_template))
             fh.flush()
             os.fsync(fh.fileno())
 
@@ -276,6 +276,40 @@ class LazyLoaderWhitelistTest(TestCase):
         self.assertTrue(inspect.isfunction(self.loader['pillar.get']))
 
         self.assertNotIn('grains.get', self.loader)
+
+
+class LazyLoaderSingleItem(TestCase):
+    '''
+    Test loading a single item via the _load() function
+    '''
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = grains(cls.opts)
+
+    def setUp(self):
+        self.loader = LazyLoader(_module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
+                                 copy.deepcopy(self.opts),
+                                 tag='module')
+
+    def tearDown(self):
+        del self.loader
+
+    def test_single_item_no_dot(self):
+        '''
+        Checks that a KeyError is raised when the function key does not contain a '.'
+        '''
+        with self.assertRaises(KeyError) as err:
+            inspect.isfunction(self.loader['testing_no_dot'])
+
+        if six.PY2:
+            self.assertEqual(err.exception[0],
+                             'The key \'%s\' should contain a \'.\'')
+        else:
+            self.assertEqual(
+                six.text_type(err.exception),
+                six.text_type(("The key '%s' should contain a '.'", 'testing_no_dot'))
+            )
 
 
 module_template = '''
@@ -831,7 +865,11 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
         with salt.utils.files.fopen(os.path.join(self.module_dir, '__init__.py'), 'w') as fh:
             # No .decode() needed here as deep_init_base is defined as str and
             # not bytes.
-            fh.write(deep_init_base.format(self.module_name))
+            fh.write(
+                salt.utils.stringutils.to_str(
+                    deep_init_base.format(self.module_name)
+                )
+            )
             fh.flush()
             os.fsync(fh.fileno())  # flush to disk
 

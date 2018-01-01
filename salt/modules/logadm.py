@@ -13,7 +13,6 @@ except ImportError:
     from pipes import quote as _quote_args
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.decorators as decorators
 import salt.utils.files

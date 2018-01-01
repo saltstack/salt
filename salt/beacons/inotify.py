@@ -23,7 +23,9 @@ import re
 
 # Import salt libs
 import salt.ext.six
+# pylint: disable=import-error
 from salt.ext.six.moves import map
+# pylint: enable=import-error
 
 # Import third party libs
 try:

@@ -10,7 +10,7 @@ import os
 import salt.auth
 from salt.utils.versions import StrictVersion as _StrictVersion
 
-__virtualname__ = os.path.abspath(__file__).rsplit('/')[-2] or 'rest_tornado'
+__virtualname__ = os.path.abspath(__file__).rsplit(os.sep)[-2] or 'rest_tornado'
 
 logger = logging.getLogger(__virtualname__)
 

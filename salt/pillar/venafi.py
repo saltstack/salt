@@ -15,7 +15,6 @@ section of your ``master`` configuration file:
 '''
 from __future__ import absolute_import
 import logging
-import salt.utils
 import salt.cache
 import salt.syspaths as syspaths
 

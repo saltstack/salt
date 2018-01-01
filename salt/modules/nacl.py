@@ -85,6 +85,7 @@ without extra parameters:
     salt-run nacl.dec 'tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
 
 .. code-block:: yam
+
     # a salt developers minion could have pillar data that includes a nacl public key
     nacl.config:
         pk: '/kfGX7PbWeu099702PBbKWLpG/9p06IQRswkdWHCDk0='

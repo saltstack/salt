@@ -21,8 +21,9 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.data
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.systemd
@@ -75,9 +76,20 @@ def _porttree():
 
 
 def _p_to_cp(p):
-    ret = _porttree().dbapi.xmatch("match-all", p)
-    if ret:
-        return portage.cpv_getkey(ret[0])
+    try:
+        ret = portage.dep_getkey(p)
+        if ret:
+            return ret
+    except portage.exception.InvalidAtom:
+        pass
+
+    try:
+        ret = _porttree().dbapi.xmatch('bestmatch-visible', p)
+        if ret:
+            return portage.dep_getkey(ret)
+    except portage.exception.InvalidAtom:
+        pass
+
     return None
 
 
@@ -91,11 +103,14 @@ def _allnodes():
 
 
 def _cpv_to_cp(cpv):
-    ret = portage.cpv_getkey(cpv)
-    if ret:
-        return ret
-    else:
-        return cpv
+    try:
+        ret = portage.dep_getkey(cpv)
+        if ret:
+            return ret
+    except portage.exception.InvalidAtom:
+        pass
+
+    return cpv
 
 
 def _cpv_to_version(cpv):
@@ -222,7 +237,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     if len(names) == 0:
         return ''
@@ -246,7 +261,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def _get_upgradable(backtrack=3):
@@ -319,7 +334,7 @@ def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
 
         salt '*' pkg.list_upgrades
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
     return _get_upgradable(backtrack)
 
@@ -379,9 +394,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -582,7 +597,7 @@ def install(name=None,
             'binhost': binhost,
         }
     ))
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     try:
@@ -697,7 +712,7 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    changes.update(salt.utils.compare_dicts(old, new))
+    changes.update(salt.utils.data.compare_dicts(old, new))
 
     if needed_changes:
         raise CommandExecutionError(
@@ -749,7 +764,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
 
         salt '*' pkg.update <package name>
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     full_atom = pkg
@@ -790,7 +805,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if needed_changes:
         raise CommandExecutionError(
@@ -849,7 +864,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
            'result': True,
            'comment': ''}
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     if binhost == 'try':
@@ -880,7 +895,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -979,7 +994,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1092,7 +1107,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
                             python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def version_cmp(pkg1, pkg2, **kwargs):

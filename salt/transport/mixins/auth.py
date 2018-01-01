@@ -211,7 +211,7 @@ class AESReqServerMixin(object):
 
         # Check if key is configured to be auto-rejected/signed
         auto_reject = self.auto_key.check_autoreject(load['id'])
-        auto_sign = self.auto_key.check_autosign(load['id'])
+        auto_sign = self.auto_key.check_autosign(load['id'], load.get(u'autosign_grains', None))
 
         pubfn = os.path.join(self.opts['pki_dir'],
                              'minions',

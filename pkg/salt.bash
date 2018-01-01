@@ -35,8 +35,9 @@ _salt_get_keys(){
 }
 
 _salt(){
-    local _salt_cache_functions=${SALT_COMP_CACHE_FUNCTIONS:-"$HOME/.cache/salt-comp-cache_functions"}
-    local _salt_cache_timeout=${SALT_COMP_CACHE_TIMEOUT:-"last hour"}
+    CACHE_DIR="$HOME/.cache/salt-comp-cache_functions"
+    local _salt_cache_functions=${SALT_COMP_CACHE_FUNCTIONS:=$CACHE_DIR}
+    local _salt_cache_timeout=${SALT_COMP_CACHE_TIMEOUT:='last hour'}
 
     if [ ! -d "$(dirname ${_salt_cache_functions})" ]; then
         mkdir -p "$(dirname ${_salt_cache_functions})"

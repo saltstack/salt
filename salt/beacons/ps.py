@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Send events covering service status
+Send events covering process status
 '''
 
 # Import Python Libs

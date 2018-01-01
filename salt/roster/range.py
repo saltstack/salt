@@ -13,6 +13,7 @@ When you want to use a range query for target matching, use ``--roster range``. 
 '''
 from __future__ import absolute_import
 import fnmatch
+import copy
 
 import logging
 log = logging.getLogger(__name__)
@@ -68,7 +69,7 @@ def targets(tgt, tgt_type='range', **kwargs):
 def target_range(tgt, hosts):
     ret = {}
     for host in hosts:
-        ret[host] = __opts__.get('roster_defaults', {}).copy()
+        ret[host] = copy.deepcopy(__opts__.get('roster_defaults', {}))
         ret[host].update({'host': host})
         if __opts__.get('ssh_user'):
             ret[host].update({'user': __opts__['ssh_user']})
@@ -79,7 +80,7 @@ def target_glob(tgt, hosts):
     ret = {}
     for host in hosts:
         if fnmatch.fnmatch(tgt, host):
-            ret[host] = __opts__.get('roster_defaults', {}).copy()
+            ret[host] = copy.deepcopy(__opts__.get('roster_defaults', {}))
             ret[host].update({'host': host})
             if __opts__.get('ssh_user'):
                 ret[host].update({'user': __opts__['ssh_user']})

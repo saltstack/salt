@@ -66,7 +66,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
                 raise err
 
         self.assertSaltStateChangesEqual(
-            ret, GITHUB_FINGERPRINT, keys=('new', 'fingerprint')
+            ret, GITHUB_FINGERPRINT, keys=('new', 0, 'fingerprint')
         )
 
         # save twice, no changes
@@ -81,7 +81,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
                              **dict(kwargs, name=GITHUB_IP))
         try:
             self.assertSaltStateChangesEqual(
-                ret, GITHUB_FINGERPRINT, keys=('new', 'fingerprint')
+                ret, GITHUB_FINGERPRINT, keys=('new', 0, 'fingerprint')
             )
         except AssertionError as err:
             try:
@@ -94,8 +94,8 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # record for every host must be available
         ret = self.run_function(
-            'ssh.get_known_host', ['root', 'github.com'], config=KNOWN_HOSTS
-        )
+            'ssh.get_known_host_entries', ['root', 'github.com'], config=KNOWN_HOSTS
+        )[0]
         try:
             self.assertNotIn(ret, ('', None))
         except AssertionError:
@@ -103,8 +103,8 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
                 'Salt return \'{0}\' is in (\'\', None).'.format(ret)
             )
         ret = self.run_function(
-            'ssh.get_known_host', ['root', GITHUB_IP], config=KNOWN_HOSTS
-        )
+            'ssh.get_known_host_entries', ['root', GITHUB_IP], config=KNOWN_HOSTS
+        )[0]
         try:
             self.assertNotIn(ret, ('', None, {}))
         except AssertionError:
@@ -144,7 +144,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
         # remove once, the key is gone
         ret = self.run_state('ssh_known_hosts.absent', **kwargs)
         self.assertSaltStateChangesEqual(
-            ret, GITHUB_FINGERPRINT, keys=('old', 'fingerprint')
+            ret, GITHUB_FINGERPRINT, keys=('old', 0, 'fingerprint')
         )
 
         # remove twice, nothing has changed

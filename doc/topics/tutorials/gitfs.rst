@@ -27,7 +27,7 @@ Installing Dependencies
 =======================
 
 Both pygit2_ and GitPython_ are supported Python interfaces to git. If
-compatible versions of both are installed, pygit2_ will preferred. In these
+compatible versions of both are installed, pygit2_ will be preferred. In these
 cases, GitPython_ can be forced using the :conf_master:`gitfs_provider`
 parameter in the master config file.
 

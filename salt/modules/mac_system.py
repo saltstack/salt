@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: 2016.3.0
+System module for sleeping, restarting, and shutting down the system on Mac OS X
 
-System module for sleeping, restarting, and shutting down the system on Mac OS
-X.
+.. versionadded:: 2016.3.0
 
 .. warning::
     Using this module will enable ``atrun`` on the system if it is disabled.

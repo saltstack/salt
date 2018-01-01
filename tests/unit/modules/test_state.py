@@ -19,11 +19,16 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
+import salt.config
+import salt.loader
+import salt.utils.hashutils
 import salt.utils.odict
 import salt.utils.platform
+import salt.utils.state
 import salt.modules.state as state
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.modules.config as config
+from salt.ext import six
 
 
 class MockState(object):
@@ -132,6 +137,9 @@ class MockState(object):
             data = data
             ret = ret
             return True
+
+        def requisite_in(self, data):  # pylint: disable=unused-argument
+            return data, []
 
     class HighState(object):
         '''
@@ -280,7 +288,7 @@ class MockTarFile(object):
     '''
         Mock tarfile class
     '''
-    path = "/tmp"
+    path = os.sep + "tmp"
 
     def __init__(self):
         pass
@@ -345,6 +353,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
+        utils = salt.loader.utils(
+            salt.config.DEFAULT_MINION_OPTS,
+            whitelist=['state']
+        )
         patcher = patch('salt.modules.state.salt.state', MockState())
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -352,10 +364,19 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             state: {
                 '__opts__': {
                     'cachedir': '/D',
-                    'environment': None,
+                    'saltenv': None,
                     '__cli': 'salt',
                 },
+                '__utils__': utils,
+                '__salt__': {
+                    'config.get': config.get,
+                }
             },
+            config: {
+                '__opts__': {},
+                '__pillar__': {},
+            },
+
         }
 
     def test_running(self):
@@ -403,7 +424,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(state.high({"vim": {"pkg": ["installed"]}}))
 
             mock = MagicMock(return_value={"test": True})
-            with patch.object(state, '_get_opts', mock):
+            with patch.object(salt.utils.state, 'get_sls_opts', mock):
                 self.assertTrue(state.high({"vim": {"pkg": ["installed"]}}))
 
     def test_template(self):
@@ -519,7 +540,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(state.__opts__, {"test": "install"}):
                 mock = MagicMock(return_value={"test": ""})
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
@@ -621,9 +642,9 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(state.__opts__, {"test": "A"}):
                 mock = MagicMock(
                     return_value={'test': True,
-                                  'environment': None}
+                                  'saltenv': None}
                 )
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
                         MockState.State.flag = True
@@ -648,9 +669,9 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(state.__opts__, {"test": "A"}):
                 mock = MagicMock(
                     return_value={'test': True,
-                                  'environment': None}
+                                  'saltenv': None}
                 )
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     MockState.State.flag = True
                     MockState.HighState.flag = True
                     self.assertEqual(state.show_low_sls("foo"), 2)
@@ -670,9 +691,9 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(state.__opts__, {"test": "A"}):
                 mock = MagicMock(
                     return_value={'test': True,
-                                  'environment': None}
+                                  'saltenv': None}
                 )
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
@@ -696,14 +717,14 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(state, '_check_queue', mock):
             self.assertEqual(state.top("reverse_top.sls"), "A")
 
-            mock = MagicMock(side_effect=[False, True, True])
-            with patch.object(state, '_check_pillar', mock):
-                with patch.dict(state.__pillar__, {"_errors": "E"}):
+            mock = MagicMock(side_effect=[['E'], None, None])
+            with patch.object(state, '_get_pillar_errors', mock):
+                with patch.dict(state.__pillar__, {"_errors": ['E']}):
                     self.assertListEqual(state.top("reverse_top.sls"), ret)
 
                 with patch.dict(state.__opts__, {"test": "A"}):
                     mock = MagicMock(return_value={'test': True})
-                    with patch.object(state, '_get_opts', mock):
+                    with patch.object(salt.utils.state, 'get_sls_opts', mock):
                         mock = MagicMock(return_value=True)
                         with patch.object(salt.utils, 'test_mode', mock):
                             self.assertRaises(SaltInvocationError,
@@ -744,7 +765,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(state.__opts__, {"test": "A"}):
                     mock = MagicMock(return_value={'test': True})
-                    with patch.object(state, '_get_opts', mock):
+                    with patch.object(salt.utils.state, 'get_sls_opts', mock):
                         self.assertRaises(SaltInvocationError,
                                           state.highstate,
                                           "whitelist=sls1.sls",
@@ -855,14 +876,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                True),
                                      ["A"])
 
-                mock = MagicMock(side_effect=[False,
-                                              True,
-                                              True,
-                                              True,
-                                              True])
-                with patch.object(state, '_check_pillar', mock):
+                mock = MagicMock(side_effect=[['E', '1'], None, None, None, None])
+                with patch.object(state, '_get_pillar_errors', mock):
                     with patch.dict(state.__context__, {"retcode": 5}):
-                        with patch.dict(state.__pillar__, {"_errors": "E1"}):
+                        with patch.dict(state.__pillar__, {"_errors": ['E', '1']}):
                             self.assertListEqual(state.sls("core,edit.vim dev",
                                                            None,
                                                            None,
@@ -870,8 +887,8 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                     with patch.dict(state.__opts__, {"test": None}):
                         mock = MagicMock(return_value={"test": "",
-                                                       "environment": None})
-                        with patch.object(state, '_get_opts', mock):
+                                                       "saltenv": None})
+                        with patch.object(salt.utils.state, 'get_sls_opts', mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(salt.utils,
                                               'test_mode',
@@ -928,6 +945,66 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                           mock):
                                             self.sub_test_sls()
 
+    def test_get_test_value(self):
+        '''
+        Test _get_test_value when opts contains different values
+        '''
+        test_arg = 'test'
+        with patch.dict(state.__opts__, {test_arg: True}):
+            self.assertTrue(state._get_test_value(test=None),
+                            msg='Failure when {0} is True in __opts__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {test_arg: 'blah'}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} is blah in __opts__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {test_arg: 'true'}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} is true in __opts__'.format(test_arg))
+
+        with patch.dict(config.__opts__, {test_arg: False}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} is False in __opts__'.format(test_arg))
+
+        with patch.dict(config.__opts__, {}):
+            self.assertFalse(state._get_test_value(test=None),
+                            msg='Failure when {0} does not exist in __opts__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {test_arg: None}):
+            self.assertEqual(state._get_test_value(test=None), None,
+                            msg='Failure when {0} is None in __opts__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {test_arg: True}):
+            self.assertTrue(state._get_test_value(test=None),
+                            msg='Failure when {0} is True in __pillar__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {'master': {test_arg: True}}):
+            self.assertTrue(state._get_test_value(test=None),
+                            msg='Failure when {0} is True in master __pillar__'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {'master': {test_arg: False}}):
+            with patch.dict(config.__pillar__, {test_arg: True}):
+                self.assertTrue(state._get_test_value(test=None),
+                                msg='Failure when {0} is False in master __pillar__ and True in pillar'.format(test_arg))
+
+        with patch.dict(config.__pillar__, {'master': {test_arg: True}}):
+            with patch.dict(config.__pillar__, {test_arg: False}):
+                self.assertFalse(state._get_test_value(test=None),
+                                 msg='Failure when {0} is True in master __pillar__ and False in pillar'.format(test_arg))
+
+        with patch.dict(state.__opts__, {'test': False}):
+            self.assertFalse(state._get_test_value(test=None),
+                             msg='Failure when {0} is False in __opts__'.format(test_arg))
+
+        with patch.dict(state.__opts__, {'test': False}):
+            with patch.dict(config.__pillar__, {'master': {test_arg: True}}):
+                self.assertTrue(state._get_test_value(test=None),
+                                msg='Failure when {0} is False in __opts__'.format(test_arg))
+
+        with patch.dict(state.__opts__, {}):
+            self.assertTrue(state._get_test_value(test=True),
+                            msg='Failure when test is True as arg')
+
     def sub_test_sls(self):
         '''
             Sub function of test_sls
@@ -953,30 +1030,170 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Test to execute a packaged state run
         '''
+        tar_file = os.sep + os.path.join('tmp', 'state_pkg.tgz')
         mock = MagicMock(side_effect=[False, True, True, True, True, True, True, True])
         with patch.object(os.path, 'isfile', mock), \
                 patch('salt.modules.state.tarfile', MockTarFile), \
                 patch('salt.modules.state.json', MockJson()):
-            self.assertEqual(state.pkg("/tmp/state_pkg.tgz", "", "md5"), {})
+            self.assertEqual(state.pkg(tar_file, "", "md5"), {})
 
             mock = MagicMock(side_effect=[False, 0, 0, 0, 0])
-            with patch.object(salt.utils, 'get_hash', mock):
-                self.assertDictEqual(state.pkg("/tmp/state_pkg.tgz", "", "md5"),
-                                     {})
+            with patch.object(salt.utils.hashutils, 'get_hash', mock):
+                # Verify hash
+                self.assertDictEqual(state.pkg(tar_file, "", "md5"), {})
 
-                self.assertDictEqual(state.pkg("/tmp/state_pkg.tgz", 0, "md5"),
-                                     {})
+                # Verify file outside intended root
+                self.assertDictEqual(state.pkg(tar_file, 0, "md5"), {})
 
                 MockTarFile.path = ""
                 MockJson.flag = True
                 with patch('salt.utils.files.fopen', mock_open()):
-                    self.assertListEqual(state.pkg("/tmp/state_pkg.tgz",
-                                                   0,
-                                                   "md5"),
-                                         [True])
+                    self.assertListEqual(state.pkg(tar_file, 0, "md5"), [True])
 
                 MockTarFile.path = ""
                 MockJson.flag = False
-                with patch('salt.utils.files.fopen', mock_open()):
-                    self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
-                                              0, "md5"))
+                if six.PY2:
+                    with patch('salt.utils.files.fopen', mock_open()), \
+                            patch.dict(state.__utils__, {'state.check_result': MagicMock(return_value=True)}):
+                        self.assertTrue(state.pkg(tar_file, 0, "md5"))
+                else:
+                    with patch('salt.utils.files.fopen', mock_open()):
+                        self.assertTrue(state.pkg(tar_file, 0, "md5"))
+
+    def test_lock_saltenv(self):
+        '''
+        Tests lock_saltenv in each function which accepts saltenv on the CLI
+        '''
+        lock_msg = 'lock_saltenv is enabled, saltenv cannot be changed'
+        empty_list_mock = MagicMock(return_value=[])
+        with patch.dict(state.__opts__, {'lock_saltenv': True}), \
+                patch.dict(state.__salt__, {'grains.get': empty_list_mock}), \
+                patch.object(state, 'running', empty_list_mock):
+
+            # Test high
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.high(
+                    [{"vim": {"pkg": ["installed"]}}], saltenv='base')
+
+            # Test template
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.template('foo', saltenv='base')
+
+            # Test template_str
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.template_str('foo', saltenv='base')
+
+            # Test apply_ with SLS
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.apply_('foo', saltenv='base')
+
+            # Test apply_ with Highstate
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.apply_(saltenv='base')
+
+            # Test highstate
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.highstate(saltenv='base')
+
+            # Test sls
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.sls('foo', saltenv='base')
+
+            # Test top
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.top('foo.sls', saltenv='base')
+
+            # Test show_highstate
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.show_highstate(saltenv='base')
+
+            # Test show_lowstate
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.show_lowstate(saltenv='base')
+
+            # Test sls_id
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.sls_id('foo', 'bar', saltenv='base')
+
+            # Test show_low_sls
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.show_low_sls('foo', saltenv='base')
+
+            # Test show_sls
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.show_sls('foo', saltenv='base')
+
+            # Test show_top
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.show_top(saltenv='base')
+
+            # Test single
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.single('foo.bar', name='baz', saltenv='base')
+
+            # Test pkg
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.pkg(
+                    '/tmp/salt_state.tgz',
+                    '760a9353810e36f6d81416366fc426dc',
+                    'md5',
+                    saltenv='base')
+
+    def test_get_pillar_errors_CC(self):
+        '''
+        Test _get_pillar_errors function.
+        CC: External clean, Internal clean
+        :return:
+        '''
+        for int_pillar, ext_pillar in [({'foo': 'bar'}, {'fred': 'baz'}),
+                                       ({'foo': 'bar'}, None),
+                                       ({}, {'fred': 'baz'})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, None),
+                                  ({}, None)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+    def test_get_pillar_errors_EC(self):
+        '''
+        Test _get_pillar_errors function.
+        EC: External erroneous, Internal clean
+        :return:
+        '''
+        errors = ['failure', 'everywhere']
+        for int_pillar, ext_pillar in [({'foo': 'bar'}, {'fred': 'baz', '_errors': errors}),
+                                       ({}, {'fred': 'baz', '_errors': errors})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, errors),
+                                  ({}, errors)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+    def test_get_pillar_errors_EE(self):
+        '''
+        Test _get_pillar_errors function.
+        CC: External erroneous, Internal erroneous
+        :return:
+        '''
+        errors = ['failure', 'everywhere']
+        for int_pillar, ext_pillar in [({'foo': 'bar', '_errors': errors}, {'fred': 'baz', '_errors': errors})]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, errors),
+                                  ({}, errors)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+    def test_get_pillar_errors_CE(self):
+        '''
+        Test _get_pillar_errors function.
+        CC: External clean, Internal erroneous
+        :return:
+        '''
+        errors = ['failure', 'everywhere']
+        for int_pillar, ext_pillar in [({'foo': 'bar', '_errors': errors}, {'fred': 'baz'}),
+                                       ({'foo': 'bar', '_errors': errors}, None)]:
+            with patch('salt.modules.state.__pillar__', int_pillar):
+                for opts, res in [({'force': True}, None),
+                                  ({'force': False}, errors),
+                                  ({}, errors)]:
+                    assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)

@@ -63,6 +63,22 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
         linux_acl.getfacl(*self.files, recursive=True)
         self.cmdrun.assert_called_once_with('getfacl --absolute-names -R ' + ' '.join(self.quoted_files), python_shell=False)
 
+    def test_getfacl__effective_acls(self):
+        line = 'group:webmaster:r-x        #effective:---'
+        user = 'root'
+        group = 'root'
+        expected = {
+            'type': 'acl',
+            'group': 'webmaster',
+            'permissions': {
+                'read': False,
+                'write': False,
+                'execute': False
+            },
+            'octal': 0,
+        }
+        self.assertEqual(linux_acl._parse_acl(line, user, group), expected)
+
     def test_wipefacls_wo_args(self):
         self.assertRaises(CommandExecutionError, linux_acl.wipefacls)
 

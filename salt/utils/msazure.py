@@ -186,7 +186,7 @@ def object_to_dict(obj):
         ret = obj
     else:
         ret = {}
-        for item in dir(obj):
+        for item in obj.__dict__:
             if item.startswith('_'):
                 continue
             # This is ugly, but inspect.isclass() doesn't seem to work

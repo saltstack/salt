@@ -14,6 +14,7 @@ Utils for the NAPALM modules and proxy.
 
 .. versionadded:: 2017.7.0
 '''
+
 # Import Python libs
 from __future__ import absolute_import
 import traceback
@@ -22,20 +23,31 @@ import importlib
 from functools import wraps
 
 # Import Salt libs
+from salt.ext import six as six
 import salt.output
 import salt.utils.platform
 
-# Import 3rd-party libs
-from salt.ext import six
+# Import third party libs
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    import napalm_base
+    import napalm
+    import napalm.base as napalm_base
     # pylint: enable=W0611
     HAS_NAPALM = True
+    HAS_NAPALM_BASE = False  # doesn't matter anymore, but needed for the logic below
+    try:
+        NAPALM_MAJOR = int(napalm.__version__.split('.')[0])
+    except AttributeError:
+        NAPALM_MAJOR = 0
 except ImportError:
     HAS_NAPALM = False
+    try:
+        import napalm_base
+        HAS_NAPALM_BASE = True
+    except ImportError:
+        HAS_NAPALM_BASE = False
 
 try:
     # try importing ConnectionClosedException
@@ -81,7 +93,7 @@ def virtual(opts, virtualname, filename):
     '''
     Returns the __virtual__.
     '''
-    if HAS_NAPALM and (is_proxy(opts) or is_minion(opts)):
+    if ((HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE) and (is_proxy(opts) or is_minion(opts)):
         return virtualname
     else:
         return (

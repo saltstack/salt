@@ -441,6 +441,17 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             log.debug('salt-call output:\n\n%s', '\n'.join(ret))
             self.fail('CLI pillar override not found in pillar data')
 
+    def test_pillar_items_masterless(self):
+        '''
+        Test to ensure we get expected output
+        from pillar.items with salt-call
+        '''
+        get_items = self.run_call('pillar.items', local=True)
+        exp_out = ['        - Lancelot', '        - Galahad', '        - Bedevere',
+                   '    monty:', '        python']
+        for out in exp_out:
+            self.assertIn(out, get_items)
+
     def tearDown(self):
         '''
         Teardown method to remove installed packages
@@ -476,6 +487,21 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             message='unknown argument',
             stdout=stdout, stderr=stderr
         )
+
+    def test_masterless_highstate(self):
+        '''
+        test state.highstate in masterless mode
+        '''
+        ret = self.run_call('state.highstate', local=True)
+
+        destpath = os.path.join(TMP, 'testfile')
+        exp_out = ['    Function: file.managed', '      Result: True',
+                   '          ID: {0}'.format(destpath)]
+
+        for out in exp_out:
+            self.assertIn(out, ret)
+
+        self.assertTrue(os.path.exists(destpath))
 
     def test_exit_status_correct_usage(self):
         '''

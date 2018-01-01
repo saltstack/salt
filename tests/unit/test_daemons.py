@@ -68,6 +68,141 @@ class LoggerMock(object):
         return False
 
 
+def _master_exec_test(child_pipe):
+    def _create_master():
+        '''
+        Create master instance
+        :return:
+        '''
+        obj = daemons.Master()
+        obj.config = {'user': 'dummy', 'hash_type': alg}
+        for attr in ['start_log_info', 'prepare', 'shutdown', 'master']:
+            setattr(obj, attr, MagicMock())
+
+        return obj
+
+    _logger = LoggerMock()
+    ret = True
+    with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
+        with patch('salt.cli.daemons.log', _logger):
+            for alg in ['md5', 'sha1']:
+                _create_master().start()
+                ret = ret and _logger.messages \
+                      and _logger.has_message('Do not use {alg}'.format(alg=alg),
+                                              log_type='warning')
+
+            _logger.reset()
+
+            for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
+                _create_master().start()
+                ret = ret and _logger.messages \
+                      and not _logger.has_message('Do not use ')
+            child_pipe.send(ret)
+            child_pipe.close()
+
+
+def _minion_exec_test(child_pipe):
+    def _create_minion():
+        '''
+        Create minion instance
+        :return:
+        '''
+        obj = daemons.Minion()
+        obj.config = {'user': 'dummy', 'hash_type': alg}
+        for attr in ['start_log_info', 'prepare', 'shutdown']:
+            setattr(obj, attr, MagicMock())
+        setattr(obj, 'minion', MagicMock(restart=False))
+
+        return obj
+
+    ret = True
+    _logger = LoggerMock()
+    with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
+        with patch('salt.cli.daemons.log', _logger):
+            for alg in ['md5', 'sha1']:
+                _create_minion().start()
+                ret = ret and _logger.messages \
+                      and _logger.has_message('Do not use {alg}'.format(alg=alg),
+                                              log_type='warning')
+            _logger.reset()
+
+            for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
+                _create_minion().start()
+                ret = ret and _logger.messages \
+                      and not _logger.has_message('Do not use ')
+
+        child_pipe.send(ret)
+        child_pipe.close()
+
+
+def _proxy_exec_test(child_pipe):
+    def _create_proxy_minion():
+        '''
+        Create proxy minion instance
+        :return:
+        '''
+        obj = daemons.ProxyMinion()
+        obj.config = {'user': 'dummy', 'hash_type': alg}
+        for attr in ['minion', 'start_log_info', 'prepare', 'shutdown', 'tune_in']:
+            setattr(obj, attr, MagicMock())
+
+        obj.minion.restart = False
+        return obj
+
+    ret = True
+    _logger = LoggerMock()
+    with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
+        with patch('salt.cli.daemons.log', _logger):
+            for alg in ['md5', 'sha1']:
+                _create_proxy_minion().start()
+                ret = ret and _logger.messages \
+                      and _logger.has_message('Do not use {alg}'.format(alg=alg),
+                                              log_type='warning')
+
+            _logger.reset()
+
+            for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
+                _create_proxy_minion().start()
+                ret = ret and _logger.messages \
+                      and not _logger.has_message('Do not use ')
+    child_pipe.send(ret)
+    child_pipe.close()
+
+
+def _syndic_exec_test(child_pipe):
+    def _create_syndic():
+        '''
+        Create syndic instance
+        :return:
+        '''
+        obj = daemons.Syndic()
+        obj.config = {'user': 'dummy', 'hash_type': alg}
+        for attr in ['syndic', 'start_log_info', 'prepare', 'shutdown']:
+            setattr(obj, attr, MagicMock())
+
+        return obj
+
+    ret = True
+    _logger = LoggerMock()
+    with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
+        with patch('salt.cli.daemons.log', _logger):
+            for alg in ['md5', 'sha1']:
+                _create_syndic().start()
+                ret = ret and _logger.messages \
+                      and _logger.has_message('Do not use {alg}'.format(alg=alg),
+                                              log_type='warning')
+
+            _logger.reset()
+
+            for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
+                _create_syndic().start()
+                ret = ret and _logger.messages \
+                      and not _logger.has_message('Do not use ')
+
+    child_pipe.send(ret)
+    child_pipe.close()
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
     '''
@@ -87,38 +222,7 @@ class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
 
         :return:
         '''
-        def exec_test(child_pipe):
-            def _create_master():
-                '''
-                Create master instance
-                :return:
-                '''
-                obj = daemons.Master()
-                obj.config = {'user': 'dummy', 'hash_type': alg}
-                for attr in ['start_log_info', 'prepare', 'shutdown', 'master']:
-                    setattr(obj, attr, MagicMock())
-
-                return obj
-
-            _logger = LoggerMock()
-            ret = True
-            with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-                with patch('salt.cli.daemons.log', _logger):
-                    for alg in ['md5', 'sha1']:
-                        _create_master().start()
-                        ret = ret and _logger.messages \
-                                and _logger.has_message('Do not use {alg}'.format(alg=alg),
-                                                        log_type='warning')
-
-                    _logger.reset()
-
-                    for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
-                        _create_master().start()
-                        ret = ret and _logger.messages \
-                              and not _logger.has_message('Do not use ')
-                    child_pipe.send(ret)
-                    child_pipe.close()
-        self._multiproc_exec_test(exec_test)
+        self._multiproc_exec_test(_master_exec_test)
 
     def test_minion_daemon_hash_type_verified(self):
         '''
@@ -126,41 +230,7 @@ class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
 
         :return:
         '''
-
-        def exec_test(child_pipe):
-            def _create_minion():
-                '''
-                Create minion instance
-                :return:
-                '''
-                obj = daemons.Minion()
-                obj.config = {'user': 'dummy', 'hash_type': alg}
-                for attr in ['start_log_info', 'prepare', 'shutdown']:
-                    setattr(obj, attr, MagicMock())
-                setattr(obj, 'minion', MagicMock(restart=False))
-
-                return obj
-
-            ret = True
-            _logger = LoggerMock()
-            with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-                with patch('salt.cli.daemons.log', _logger):
-                    for alg in ['md5', 'sha1']:
-                        _create_minion().start()
-                        ret = ret and _logger.messages \
-                                and _logger.has_message('Do not use {alg}'.format(alg=alg),
-                                                        log_type='warning')
-                    _logger.reset()
-
-                    for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
-                        _create_minion().start()
-                        ret = ret and _logger.messages \
-                                and not _logger.has_message('Do not use ')
-
-                child_pipe.send(ret)
-                child_pipe.close()
-
-        self._multiproc_exec_test(exec_test)
+        self._multiproc_exec_test(_minion_exec_test)
 
     def test_proxy_minion_daemon_hash_type_verified(self):
         '''
@@ -168,41 +238,7 @@ class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
 
         :return:
         '''
-
-        def exec_test(child_pipe):
-            def _create_proxy_minion():
-                '''
-                Create proxy minion instance
-                :return:
-                '''
-                obj = daemons.ProxyMinion()
-                obj.config = {'user': 'dummy', 'hash_type': alg}
-                for attr in ['minion', 'start_log_info', 'prepare', 'shutdown', 'tune_in']:
-                    setattr(obj, attr, MagicMock())
-
-                obj.minion.restart = False
-                return obj
-
-            ret = True
-            _logger = LoggerMock()
-            with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-                with patch('salt.cli.daemons.log', _logger):
-                    for alg in ['md5', 'sha1']:
-                        _create_proxy_minion().start()
-                        ret = ret and _logger.messages \
-                                and _logger.has_message('Do not use {alg}'.format(alg=alg),
-                                                        log_type='warning')
-
-                    _logger.reset()
-
-                    for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
-                        _create_proxy_minion().start()
-                        ret = ret and _logger.messages \
-                                and not _logger.has_message('Do not use ')
-            child_pipe.send(ret)
-            child_pipe.close()
-
-        self._multiproc_exec_test(exec_test)
+        self._multiproc_exec_test(_proxy_exec_test)
 
     def test_syndic_daemon_hash_type_verified(self):
         '''
@@ -210,38 +246,4 @@ class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
 
         :return:
         '''
-
-        def exec_test(child_pipe):
-            def _create_syndic():
-                '''
-                Create syndic instance
-                :return:
-                '''
-                obj = daemons.Syndic()
-                obj.config = {'user': 'dummy', 'hash_type': alg}
-                for attr in ['syndic', 'start_log_info', 'prepare', 'shutdown']:
-                    setattr(obj, attr, MagicMock())
-
-                return obj
-
-            ret = True
-            _logger = LoggerMock()
-            with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-                with patch('salt.cli.daemons.log', _logger):
-                    for alg in ['md5', 'sha1']:
-                        _create_syndic().start()
-                        ret = ret and _logger.messages \
-                                and _logger.has_message('Do not use {alg}'.format(alg=alg),
-                                                        log_type='warning')
-
-                    _logger.reset()
-
-                    for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
-                        _create_syndic().start()
-                        ret = ret and _logger.messages \
-                                and not _logger.has_message('Do not use ')
-
-            child_pipe.send(ret)
-            child_pipe.close()
-
-        self._multiproc_exec_test(exec_test)
+        self._multiproc_exec_test(_syndic_exec_test)

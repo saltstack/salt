@@ -5,6 +5,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
@@ -17,10 +18,11 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils.parsers
 import salt.log.setup as log
 import salt.config
 import salt.syspaths
+import salt.utils.parsers
+import salt.utils.platform
 
 
 class ErrorMock(object):  # pylint: disable=too-few-public-methods
@@ -78,7 +80,8 @@ class LogSetupMock(object):
         '''
         Mock
         '''
-        return None
+        import multiprocessing
+        return multiprocessing.Queue()
 
     def setup_multiprocessing_logging_listener(self, opts, *args):  # pylint: disable=invalid-name,unused-argument
         '''
@@ -486,8 +489,35 @@ class LogSettingsParserTests(TestCase):
         # Check log file logger
         self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
+    def test_log_created(self):
+        '''
+        Tests that log file is created
+        '''
+        args = self.args
+        log_file = self.log_file
+        log_file_name = self.logfile_config_setting_name
+        opts = self.default_config.copy()
+        opts.update({'log_file': log_file})
+        if log_file_name is not 'log_file':
+            opts.update({log_file_name:
+                         getattr(self, log_file_name)})
+
+        if log_file_name is 'key_logfile':
+            self.skipTest('salt-key creates log file outside of parse_args.')
+
+        parser = self.parser()
+        with patch(self.config_func, MagicMock(return_value=opts)):
+            parser.parse_args(args)
+
+        if log_file_name is 'log_file':
+            self.assertEqual(os.path.getsize(log_file), 0)
+        else:
+            self.assertEqual(os.path.getsize(getattr(self, log_file_name)), 0)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class MasterOptionParserTestCase(LogSettingsParserTests):
     '''
     Tests parsing Salt Master options
@@ -514,6 +544,7 @@ class MasterOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class MinionOptionParserTestCase(LogSettingsParserTests):
     '''
     Tests parsing Salt Minion options
@@ -567,6 +598,7 @@ class ProxyMinionOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class SyndicOptionParserTestCase(LogSettingsParserTests):
     '''
     Tests parsing Salt Syndic options
@@ -584,6 +616,7 @@ class SyndicOptionParserTestCase(LogSettingsParserTests):
 
         # Log file
         self.log_file = '/tmp/salt_syndic_parser_test'
+        self.syndic_log_file = '/tmp/salt_syndic_log'
         # Function to patch
         self.config_func = 'salt.config.syndic_config'
 
@@ -673,6 +706,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
 
         # Log file
         self.log_file = '/tmp/salt_key_parser_test'
+        self.key_logfile = '/tmp/key_logfile'
         # Function to patch
         self.config_func = 'salt.config.master_config'
 
@@ -848,6 +882,7 @@ class SaltSSHOptionParserTestCase(LogSettingsParserTests):
 
         # Log file
         self.log_file = '/tmp/salt_ssh_parser_test'
+        self.ssh_log_file = '/tmp/ssh_logfile'
         # Function to patch
         self.config_func = 'salt.config.master_config'
 
@@ -914,6 +949,7 @@ class SPMParserTestCase(LogSettingsParserTests):
 
         # Log file
         self.log_file = '/tmp/spm_parser_test'
+        self.spm_logfile = '/tmp/spm_logfile'
         # Function to patch
         self.config_func = 'salt.config.spm_config'
 
@@ -947,6 +983,7 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
 
         # Log file
         self.log_file = '/tmp/salt_api_parser_test'
+        self.api_logfile = '/tmp/api_logfile'
         # Function to patch
         self.config_func = 'salt.config.api_config'
 
@@ -957,6 +994,48 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SaltAPIParser
         self.addCleanup(delattr, self, 'parser')
 
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class DaemonMixInTestCase(TestCase):
+    '''
+    Tests the PIDfile deletion in the DaemonMixIn.
+    '''
+
+    def setUp(self):
+        '''
+        Setting up
+        '''
+        # Set PID
+        self.pid = '/some/fake.pid'
+
+        # Setup mixin
+        self.mixin = salt.utils.parsers.DaemonMixIn()
+        self.mixin.info = None
+        self.mixin.config = {}
+        self.mixin.config['pidfile'] = self.pid
+
+    def test_pid_file_deletion(self):
+        '''
+        PIDfile deletion without exception.
+        '''
+        with patch('os.unlink', MagicMock()) as os_unlink:
+            with patch('os.path.isfile', MagicMock(return_value=True)):
+                with patch.object(self.mixin, 'info', MagicMock()):
+                    self.mixin._mixin_before_exit()
+                    assert self.mixin.info.call_count == 0
+                    assert os_unlink.call_count == 1
+
+    def test_pid_file_deletion_with_oserror(self):
+        '''
+        PIDfile deletion with exception
+        '''
+        with patch('os.unlink', MagicMock(side_effect=OSError())) as os_unlink:
+            with patch('os.path.isfile', MagicMock(return_value=True)):
+                with patch.object(self.mixin, 'info', MagicMock()):
+                    self.mixin._mixin_before_exit()
+                    assert os_unlink.call_count == 1
+                    self.mixin.info.assert_called_with(
+                        'PIDfile could not be deleted: {0}'.format(self.pid))
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module
 del LogSettingsParserTests

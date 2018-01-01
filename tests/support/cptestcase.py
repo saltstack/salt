@@ -38,8 +38,10 @@ from tests.support.case import TestCase
 # pylint: disable=import-error
 import cherrypy  # pylint: disable=3rd-party-module-not-gated
 from salt.ext import six
-from salt.ext.six.moves import StringIO
+from salt.ext.six import BytesIO
 # pylint: enable=import-error
+
+import salt.utils.stringutils
 
 # Not strictly speaking mandatory but just makes sense
 cherrypy.config.update({'environment': "test_suite"})
@@ -92,7 +94,7 @@ class BaseCherryPyTestCase(TestCase):
         fd = None
         if body is not None:
             h['content-length'] = '{0}'.format(len(body))
-            fd = StringIO(body)
+            fd = BytesIO(salt.utils.stringutils.to_bytes(body))
 
         if headers is not None:
             h.update(headers)

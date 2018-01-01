@@ -200,12 +200,10 @@ def create(path,
             for entry in extra_search_dir:
                 cmd.append('--extra-search-dir={0}'.format(entry))
         if never_download is True:
-            if virtualenv_version_info >= (1, 10):
+            if virtualenv_version_info >= (1, 10) and virtualenv_version_info < (14, 0, 0):
                 log.info(
-                    'The virtualenv \'--never-download\' option has been '
-                    'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'never_download\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.'
+                    '--never-download was deprecated in 1.10.0, but reimplemented in 14.0.0. '
+                    'If this feature is needed, please install a supported virtualenv version.'
                 )
             else:
                 cmd.append('--never-download')
@@ -319,7 +317,7 @@ def get_site_packages(venv):
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
         'from distutils import sysconfig; '
-            'print sysconfig.get_python_lib()'
+            'print(sysconfig.get_python_lib())'
     )
 
     if ret['retcode'] != 0:

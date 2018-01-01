@@ -27,6 +27,7 @@ except ImportError:
 
 # Import Salt libs
 import salt.utils.files
+from salt.ext import six
 
 # Juniper interface libraries
 # https://github.com/Juniper/py-junos-eznc
@@ -176,6 +177,10 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
                 op.update(kwargs['__pub_arg'][-1])
+    elif '__pub_schedule' in kwargs:
+        for key, value in six.iteritems(kwargs):
+            if not key.startswith('__pub_'):
+                op[key] = value
     else:
         op.update(kwargs)
     op['dev_timeout'] = str(op.pop('timeout', conn.timeout))

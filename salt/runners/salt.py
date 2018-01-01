@@ -30,8 +30,7 @@ Execution modules are also available to salt runners:
 
 '''
 # import python libs
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # import salt libs
@@ -121,9 +120,7 @@ def execute(tgt,
                          kwarg=kwarg,
                          **kwargs)
     except SaltClientError as client_error:
-        log.error('Error while executing {fun} on {tgt} ({tgt_type})'.format(fun=fun,
-                                                                             tgt=tgt,
-                                                                             tgt_type=tgt_type))
+        log.error('Error while executing %s on %s (%s)', fun, tgt, tgt_type)
         log.error(client_error)
         return {}
     return ret

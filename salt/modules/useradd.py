@@ -19,10 +19,10 @@ import logging
 import copy
 
 # Import salt libs
-import salt.utils  # Can be removed when get_group_list is moved
 import salt.utils.files
 import salt.utils.decorators.path
 import salt.utils.locales
+import salt.utils.user
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -623,7 +623,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    return salt.utils.get_group_list(name)
+    return salt.utils.user.get_group_list(name)
 
 
 def list_users():

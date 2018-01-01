@@ -28,6 +28,7 @@ For an item only one field should be provided. Either a `data` or a `file` entry
 In case both are provided the `file` entry is prefered.
 
 .. code-block:: bash
+
     salt '*' kubernetes.nodes api_url=http://k8s-api-server:port api_user=myuser api_password=pass
 
 .. versionadded: 2017.7.0
@@ -35,16 +36,22 @@ In case both are provided the `file` entry is prefered.
 
 # Import Python Futures
 from __future__ import absolute_import
+import sys
 import os.path
 import base64
 import logging
 import yaml
 import tempfile
+import signal
+from time import sleep
+from contextlib import contextmanager
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
 import salt.utils.files
 import salt.utils.templates
+from salt.exceptions import TimeoutError
+from salt.ext.six.moves import range  # pylint: disable=import-error
 
 try:
     import kubernetes  # pylint: disable=import-self
@@ -76,6 +83,21 @@ def __virtual__():
         return __virtualname__
 
     return False, 'python kubernetes library not found'
+
+
+if not salt.utils.platform.is_windows():
+    @contextmanager
+    def _time_limit(seconds):
+        def signal_handler(signum, frame):
+            raise TimeoutError
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+
+    POLLING_TIME_LIMIT = 30
 
 
 # pylint: disable=no-member
@@ -123,6 +145,9 @@ def _setup_conn(**kwargs):
     kubernetes.client.configuration.host = host
     kubernetes.client.configuration.user = username
     kubernetes.client.configuration.passwd = password
+    if __salt__['config.option']('kubernetes.api_key'):
+        kubernetes.client.configuration.api_key = {'authorization': __salt__['config.option']('kubernetes.api_key')}
+        kubernetes.client.configuration.api_key_prefix = {'authorization': __salt__['config.option']('kubernetes.api_key_prefix')}
 
     if ca_cert_file:
         kubernetes.client.configuration.ssl_ca_cert = ca_cert_file
@@ -144,12 +169,15 @@ def _setup_conn(**kwargs):
 
     if client_key_file:
         kubernetes.client.configuration.key_file = client_key_file
-    if client_key:
+    elif client_key:
         with tempfile.NamedTemporaryFile(prefix='salt-kube-', delete=False) as k:
             k.write(base64.b64decode(client_key))
             kubernetes.client.configuration.key_file = k.name
     else:
         kubernetes.client.configuration.key_file = None
+
+    # The return makes unit testing easier
+    return vars(kubernetes.client.configuration)
 
 
 def _cleanup(**kwargs):
@@ -157,11 +185,11 @@ def _cleanup(**kwargs):
     cert = kubernetes.client.configuration.cert_file
     key = kubernetes.client.configuration.key_file
     if cert and os.path.exists(cert) and os.path.basename(cert).startswith('salt-kube-'):
-        salt.utils.safe_rm(cert)
+        salt.utils.files.safe_rm(cert)
     if key and os.path.exists(key) and os.path.basename(key).startswith('salt-kube-'):
-        salt.utils.safe_rm(key)
+        salt.utils.files.safe_rm(key)
     if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
-        salt.utils.safe_rm(ca)
+        salt.utils.files.safe_rm(ca)
 
 
 def ping(**kwargs):
@@ -249,7 +277,7 @@ def node_labels(name, **kwargs):
     match = node(name, **kwargs)
 
     if match is not None:
-        return match.metadata.labels
+        return match['metadata']['labels']
 
     return {}
 
@@ -692,7 +720,30 @@ def delete_deployment(name, namespace='default', **kwargs):
             name=name,
             namespace=namespace,
             body=body)
-        return api_response.to_dict()
+        mutable_api_response = api_response.to_dict()
+        if not salt.utils.platform.is_windows():
+            try:
+                with _time_limit(POLLING_TIME_LIMIT):
+                    while show_deployment(name, namespace) is not None:
+                        sleep(1)
+                    else:  # pylint: disable=useless-else-on-loop
+                        mutable_api_response['code'] = 200
+            except TimeoutError:
+                pass
+        else:
+            # Windows has not signal.alarm implementation, so we are just falling
+            # back to loop-counting.
+            for i in range(60):
+                if show_deployment(name, namespace) is None:
+                    mutable_api_response['code'] = 200
+                    break
+                else:
+                    sleep(1)
+        if mutable_api_response['code'] != 200:
+            log.warning('Reached polling time limit. Deployment is not yet '
+                        'deleted, but we are backing off. Sorry, but you\'ll '
+                        'have to check manually.')
+        return mutable_api_response
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
@@ -1007,14 +1058,22 @@ def create_service(
 
 def create_secret(
         name,
-        namespace,
-        data,
-        source,
-        template,
-        saltenv,
+        namespace='default',
+        data=None,
+        source=None,
+        template=None,
+        saltenv='base',
         **kwargs):
     '''
     Creates the kubernetes secret as defined by the user.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.create_secret \
+            passwords default '{"db": "letmein"}'
+
+        salt 'minion2' kubernetes.create_secret \
+            name=passwords namespace=default data='{"db": "letmein"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1056,12 +1115,20 @@ def create_configmap(
         name,
         namespace,
         data,
-        source,
-        template,
-        saltenv,
+        source=None,
+        template=None,
+        saltenv='base',
         **kwargs):
     '''
     Creates the kubernetes configmap as defined by the user.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.create_configmap \
+            settings default '{"example.conf": "# example file"}'
+
+        salt 'minion2' kubernetes.create_configmap \
+            name=settings namespace=default data='{"example.conf": "# example file"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1230,14 +1297,22 @@ def replace_service(name,
 
 def replace_secret(name,
                    data,
-                   source,
-                   template,
-                   saltenv,
+                   source=None,
+                   template=None,
+                   saltenv='base',
                    namespace='default',
                    **kwargs):
     '''
     Replaces an existing secret with a new one defined by name and namespace,
     having the specificed data.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.replace_secret \
+            name=passwords data='{"db": "letmein"}'
+
+        salt 'minion2' kubernetes.replace_secret \
+            name=passwords namespace=saltstack data='{"db": "passw0rd"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1277,14 +1352,22 @@ def replace_secret(name,
 
 def replace_configmap(name,
                       data,
-                      source,
-                      template,
-                      saltenv,
+                      source=None,
+                      template=None,
+                      saltenv='base',
                       namespace='default',
                       **kwargs):
     '''
     Replaces an existing configmap with a new one defined by name and
-    namespace, having the specificed data.
+    namespace with the specified data.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.replace_configmap \
+            settings default '{"example.conf": "# example file"}'
+
+        salt 'minion2' kubernetes.replace_configmap \
+            name=settings namespace=default data='{"example.conf": "# example file"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1401,6 +1484,13 @@ def __dict_to_object_meta(name, namespace, metadata):
     '''
     meta_obj = kubernetes.client.V1ObjectMeta()
     meta_obj.namespace = namespace
+
+    # Replicate `kubectl [create|replace|apply] --record`
+    if 'annotations' not in metadata:
+        metadata['annotations'] = {}
+    if 'kubernetes.io/change-cause' not in metadata['annotations']:
+        metadata['annotations']['kubernetes.io/change-cause'] = ' '.join(sys.argv)
+
     for key, value in iteritems(metadata):
         if hasattr(meta_obj, key):
             setattr(meta_obj, key, value)

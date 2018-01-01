@@ -9,7 +9,6 @@ import logging
 import json
 
 # Import salt libs
-import salt.utils
 import salt.utils.path
 from salt.ext import six
 

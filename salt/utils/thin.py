@@ -70,9 +70,11 @@ except ImportError:
 
 # Import salt libs
 import salt
-import salt.utils
 import salt.utils.files
+import salt.utils.hashutils
+import salt.utils.path
 import salt.exceptions
+import salt.version
 
 SALTCALL = '''
 import os
@@ -299,7 +301,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                     elif compress == 'zip':
                         tfp.write(base, arcname=os.path.join('py{0}'.format(py_ver), base))
                 continue
-            for root, dirs, files in os.walk(base, followlinks=True):
+            for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
                     if not name.endswith(('.pyc', '.pyo')):
                         if compress == 'gzip':
@@ -341,7 +343,7 @@ def thin_sum(cachedir, form='sha1'):
     Return the checksum of the current thin tarball
     '''
     thintar = gen_thin(cachedir)
-    return salt.utils.get_hash(thintar, form)
+    return salt.utils.hashutils.get_hash(thintar, form)
 
 
 def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
@@ -593,7 +595,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
                 # top is a single file module
                 tfp.add(base, arcname=os.path.join('py{0}'.format(py_ver), base))
                 continue
-            for root, dirs, files in os.walk(base, followlinks=True):
+            for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
                     if name.endswith(('.pyc', '.pyo')):
                         continue
@@ -625,4 +627,4 @@ def min_sum(cachedir, form='sha1'):
     Return the checksum of the current thin tarball
     '''
     mintar = gen_min(cachedir)
-    return salt.utils.get_hash(mintar, form)
+    return salt.utils.hashutils.get_hash(mintar, form)

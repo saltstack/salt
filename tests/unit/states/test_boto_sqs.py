@@ -62,15 +62,15 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                          'boto_sqs.create': mock_bool,
                          'boto_sqs.get_attributes': mock_attr}):
             with patch.dict(boto_sqs.__opts__, {'test': False}):
-                comt = 'Failed to create SQS queue {0}: create error'.format(
+                comt = ['Failed to create SQS queue {0}: create error'.format(
                     name,
-                )
+                )]
                 ret = base_ret.copy()
                 ret.update({'result': False, 'comment': comt})
                 self.assertDictEqual(boto_sqs.present(name), ret)
 
             with patch.dict(boto_sqs.__opts__, {'test': True}):
-                comt = 'SQS queue {0} is set to be created.'.format(name)
+                comt = ['SQS queue {0} is set to be created.'.format(name)]
                 ret = base_ret.copy()
                 ret.update({
                     'result': None,
@@ -85,17 +85,19 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                     -{}
                     +DelaySeconds: 20
                 ''')
-                comt = textwrap.dedent('''\
-                    SQS queue mysqs present.
-                    Attribute(s) DelaySeconds set to be updated:
-                ''') + diff
+                comt = [
+                    'SQS queue mysqs present.',
+                    'Attribute(s) DelaySeconds set to be updated:\n{0}'.format(
+                        diff,
+                    ),
+                ]
                 ret.update({
                     'comment': comt,
                     'pchanges': {'attributes': {'diff': diff}},
                 })
                 self.assertDictEqual(boto_sqs.present(name, attributes), ret)
 
-            comt = ('SQS queue mysqs present.')
+            comt = ['SQS queue mysqs present.']
             ret = base_ret.copy()
             ret.update({'result': True, 'comment': comt})
             self.assertDictEqual(boto_sqs.present(name), ret)

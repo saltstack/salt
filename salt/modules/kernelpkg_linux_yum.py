@@ -11,11 +11,13 @@ try:
     from salt.ext import six
     from salt.utils.versions import LooseVersion as _LooseVersion
     from salt.exceptions import CommandExecutionError
+    import salt.utils.data
+    import salt.utils.functools
     import salt.utils.systemd
     import salt.modules.yumpkg
-    HAS_REQUIRED_LIBS = True
-except ImportError:
-    HAS_REQUIRED_LIBS = False
+    __IMPORT_ERROR = None
+except ImportError as exc:
+    __IMPORT_ERROR = exc.__str__()
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'kernelpkg'
 
 # Import functions from yumpkg
-_yum = salt.utils.namespaced_function(salt.modules.yumpkg._yum, globals())  # pylint: disable=invalid-name, protected-access
+_yum = salt.utils.functools.namespaced_function(salt.modules.yumpkg._yum, globals())  # pylint: disable=invalid-name, protected-access
 
 
 def __virtual__():
@@ -31,8 +33,8 @@ def __virtual__():
     Load this module on RedHat-based systems only
     '''
 
-    if not HAS_REQUIRED_LIBS:
-        return (False, "Required library could not be imported")
+    if __IMPORT_ERROR:
+        return (False, __IMPORT_ERROR)
 
     if __grains__.get('os_family', '') == 'RedHat':
         return __virtualname__
@@ -233,7 +235,7 @@ def remove(release):
     # Look for the changes in installed packages
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     # Look for command execution errors
     if out['retcode'] != 0:

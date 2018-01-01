@@ -283,6 +283,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         thin_provision
             Specifies whether the disk should be thin provisioned or not. Default is ``thin_provision: False``.
             .. versionadded:: 2016.3.0
+        eagerly_scrub
+            Specifies whether the disk should be rewrite with zeros during thick provisioning or not.
+            Default is ``eagerly_scrub: False``.
+            .. versionadded:: Oxygen
         controller
             Specify the SCSI controller label to which this disk should be attached.
             This should be specified only when creating both the specified SCSI

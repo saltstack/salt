@@ -8,8 +8,8 @@ import logging
 import subprocess
 
 # Import Salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.data
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
@@ -199,17 +199,17 @@ class Updates(object):
             results['Total'] += 1
 
             # Updates available for download
-            if not salt.utils.is_true(update.IsDownloaded) \
-                    and not salt.utils.is_true(update.IsInstalled):
+            if not salt.utils.data.is_true(update.IsDownloaded) \
+                    and not salt.utils.data.is_true(update.IsInstalled):
                 results['Available'] += 1
 
             # Updates downloaded awaiting install
-            if salt.utils.is_true(update.IsDownloaded) \
-                    and not salt.utils.is_true(update.IsInstalled):
+            if salt.utils.data.is_true(update.IsDownloaded) \
+                    and not salt.utils.data.is_true(update.IsInstalled):
                 results['Downloaded'] += 1
 
             # Updates installed
-            if salt.utils.is_true(update.IsInstalled):
+            if salt.utils.data.is_true(update.IsInstalled):
                 results['Installed'] += 1
 
             # Add Categories and increment total for each one
@@ -437,16 +437,16 @@ class WindowsUpdateAgent(object):
 
         for update in self._updates:
 
-            if salt.utils.is_true(update.IsHidden) and skip_hidden:
+            if salt.utils.data.is_true(update.IsHidden) and skip_hidden:
                 continue
 
-            if salt.utils.is_true(update.IsInstalled) and skip_installed:
+            if salt.utils.data.is_true(update.IsInstalled) and skip_installed:
                 continue
 
-            if salt.utils.is_true(update.IsMandatory) and skip_mandatory:
+            if salt.utils.data.is_true(update.IsMandatory) and skip_mandatory:
                 continue
 
-            if salt.utils.is_true(
+            if salt.utils.data.is_true(
                     update.InstallationBehavior.RebootBehavior) and skip_reboot:
                 continue
 
@@ -587,12 +587,12 @@ class WindowsUpdateAgent(object):
                 bool(update.IsDownloaded)
 
             # Accept EULA
-            if not salt.utils.is_true(update.EulaAccepted):
+            if not salt.utils.data.is_true(update.EulaAccepted):
                 log.debug('Accepting EULA: {0}'.format(update.Title))
                 update.AcceptEula()  # pylint: disable=W0104
 
             # Update already downloaded
-            if not salt.utils.is_true(update.IsDownloaded):
+            if not salt.utils.data.is_true(update.IsDownloaded):
                 log.debug('To Be Downloaded: {0}'.format(uid))
                 log.debug('\tTitle: {0}'.format(update.Title))
                 download_list.Add(update)
@@ -697,7 +697,7 @@ class WindowsUpdateAgent(object):
             ret['Updates'][uid]['AlreadyInstalled'] = bool(update.IsInstalled)
 
             # Make sure the update has actually been installed
-            if not salt.utils.is_true(update.IsInstalled):
+            if not salt.utils.data.is_true(update.IsInstalled):
                 log.debug('To Be Installed: {0}'.format(uid))
                 log.debug('\tTitle: {0}'.format(update.Title))
                 install_list.Add(update)
@@ -817,7 +817,7 @@ class WindowsUpdateAgent(object):
                 not bool(update.IsInstalled)
 
             # Make sure the update has actually been Uninstalled
-            if salt.utils.is_true(update.IsInstalled):
+            if salt.utils.data.is_true(update.IsInstalled):
                 log.debug('To Be Uninstalled: {0}'.format(uid))
                 log.debug('\tTitle: {0}'.format(update.Title))
                 uninstall_list.Add(update)
@@ -1003,4 +1003,4 @@ def needs_reboot():
 
     # Create an AutoUpdate object
     obj_sys = win32com.client.Dispatch('Microsoft.Update.SystemInfo')
-    return salt.utils.is_true(obj_sys.RebootRequired)
+    return salt.utils.data.is_true(obj_sys.RebootRequired)

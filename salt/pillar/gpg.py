@@ -18,7 +18,7 @@ Set ``gpg_keydir`` in your config to adjust the homedir the renderer uses.
 '''
 
 from __future__ import absolute_import
-import salt.utils
+import salt.loader
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):

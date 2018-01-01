@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for analyzing/parsing docstrings
+'''
+
 from __future__ import absolute_import
 import re
 from salt.ext import six

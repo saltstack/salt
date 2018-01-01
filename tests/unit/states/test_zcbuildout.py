@@ -64,14 +64,14 @@ class BuildoutTestCase(Base):
         ret = buildout.installed(b_dir,
                                  python=self.py_st,
                                  onlyif='/bin/false')
-        self.assertEqual(ret['comment'], '\nonlyif execution failed')
+        self.assertEqual(ret['comment'], '\nonlyif condition is false')
         self.assertEqual(ret['result'], True)
         self.assertTrue('/b' in ret['name'])
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir,
                                  python=self.py_st,
                                  unless='/bin/true')
-        self.assertEqual(ret['comment'], '\nunless execution succeeded')
+        self.assertEqual(ret['comment'], '\nunless condition is true')
         self.assertEqual(ret['result'], True)
         self.assertTrue('/b' in ret['name'])
         ret = buildout.installed(b_dir, python=self.py_st)

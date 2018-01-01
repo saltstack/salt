@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from datetime import datetime
 import os
 import json
@@ -31,7 +31,6 @@ from tests.support.mock import (
 import yaml
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 import salt.utils.platform
 import salt.states.file as filestate
@@ -56,7 +55,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 },
                 '__opts__': {'test': False, 'cachedir': ''},
                 '__instance_id__': '',
-                '__low__': {}
+                '__low__': {},
+                '__utils__': {},
             }
         }
 
@@ -577,7 +577,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                              'file.copy': mock_cp,
                              'file.manage_file': mock_ex,
                              'cmd.run_all': mock_cmd_fail}):
-                comt = ('Must provide name to file.managed')
+                comt = ('Destination file name is required')
                 ret.update({'comment': comt, 'name': '', 'pchanges': {}})
                 self.assertDictEqual(filestate.managed(''), ret)
 
@@ -743,7 +743,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_check = MagicMock(return_value=(
             None,
             'The directory "{0}" will be changed'.format(name),
-            {'directory': 'new'}))
+            {name: {'directory': 'new'}}))
         mock_error = CommandExecutionError
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -801,20 +801,20 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                                  group=group),
                                              ret)
 
-                with patch.object(os.path, 'isfile', mock_f):
+                with patch.object(os.path, 'isdir', mock_f):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         if salt.utils.platform.is_windows():
                             comt = 'The directory "{0}" will be changed' \
                                    ''.format(name)
-                            p_chg = {'directory': 'new'}
                         else:
                             comt = ('The following files will be changed:\n{0}:'
                                     ' directory - new\n'.format(name))
-                            p_chg = {'/etc/grub.conf': {'directory': 'new'}}
+                        p_chg = {'/etc/grub.conf': {'directory': 'new'}}
                         ret.update({
                             'comment': comt,
                             'result': None,
-                            'pchanges': p_chg
+                            'pchanges': p_chg,
+                            'changes': {}
                         })
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
@@ -825,7 +825,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         with patch.object(os.path, 'isdir', mock_f):
                             comt = ('No directory to create {0} in'
                                     .format(name))
-                            ret.update({'comment': comt, 'result': False})
+                            ret.update({'comment': comt, 'result': False, 'changes': {}})
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user, group=group),
                                                  ret)
@@ -840,6 +840,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                  ret)
 
                         recurse = ['ignore_files', 'ignore_dirs']
+                        ret.update({'comment': 'Must not specify "recurse" '
+                                               'options "ignore_files" and '
+                                               '"ignore_dirs" at the same '
+                                               'time.',
+                                    'pchanges': {}})
                         with patch.object(os.path, 'isdir', mock_t):
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user,
@@ -1181,7 +1186,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     ret.update({'name': name})
                     with patch.object(salt.utils.files, 'fopen',
                                       MagicMock(mock_open(read_data=''))):
-                        with patch.object(salt.utils, 'istextfile', mock_f):
+                        with patch.dict(filestate.__utils__, {'files.is_text': mock_f}):
                             with patch.dict(filestate.__opts__, {'test': True}):
                                 change = {'diff': 'Replace binary file'}
                                 comt = ('File {0} is set to be updated'

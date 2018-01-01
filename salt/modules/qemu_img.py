@@ -13,7 +13,6 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
 import salt.utils.path
 
 

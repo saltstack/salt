@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 import os.path
 import logging
-import salt.utils
 import salt.utils.path
 
 log = logging.getLogger(__name__)

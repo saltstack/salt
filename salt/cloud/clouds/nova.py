@@ -223,7 +223,7 @@ except ImportError as exc:
 # Import Salt Cloud Libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
 import salt.config as config
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,

@@ -297,10 +297,10 @@ from .saltnado import _check_cors_origin
 
 import tornado.gen
 
-import salt.utils
+import salt.utils.json
 import salt.netapi
 
-json = salt.utils.import_json()
+json = salt.utils.json.import_json()
 
 import logging
 logger = logging.getLogger()

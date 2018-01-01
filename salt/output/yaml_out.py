@@ -17,7 +17,7 @@ Example output::
           - Hello
           - World
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import third party libs
 import logging
@@ -56,5 +56,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
         return yaml.dump(data, **params)
     except Exception as exc:
         import pprint
-        log.exception('Exception {0} encountered when trying to serialize {1}'.format(
-            exc, pprint.pformat(data)))
+        log.exception(
+            'Exception %s encountered when trying to serialize %s',
+            exc, pprint.pformat(data)
+        )

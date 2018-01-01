@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-
+'''
+A decorator which returns a function with the same signature of the function
+which is being wrapped.
+'''
 # Import Python libs
 from __future__ import absolute_import
 import inspect

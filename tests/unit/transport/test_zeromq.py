@@ -26,7 +26,7 @@ import tornado.gen
 # Import Salt libs
 import salt.config
 from salt.ext import six
-import salt.utils
+import salt.utils.process
 import salt.transport.server
 import salt.transport.client
 import salt.exceptions

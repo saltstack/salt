@@ -101,6 +101,41 @@ class EC2Test(ShellCase):
         except AssertionError:
             raise
 
+    def test_instance_rename(self):
+        '''
+        Tests creating and renaming an instance on EC2 (classic)
+        '''
+        # create the instance
+        rename = INSTANCE_NAME + '-rename'
+        instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(INSTANCE_NAME), timeout=500)
+        ret_str = '{0}:'.format(INSTANCE_NAME)
+
+        # check if instance returned
+        try:
+            self.assertIn(ret_str, instance)
+        except AssertionError:
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            raise
+
+        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(INSTANCE_NAME, rename), timeout=500)
+
+        check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(rename), [rename])
+        exp_results = ['        {0}:'.format(rename), '            size:',
+                       '            architecture:']
+        try:
+            for result in exp_results:
+                self.assertIn(result, check_rename[0])
+        except AssertionError:
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            raise
+
+        # delete the instance
+        delete = self.run_cloud('-d {0} --assume-yes'.format(rename), timeout=500)
+        ret_str = '                    shutting-down'
+
+        # check if deletion was performed appropriately
+        self.assertIn(ret_str, delete)
+
     def tearDown(self):
         '''
         Clean up after tests

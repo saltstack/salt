@@ -25,6 +25,7 @@ import os
 # Import salt libs
 import salt.utils.platform
 import salt.utils.powershell
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
 _DEFAULT_CONTEXT = 'LocalMachine'
@@ -46,7 +47,7 @@ def __virtual__():
     if not salt.utils.platform.is_windows():
         return False, 'Only available on Windows Systems'
 
-    if salt.utils.version_cmp(__grains__['osversion'], '6.2.9200') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '6.2.9200') == -1:
         return False, 'Only available on Windows 8+ / Windows Server 2012 +'
 
     if not __salt__['cmd.shell_info']('powershell')['installed']:
@@ -170,7 +171,11 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
             if key not in blacklist_keys:
                 cert_info[key.lower()] = item[key]
 
-        cert_info['dnsnames'] = [name.get('Unicode') for name in item.get('DnsNameList', {})]
+        names = item.get('DnsNameList', None)
+        if isinstance(names, list):
+            cert_info['dnsnames'] = [name.get('Unicode') for name in names]
+        else:
+            cert_info['dnsnames'] = []
         ret[item['Thumbprint']] = cert_info
     return ret
 

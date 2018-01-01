@@ -126,7 +126,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return postgres --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
@@ -142,6 +142,7 @@ import salt.returners
 import salt.exceptions
 
 # Import third party libs
+from salt.ext import six
 try:
     import psycopg2
     HAS_POSTGRES = True
@@ -209,7 +210,7 @@ def _get_serv(ret=None, commit=False):
         yield cursor
     except psycopg2.DatabaseError as err:
         error = err.args
-        sys.stderr.write(str(error))
+        sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
         raise err
     else:
@@ -381,4 +382,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

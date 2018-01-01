@@ -175,11 +175,21 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests zfs list
         '''
-        res = OrderedDict([('myzpool', {'avail': '79.9M', 'mountpoint': '/myzpool', 'used': '113K', 'refer': '19K'})])
-        ret = {'pid': 31817, 'retcode': 0, 'stderr': '', 'stdout': 'myzpool\t113K\t79.9M\t19K\t/myzpool'}
+        res = OrderedDict([('myzpool', {'avail': '954G', 'mountpoint': '/myzpool', 'used': '844G', 'refer': '96K'})])
+        ret = {'pid': 31817, 'retcode': 0, 'stderr': '', 'stdout': 'myzpool\t844G\t954G\t96K\t/myzpool'}
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.list_('myzpool'), res)
+
+    def test_list_parsable_success(self):
+        '''
+        Tests zfs list with parsable output
+        '''
+        res = OrderedDict([('myzpool', {'avail': 1024795238400, 'mountpoint': '/myzpool', 'used': 905792561152, 'refer': 98304})])
+        ret = {'pid': 31817, 'retcode': 0, 'stderr': '', 'stdout': 'myzpool\t905792561152\t1024795238400\t98304\t/myzpool'}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.list_('myzpool', parsable=True), res)
 
     def test_mount_success(self):
         '''
@@ -461,8 +471,18 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests zfs get success
         '''
-        res = OrderedDict([('myzpool', {'compression': {'value': 'off'}})])
-        ret = {'pid': 562, 'retcode': 0, 'stderr': '', 'stdout': 'myzpool\tcompression\toff'}
+        res = OrderedDict([('myzpool', {'used': {'value': '844G'}})])
+        ret = {'pid': 562, 'retcode': 0, 'stderr': '', 'stdout': 'myzpool\tused\t844G'}
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertEqual(zfs.get('myzpool', properties='compression', fields='value'), res)
+            self.assertEqual(zfs.get('myzpool', properties='used', fields='value'), res)
+
+    def test_get_parsable_success(self):
+        '''
+        Tests zfs get with parsable output
+        '''
+        res = OrderedDict([('myzpool', {'used': {'value': 905792561152}})])
+        ret = {'pid': 562, 'retcode': 0, 'stderr': '', 'stdout': 'myzpool\tused\t905792561152'}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.get('myzpool', properties='used', fields='value', parsable=True), res)

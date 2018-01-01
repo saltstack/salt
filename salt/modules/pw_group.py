@@ -14,8 +14,8 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.data
 
 
 log = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def add(name, gid=None, **kwargs):
         salt '*' group.add foo 3456
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    if salt.utils.is_true(kwargs.pop('system', False)):
+    if salt.utils.data.is_true(kwargs.pop('system', False)):
         log.warning('pw_group module does not support the \'system\' argument')
     if kwargs:
         log.warning('Invalid kwargs passed to group.add')

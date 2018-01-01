@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -38,7 +38,7 @@ class NaclTestCase(TestCase, LoaderModuleMockMixin):
         secret_list = [secret]
         crypted_list = [crypted]
 
-        with patch.dict(nacl.__salt__, {'nacl.dec_pub': MagicMock(return_value=secret)}):
+        with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=secret)}):
             self.assertEqual(nacl._decrypt_object(secret), secret)
             self.assertEqual(nacl._decrypt_object(crypted), secret)
             self.assertEqual(nacl._decrypt_object(crypted_map), secret_map)
@@ -51,5 +51,5 @@ class NaclTestCase(TestCase, LoaderModuleMockMixin):
         '''
         secret = 'Use more salt.'
         crypted = 'NACL[MRN3cc+fmdxyQbz6WMF+jq1hKdU5X5BBI7OjK+atvHo1ll+w1gZ7XyWtZVfq9gK9rQaMfkDxmidJKwE0Mw==]'
-        with patch.dict(nacl.__salt__, {'nacl.dec_pub': MagicMock(return_value=secret)}):
+        with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=secret)}):
             self.assertEqual(nacl.render(crypted), secret)

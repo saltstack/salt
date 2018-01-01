@@ -110,7 +110,7 @@ def _conf(family='ipv4'):
         # SuSE does not seem to use separate files for IPv4 and IPv6
         return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
     elif __grains__['os_family'] == 'Void':
-        if family == 'ipv6':
+        if family == 'ipv4':
             return '/etc/iptables/iptables.rules'
         else:
             return '/etc/iptables/ip6tables.rules'
@@ -1463,6 +1463,8 @@ def _parser():
     add_arg('--or-mark', dest='or-mark', action='append')
     add_arg('--xor-mark', dest='xor-mark', action='append')
     add_arg('--set-mark', dest='set-mark', action='append')
+    add_arg('--nfmask', dest='nfmask', action='append')
+    add_arg('--ctmask', dest='ctmask', action='append')
     ## CONNSECMARK
     add_arg('--save', dest='save', action='append')
     add_arg('--restore', dest='restore', action='append')

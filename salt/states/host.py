@@ -131,7 +131,7 @@ def absent(name, ip):  # pylint: disable=C0103
             comments.append('Host {0} ({1}) already absent'.format(name, _ip))
         else:
             if __opts__['test']:
-                comments.append('Host {0} ({1} needs to be removed'.format(name, _ip))
+                comments.append('Host {0} ({1}) needs to be removed'.format(name, _ip))
             else:
                 if __salt__['hosts.rm_host'](_ip, name):
                     ret['changes'] = {'host': name}

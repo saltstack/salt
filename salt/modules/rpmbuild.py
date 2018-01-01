@@ -24,9 +24,9 @@ import functools
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
-import salt.utils  # Can be removed when chugid_and_umask is moved
 import salt.utils.files
 import salt.utils.path
+import salt.utils.user
 import salt.utils.vt
 
 # Import 3rd-party libs
@@ -487,7 +487,7 @@ def make_repo(repodir,
                 times_looped = 0
                 error_msg = 'Failed to sign file {0}'.format(abs_file)
                 cmd = 'rpm {0} --addsign {1}'.format(define_gpg_name, abs_file)
-                preexec_fn = functools.partial(salt.utils.chugid_and_umask, runas, None)
+                preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
                 try:
                     stdout, stderr = None, None
                     proc = salt.utils.vt.Terminal(

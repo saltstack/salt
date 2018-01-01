@@ -12,7 +12,6 @@ import hmac
 # Import Salt libs
 import salt.exceptions
 from salt.ext import six
-import salt.utils
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.stringutils

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-This module is Alpha
-
 Module for working with Windows PowerShell DSC (Desired State Configuration)
+
+This module is Alpha
 
 This module applies DSC Configurations in the form of PowerShell scripts or
 MOF (Managed Object Format) schema files.

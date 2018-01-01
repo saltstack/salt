@@ -709,7 +709,7 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
     # to keep this function around and cannot officially remove it. Progress of
     # the new function will be tracked in https://github.com/saltstack/salt/issues/35523
     salt.utils.versions.warn_until(
-        'Oxygen',
+        'Fluorine',
         'This state is unsuitable for setting parameters that appear more '
         'than once in an LXC config file, or parameters which must appear in '
         'a certain order (such as when configuring more than one network '

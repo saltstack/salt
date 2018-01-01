@@ -90,7 +90,7 @@ def get_salt_vars():
             __opts__,
             __grains__,
             __opts__.get('id'),
-            __opts__.get('environment'),
+            __opts__.get('saltenv'),
         ).compile_pillar()
     else:
         __pillar__ = {}

@@ -10,7 +10,7 @@ import sys
 import time
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
 import salt.key
 
 # Import third party libs
@@ -55,7 +55,7 @@ def list_():
     for dir_ in key_dirs:
         ret[os.path.basename(dir_)] = []
         try:
-            for fn_ in salt.utils.isorted(os.listdir(dir_)):
+            for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(dir_)):
                 if not fn_.startswith('.'):
                     if os.path.isfile(os.path.join(dir_, fn_)):
                         ret[os.path.basename(dir_)].append(fn_)

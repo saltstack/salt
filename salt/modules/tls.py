@@ -551,19 +551,19 @@ def _check_onlyif_unless(onlyif, unless):
     if onlyif is not None:
         if not isinstance(onlyif, six.string_types):
             if not onlyif:
-                ret = {'comment': 'onlyif execution failed', 'result': True}
+                ret = {'comment': 'onlyif condition is false', 'result': True}
         elif isinstance(onlyif, six.string_types):
             if retcode(onlyif) != 0:
-                ret = {'comment': 'onlyif execution failed', 'result': True}
-                log.debug('onlyif execution failed')
+                ret = {'comment': 'onlyif condition is false', 'result': True}
+                log.debug('onlyif condition is false')
     if unless is not None:
         if not isinstance(unless, six.string_types):
             if unless:
-                ret = {'comment': 'unless execution succeeded', 'result': True}
+                ret = {'comment': 'unless condition is true', 'result': True}
         elif isinstance(unless, six.string_types):
             if retcode(unless) == 0:
-                ret = {'comment': 'unless execution succeeded', 'result': True}
-                log.debug('unless execution succeeded')
+                ret = {'comment': 'unless condition is true', 'result': True}
+                log.debug('unless condition is true')
     return ret
 
 

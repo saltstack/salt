@@ -13,7 +13,6 @@ import traceback
 # Import salt libs
 import salt.crypt
 import salt.payload
-import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.network
@@ -204,7 +203,7 @@ def send(func, *args, **kwargs):
     if mine_func not in __salt__:
         return False
     data = {}
-    arg_data = salt.utils.arg_lookup(__salt__[mine_func])
+    arg_data = salt.utils.args.arg_lookup(__salt__[mine_func])
     func_data = copy.deepcopy(kwargs)
     for ind, _ in enumerate(arg_data.get('args', [])):
         try:
@@ -212,9 +211,10 @@ def send(func, *args, **kwargs):
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    f_call = salt.utils.format_call(__salt__[mine_func],
-                                    func_data,
-                                    expected_extra_kws=MINE_INTERNAL_KEYWORDS)
+    f_call = salt.utils.args.format_call(
+        __salt__[mine_func],
+        func_data,
+        expected_extra_kws=MINE_INTERNAL_KEYWORDS)
     for arg in args:
         if arg not in f_call['args']:
             f_call['args'].append(arg)

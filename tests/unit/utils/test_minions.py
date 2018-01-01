@@ -57,7 +57,9 @@ class CkMinionsTestCase(TestCase):
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'wheel')
         self.assertFalse(ret)
         ret = self.ckminions.spec_check(auth_list, 'testarg', {}, 'runner')
-        self.assertFalse(ret)
+        mock_ret = {'error': {'name': 'SaltInvocationError',
+                              'message': 'A command invocation error occurred: Check syntax.'}}
+        self.assertDictEqual(mock_ret, ret)
 
         # Test spec in plural form
         auth_list = ['@runners']

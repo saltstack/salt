@@ -9,7 +9,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, call, mock_open, NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # salt libs
-import salt.utils
 import salt.utils.files
 from salt import crypt
 

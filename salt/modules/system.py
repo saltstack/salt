@@ -181,7 +181,10 @@ def has_settable_hwclock():
     salt '*' system.has_settable_hwclock
     '''
     if salt.utils.path.which_bin(['hwclock']) is not None:
-        res = __salt__['cmd.run_all'](['hwclock', '--test', '--systohc'], python_shell=False)
+        res = __salt__['cmd.run_all'](
+            ['hwclock', '--test', '--systohc'], python_shell=False,
+            output_loglevel='quiet', ignore_retcode=True
+        )
         return res['retcode'] == 0
     return False
 
@@ -593,7 +596,7 @@ def set_computer_name(hostname):
 
     .. code-block:: bash
 
-        salt '*' system.set_conputer_name master.saltstack.com
+        salt '*' system.set_computer_name master.saltstack.com
     '''
     return __salt__['network.mod_hostname'](hostname)
 

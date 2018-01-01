@@ -83,7 +83,6 @@ import json
 from salt.ext import six
 import salt.utils.boto3
 import salt.utils.compat
-import salt.utils
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 

@@ -10,7 +10,6 @@ import subprocess
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
-import salt.utils
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)

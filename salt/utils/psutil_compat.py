@@ -26,7 +26,7 @@ else:
     # Psuedo "from psutil import *"
     _globals = globals()
     for attr in psutil.__all__:
-        _temp = __import__('psutil', globals(), locals(), [attr], -1)
+        _temp = __import__('psutil', globals(), locals(), [attr], -1 if six.PY2 else 0)
         try:
             _globals[attr] = getattr(_temp, attr)
         except AttributeError:

@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+State to work with sysrc
+
+'''
 
 # Import Python libs
 from __future__ import absolute_import

@@ -18,7 +18,6 @@ import shutil
 import tempfile
 
 from salt.exceptions import SaltCacheError
-import salt.utils
 import salt.utils.atomicfile
 import salt.utils.files
 

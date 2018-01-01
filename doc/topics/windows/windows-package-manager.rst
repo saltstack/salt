@@ -481,11 +481,17 @@ Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file
 :param bool allusers: This parameter is specific to `.msi` installations. It
     tells `msiexec` to install the software for all users. The default is True.
 
-:param bool cache_dir: If true, the entire directory where the installer resides
-    will be recursively cached. This is useful for installers that depend on
-    other files in the same directory for installation.
+:param bool cache_dir: If true when installer URL begins with salt://, the
+    entire directory where the installer resides will be recursively cached.
+    This is useful for installers that depend on other files in the same
+    directory for installation.
 
-.. note:: Only applies to salt: installer URLs.
+:param str cache_file:
+    When installer URL begins with salt://, this indicates single file to copy
+    down for use with the installer. Copied to the same location as the
+    installer. Use this over ``cache_dir`` if there are many files in the
+    directory and you only need a specific file and don't want to cache
+    additional files that may reside in the installer directory.
 
 Here's an example for a software package that has dependent files:
 

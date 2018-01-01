@@ -103,72 +103,86 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}):
-            pkgs = yumpkg.list_pkgs(attr=['arch', 'install_date_time_t'])
+            pkgs = yumpkg.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             for pkg_name, pkg_attr in {
                 'python-urlgrabber': {
-                    'version': '3.10-8.el7',
+                    'version': '3.10',
+                    'release': '8.el7',
                     'arch': 'noarch',
                     'install_date_time_t': 1487838471,
                 },
                 'alsa-lib': {
-                    'version': '1.1.1-1.el7',
+                    'version': '1.1.1',
+                    'release': '1.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838475,
                 },
                 'gnupg2': {
-                    'version': '2.0.22-4.el7',
+                    'version': '2.0.22',
+                    'release': '4.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838477,
                 },
                 'rpm-python': {
-                    'version': '4.11.3-21.el7',
+                    'version': '4.11.3',
+                    'release': '21.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838477,
                 },
                 'pygpgme': {
-                    'version': '0.3-9.el7',
+                    'version': '0.3',
+                    'release': '9.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838478,
                 },
                 'yum': {
-                    'version': '3.4.3-150.el7.centos',
+                    'version': '3.4.3',
+                    'release': '150.el7.centos',
                     'arch': 'noarch',
                     'install_date_time_t': 1487838479,
                 },
                 'lzo': {
-                    'version': '2.06-8.el7',
+                    'version': '2.06',
+                    'release': '8.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838479,
                 },
                 'qrencode-libs': {
-                    'version': '3.4.1-3.el7',
+                    'version': '3.4.1',
+                    'release': '3.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838480,
                 },
                 'ustr': {
-                    'version': '1.0.4-16.el7',
+                    'version': '1.0.4',
+                    'release': '16.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838480,
                 },
                 'shadow-utils': {
-                    'version': '2:4.1.5.1-24.el7',
+                    'epoch': '2',
+                    'version': '4.1.5.1',
+                    'release': '24.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838481,
                 },
                 'util-linux': {
-                    'version': '2.23.2-33.el7',
+                    'version': '2.23.2',
+                    'release': '33.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838484,
                 },
                 'openssh': {
-                    'version': '6.6.1p1-33.el7_3',
+                    'version': '6.6.1p1',
+                    'release': '33.el7_3',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838485,
                 },
                 'virt-what': {
-                    'version': '1.13-8.el7',
-                    'arch': 'x86_64',
+                    'version': '1.13',
+                    'release': '8.el7',
                     'install_date_time_t': 1487838486,
+                    'arch': 'x86_64',
                 }}.items():
                 self.assertTrue(pkgs.get(pkg_name))
                 self.assertEqual(pkgs[pkg_name], [pkg_attr])

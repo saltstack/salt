@@ -45,6 +45,7 @@ Etcd profile configuration can be overriden using following arguments: ``host``,
 ``port``, ``username``, ``password``, ``ca``, ``client_key`` and ``client_cert``.
 
 .. code-block:: yaml
+
     my-value:
       etcd.set:
         - name: /path/to/key

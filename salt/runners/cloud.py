@@ -6,7 +6,7 @@ The Salt Cloud Runner
 This runner wraps the functionality of salt cloud making salt cloud routines
 available to all internal apis via the runner system
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -115,20 +115,24 @@ def profile(prof=None, instances=None, opts=None, **kwargs):
     return info
 
 
-def map_run(path=None, **kwargs):
+def map_run(path=None, opts=None, **kwargs):
     '''
     Execute a salt cloud map file
     '''
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.map_run(path, **salt.utils.args.clean_kwargs(**kwargs))
     return info
 
 
-def destroy(instances):
+def destroy(instances, opts=None):
     '''
     Destroy the named vm(s)
     '''
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.destroy(instances)
     return info
 
@@ -138,6 +142,7 @@ def action(func=None,
            instances=None,
            provider=None,
            instance=None,
+           opts=None,
            **kwargs):
     '''
     Execute a single action on the given map/provider/instance
@@ -150,6 +155,8 @@ def action(func=None,
     '''
     info = {}
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     try:
         info = client.action(
             func,

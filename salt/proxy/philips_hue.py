@@ -21,7 +21,7 @@ Philips HUE lamps module for proxy.
 '''
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import salt.ext.six.moves.http_client as http_client
 
 # Import python libs
@@ -29,6 +29,7 @@ import logging
 import time
 import json
 from salt.exceptions import (CommandExecutionError, MinionError)
+from salt.ext import six
 
 
 __proxyenabled__ = ['philips_hue']
@@ -188,8 +189,8 @@ def call_lights(*args, **kwargs):
     res = dict()
     lights = _get_lights()
     for dev_id in 'id' in kwargs and _get_devices(kwargs) or sorted(lights.keys()):
-        if lights.get(str(dev_id)):
-            res[dev_id] = lights[str(dev_id)]
+        if lights.get(six.text_type(dev_id)):
+            res[dev_id] = lights[six.text_type(dev_id)]
 
     return res or False
 
@@ -221,7 +222,7 @@ def call_switch(*args, **kwargs):
             state = kwargs['on'] and Const.LAMP_ON or Const.LAMP_OFF
         else:
             # Invert the current state
-            state = devices[str(dev_id)]['state']['on'] and Const.LAMP_OFF or Const.LAMP_ON
+            state = devices[six.text_type(dev_id)]['state']['on'] and Const.LAMP_OFF or Const.LAMP_ON
         out[dev_id] = _set(dev_id, state)
 
     return out
@@ -247,7 +248,7 @@ def call_blink(*args, **kwargs):
     pause = kwargs.get('pause', 0)
     res = dict()
     for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
-        state = devices[str(dev_id)]['state']['on']
+        state = devices[six.text_type(dev_id)]['state']['on']
         _set(dev_id, state and Const.LAMP_OFF or Const.LAMP_ON)
         if pause:
             time.sleep(pause)

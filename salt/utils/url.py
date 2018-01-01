@@ -10,7 +10,7 @@ import sys
 
 # Import salt libs
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse  # pylint: disable=import-error,no-name-in-module
-import salt.utils
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
 from salt.utils.locales import sdecode
@@ -27,12 +27,7 @@ def parse(url):
     resource = url.split('salt://', 1)[-1]
 
     if '?env=' in resource:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the salt:// URL.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         path, saltenv = resource.split('?env=', 1)[0], None
     elif '?saltenv=' in resource:
         path, saltenv = resource.split('?saltenv=', 1)
@@ -40,7 +35,7 @@ def parse(url):
         path, saltenv = resource, None
 
     if salt.utils.platform.is_windows():
-        path = salt.utils.sanitize_win_path_string(path)
+        path = salt.utils.path.sanitize_win_path(path)
 
     return path, saltenv
 
@@ -50,12 +45,12 @@ def create(path, saltenv=None):
     join `path` and `saltenv` into a 'salt://' URL.
     '''
     if salt.utils.platform.is_windows():
-        path = salt.utils.sanitize_win_path_string(path)
+        path = salt.utils.path.sanitize_win_path(path)
     path = sdecode(path)
 
-    query = u'saltenv={0}'.format(saltenv) if saltenv else ''
+    query = 'saltenv={0}'.format(saltenv) if saltenv else ''
     url = sdecode(urlunparse(('file', '', path, '', query, '')))
-    return u'salt://{0}'.format(url[len('file:///'):])
+    return 'salt://{0}'.format(url[len('file:///'):])
 
 
 def is_escaped(url):
@@ -87,13 +82,13 @@ def escape(url):
         if url.startswith('|'):
             return url
         else:
-            return u'|{0}'.format(url)
+            return '|{0}'.format(url)
     elif scheme == 'salt':
         path, saltenv = parse(url)
         if path.startswith('|'):
             return create(path, saltenv)
         else:
-            return create(u'|{0}'.format(path), saltenv)
+            return create('|{0}'.format(path), saltenv)
     else:
         return url
 

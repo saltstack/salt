@@ -7,7 +7,7 @@ Unit tests for the Default Job Cache (local_cache).
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import logging
@@ -97,7 +97,10 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         local_cache.clean_old_jobs()
 
         # Get the name of the JID directory that was created to test against
-        jid_dir_name = jid_dir.rpartition('/')[2]
+        if salt.utils.platform.is_windows():
+            jid_dir_name = jid_dir.rpartition('\\')[2]
+        else:
+            jid_dir_name = jid_dir.rpartition('/')[2]
 
         # Assert the JID directory is still present to be cleaned after keep_jobs interval
         self.assertEqual([jid_dir_name], os.listdir(TMP_JID_DIR))
@@ -214,7 +217,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
         are either present or removed
         '''
         for content in contents:
-            log.debug('CONTENT {0}'.format(content))
+            log.debug('CONTENT %s', content)
             if status == 'present':
                 check_job_dir = os.path.exists(content)
             elif status == 'removed':

@@ -76,7 +76,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return slack --return_kwargs '{"channel": "#random"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import yaml
@@ -170,7 +170,7 @@ def _post_message(channel,
                                     header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
                                     data=_urlencode(parameters))
 
-    log.debug('result {0}'.format(result))
+    log.debug('Slack message post result: %s', result)
     if result:
         return True
     else:

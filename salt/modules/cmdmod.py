@@ -5,7 +5,7 @@ A module for shelling out.
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import functools
@@ -24,8 +24,8 @@ import re
 import tempfile
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -33,6 +33,7 @@ import salt.utils.powershell
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.timed_subprocess
+import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
 import salt.grains.extra
@@ -148,7 +149,7 @@ def _render_cmd(cmd, cwd, template, saltenv='base', pillarenv=None, pillar_overr
         # write out path to temp file
         tmp_path_fn = salt.utils.files.mkstemp()
         with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
-            fp_.write(contents)
+            fp_.write(salt.utils.stringutils.to_str(contents))
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
@@ -170,41 +171,30 @@ def _render_cmd(cmd, cwd, template, saltenv='base', pillarenv=None, pillar_overr
     return (cmd, cwd)
 
 
-def _check_loglevel(level='info', quiet=False):
+def _check_loglevel(level='info'):
     '''
     Retrieve the level code for use in logging.Logger.log().
     '''
-    def _bad_level(level):
-        log.error(
-            'Invalid output_loglevel \'{0}\'. Valid levels are: {1}. Falling '
-            'back to \'info\'.'
-            .format(
-                level,
-                ', '.join(
-                    sorted(LOG_LEVELS, reverse=True)
-                )
-            )
-        )
-        return LOG_LEVELS['info']
-
-    if salt.utils.is_true(quiet) or str(level).lower() == 'quiet':
-        return None
-
     try:
         level = level.lower()
-        if level not in LOG_LEVELS:
-            return _bad_level(level)
-    except AttributeError:
-        return _bad_level(level)
-
-    return LOG_LEVELS[level]
+        if level == 'quiet':
+            return None
+        else:
+            return LOG_LEVELS[level]
+    except (AttributeError, KeyError):
+        log.error(
+            'Invalid output_loglevel \'%s\'. Valid levels are: %s. Falling '
+            'back to \'info\'.',
+            level, ', '.join(sorted(LOG_LEVELS, reverse=True))
+        )
+        return LOG_LEVELS['info']
 
 
 def _parse_env(env):
     if not env:
         env = {}
     if isinstance(env, list):
-        env = salt.utils.repack_dictlist(env)
+        env = salt.utils.data.repack_dictlist(env)
     if not isinstance(env, dict):
         env = {}
     return env
@@ -218,7 +208,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
+        __opts__['saltenv'],
         pillar_override=pillar_override,
         pillarenv=pillarenv
     )
@@ -233,7 +223,7 @@ def _check_avail(cmd):
     Check to see if the given command can be run
     '''
     if isinstance(cmd, list):
-        cmd = ' '.join([str(x) if not isinstance(x, six.string_types) else x
+        cmd = ' '.join([six.text_type(x) if not isinstance(x, six.string_types) else x
                         for x in cmd])
     bret = True
     wret = False
@@ -268,6 +258,7 @@ def _run(cmd,
          python_shell=False,
          env=None,
          clean_env=False,
+         prepend_path=None,
          rstrip=True,
          template=None,
          umask=None,
@@ -381,7 +372,7 @@ def _run(cmd,
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
         msg = (
-            u'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
+            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
                 '\'' if not isinstance(cmd, list) else '',
                 _get_stripped(cmd),
                 'as user \'{0}\' '.format(runas) if runas else '',
@@ -401,10 +392,8 @@ def _run(cmd,
             msg = 'missing salt/utils/win_runas.py'
             raise CommandExecutionError(msg)
 
-        if not isinstance(cmd, list):
-            cmd = salt.utils.args.shlex_split(cmd, posix=False)
-
-        cmd = ' '.join(cmd)
+        if isinstance(cmd, (list, tuple)):
+            cmd = ' '.join(cmd)
 
         return win_runas(cmd, runas, password, cwd)
 
@@ -444,7 +433,7 @@ def _run(cmd,
                 import itertools
                 env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             elif six.PY3:
-                if isinstance(env_encoded, str):
+                if isinstance(env_encoded, str):  # future lint: disable=blacklisted-function
                     env_encoded = env_encoded.encode(__salt_system_encoding__)
                 env_runas = dict(list(zip(*[iter(env_encoded.split(b'\0'))]*2)))
 
@@ -493,13 +482,16 @@ def _run(cmd,
         run_env = os.environ.copy()
         run_env.update(env)
 
+    if prepend_path:
+        run_env['PATH'] = ':'.join((prepend_path, run_env['PATH']))
+
     if python_shell is None:
         python_shell = False
 
     kwargs = {'cwd': cwd,
               'shell': python_shell,
               'env': run_env,
-              'stdin': str(stdin) if stdin is not None else stdin,
+              'stdin': six.text_type(stdin) if stdin is not None else stdin,
               'stdout': stdout,
               'stderr': stderr,
               'with_communicate': with_communicate,
@@ -508,7 +500,7 @@ def _run(cmd,
               }
 
     if umask is not None:
-        _umask = str(umask).lstrip('0')
+        _umask = six.text_type(umask).lstrip('0')
 
         if _umask == '':
             msg = 'Zero umask is not allowed.'
@@ -524,7 +516,7 @@ def _run(cmd,
 
     if runas or umask:
         kwargs['preexec_fn'] = functools.partial(
-            salt.utils.chugid_and_umask,
+            salt.utils.user.chugid_and_umask,
             runas,
             _umask)
 
@@ -541,11 +533,11 @@ def _run(cmd,
             .format(cwd)
         )
 
-    if python_shell is not True and not isinstance(cmd, list):
-        posix = True
-        if salt.utils.platform.is_windows():
-            posix = False
-        cmd = salt.utils.args.shlex_split(cmd, posix=posix)
+    if python_shell is not True \
+            and not salt.utils.platform.is_windows() \
+            and not isinstance(cmd, list):
+        cmd = salt.utils.args.shlex_split(cmd)
+
     if not use_vt:
         # This is where the magic happens
         try:
@@ -574,7 +566,7 @@ def _run(cmd,
         try:
             proc.run()
         except TimedProcTimeoutError as exc:
-            ret['stdout'] = str(exc)
+            ret['stdout'] = six.text_type(exc)
             ret['stderr'] = ''
             ret['retcode'] = None
             ret['pid'] = proc.process.pid
@@ -585,12 +577,18 @@ def _run(cmd,
         try:
             out = proc.stdout.decode(__salt_system_encoding__)
         except AttributeError:
-            out = u''
+            out = ''
+        except UnicodeDecodeError:
+            log.error('UnicodeDecodeError while decoding output of cmd {0}'.format(cmd))
+            out = proc.stdout.decode(__salt_system_encoding__, 'replace')
 
         try:
             err = proc.stderr.decode(__salt_system_encoding__)
         except AttributeError:
-            err = u''
+            err = ''
+        except UnicodeDecodeError:
+            log.error('UnicodeDecodeError while decoding error of cmd {0}'.format(cmd))
+            err = proc.stderr.decode(__salt_system_encoding__, 'replace')
 
         if rstrip:
             if out is not None:
@@ -774,6 +772,7 @@ def run(cmd,
         umask=None,
         output_loglevel='debug',
         log_callback=None,
+        hide_output=False,
         timeout=None,
         reset_system_locale=True,
         ignore_retcode=False,
@@ -783,6 +782,7 @@ def run(cmd,
         password=None,
         encoded_cmd=False,
         raise_err=False,
+        prepend_path=None,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -865,6 +865,11 @@ def run(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -875,8 +880,20 @@ def run(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -886,9 +903,8 @@ def run(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
 
-    :param bool raise_err: Specifies whether to raise a CommandExecutionError.
-      If False, the error will be logged, but no exception will be raised.
-      Default is False.
+    :param bool raise_err: If ``True`` and the command has a nonzero exit code,
+    a CommandExecutionError exception will be raised.
 
     .. warning::
         This function does not process commands through a shell
@@ -950,6 +966,7 @@ def run(cmd,
                stderr=subprocess.STDOUT,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -980,9 +997,11 @@ def run(cmd,
             )
             log.error(log_callback(msg))
             if raise_err:
-                raise CommandExecutionError(log_callback(ret['stdout']))
-        log.log(lvl, u'output: %s', log_callback(ret['stdout']))
-    return ret['stdout']
+                raise CommandExecutionError(
+                    log_callback(ret['stdout'] if not hide_output else '')
+                )
+        log.log(lvl, 'output: %s', log_callback(ret['stdout']))
+    return ret['stdout'] if not hide_output else ''
 
 
 def shell(cmd,
@@ -997,7 +1016,7 @@ def shell(cmd,
         umask=None,
         output_loglevel='debug',
         log_callback=None,
-        quiet=False,
+        hide_output=False,
         timeout=None,
         reset_system_locale=True,
         ignore_retcode=False,
@@ -1005,6 +1024,7 @@ def shell(cmd,
         use_vt=False,
         bg=False,
         password=None,
+        prepend_path=None,
         **kwargs):
     '''
     Execute the passed command and return the output as a string.
@@ -1080,6 +1100,11 @@ def shell(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1090,8 +1115,20 @@ def shell(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -1158,12 +1195,13 @@ def shell(cmd,
                shell=shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
                log_callback=log_callback,
-               quiet=quiet,
+               hide_output=hide_output,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
@@ -1188,12 +1226,14 @@ def run_stdout(cmd,
                umask=None,
                output_loglevel='debug',
                log_callback=None,
+               hide_output=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
                saltenv='base',
                use_vt=False,
                password=None,
+               prepend_path=None,
                **kwargs):
     '''
     Execute a command, and only return the standard out
@@ -1266,6 +1306,11 @@ def run_stdout(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1276,8 +1321,20 @@ def run_stdout(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -1320,6 +1377,7 @@ def run_stdout(cmd,
                python_shell=python_shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -1353,7 +1411,7 @@ def run_stdout(cmd,
             log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
-    return ret['stdout']
+    return ret['stdout'] if not hide_output else ''
 
 
 def run_stderr(cmd,
@@ -1369,12 +1427,14 @@ def run_stderr(cmd,
                umask=None,
                output_loglevel='debug',
                log_callback=None,
+               hide_output=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
                saltenv='base',
                use_vt=False,
                password=None,
+               prepend_path=None,
                **kwargs):
     '''
     Execute a command and only return the standard error
@@ -1448,6 +1508,11 @@ def run_stderr(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1458,8 +1523,20 @@ def run_stderr(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -1502,6 +1579,7 @@ def run_stderr(cmd,
                python_shell=python_shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -1535,7 +1613,7 @@ def run_stderr(cmd,
             log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
-    return ret['stderr']
+    return ret['stderr'] if not hide_output else ''
 
 
 def run_all(cmd,
@@ -1551,6 +1629,7 @@ def run_all(cmd,
             umask=None,
             output_loglevel='debug',
             log_callback=None,
+            hide_output=False,
             timeout=None,
             reset_system_locale=True,
             ignore_retcode=False,
@@ -1559,6 +1638,7 @@ def run_all(cmd,
             redirect_stderr=False,
             password=None,
             encoded_cmd=False,
+            prepend_path=None,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -1632,6 +1712,11 @@ def run_all(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1642,8 +1727,20 @@ def run_all(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -1710,6 +1807,7 @@ def run_all(cmd,
                python_shell=python_shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -1739,11 +1837,14 @@ def run_all(cmd,
             )
             log.error(log_callback(msg))
         if ret['stdout']:
-            log.log(lvl, u'stdout: {0}'.format(log_callback(ret['stdout'])))
+            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
         if ret['stderr']:
-            log.log(lvl, u'stderr: {0}'.format(log_callback(ret['stderr'])))
+            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
+
+    if hide_output:
+        ret['stdout'] = ret['stderr'] = ''
     return ret
 
 
@@ -1981,7 +2082,7 @@ def script(source,
            umask=None,
            output_loglevel='debug',
            log_callback=None,
-           quiet=False,
+           hide_output=False,
            timeout=None,
            reset_system_locale=True,
            saltenv='base',
@@ -2078,12 +2179,20 @@ def script(source,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG)regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
 
-    :param bool quiet: The command will be executed quietly, meaning no log
-      entries of the actual command or its return data. This is deprecated as of
-      the **2014.1.0** release, and is being replaced with ``output_loglevel: quiet``.
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: If the command has not terminated after timeout seconds,
       send the subprocess sigterm, and if sigterm is ignored, follow up with
@@ -2120,12 +2229,7 @@ def script(source,
             )
 
     if '__env__' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
     if salt.utils.platform.is_windows() and runas and cwd is None:
@@ -2171,7 +2275,7 @@ def script(source,
     if not salt.utils.platform.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
-    ret = _run(path + ' ' + str(args) if args else path,
+    ret = _run(path + ' ' + six.text_type(args) if args else path,
                cwd=cwd,
                stdin=stdin,
                output_loglevel=output_loglevel,
@@ -2192,6 +2296,9 @@ def script(source,
         _cleanup_tempfile(cwd)
     else:
         _cleanup_tempfile(path)
+
+    if hide_output:
+        ret['stdout'] = ret['stderr'] = ''
     return ret
 
 
@@ -2304,8 +2411,11 @@ def script_retcode(source,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
 
     :param bool quiet: The command will be executed quietly, meaning no log
       entries of the actual command or its return data. This is deprecated as of
@@ -2336,12 +2446,7 @@ def script_retcode(source,
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     if '__env__' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
     return script(source=source,
@@ -2445,7 +2550,7 @@ def exec_code_all(lang, code, cwd=None, args=None, **kwargs):
         codefile = salt.utils.files.mkstemp()
 
     with salt.utils.files.fopen(codefile, 'w+t', binary=False) as fp_:
-        fp_.write(code)
+        fp_.write(salt.utils.stringutils.to_str(code))
 
     if powershell:
         cmd = [lang, "-File", codefile]
@@ -2505,7 +2610,7 @@ def run_chroot(root,
                umask=None,
                output_loglevel='quiet',
                log_callback=None,
-               quiet=False,
+               hide_output=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
@@ -2584,7 +2689,7 @@ def run_chroot(root,
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
-     clean_env:
+    clean_env:
         Attempt to clean out all other shell environment variables and set
         only those provided in the 'env' argument to this function.
 
@@ -2599,10 +2704,22 @@ def run_chroot(root,
     umask
          The umask (in octal) to use when running the command.
 
-    output_loglevel
-        Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged (loglevel: DEBUG)
-        regardless, unless ``quiet`` is used for this value.
+    output_loglevel : quiet
+        Control the loglevel at which the output from the command is logged to
+        the minion log.
+
+        .. note::
+            The command being run will still be logged at the ``debug``
+            loglevel regardless, unless ``quiet`` is used for this value.
+
+    hide_output : False
+        If ``True``, suppress stdout and stderr in the return data.
+
+        .. note::
+            This is separate from ``output_loglevel``, which only handles how
+            Salt logs to the minion log.
+
+        .. versionadded:: Oxygen
 
     timeout
         A timeout in seconds for the executed process to return.
@@ -2634,7 +2751,7 @@ def run_chroot(root,
         sh_ = '/bin/bash'
 
     if isinstance(cmd, (list, tuple)):
-        cmd = ' '.join([str(i) for i in cmd])
+        cmd = ' '.join([six.text_type(i) for i in cmd])
     cmd = 'chroot {0} {1} -c {2}'.format(root, sh_, _cmd_quote(cmd))
 
     run_func = __context__.pop('cmd.run_chroot.func', run_all)
@@ -2652,7 +2769,6 @@ def run_chroot(root,
                    umask=umask,
                    output_loglevel=output_loglevel,
                    log_callback=log_callback,
-                   quiet=quiet,
                    timeout=timeout,
                    reset_system_locale=reset_system_locale,
                    ignore_retcode=ignore_retcode,
@@ -2678,6 +2794,8 @@ def run_chroot(root,
 
     __salt__['mount.umount'](os.path.join(root, 'proc'))
     __salt__['mount.umount'](os.path.join(root, 'dev'))
+    if hide_output:
+        ret['stdout'] = ret['stderr'] = ''
     return ret
 
 
@@ -2693,7 +2811,8 @@ def _is_valid_shell(shell):
     if os.path.exists(shells):
         try:
             with salt.utils.files.fopen(shells, 'r') as shell_fp:
-                lines = shell_fp.read().splitlines()
+                lines = [salt.utils.stringutils.to_unicode(x)
+                         for x in shell_fp.read().splitlines()]
             for line in lines:
                 if line.startswith('#'):
                     continue
@@ -2725,7 +2844,8 @@ def shells():
     if os.path.exists(shells_fn):
         try:
             with salt.utils.files.fopen(shells_fn, 'r') as shell_fp:
-                lines = shell_fp.read().splitlines()
+                lines = [salt.utils.stringutils.to_unicode(x)
+                         for x in shell_fp.read().splitlines()]
             for line in lines:
                 line = line.strip()
                 if line.startswith('#'):
@@ -2784,8 +2904,8 @@ def shell_info(shell, list_modules=False):
     '''
     regex_shells = {
         'bash': [r'version (\d\S*)', 'bash', '--version'],
-        'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test a error result
-        'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test a error result
+        'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test an error result
+        'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test an error result
         'zsh': [r'^zsh (\d\S*)', 'zsh', '--version'],
         'tcsh': [r'^tcsh (\d\S*)', 'tcsh', '--version'],
         'cmd': [r'Version ([\d.]+)', 'cmd.exe', '/C', 'ver'],
@@ -2928,7 +3048,7 @@ def powershell(cmd,
         rstrip=True,
         umask=None,
         output_loglevel='debug',
-        quiet=False,
+        hide_output=False,
         timeout=None,
         reset_system_locale=True,
         ignore_retcode=False,
@@ -3056,8 +3176,20 @@ def powershell(cmd,
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-      the command is logged. Note that the command being run will still be logged
-      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+    the command is logged to the minion log.
+
+    .. note::
+        The command being run will still be logged at the ``debug``
+        loglevel regardless, unless ``quiet`` is used for this value.
+
+    :param bool hide_output: If ``True``, suppress stdout and stderr in the
+    return data.
+
+    .. note::
+        This is separate from ``output_loglevel``, which only handles how
+        Salt logs to the minion log.
+
+    .. versionadded:: Oxygen
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -3121,7 +3253,7 @@ def powershell(cmd,
                    rstrip=rstrip,
                    umask=umask,
                    output_loglevel=output_loglevel,
-                   quiet=quiet,
+                   hide_output=hide_output,
                    timeout=timeout,
                    reset_system_locale=reset_system_locale,
                    ignore_retcode=ignore_retcode,
@@ -3478,6 +3610,7 @@ def run_bg(cmd,
         ignore_retcode=False,
         saltenv='base',
         password=None,
+        prepend_path=None,
         **kwargs):
     r'''
     .. versionadded: 2016.3.0
@@ -3486,6 +3619,12 @@ def run_bg(cmd,
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    .. note::
+
+        If the init system is systemd and the backgrounded task should run even if the salt-minion process
+        is restarted, prepend ``systemd-run --scope`` to the command.  This will reparent the process in its
+        own scope separate from salt-minion, and will not be affected by restarting the minion service.
 
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
@@ -3556,6 +3695,11 @@ def run_bg(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -3624,6 +3768,7 @@ def run_bg(cmd,
                cwd=cwd,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                umask=umask,
                log_callback=log_callback,

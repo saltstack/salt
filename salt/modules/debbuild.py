@@ -48,7 +48,7 @@ __virtualname__ = 'pkgbuild'
 
 def __virtual__():
     '''
-    Confirm this module is on a Debian based system, and has required utilities
+    Confirm this module is on a Debian-based system, and has required utilities
     '''
     if __grains__.get('os_family', False) in ('Kali', 'Debian'):
         missing_util = False
@@ -726,7 +726,7 @@ def make_repo(repodir,
 
                             if times_looped > number_retries:
                                 raise SaltInvocationError(
-                                    'Attemping to sign file {0} failed, timed out after {1} seconds'
+                                    'Attempting to sign file {0} failed, timed out after {1} seconds'
                                     .format(abs_file, int(times_looped * interval))
                                 )
                             time.sleep(interval)
@@ -770,7 +770,7 @@ def make_repo(repodir,
 
                         if times_looped > number_retries:
                             raise SaltInvocationError(
-                                    'Attemping to reprepro includedsc for file {0} failed, timed out after {1} loops'.format(abs_file, times_looped)
+                                    'Attempting to reprepro includedsc for file {0} failed, timed out after {1} loops'.format(abs_file, times_looped)
                              )
                         time.sleep(interval)
 

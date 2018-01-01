@@ -1133,9 +1133,14 @@ def get_name(principal):
 
     try:
         return win32security.LookupAccountSid(None, sid_obj)[0]
-    except TypeError:
-        raise CommandExecutionError(
-            'Could not find User for {0}'.format(principal))
+    except (pywintypes.error, TypeError) as exc:
+        if type(exc) == pywintypes.error:
+            win_error = win32api.FormatMessage(exc.winerror).rstrip('\n')
+            message = 'Error resolving {0} ({1})'.format(principal, win_error)
+        else:
+            message = 'Error resolving {0}'.format(principal)
+
+        raise CommandExecutionError(message)
 
 
 def get_owner(obj_name):
@@ -1173,7 +1178,7 @@ def get_owner(obj_name):
             owner_sid = 'S-1-1-0'
         else:
             raise CommandExecutionError(
-                'Failed to set permissions: {0}'.format(exc.strerror))
+                'Failed to get owner: {0}'.format(exc.strerror))
 
     return get_name(win32security.ConvertSidToStringSid(owner_sid))
 

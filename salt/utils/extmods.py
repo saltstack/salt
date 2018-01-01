@@ -11,6 +11,8 @@ import shutil
 
 # Import salt libs
 import salt.fileclient
+import salt.utils.hashutils
+import salt.utils.path
 import salt.utils.url
 
 # Import 3rd-party libs
@@ -21,7 +23,7 @@ log = logging.getLogger(__name__)
 
 def _list_emptydirs(rootdir):
     emptydirs = []
-    for root, dirs, files in os.walk(rootdir):
+    for root, dirs, files in salt.utils.path.os_walk(rootdir):
         if not files and not dirs:
             emptydirs.append(root)
     return emptydirs
@@ -29,7 +31,7 @@ def _list_emptydirs(rootdir):
 
 def _listdir_recursively(rootdir):
     file_list = []
-    for root, dirs, files in os.walk(rootdir):
+    for root, dirs, files in salt.utils.path.os_walk(rootdir):
         for filename in files:
             relpath = os.path.relpath(root, rootdir).strip('.')
             file_list.append(os.path.join(relpath, filename))
@@ -111,8 +113,8 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                 if os.path.isfile(dest):
                     # The file is present, if the sum differs replace it
                     hash_type = opts.get('hash_type', 'md5')
-                    src_digest = salt.utils.get_hash(fn_, hash_type)
-                    dst_digest = salt.utils.get_hash(dest, hash_type)
+                    src_digest = salt.utils.hashutils.get_hash(fn_, hash_type)
+                    dst_digest = salt.utils.hashutils.get_hash(dest, hash_type)
                     if src_digest != dst_digest:
                         # The downloaded file differs, replace!
                         shutil.copyfile(fn_, dest)

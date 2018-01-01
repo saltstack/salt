@@ -105,8 +105,9 @@ except ImportError:
 from salt.ext import six
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.hashutils
+import salt.utils.path
 import salt.utils.stringutils
 import salt.defaults.exitcodes
 from salt.utils.filebuffer import BufferedReader
@@ -510,7 +511,7 @@ class PrintOption(Option):
                     result.append(gid)
             elif arg == 'md5':
                 if stat.S_ISREG(fstat[stat.ST_MODE]):
-                    md5digest = salt.utils.get_hash(fullpath, 'md5')
+                    md5digest = salt.utils.hashutils.get_hash(fullpath, 'md5')
                     result.append(md5digest)
                 else:
                     result.append('')
@@ -642,7 +643,7 @@ class Finder(object):
                 for result in self._perform_actions(path, fstat=fstat):
                     yield result
 
-        for dirpath, dirs, files in os.walk(path):
+        for dirpath, dirs, files in salt.utils.path.os_walk(path):
             relpath = os.path.relpath(dirpath, path)
             depth = path_depth(relpath) + 1
             if depth >= self.mindepth and (self.maxdepth is None or self.maxdepth >= depth):

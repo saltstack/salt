@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Lazily-evaluated data structures, primarily used by Salt's loader
+'''
 
 # Import Python Libs
 from __future__ import absolute_import

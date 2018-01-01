@@ -46,11 +46,12 @@ import salt.client
 import salt.config
 import salt.loader
 import salt.template
-import salt.utils  # Can be removed when pem_finger is moved
 import salt.utils.compat
+import salt.utils.crypt
 import salt.utils.event
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.versions
 import salt.utils.vt
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.utils.yamldumper import SafeOrderedDumper
@@ -292,12 +293,14 @@ def salt_config_to_yaml(configuration, line_break='\n'):
                      Dumper=SafeOrderedDumper)
 
 
-def bootstrap(vm_, opts):
+def bootstrap(vm_, opts=None):
     '''
     This is the primary entry point for logging into any system (POSIX or
     Windows) to install Salt. It will make the decision on its own as to which
     deploy function to call.
     '''
+    if opts is None:
+        opts = __opts__
     deploy_config = salt.config.get_cloud_config_value(
         'deploy',
         vm_, opts, default=False)
@@ -395,13 +398,14 @@ def bootstrap(vm_, opts):
 
     # NOTE: deploy_kwargs is also used to pass inline_script variable content
     #       to run_inline_script function
+    host = salt.config.get_cloud_config_value('ssh_host', vm_, opts)
     deploy_kwargs = {
         'opts': opts,
-        'host': vm_['ssh_host'],
+        'host': host,
         'port': salt.config.get_cloud_config_value(
             'ssh_port', vm_, opts, default=22
         ),
-        'salt_host': vm_.get('salt_host', vm_['ssh_host']),
+        'salt_host': vm_.get('salt_host', host),
         'username': ssh_username,
         'script': deploy_script_code,
         'inline_script': inline_script_config,
@@ -457,7 +461,7 @@ def bootstrap(vm_, opts):
             'wait_for_passwd_maxtries', vm_, opts, default=15
         ),
         'preflight_cmds': salt.config.get_cloud_config_value(
-            'preflight_cmds', vm_, __opts__, default=[]
+            'preflight_cmds', vm_, opts, default=[]
         ),
         'cloud_grains': {'driver': vm_['driver'],
                          'provider': vm_['provider'],
@@ -2673,7 +2677,7 @@ def request_minion_cachedir(
         base = __opts__['cachedir']
 
     if not fingerprint and pubkey is not None:
-        fingerprint = salt.utils.pem_finger(key=pubkey, sum_type=(opts and opts.get('hash_type') or 'sha256'))
+        fingerprint = salt.utils.crypt.pem_finger(key=pubkey, sum_type=(opts and opts.get('hash_type') or 'sha256'))
 
     init_cachedir(base)
 
@@ -2806,7 +2810,7 @@ def cache_nodes_ip(opts, base=None):
     Retrieve a list of all nodes from Salt Cloud cache, and any associated IP
     addresses. Returns a dict.
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Flourine',
         'This function is incomplete and non-functional '
         'and will be removed in Salt Flourine.'

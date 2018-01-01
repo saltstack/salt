@@ -17,9 +17,9 @@ except ImportError:
     HAS_REQUESTS = False  # pylint: disable=W0612
 
 # Import Salt libs
-import salt.utils
 import salt.utils.aws
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
@@ -119,7 +119,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
     payload_hash = None
     if method == 'PUT':
         if local_file:
-            payload_hash = salt.utils.get_hash(local_file, form='sha256')
+            payload_hash = salt.utils.hashutils.get_hash(local_file, form='sha256')
 
     if path is None:
         path = ''

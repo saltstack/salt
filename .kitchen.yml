@@ -1,0 +1,193 @@
+---
+<% vagrant = system('which vagrant 2>/dev/null >/dev/null') %>
+<% version = '2017.7.1' %>
+<% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
+<% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
+
+<% if File.exists?(driverfile) %>
+<%= ERB.new(File.read(driverfile)).result %>
+<% else %>
+driver:
+  name: docker
+  use_sudo: false
+  hostname: salt
+  privileged: true
+  username: root
+  volume:
+    - /var/run/docker.sock:/docker.sock
+  cap_add:
+    - sys_admin
+  disable_upstart: false
+  provision_command:
+    - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+transport:
+  name: sftp
+<% end %>
+
+sudo: false
+provisioner:
+  name: salt_solo
+  salt_install: bootstrap
+  salt_version: latest
+  salt_bootstrap_url: https://bootstrap.saltstack.com
+  salt_bootstrap_options: -X stable <%= version %>
+  log_level: info
+  require_chef: false
+  remote_states:
+    name: git://github.com/saltstack/salt-jenkins.git
+    branch: oxygen
+    repo: git
+    testingdir: /testing
+  salt_copy_filter:
+    - .bundle
+    - .git
+    - .gitignore
+    - .kitchen
+    - .kitchen.yml
+    - Gemfile
+    - Gemfile.lock
+    - README.rst
+    - .travis.yml
+  state_top:
+    base:
+      "*":
+        - git.salt
+        - kitchen
+<% if File.exists?(platformsfile) %>
+<%= ERB.new(File.read(platformsfile)).result %>
+<% else %>
+platforms:
+  - name: fedora
+    driver_config:
+      image: fedora:latest
+      run_command: /usr/lib/systemd/systemd
+    provisioner:
+      salt_bootstrap_options: -X git v<%= version %> >/dev/null
+  - name: centos-7
+    driver_config:
+      run_command: /usr/lib/systemd/systemd
+  - name: centos-6
+    driver_config:
+      run_command: /sbin/init
+      provision_command:
+        - yum install -y upstart
+    provisioner:
+      salt_bootstrap_options: -P -y -x python2.7 -X git v<%= version %> >/dev/null
+  - name: ubuntu-rolling
+    driver_config:
+      image: ubuntu:rolling
+      run_command: /lib/systemd/systemd
+    provisioner:
+      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh
+  - name: ubuntu-16.04
+    driver_config:
+      run_command: /lib/systemd/systemd
+  - name: ubuntu-14.04
+    driver_config:
+      run_command: /sbin/init
+      provision_command:
+        - rm -f /sbin/initctl
+        - dpkg-divert --local --rename --remove /sbin/initctl
+  - name: debian-8
+    driver_config:
+      run_command: /lib/systemd/systemd
+      provision_command:
+        - apt-get install -y dbus
+        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+  - name: debian-9
+    driver_config:
+      run_command: /lib/systemd/systemd
+  - name: arch
+    driver_config:
+      image: base/archlinux
+      run_command: /usr/lib/systemd/systemd
+      provision_command:
+        - pacman -Syu --noconfirm systemd
+        - systemctl enable sshd
+        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+    provisioner:
+      salt_bootstrap_options: -X git v<%= version %> >/dev/null
+  - name: opensuse
+    driver_config:
+      run_command: /usr/lib/systemd/systemd
+      provision_command:
+        - systemctl enable sshd.service
+        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+    provisioner:
+      salt_bootstrap_options: -X git v<%= version %> >/dev/null
+<% if vagrant != false %>
+  - name: windows-2012r2
+    driver:
+      box: mwrock/Windows2012R2
+      communicator: winrm
+      name: vagrant
+      gui: true
+      username: administrator
+      password: Pass@word1
+    provisioner:
+      init_environment: |
+        Clear-Host
+        $AddedLocation ="c:\salt"
+        $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+        $OldPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
+        $NewPath= $OldPath + ’;’ + $AddedLocation
+        Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
+      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
+      salt_bootstrap_options: ''
+  - name: windows-2016
+    driver:
+      box: mwrock/Windows2016
+      communicator: winrm
+      name: vagrant
+      username: Vagrant
+      password: vagrant
+      gui: true
+    provisioner:
+      init_environment: |
+        Clear-Host
+        $AddedLocation ="c:\salt;c:\salt\bin\Scripts"
+        $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+        $OldPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
+        $NewPath= $OldPath + ’;’ + $AddedLocation
+        Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
+      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
+      salt_bootstrap_options: ''
+<% end %>
+<% end %>
+suites:
+  - name: py2
+    provisioner:
+      pillars:
+        top.sls:
+          base:
+            "*":
+              - jenkins
+        jenkins.sls:
+          testing_dir: /tmp/kitchen/testing
+          clone_repo: false
+          salttesting_namespec: salttesting==2017.6.1
+  - name: py3
+    excludes:
+      - centos-6
+      - ubuntu-14.04
+    provisioner:
+      pillars:
+        top.sls:
+          base:
+            "*":
+              - jenkins
+        jenkins.sls:
+          testing_dir: /tmp/kitchen/testing
+          clone_repo: false
+          py3: true
+          salttesting_namespec: salttesting==2017.6.1
+verifier:
+  name: shell
+  remote_exec: true
+  sudo: false
+  live_stream: {}
+<% if ENV['TESTOPTS'].nil? %>
+  command: '$(kitchen) /tmp/kitchen/testing/tests/runtests.py --run-destructive --sysinfo --transport=zeromq --output-columns=80 --ssh --coverage-xml=/tmp/coverage.xml --xml=/tmp/xml-unittests-output'
+<% else %>
+  command: '$(kitchen) /tmp/kitchen/testing/tests/runtests.py --run-destructive --output-columns 80 <%= ENV["TESTOPTS"] %>'
+<% end %>

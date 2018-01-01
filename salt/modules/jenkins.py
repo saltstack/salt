@@ -112,7 +112,7 @@ def run(script):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' jenkins.run 'Jenkins.instance.doSafeRestart()'
 

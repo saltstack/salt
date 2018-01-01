@@ -144,8 +144,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
     Ensure a hosted zone exists with the given attributes.
 
     name
-        The name of the state definition.  This will be used as the 'CallerReference' param when
-        creating the hosted zone to help ensure idempotency.
+        The name of the state definition.
 
     Name
         The name of the domain. This should be a fully-specified domain, and should terminate with a

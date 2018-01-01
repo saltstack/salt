@@ -36,6 +36,60 @@ def __virtual__():
     return (False, "Module win_groupadd: module only works on Windows systems")
 
 
+def _get_computer_object():
+    '''
+    A helper function to get the object for the local machine
+
+    Returns:
+        object: Returns the computer object for the local machine
+    '''
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+    return nt.GetObject('', 'WinNT://.,computer')
+
+
+def _get_group_object(name):
+    '''
+    A helper function to get a specified group object
+
+    Args:
+
+        name (str): The name of the object
+
+    Returns:
+        object: The specified group object
+    '''
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+    return nt.GetObject('', 'WinNT://./' + name + ',group')
+
+
+def _get_all_groups():
+    '''
+    A helper function that gets a list of group objects for all groups on the
+    machine
+
+    Returns:
+        iter: A list of objects for all groups on the machine
+    '''
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+    results = nt.GetObject('', 'WinNT://.')
+    results.Filter = ['group']
+    return results
+
+
+def _get_username(member):
+    '''
+    Resolve the username from the member object returned from a group query
+
+    Returns:
+        str: The username converted to domain\\username format
+    '''
+    return member.ADSPath.replace('WinNT://', '').replace(
+        '/', '\\').encode('ascii', 'backslashreplace')
+
+
 def add(name, **kwargs):
     '''
     Add the specified group
@@ -60,10 +114,8 @@ def add(name, **kwargs):
            'comment': ''}
 
     if not info(name):
-        pythoncom.CoInitialize()
-        nt = win32com.client.Dispatch('AdsNameSpaces')
+        compObj = _get_computer_object()
         try:
-            compObj = nt.GetObject('', 'WinNT://.,computer')
             newGroup = compObj.Create('group', name)
             newGroup.SetInfo()
             ret['changes'].append('Successfully created group {0}'.format(name))
@@ -104,10 +156,8 @@ def delete(name, **kwargs):
            'comment': ''}
 
     if info(name):
-        pythoncom.CoInitialize()
-        nt = win32com.client.Dispatch('AdsNameSpaces')
+        compObj = _get_computer_object()
         try:
-            compObj = nt.GetObject('', 'WinNT://.,computer')
             compObj.Delete('group', name)
             ret['changes'].append(('Successfully removed group {0}').format(name))
         except pywintypes.com_error as com_err:
@@ -144,17 +194,10 @@ def info(name):
 
         salt '*' group.info foo
     '''
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-
     try:
-        groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
+        groupObj = _get_group_object(name)
         gr_name = groupObj.Name
-        gr_mem = []
-        for member in groupObj.members():
-            gr_mem.append(
-                    member.ADSPath.replace('WinNT://', '').replace(
-                    '/', '\\').encode('ascii', 'backslashreplace'))
+        gr_mem = [_get_username(x) for x in groupObj.members()]
     except pywintypes.com_error:
         return False
 
@@ -193,20 +236,12 @@ def getent(refresh=False):
 
     ret = []
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
+    results = _get_all_groups()
 
-    results = nt.GetObject('', 'WinNT://.')
-    results.Filter = ['group']
     for result in results:
-        member_list = []
-        for member in result.members():
-            member_list.append(
-                    member.AdsPath.replace('WinNT://', '').replace(
-                    '/', '\\').encode('ascii', 'backslashreplace'))
-        group = {'gid': __salt__['file.group_to_gid'](result.name),
-                'members': member_list,
-                'name': result.name,
+        group = {'gid': __salt__['file.group_to_gid'](result.Name),
+                'members': [_get_username(x) for x in result.members()],
+                'name': result.Name,
                 'passwd': 'x'}
         ret.append(group)
     __context__['group.getent'] = ret
@@ -240,17 +275,21 @@ def adduser(name, username, **kwargs):
            'changes': {'Users Added': []},
            'comment': ''}
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
-    existingMembers = []
-    for member in groupObj.members():
-        existingMembers.append(
-                member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace').lower())
+    try:
+        groupObj = _get_group_object(name)
+    except pywintypes.com_error as com_err:
+        if len(com_err.excepinfo) >= 2:
+            friendly_error = com_err.excepinfo[2].rstrip('\r\n')
+        ret['result'] = False
+        ret['comment'] = 'Failure accessing group {0}. {1}' \
+                         ''.format(name, friendly_error)
+        return ret
+
+    existingMembers = [_get_username(x) for x in groupObj.members()]
+    username = salt.utils.win_functions.get_sam_name(username)
 
     try:
-        if salt.utils.win_functions.get_sam_name(username) not in existingMembers:
+        if username not in existingMembers:
             if not __opts__['test']:
                 groupObj.Add('WinNT://' + username.replace('\\', '/'))
 
@@ -299,14 +338,17 @@ def deluser(name, username, **kwargs):
            'changes': {'Users Removed': []},
            'comment': ''}
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
-    existingMembers = []
-    for member in groupObj.members():
-        existingMembers.append(
-                member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace').lower())
+    try:
+        groupObj = _get_group_object(name)
+    except pywintypes.com_error as com_err:
+        if len(com_err.excepinfo) >= 2:
+            friendly_error = com_err.excepinfo[2].rstrip('\r\n')
+        ret['result'] = False
+        ret['comment'] = 'Failure accessing group {0}. {1}' \
+                         ''.format(name, friendly_error)
+        return ret
+
+    existingMembers = [_get_username(x) for x in groupObj.members()]
 
     try:
         if salt.utils.win_functions.get_sam_name(username) in existingMembers:
@@ -365,10 +407,8 @@ def members(name, members_list, **kwargs):
         ret['comment'].append('Members is not a list object')
         return ret
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
     try:
-        groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
+        groupObj = _get_group_object(name)
     except pywintypes.com_error as com_err:
         if len(com_err.excepinfo) >= 2:
             friendly_error = com_err.excepinfo[2].rstrip('\r\n')
@@ -377,12 +417,7 @@ def members(name, members_list, **kwargs):
                 'Failure accessing group {0}.  {1}'
                 ).format(name, friendly_error))
         return ret
-    existingMembers = []
-    for member in groupObj.members():
-        existingMembers.append(
-                member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace').lower())
-
+    existingMembers = [_get_username(x) for x in groupObj.members()]
     existingMembers.sort()
     members_list.sort()
 
@@ -448,18 +483,14 @@ def list_groups(refresh=False):
         salt '*' group.list_groups
     '''
     if 'group.list_groups' in __context__ and not refresh:
-        return __context__['group.getent']
+        return __context__['group.list_groups']
+
+    results = _get_all_groups()
 
     ret = []
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-
-    results = nt.GetObject('', 'WinNT://.')
-    results.Filter = ['group']
-
     for result in results:
-        ret.append(result.name)
+        ret.append(result.Name)
 
     __context__['group.list_groups'] = ret
 
