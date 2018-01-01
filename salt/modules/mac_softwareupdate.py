@@ -10,8 +10,9 @@ import re
 import os
 
 # import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 import salt.utils.mac_utils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -48,7 +49,7 @@ def _get_available(recommended=False, restart=False):
     rexp = re.compile('(?m)^   [*|-] '
                       r'([^ ].*)[\r\n].*\(([^\)]+)')
 
-    if salt.utils.is_true(recommended):
+    if salt.utils.data.is_true(recommended):
         # rexp parses lines that look like the following:
         #    * Safari6.1.2MountainLion-6.1.2
         #         Safari (6.1.2), 51679K [recommended]
@@ -66,7 +67,7 @@ def _get_available(recommended=False, restart=False):
         version_num = _get(line, 'version')
         ret[name] = version_num
 
-    if not salt.utils.is_true(restart):
+    if not salt.utils.data.is_true(restart):
         return ret
 
     # rexp parses lines that look like the following:
@@ -330,7 +331,7 @@ def list_downloads():
        salt '*' softwareupdate.list_downloads
     '''
     outfiles = []
-    for root, subFolder, files in os.walk('/Library/Updates'):
+    for root, subFolder, files in salt.utils.path.os_walk('/Library/Updates'):
         for f in files:
             outfiles.append(os.path.join(root, f))
 

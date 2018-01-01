@@ -65,7 +65,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.platform
 import salt.utils.validate.net
 from salt.ext.six.moves import range
@@ -386,7 +386,7 @@ def managed(name,
                     )
 
         new = __salt__['ip.get_interface'](name)
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        ret['changes'] = salt.utils.data.compare_dicts(old, new)
         if _changes(new, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             ret['result'] = False
             ret['comment'] = ('Failed to set desired configuration settings '

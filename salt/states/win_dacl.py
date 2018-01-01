@@ -33,7 +33,7 @@ Ensure an ACL does not exist
 
     .. code-block:: yaml
 
-    removeAcl:
+        removeAcl:
           win_dacl.absent:
             - name: HKEY_LOCAL_MACHINE\\SOFTWARE\\mykey
             - objectType: Registry
@@ -50,11 +50,11 @@ Ensure an object is inheriting permissions
 
     .. code-block:: yaml
 
-    eInherit:
-      win_dacl.enableinheritance:
-        - name: HKEY_LOCAL_MACHINE\\SOFTWARE\\mykey
-        - objectType: Registry
-        - clear_existing_acl: True
+        eInherit:
+          win_dacl.enableinheritance:
+            - name: HKEY_LOCAL_MACHINE\\SOFTWARE\\mykey
+            - objectType: Registry
+            - clear_existing_acl: True
 
 Ensure an object is not inheriting permissions
     parameters:
@@ -62,13 +62,13 @@ Ensure an object is not inheriting permissions
         objectType - Registry/File/Directory
         copy_inherited_acl - True/False - if inheritance is enabled, should the inherited permissions be copied to the ACL when inheritance is disabled
 
-        .. code-block:: yaml
+    .. code-block:: yaml
 
-    dInherit:
-      win_dacl.disableinheritance:
-        - name: HKEY_LOCAL_MACHINE\\SOFTWARE\\mykey
-        - objectType: Registry
-        - copy_inherited_acl: False
+        dInherit:
+          win_dacl.disableinheritance:
+            - name: HKEY_LOCAL_MACHINE\\SOFTWARE\\mykey
+            - objectType: Registry
+            - copy_inherited_acl: False
 '''
 
 
@@ -119,7 +119,7 @@ def present(name, objectType, user, permission, acetype, propagation):
 
 def absent(name, objectType, user, permission, acetype, propagation):
     '''
-    Ensure a Linux ACL does not exist
+    Ensure an ACL does not exist
     '''
     ret = {'name': name,
            'result': True,

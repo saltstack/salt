@@ -22,7 +22,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.functools
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ def computer_desc(name):
                           '\'{0}\''.format(name))
     return ret
 
-computer_description = salt.utils.alias_function(computer_desc, 'computer_description')
+computer_description = salt.utils.functools.alias_function(computer_desc, 'computer_description')
 
 
 def computer_name(name):

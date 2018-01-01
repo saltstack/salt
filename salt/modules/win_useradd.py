@@ -35,8 +35,8 @@ except:  # pylint: disable=W0702
     from pipes import quote as _cmd_quote
 
 # Import Salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.dateutils
 import salt.utils.platform
 from salt.ext import six
 from salt.ext.six import string_types
@@ -297,7 +297,7 @@ def update(name,
             user_info['acct_expires'] = win32netcon.TIMEQ_FOREVER
         else:
             try:
-                dt_obj = salt.utils.date_cast(expiration_date)
+                dt_obj = salt.utils.dateutils.date_cast(expiration_date)
             except (ValueError, RuntimeError):
                 return 'Invalid Date/Time Format: {0}'.format(expiration_date)
             user_info['acct_expires'] = time.mktime(dt_obj.timetuple())
