@@ -371,6 +371,12 @@ def create(vm_):
     if post_uri:
         kwargs['postInstallScriptUri'] = post_uri
 
+    dedicated_host_id = config.get_cloud_config_value(
+        'dedicated_host_id', vm_, __opts__, default=None
+    )
+    if dedicated_host_id:
+        kwargs['dedicatedHost'] = {'id': dedicated_host_id}
+
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',

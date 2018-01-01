@@ -86,7 +86,7 @@ cluster.skip_full_coverage_check: ``False``
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import json
 import logging
 
@@ -305,11 +305,11 @@ def clean_old_jobs():
             to_remove.append(ret_key)
     if len(to_remove) != 0:
         serv.delete(*to_remove)
-        log.debug('clean old jobs: {0}'.format(to_remove))
+        log.debug('clean old jobs: %s', to_remove)
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

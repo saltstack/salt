@@ -25,11 +25,12 @@ import re
 import random
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.cloud
 import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.functools
+import salt.utils.hashutils
 import salt.utils.network
 import salt.utils.odict
 import salt.utils.path
@@ -483,7 +484,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
                 ethx['mac'] = iopts[i]
                 break
         if 'mac' not in ethx:
-            ethx['mac'] = salt.utils.gen_mac()
+            ethx['mac'] = salt.utils.network.gen_mac()
     # last round checking for unique gateway and such
     gw = None
     for ethx in [a for a in nic_opts]:
@@ -786,7 +787,7 @@ def _network_conf(conf_tuples=None, **kwargs):
                 'test': not mac,
                 'value': mac,
                 'old': old_if.get('lxc.network.hwaddr'),
-                'default': salt.utils.gen_mac()}),
+                'default': salt.utils.network.gen_mac()}),
             ('lxc.network.ipv4', {
                 'test': not ipv4,
                 'value': ipv4,
@@ -1094,7 +1095,7 @@ def _get_base(**kwargs):
         proto = _urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
         img_name = os.path.basename(img_tar)
-        hash_ = salt.utils.get_hash(
+        hash_ = salt.utils.hashutils.get_hash(
                 img_tar,
                 __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
@@ -2597,7 +2598,7 @@ def destroy(name, stop=False, path=None):
     return _change_state('lxc-destroy', name, None, path=path)
 
 # Compatibility between LXC and nspawn
-remove = salt.utils.alias_function(destroy, 'remove')
+remove = salt.utils.functools.alias_function(destroy, 'remove')
 
 
 def exists(name, path=None):
@@ -2940,7 +2941,7 @@ def set_password(name, users, password, encrypted=True, path=None):
         )
     return True
 
-set_pass = salt.utils.alias_function(set_password, 'set_pass')
+set_pass = salt.utils.functools.alias_function(set_password, 'set_pass')
 
 
 def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
@@ -4205,7 +4206,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
         overwrite=overwrite,
         makedirs=makedirs)
 
-cp = salt.utils.alias_function(copy_to, 'cp')
+cp = salt.utils.functools.alias_function(copy_to, 'cp')
 
 
 def read_conf(conf_file, out_format='simple'):

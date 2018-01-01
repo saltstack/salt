@@ -97,7 +97,6 @@ import sys
 
 import salt.exceptions
 from salt.ext import six
-import salt.utils
 import salt.utils.stringutils
 
 HAS_VIRTUALENV = False

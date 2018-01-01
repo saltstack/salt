@@ -56,7 +56,6 @@ import time
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.odict as odict
-import salt.utils
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -117,7 +116,7 @@ boto3_param_map = {
     'publicly_accessible': ('PubliclyAccessible', bool),
     'storage_encrypted': ('StorageEncrypted', bool),
     'storage_type': ('StorageType', str),
-    'taglist': ('Tags', list),
+    'tags': ('Tags', list),
     'tde_credential_arn': ('TdeCredentialArn', str),
     'tde_credential_password': ('TdeCredentialPassword', str),
     'vpc_security_group_ids': ('VpcSecurityGroupIds', list),
@@ -281,10 +280,11 @@ def create(name, allocated_storage, db_instance_class, engine,
         if not conn:
             return {'results': bool(conn)}
 
-        taglist = _tag_doc(tags)
         kwargs = {}
         boto_params = set(boto3_param_map.keys())
         keys = set(locals().keys())
+        tags = _tag_doc(tags)
+
         for param_key in keys.intersection(boto_params):
             val = locals()[param_key]
             if val is not None:
@@ -505,10 +505,17 @@ def update_parameter_group(name, parameters, apply_method="pending-reboot",
 
     param_list = []
     for key, value in six.iteritems(parameters):
-        item = (key, value, apply_method)
+        item = odict.OrderedDict()
+        item.update({'ParameterName': key})
+        item.update({'ApplyMethod': apply_method})
+        if type(value) is bool:
+            item.update({'ParameterValue': 'on' if value else 'off'})
+        else:
+            item.update({'ParameterValue': str(value)})
         param_list.append(item)
-        if not len(param_list):
-            return {'results': False}
+
+    if not len(param_list):
+        return {'results': False}
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -843,6 +850,7 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
                     'message': 'Could not establish a connection to RDS'}
 
         kwargs = {}
+        kwargs.update({'DBParameterGroupName': name})
         for key in ('Marker', 'Source'):
             if locals()[key] is not None:
                 kwargs[key] = str(locals()[key])
@@ -850,26 +858,23 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
         if locals()['MaxRecords'] is not None:
             kwargs['MaxRecords'] = int(locals()['MaxRecords'])
 
-        r = conn.describe_db_parameters(DBParameterGroupName=name, **kwargs)
+        pag = conn.get_paginator('describe_db_parameters')
+        pit = pag.paginate(**kwargs)
 
-        if not r:
-            return {'result': False,
-                    'message': 'Failed to get RDS parameters for group {0}.'
-                    .format(name)}
-
-        results = r['Parameters']
         keys = ['ParameterName', 'ParameterValue', 'Description',
                 'Source', 'ApplyType', 'DataType', 'AllowedValues',
                 'IsModifieable', 'MinimumEngineVersion', 'ApplyMethod']
 
         parameters = odict.OrderedDict()
         ret = {'result':  True}
-        for result in results:
-            data = odict.OrderedDict()
-            for k in keys:
-                data[k] = result.get(k)
 
-            parameters[result.get('ParameterName')] = data
+        for p in pit:
+            for result in p['Parameters']:
+                data = odict.OrderedDict()
+                for k in keys:
+                    data[k] = result.get(k)
+
+                parameters[result.get('ParameterName')] = data
 
         ret['parameters'] = parameters
         return ret

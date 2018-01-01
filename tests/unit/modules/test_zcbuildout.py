@@ -130,10 +130,10 @@ class BuildoutTestCase(Base):
     def test_onlyif_unless(self):
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.buildout(b_dir, onlyif='/bin/false')
-        self.assertTrue(ret['comment'] == 'onlyif execution failed')
+        self.assertTrue(ret['comment'] == 'onlyif condition is false')
         self.assertTrue(ret['status'] is True)
         ret = buildout.buildout(b_dir, unless='/bin/true')
-        self.assertTrue(ret['comment'] == 'unless execution succeeded')
+        self.assertTrue(ret['comment'] == 'unless condition is true')
         self.assertTrue(ret['status'] is True)
 
     @requires_network()

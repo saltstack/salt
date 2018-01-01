@@ -23,6 +23,7 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
+from salt.exceptions import CommandNotFoundError
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -140,7 +141,7 @@ class PathJoinTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WhichTestCase(TestCase):
+class PathTestCase(TestCase):
     def test_which_bin(self):
         ret = salt.utils.path.which_bin('str')
         self.assertIs(None, ret)
@@ -156,3 +157,23 @@ class WhichTestCase(TestCase):
         with patch('salt.utils.path.which', return_value=''):
             ret = salt.utils.path.which_bin(test_exes)
             self.assertIs(None, ret)
+
+    def test_sanitize_win_path(self):
+        p = '\\windows\\system'
+        self.assertEqual(salt.utils.path.sanitize_win_path('\\windows\\system'), '\\windows\\system')
+        self.assertEqual(salt.utils.path.sanitize_win_path('\\bo:g|us\\p?at*h>'), '\\bo_g_us\\p_at_h_')
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_check_or_die(self):
+        self.assertRaises(CommandNotFoundError, salt.utils.path.check_or_die, None)
+
+        with patch('salt.utils.path.which', return_value=False):
+            self.assertRaises(CommandNotFoundError, salt.utils.path.check_or_die, 'FAKE COMMAND')
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_join(self):
+        with patch('salt.utils.platform.is_windows', return_value=False) as is_windows_mock:
+            self.assertFalse(is_windows_mock.return_value)
+            expected_path = os.path.join(os.sep + 'a', 'b', 'c', 'd')
+            ret = salt.utils.path.join('/a/b/c', 'd')
+            self.assertEqual(ret, expected_path)

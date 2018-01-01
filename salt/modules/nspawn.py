@@ -34,8 +34,8 @@ import tempfile
 
 # Import Salt libs
 import salt.defaults.exitcodes
-import salt.utils
 import salt.utils.args
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -890,7 +890,7 @@ def list_running():
 
 # 'machinectl list' shows only running containers, so allow this to work as an
 # alias to nspawn.list_running
-list_ = salt.utils.alias_function(list_running, 'list_')
+list_ = salt.utils.functools.alias_function(list_running, 'list_')
 
 
 def list_stopped():
@@ -1263,7 +1263,7 @@ def remove(name, stop=False):
 
 
 # Compatibility between LXC and nspawn
-destroy = salt.utils.alias_function(remove, 'destroy')
+destroy = salt.utils.functools.alias_function(remove, 'destroy')
 
 
 @_ensure_exists
@@ -1319,7 +1319,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False):
         overwrite=overwrite,
         makedirs=makedirs)
 
-cp = salt.utils.alias_function(copy_to, 'cp')
+cp = salt.utils.functools.alias_function(copy_to, 'cp')
 
 
 # Everything below requres systemd >= 219
@@ -1484,4 +1484,4 @@ def pull_dkr(url, name, index):
     '''
     return _pull_image('dkr', url, name, index=index)
 
-pull_docker = salt.utils.alias_function(pull_dkr, 'pull_docker')
+pull_docker = salt.utils.functools.alias_function(pull_dkr, 'pull_docker')

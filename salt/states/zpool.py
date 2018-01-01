@@ -73,6 +73,7 @@ import logging
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
+from salt.modules.zpool import _conform_value
 
 log = logging.getLogger(__name__)
 
@@ -186,6 +187,10 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
         log.debug('zpool.present::{0}::layout - {1}'.format(name, layout))
 
+    # ensure properties conform to the zfs parsable format
+    for prop in properties:
+        properties[prop] = _conform_value(properties[prop], True)
+
     # ensure the pool is present
     ret['result'] = False
     if __salt__['zpool.exists'](name):  # update
@@ -200,26 +205,15 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
             if prop not in properties_current:
                 continue
 
-            value = properties[prop]
-            if isinstance(value, bool):
-                value = 'on' if value else 'off'
-
-            if properties_current[prop] != value:
+            if properties_current[prop] != properties[prop]:
                 properties_update.append(prop)
 
         # update properties
         for prop in properties_update:
-            value = properties[prop]
-            res = __salt__['zpool.set'](name, prop, value)
-
-            # also transform value so we match with the return
-            if isinstance(value, bool):
-                value = 'on' if value else 'off'
-            elif ' ' in value:
-                value = "'{0}'".format(value)
+            res = __salt__['zpool.set'](name, prop, properties[prop])
 
             # check return
-            if name in res and prop in res[name] and res[name][prop] == value:
+            if name in res and prop in res[name] and res[name][prop] == properties[prop]:
                 if name not in ret['changes']:
                     ret['changes'][name] = {}
                 ret['changes'][name].update(res[name])

@@ -12,9 +12,8 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
-# from salt.modules import linux_acl as acl
+import salt.utils.user
 
 
 # Acl package should be installed to test linux_acl module
@@ -60,8 +59,8 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
 
     def test_getfacl_w_single_file_without_acl(self):
         ret = self.run_function('acl.getfacl', arg=[self.myfile])
-        user = salt.utils.get_user()
-        group = salt.utils.get_default_group(user)
+        user = salt.utils.user.get_user()
+        group = salt.utils.user.get_default_group(user)
         self.maxDiff = None
         self.assertEqual(
             ret,

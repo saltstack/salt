@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import fnmatch
 import re
+import copy
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -77,7 +78,7 @@ class RosterMatcher(object):
             if fnmatch.fnmatch(minion, self.tgt):
                 data = self.get_data(minion)
                 if data:
-                    minions[minion] = data
+                    minions[minion] = data.copy()
         return minions
 
     def ret_pcre_minions(self):
@@ -89,7 +90,7 @@ class RosterMatcher(object):
             if re.match(self.tgt, minion):
                 data = self.get_data(minion)
                 if data:
-                    minions[minion] = data
+                    minions[minion] = data.copy()
         return minions
 
     def ret_list_minions(self):
@@ -103,7 +104,7 @@ class RosterMatcher(object):
             if minion in self.tgt:
                 data = self.get_data(minion)
                 if data:
-                    minions[minion] = data
+                    minions[minion] = data.copy()
         return minions
 
     def ret_nodegroup_minions(self):
@@ -119,7 +120,7 @@ class RosterMatcher(object):
             if minion in nodegroup:
                 data = self.get_data(minion)
                 if data:
-                    minions[minion] = data
+                    minions[minion] = data.copy()
         return minions
 
     def ret_range_minions(self):
@@ -136,14 +137,14 @@ class RosterMatcher(object):
             if minion in range_hosts:
                 data = self.get_data(minion)
                 if data:
-                    minions[minion] = data
+                    minions[minion] = data.copy()
         return minions
 
     def get_data(self, minion):
         '''
         Return the configured ip
         '''
-        ret = __opts__.get('roster_defaults', {})
+        ret = copy.deepcopy(__opts__.get('roster_defaults', {}))
         if isinstance(self.raw[minion], string_types):
             ret.update({'host': self.raw[minion]})
             return ret

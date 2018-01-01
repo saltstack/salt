@@ -58,11 +58,16 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
     '''
     Parse a string or file through Salt's renderer system
 
+    .. versionchanged:: Oxygen
+       Add support for Salt fileserver URIs.
+
     This is an open-ended function and can be used for a variety of tasks. It
     makes use of Salt's "renderer pipes" system to run a string or file through
     a pipe of any of the loaded renderer modules.
 
-    :param path: The path to a file on the filesystem.
+    :param path: The path to a file on Salt's fileserver (any URIs supported by
+        :py:func:`cp.get_url <salt.modules.cp.get_url>`) or on the local file
+        system.
     :param string: An inline string to be used as the file to send through the
         renderer system. Note, not all renderer modules can work with strings;
         the 'py' renderer requires a file, for example.
@@ -113,6 +118,7 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
 
     .. code-block:: bash
 
+        salt '*' slsutil.renderer salt://path/to/file
         salt '*' slsutil.renderer /path/to/file
         salt '*' slsutil.renderer /path/to/file.jinja 'jinja'
         salt '*' slsutil.renderer /path/to/file.sls 'jinja|yaml'
@@ -126,7 +132,7 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
     renderers = salt.loader.render(__opts__, __salt__)
 
     if path:
-        path_or_string = path
+        path_or_string = __salt__['cp.get_url'](path)
     elif string:
         path_or_string = ':string:'
         kwargs['input_data'] = string

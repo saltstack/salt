@@ -10,7 +10,7 @@ What has not been implemented yet can be accessed through ``parallels.prlctl``
 and ``parallels.prlsrvctl`` (note the preceding double dash ``--`` as
 necessary):
 
-.. code-block::
+.. code-block:: bash
 
     salt '*' parallels.prlctl installtools macvm runas=macdev
     salt -- '*' parallels.prlctl capture 'macvm --file macvm.display.png' runas=macdev

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import textwrap
@@ -262,3 +262,57 @@ class CMDModuleTest(ModuleCase):
                                 f_timeout=2,
                                 python_shell=True)
         self.assertEqual(out, 'hello')
+
+    def test_hide_output(self):
+        '''
+        Test the hide_output argument
+        '''
+        ls_command = ['ls', '/'] \
+            if not salt.utils.platform.is_windows() \
+            else ['dir', 'c:\\']
+
+        error_command = ['thiscommanddoesnotexist']
+
+        # cmd.run
+        out = self.run_function(
+            'cmd.run',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out, '')
+
+        # cmd.shell
+        out = self.run_function(
+            'cmd.shell',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out, '')
+
+        # cmd.run_stdout
+        out = self.run_function(
+            'cmd.run_stdout',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out, '')
+
+        # cmd.run_stderr
+        out = self.run_function(
+            'cmd.shell',
+            error_command,
+            hide_output=True)
+        self.assertEqual(out, '')
+
+        # cmd.run_all (command should have produced stdout)
+        out = self.run_function(
+            'cmd.run_all',
+            ls_command,
+            hide_output=True)
+        self.assertEqual(out['stdout'], '')
+        self.assertEqual(out['stderr'], '')
+
+        # cmd.run_all (command should have produced stderr)
+        out = self.run_function(
+            'cmd.run_all',
+            error_command,
+            hide_output=True)
+        self.assertEqual(out['stdout'], '')
+        self.assertEqual(out['stderr'], '')

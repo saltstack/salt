@@ -5,7 +5,7 @@
     This can be used as an option when the device does not provide
     an api over HTTP and doesn't have the python stack to run a minion.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import json

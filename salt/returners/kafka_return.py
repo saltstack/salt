@@ -25,7 +25,7 @@ To use the kafka returner, append '--return kafka' to the Salt command, eg;
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import json
 import logging
 

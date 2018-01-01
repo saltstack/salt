@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
@@ -147,3 +147,33 @@ class StdTest(ModuleCase):
 
         finally:
             os.unlink(key_file)
+
+    def test_missing_minion_list(self):
+        '''
+        test cmd with missing minion in nodegroup
+        '''
+        ret = self.client.cmd(
+                'minion,ghostminion',
+                'test.ping',
+                tgt_type='list'
+                )
+        self.assertIn('minion', ret)
+        self.assertIn('ghostminion', ret)
+        self.assertEqual(True, ret['minion'])
+        self.assertEqual(u'Minion did not return. [No response]',
+                         ret['ghostminion'])
+
+    def test_missing_minion_nodegroup(self):
+        '''
+        test cmd with missing minion in nodegroup
+        '''
+        ret = self.client.cmd(
+                'missing_minion',
+                'test.ping',
+                tgt_type='nodegroup'
+                )
+        self.assertIn('minion', ret)
+        self.assertIn('ghostminion', ret)
+        self.assertEqual(True, ret['minion'])
+        self.assertEqual(u'Minion did not return. [No response]',
+                         ret['ghostminion'])

@@ -104,7 +104,7 @@ class SSHModuleTest(ModuleCase):
         # user will get an indicator of what went wrong.
         self.assertEqual(len(list(ret.items())), 0)  # Zero keys found
 
-    def test_get_known_host(self):
+    def test_get_known_host_entries(self):
         '''
         Check that known host information is returned from ~/.ssh/config
         '''
@@ -113,7 +113,7 @@ class SSHModuleTest(ModuleCase):
              KNOWN_HOSTS)
         arg = ['root', 'github.com']
         kwargs = {'config': KNOWN_HOSTS}
-        ret = self.run_function('ssh.get_known_host', arg, **kwargs)
+        ret = self.run_function('ssh.get_known_host_entries', arg, **kwargs)[0]
         try:
             self.assertEqual(ret['enc'], 'ssh-rsa')
             self.assertEqual(ret['key'], self.key)
@@ -125,16 +125,16 @@ class SSHModuleTest(ModuleCase):
                 )
             )
 
-    def test_recv_known_host(self):
+    def test_recv_known_host_entries(self):
         '''
         Check that known host information is returned from remote host
         '''
-        ret = self.run_function('ssh.recv_known_host', ['github.com'])
+        ret = self.run_function('ssh.recv_known_host_entries', ['github.com'])
         try:
             self.assertNotEqual(ret, None)
-            self.assertEqual(ret['enc'], 'ssh-rsa')
-            self.assertEqual(ret['key'], self.key)
-            self.assertEqual(ret['fingerprint'], GITHUB_FINGERPRINT)
+            self.assertEqual(ret[0]['enc'], 'ssh-rsa')
+            self.assertEqual(ret[0]['key'], self.key)
+            self.assertEqual(ret[0]['fingerprint'], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
                 'AssertionError: {0}. Function returned: {1}'.format(
@@ -215,7 +215,7 @@ class SSHModuleTest(ModuleCase):
         try:
             self.assertEqual(ret['status'], 'updated')
             self.assertEqual(ret['old'], None)
-            self.assertEqual(ret['new']['fingerprint'], GITHUB_FINGERPRINT)
+            self.assertEqual(ret['new'][0]['fingerprint'], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
                 'AssertionError: {0}. Function returned: {1}'.format(
@@ -223,8 +223,8 @@ class SSHModuleTest(ModuleCase):
                 )
             )
         # check that item does exist
-        ret = self.run_function('ssh.get_known_host', ['root', 'github.com'],
-                                config=KNOWN_HOSTS)
+        ret = self.run_function('ssh.get_known_host_entries', ['root', 'github.com'],
+                                config=KNOWN_HOSTS)[0]
         try:
             self.assertEqual(ret['fingerprint'], GITHUB_FINGERPRINT)
         except AssertionError as exc:

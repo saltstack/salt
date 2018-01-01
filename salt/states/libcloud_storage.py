@@ -69,7 +69,6 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.compat
 
 log = logging.getLogger(__name__)

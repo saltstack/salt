@@ -141,6 +141,7 @@ MODULE_RET = {
 }
 
 
+@skipIf(sys.platform.startswith('win'), 'Snapper not available on Windows')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SnapperTestCase(TestCase, LoaderModuleMockMixin):
 

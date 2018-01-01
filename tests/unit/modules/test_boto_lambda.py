@@ -30,7 +30,6 @@ import salt.loader
 import salt.modules.boto_lambda as boto_lambda
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion
-import salt.utils
 import salt.utils.stringutils
 
 # Import 3rd-party libs

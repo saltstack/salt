@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Pass Renderer for Salt
 
 [pass](https://www.passwordstore.org/)
@@ -38,10 +38,10 @@ entries that are of interest for pillar data
         pass:
           pkg.installed
         ```
-"""
+'''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 from os.path import expanduser
@@ -58,9 +58,9 @@ log = logging.getLogger(__name__)
 
 
 def _get_pass_exec():
-    """
+    '''
     Return the pass executable or raise an error
-    """
+    '''
     pass_exec = salt.utils.path.which('pass')
     if pass_exec:
         return pass_exec
@@ -69,12 +69,12 @@ def _get_pass_exec():
 
 
 def _fetch_secret(pass_path):
-    """
+    '''
     Fetch secret from pass based on pass_path. If there is
     any error, return back the original pass_path value
-    """
+    '''
     cmd = "pass show {0}".format(pass_path.strip())
-    log.debug('Fetching secret: {0}'.format(cmd))
+    log.debug('Fetching secret: %s', cmd)
 
     proc = Popen(cmd.split(' '), stdout=PIPE, stderr=PIPE)
     pass_data, pass_error = proc.communicate()
@@ -88,9 +88,9 @@ def _fetch_secret(pass_path):
 
 
 def _decrypt_object(obj):
-    """
+    '''
     Recursively try to find a pass path (string) that can be handed off to pass
-    """
+    '''
     if isinstance(obj, six.string_types):
         return _fetch_secret(obj)
     elif isinstance(obj, dict):
@@ -103,9 +103,9 @@ def _decrypt_object(obj):
 
 
 def render(pass_info, saltenv='base', sls='', argline='', **kwargs):
-    """
+    '''
     Fetch secret from pass based on pass_path
-    """
+    '''
     try:
         _get_pass_exec()
     except SaltRenderError:

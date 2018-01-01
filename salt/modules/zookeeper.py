@@ -34,6 +34,7 @@ Configuration
     be set up as different configuration profiles. For example:
 
     .. code-block:: yaml
+
         zookeeper:
           prod:
             hosts: zoo1,zoo2,zoo3
@@ -74,7 +75,6 @@ except ImportError:
     HAS_KAZOO = False
 
 # Import Salt libraries
-import salt.utils
 import salt.utils.stringutils
 
 __virtualname__ = 'zookeeper'

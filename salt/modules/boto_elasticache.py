@@ -75,7 +75,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return (False, 'The modle boto_elasticache could not be loaded: boto libraries not found')
+        return (False, 'The model boto_elasticache could not be loaded: boto libraries not found')
     __utils__['boto.assign_funcs'](__name__, 'elasticache', pack=__salt__)
     return True
 

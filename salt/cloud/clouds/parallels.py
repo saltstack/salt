@@ -27,7 +27,6 @@ import pprint
 import logging
 
 # Import Salt libs
-import salt.utils
 from salt._compat import ElementTree as ET
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.error import URLError
