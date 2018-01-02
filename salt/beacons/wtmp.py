@@ -9,7 +9,7 @@ Beacon to fire events at login of users as registered in the wtmp file
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import os
 import struct
