@@ -1772,7 +1772,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
             for h in hostnames:
                 # It's an IP address, just return it
                 if h[4][0] == addr:
-                    resolved = addr
+                    resolved = salt.utils.zeromq.ip_bracket(addr)
                     break
 
                 if h[0] == socket.AF_INET and ipv6 is True:

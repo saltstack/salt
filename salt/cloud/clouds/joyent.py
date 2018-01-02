@@ -359,7 +359,7 @@ def create_node(**kwargs):
 
     data = json.dumps(create_data)
 
-    ret = query(command='/my/machines', data=data, method='POST',
+    ret = query(command='my/machines', data=data, method='POST',
                 location=location)
     if ret[0] in VALID_RESPONSE_CODES:
         return ret[1]
@@ -436,7 +436,7 @@ def reboot(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/{0}'.format(node['id']),
+                      command='my/machines/{0}'.format(node['id']),
                       location=node['location'], data={'action': 'reboot'})
     return ret[0] in VALID_RESPONSE_CODES
 
@@ -456,7 +456,7 @@ def stop(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/{0}'.format(node['id']),
+                      command='my/machines/{0}'.format(node['id']),
                       location=node['location'], data={'action': 'stop'})
     return ret[0] in VALID_RESPONSE_CODES
 
@@ -477,7 +477,7 @@ def start(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/{0}'.format(node['id']),
+                      command='my/machines/{0}'.format(node['id']),
                       location=node['location'], data={'action': 'start'})
     return ret[0] in VALID_RESPONSE_CODES
 
@@ -869,7 +869,7 @@ def avail_sizes(call=None):
             '-f or --function, or with the --list-sizes option'
         )
 
-    rcode, items = query(command='/my/packages')
+    rcode, items = query(command='my/packages')
     if rcode not in VALID_RESPONSE_CODES:
         return {}
     return key_list(items=items)
@@ -1077,7 +1077,13 @@ def query(action=None,
     hash_ = SHA256.new()
     hash_.update(timestamp.encode(__salt_system_encoding__))
     signed = base64.b64encode(rsa_.sign(hash_))
-    keyid = '/{0}/keys/{1}'.format(user.split('/')[0], ssh_keyname)
+    user_arr = user.split('/')
+    if len(user_arr) == 1:
+        keyid = '/{0}/keys/{1}'.format(user_arr[0], ssh_keyname)
+    elif len(user_arr) == 2:
+        keyid = '/{0}/users/{1}/keys/{2}'.format(user_arr[0], user_arr[1], ssh_keyname)
+    else:
+        log.error('Malformed user string')
 
     headers = {
         'Content-Type': 'application/json',
