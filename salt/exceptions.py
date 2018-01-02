@@ -2,7 +2,7 @@
 '''
 This module is a central location for all salt exceptions
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -41,6 +41,8 @@ class SaltException(Exception):
     def __init__(self, message=''):
         # Avoid circular import
         import salt.utils.stringutils
+        if not isinstance(message, six.string_types):
+            message = six.text_type(message)
         if six.PY3 or isinstance(message, unicode):  # pylint: disable=incompatible-py3-code
             super(SaltException, self).__init__(
                 salt.utils.stringutils.to_str(message)
@@ -120,7 +122,7 @@ class CommandExecutionError(SaltException):
     def __init__(self, message='', info=None):
         # Avoid circular import
         import salt.utils.stringutils
-        self.error = exc_str_prefix = salt.utils.stringutils.to_unicode(message)
+        self.error = exc_str_prefix = six.text_type(message)
         self.info = info
         if self.info:
             if exc_str_prefix:

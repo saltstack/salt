@@ -533,14 +533,14 @@ def tar(options, tarfile, sources=None, dest=None,
         raise SaltInvocationError('Tar options can not be empty')
 
     cmd = ['tar']
-    if dest:
-        cmd.extend(['-C', '{0}'.format(dest)])
-
     if options:
         cmd.extend(options.split())
 
     cmd.extend(['{0}'.format(tarfile)])
     cmd.extend(_expand_sources(sources))
+    if dest:
+        cmd.extend(['-C', '{0}'.format(dest)])
+
     return __salt__['cmd.run'](cmd,
                                cwd=cwd,
                                template=template,

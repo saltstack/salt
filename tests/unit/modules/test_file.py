@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import tempfile
@@ -567,8 +567,8 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         newlines at end of file.
         '''
         # File ending with a newline
-        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.stringutils.to_bytes('foo' + os.linesep))
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_str('foo' + os.linesep))
             tfile.flush()
         filemod.append(tfile.name, 'bar')
         expected = os.linesep.join(['foo', 'bar']) + os.linesep
@@ -577,8 +577,8 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 salt.utils.stringutils.to_unicode(tfile2.read()), expected)
 
         # File not ending with a newline
-        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.stringutils.to_bytes('foo'))
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_str('foo'))
             tfile.flush()
         filemod.append(tfile.name, 'bar')
         with salt.utils.files.fopen(tfile.name) as tfile2:
@@ -586,8 +586,8 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 salt.utils.stringutils.to_unicode(tfile2.read()), expected)
 
         # A newline should be added in empty files
-        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            filemod.append(tfile.name, salt.utils.stringutils.to_bytes('bar'))
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tfile:
+            filemod.append(tfile.name, salt.utils.stringutils.to_str('bar'))
         with salt.utils.files.fopen(tfile.name) as tfile2:
             self.assertEqual(
                 salt.utils.stringutils.to_unicode(tfile2.read()),

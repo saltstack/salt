@@ -108,7 +108,7 @@ def __virtual__():
     else:
         return (
             False,
-            '{0} state module can only be loaded on SmartOS computed nodes'.format(
+            '{0} state module can only be loaded on SmartOS compute nodes'.format(
                 __virtualname__
             )
         )

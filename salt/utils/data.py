@@ -4,7 +4,7 @@ Functions for manipulating, inspecting, or otherwise working with data types
 and data structures.
 '''
 
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import collections

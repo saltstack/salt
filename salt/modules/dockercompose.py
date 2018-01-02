@@ -95,12 +95,17 @@ Functions
     - :py:func:`dockercompose.build <salt.modules.dockercompose.build>`
 - Gather information about containers:
     - :py:func:`dockercompose.ps <salt.modules.dockercompose.ps>`
+- Manage service definitions:
+    - :py:func:`dockercompose.service_create <salt.modules.dockercompose.ps>`
+    - :py:func:`dockercompose.service_upsert <salt.modules.dockercompose.ps>`
+    - :py:func:`dockercompose.service_remove <salt.modules.dockercompose.ps>`
+    - :py:func:`dockercompose.service_set_tag <salt.modules.dockercompose.ps>`
 
 Detailed Function Documentation
 -------------------------------
 '''
 
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 import logging
@@ -258,8 +263,9 @@ def __load_docker_compose(path):
     return result, None
 
 
-def __dump_docker_compose(path, content):
+def __dump_docker_compose(path, content, already_existed):
     '''
+    Dumps
 
     :param path:
     :param content: the not-yet dumped content
@@ -267,14 +273,14 @@ def __dump_docker_compose(path, content):
     '''
     try:
         dumped = yaml.dump(content, indent=2, default_flow_style=False)
-        return __write_docker_compose(path, dumped)
+        return __write_docker_compose(path, dumped, already_existed)
     except TypeError as t_err:
         msg = 'Could not dump {0} {1}'.format(content, t_err)
         return __standardize_result(False, msg,
                                     None, None)
 
 
-def __write_docker_compose(path, docker_compose):
+def __write_docker_compose(path, docker_compose, already_existed):
     '''
     Write docker-compose to a path
     in order to use it with docker-compose ( config check )
@@ -303,7 +309,8 @@ def __write_docker_compose(path, docker_compose):
                                     None, None)
     project = __load_project_from_file_path(file_path)
     if isinstance(project, dict):
-        os.remove(file_path)
+        if not already_existed:
+            os.remove(file_path)
         return project
     return file_path
 
@@ -372,7 +379,7 @@ def __load_compose_definitions(path, definition):
     return compose_result, loaded_definition, None
 
 
-def __dump_compose_file(path, compose_result, success_msg):
+def __dump_compose_file(path, compose_result, success_msg, already_existed):
     '''
     Utility function to dump the compose result to a file.
 
@@ -381,11 +388,13 @@ def __dump_compose_file(path, compose_result, success_msg):
     :param success_msg: the message to give upon success
     :return:
     '''
-    ret = __dump_docker_compose(path, compose_result['compose_content'])
+    ret = __dump_docker_compose(path,
+                                compose_result['compose_content'],
+                                already_existed)
     if isinstance(ret, dict):
         return ret
     return __standardize_result(True, success_msg,
-                                compose_result, None)
+                                compose_result['compose_content'], None)
 
 
 def __handle_except(inst):
@@ -471,7 +480,9 @@ def create(path, docker_compose):
         salt myminion dockercompose.create /path/where/docker-compose/stored content
     '''
     if docker_compose:
-        ret = __write_docker_compose(path, docker_compose)
+        ret = __write_docker_compose(path,
+                                     docker_compose,
+                                     already_existed=False)
         if isinstance(ret, dict):
             return ret
     else:
@@ -909,7 +920,8 @@ def service_create(path, service_name, definition):
         return __standardize_result(False, msg, None, None)
     services[service_name] = loaded_definition
     return __dump_compose_file(path, compose_result,
-                               'Service {0} created'.format(service_name))
+                               'Service {0} created'.format(service_name),
+                               already_existed=True)
 
 
 def service_upsert(path, service_name, definition):
@@ -940,7 +952,8 @@ def service_upsert(path, service_name, definition):
         return __standardize_result(False, msg, None, None)
     services[service_name] = loaded_definition
     return __dump_compose_file(path, compose_result,
-                               'Service definition for {0} is set'.format(service_name))
+                               'Service definition for {0} is set'.format(service_name),
+                               already_existed=True)
 
 
 def service_remove(path, service_name):
@@ -970,7 +983,8 @@ def service_remove(path, service_name):
                                     None, None)
     del services[service_name]
     return __dump_compose_file(path, compose_result,
-                               'Service {0} is removed from {1}'.format(service_name, path))
+                               'Service {0} is removed from {1}'.format(service_name, path),
+                               already_existed = True)
 
 
 def service_set_tag(path, service_name, tag):
@@ -1005,6 +1019,7 @@ def service_set_tag(path, service_name, tag):
                                     'Service {0} did not contain the variable "image"'.format(service_name),
                                     None, None)
     image = services[service_name]['image'].split(':')[0]
-    services[service_name]['image'] = '{0}:{1}'.format(image, tag)
+    services[service_name]['image'] = str('{0}:{1}'.format(image, tag))
     return __dump_compose_file(path, compose_result,
-                               'Service {0} is set to tag {1}'.format(service_name, tag))
+                               'Service {0} is set to tag "{1}"'.format(service_name, tag),
+                               already_existed=True)

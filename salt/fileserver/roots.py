@@ -15,7 +15,7 @@ be in the :conf_master:`fileserver_backend` list to enable this backend.
 Fileserver environments are defined using the :conf_master:`file_roots`
 configuration option.
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os

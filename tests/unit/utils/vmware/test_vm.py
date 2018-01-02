@@ -68,13 +68,13 @@ class CreateVirtualMachineTestCase(TestCase):
     def test_create_vm_pool_task_call(self):
         vmware.create_vm(self.vm_name, self.mock_config_spec,
                          self.mock_folder_object, self.mock_resourcepool_object)
-        self.mock_vm_create_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_create_task)
 
     def test_create_vm_host_task_call(self):
         vmware.create_vm(self.vm_name, self.mock_config_spec,
                          self.mock_folder_object, self.mock_resourcepool_object,
                          host_object=self.mock_host_object)
-        self.mock_vm_create_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_create_task)
 
     def test_create_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
@@ -133,13 +133,13 @@ class RegisterVirtualMachineTestCase(TestCase):
     def test_register_vm_pool_task_call(self):
         vmware.register_vm(self.datacenter, self.vm_name, self.mock_vmx_path,
                            self.mock_resourcepool_object)
-        self.mock_vm_register_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_register_task)
 
     def test_register_vm_host_task_call(self):
         vmware.register_vm(self.datacenter, self.vm_name, self.mock_vmx_path,
                            self.mock_resourcepool_object,
                            host_object=self.mock_host_object)
-        self.mock_vm_register_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_register_task)
 
     def test_register_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
@@ -192,7 +192,7 @@ class UpdateVirtualMachineTestCase(TestCase):
 
     def test_update_vm_task_call(self):
         vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
-        self.mock_vm_update_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_update_task)
 
     def test_update_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
@@ -234,7 +234,7 @@ class DeleteVirtualMachineTestCase(TestCase):
 
     def test_destroy_vm_task_call(self):
         vmware.delete_vm(self.mock_vm_ref)
-        self.mock_vm_destroy_task.assert_called_once()
+        self.assert_called_once(self.mock_vm_destroy_task)
 
     def test_destroy_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
@@ -274,7 +274,7 @@ class UnregisterVirtualMachineTestCase(TestCase):
 
     def test_unregister_vm_task_call(self):
         vmware.unregister_vm(self.mock_vm_ref)
-        self.mock_vm_unregister.assert_called_once()
+        self.assert_called_once(self.mock_vm_unregister)
 
     def test_unregister_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()

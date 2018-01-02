@@ -13,7 +13,7 @@ The data sent to the state calls is as follows:
 '''
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import copy

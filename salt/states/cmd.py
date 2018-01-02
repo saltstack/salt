@@ -232,7 +232,7 @@ To use it, one may pass it like this. Example:
 '''
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import copy

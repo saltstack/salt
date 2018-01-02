@@ -824,6 +824,8 @@ class SSHCase(ShellCase):
         '''
         ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout,
                            wipe=wipe, raw=raw)
+        log.debug('SSHCase run_function executed %s with arg %s', function, arg)
+        log.debug('SSHCase JSON return: %s', ret)
         try:
             return json.loads(ret)['localhost']
         except Exception:
