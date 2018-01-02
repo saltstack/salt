@@ -58,8 +58,9 @@ from __future__ import absolute_import
 
 import re
 import logging
-import json
 import copy
+
+import salt.utils.json
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -157,7 +158,7 @@ def topic_present(name, subscriptions=None, attributes=None,
             ret['comment'] += '  Attribute {0} would be updated on topic {1}.'.format(attr, TopicArn)
             ret['result'] = None
             continue
-        want_val = want_val if isinstance(want_val, six.string_types) else json.dumps(want_val)
+        want_val = want_val if isinstance(want_val, six.string_types) else salt.utils.json.dumps(want_val)
         if __salt__['boto3_sns.set_topic_attributes'](TopicArn, attr, want_val, region=region,
                                                       key=key, keyid=keyid, profile=profile):
             ret['comment'] += '  Attribute {0} set to {1} on topic {2}.'.format(attr, want_val,
@@ -307,6 +308,12 @@ def topic_absent(name, unsubscribe=False, region=None, key=None, keyid=None, pro
 
 
 def _json_objs_equal(left, right):
-    left = __utils__['boto3.ordered'](json.loads(left) if isinstance(left, six.string_types) else left)
-    right = __utils__['boto3.ordered'](json.loads(right) if isinstance(right, six.string_types) else right)
+    left = __utils__['boto3.ordered'](
+        salt.utils.json.loads(left)
+        if isinstance(left, six.string_types)
+        else left)
+    right = __utils__['boto3.ordered'](
+        salt.utils.json.loads(right)
+        if isinstance(right, six.string_types)
+        else right)
     return left == right

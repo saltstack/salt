@@ -68,7 +68,7 @@ def _changes(name,
              workphone='',
              homephone='',
              loginclass=None,
-             date=0,
+             date=None,
              mindays=0,
              maxdays=999999,
              inactdays=0,
@@ -135,7 +135,7 @@ def _changes(name,
                     change['passwd'] = password
         if empty_password and lshad['passwd'] != '':
             change['empty_password'] = True
-        if date and date is not 0 and lshad['lstchg'] != date:
+        if date is not None and lshad['lstchg'] != date:
             change['date'] = date
         if mindays and mindays is not 0 and lshad['min'] != mindays:
             change['mindays'] = mindays
@@ -687,7 +687,7 @@ def present(name,
                                          'empty password'.format(name)
                         ret['result'] = False
                     ret['changes']['password'] = ''
-                if date:
+                if date is not None:
                     __salt__['shadow.set_date'](name, date)
                     spost = __salt__['shadow.info'](name)
                     if spost['lstchg'] != date:

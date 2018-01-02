@@ -132,8 +132,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_key('-L --out json')
         ret = {}
         try:
-            import json
-            ret = json.loads('\n'.join(data))
+            import salt.utils.json
+            ret = salt.utils.json.loads('\n'.join(data))
         except ValueError:
             pass
 

@@ -4,7 +4,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 from datetime import datetime
 import os
-import json
 import pprint
 import shutil
 
@@ -32,6 +31,7 @@ import yaml
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.json
 import salt.utils.platform
 import salt.states.file as filestate
 import salt.serializers.yaml as yamlserializer
@@ -81,7 +81,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertEqual(yaml.load(returner.returned), dataset)
 
             filestate.serialize('/tmp', dataset, formatter="json")
-            self.assertEqual(json.loads(returner.returned), dataset)
+            self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
 
             filestate.serialize('/tmp', dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')

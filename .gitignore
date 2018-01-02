@@ -94,6 +94,8 @@ tests/integration/cloud/providers/pki/minions
 /.tox/
 
 # Kitchen tests files
+.kitchen.local.yml
 .kitchen/
 .bundle/
 Gemfile.lock
+/artifacts/

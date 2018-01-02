@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import multiprocessing
 import ctypes
 import logging
@@ -51,7 +51,7 @@ class AESPubClientMixin(object):
     @tornado.gen.coroutine
     def _decode_payload(self, payload):
         # we need to decrypt it
-        log.trace('Decoding payload: {0}'.format(payload))
+        log.trace('Decoding payload: %s', payload)
         if payload['enc'] == 'aes':
             self._verify_master_signature(payload)
             try:
@@ -172,12 +172,10 @@ class AESReqServerMixin(object):
         '''
 
         if not salt.utils.verify.valid_id(self.opts, load['id']):
-            log.info(
-                'Authentication request from invalid id {id}'.format(**load)
-                )
+            log.info('Authentication request from invalid id %s', load['id'])
             return {'enc': 'clear',
                     'load': {'ret': False}}
-        log.info('Authentication request from {id}'.format(**load))
+        log.info('Authentication request from %s', load['id'])
 
         # 0 is default which should be 'unlimited'
         if self.opts['max_minions'] > 0:
@@ -231,8 +229,8 @@ class AESReqServerMixin(object):
             pass
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
-            log.info('Public key rejected for {0}. Key is present in '
-                     'rejection key dir.'.format(load['id']))
+            log.info('Public key rejected for %s. Key is present in '
+                     'rejection key dir.', load['id'])
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
@@ -245,9 +243,9 @@ class AESReqServerMixin(object):
             with salt.utils.files.fopen(pubfn, 'r') as pubfn_handle:
                 if pubfn_handle.read().strip() != load['pub'].strip():
                     log.error(
-                        'Authentication attempt from {id} failed, the public '
+                        'Authentication attempt from %s failed, the public '
                         'keys did not match. This may be an attempt to compromise '
-                        'the Salt cluster.'.format(**load)
+                        'the Salt cluster.', load['id']
                     )
                     # put denied minion key into minions_denied
                     with salt.utils.files.fopen(pubfn_denied, 'w+') as fp_:
@@ -264,9 +262,7 @@ class AESReqServerMixin(object):
             # The key has not been accepted, this is a new minion
             if os.path.isdir(pubfn_pend):
                 # The key path is a directory, error out
-                log.info(
-                    'New public key {id} is a directory'.format(**load)
-                )
+                log.info('New public key %s is a directory', load['id'])
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
@@ -276,14 +272,12 @@ class AESReqServerMixin(object):
 
             if auto_reject:
                 key_path = pubfn_rejected
-                log.info('New public key for {id} rejected via autoreject_file'
-                         .format(**load))
+                log.info('New public key for %s rejected via autoreject_file', load['id'])
                 key_act = 'reject'
                 key_result = False
             elif not auto_sign:
                 key_path = pubfn_pend
-                log.info('New public key for {id} placed in pending'
-                         .format(**load))
+                log.info('New public key for %s placed in pending', load['id'])
                 key_act = 'pend'
                 key_result = True
             else:
@@ -314,8 +308,8 @@ class AESReqServerMixin(object):
                     shutil.move(pubfn_pend, pubfn_rejected)
                 except (IOError, OSError):
                     pass
-                log.info('Pending public key for {id} rejected via '
-                         'autoreject_file'.format(**load))
+                log.info('Pending public key for %s rejected via '
+                         'autoreject_file', load['id'])
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
                 eload = {'result': False,
@@ -333,10 +327,9 @@ class AESReqServerMixin(object):
                 with salt.utils.files.fopen(pubfn_pend, 'r') as pubfn_handle:
                     if pubfn_handle.read() != load['pub']:
                         log.error(
-                            'Authentication attempt from {id} failed, the public '
+                            'Authentication attempt from %s failed, the public '
                             'key in pending did not match. This may be an '
-                            'attempt to compromise the Salt cluster.'
-                            .format(**load)
+                            'attempt to compromise the Salt cluster.', load['id']
                         )
                         # put denied minion key into minions_denied
                         with salt.utils.files.fopen(pubfn_denied, 'w+') as fp_:
@@ -350,9 +343,9 @@ class AESReqServerMixin(object):
                                 'load': {'ret': False}}
                     else:
                         log.info(
-                            'Authentication failed from host {id}, the key is in '
+                            'Authentication failed from host %s, the key is in '
                             'pending and needs to be accepted with salt-key '
-                            '-a {id}'.format(**load)
+                            '-a %s', load['id'], load['id']
                         )
                         eload = {'result': True,
                                  'act': 'pend',
@@ -369,10 +362,9 @@ class AESReqServerMixin(object):
                 with salt.utils.files.fopen(pubfn_pend, 'r') as pubfn_handle:
                     if pubfn_handle.read() != load['pub']:
                         log.error(
-                            'Authentication attempt from {id} failed, the public '
+                            'Authentication attempt from %s failed, the public '
                             'keys in pending did not match. This may be an '
-                            'attempt to compromise the Salt cluster.'
-                            .format(**load)
+                            'attempt to compromise the Salt cluster.', load['id']
                         )
                         # put denied minion key into minions_denied
                         with salt.utils.files.fopen(pubfn_denied, 'w+') as fp_:
@@ -396,7 +388,7 @@ class AESReqServerMixin(object):
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
-        log.info('Authentication accepted from {id}'.format(**load))
+        log.info('Authentication accepted from %s', load['id'])
         # only write to disk if you are adding the file, and in open mode,
         # which implies we accept any key from a minion.
         if not os.path.isfile(pubfn) and not self.opts['open_mode']:
@@ -424,7 +416,7 @@ class AESReqServerMixin(object):
             with salt.utils.files.fopen(pubfn) as f:
                 pub = RSA.importKey(f.read())
         except (ValueError, IndexError, TypeError) as err:
-            log.error('Corrupt public key "{0}": {1}'.format(pubfn, err))
+            log.error('Corrupt public key "%s": %s', pubfn, err)
             return {'enc': 'clear',
                     'load': {'ret': False}}
 

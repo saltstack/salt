@@ -34,16 +34,19 @@ mysql:
     - rollback: True
 
 '''
+# Import Python libs
 from __future__ import absolute_import
-import json
 import logging
-
-# Import third party libs
-from salt.ext import six
-import salt.utils.files
-import salt.exceptions
 import yaml
-# Import python libs
+
+# Import Salt libs
+import salt.utils.files
+import salt.utils.json
+import salt.exceptions
+
+# Import 3rd-party libs
+from salt.ext import six
+
 # pylint: disable=import-error
 HAS_OSLO = False
 try:
@@ -102,7 +105,7 @@ def _parse_template(tmpl_str):
     '''
     tmpl_str = tmpl_str.strip()
     if tmpl_str.startswith('{'):
-        tpl = json.loads(tmpl_str)
+        tpl = salt.utils.json.loads(tmpl_str)
     else:
         try:
             tpl = yaml.load(tmpl_str, Loader=YamlLoader)

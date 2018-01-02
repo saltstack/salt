@@ -17,8 +17,10 @@ Module for sending messages to Mattermost
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import json
 import logging
+
+# Import Salt libs
+import salt.utils.json
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -129,9 +131,11 @@ def post_message(message,
         parameters['username'] = username
     parameters['text'] = '```' + message + '```'  # pre-formatted, fixed-width text
     log.debug('Parameters: %s', parameters)
-    result = salt.utils.mattermost.query(api_url=api_url,
-                                         hook=hook,
-                                         data='payload={0}'.format(json.dumps(parameters)))
+    data = salt.utils.json.dumps(parameters)
+    result = salt.utils.mattermost.query(
+        api_url=api_url,
+        hook=hook,
+        data=str('payload={0}').format(data))  # future lint: blacklisted-function
 
     if result:
         return True

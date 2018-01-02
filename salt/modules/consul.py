@@ -8,6 +8,12 @@ https://www.consul.io
 
 # Import Python Libs
 from __future__ import absolute_import
+import base64
+import logging
+
+# Import salt libs
+import salt.utils.http
+import salt.utils.json
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -16,13 +22,6 @@ import salt.ext.six
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
-# Import salt libs
-import salt.utils.http
-
-import base64
-import json
-
-import logging
 log = logging.getLogger(__name__)
 
 from salt.exceptions import SaltInvocationError
@@ -84,7 +83,7 @@ def _query(function,
 
     if data is None:
         data = {}
-    data = json.dumps(data)
+    data = salt.utils.json.dumps(data)
 
     result = salt.utils.http.query(
         url,

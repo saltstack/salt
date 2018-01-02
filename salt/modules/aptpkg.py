@@ -23,7 +23,6 @@ import os
 import re
 import logging
 import time
-import json
 
 # Import third party libs
 import yaml
@@ -42,6 +41,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.itertools
+import salt.utils.json
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.pkg.deb
@@ -137,7 +137,7 @@ def _get_ppa_info_from_launchpad(owner_name, ppa_name):
         owner_name, ppa_name)
     request = _Request(lp_url, headers={'Accept': 'application/json'})
     lp_page = _urlopen(request)
-    return json.load(lp_page)
+    return salt.utils.json.load(lp_page)
 
 
 def _reconstruct_ppa_name(owner_name, ppa_name):

@@ -41,12 +41,12 @@ import logging
 import tempfile
 import subprocess
 import collections
-import json
 import re
 import salt.syspaths as syspaths
 import salt.cache
 import salt.utils.files
 import salt.utils.http
+import salt.utils.json
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import (CommandExecutionError, SaltRunnerError)
@@ -445,7 +445,7 @@ def order_certificate(minion_id, common_name, organization_id, validity_years,
         body['renewal_of_order_id'] = renewal_of_order_id
 
     body['certificate'] = certificate
-    encoded_body = json.dumps(body)
+    encoded_body = salt.utils.json.dumps(body)
 
     qdata = salt.utils.http.query(
         '{0}/order/certificate/ssl'.format(_base_url()),

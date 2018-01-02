@@ -167,7 +167,7 @@ def template_shebang(template, renderers, default, blacklist, whitelist, input_d
         line = input_data.split()[0]
     else:
         with salt.utils.files.fopen(template, 'r') as ifile:
-            line = ifile.readline()
+            line = salt.utils.stringutils.to_unicode(ifile.readline())
 
     # Check if it starts with a shebang and not a path
     if line.startswith('#!') and not line.startswith('#!/'):
