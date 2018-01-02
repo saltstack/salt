@@ -209,7 +209,7 @@ Section -Prerequisites
             # of the user variable are undefined).
             # http://nsis.sourceforge.net/Reference/ExecWait
             ClearErrors
-            ExecWait '"$INSTDIR\vcredist.exe" /qb! /norestart' $0
+            ExecWait '"$INSTDIR\vcredist.exe" /qb! /quiet /norestart' $0
             IfErrors 0 CheckVcRedistErrorCode
                 MessageBox MB_OK \
                     "VC Redist 2008 SP1 MFC failed to install. Try installing the package manually." \
