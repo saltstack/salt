@@ -1838,6 +1838,8 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
 
 def stop(name, resource_group=None, call=None):
     '''
+    versionadded:: Fluorine
+    
     Stop a VM
 
     CLI Examples:
@@ -1857,7 +1859,6 @@ def stop(name, resource_group=None, call=None):
             try:
                 instance_stop = compconn.virtual_machines.deallocate(group, name)
                 instance_stop.wait()
-                resource_group = group
             except CloudError:
                 continue
     else:
@@ -1868,6 +1869,8 @@ def stop(name, resource_group=None, call=None):
 
 def start(name, resource_group=None, call=None):
     '''
+    versionadded:: Fluorine
+    
     Start a VM
 
     CLI Examples:
@@ -1887,7 +1890,6 @@ def start(name, resource_group=None, call=None):
             try:
                 instance_start = compconn.virtual_machines.start(group, name)
                 instance_start.wait()
-                resource_group = group
             except CloudError:
                 continue
     else:
