@@ -75,7 +75,7 @@ def __virtual__():
     return False, 'The linux_acl state cannot be loaded: the getfacl or setfacl binary is not in the path.'
 
 
-def present(name, acl_type, acl_name='', perms='', recurse=False):
+def present(name, acl_type, acl_name='', perms='', recurse=False, force=False):
     '''
     Ensure a Linux ACL is present
 
@@ -361,31 +361,33 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
     # We search through the dictionary getfacl returns for the owner of the
     # file if acl_name is empty.
     if acl_names == '':
-        _search_name = __current_perms[name].get('comment').get(_acl_type, '')
+        _search_names = __current_perms[name].get('comment').get(_acl_type, '')
     else:
-        _search_name = acl_names
+        _search_names = acl_names
 
     if _current_perms.get(_acl_type, None) or _default:
         try:
-            user = [i for i in _current_perms[_acl_type] if next(six.iterkeys(i)) == _search_name].pop()
+            users = [i for i in _current_perms[_acl_type] if next(six.iterkeys(i)) in _search_names].pop()
         except (AttributeError, IndexError, StopIteration, KeyError):
-            user = None
+            users = None
 
-        if user:
-            if user[_search_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
+        if users:
+            changes = {}
+            for count, search_name in enumerate(_search_names):
+            if users[search_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
                 ret['comment'] = 'Permissions are in the desired state'
             else:
-                changes = {'new': {'acl_name': acl_names,
+                changes .update({'new_{}'.format(count): {'acl_name': ', '.join(acl_names),
                                    'acl_type': acl_type,
-                                   'perms': perms},
-                           'old': {'acl_name': acl_names,
+                                   'perms': _octal_perms},
+                           'old_{}'.format(count): {'acl_name': ', '.join(acl_names),
                                    'acl_type': acl_type,
-                                   'perms': six.text_type(user[_search_name]['octal'])}}
+                                   'perms': six.text_type(users[search_name]['octal'])}})
                 if __opts__['test']:
                     ret.update({'comment': 'Updated permissions will be applied for '
                                            '{0}: {1} -> {2}'.format(
                                                 acl_names,
-                                                six.text_type(user[_search_name]['octal']),
+                                                six.text_type(users[_search_names]['octal']),
                                                 perms),
                                 'result': None, 'pchanges': changes})
                     return ret
@@ -423,7 +425,7 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
                     __salt__['acl.modfacl'](acl_type, acl_name, perms, name,
                                             recursive=recurse, raise_err=True)
                 ret.update({'comment': 'Applied new permissions for '
-                                       '{0}'.format(acl_names),
+                                       '{0}'.format(', '.join(acl_names)),
                             'result': True, 'changes': {}})
             except CommandExecutionError as exc:
                 ret.update({'comment': 'Error updating permissions for {0}: '
