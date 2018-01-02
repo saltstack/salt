@@ -63,7 +63,7 @@ def _user_mdata(mdata_list=None, mdata_get=None):
         return grains
 
     for mdata_grain in __salt__['cmd.run'](mdata_list, ignore_retcode=True).splitlines():
-        mdata_value = __salt__['cmd.run']('{0} {1}'.format(mdata_get, mdata_grain, ignore_retcode=True))
+        mdata_value = __salt__['cmd.run']('{0} {1}'.format(mdata_get, mdata_grain), ignore_retcode=True)
 
         if not mdata_grain.startswith('sdc:'):
             if 'mdata' not in grains:
@@ -106,7 +106,7 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
         return grains
 
     for mdata_grain in sdc_text_keys+sdc_json_keys:
-        mdata_value = __salt__['cmd.run']('{0} sdc:{1}'.format(mdata_get, mdata_grain, ignore_retcode=True))
+        mdata_value = __salt__['cmd.run']('{0} sdc:{1}'.format(mdata_get, mdata_grain), ignore_retcode=True)
 
         if not mdata_value.startswith('No metadata for '):
             if 'mdata' not in grains:
