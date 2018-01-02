@@ -368,7 +368,7 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
     if _current_perms.get(_acl_type, None) or _default:
         try:
             users = [i for i in _current_perms[_acl_type] if next(six.iterkeys(i)) in _search_names].pop()
-        except (AttributeError, IndexError, StopIteration, KeyError):
+        except (AttributeError, KeyError):
             users = None
 
         if users:
