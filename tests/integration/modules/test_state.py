@@ -4,7 +4,6 @@
 from __future__ import absolute_import
 import os
 import shutil
-import six
 import textwrap
 import threading
 import time
