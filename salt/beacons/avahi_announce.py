@@ -12,8 +12,9 @@ Dependencies
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
+import six
 import time
 from salt.ext.six.moves import map
 
@@ -194,12 +195,12 @@ def beacon(config):
                     grain_value = ','.join(grain_value)
             txt[item] = _enforce_txt_record_maxlen(item, grain_value)
             if LAST_GRAINS and (LAST_GRAINS.get(grain, '') != __grains__.get(grain, '')):
-                changes[str('txt.' + item)] = txt[item]
+                changes[six.text_type('txt.' + item)] = txt[item]
         else:
             txt[item] = _enforce_txt_record_maxlen(item, _config['txt'][item])
 
         if not LAST_GRAINS:
-            changes[str('txt.' + item)] = txt[item]
+            changes[six.text_type('txt.' + item)] = txt[item]
 
     if changes:
         if not LAST_GRAINS:
@@ -225,8 +226,8 @@ def beacon(config):
             GROUP.Commit()
         else:
             GROUP.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
-                                servicename, _config['servicetype'], '',
-                                avahi.dict_to_txt_array(txt))
+                                   servicename, _config['servicetype'], '',
+                                   avahi.dict_to_txt_array(txt))
 
         ret.append({'tag': 'result', 'changes': changes})
 
