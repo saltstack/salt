@@ -381,10 +381,10 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
                 if users[search_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
                     ret['comment'] = 'Permissions are in the desired state'
                 else:
-                    changes.update({'new_{}'.format(count): {'acl_name': ', '.join(acl_names),
+                    changes.update({'new': {'acl_name': ', '.join(acl_names),
                                                              'acl_type': acl_type,
                                                              'perms': _octal_perms},
-                                    'old_{}'.format(count): {'acl_name': ', '.join(acl_names),
+                                    'old': {'acl_name': ', '.join(acl_names),
                                                              'acl_type': acl_type,
                                                              'perms': str(users[search_name]['octal'])}})
                     if __opts__['test']:
