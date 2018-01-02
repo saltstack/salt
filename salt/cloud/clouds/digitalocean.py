@@ -27,16 +27,16 @@ under the "SSH Keys" section.
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
-import time
-import json
-import pprint
-import logging
 import decimal
+import logging
+import os
+import pprint
+import time
 
 # Import Salt Libs
 import salt.utils.cloud
 import salt.utils.files
+import salt.utils.json
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -562,7 +562,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None, http_meth
         'personal_access_token', get_configured_provider(), __opts__, search_global=False
     )
 
-    data = json.dumps(args)
+    data = salt.utils.json.dumps(args)
 
     requester = getattr(requests, http_method)
     request = requester(path, data=data, headers={'Authorization': 'Bearer ' + personal_access_token, 'Content-Type': 'application/json'})
@@ -584,7 +584,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None, http_meth
 
     content = request.text
 
-    result = json.loads(content)
+    result = salt.utils.json.loads(content)
     if result.get('status', '').lower() == 'error':
         raise SaltCloudSystemExit(
             pprint.pformat(result.get('error_message', {}))

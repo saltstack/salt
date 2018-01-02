@@ -126,8 +126,8 @@ class RosterEntryConfigTest(TestCase):
             self.assertDictContainsSubset(expected['properties'], config.serialize()['properties'])
             self.assertDictContainsSubset(expected, config.serialize())
         except AssertionError:
-            import json
-            print(json.dumps(config.serialize(), indent=4))
+            import salt.utils.json
+            print(salt.utils.json.dumps(config.serialize(), indent=4))
             raise
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
@@ -263,8 +263,8 @@ class RosterItemTest(TestCase):
                 ssh_schemas.RosterItem.serialize()
             )
         except AssertionError:
-            import json
-            print(json.dumps(ssh_schemas.RosterItem.serialize(), indent=4))
+            import salt.utils.json
+            print(salt.utils.json.dumps(ssh_schemas.RosterItem.serialize(), indent=4))
             raise
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')

@@ -6,7 +6,6 @@ from jinja2 import Environment, DictLoader, exceptions
 import ast
 import copy
 import datetime
-import json
 import os
 import pprint
 import re
@@ -27,6 +26,7 @@ from salt.exceptions import SaltRenderError
 from salt.ext import six
 from salt.ext.six.moves import builtins
 
+import salt.utils.json
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import (
     SaltCacheLoader,
@@ -625,7 +625,7 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
-        self.assertEqual(dataset, json.loads(rendered))
+        self.assertEqual(dataset, salt.utils.json.loads(rendered))
 
     def test_serialize_yaml(self):
         dataset = {

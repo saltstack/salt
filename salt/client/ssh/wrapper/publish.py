@@ -10,7 +10,7 @@ salt-ssh calls and return the data from them.
 No access control is needed because calls cannot originate from the minions.
 '''
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import, print_function
 import copy
 import logging
 

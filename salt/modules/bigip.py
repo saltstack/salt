@@ -7,7 +7,7 @@ An execution module which can manipulate an f5 bigip via iControl REST
 
 # Import python libs
 from __future__ import absolute_import
-import json
+import salt.utils.json
 import logging as logger
 
 # Import third party libs
@@ -72,7 +72,7 @@ def _load_response(response):
     '''
 
     try:
-        data = json.loads(response.text)
+        data = salt.utils.json.loads(response.text)
     except ValueError:
         data = response.text
 
@@ -181,7 +181,7 @@ def _set_value(value):
         value = value.replace('}j', '}')
 
         try:
-            return json.loads(value)
+            return salt.utils.json.loads(value)
         except Exception:
             raise salt.exceptions.CommandExecutionError
 
@@ -252,7 +252,10 @@ def start_transaction(hostname, username, password, label):
 
     #post to REST to get trans id
     try:
-        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/transaction', data=json.dumps(payload))
+        response = bigip_session.post(
+            BIG_IP_URL_BASE.format(host=hostname) + '/transaction',
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -342,7 +345,10 @@ def commit_transaction(hostname, username, password, label):
 
         #patch to REST to get trans id
         try:
-            response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}'.format(trans_id=trans_id), data=json.dumps(payload))
+            response = bigip_session.patch(
+                BIG_IP_URL_BASE.format(host=hostname) + '/transaction/{trans_id}'.format(trans_id=trans_id),
+                data=salt.utils.json.dumps(payload)
+            )
             return _load_response(response)
         except requests.exceptions.ConnectionError as e:
             return _load_connection_error(hostname, e)
@@ -460,7 +466,9 @@ def create_node(hostname, username, password, name, address, trans_label=None):
 
     #post to REST
     try:
-        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node', data=json.dumps(payload))
+        response = bigip_session.post(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/node',
+            data=salt.utils.json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -537,7 +545,10 @@ def modify_node(hostname, username, password, name,
 
     #put to REST
     try:
-        response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/{name}'.format(name=name), data=json.dumps(payload))
+        response = bigip_session.put(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/node/{name}'.format(name=name),
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -758,7 +769,10 @@ def create_pool(hostname, username, password, name, members=None,
 
     #post to REST
     try:
-        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool', data=json.dumps(payload))
+        response = bigip_session.post(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool',
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -902,7 +916,10 @@ def modify_pool(hostname, username, password, name,
 
     #post to REST
     try:
-        response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name), data=json.dumps(payload))
+        response = bigip_session.put(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}'.format(name=name),
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -999,7 +1016,10 @@ def replace_pool_members(hostname, username, password, name, members):
 
     #put to REST
     try:
-        response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name), data=json.dumps(payload))
+        response = bigip_session.put(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}'.format(name=name),
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -1052,7 +1072,10 @@ def add_pool_member(hostname, username, password, name, member):
 
     #post to REST
     try:
-        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/members'.format(name=name), data=json.dumps(payload))
+        response = bigip_session.post(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}/members'.format(name=name),
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -1138,7 +1161,10 @@ def modify_pool_member(hostname, username, password, name, member,
 
     #put to REST
     try:
-        response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/members/{member}'.format(name=name, member=member), data=json.dumps(payload))
+        response = bigip_session.put(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}/members/{member}'.format(name=name, member=member),
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -1493,7 +1519,10 @@ def create_virtual(hostname, username, password, name, destination,
 
     #post to REST
     try:
-        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual', data=json.dumps(payload))
+        response = bigip_session.post(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/virtual',
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -1762,7 +1791,10 @@ def modify_virtual(hostname, username, password, name,
 
     #put to REST
     try:
-        response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/{name}'.format(name=name), data=json.dumps(payload))
+        response = bigip_session.put(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/virtual/{name}'.format(name=name),
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -1879,7 +1911,10 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     #post to REST
     try:
-        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}'.format(type=monitor_type), data=json.dumps(payload))
+        response = bigip_session.post(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/monitor/{type}'.format(type=monitor_type),
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -1926,7 +1961,10 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     #put to REST
     try:
-        response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name}'.format(type=monitor_type, name=name), data=json.dumps(payload))
+        response = bigip_session.put(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/monitor/{type}/{name}'.format(type=monitor_type, name=name),
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -2077,7 +2115,10 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
 
     #post to REST
     try:
-        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}'.format(type=profile_type), data=json.dumps(payload))
+        response = bigip_session.post(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/profile/{type}'.format(type=profile_type),
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -2162,7 +2203,10 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
 
     #put to REST
     try:
-        response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name}'.format(type=profile_type, name=name), data=json.dumps(payload))
+        response = bigip_session.put(
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/profile/{type}/{name}'.format(type=profile_type, name=name),
+            data=salt.utils.json.dumps(payload)
+        )
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 

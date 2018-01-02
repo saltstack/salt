@@ -61,7 +61,6 @@ verbose : True
 
 # Import python Libs
 from __future__ import absolute_import
-import json
 import os
 
 # Import 3rd-party libs
@@ -77,6 +76,7 @@ from salt.ext.six.moves.urllib.request import (
 # pylint: enable=no-name-in-module,import-error
 
 # Import salt libs
+import salt.utils.json
 import salt.utils.path
 
 # ######################### PRIVATE METHODS ##############################
@@ -258,7 +258,7 @@ def _auth(url):
 def _http_request(url, request_timeout=None):
     '''
     PRIVATE METHOD
-    Uses json.load to fetch the JSON results from the solr API.
+    Uses salt.utils.json.load to fetch the JSON results from the solr API.
 
     url : str
         a complete URL that can be passed to urllib.open
@@ -274,10 +274,8 @@ def _http_request(url, request_timeout=None):
     try:
 
         request_timeout = __salt__['config.option']('solr.request_timeout')
-        if request_timeout is None:
-            data = json.load(_urlopen(url))
-        else:
-            data = json.load(_urlopen(url, timeout=request_timeout))
+        kwargs = {} if request_timeout is None else {'timeout': request_timeout}
+        data = salt.utils.json.load(_urlopen(url, **kwargs))
         return _get_return_dict(True, data, [])
     except Exception as err:
         return _get_return_dict(False, {}, ["{0} : {1}".format(url, err)])
