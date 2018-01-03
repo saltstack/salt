@@ -1838,8 +1838,7 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
 
 def stop(name, resource_group=None, call=None):
     '''
-   .. versionadded:: Fluorine
-    
+    .. versionadded:: Fluorine    
     Stop a VM
 
     CLI Examples:
@@ -1870,7 +1869,6 @@ def stop(name, resource_group=None, call=None):
 def start(name, resource_group=None, call=None):
     '''
     .. versionadded:: Fluorine
-    
     Start a VM
 
     CLI Examples:
