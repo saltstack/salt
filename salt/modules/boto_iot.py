@@ -52,12 +52,12 @@ The dependencies listed above can be installed via package or pip.
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import json
 import datetime
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.json
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -329,7 +329,7 @@ def create_policy(policyName, policyDocument,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if not isinstance(policyDocument, string_types):
-            policyDocument = json.dumps(policyDocument)
+            policyDocument = salt.utils.json.dumps(policyDocument)
         policy = conn.create_policy(policyName=policyName,
                                     policyDocument=policyDocument)
         if policy:
@@ -446,7 +446,7 @@ def create_policy_version(policyName, policyDocument, setAsDefault=False,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if not isinstance(policyDocument, string_types):
-            policyDocument = json.dumps(policyDocument)
+            policyDocument = salt.utils.json.dumps(policyDocument)
         policy = conn.create_policy_version(policyName=policyName,
                                     policyDocument=policyDocument,
                                     setAsDefault=setAsDefault)

@@ -2,11 +2,11 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function
-import json
 import time
 import threading
 
 # Import Salt Libs
+import salt.utils.json
 import salt.utils.stringutils
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
@@ -24,12 +24,6 @@ try:
     HAS_ZMQ_IOLOOP = True
 except ImportError:
     HAS_ZMQ_IOLOOP = False
-
-
-def json_loads(data):
-    if six.PY3 and isinstance(data, bytes):
-        data = data.decode('utf-8')
-    return json.loads(data)
 
 
 class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstract-method
@@ -63,7 +57,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                 )
         self.assertEqual(response.code, 200)
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(sorted(response_obj['clients']),
                          ['local', 'local_async', 'runner', 'runner_async'])
         self.assertEqual(response_obj['return'], 'Welcome')
@@ -79,7 +73,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json']},
                               follow_redirects=False,
                               connect_timeout=30,
@@ -100,13 +94,13 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               connect_timeout=30,
                               request_timeout=30,
                               )
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
     def test_simple_local_post_no_tgt(self):
@@ -119,13 +113,13 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               connect_timeout=30,
                               request_timeout=30,
                               )
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
     # local client request body test
@@ -140,13 +134,13 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
               }
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               connect_timeout=30,
                               request_timeout=30,
                               )
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
     def test_simple_local_post_invalid_request(self):
@@ -156,7 +150,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         low = ["invalid request"]
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               connect_timeout=30,
@@ -172,12 +166,12 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
 
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
 
@@ -197,12 +191,12 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
 
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
         ret[1]['minions'] = sorted(ret[1]['minions'])
@@ -231,12 +225,12 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 ]
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
 
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
         ret[1]['minions'] = sorted(ret[1]['minions'])
@@ -255,11 +249,11 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
 
     # runner tests
@@ -269,13 +263,13 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               connect_timeout=30,
                               request_timeout=30,
                               )
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
         self.assertEqual(set(response_obj['return'][0]), set(['minion', 'sub_minion']))
 
@@ -286,13 +280,13 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               connect_timeout=10,
                               request_timeout=10,
                               )
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         self.assertIn('return', response_obj)
         self.assertEqual(1, len(response_obj['return']))
         self.assertIn('jid', response_obj['return'][0])
@@ -317,7 +311,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               follow_redirects=False,
                               )
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
         # one per minion
         self.assertEqual(len(response_obj['return'][0]), 2)
@@ -332,7 +326,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               follow_redirects=False,
                               )
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
         self.assertEqual(len(response_obj['return'][0]), 1)
         # check a single grain
@@ -344,12 +338,12 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/minions',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
 
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
 
@@ -366,12 +360,12 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/minions',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
 
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
 
@@ -392,7 +386,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/minions',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
@@ -419,7 +413,7 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
                                follow_redirects=False,
                                )
         response = self.wait(timeout=30)
-        response_obj = json_loads(response.body)['return'][0]
+        response_obj = salt.utils.json.loads(response.body)['return'][0]
         try:
             for jid, ret in six.iteritems(response_obj):
                 self.assertIn('Function', ret)
@@ -429,7 +423,7 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 self.assertIn('StartTime', ret)
                 self.assertIn('Arguments', ret)
         except AttributeError as attribute_error:
-            print(json_loads(response.body))
+            print(salt.utils.json.loads(response.body))
             raise
 
         # test with a specific JID passed in
@@ -441,7 +435,7 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
                                follow_redirects=False,
                                )
         response = self.wait(timeout=30)
-        response_obj = json_loads(response.body)['return'][0]
+        response_obj = salt.utils.json.loads(response.body)['return'][0]
         self.assertIn('Function', response_obj)
         self.assertIn('Target', response_obj)
         self.assertIn('Target-type', response_obj)
@@ -470,11 +464,11 @@ class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 }]
         response = self.fetch('/run',
                               method='POST',
-                              body=json.dumps(low),
+                              body=salt.utils.json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
-        response_obj = json_loads(response.body)
+        response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
 
@@ -561,7 +555,7 @@ class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
                                   body='foo=bar',
                                   headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                                   )
-            response_obj = json_loads(response.body)
+            response_obj = salt.utils.json.loads(response.body)
             self.assertTrue(response_obj['success'])
             resolve_future_timeout = 60
             self._future_resolved.wait(resolve_future_timeout)

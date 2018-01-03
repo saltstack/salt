@@ -78,14 +78,15 @@ config:
 
 '''
 
-# Import Python Libs
+# Import Python libs
 from __future__ import absolute_import
 import logging
 import os
-import os.path
-import json
 
-# Import Salt Libs
+# Import Salt libs
+import salt.utils.json
+
+# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -224,7 +225,7 @@ def present(name, DomainName,
         Tags = {}
     if AccessPolicies is not None and isinstance(AccessPolicies, six.string_types):
         try:
-            AccessPolicies = json.loads(AccessPolicies)
+            AccessPolicies = salt.utils.json.loads(AccessPolicies)
         except ValueError as e:
             ret['result'] = False
             ret['comment'] = 'Failed to create domain: {0}.'.format(e.message)
@@ -275,7 +276,7 @@ def present(name, DomainName,
     _describe = __salt__['boto_elasticsearch_domain.describe'](DomainName=DomainName,
                                   region=region, key=key, keyid=keyid,
                                   profile=profile)['domain']
-    _describe['AccessPolicies'] = json.loads(_describe['AccessPolicies'])
+    _describe['AccessPolicies'] = salt.utils.json.loads(_describe['AccessPolicies'])
 
     # When EBSEnabled is false, describe returns extra values that can't be set
     if not _describe.get('EBSOptions', {}).get('EBSEnabled'):

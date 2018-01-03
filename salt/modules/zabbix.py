@@ -27,10 +27,10 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import socket
-import json
 
 # Import salt libs
 import salt.utils.http
+import salt.utils.json
 import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=import-error,no-name-in-module
@@ -96,7 +96,7 @@ def _query(method, params, url, auth=None):
     if method not in unauthenticated_methods:
         data['auth'] = auth
 
-    data = json.dumps(data)
+    data = salt.utils.json.dumps(data)
 
     try:
         result = salt.utils.http.query(url,
