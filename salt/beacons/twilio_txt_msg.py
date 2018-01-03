@@ -7,8 +7,8 @@ Beacon to emit Twilio text messages
 from __future__ import absolute_import, unicode_literals
 
 import logging
-import six
 
+from salt.ext import six
 from salt.ext.six.moves import map
 
 # Import 3rd Party libs
