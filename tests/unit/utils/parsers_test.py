@@ -5,6 +5,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import logging
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
@@ -941,9 +942,11 @@ class DaemonMixInTestCase(TestCase):
 
         # Setup mixin
         self.mixin = salt.utils.parsers.DaemonMixIn()
-        self.mixin.info = None
         self.mixin.config = {}
         self.mixin.config['pidfile'] = self.pid
+
+        # logger
+        self.logger = logging.getLogger('salt.utils.parsers')
 
     def test_pid_file_deletion(self):
         '''
@@ -951,9 +954,9 @@ class DaemonMixInTestCase(TestCase):
         '''
         with patch('os.unlink', MagicMock()) as os_unlink:
             with patch('os.path.isfile', MagicMock(return_value=True)):
-                with patch.object(self.mixin, 'info', MagicMock()):
+                with patch.object(self.logger, 'info') as mock_logger:
                     self.mixin._mixin_before_exit()
-                    assert self.mixin.info.call_count == 0
+                    assert mock_logger.call_count == 0
                     assert os_unlink.call_count == 1
 
     def test_pid_file_deletion_with_oserror(self):
@@ -962,10 +965,10 @@ class DaemonMixInTestCase(TestCase):
         '''
         with patch('os.unlink', MagicMock(side_effect=OSError())) as os_unlink:
             with patch('os.path.isfile', MagicMock(return_value=True)):
-                with patch.object(self.mixin, 'info', MagicMock()):
+                with patch.object(self.logger, 'info') as mock_logger:
                     self.mixin._mixin_before_exit()
                     assert os_unlink.call_count == 1
-                    self.mixin.info.assert_called_with(
+                    mock_logger.assert_called_with(
                         'PIDfile could not be deleted: {0}'.format(self.pid))
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module
