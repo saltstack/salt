@@ -367,6 +367,9 @@ class InstallPyWin32Wheel(Command):
         if get_installed_version('pywin32') is not None:
             print('PyWin32 already installed')
             return
+        if get_installed_version('pypiwin32') is not None:
+            print('PyWin32 already installed')
+            return
         # Install PyWin32 from Salt repo
         from pip.utils import call_subprocess
         from pip.utils.logging import indent_log
