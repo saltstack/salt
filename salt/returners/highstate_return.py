@@ -80,7 +80,6 @@ the time of execution.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import json
 import smtplib
 import cgi
 from email.mime.text import MIMEText
@@ -91,6 +90,7 @@ from salt.ext.six.moves import StringIO
 from salt.ext import six
 
 import salt.utils.files
+import salt.utils.json
 import salt.utils.stringutils
 import salt.returners
 
@@ -424,7 +424,7 @@ def _produce_output(report, failed, setup):
     log.debug('highstate output format: %s', report_format)
 
     if report_format == 'json':
-        report_text = json.dumps(report)
+        report_text = salt.utils.json.dumps(report)
     elif report_format == 'yaml':
         string_file = StringIO()
         yaml.safe_dump(report, string_file, default_flow_style=False)

@@ -6,7 +6,6 @@ Tests for the state runner
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
-import json
 import os
 import shutil
 import signal
@@ -25,6 +24,7 @@ from tests.support.paths import TMP
 import salt.utils.platform
 import salt.utils.event
 import salt.utils.files
+import salt.utils.json
 import salt.utils.stringutils
 
 # Import 3rd-party libs
@@ -94,7 +94,7 @@ class StateRunnerTest(ShellCase):
         See https://github.com/saltstack/salt/issues/43204
         '''
         self.run_run('saltutil.sync_modules')
-        ret = json.loads(
+        ret = salt.utils.json.loads(
             '\n'.join(
                 self.run_run('state.orchestrate orch.issue43204 --out=json')
             )

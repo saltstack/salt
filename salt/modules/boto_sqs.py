@@ -48,7 +48,9 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
+
+# Import Salt libs
+import salt.utils.json
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -87,13 +89,13 @@ def _preprocess_attributes(attributes):
     Pre-process incoming queue attributes before setting them
     '''
     if isinstance(attributes, six.string_types):
-        attributes = json.loads(attributes)
+        attributes = salt.utils.json.loads(attributes)
 
     def stringified(val):
         # Some attributes take full json policy documents, but they take them
         # as json strings. Convert the value back into a json string.
         if isinstance(val, dict):
-            return json.dumps(val)
+            return salt.utils.json.dumps(val)
         return val
 
     return dict(

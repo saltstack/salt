@@ -2,12 +2,10 @@
 '''
 Create ssh executor system
 '''
-
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import, print_function
 # Import python libs
 import os
 import time
-import json
 import logging
 
 # Import salt libs
@@ -19,6 +17,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.jid
+import salt.utils.json
 import salt.utils.platform
 import salt.utils.state
 import salt.utils.thin
@@ -174,7 +173,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
@@ -318,7 +317,7 @@ def low(data, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
@@ -407,7 +406,7 @@ def high(data, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
@@ -650,7 +649,7 @@ def highstate(test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
@@ -731,7 +730,7 @@ def top(topfn, test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
@@ -1094,7 +1093,7 @@ def single(fun, name, test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
