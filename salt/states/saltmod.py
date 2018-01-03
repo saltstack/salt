@@ -116,7 +116,7 @@ def state(name,
         sls=None,
         top=None,
         saltenv=None,
-        test=False,
+        test=None,
         pillar=None,
         pillarenv=None,
         expect_minions=True,
@@ -283,8 +283,8 @@ def state(name,
         state_ret['result'] = False
         return state_ret
 
-    if test or __opts__.get('test'):
-        cmd_kw['kwarg']['test'] = True
+    if test is not None or __opts__.get('test'):
+        cmd_kw['kwarg']['test'] = test if test is not None else opts.get('test')
 
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
