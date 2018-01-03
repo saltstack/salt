@@ -21,5 +21,8 @@ class SSHGrainsTest(SSHCase):
         test grains.items with salt-ssh
         '''
         ret = self.run_function('grains.items')
-        self.assertEqual(ret['kernel'], 'Linux')
+        grain = 'Linux'
+        if salt.utils.platform.is_darwin():
+            grain = 'Darwin'
+        self.assertEqual(ret['kernel'], grain)
         self.assertTrue(isinstance(ret, dict))
