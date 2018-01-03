@@ -1,11 +1,11 @@
 # encoding: utf-8
 from __future__ import absolute_import
-import json
 import logging
 import threading
 from salt.ext import six
 
 import salt.netapi
+import salt.utils.json
 
 logger = logging.getLogger(__name__)
 
@@ -46,14 +46,15 @@ class SaltInfo(object):
             minions[minion] = curr_minion
         logger.debug('ended loop')
         ret = {'minions': minions}
-        self.handler.write_message(u'{0}\n\n'.format(json.dumps(ret)))
+        self.handler.write_message(
+            salt.utils.json.dumps(ret) + str('\n\n'))  # future lint: disable=blacklisted-function
 
     def publish(self, key, data):
         '''
         Publishes the data to the event stream.
         '''
         publish_data = {key: data}
-        pub = u'{0}\n\n'.format(json.dumps(publish_data))
+        pub = salt.utils.json.dumps(publish_data) + str('\n\n')  # future lint: disable=blacklisted-function
         self.handler.write_message(pub)
 
     def process_minion_update(self, event_data):
@@ -63,7 +64,7 @@ class SaltInfo(object):
         tag = event_data['tag']
         event_info = event_data['data']
 
-        _, _, _, _, mid = tag.split('/')
+        mid = tag.split('/')[-1]
 
         if not self.minions.get(mid, None):
             self.minions[mid] = {}

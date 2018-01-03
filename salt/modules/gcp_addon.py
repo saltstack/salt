@@ -6,6 +6,8 @@ and the set of routes for a particular VM is called its routing table.
 For each packet leaving a virtual machine, the system searches that machine's
 routing table for a single best matching route.
 
+.. versionadded:: Oxygen
+
 This module will create a route to send traffic destined to the Internet
 through your gateway instance.
 
@@ -13,9 +15,13 @@ through your gateway instance.
 :maturity:   new
 :depends:    google-api-python-client
 :platform:   Linux
+
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 import logging
+
 log = logging.getLogger(__name__)
 
 try:
@@ -33,8 +39,8 @@ def __virtual__():
     Check for googleapiclient api
     '''
     if HAS_LIB is False:
-        log.info("Required google API's(googleapiclient, oauth2client) not found")
-    return (HAS_LIB, "Required google API's(googleapiclient, oauth2client) not found")
+        return False, 'Required dependencies \'googleapiclient\' and/or \'oauth2client\' were not found.'
+    return __virtualname__
 
 
 def _get_network(project_id, network_name, service):

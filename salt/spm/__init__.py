@@ -6,7 +6,7 @@ This module provides the point of entry to SPM, the Salt Package Manager
 '''
 
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import yaml
 import tarfile
@@ -137,7 +137,7 @@ class SPMClient(object):
             else:
                 raise SPMInvocationError('Invalid command \'{0}\''.format(command))
         except SPMException as exc:
-            self.ui.error(str(exc))
+            self.ui.error(six.text_type(exc))
 
     def _pkgdb_fun(self, func, *args, **kwargs):
         try:
@@ -653,11 +653,11 @@ class SPMClient(object):
                         raise SPMException('Auth defined, but password is not set for username: \'{0}\''
                                            .format(repo_info['username']))
                 except SPMException as exc:
-                    self.ui.error(str(exc))
+                    self.ui.error(six.text_type(exc))
             else:
                 query = http.query(dl_path, text=True)
         except SPMException as exc:
-            self.ui.error(str(exc))
+            self.ui.error(six.text_type(exc))
 
         try:
             if query:
@@ -668,7 +668,7 @@ class SPMClient(object):
             else:
                 raise SPMException('Response is empty, please check for Errors above.')
         except SPMException as exc:
-            self.ui.error(str(exc))
+            self.ui.error(six.text_type(exc))
 
         return response
 
@@ -757,35 +757,25 @@ class SPMClient(object):
                     if use_formula is True:
                         # Ignore/archive/delete the old version
                         log.debug(
-                            '{0} {1}-{2} had been added, but {3}-{4} will replace it'.format(
-                                spm_name,
-                                cur_info['version'],
-                                cur_info['release'],
-                                new_info['version'],
-                                new_info['release'],
-                            )
+                            '%s %s-%s had been added, but %s-%s will replace it',
+                            spm_name, cur_info['version'], cur_info['release'],
+                            new_info['version'], new_info['release']
                         )
                         old_files.append(repo_metadata[spm_name]['filename'])
                     else:
                         # Ignore/archive/delete the new version
                         log.debug(
-                            '{0} {1}-{2} has been found, but is older than {3}-{4}'.format(
-                                spm_name,
-                                new_info['version'],
-                                new_info['release'],
-                                cur_info['version'],
-                                cur_info['release'],
-                            )
+                            '%s %s-%s has been found, but is older than %s-%s',
+                            spm_name, new_info['version'], new_info['release'],
+                            cur_info['version'], cur_info['release']
                         )
                         old_files.append(spm_file)
 
                 if use_formula is True:
                     log.debug(
-                        'adding {0}-{1}-{2} to the repo'.format(
-                            formula_conf['name'],
-                            formula_conf['version'],
-                            formula_conf['release'],
-                        )
+                        'adding %s-%s-%s to the repo',
+                        formula_conf['name'], formula_conf['version'],
+                        formula_conf['release']
                     )
                     repo_metadata[spm_name] = {
                         'info': formula_conf.copy(),
@@ -803,33 +793,31 @@ class SPMClient(object):
                 Dumper=SafeOrderedDumper
             )
 
-        log.debug('Wrote {0}'.format(metadata_filename))
+        log.debug('Wrote %s', metadata_filename)
 
         for file_ in old_files:
             if self.opts['spm_repo_dups'] == 'ignore':
                 # ignore old packages, but still only add the latest
-                log.debug('{0} will be left in the directory'.format(file_))
+                log.debug('%s will be left in the directory', file_)
             elif self.opts['spm_repo_dups'] == 'archive':
                 # spm_repo_archive_path is where old packages are moved
                 if not os.path.exists('./archive'):
                     try:
                         os.makedirs('./archive')
-                        log.debug('{0} has been archived'.format(file_))
+                        log.debug('%s has been archived', file_)
                     except IOError:
                         log.error('Unable to create archive directory')
                 try:
                     shutil.move(file_, './archive')
                 except (IOError, OSError):
-                    log.error(
-                        'Unable to archive {0}'.format(file_)
-                    )
+                    log.error('Unable to archive %s', file_)
             elif self.opts['spm_repo_dups'] == 'delete':
                 # delete old packages from the repo
                 try:
                     os.remove(file_)
-                    log.debug('{0} has been deleted'.format(file_))
+                    log.debug('%s has been deleted', file_)
                 except IOError:
-                    log.error('Unable to delete {0}'.format(file_))
+                    log.error('Unable to delete %s', file_)
                 except OSError:
                     # The file has already been deleted
                     pass

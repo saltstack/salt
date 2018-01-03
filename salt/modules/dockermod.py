@@ -212,6 +212,7 @@ from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-bui
 import salt.utils.docker.translate.container
 import salt.utils.docker.translate.network
 import salt.utils.functools
+import salt.utils.json
 import salt.utils.path
 import salt.pillar
 import salt.exceptions
@@ -357,7 +358,7 @@ def _get_client(timeout=NOTSET, **kwargs):
             python_shell=False)
         try:
             docker_machine_json = \
-                json.loads(__utils__['stringutils.to_str'](docker_machine_json))
+                salt.utils.json.loads(docker_machine_json)
             docker_machine_tls = \
                 docker_machine_json['HostOptions']['AuthOptions']
             docker_machine_ip = docker_machine_json['Driver']['IPAddress']
@@ -3971,12 +3972,7 @@ def build(path=None,
 
     stream_data = []
     for line in response:
-        stream_data.extend(
-            json.loads(
-                __utils__['stringutils.to_str'](line),
-                cls=DockerJSONDecoder
-            )
-        )
+        stream_data.extend(salt.utils.json.loads(line, cls=DockerJSONDecoder))
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
@@ -4511,7 +4507,7 @@ def pull(image,
     for event in response:
         log.debug('pull event: %s', event)
         try:
-            event = json.loads(__utils__['stringutils.to_str'](event))
+            event = salt.utils.json.loads(event)
         except Exception as exc:
             raise CommandExecutionError(
                 'Unable to interpret API event: \'{0}\''.format(event),
@@ -4605,7 +4601,7 @@ def push(image,
     # Iterate through API response and collect information
     for event in response:
         try:
-            event = json.loads(__utils__['stringutils.to_str'](event))
+            event = salt.utils.json.loads(event)
         except Exception as exc:
             raise CommandExecutionError(
                 'Unable to interpret API event: \'{0}\''.format(event),
