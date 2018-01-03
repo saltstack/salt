@@ -77,12 +77,12 @@ Connection module for Amazon Elasticsearch Service
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import json
 
 # Import Salt libs
 from salt.ext import six
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.json
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -256,12 +256,12 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
                 val = locals()[k]
                 if isinstance(val, six.string_types):
                     try:
-                        val = json.loads(val)
+                        val = salt.utils.json.loads(val)
                     except ValueError as e:
                         return {'updated': False, 'error': 'Error parsing {0}: {1}'.format(k, e.message)}
                 kwargs[k] = val
         if 'AccessPolicies' in kwargs:
-            kwargs['AccessPolicies'] = json.dumps(kwargs['AccessPolicies'])
+            kwargs['AccessPolicies'] = salt.utils.json.dumps(kwargs['AccessPolicies'])
         if 'ElasticsearchVersion' in kwargs:
             kwargs['ElasticsearchVersion'] = str(kwargs['ElasticsearchVersion'])
         domain = conn.create_elasticsearch_domain(DomainName=DomainName, **kwargs)
@@ -330,12 +330,12 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
             val = locals()[k]
             if isinstance(val, six.string_types):
                 try:
-                    val = json.loads(val)
+                    val = salt.utils.json.loads(val)
                 except ValueError as e:
                     return {'updated': False, 'error': 'Error parsing {0}: {1}'.format(k, e.message)}
             call_args[k] = val
     if 'AccessPolicies' in call_args:
-        call_args['AccessPolicies'] = json.dumps(call_args['AccessPolicies'])
+        call_args['AccessPolicies'] = salt.utils.json.dumps(call_args['AccessPolicies'])
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         domain = conn.update_elasticsearch_domain_config(DomainName=DomainName, **call_args)

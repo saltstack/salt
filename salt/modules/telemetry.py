@@ -23,10 +23,15 @@ https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 :depends: requests
 
 '''
+# Import Python libs
 from __future__ import absolute_import
-from salt._compat import string_types
-import json
 import logging
+
+# Import Salt libs
+import salt.utils.json
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +62,7 @@ def _auth(api_key=None, profile='telemetry'):
     if api_key is None and profile is None:
         raise Exception("Missing api_key and profile")
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = __salt__['config.option'](profile)
         elif isinstance(profile, dict):
             _profile = profile
@@ -184,7 +189,7 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
             "name":  notify_channel[:notify_channel.find('@')] + 'EscalationPolicy',
             "email": notify_channel
         }
-        response = requests.post(post_url, data=json.dumps(data), headers=auth)
+        response = requests.post(post_url, data=salt.utils.json.dumps(data), headers=auth)
         if response.status_code == 200:
             log.info("Successfully created EscalationPolicy {0} with EmailNotificationChannel {1}"
                 .format(data.get('name'), notify_channel))
@@ -224,7 +229,7 @@ def get_alarms(deployment_id, profile="telemetry"):
         return 'No alarms defined for deployment: {0}'.format(deployment_id)
     else:
         # Non 200 response, sent back the error response'
-        return {'err_code': response.status_code, 'err_msg': json.loads(response.text).get('err', '')}
+        return {'err_code': response.status_code, 'err_msg': salt.utils.json.loads(response.text).get('err', '')}
 
 
 def create_alarm(deployment_id, metric_name, data, api_key=None, profile="telemetry"):
@@ -259,19 +264,24 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     }
 
     try:
-        response = requests.post(request_uri, data=json.dumps(post_body), headers=auth)
+        response = requests.post(request_uri, data=salt.utils.json.dumps(post_body), headers=auth)
     except requests.exceptions.RequestException as e:
         # TODO: May be we should retry?
         log.error(str(e))
 
     if response.status_code >= 200 and response.status_code < 300:
         # update cache
-        log.info("Created alarm on metric: {0} in deployment: {1}".format(metric_name, deployment_id))
-        log.debug("Updating cache for metric {0} in deployment {1}: {2}".format(metric_name, deployment_id, response.json()))
+        log.info('Created alarm on metric: %s in deployment: %s', metric_name, deployment_id)
+        log.debug('Updating cache for metric %s in deployment %s: %s',
+                  metric_name, deployment_id, response.json())
         _update_cache(deployment_id, metric_name, response.json())
     else:
-        log.error("Failed to create alarm on metric: {0} in deployment {1}:  payload: {2}".
-            format(metric_name, deployment_id, json.dumps(post_body)))
+        log.error(
+            str('Failed to create alarm on metric: %s in deployment %s: payload: %s'),  # future lint: disable=blacklisted-function
+            salt.utils.stringutils.to_str(metric_name),
+            salt.utils.stringutils.to_str(deployment_id),
+            salt.utils.json.dumps(post_body)
+        )
 
     return response.status_code >= 200 and response.status_code < 300, response.json()
 
@@ -308,19 +318,26 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     }
 
     try:
-        response = requests.put(request_uri, data=json.dumps(post_body), headers=auth)
+        response = requests.put(request_uri, data=salt.utils.json.dumps(post_body), headers=auth)
     except requests.exceptions.RequestException as e:
-        log.error("Update failed {0}" .format(str(e)))
+        log.error('Update failed: %s', e)
         return False, str(e)
 
     if response.status_code >= 200 and response.status_code < 300:
         # Also update cache
-        log.debug("Updating cache for metric {0} in deployment {1}: {2}".format(metric_name, deployment_id, response.json()))
+        log.debug('Updating cache for metric %s in deployment %s: %s',
+                  metric_name, deployment_id, response.json())
         _update_cache(deployment_id, metric_name, response.json())
-        log.info("Updated alarm on metric: {0} in deployment: {1}".format(metric_name, deployment_id))
+        log.info('Updated alarm on metric: %s in deployment: %s', metric_name, deployment_id)
         return True, response.json()
 
-    err_msg = "Failed to create alarm on metric: {0} in deployment {1}:  payload: {2}".format(metric_name, deployment_id, json.dumps(post_body))
+    err_msg = str(  # future lint: disable=blacklisted-function
+        'Failed to create alarm on metric: {0} in deployment: {1} '
+        'payload: {2}').format(
+            salt.utils.stringutils.to_str(metric_name),
+            salt.utils.stringutils.to_str(deployment_id),
+            salt.utils.json.dumps(post_body)
+        )
     log.error(err_msg)
     return False, err_msg
 

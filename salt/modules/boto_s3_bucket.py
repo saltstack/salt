@@ -54,12 +54,12 @@ The dependencies listed above can be installed via package or pip.
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import json
 
 # Import Salt libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error
 import salt.utils.compat
+import salt.utils.json
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -227,7 +227,7 @@ def delete_objects(Bucket, Delete, MFA=None, RequestPayer=None,
     '''
 
     if isinstance(Delete, six.string_types):
-        Delete = json.loads(Delete)
+        Delete = salt.utils.json.loads(Delete)
     if not isinstance(Delete, dict):
         raise SaltInvocationError("Malformed Delete request.")
     if 'Objects' not in Delete:
@@ -483,7 +483,7 @@ def put_acl(Bucket,
         kwargs = {}
         if AccessControlPolicy is not None:
             if isinstance(AccessControlPolicy, six.string_types):
-                AccessControlPolicy = json.loads(AccessControlPolicy)
+                AccessControlPolicy = salt.utils.json.loads(AccessControlPolicy)
             kwargs['AccessControlPolicy'] = AccessControlPolicy
         for arg in ('ACL',
                     'GrantFullControl',
@@ -523,7 +523,7 @@ def put_cors(Bucket,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if CORSRules is not None and isinstance(CORSRules, six.string_types):
-            CORSRules = json.loads(CORSRules)
+            CORSRules = salt.utils.json.loads(CORSRules)
         conn.put_bucket_cors(Bucket=Bucket, CORSConfiguration={'CORSRules': CORSRules})
         return {'updated': True, 'name': Bucket}
     except ClientError as e:
@@ -558,7 +558,7 @@ def put_lifecycle_configuration(Bucket,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if Rules is not None and isinstance(Rules, six.string_types):
-            Rules = json.loads(Rules)
+            Rules = salt.utils.json.loads(Rules)
         conn.put_bucket_lifecycle_configuration(Bucket=Bucket, LifecycleConfiguration={'Rules': Rules})
         return {'updated': True, 'name': Bucket}
     except ClientError as e:
@@ -596,7 +596,7 @@ def put_logging(Bucket,
         else:
             logstatus = {}
         if TargetGrants is not None and isinstance(TargetGrants, six.string_types):
-            TargetGrants = json.loads(TargetGrants)
+            TargetGrants = salt.utils.json.loads(TargetGrants)
         conn.put_bucket_logging(Bucket=Bucket, BucketLoggingStatus=logstatus)
         return {'updated': True, 'name': Bucket}
     except ClientError as e:
@@ -629,15 +629,15 @@ def put_notification_configuration(Bucket,
         if TopicConfigurations is None:
             TopicConfigurations = []
         elif isinstance(TopicConfigurations, six.string_types):
-            TopicConfigurations = json.loads(TopicConfigurations)
+            TopicConfigurations = salt.utils.json.loads(TopicConfigurations)
         if QueueConfigurations is None:
             QueueConfigurations = []
         elif isinstance(QueueConfigurations, six.string_types):
-            QueueConfigurations = json.loads(QueueConfigurations)
+            QueueConfigurations = salt.utils.json.loads(QueueConfigurations)
         if LambdaFunctionConfigurations is None:
             LambdaFunctionConfigurations = []
         elif isinstance(LambdaFunctionConfigurations, six.string_types):
-            LambdaFunctionConfigurations = json.loads(LambdaFunctionConfigurations)
+            LambdaFunctionConfigurations = salt.utils.json.loads(LambdaFunctionConfigurations)
         # TODO allow the user to use simple names & substitute ARNs for those names
         conn.put_bucket_notification_configuration(Bucket=Bucket, NotificationConfiguration={
                 'TopicConfigurations': TopicConfigurations,
@@ -670,7 +670,7 @@ def put_policy(Bucket, Policy,
         if Policy is None:
             Policy = '{}'
         elif not isinstance(Policy, six.string_types):
-            Policy = json.dumps(Policy)
+            Policy = salt.utils.json.dumps(Policy)
         conn.put_bucket_policy(Bucket=Bucket, Policy=Policy)
         return {'updated': True, 'name': Bucket}
     except ClientError as e:
@@ -714,7 +714,7 @@ def put_replication(Bucket, Role, Rules,
         if Rules is None:
             Rules = []
         elif isinstance(Rules, six.string_types):
-            Rules = json.loads(Rules)
+            Rules = salt.utils.json.loads(Rules)
         conn.put_bucket_replication(Bucket=Bucket, ReplicationConfiguration={
                 'Role': Role,
                 'Rules': Rules
@@ -838,7 +838,7 @@ def put_website(Bucket, ErrorDocument=None, IndexDocument=None,
             val = locals()[key]
             if val is not None:
                 if isinstance(val, six.string_types):
-                    WebsiteConfiguration[key] = json.loads(val)
+                    WebsiteConfiguration[key] = salt.utils.json.loads(val)
                 else:
                     WebsiteConfiguration[key] = val
         conn.put_bucket_website(Bucket=Bucket,

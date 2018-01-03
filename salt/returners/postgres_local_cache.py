@@ -109,13 +109,13 @@ Required python modules: psycopg2
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import json
 import logging
 import re
 import sys
 
 # Import salt libs
 import salt.utils.jid
+import salt.utils.json
 from salt.ext import six
 
 # Import third party libs
@@ -166,7 +166,7 @@ def _format_job_instance(job):
     Format the job instance correctly
     '''
     ret = {'Function': job.get('fun', 'unknown-function'),
-           'Arguments': json.loads(job.get('arg', '[]')),
+           'Arguments': salt.utils.json.loads(job.get('arg', '[]')),
            # unlikely but safeguard from invalid returns
            'Target': job.get('tgt', 'unknown-target'),
            'Target-type': job.get('tgt_type', 'list'),
@@ -241,7 +241,7 @@ def returner(load):
         sql, (
             load['fun'],
             load['jid'],
-            json.dumps(job_ret),
+            salt.utils.json.dumps(job_ret),
             load['id'],
             load.get('success'),
         )
@@ -266,7 +266,7 @@ def event_return(events):
         sql = '''INSERT INTO salt_events
                 (tag, data, master_id)
                 VALUES (%s, %s, %s)'''
-        cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
+        cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__['id']))
     _close_conn(conn)
 
 
@@ -294,7 +294,7 @@ def save_load(jid, clear_load, minions=None):
             six.text_type(clear_load.get("kwargs")),
             six.text_type(clear_load.get("ret")),
             six.text_type(clear_load.get("user")),
-            six.text_type(json.dumps(clear_load.get("arg"))),
+            six.text_type(salt.utils.json.dumps(clear_load.get("arg"))),
             six.text_type(clear_load.get("fun")),
         )
     )
@@ -371,7 +371,7 @@ def get_jid(jid):
     ret = {}
     if data:
         for minion, full_ret in data:
-            ret_data = json.loads(full_ret)
+            ret_data = salt.utils.json.loads(full_ret)
             if not isinstance(ret_data, dict) or 'return' not in ret_data:
                 # Convert the old format in which the return contains the only return data to the
                 # new that is dict containing 'return' and optionally 'retcode' and 'success'.

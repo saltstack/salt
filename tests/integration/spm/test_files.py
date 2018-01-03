@@ -3,7 +3,7 @@
 Tests for the spm files utility
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 

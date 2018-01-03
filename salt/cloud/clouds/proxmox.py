@@ -32,11 +32,10 @@ import time
 import pprint
 import logging
 import re
-import json
 
 # Import salt libs
-from salt.ext import six
-import salt.utils
+import salt.utils.cloud
+import salt.utils.json
 
 # Import salt cloud libs
 import salt.config as config
@@ -45,9 +44,10 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
-from salt.ext.six.moves import range
 
-# Import Third Party Libs
+# Import 3rd-party Libs
+from salt.ext import six
+from salt.ext.six.moves import range
 try:
     import requests
     HAS_REQUESTS = True
@@ -632,7 +632,7 @@ def _import_api():
 
     re_filter = re.compile('(?<=pveapi =)(.*)(?=^;)', re.DOTALL | re.MULTILINE)
     api_json = re_filter.findall(returned_data.text)[0]
-    api = json.loads(api_json)
+    api = salt.utils.json.loads(api_json)
 
 
 def _get_properties(path="", method="GET", forced_params=None):
