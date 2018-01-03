@@ -263,7 +263,7 @@ For more examples and information see <https://github.com/mickep76/pepa>.
 '''
 
 # Import futures
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 __author__ = 'Michael Persson <michael.ake.persson@gmail.com>'
 __copyright__ = 'Copyright (c) 2013 Michael Persson'
@@ -397,7 +397,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
 
     for categ, info in [next(six.iteritems(s)) for s in sequence]:
         if categ not in inp:
-            log.warning("Category is not defined: {0}".format(categ))
+            log.warning("Category is not defined: %s", categ)
             continue
 
         alias = None
@@ -416,7 +416,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
         if isinstance(inp[categ], list):
             entries = inp[categ]
         elif not inp[categ]:
-            log.warning("Category has no value set: {0}".format(categ))
+            log.warning("Category has no value set: %s", categ)
             continue
         else:
             entries = [inp[categ]]
@@ -426,7 +426,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
             results = None
             fn = os.path.join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
             if os.path.isfile(fn):
-                log.info("Loading template: {0}".format(fn))
+                log.info("Loading template: %s", fn)
                 with salt.utils.files.fopen(fn) as fhr:
                     template = jinja2.Template(fhr.read())
                 output['pepa_templates'].append(fn)
@@ -438,11 +438,11 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                     results_jinja = template.render(data)
                     results = salt.utils.yaml.safe_load(results_jinja)
                 except jinja2.UndefinedError as err:
-                    log.error('Failed to parse JINJA template: {0}\n{1}'.format(fn, err))
+                    log.error('Failed to parse JINJA template: %s\n%s', fn, err)
                 except salt.utils.yaml.YAMLError as err:
-                    log.error('Failed to parse YAML in template: {0}\n{1}'.format(fn, err))
+                    log.error('Failed to parse YAML in template: %s\n%s', fn, err)
             else:
-                log.info("Template doesn't exist: {0}".format(fn))
+                log.info("Template doesn't exist: %s", fn)
                 continue
 
             if results is not None:
@@ -455,41 +455,41 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                         operator = skey[1]
 
                     if key in immutable:
-                        log.warning('Key {0} is immutable, changes are not allowed'.format(key))
+                        log.warning('Key %s is immutable, changes are not allowed', key)
                     elif rkey in immutable:
-                        log.warning("Key {0} is immutable, changes are not allowed".format(rkey))
+                        log.warning("Key %s is immutable, changes are not allowed", rkey)
                     elif operator == 'merge()' or operator == 'imerge()':
                         if operator == 'merge()':
-                            log.debug("Merge key {0}: {1}".format(rkey, results[key]))
+                            log.debug("Merge key %s: %s", rkey, results[key])
                         else:
-                            log.debug("Set immutable and merge key {0}: {1}".format(rkey, results[key]))
+                            log.debug("Set immutable and merge key %s: %s", rkey, results[key])
                             immutable[rkey] = True
                         if rkey not in output:
-                            log.error('Cant\'t merge key {0} doesn\'t exist'.format(rkey))
+                            log.error('Cant\'t merge key %s doesn\'t exist', rkey)
                         elif not isinstance(results[key], type(output[rkey])):
-                            log.error('Can\'t merge different types for key {0}'.format(rkey))
+                            log.error('Can\'t merge different types for key %s', rkey)
                         elif isinstance(results[key], dict):
                             output[rkey].update(results[key])
                         elif isinstance(results[key], list):
                             output[rkey].extend(results[key])
                         else:
-                            log.error('Unsupported type need to be list or dict for key {0}'.format(rkey))
+                            log.error('Unsupported type need to be list or dict for key %s', rkey)
                     elif operator == 'unset()' or operator == 'iunset()':
                         if operator == 'unset()':
-                            log.debug("Unset key {0}".format(rkey))
+                            log.debug("Unset key %s", rkey)
                         else:
-                            log.debug("Set immutable and unset key {0}".format(rkey))
+                            log.debug("Set immutable and unset key %s", rkey)
                             immutable[rkey] = True
                         if rkey in output:
                             del output[rkey]
                     elif operator == 'immutable()':
-                        log.debug("Set immutable and substitute key {0}: {1}".format(rkey, results[key]))
+                        log.debug("Set immutable and substitute key %s: %s", rkey, results[key])
                         immutable[rkey] = True
                         output[rkey] = results[key]
                     elif operator is not None:
-                        log.error('Unsupported operator {0}, skipping key {1}'.format(operator, rkey))
+                        log.error('Unsupported operator %s, skipping key %s', operator, rkey)
                     else:
-                        log.debug("Substitute key {0}: {1}".format(key, results[key]))
+                        log.debug("Substitute key %s: %s", key, results[key])
                         output[key] = results[key]
 
     tree = key_value_to_tree(output)
@@ -523,7 +523,7 @@ def validate(output, resource):
     all_schemas = {}
     pepa_schemas = []
     for fn in glob.glob(valdir + '/*.yaml'):
-        log.info("Loading schema: {0}".format(fn))
+        log.info("Loading schema: %s", fn)
         with salt.utils.files.fopen(fn) as fhr:
             template = jinja2.Template(fhr.read())
         data = output
@@ -536,7 +536,7 @@ def validate(output, resource):
     val = cerberus.Validator()
     if not val.validate(output['pepa_keys'], all_schemas):
         for ekey, error in six.iteritems(val.errors):
-            log.warning('Validation failed for key {0}: {1}'.format(ekey, error))
+            log.warning('Validation failed for key %s: %s', ekey, error)
 
     output['pepa_schema_keys'] = all_schemas
     output['pepa_schemas'] = pepa_schemas
@@ -546,7 +546,7 @@ def validate(output, resource):
 if __name__ == '__main__':
     # Load configuration file
     if not os.path.isfile(args.config):
-        log.critical("Configuration file doesn't exist: {0}".format(args.config))
+        log.critical("Configuration file doesn't exist: %s", args.config)
         sys.exit(1)
 
     # Get configuration

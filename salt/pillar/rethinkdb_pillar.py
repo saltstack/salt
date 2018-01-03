@@ -42,7 +42,7 @@ In the example above the following happens.
 Module Documentation
 ====================
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libraries
 import logging
@@ -101,8 +101,8 @@ def ext_pillar(minion_id,
     username = __opts__['rethinkdb.username']
     password = __opts__['rethinkdb.password']
 
-    log.debug('Connecting to {0}:{1} as user \'{2}\' for RethinkDB ext_pillar'
-              .format(host, port, username))
+    log.debug('Connecting to %s:%s as user \'%s\' for RethinkDB ext_pillar',
+              host, port, username)
 
     # Connect to the database
     conn = rethinkdb.connect(host=host,
@@ -117,8 +117,8 @@ def ext_pillar(minion_id,
 
         if id_field:
             log.debug('ext_pillar.rethinkdb: looking up pillar. '
-                      'table: {0}, field: {1}, minion: {2}'.format(
-                          table, id_field, minion_id))
+                      'table: %s, field: %s, minion: %s',
+                      table, id_field, minion_id)
 
             if field:
                 data = rethinkdb.table(table).filter(
@@ -129,8 +129,8 @@ def ext_pillar(minion_id,
 
         else:
             log.debug('ext_pillar.rethinkdb: looking up pillar. '
-                      'table: {0}, field: id, minion: {1}'.format(
-                          table, minion_id))
+                      'table: %s, field: id, minion: %s',
+                      table, minion_id)
 
             if field:
                 data = rethinkdb.table(table).get(minion_id).pluck(field).run(
@@ -147,7 +147,7 @@ def ext_pillar(minion_id,
         # Return nothing if multiple documents are found for a minion
         if len(data.items) > 1:
             log.error('ext_pillar.rethinkdb: ambiguous documents found for '
-                      'minion {0}'.format(minion_id))
+                      'minion %s', minion_id)
             return {}
 
         else:
