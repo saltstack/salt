@@ -126,7 +126,7 @@ class PillarTestCase(TestCase):
             ]
             self.assertEqual(
                 pillar.render_pillar({'base': ['foo.sls']}),
-                ({'foo': 'bar2'}, [])
+                ({'foo': 'bar'}, [])
             )
 
             # Test includes using empty key directive
@@ -136,7 +136,7 @@ class PillarTestCase(TestCase):
             ]
             self.assertEqual(
                 pillar.render_pillar({'base': ['foo.sls']}),
-                ({'foo': 'bar2'}, [])
+                ({'foo': 'bar'}, [])
             )
 
             # Test includes using simple non-nested key
