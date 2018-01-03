@@ -46,7 +46,7 @@ def get_class(_class, salt_data):
     sub_init = '{0}/classes/{1}/init.yml'.format(saltclass_path,
                                                  _class.replace('.', '/'))
 
-    for root, dirs, files in salt.utils.path.os_walk('{0}/classes'.format(saltclass_path)):
+    for root, dirs, files in salt.utils.path.os_walk('{0}/classes'.format(saltclass_path), followlinks=True):
         for l_file in files:
             l_files.append('{0}/{1}'.format(root, l_file))
 
@@ -220,7 +220,7 @@ def expanded_dict_from_minion(minion_id, salt_data):
     _file = ''
     saltclass_path = salt_data['path']
     # Start
-    for root, dirs, files in salt.utils.path.os_walk('{0}/nodes'.format(saltclass_path)):
+    for root, dirs, files in salt.utils.path.os_walk('{0}/nodes'.format(saltclass_path), followlinks=True):
         for minion_file in files:
             if minion_file == '{0}.yml'.format(minion_id):
                 _file = os.path.join(root, minion_file)
