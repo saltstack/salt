@@ -25,16 +25,18 @@ the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 # Import Python Libs
 from __future__ import absolute_import
-import json
 import logging
 import pprint
+import os
 import time
 
 # Import Salt Libs
 from salt.ext.six.moves import range
 import salt.utils.cloud
+import salt.utils.json
 import salt.config as config
 from salt.exceptions import (
+    SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
@@ -234,6 +236,21 @@ def create(server_):
         'commercial_type', server_, __opts__, default='C1'
     )
 
+    key_filename = config.get_cloud_config_value(
+        'ssh_key_file', server_, __opts__, search_global=False, default=None
+    )
+
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined key_filename \'{0}\' does not exist'.format(
+                key_filename
+            )
+        )
+
+    ssh_password = config.get_cloud_config_value(
+        'ssh_password', server_, __opts__
+    )
+
     kwargs = {
         'name': server_['name'],
         'organization': access_key,
@@ -294,9 +311,8 @@ def create(server_):
             raise SaltCloudSystemExit(str(exc))
 
     server_['ssh_host'] = data['public_ip']['address']
-    server_['ssh_password'] = config.get_cloud_config_value(
-        'ssh_password', server_, __opts__
-    )
+    server_['ssh_password'] = ssh_password
+    server_['key_filename'] = key_filename
     ret = __utils__['cloud.bootstrap'](server_, __opts__)
 
     ret.update(data)
@@ -347,7 +363,7 @@ def query(method='servers', server_id=None, command=None, args=None,
         'token', get_configured_provider(), __opts__, search_global=False
     )
 
-    data = json.dumps(args)
+    data = salt.utils.json.dumps(args)
 
     requester = getattr(requests, http_method)
     request = requester(

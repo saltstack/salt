@@ -134,12 +134,12 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 # Import Python Libs
 from __future__ import absolute_import
 import logging
-import json
 import os
 
 # Import Salt Libs
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
 from salt.ext import six
@@ -159,8 +159,8 @@ __virtualname__ = 'boto_iam'
 
 if six.PY2:
     def _byteify(thing):
-        # Note that we intentionally don't treat odicts here - they won't compare equal
-        # in many circumstances where AWS treats them the same...
+        # Note that we intentionally don't treat odicts here - they won't
+        # compare equal in many circumstances where AWS treats them the same...
         if isinstance(thing, dict):
             return dict([(_byteify(k), _byteify(v)) for k, v in six.iteritems(thing)])
         elif isinstance(thing, list):
@@ -567,7 +567,7 @@ def _user_policies_present(name, policies=None, region=None, key=None, keyid=Non
     policies_to_delete = []
     for policy_name, policy in six.iteritems(policies):
         if isinstance(policy, six.string_types):
-            dict_policy = _byteify(json.loads(policy, object_pairs_hook=odict.OrderedDict))
+            dict_policy = _byteify(salt.utils.json.loads(policy, object_pairs_hook=odict.OrderedDict))
         else:
             dict_policy = _byteify(policy)
         _policy = _byteify(__salt__['boto_iam.get_user_policy'](name, policy_name, region, key, keyid, profile))
@@ -1030,7 +1030,7 @@ def _group_policies_present(
     policies_to_delete = []
     for policy_name, policy in six.iteritems(policies):
         if isinstance(policy, six.string_types):
-            dict_policy = _byteify(json.loads(policy, object_pairs_hook=odict.OrderedDict))
+            dict_policy = _byteify(salt.utils.json.loads(policy, object_pairs_hook=odict.OrderedDict))
         else:
             dict_policy = _byteify(policy)
         _policy = _byteify(__salt__['boto_iam.get_group_policy'](name, policy_name, region, key, keyid, profile))
@@ -1528,12 +1528,12 @@ def policy_present(name, policy_document, path=None, description=None,
         _describe = __salt__['boto_iam.get_policy_version'](name, policy.get('default_version_id'),
                                                        region, key, keyid, profile).get('policy_version', {})
         if isinstance(_describe['document'], six.string_types):
-            describeDict = json.loads(_describe['document'])
+            describeDict = salt.utils.json.loads(_describe['document'])
         else:
             describeDict = _describe['document']
 
         if isinstance(policy_document, six.string_types):
-            policy_document = json.loads(policy_document)
+            policy_document = salt.utils.json.loads(policy_document)
 
         r = salt.utils.data.compare_dicts(describeDict, policy_document)
 
@@ -1545,7 +1545,7 @@ def policy_present(name, policy_document, path=None, description=None,
                 return ret
 
             ret['comment'] = ' '.join([ret['comment'], 'Policy to be modified'])
-            policy_document = json.dumps(policy_document)
+            policy_document = salt.utils.json.dumps(policy_document)
 
             r = __salt__['boto_iam.create_policy_version'](policy_name=name,
                                                policy_document=policy_document,

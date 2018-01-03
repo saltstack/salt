@@ -11,6 +11,7 @@ idna==2.6
 ioloop==0.1a0
 ipaddress==1.0.18
 Jinja2==2.10
+libnacl==1.6.1
 lxml==4.1.1
 Mako==1.0.7
 MarkupSafe==1.0
@@ -25,7 +26,7 @@ pyOpenSSL==17.5.0
 python-dateutil==2.6.1
 python-gnupg==0.4.1
 pyyaml==3.12
-pyzmq==17.0.0b3
+pyzmq==16.0.3
 requests==2.18.4
 singledispatch==3.4.0.3
 six==1.11.0

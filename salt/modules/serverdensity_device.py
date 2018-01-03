@@ -8,16 +8,17 @@ Wrapper around Server Density API
 
 # Import Python libs
 from __future__ import absolute_import
-import json
 import logging
 import os
 import tempfile
 
+# Import Salt libs
+import salt.utils.json
+from salt.exceptions import CommandExecutionError
+
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-
-from salt.exceptions import CommandExecutionError
 
 try:
     import requests
@@ -99,7 +100,7 @@ def create(name, **params):
     log.debug('Server Density API Response content: {0}'.format(api_response.content))
     if api_response.status_code == 200:
         try:
-            return json.loads(api_response.content)
+            return salt.utils.json.loads(api_response.content)
         except ValueError:
             log.error('Could not parse API Response content: {0}'.format(api_response.content))
             raise CommandExecutionError(
@@ -130,7 +131,7 @@ def delete(device_id):
     log.debug('Server Density API Response content: {0}'.format(api_response.content))
     if api_response.status_code == 200:
         try:
-            return json.loads(api_response.content)
+            return salt.utils.json.loads(api_response.content)
         except ValueError:
             log.error('Could not parse API Response content: {0}'.format(api_response.content))
             raise CommandExecutionError(
@@ -172,13 +173,13 @@ def ls(**params):
 
     api_response = requests.get(
         'https://api.serverdensity.io/inventory/{0}'.format(endpoint),
-        params={'token': get_sd_auth('api_token'), 'filter': json.dumps(params)}
+        params={'token': get_sd_auth('api_token'), 'filter': salt.utils.json.dumps(params)}
     )
     log.debug('Server Density API Response: {0}'.format(api_response))
     log.debug('Server Density API Response content: {0}'.format(api_response.content))
     if api_response.status_code == 200:
         try:
-            return json.loads(api_response.content)
+            return salt.utils.json.loads(api_response.content)
         except ValueError:
             log.error(
                 'Could not parse Server Density API Response content: {0}'
@@ -217,7 +218,7 @@ def update(device_id, **params):
     log.debug('Server Density API Response content: {0}'.format(api_response.content))
     if api_response.status_code == 200:
         try:
-            return json.loads(api_response.content)
+            return salt.utils.json.loads(api_response.content)
         except ValueError:
             log.error(
                 'Could not parse Server Density API Response content: {0}'

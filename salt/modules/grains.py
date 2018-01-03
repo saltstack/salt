@@ -17,7 +17,6 @@ import random
 import logging
 import operator
 import collections
-import json
 import math
 import yaml
 from functools import reduce  # pylint: disable=redefined-builtin
@@ -27,6 +26,7 @@ from salt.ext import six
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.platform
 import salt.utils.yamldumper
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -116,7 +116,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     if ordered is True:
         grains = __grains__
     else:
-        grains = json.loads(json.dumps(__grains__))
+        grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__))
     return salt.utils.data.traverse_dict_and_list(
         grains,
         key,

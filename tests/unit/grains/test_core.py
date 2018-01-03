@@ -5,7 +5,9 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import logging
 import os
+import socket
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -19,6 +21,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.network
 import salt.utils.platform
 import salt.grains.core as core
 
@@ -28,6 +31,8 @@ if six.PY3:
     import ipaddress
 else:
     import salt.ext.ipaddress as ipaddress
+
+log = logging.getLogger(__name__)
 
 # Globals
 IPv4Address = ipaddress.IPv4Address
@@ -683,6 +688,26 @@ SwapTotal:       4789244 kB'''
         self.assertEqual(os_grains.get('mem_total'), 2023)
         self.assertEqual(os_grains.get('swap_total'), 400)
 
+    def test_docker_virtual(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        '''
+        with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
+            with patch.object(os.path,
+                              'isfile',
+                              MagicMock(side_effect=lambda x: True if x == '/proc/1/cgroup' else False)):
+                for cgroup_substr in (':/system.slice/docker', ':/docker/',
+                                       ':/docker-ce/'):
+                    cgroup_data = \
+                        '10:memory{0}a_long_sha256sum'.format(cgroup_substr)
+                    log.debug(
+                        'Testing Docker cgroup substring \'%s\'', cgroup_substr)
+                    with patch('salt.utils.files.fopen', mock_open(read_data=cgroup_data)):
+                        self.assertEqual(
+                            core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                            'Docker'
+                        )
+
     def _check_ipaddress(self, value, ip_v):
         '''
         check if ip address in a list is valid
@@ -806,3 +831,26 @@ SwapTotal:       4789244 kB'''
                                   MagicMock(return_value=resolv_mock)):
                     get_dns = core.dns()
                     self.assertEqual(get_dns, ret)
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_fqdns_return(self):
+        '''
+        test the return for a dns grain. test for issue:
+        https://github.com/saltstack/salt/issues/41230
+        '''
+        reverse_resolv_mock = [('foo.bar.baz', [], ['1.2.3.4']),
+        ('rinzler.evil-corp.com', [], ['5.6.7.8']),
+        ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
+        ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
+        ret = {'fqdns': ['rinzler.evil-corp.com', 'foo.bar.baz', 'bluesniff.foo.bar']}
+        self._run_fqdns_test(reverse_resolv_mock, ret)
+
+    def _run_fqdns_test(self, reverse_resolv_mock, ret):
+        with patch.object(salt.utils, 'is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.network.ip_addrs',
+            MagicMock(return_value=['1.2.3.4', '5.6.7.8'])),\
+            patch('salt.utils.network.ip_addrs6',
+            MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef'])):
+                with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+                    fqdns = core.fqdns()
+                    self.assertEqual(fqdns, ret)
