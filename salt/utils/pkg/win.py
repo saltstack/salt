@@ -1300,7 +1300,7 @@ def __main():
         version_only = True
     if str(sys.argv[2]) == 'system+user':
         user_pkgs = True
-    import json
+    import salt.utils.json
     import timeit
 
     def run():
@@ -1308,7 +1308,7 @@ def __main():
         Main run code, when this module is run directly
         '''
         pkg_list = WinSoftware(user_pkgs=user_pkgs, version_only=version_only)
-        print(json.dumps(pkg_list.data, sort_keys=True, indent=4))  # pylint: disable=superfluous-parens
+        print(salt.utils.json.dumps(pkg_list.data, sort_keys=True, indent=4))  # pylint: disable=superfluous-parens
         print('Total: {}'.format(len(pkg_list)))  # pylint: disable=superfluous-parens
 
     print('Time Taken: {}'.format(timeit.timeit(run, number=1)))  # pylint: disable=superfluous-parens

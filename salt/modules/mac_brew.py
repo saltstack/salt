@@ -13,21 +13,20 @@ from __future__ import absolute_import
 # Import python libs
 import copy
 import functools
-import json
 import logging
 
 # Import salt libs
 import salt.utils.data
 import salt.utils.functools
+import salt.utils.json
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-from salt.ext import six
-from salt.ext.six.moves import zip
 
 # Import third party libs
-import json
+from salt.ext import six
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
@@ -292,7 +291,7 @@ def _info(*pkgs):
     if brew_result['retcode']:
         log.error('Failed to get info about packages: {0}'.format(' '.join(pkgs)))
         return {}
-    output = json.loads(brew_result['stdout'])
+    output = salt.utils.json.loads(brew_result['stdout'])
     return dict(zip(pkgs, output))
 
 
@@ -422,7 +421,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     ret = {}
 
     try:
-        data = json.loads(res['stdout'])
+        data = salt.utils.json.loads(res['stdout'])
     except ValueError as err:
         msg = 'unable to interpret output from "brew outdated": {0}'.format(err)
         log.error(msg)

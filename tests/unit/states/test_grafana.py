@@ -4,7 +4,6 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
-import json
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,6 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.json
 import salt.states.grafana as grafana
 from salt.exceptions import SaltInvocationError
 
@@ -83,13 +83,13 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value={'rows':
                                                [{'panels': 'b',
                                                  'title': 'systemhealth'}]})
-                with patch.object(json, 'loads', mock):
+                with patch.object(salt.utils.json, 'loads', mock):
                     ret.update({'comment': comt1, 'result': None})
                     self.assertDictEqual(grafana.dashboard_present(name, True,
                                                                    rows=row),
                                          ret)
 
-            with patch.object(json, 'loads',
+            with patch.object(salt.utils.json, 'loads',
                               MagicMock(return_value={'rows': {}})):
                 self.assertRaises(SaltInvocationError,
                                   grafana.dashboard_present, name,
@@ -102,7 +102,7 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value={'rows': [{'panels': 'b',
                                                      'title': 'systemhealth'}]})
             with patch.dict(grafana.__opts__, {'test': False}):
-                with patch.object(json, 'loads', mock):
+                with patch.object(salt.utils.json, 'loads', mock):
                     comt = ('Failed to update dashboard myservice.')
                     ret.update({'comment': comt, 'result': False})
                     self.assertDictEqual(grafana.dashboard_present(name, True,

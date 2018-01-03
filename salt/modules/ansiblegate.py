@@ -36,8 +36,8 @@ import importlib
 import yaml
 import fnmatch
 import subprocess
-import json
 
+import salt.utils.json
 from salt.exceptions import LoaderError, CommandExecutionError
 from salt.utils import timed_subprocess
 
@@ -150,7 +150,8 @@ class AnsibleModuleCaller(object):
                                                                                                   '')))
         if args:
             kwargs['_raw_params'] = ' '.join(args)
-        js_args = '{{"ANSIBLE_MODULE_ARGS": {args}}}'.format(args=json.dumps(kwargs))
+        js_args = str('{{"ANSIBLE_MODULE_ARGS": {args}}}')  # future lint: disable=blacklisted-function
+        js_args = js_args.format(args=salt.utils.json.dumps(kwargs))
 
         proc_out = timed_subprocess.TimedProc(["echo", "{0}".format(js_args)],
                                               stdout=subprocess.PIPE, timeout=self.timeout)
@@ -160,7 +161,7 @@ class AnsibleModuleCaller(object):
         proc_exc.run()
 
         try:
-            out = json.loads(proc_exc.stdout)
+            out = salt.utils.json.loads(proc_exc.stdout)
         except ValueError as ex:
             out = {'Error': (proc_exc.stderr and (proc_exc.stderr + '.') or str(ex))}
             if proc_exc.stdout:

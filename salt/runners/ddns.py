@@ -15,7 +15,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import os
 import logging
-import json
 
 # Import third party libs
 HAS_LIBS = False
@@ -29,6 +28,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.json
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def _get_keyring(keyfile):
     keyring = None
     if keyfile and os.path.isfile(os.path.expanduser(keyfile)):
         with salt.utils.files.fopen(keyfile) as _f:
-            keyring = dns.tsigkeyring.from_text(json.load(_f))
+            keyring = dns.tsigkeyring.from_text(salt.utils.json.load(_f))
 
     return keyring
 

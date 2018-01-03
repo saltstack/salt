@@ -22,16 +22,15 @@ from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
-import json
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six
 import salt.ext.six.moves.http_client
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 import salt.utils.http
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
+import salt.utils.json
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'random_org'
@@ -97,7 +96,7 @@ def _query(api_version=None, data=None):
     api_url = 'https://api.random.org/'
     base_url = _urljoin(api_url, 'json-rpc/' + str(api_version) + '/invoke')
 
-    data = json.dumps(data)
+    data = salt.utils.json.dumps(data)
 
     result = salt.utils.http.query(
         base_url,

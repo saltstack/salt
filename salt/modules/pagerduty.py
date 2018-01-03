@@ -20,10 +20,10 @@ from __future__ import absolute_import
 
 # Import python libs
 import yaml
-import json
 
 # Import salt libs
 import salt.utils.functools
+import salt.utils.json
 import salt.utils.pagerduty
 from salt.ext.six import string_types
 
@@ -181,7 +181,7 @@ def create_event(service_key=None, description=None, details=None,
         if isinstance(details, string_types):
             details = {'details': details}
 
-    ret = json.loads(salt.utils.pagerduty.query(
+    ret = salt.utils.json.loads(salt.utils.pagerduty.query(
         method='POST',
         profile_dict=__salt__['config.option'](profile),
         api_key=service_key,

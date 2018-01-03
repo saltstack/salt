@@ -15,6 +15,9 @@ import random
 import shutil
 from salt.ext import six
 
+# Import salt libs
+import salt.utils.win_dacl
+
 
 CAN_RENAME_OPEN_FILE = False
 if os.name == 'nt':  # pragma: no cover
@@ -120,8 +123,12 @@ class _AtomicWFile(object):
         self._fh.close()
         if os.path.isfile(self._filename):
             shutil.copymode(self._filename, self._tmp_filename)
-            st = os.stat(self._filename)
-            os.chown(self._tmp_filename, st.st_uid, st.st_gid)
+            if salt.utils.win_dacl.HAS_WIN32:
+                owner = salt.utils.win_dacl.get_owner(self._filename)
+                salt.utils.win_dacl.set_owner(self._tmp_filename, owner)
+            else:
+                st = os.stat(self._filename)
+                os.chown(self._tmp_filename, st.st_uid, st.st_gid)
         atomic_rename(self._tmp_filename, self._filename)
 
     def __exit__(self, exc_type, exc_value, traceback):

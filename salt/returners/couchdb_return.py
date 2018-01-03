@@ -56,7 +56,6 @@ otherwise multi-minion targeting can lead to losing output:
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
-import json
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
@@ -70,6 +69,7 @@ from salt.ext.six.moves.urllib.request import (
 
 # Import Salt libs
 import salt.utils.jid
+import salt.utils.json
 import salt.returners
 
 log = logging.getLogger(__name__)
@@ -136,7 +136,7 @@ def _request(method, url, content_type=None, _data=None):
         handler = opener.open(request)
     except HTTPError as exc:
         return {'error': '{0}'.format(exc)}
-    return json.loads(handler.read())
+    return salt.utils.json.loads(handler.read())
 
 
 def returner(ret):
@@ -168,7 +168,7 @@ def returner(ret):
     _response = _request("PUT",
                          options['url'] + options['db'] + "/" + doc['_id'],
                          'application/json',
-                         json.dumps(doc))
+                         salt.utils.json.dumps(doc))
 
     # Sanity check regarding the response..
     if 'ok' not in _response or _response['ok'] is not True:
@@ -355,7 +355,7 @@ def set_salt_view():
     # Make the request to update the design doc.
     _response = _request("PUT",
                          options['url'] + options['db'] + "/_design/salt",
-                         "application/json", json.dumps(new_doc))
+                         "application/json", salt.utils.json.dumps(new_doc))
     if 'error' in _response:
         log.warning(
             'Unable to set the salt design document: %s',

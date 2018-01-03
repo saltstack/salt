@@ -1005,7 +1005,7 @@ VALID_OPTS = {
 
     'queue_dirs': list,
 
-    # Instructs the minion to ping its master(s) every n number of seconds. Used
+    # Instructs the minion to ping its master(s) every n number of minutes. Used
     # primarily as a mitigation technique against minion disconnects.
     'ping_interval': int,
 
@@ -1180,6 +1180,12 @@ VALID_OPTS = {
 
     # SSDP discovery pause between the attempts
     'pause': int,
+
+    # Scheduler should be a dictionary
+    'schedule': dict,
+
+    # Enable calling ssh minions from the salt master
+    'enable_ssh_minions': bool,
 }
 
 # default configurations
@@ -1471,6 +1477,7 @@ DEFAULT_MINION_OPTS = {
         'match': 'any',
         'mapping': {},
     },
+    'schedule': {},
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1516,6 +1523,7 @@ DEFAULT_MASTER_OPTS = {
     'env_order': [],
     'saltenv': None,
     'lock_saltenv': False,
+    'pillarenv': None,
     'default_top': 'base',
     'file_client': 'local',
     'git_pillar_base': 'master',
@@ -1793,6 +1801,9 @@ DEFAULT_MASTER_OPTS = {
         'port': 4520,
         'mapping': {},
     },
+    'schedule': {},
+    'enable_ssh': False,
+    'enable_ssh_minions': False,
 }
 
 
@@ -3753,10 +3764,6 @@ def apply_minion_config(overrides=None,
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
-
-    # if there is no schedule option yet, add an empty scheduler
-    if 'schedule' not in opts:
-        opts['schedule'] = {}
 
     # Make sure hash_type is lowercase
     opts['hash_type'] = opts['hash_type'].lower()
