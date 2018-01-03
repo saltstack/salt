@@ -72,7 +72,11 @@ def _walk_through(job_dir):
                 continue
 
             with salt.utils.files.fopen(load_path, 'rb') as rfh:
-                job = serial.load(rfh)
+                try:
+                    job = serial.load(rfh)
+                except Exception:
+                    log.exception('Failed to deserialize %s', load_path)
+                    continue
                 jid = job['jid']
                 yield jid, job, t_path, final
 
