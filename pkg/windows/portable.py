@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import sys
+import os
 import getopt
 
 
@@ -30,7 +31,7 @@ def display_help():
 
 def main(argv):
     target = ''
-    search = sys.exec_prefix
+    search = os.path.dirname(sys.executable)
     replace = '..'
     try:
         opts, args = getopt.getopt(argv,
