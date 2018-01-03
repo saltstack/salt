@@ -49,8 +49,6 @@ return: return_data
 full_ret: full load of job return
 '''
 from __future__ import absolute_import, print_function, unicode_literals
-
-import json
 import logging
 
 try:
@@ -78,14 +76,18 @@ COUCHBASE_CONN = None
 DESIGN_NAME = 'couchbase_returner'
 VERIFIED_VIEWS = False
 
+_json = salt.utils.json.import_json()
+
+
+def _json_dumps(obj, **kwargs):
+    return salt.utils.json.dumps(obj, _json_module=_json)
+
 
 def __virtual__():
     if not HAS_DEPS:
         return False, 'Could not import couchbase returner; couchbase is not installed.'
 
-    # try to load some faster json libraries. In order of fastest to slowest
-    json = salt.utils.json.import_json()
-    couchbase.set_json_converters(json.dumps, json.loads)
+    couchbase.set_json_converters(_json_dumps, salt.utils.json.loads)
 
     return __virtualname__
 
@@ -192,7 +194,7 @@ def returner(load):
     hn_key = '{0}/{1}'.format(load['jid'], load['id'])
     try:
         ret_doc = {'return': load['return'],
-                   'full_ret': json.dumps(load)}
+                   'full_ret': salt.utils.json.dumps(load)}
 
         cb_.add(hn_key,
                ret_doc,

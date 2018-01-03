@@ -103,10 +103,10 @@
 # pylint: disable=too-few-public-methods,too-many-public-methods
 
 # Import python libs
-from __future__ import absolute_import
-import logging
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import datetime
-from copy import copy
+import logging
 
 
 # Import Salt Libs
@@ -270,7 +270,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
         except:
             raise ConstructorError('unable to build reset')
 
-        node = copy(node)
+        node = copy.copy(node)
         node.tag = tag
         obj = self.construct_object(node, deep)
         if obj is None:
@@ -287,7 +287,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
         except:
             raise ConstructorError('unable to build reset')
 
-        node = copy(node)
+        node = copy.copy(node)
         node.tag = tag
 
         return self.construct_object(node, deep)

@@ -17,7 +17,7 @@ You can setup connection parameters like this
 from __future__ import absolute_import
 
 try:
-    import json
+    import salt.utils.json
     from salt.ext import six
     from salt.exceptions import CommandExecutionError
     import requests
@@ -56,8 +56,8 @@ def _is_updated(old_conf, new_conf):
     changed = {}
 
     # Dirty json hacking to get parameters in the same format
-    new_conf = _json_to_unicode(json.loads(json.dumps(new_conf, ensure_ascii=False)))
-    old_conf = json.loads(json.dumps(old_conf, ensure_ascii=False))
+    new_conf = _json_to_unicode(salt.utils.json.loads(salt.utils.json.dumps(new_conf, ensure_ascii=False)))
+    old_conf = salt.utils.json.loads(salt.utils.json.dumps(old_conf, ensure_ascii=False))
 
     for key, value in old_conf.items():
         oldval = str(value).lower()

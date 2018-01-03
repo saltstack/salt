@@ -194,13 +194,13 @@ from __future__ import absolute_import
 
 # Import Python Libs
 import copy
-import json
 import logging
 import os
 import pprint
 import socket
 
 # Import Salt Libs
+import salt.utils.json
 import salt.config as config
 import salt.ext.six as six
 from salt.exceptions import (
@@ -817,7 +817,7 @@ def call(conn=None, call=None, kwargs=None):
     func = kwargs.pop('func')
     for key, value in kwargs.items():
         try:
-            kwargs[key] = json.loads(value)
+            kwargs[key] = salt.utils.json.loads(value)
         except ValueError:
             continue
     try:

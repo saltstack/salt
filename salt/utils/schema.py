@@ -77,7 +77,7 @@
             ('x-ordering', ['host', 'port']),
             ('additionalProperties', True)]
         )
-        >>> print(json.dumps(HostConfig.serialize(), indent=2))
+        >>> print(salt.utils.json.dumps(HostConfig.serialize(), indent=2))
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "Host Configuration",
@@ -170,7 +170,7 @@
 
     .. code-block:: python
 
-        >>> print json.dumps(MyConfig.serialize(), indent=4)
+        >>> print salt.utils.json.dumps(MyConfig.serialize(), indent=4)
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "My Config",
@@ -282,7 +282,7 @@
 
     .. code-block:: python
 
-        >>> print(json.dumps(MyConfig, indent=4))
+        >>> print(salt.utils.json.dumps(MyConfig, indent=4))
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "My Config",

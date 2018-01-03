@@ -48,17 +48,19 @@ config:
 
 # Import Python Libs
 from __future__ import absolute_import
+import hashlib
 import logging
 import os
-import os.path
-import hashlib
 import re
-import json
 import yaml
+
 # Import Salt Libs
-from salt.ext import six
 import salt.utils.files
+import salt.utils.json
 from salt.utils.yamlloader import SaltYamlSafeLoader
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -447,7 +449,7 @@ def _dict_to_json_pretty(d, sort_keys=True):
     '''
     helper function to generate pretty printed json output
     '''
-    return json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
+    return salt.utils.json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
 
 
 # Heuristic on whether or not the property name loosely matches given set of 'interesting' factors

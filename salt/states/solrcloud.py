@@ -8,7 +8,9 @@ States for solrcloud alias and collection configuration
 
 # Import Python libs
 from __future__ import absolute_import
-import json
+
+# Import Salt libs
+import salt.utils.json
 
 # Import 3rd party libs
 from salt.ext import six
@@ -136,8 +138,8 @@ def collection(name, options=None, **kwargs):
             if __opts__['test']:
                 ret['comment'] = 'Collection options "{0}" will be changed.'.format(name)
                 ret['pchanges'] = {
-                    'old': json.dumps(current_options, sort_keys=True, indent=4, separators=(',', ': ')),
-                    'new': json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
+                    'old': salt.utils.json.dumps(current_options, sort_keys=True, indent=4, separators=(',', ': ')),
+                    'new': salt.utils.json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
                 }
                 ret['result'] = None
 
@@ -148,18 +150,19 @@ def collection(name, options=None, **kwargs):
                 ret['comment'] = 'Parameters were updated for collection "{0}".'.format(name)
                 ret['result'] = True
                 ret['changes'] = {
-                    'old': json.dumps(current_options, sort_keys=True, indent=4, separators=(',', ': ')),
-                    'new': json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
+                    'old': salt.utils.json.dumps(current_options, sort_keys=True, indent=4, separators=(',', ': ')),
+                    'new': salt.utils.json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
                 }
 
                 return ret
 
     else:
+        new_changes = salt.utils.json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
         if __opts__['test']:
             ret['comment'] = 'The collection "{0}" will be created.'.format(name)
             ret['pchanges'] = {
                 'old': None,
-                'new': 'options='+json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
+                'new': str('options=') + new_changes  # future lint: disable=blacklisted-function
             }
             ret['result'] = None
         else:
@@ -167,7 +170,7 @@ def collection(name, options=None, **kwargs):
             ret['comment'] = 'The collection "{0}" has been created.'.format(name)
             ret['changes'] = {
                 'old': None,
-                'new': 'options='+json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
+                'new': str('options=') + new_changes  # future lint: disable=blacklisted-function
             }
 
             ret['result'] = True
