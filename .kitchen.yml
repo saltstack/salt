@@ -13,7 +13,7 @@ driver:
   use_sudo: false
   hostname: salt
   privileged: true
-  username: root
+  username: kitchen
   volume:
     - /var/run/docker.sock:/docker.sock
   cap_add:
@@ -21,11 +21,8 @@ driver:
   disable_upstart: false
   provision_command:
     - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
-transport:
-  name: sftp
 <% end %>
 
-sudo: true
 provisioner:
   name: salt_solo
   salt_install: bootstrap
@@ -33,6 +30,7 @@ provisioner:
   salt_bootstrap_url: https://bootstrap.saltstack.com
   salt_bootstrap_options: -X stable <%= version %>
   log_level: info
+  sudo: true
   require_chef: false
   remote_states:
     name: git://github.com/saltstack/salt-jenkins.git
