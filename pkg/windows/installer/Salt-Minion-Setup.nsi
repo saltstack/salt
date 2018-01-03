@@ -597,7 +597,7 @@ Function BackupExistingConfig
         # Backup the minion config
         Rename "$INSTDIR\conf\minion" "$INSTDIR\conf\minion-${TIME_STAMP}.bak"
         IfFileExists "$INSTDIR\conf\minion.d" 0 +2
-            Rename "$INSTDIR\conf\minion.d" "$INSTDIR\conf\minion.d-{TIME_STAMP}$.bak"
+            Rename "$INSTDIR\conf\minion.d" "$INSTDIR\conf\minion.d-${TIME_STAMP}.bak"
 
     ${EndIf}
 
@@ -1418,7 +1418,7 @@ Function parseCommandLineSwitches
         FileWrite $0 "$\t$\t$\tdefault config$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "$\t$\t$\tAny existing config will be backed up by appending$\n"
-        FileWrite $0 "$\t$\t$\ta timestamp and a .bak$ extension. That includes\n"
+        FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes\n"
         FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "/custom-config=$\t$\tA string value specifying the name of a custom config$\n"
@@ -1428,7 +1428,7 @@ Function parseCommandLineSwitches
         FileWrite $0 "$\t$\t$\tcustom config$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "$\t$\t$\tAny existing config will be backed up by appending$\n"
-        FileWrite $0 "$\t$\t$\ta timestamp and a .bak$ extension. That includes\n"
+        FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes\n"
         FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "/S$\t$\t$\tInstall Salt silently$\n"
