@@ -40,10 +40,10 @@ Connection module for Amazon Cloud Formation
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import json
 
 # Import Salt libs
 import salt.utils.compat
+import salt.utils.json
 from salt.ext import six
 
 # Import 3rd-party libs
@@ -159,8 +159,8 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
     if __salt__['boto_cfn.exists'](name, region, key, keyid, profile):
         template = __salt__['boto_cfn.get_template'](name, region, key, keyid, profile)
         template = template['GetTemplateResponse']['GetTemplateResult']['TemplateBody'].encode('ascii', 'ignore')
-        template = json.loads(template)
-        _template_body = json.loads(template_body)
+        template = salt.utils.json.loads(template)
+        _template_body = salt.utils.json.loads(template_body)
         compare = salt.utils.compat.cmp(template, _template_body)
         if compare != 0:
             log.debug('Templates are not the same. Compare value is {0}'.format(compare))

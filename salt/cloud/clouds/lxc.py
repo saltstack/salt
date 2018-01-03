@@ -10,7 +10,6 @@ Please read :ref:`core config documentation <config_lxc>`.
 
 # Import python libs
 from __future__ import absolute_import
-import json
 import os
 import logging
 import copy
@@ -19,6 +18,7 @@ from pprint import pformat
 
 # Import salt cloud libs
 import salt.utils.cloud
+import salt.utils.json
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 
@@ -137,15 +137,15 @@ def _salt(fun, *args, **kw):
         cache = True
         laps = laps // __CACHED_FUNS[fun]
     try:
-        sargs = json.dumps(args)
+        sargs = salt.utils.json.dumps(args)
     except TypeError:
         sargs = ''
     try:
-        skw = json.dumps(kw)
+        skw = salt.utils.json.dumps(kw)
     except TypeError:
         skw = ''
     try:
-        skwargs = json.dumps(kwargs)
+        skwargs = salt.utils.json.dumps(kwargs)
     except TypeError:
         skwargs = ''
     cache_key = (laps, target, fun, sargs, skw, skwargs)

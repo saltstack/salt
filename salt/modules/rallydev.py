@@ -15,12 +15,12 @@ Requires a ``username`` and a ``password`` in ``/etc/salt/minion``:
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import json
 import logging
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 import salt.utils.http
+import salt.utils.json
 
 log = logging.getLogger(__name__)
 
@@ -202,7 +202,7 @@ def update_item(name, id_, field=None, value=None, postdata=None):
         action=name,
         command=id_,
         method='POST',
-        data=json.dumps(postdata),
+        data=salt.utils.json.dumps(postdata),
     )
     return result
 

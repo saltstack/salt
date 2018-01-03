@@ -3,7 +3,7 @@
 Tests for the spm build utility
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 
@@ -43,9 +43,9 @@ class SPMBuildTest(SPMCase, ModuleCase):
         test spm build with a big file
         '''
         # check to make sure there is enough space to run this test
-        check_space = self.run_function('status.diskusage', ['/'])
-        space = check_space['/']['available']
-        if space < 2000000:
+        check_space = self.run_function('status.diskusage', ['/tmp'])
+        space = check_space['/tmp']['available']
+        if space < 3000000000:
             self.skipTest('Not enough space on host to run this test')
 
         self.run_function('cmd.run',
