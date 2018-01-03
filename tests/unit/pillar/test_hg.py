@@ -2,7 +2,7 @@
 '''test for pillar hg_pillar.py'''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import tempfile
@@ -55,7 +55,9 @@ class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModule
                     'renderer': 'yaml_jinja',
                     'pillar_opts': False,
                     'renderer_blacklist': [],
-                    'renderer_whitelist': []
+                    'renderer_whitelist': [],
+                    'file_ignore_glob': [],
+                    'file_ignore_regex': [],
                 }
             }
         }

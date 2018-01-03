@@ -374,7 +374,7 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import os
 import logging
@@ -432,8 +432,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         else:
             namespace = None
         if not os.path.isfile(cfg):
-            log.warning('Ignoring Stack cfg "{0}": '
-                        'file does not exist'.format(cfg))
+            log.warning('Ignoring Stack cfg "%s": file does not exist', cfg)
             continue
         stack = _process_stack_cfg(cfg, stack, minion_id, pillar, namespace)
     return stack
@@ -460,20 +459,22 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace):
                                                  pillar=pillar, stack=stack)
             obj = salt.utils.yaml.safe_load(p)
             if not isinstance(obj, dict):
-                log.info('Ignoring Stack template "{0}": Can\'t parse '
-                         'as a valid yaml dictionary'.format(path))
+                log.info(
+                    'Ignoring Stack template "%s": Can\'t parse as a valid '
+                    'yaml dictionary', path
+                )
                 continue
             if namespace:
                 for sub in namespace.split(':')[::-1]:
                     obj = {sub: obj}
             stack = _merge_dict(stack, obj)
-            log.info('Stack template "{0}" parsed'.format(path))
+            log.info('Stack template "%s" parsed', path)
         except exceptions.TopLevelLookupException as e:
-            log.info('Stack template "{0}" not found.'.format(path))
+            log.info('Stack template "%s" not found.', path)
             continue
         except Exception as e:
-            log.info('Ignoring Stack template "{0}":'.format(path))
-            log.info('{0}'.format(exceptions.text_error_template().render()))
+            log.info('Ignoring Stack template "%s":', path)
+            log.info('%s', exceptions.text_error_template().render())
             continue
     return stack
 
@@ -510,8 +511,10 @@ def _merge_dict(stack, obj):
                     stack[k] = _cleanup(v)
                     v = stack_k
                 if type(stack[k]) != type(v):
-                    log.debug('Force overwrite, types differ: '
-                              '\'{0}\' != \'{1}\''.format(stack[k], v))
+                    log.debug(
+                        'Force overwrite, types differ: \'%s\' != \'%s\'',
+                        stack[k], v
+                    )
                     stack[k] = _cleanup(v)
                 elif isinstance(v, dict):
                     stack[k] = _merge_dict(stack[k], v)
