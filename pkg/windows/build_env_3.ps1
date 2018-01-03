@@ -247,10 +247,11 @@ Start_Process_and_test_exitcode "$($ini['Settings']['Scripts3Dir'])\pip.exe" "in
 
 # Move DLL's to Python Root
 Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
-Move-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['SitePkgs3Dir'])\win32" -Force
+Move-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['Python3Dir'])" -Force
 
 # Create gen_py directory
-New-Item -Path "$($ini['Settings']['SitePkgs3Dir'])\win32com\gen_py" -ItemType Directory -Force
+Write-Output " - $script_name :: Creating gen_py Directory . . ."
+New-Item -Path "$($ini['Settings']['SitePkgs3Dir'])\win32com\gen_py" -ItemType Directory -Force | Out-Null
 
 # Remove pywin32_system32 directory
 Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
