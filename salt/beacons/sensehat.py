@@ -14,8 +14,8 @@ from __future__ import absolute_import, unicode_literals
 
 import logging
 import re
-import six
 
+from salt.ext import six
 from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)

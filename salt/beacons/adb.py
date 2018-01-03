@@ -56,7 +56,7 @@ def validate(config):
                 log.info('Need a one of the following adb '
                          'states: %s', ', '.join(states))
                 return False, ('Need a one of the following adb '
-                               'states: %s', ', '.join(states))
+                               'states: {0}'.format(', '.join(states)))
     return True, 'Valid beacon configuration'
 
 
