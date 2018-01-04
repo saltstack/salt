@@ -83,11 +83,11 @@ import shutil
 import logging
 import sys
 import tempfile
-import json
 
 # Import Salt libs
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.locales
 import salt.utils.platform
 import salt.utils.url
@@ -1151,7 +1151,7 @@ def list_upgrades(bin_env=None,
 
     packages = {}
     try:
-        json_results = json.loads(result['stdout'])
+        json_results = salt.utils.json.loads(result['stdout'])
         for json_result in json_results:
             packages[json_result['name']] = json_result['latest_version']
     except ValueError:

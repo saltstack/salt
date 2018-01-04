@@ -228,6 +228,10 @@ class CkMinions(object):
         Retreive complete minion list from PKI dir.
         Respects cache if configured
         '''
+        if self.opts.get('__role') == 'master' and self.opts.get('__cli') == 'salt-run':
+            # Compiling pillar directly on the master, just return the master's
+            # ID as that is the only one that is available.
+            return [self.opts['id']]
         minions = []
         pki_cache_fn = os.path.join(self.opts['pki_dir'], self.acc, '.key_cache')
         try:
@@ -241,7 +245,10 @@ class CkMinions(object):
                         minions.append(fn_)
             return minions
         except OSError as exc:
-            log.error('Encountered OSError while evaluating  minions in PKI dir: {0}'.format(exc))
+            log.error(
+                'Encountered OSError while evaluating minions in PKI dir: %s',
+                exc
+            )
             return minions
 
     def _check_cache_minions(self,

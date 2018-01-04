@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 # Import python libraries
 import logging
-import json
 import os
 
 try:
@@ -27,6 +26,7 @@ except ImportError:
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.json
 from salt.ext import six
 
 # Juniper interface libraries
@@ -234,7 +234,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
         if format == 'text':
             write_response = reply.text
         elif format == 'json':
-            write_response = json.dumps(reply, indent=1)
+            write_response = salt.utils.json.dumps(reply, indent=1)
         else:
             write_response = etree.tostring(reply)
         with salt.utils.files.fopen(dest, 'w') as fp:

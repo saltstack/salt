@@ -6,7 +6,6 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 # Import python libs
 from __future__ import absolute_import
 import collections
-import json
 import logging
 import os.path
 import pipes
@@ -31,6 +30,7 @@ from salt.exceptions import TemplateError
 import salt.fileclient
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.url
 import salt.utils.yamldumper
 from salt.utils.decorators.jinja import jinja_filter, jinja_test, jinja_global
@@ -782,7 +782,7 @@ class SerializerExtension(Extension, object):
         return explore(data)
 
     def format_json(self, value, sort_keys=True, indent=None):
-        return Markup(json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
+        return Markup(salt.utils.json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
 
     def format_yaml(self, value, flow_style=True):
         yaml_txt = salt.utils.yamldumper.safe_dump(
@@ -853,7 +853,7 @@ class SerializerExtension(Extension, object):
         if isinstance(value, TemplateModule):
             value = str(value)
         try:
-            return json.loads(value)
+            return salt.utils.json.loads(value)
         except (ValueError, TypeError, AttributeError):
             raise TemplateRuntimeError(
                 'Unable to load json from {0}'.format(value))

@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
 import os
 try:
     from shlex import quote as _quote_args  # pylint: disable=E0611
@@ -17,8 +16,10 @@ except ImportError:
 import salt.utils.args
 import salt.utils.decorators as decorators
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
@@ -96,7 +97,7 @@ def _create_update_from_file(mode='create', uuid=None, path=None):
         ret['Error'] = _exit_status(retcode)
         if 'stderr' in res:
             if res['stderr'][0] == '{':
-                ret['Error'] = json.loads(res['stderr'])
+                ret['Error'] = salt.utils.json.loads(res['stderr'])
             else:
                 ret['Error'] = res['stderr']
         return ret
@@ -113,7 +114,7 @@ def _create_update_from_file(mode='create', uuid=None, path=None):
         ret['Error'] = _exit_status(retcode)
         if 'stderr' in res:
             if res['stderr'][0] == '{':
-                ret['Error'] = json.loads(res['stderr'])
+                ret['Error'] = salt.utils.json.loads(res['stderr'])
             else:
                 ret['Error'] = res['stderr']
         return ret
@@ -133,7 +134,7 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
     # write json file
     vmadm_json_file = __salt__['temp.file'](prefix='vmadm-')
     with salt.utils.files.fopen(vmadm_json_file, 'w') as vmadm_json:
-        vmadm_json.write(json.dumps(vmcfg))
+        salt.utils.json.dump(vmcfg, vmadm_json)
 
     # vmadm validate create|update [-f <filename>]
     cmd = '{vmadm} validate {mode} {brand} -f {vmadm_json_file}'.format(
@@ -148,7 +149,7 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
         ret['Error'] = _exit_status(retcode)
         if 'stderr' in res:
             if res['stderr'][0] == '{':
-                ret['Error'] = json.loads(res['stderr'])
+                ret['Error'] = salt.utils.json.loads(res['stderr'])
             else:
                 ret['Error'] = res['stderr']
         return ret
@@ -165,7 +166,7 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
         ret['Error'] = _exit_status(retcode)
         if 'stderr' in res:
             if res['stderr'][0] == '{':
-                ret['Error'] = json.loads(res['stderr'])
+                ret['Error'] = salt.utils.json.loads(res['stderr'])
             else:
                 ret['Error'] = res['stderr']
         return ret
@@ -404,7 +405,7 @@ def lookup(search=None, order=None, one=False):
     if one:
         result = res['stdout']
     else:
-        for vm in json.loads(res['stdout']):
+        for vm in salt.utils.json.loads(res['stdout']):
             result.append(vm)
 
     return result
@@ -525,7 +526,7 @@ def get(vm, key='uuid'):
     if retcode != 0:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
-    return json.loads(res['stdout'])
+    return salt.utils.json.loads(res['stdout'])
 
 
 def info(vm, info_type='all', key='uuid'):
@@ -570,7 +571,7 @@ def info(vm, info_type='all', key='uuid'):
     if retcode != 0:
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
-    return json.loads(res['stdout'])
+    return salt.utils.json.loads(res['stdout'])
 
 
 def create_snapshot(vm, name, key='uuid'):
@@ -756,10 +757,10 @@ def reprovision(vm, image, key='uuid'):
         ret['Error'] = 'Image ({0}) is not present on this host'.format(image)
         return ret
     # vmadm reprovision <uuid> [-f <filename>]
-    cmd = 'echo {image} | {vmadm} reprovision {uuid}'.format(
-        vmadm=vmadm,
-        uuid=vm,
-        image=_quote_args(json.dumps({'image_uuid': image}))
+    cmd = str('echo {image} | {vmadm} reprovision {uuid}').format(  # future lint: disable=blacklisted-function
+        vmadm=salt.utils.stringutils.to_str(vmadm),
+        uuid=salt.utils.stringutils.to_str(vm),
+        image=_quote_args(salt.utils.json.dumps({'image_uuid': image}))
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = res['retcode']

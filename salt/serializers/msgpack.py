@@ -7,9 +7,9 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import logging
-from copy import copy
 
 # Import Salt Libs
 from salt.log import setup_console_logger
@@ -87,7 +87,7 @@ else:  # msgpack.version < 0.2.0
             return dict(data)
         elif isinstance(obj, (list, tuple)):
             return [_encoder(value) for value in obj]
-        return copy(obj)
+        return copy.copy(obj)
 
     def _decoder(obj):
         return obj

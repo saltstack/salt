@@ -2,13 +2,14 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import json
+import yaml
+
+# Import Salt libs
+import salt.utils.json
+from tests.support.cherrypy_testclasses import BaseToolsTest
 
 # Import 3rd-party libs
-import yaml
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
-
-from tests.support.cherrypy_testclasses import BaseToolsTest
 
 
 class TestOutFormats(BaseToolsTest):
@@ -58,7 +59,7 @@ class TestInFormats(BaseToolsTest):
     def test_json_ctype(self):
         data = {'valid': 'stuff'}
         request, response = self.request('/', method='POST',
-            body=json.dumps(data), headers=(
+            body=salt.utils.json.dumps(data), headers=(
                 ('Content-type', 'application/json'),
         ))
         self.assertEqual(response.status, '200 OK')
@@ -70,7 +71,7 @@ class TestInFormats(BaseToolsTest):
         '''
         data = {'valid': 'stuff'}
         request, response = self.request('/', method='POST',
-            body=json.dumps(data), headers=(
+            body=salt.utils.json.dumps(data), headers=(
                 ('Content-type', 'text/plain'),
         ))
         self.assertEqual(response.status, '200 OK')

@@ -67,11 +67,11 @@ create the profiles as specified above. Then add:
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import json
 import logging
 
 # Import salt libs
 import salt.utils.jid
+import salt.utils.json
 try:
     import salt.utils.etcd_util
     HAS_LIBS = True
@@ -134,7 +134,7 @@ def returner(ret):
             ret['id'],
             field
         ))
-        client.set(dest, json.dumps(ret[field]), ttl=ttl)
+        client.set(dest, salt.utils.json.dumps(ret[field]), ttl=ttl)
 
 
 def save_load(jid, load, minions=None):
@@ -149,7 +149,7 @@ def save_load(jid, load, minions=None):
         ttl = __opts__.get('etcd.ttl')
     client.set(
         '/'.join((path, 'jobs', jid, '.load.p')),
-        json.dumps(load),
+        salt.utils.json.dumps(load),
         ttl=ttl,
     )
 
@@ -167,7 +167,7 @@ def get_load(jid):
     '''
     read_profile = __opts__.get('etcd.returner_read_profile')
     client, path = _get_conn(__opts__, read_profile)
-    return json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))))
+    return salt.utils.json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))))
 
 
 def get_jid(jid):
@@ -203,7 +203,7 @@ def get_jids():
         if item.dir is True:
             jid = six.text_type(item.key).split('/')[-1]
             load = client.get('/'.join((item.key, '.load.p'))).value
-            ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, salt.utils.json.loads(load))
     return ret
 
 

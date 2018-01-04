@@ -9,9 +9,8 @@ and the like, but also useful for basic HTTP testing.
 # Import python libs
 from __future__ import absolute_import
 import cgi
-import json
 import logging
-import os.path
+import os
 import pprint
 import socket
 import yaml
@@ -44,6 +43,7 @@ import salt.loader
 import salt.syspaths
 import salt.utils.args
 import salt.utils.files
+import salt.utils.json
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
@@ -648,7 +648,7 @@ def query(url,
             return ret
 
         if decode_type == 'json':
-            ret['dict'] = json.loads(salt.utils.stringutils.to_str(result_text))
+            ret['dict'] = salt.utils.json.loads(result_text)
         elif decode_type == 'xml':
             ret['dict'] = []
             items = ET.fromstring(result_text)

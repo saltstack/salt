@@ -101,6 +101,18 @@ def _conform_value(value, convert_size=False):
     return value
 
 
+def _zfs_quote_escape_path(name):
+    '''
+    Quotes zfs path with single quotes and escapes single quotes in path if present
+    '''
+    if name:
+        if six.PY3:
+            name = '\'' + name.replace('\'', '\\\'') + '\''
+        else:
+            name = '\'' + name.encode('string_escape').replace('\'', '\\\'') + '\''
+    return name
+
+
 def exists(name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
@@ -123,7 +135,7 @@ def exists(name, **kwargs):
     zfs = _check_zfs()
     ltype = kwargs.get('type', None)
 
-    cmd = '{0} list {1}{2}'.format(zfs, '-t {0} '.format(ltype) if ltype else '', name)
+    cmd = '{0} list {1}{2}'.format(zfs, '-t {0} '.format(ltype) if ltype else '', _zfs_quote_escape_path(name))
     res = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
 
     return res['retcode'] == 0
@@ -170,6 +182,8 @@ def create(name, **kwargs):
 
     zfs = _check_zfs()
     properties = kwargs.get('properties', None)
+    if properties and 'mountpoint' in properties:
+        properties['mountpoint'] = _zfs_quote_escape_path(properties['mountpoint'])
     create_parent = kwargs.get('create_parent', False)
     volume_size = kwargs.get('volume_size', None)
     sparse = kwargs.get('sparse', False)
@@ -193,7 +207,7 @@ def create(name, **kwargs):
         cmd = '{0} -V {1}'.format(cmd, volume_size)
 
     # append name
-    cmd = '{0} {1}'.format(cmd, name)
+    cmd = '{0} {1}'.format(cmd, _zfs_quote_escape_path(name))
 
     # Create filesystem
     res = __salt__['cmd.run_all'](cmd)
@@ -248,7 +262,7 @@ def destroy(name, **kwargs):
     if recursive:
         cmd = '{0} -r'.format(cmd)
 
-    cmd = '{0} {1}'.format(cmd, name)
+    cmd = '{0} {1}'.format(cmd, _zfs_quote_escape_path(name))
     res = __salt__['cmd.run_all'](cmd)
 
     if res['retcode'] != 0:
@@ -312,8 +326,8 @@ def rename(name, new_name, **kwargs):
         force='-f ' if force else '',
         create_parent='-p ' if create_parent else '',
         recursive='-r ' if recursive else '',
-        name=name,
-        new_name=new_name
+        name=_zfs_quote_escape_path(name),
+        new_name=_zfs_quote_escape_path(new_name)
     ))
 
     if res['retcode'] != 0:
@@ -400,7 +414,7 @@ def list_(name=None, **kwargs):
 
     # add name if set
     if name:
-        cmd = '{0} {1}'.format(cmd, name)
+        cmd = '{0} {1}'.format(cmd, _zfs_quote_escape_path(name))
 
     # parse output
     res = __salt__['cmd.run_all'](cmd)
@@ -450,7 +464,7 @@ def mount(name='-a', **kwargs):
         zfs=zfs,
         overlay='-O ' if overlay else '',
         options='-o {0} '.format(options) if options else '',
-        filesystem=name
+        filesystem=_zfs_quote_escape_path(name)
     ))
 
     ret = {}
@@ -491,7 +505,7 @@ def unmount(name, **kwargs):
     res = __salt__['cmd.run_all']('{zfs} unmount {force}{filesystem}'.format(
         zfs=zfs,
         force='-f ' if force else '',
-        filesystem=name
+        filesystem=_zfs_quote_escape_path(name)
     ))
 
     ret = {}
@@ -536,7 +550,7 @@ def inherit(prop, name, **kwargs):
         recursive='-r ' if recursive else '',
         revert='-S ' if revert else '',
         prop=prop,
-        name=name
+        name=_zfs_quote_escape_path(name)
     ))
 
     ret = {}
@@ -590,8 +604,8 @@ def diff(name_a, name_b, **kwargs):
         zfs=zfs,
         changetime='-t ' if show_changetime else '',
         indication='-F ' if show_indication else '',
-        name_a=name_a,
-        name_b=name_b
+        name_a=_zfs_quote_escape_path(name_a),
+        name_b=_zfs_quote_escape_path(name_b)
     ))
 
     if res['retcode'] != 0:
@@ -658,7 +672,7 @@ def rollback(name, **kwargs):
         force='-f ' if force else '',
         recursive='-r ' if recursive else '',
         recursive_all='-R ' if recursive_all else '',
-        snapshot=name
+        snapshot=_zfs_quote_escape_path(name)
     ))
 
     if res['retcode'] != 0:
@@ -720,8 +734,8 @@ def clone(name_a, name_b, **kwargs):
         zfs=zfs,
         create_parent='-p ' if create_parent else '',
         properties='{0} '.format(properties) if properties else '',
-        name_a=name_a,
-        name_b=name_b
+        name_a=_zfs_quote_escape_path(name_a),
+        name_b=_zfs_quote_escape_path(name_b)
     ))
 
     if res['retcode'] != 0:
@@ -768,7 +782,7 @@ def promote(name):
 
     res = __salt__['cmd.run_all']('{zfs} promote {name}'.format(
         zfs=zfs,
-        name=name
+        name=_zfs_quote_escape_path(name)
     ))
 
     if res['retcode'] != 0:
@@ -823,8 +837,8 @@ def bookmark(snapshot, bookmark):
 
     res = __salt__['cmd.run_all']('{zfs} bookmark {snapshot} {bookmark}'.format(
         zfs=zfs,
-        snapshot=snapshot,
-        bookmark=bookmark
+        snapshot=_zfs_quote_escape_path(snapshot),
+        bookmark=_zfs_quote_escape_path(bookmark)
     ))
 
     if res['retcode'] != 0:
@@ -863,7 +877,7 @@ def holds(snapshot, **kwargs):
     res = __salt__['cmd.run_all']('{zfs} holds -H {recursive}{snapshot}'.format(
         zfs=zfs,
         recursive='-r ' if recursive else '',
-        snapshot=snapshot
+        snapshot=_zfs_quote_escape_path(snapshot)
     ))
 
     if res['retcode'] == 0:
@@ -941,8 +955,8 @@ def hold(tag, *snapshot, **kwargs):
             res = __salt__['cmd.run_all']('{zfs} hold {recursive}{tag} {snapshot}'.format(
                 zfs=zfs,
                 recursive='-r ' if recursive else '',
-                tag=ctag,
-                snapshot=csnap
+                tag=_zfs_quote_escape_path(ctag),
+                snapshot=_zfs_quote_escape_path(csnap)
             ))
 
             if csnap not in ret:
@@ -1018,8 +1032,8 @@ def release(tag, *snapshot, **kwargs):
             res = __salt__['cmd.run_all']('{zfs} release {recursive}{tag} {snapshot}'.format(
                 zfs=zfs,
                 recursive='-r ' if recursive else '',
-                tag=ctag,
-                snapshot=csnap
+                tag=_zfs_quote_escape_path(ctag),
+                snapshot=_zfs_quote_escape_path(csnap)
             ))
 
             if csnap not in ret:
@@ -1100,7 +1114,7 @@ def snapshot(*snapshot, **kwargs):
             zfs=zfs,
             recursive='-r ' if recursive else '',
             properties='{0} '.format(properties) if properties else '',
-            snapshot=csnap
+            snapshot=_zfs_quote_escape_path(csnap)
         ))
 
         if res['retcode'] != 0:
@@ -1181,7 +1195,7 @@ def set(*dataset, **kwargs):
                 zfs=zfs,
                 prop=prop,
                 value=_conform_value(properties[prop]),
-                dataset=ds
+                dataset=_zfs_quote_escape_path(ds)
             ))
             if ds not in ret:
                 ret[ds] = {}
@@ -1280,6 +1294,8 @@ def get(*dataset, **kwargs):
     cmd = '{0} {1}'.format(cmd, properties)
 
     # datasets
+    if dataset:
+        dataset = [_zfs_quote_escape_path(x) for x in dataset]
     cmd = '{0} {1}'.format(cmd, ' '.join(dataset))
 
     # parse output

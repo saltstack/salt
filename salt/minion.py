@@ -1594,7 +1594,8 @@ class Minion(MinionBase):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True
-                elif minion_instance.opts['grains'].get('minion_blackout', False):
+                # use minion_blackout_whitelist from grains if it exists
+                if minion_instance.opts['grains'].get('minion_blackout', False):
                     whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True
