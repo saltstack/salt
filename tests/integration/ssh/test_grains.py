@@ -22,7 +22,7 @@ class SSHGrainsTest(SSHCase):
         '''
         ret = self.run_function('grains.items')
         grain = 'Linux'
-        if salt.utils.platform.is_darwin():
+        if salt.utils.is_darwin():
             grain = 'Darwin'
         self.assertEqual(ret['kernel'], grain)
         self.assertTrue(isinstance(ret, dict))
