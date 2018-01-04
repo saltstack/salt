@@ -375,7 +375,7 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import glob
 import os
@@ -413,8 +413,8 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         stack_config_files += cfgs
     for cfg in stack_config_files:
         if not os.path.isfile(cfg):
-            log.warning('Ignoring pillar stack cfg "{0}": '
-                     'file does not exist'.format(cfg))
+            log.warning(
+                'Ignoring pillar stack cfg "%s": file does not exist', cfg)
             continue
         stack = _process_stack_cfg(cfg, stack, minion_id, pillar)
     return stack
@@ -429,7 +429,7 @@ def _construct_unicode(loader, node):
 
 
 def _process_stack_cfg(cfg, stack, minion_id, pillar):
-    log.debug('Config: {0}'.format(cfg))
+    log.debug('Config: %s', cfg)
     basedir, filename = os.path.split(cfg)
     jenv = Environment(loader=FileSystemLoader(basedir), extensions=['jinja2.ext.do', salt.utils.jinja.SerializerExtension])
     jenv.globals.update({
@@ -448,17 +448,19 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             continue  # silently ignore whitespace or empty lines
         paths = glob.glob(os.path.join(basedir, item))
         if not paths:
-            log.warning('Ignoring pillar stack template "{0}": can\'t find from '
-                     'root dir "{1}"'.format(item, basedir))
+            log.warning(
+                'Ignoring pillar stack template "%s": can\'t find from root '
+                'dir "%s"', item, basedir
+            )
             continue
         for path in sorted(paths):
-            log.debug('YAML: basedir={0}, path={1}'.format(basedir, path))
+            log.debug('YAML: basedir=%s, path=%s', basedir, path)
             # FileSystemLoader always expects unix-style paths
             unix_path = _to_unix_slashes(os.path.relpath(path, basedir))
             obj = salt.utils.yaml.safe_load(jenv.get_template(unix_path).render(stack=stack))
             if not isinstance(obj, dict):
-                log.info('Ignoring pillar stack template "{0}": Can\'t parse '
-                         'as a valid yaml dictionary'.format(path))
+                log.info('Ignoring pillar stack template "%s": Can\'t parse '
+                         'as a valid yaml dictionary', path)
                 continue
             stack = _merge_dict(stack, obj)
     return stack
@@ -496,8 +498,7 @@ def _merge_dict(stack, obj):
                     stack[k] = _cleanup(v)
                     v = stack_k
                 if type(stack[k]) != type(v):
-                    log.debug('Force overwrite, types differ: '
-                              '\'{0}\' != \'{1}\''.format(stack[k], v))
+                    log.debug('Force overwrite, types differ: \'%s\' != \'%s\'', stack[k], v)
                     stack[k] = _cleanup(v)
                 elif isinstance(v, dict):
                     stack[k] = _merge_dict(stack[k], v)
