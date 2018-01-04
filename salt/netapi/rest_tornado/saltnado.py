@@ -196,7 +196,6 @@ from collections import defaultdict
 
 # pylint: disable=import-error
 import cgi
-import yaml
 import tornado.escape
 import tornado.httpserver
 import tornado.ioloop
@@ -215,6 +214,7 @@ import salt.netapi
 import salt.utils.args
 import salt.utils.event
 import salt.utils.json
+import salt.utils.yaml
 from salt.utils.event import tagify
 import salt.client
 import salt.runner
@@ -399,7 +399,7 @@ class EventListener(object):
 class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylint: disable=W0223
     ct_out_map = (
         ('application/json', _json_dumps),
-        ('application/x-yaml', yaml.safe_dump),
+        ('application/x-yaml', salt.utils.yaml.safe_dump),
     )
 
     def _verify_client(self, low):
@@ -523,8 +523,8 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         ct_in_map = {
             'application/x-www-form-urlencoded': self._form_loader,
             'application/json': salt.utils.json.loads,
-            'application/x-yaml': yaml.safe_load,
-            'text/yaml': yaml.safe_load,
+            'application/x-yaml': salt.utils.yaml.safe_load,
+            'text/yaml': salt.utils.yaml.safe_load,
             # because people are terrible and don't mean what they say
             'text/plain': salt.utils.json.loads
         }

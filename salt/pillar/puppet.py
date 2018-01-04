@@ -7,11 +7,11 @@ from __future__ import absolute_import
 # Don't "fix" the above docstring to put it on two lines, as the sphinx
 # autosummary pulls only the first line for its description.
 
-# Import python libs
+# Import Python libs
 import logging
 
-# Import third party libs
-import yaml
+# Import Salt libs
+import salt.utils.yaml
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -24,9 +24,8 @@ def ext_pillar(minion_id,
     Execute an unmodified puppet_node_classifier and read the output as YAML
     '''
     try:
-        data = yaml.safe_load(__salt__['cmd.run']('{0} {1}'.format(command, minion_id)))
-        data = data['parameters']
-        return data
+        data = salt.utils.yaml.safe_load(__salt__['cmd.run']('{0} {1}'.format(command, minion_id)))
+        return data['parameters']
     except Exception:
         log.critical(
                 'YAML data from {0} failed to parse'.format(command)

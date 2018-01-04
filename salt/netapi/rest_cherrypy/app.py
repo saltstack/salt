@@ -606,7 +606,6 @@ except ImportError:
     cpstats = None
     logger.warn('Import of cherrypy.cpstats failed.')
 
-import yaml
 # pylint: enable=import-error, 3rd-party-module-not-gated
 
 # Import Salt libs
@@ -617,6 +616,7 @@ import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
+import salt.utils.yaml
 from salt.ext import six
 from salt.ext.six import BytesIO
 
@@ -837,7 +837,7 @@ def cors_tool():
 ct_out_map = (
     ('application/json', salt.utils.json.dumps),
     ('application/x-yaml', functools.partial(
-        yaml.safe_dump, default_flow_style=False)),
+        salt.utils.yaml.safe_dump, default_flow_style=False)),
 )
 
 
@@ -998,7 +998,7 @@ def yaml_processor(entity):
         contents.seek(0)
         body = salt.utils.stringutils.to_unicode(contents.read())
     try:
-        cherrypy.serving.request.unserialized_data = yaml.safe_load(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.yaml.safe_load(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
 

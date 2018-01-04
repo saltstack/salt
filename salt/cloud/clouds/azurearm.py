@@ -59,13 +59,13 @@ import time
 import logging
 import pprint
 import base64
-import yaml
 import collections
 import salt.cache
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.data
 import salt.utils.files
+import salt.utils.yaml
 from salt.utils.versions import LooseVersion
 from salt.ext import six
 import salt.version
@@ -1070,7 +1070,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     )
 
     if isinstance(kwargs.get('volumes'), six.string_types):
-        volumes = yaml.safe_load(kwargs['volumes'])
+        volumes = salt.utils.yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs.get('volumes')
 

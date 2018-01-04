@@ -40,7 +40,6 @@ import sys
 import os.path
 import base64
 import logging
-import yaml
 import tempfile
 import signal
 from time import sleep
@@ -50,6 +49,7 @@ from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
 import salt.utils.files
 import salt.utils.templates
+import salt.utils.yaml
 from salt.exceptions import TimeoutError
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
@@ -1475,7 +1475,7 @@ def __read_and_render_yaml_file(source,
                     'Unknown template specified: {0}'.format(
                         template))
 
-        return yaml.load(contents)
+        return salt.utils.yaml.safe_load(contents)
 
 
 def __dict_to_object_meta(name, namespace, metadata):

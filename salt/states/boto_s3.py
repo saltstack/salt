@@ -55,8 +55,6 @@ import copy
 import difflib
 import logging
 
-import yaml
-
 # Import Salt libs
 import salt.ext.six as six
 import salt.utils.hashutils
@@ -265,14 +263,16 @@ def object_present(
         action = 'create'
 
     def _yaml_safe_dump(attrs):
-        '''Safely dump YAML using a readable flow style'''
+        '''
+        Safely dump YAML using a readable flow style
+        '''
         dumper_name = 'IndentedSafeOrderedDumper'
-        dumper = __utils__['yamldumper.get_dumper'](dumper_name)
-        return yaml.dump(
+        dumper = __utils__['yaml.get_dumper'](dumper_name)
+        return __utils__['yaml.dump'](
             attrs,
             default_flow_style=False,
-            Dumper=dumper,
-        )
+            Dumper=dumper)
+
     changes_diff = ''.join(difflib.unified_diff(
         _yaml_safe_dump(s3_metadata).splitlines(True),
         _yaml_safe_dump(desired_metadata).splitlines(True),

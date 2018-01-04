@@ -271,19 +271,18 @@ __license__ = 'Apache License, Version 2.0'
 __version__ = '0.6.6'
 
 # Import python libs
-import logging
-import sys
 import glob
-import yaml
 import jinja2
+import logging
+import os
 import re
-from os.path import isfile, join
+import sys
 
 # Import Salt libs
 from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 import salt.utils.files
-from salt.utils.yamlloader import SaltYamlSafeLoader
+import salt.utils.yaml
 
 # Import 3rd-party libs
 try:
@@ -409,9 +408,9 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
 
         templdir = None
         if info and 'base_only' in info and info['base_only']:
-            templdir = join(roots['base'], resource, alias)
+            templdir = os.path.join(roots['base'], resource, alias)
         else:
-            templdir = join(roots[inp['environment']], resource, alias)
+            templdir = os.path.join(roots[inp['environment']], resource, alias)
 
         entries = []
         if isinstance(inp[categ], list):
@@ -425,8 +424,8 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
         for entry in entries:
             results_jinja = None
             results = None
-            fn = join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
-            if isfile(fn):
+            fn = os.path.join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
+            if os.path.isfile(fn):
                 log.info("Loading template: {0}".format(fn))
                 with salt.utils.files.fopen(fn) as fhr:
                     template = jinja2.Template(fhr.read())
@@ -437,13 +436,10 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                     data['grains'] = __grains__.copy()
                     data['pillar'] = pillar.copy()
                     results_jinja = template.render(data)
-                    results = yaml.load(
-                        results_jinja,
-                        Loader=SaltYamlSafeLoader
-                    )
+                    results = salt.utils.yaml.safe_load(results_jinja)
                 except jinja2.UndefinedError as err:
                     log.error('Failed to parse JINJA template: {0}\n{1}'.format(fn, err))
-                except yaml.YAMLError as err:
+                except salt.utils.yaml.YAMLError as err:
                     log.error('Failed to parse YAML in template: {0}\n{1}'.format(fn, err))
             else:
                 log.info("Template doesn't exist: {0}".format(fn))
@@ -522,7 +518,7 @@ def validate(output, resource):
 
     roots = __opts__['pepa_roots']
 
-    valdir = join(roots['base'], resource, 'validate')
+    valdir = os.path.join(roots['base'], resource, 'validate')
 
     all_schemas = {}
     pepa_schemas = []
@@ -533,10 +529,7 @@ def validate(output, resource):
         data = output
         data['grains'] = __grains__.copy()
         data['pillar'] = __pillar__.copy()
-        schema = yaml.load(
-            template.render(data),
-            Loader=SaltYamlSafeLoader
-        )
+        schema = salt.utils.yaml.safe_load(template.render(data))
         all_schemas.update(schema)
         pepa_schemas.append(fn)
 
@@ -552,18 +545,13 @@ def validate(output, resource):
 # Only used when called from a terminal
 if __name__ == '__main__':
     # Load configuration file
-    if not isfile(args.config):
+    if not os.path.isfile(args.config):
         log.critical("Configuration file doesn't exist: {0}".format(args.config))
         sys.exit(1)
 
     # Get configuration
     with salt.utils.files.fopen(args.config) as fh_:
-        __opts__.update(
-            yaml.load(
-                fh_.read(),
-                Loader=SaltYamlSafeLoader
-            )
-        )
+        __opts__.update(salt.utils.yaml.safe_load(fh_))
 
     loc = 0
     for name in [next(iter(list(e.keys()))) for e in __opts__['ext_pillar']]:
@@ -576,24 +564,14 @@ if __name__ == '__main__':
     if 'pepa_grains' in __opts__:
         __grains__ = __opts__['pepa_grains']
     if args.grains:
-        __grains__.update(
-            yaml.load(
-                args.grains,
-                Loader=SaltYamlSafeLoader
-            )
-        )
+        __grains__.update(salt.utils.yaml.safe_load(args.grains))
 
     # Get pillars
     __pillar__ = {}
     if 'pepa_pillar' in __opts__:
         __pillar__ = __opts__['pepa_pillar']
     if args.pillar:
-        __pillar__.update(
-            yaml.load(
-                args.pillar,
-                Loader=SaltYamlSafeLoader
-            )
-        )
+        __pillar__.update(salt.utils.yaml.safe_load(args.pillar))
 
     # Validate or not
     if args.validate:
@@ -644,19 +622,32 @@ if __name__ == '__main__':
     if __opts__['pepa_validate']:
         validate(result, __opts__['ext_pillar'][loc]['pepa']['resource'])
 
-    yaml.dumper.SafeDumper.ignore_aliases = lambda self, data: True
-    if not args.no_color:
-        try:
-            # pylint: disable=import-error
-            import pygments
-            import pygments.lexers
-            import pygments.formatters
-            # pylint: disable=no-member
-            print(pygments.highlight(yaml.safe_dump(result),
-                                     pygments.lexers.YamlLexer(),
-                                     pygments.formatters.TerminalFormatter()))
-            # pylint: enable=no-member, import-error
-        except ImportError:
-            print(yaml.safe_dump(result, indent=4, default_flow_style=False))
-    else:
-        print(yaml.safe_dump(result, indent=4, default_flow_style=False))
+    try:
+        orig_ignore = salt.utils.yaml.SafeOrderedDumper.ignore_aliases
+        salt.utils.yaml.SafeOrderedDumper.ignore_aliases = lambda x, y: True
+
+        def _print_result(result):
+            print(salt.utils.yaml.safe_dump(
+                result,
+                indent=4,
+                default_flow_style=False))
+
+        if not args.no_color:
+            try:
+                # pylint: disable=import-error
+                import pygments
+                import pygments.lexers
+                import pygments.formatters
+                # pylint: disable=no-member
+                print(pygments.highlight(
+                    salt.utils.yaml.safe_dump(result),
+                    pygments.lexers.YamlLexer(),
+                    pygments.formatters.TerminalFormatter()))
+                # pylint: enable=no-member, import-error
+            except ImportError:
+                _print_result(result)
+        else:
+            _print_result(result)
+    finally:
+        # Undo monkeypatching
+        salt.utils.yaml.SafeOrderedDumper.ignore_aliases = orig_ignore
