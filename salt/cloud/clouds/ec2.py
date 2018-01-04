@@ -3418,7 +3418,7 @@ def _get_node(name=None, instance_id=None, location=None):
     return {}
 
 
-def list_nodes_full(location=None, call=None):
+def list_nodes_full(location=None, call=None, kwargs = None):
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -3427,7 +3427,8 @@ def list_nodes_full(location=None, call=None):
             'The list_nodes_full function must be called with -f '
             'or --function.'
         )
-
+    if not location:
+        location = kwargs.get('location',None)
     return _list_nodes_full(location or get_location())
 
 
@@ -4373,6 +4374,40 @@ def delete_keypair(kwargs=None, call=None):
                      sigver='4')
     return data
 
+def describe_keypairs(call=None):
+    '''
+    list SSH keypairs based on location
+    '''
+    if call != 'function':
+        log.error(
+            'The describe_keypair function must be called with -f or --function.'
+        )
+        return False
+
+    params = {'Action': 'DescribeKeyPairs'}
+
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+    return data
+
+def describe_securitygroups(call=None):
+    '''
+    list SecurityGroups based on location
+    '''
+    if call != 'function':
+        log.error(
+            'The describe_securitygroups function must be called with -f or --function.'
+        )
+        return False
+
+    params = {'Action': 'DescribeSecurityGroups'}
+    data = aws.query(params, location=get_location(),
+                        provider=get_provider(), opts=__opts__, sigver='4')
+    return data
 
 def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
     '''
