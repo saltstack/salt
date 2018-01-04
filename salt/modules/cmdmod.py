@@ -445,7 +445,7 @@ def _run(cmd,
             fse = sys.getfilesystemencoding()
             for key, val in six.iteritems(env):
                 if isinstance(val, six.text_type):
-                    env[key] = val.encode(fse)
+                    env[key] = val.encode(fse, 'backslashreplace')
         except ValueError:
             raise CommandExecutionError(
                 'Environment could not be retrieved for User \'{0}\''.format(
