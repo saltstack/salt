@@ -4,7 +4,7 @@ Use hiera data as a Pillar source
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -39,8 +39,6 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     try:
         data = salt.utils.yaml.safe_load(__salt__['cmd.run'](cmd))
     except Exception:
-        log.critical(
-                'Hiera YAML data failed to parse from conf {0}'.format(conf)
-                )
+        log.critical('Hiera YAML data failed to parse from conf %s', conf)
         return {}
     return data

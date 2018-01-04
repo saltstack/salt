@@ -120,7 +120,7 @@ Matchers for more examples.
       - consul: my_consul_config root=salt target="L@salt.example.com and G@osarch:x86_64"
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -224,7 +224,7 @@ def fetch_tree(client, path):
     ret = {}
     has_children = re.compile(r'/$')
 
-    log.debug('Fetched items: %r', format(items))
+    log.debug('Fetched items: %r', items)
 
     if items is None:
         return ret
@@ -232,10 +232,10 @@ def fetch_tree(client, path):
         key = re.sub(r'^' + path + '/?', '', item['Key'])
         if key != '':
             log.debug('key/path - %s: %s', path, key)
-            log.debug('has_children? %r', format(has_children.search(key)))
+            log.debug('has_children? %r', has_children.search(key))
         if has_children.search(key) is None:
             ret = pillar_format(ret, key.split('/'), item['Value'])
-            log.debug('Fetching subkeys for key: %r', format(item))
+            log.debug('Fetching subkeys for key: %r', item)
 
     return ret
 
