@@ -15,11 +15,11 @@ Requires a ``subdomain`` and an ``apikey`` in ``/etc/salt/minion``:
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import yaml
 import logging
 
 # Import salt libs
 import salt.utils.http
+import salt.utils.yaml
 from salt.ext import six
 from salt._compat import ElementTree as ET
 
@@ -167,7 +167,7 @@ def update_employee(emp_id, key=None, value=None, items=None):
             return {'Error': 'At least one key/value pair is required'}
         items = {key: value}
     elif isinstance(items, six.string_types):
-        items = yaml.safe_load(items)
+        items = salt.utils.yaml.safe_load(items)
 
     xml_items = ''
     for pair in items:
