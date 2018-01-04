@@ -885,7 +885,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                 try:
                     os.unlink(self.config['pidfile'])
                 except OSError as err:
-                    self.info(
+                    logging.getLogger(__name__).info(
                         'PIDfile could not be deleted: {0}'.format(
                             self.config['pidfile']
                         )
