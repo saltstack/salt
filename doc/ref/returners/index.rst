@@ -72,7 +72,7 @@ Other optional functions can be included to add support for
 .. code-block:: python
 
     import redis
-    import json
+    import salt.utils.json
 
     def returner(ret):
         '''
@@ -84,7 +84,7 @@ Other optional functions can be included to add support for
                     port=6379,
                     db='0')
         serv.sadd("%(id)s:jobs" % ret, ret['jid'])
-        serv.set("%(jid)s:%(id)s" % ret, json.dumps(ret['return']))
+        serv.set("%(jid)s:%(id)s" % ret, salt.utils.json.dumps(ret['return']))
         serv.sadd('jobs', ret['jid'])
         serv.sadd(ret['jid'], ret['id'])
 
@@ -168,6 +168,8 @@ must implement the following functions:
 
 .. code-block:: python
 
+    import salt.utils.json
+
     def save_load(jid, load):
         '''
         Save the load to the specified jid id
@@ -176,7 +178,7 @@ must implement the following functions:
                      jid, load
                    ) VALUES (
                      '{0}', '{1}'
-                   );'''.format(jid, json.dumps(load))
+                   );'''.format(jid, salt.utils.json.dumps(load))
 
         # cassandra_cql.cql_query may raise a CommandExecutionError
         try:
@@ -185,8 +187,9 @@ must implement the following functions:
             log.critical('Could not save load in jids table.')
             raise
         except Exception as e:
-            log.critical('''Unexpected error while inserting into
-             jids: {0}'''.format(str(e)))
+            log.critical(
+                'Unexpected error while inserting into jids: {0}'.format(e)
+            )
             raise
 
 
@@ -316,6 +319,8 @@ contains the jid and therefore is guaranteed to be unique.
 
 .. code-block:: python
 
+    import salt.utils.json
+
     def event_return(events):
      '''
      Return event to mysql server
@@ -329,7 +334,7 @@ contains the jid and therefore is guaranteed to be unique.
              data = event.get('data', '')
              sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id` )
                       VALUES (%s, %s, %s)'''
-             cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
+             cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__['id']))
 
 
 Testing the Returner
@@ -358,7 +363,7 @@ infrastructure, all events seen by a salt master may be logged to one or
 more returners.
 
 To enable event logging, set the ``event_return`` configuration option in the
-master config to the returner(s) which should be designated as the handler 
+master config to the returner(s) which should be designated as the handler
 for event returns.
 
 .. note::

@@ -300,7 +300,7 @@ import tornado.gen
 import salt.utils.json
 import salt.netapi
 
-json = salt.utils.json.import_json()
+_json = salt.utils.json.import_json()
 
 import logging
 logger = logging.getLogger()
@@ -354,7 +354,8 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
             while True:
                 try:
                     event = yield self.application.event_listener.get_event(self)
-                    self.write_message(json.dumps(event))
+                    self.write_message(
+                        salt.utils.json.dumps(event, _json_module=_json))
                 except Exception as err:
                     logger.info('Error! Ending server side websocket connection. Reason = {0}'.format(str(err)))
                     break
@@ -417,7 +418,7 @@ class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0223,W0232
                 try:
                     event = yield self.application.event_listener.get_event(self)
                     evt_processor.process(event, self.token, self.application.opts)
-                    # self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
+                    # self.write_message(u'data: {0}\n\n'.format(salt.utils.json.dumps(event, _json_module=_json)))
                 except Exception as err:
                     logger.debug('Error! Ending server side websocket connection. Reason = {0}'.format(str(err)))
                     break

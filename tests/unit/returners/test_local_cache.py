@@ -123,8 +123,13 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         with patch('os.path.isfile', MagicMock(return_value=False)) as mock:
             local_cache.clean_old_jobs()
 
-        # Assert that the JID dir was removed
-        self.assertEqual([], os.listdir(TMP_JID_DIR))
+        # there should be only 1 dir in TMP_JID_DIR
+        self.assertEqual(1, len(os.listdir(TMP_JID_DIR)))
+        # top level dir should still be present
+        self.assertEqual(True, os.path.exists(jid_dir))
+        self.assertEqual(True, os.path.isdir(jid_dir))
+        # while the 'jid' dir inside it should be gone
+        self.assertEqual(False, os.path.exists(jid_dir_name))
 
     def test_clean_old_jobs_jid_file_is_cleaned(self):
         '''
@@ -142,13 +147,25 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(local_cache.__opts__, {'keep_jobs': 0.00000001}):
             local_cache.clean_old_jobs()
 
-        # Assert that the JID dir was removed
-        self.assertEqual([], os.listdir(TMP_JID_DIR))
+        # there should be only 1 dir in TMP_JID_DIR
+        self.assertEqual(1, len(os.listdir(TMP_JID_DIR)))
+        # top level dir should still be present
+        self.assertEqual(True, os.path.exists(jid_dir))
+        self.assertEqual(True, os.path.isdir(jid_dir))
+        # while the 'jid' dir inside it should be gone
+        self.assertEqual(False, os.path.exists(jid_dir_name))
 
     def _make_tmp_jid_dirs(self, create_files=True):
         '''
         Helper function to set up temporary directories and files used for
         testing the clean_old_jobs function.
+
+        This emulates salt.utils.jid.jid_dir() by creating this structure:
+
+        TMP_JID_DIR dir/
+          random dir from tempfile.mkdtemp/
+            'jid' directory/
+              'jid' file
 
         Returns a temp_dir name and a jid_file_path. If create_files is False,
         the jid_file_path will be None.

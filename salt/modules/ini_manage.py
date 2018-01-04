@@ -9,22 +9,19 @@ Edit ini files
 
 (for example /etc/sysctl.conf)
 '''
-
-from __future__ import absolute_import, print_function
-
 # Import Python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import re
-import json
 
 # Import Salt libs
-from salt.ext import six
 import salt.utils.files
+import salt.utils.json
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
 
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'ini'
 
@@ -349,10 +346,10 @@ class _Section(OrderedDict):
     def __repr__(self, _repr_running=None):
         _repr_running = _repr_running or {}
         super_repr = super(_Section, self).__repr__(_repr_running)
-        return os.linesep.join((super_repr, json.dumps(self, indent=4)))
+        return os.linesep.join((super_repr, salt.utils.json.dumps(self, indent=4)))
 
     def __str__(self):
-        return json.dumps(self, indent=4)
+        return salt.utils.json.dumps(self, indent=4)
 
     def __eq__(self, item):
         return (isinstance(item, self.__class__) and

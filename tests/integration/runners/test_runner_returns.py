@@ -132,5 +132,5 @@ class RunnerReturnsTest(ShellCase):
                         'jid': jid,
                         'return': {'args': ['foo'], 'kwargs': {'bar': 'hello world!'}},
                         'success': True,
-                        'user': RUNTIME_VARS.RUNNING_TESTS_USER}}
+                        'user': RUNTIME_VARS.RUNNING_TESTS_USER if 'SUDO_USER' not in os.environ else 'root'}}
         )
