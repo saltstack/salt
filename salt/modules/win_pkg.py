@@ -155,7 +155,7 @@ def latest_version(*names, **kwargs):
             # check, whether latest available version
             # is newer than latest installed version
             if compare_versions(ver1=six.text_type(latest_available),
-                                oper=six.text_type('>'),
+                                oper='>',
                                 ver2=six.text_type(latest_installed)):
                 log.debug('Upgrade of {0} from {1} to {2} '
                           'is available'.format(name,
@@ -1164,7 +1164,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 version_num = six.text_type(version_num)
 
         if not version_num:
-            # following can be version number or latest
+            # following can be version number or latest or Not Found
+            version_num = _get_latest_pkg_version(pkginfo)
+
+        if version_num == 'latest' and 'latest' not in pkginfo:
             version_num = _get_latest_pkg_version(pkginfo)
 
         # Check if the version is already installed
@@ -1173,9 +1176,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             # Desired version number already installed
             ret[pkg_name] = {'current': version_num}
             continue
-
         # If version number not installed, is the version available?
-        elif version_num not in pkginfo:
+        elif version_num != 'latest' and version_num not in pkginfo:
             log.error('Version {0} not found for package '
                       '{1}'.format(version_num, pkg_name))
             ret[pkg_name] = {'not found': version_num}
