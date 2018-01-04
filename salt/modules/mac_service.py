@@ -421,7 +421,7 @@ def status(name, sig=None, runas=None):
     for line in output.splitlines():
         if 'PID' in line:
             continue
-        if re.search(name, line):
+        if re.search(name, line.split()[-1]):
             if line.split()[0].isdigit():
                 if pids:
                     pids += '\n'
