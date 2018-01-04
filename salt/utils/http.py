@@ -429,6 +429,8 @@ def query(url,
                     'charset' in res_params and \
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result.body.decode('utf-8')
         ret['body'] = result_text
     else:
         # Tornado
