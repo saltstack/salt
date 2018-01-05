@@ -956,6 +956,22 @@ The TCP port for ``mworkers`` to connect to on the master.
 
     tcp_master_workers: 4515
 
+.. conf_master:: master_job_cache
+
+``auth_events``
+--------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``True``
+
+Determines whether the master will fire authentication events.
+:ref:`Authentication events <event-master_auth>` are fired when
+a minion performs an authentication check with the master.
+
+.. code-block:: yaml
+
+    auth_events: True
 
 .. _salt-ssh-configuration:
 
