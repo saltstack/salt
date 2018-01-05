@@ -363,9 +363,7 @@ def groups(username, **kwargs):
                                            [_config('accountattributename'), 'cn'])
 
             for entry, result in search_results:
-                for user in result[_config('accountattributename')]:
-                    if username == user.split(',')[0].split('=')[-1]:
-                        group_list.append(entry.split(',')[0].split('=')[-1])
+                group_list.extend(result[_config('accountattributename')])
 
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
 
