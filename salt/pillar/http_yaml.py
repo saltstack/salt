@@ -42,9 +42,11 @@ Module Documentation
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
+
+from salt.ext import six
 
 # Import Salt libs
 try:
@@ -55,7 +57,7 @@ except ImportError:
 
 
 # Set up logging
-_LOG = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -88,21 +90,21 @@ def ext_pillar(minion_id,
             grain_value = __salt__['grains.get'](grain_name, None)
 
             if not grain_value:
-                _LOG.error("Unable to get minion '%s' grain: %s", minion_id, grain_name)
+                log.error("Unable to get minion '%s' grain: %s", minion_id, grain_name)
                 return {}
 
-            grain_value = _quote(str(grain_value))
+            grain_value = _quote(six.text_type(grain_value))
             url = re.sub('<{0}>'.format(grain_name), grain_value, url)
 
-    _LOG.debug('Getting url: %s', url)
+    log.debug('Getting url: %s', url)
     data = __salt__['http.query'](url=url, decode=True, decode_type='yaml')
 
     if 'dict' in data:
         return data['dict']
 
-    _LOG.error("Error on minion '%s' http query: %s\nMore Info:\n", minion_id, url)
+    log.error("Error on minion '%s' http query: %s\nMore Info:\n", minion_id, url)
 
     for key in data:
-        _LOG.error('%s: %s', key, data[key])
+        log.error('%s: %s', key, data[key])
 
     return {}
