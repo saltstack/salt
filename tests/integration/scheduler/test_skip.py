@@ -66,12 +66,14 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         # Run 11/29/2017 at 4pm
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
+        log.debug('=== ret {} ==='.format(ret))
         self.assertNotIn('_last_run', ret)
 
         # Run 11/29/2017 at 5pm
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 5:00pm').timetuple()))
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
+        log.debug('=== ret {} ==='.format(ret))
         self.assertEqual(ret['_last_run'], run_time)
 
     def test_skip_during_range(self):

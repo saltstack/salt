@@ -35,10 +35,12 @@ _TRAFFICCTL = salt.utils.path.which('traffic_ctl')
 
 
 def _traffic_ctl(*args):
+    log.debug('=== args {} ==='.format(args))
     return ' '.join([_TRAFFICCTL] + args)
 
 
 def _traffic_line(*args):
+    log.debug('=== args {} ==='.format(args))
     return ' '.join([_TRAFFICLINE] + args)
 
 
