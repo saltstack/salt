@@ -2305,7 +2305,7 @@ def list_upgrades(refresh=True, **kwargs):
 
 def _parse_upgrade(stdout):
     '''
-    Parse the output from the ``pkg update --dry-run`` command
+    Parse the output from the ``pkg upgrade --dry-run`` command
 
     Returns a dictionary of the expected actions:
 
@@ -2317,6 +2317,11 @@ def _parse_upgrade(stdout):
             'version':
               'current': n.n.n
               'new': n.n.n
+        'install':
+          pkgname:
+            'repo': repository
+            'version':
+              'current': n.n.n
         'reinstall':
           pkgname:
             'repo': repository
@@ -2326,10 +2331,12 @@ def _parse_upgrade(stdout):
     '''
     # Match strings like 'python36: 3.6.3 -> 3.6.4 [FreeBSD]'
     upgrade_regex = re.compile(r'^\s+([^:]+):\s([0-9p_,.]+)\s+->\s+([0-9p_,.]+)\s+\[([^]]+)\]')
+    # Match strings like 'rubygem-bcrypt_pbkdf: 1.0.0 [FreeBSD]'
+    install_regex = re.compile(r'^\s+([^:]+):\s+([0-9p_,.]+)\s+\[([^]]+)\]')
     # Match strings like 'py27-yaml-3.11_2 [FreeBSD] (direct dependency changed: py27-setuptools)'
     reinstall_regex = re.compile(r'^\s+(\S+)-(?<=-)([0-9p_,.]+)\s+\[([^]]+)\]')
 
-    result = {'upgrade': {}, 'reinstall': {}}
+    result = {'upgrade': {}, 'install': {}, 'reinstall': {}}
     section = None
     for line in salt.utils.itertools.split(stdout, '\n'):
 
@@ -2339,6 +2346,10 @@ def _parse_upgrade(stdout):
 
         if line == 'Installed packages to be UPGRADED:':
             section = 'upgrade'
+            continue
+
+        if line == 'New packages to be INSTALLED:':
+            section = 'install'
             continue
 
         if line == 'Installed packages to be REINSTALLED:':
@@ -2357,6 +2368,18 @@ def _parse_upgrade(stdout):
                 }
             else:
                 log.error('Unable to parse upgrade: \'%s\'', line)
+
+        if section == 'install':
+            match = install_regex.match(line)
+            if match:
+                result[section][match.group(1)] = {
+                    'version': {
+                        'current': match.group(2)
+                    },
+                    'repo': match.group(3)
+                }
+            else:
+                log.error('Unable to parse install: \'%s\'', line)
 
         if section == 'reinstall':
             match = reinstall_regex.match(line)
