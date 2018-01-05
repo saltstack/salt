@@ -112,7 +112,11 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         pkg_cmd = MagicMock(return_value=textwrap.dedent(
             """
-            The following 104 package(s) will be affected (of 0 checked):
+            The following 6 package(s) will be affected (of 0 checked):
+
+            New packages to be INSTALLED:
+                    pkge: 5.0 [FreeBSD]
+                    pkgf: 6.0 [FreeBSD]
 
             Installed packages to be UPGRADED:
                     pkga: 1.0 -> 1.1 [FreeBSD]
@@ -120,7 +124,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
 
             Installed packages to be REINSTALLED:
                     pkgc-3.0 [FreeBSD] (direct dependency changed: pkga)
-                    pkgd-4.4 [FreeBSD] (direct dependency changed: pkgb)
+                    pkgd-4.0 [FreeBSD] (direct dependency changed: pkgb)
 
             Number of packages to be upgraded: 2
             Number of packages to be reinstalled: 2
