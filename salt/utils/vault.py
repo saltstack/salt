@@ -98,7 +98,7 @@ def _get_vault_connection():
     Get the connection details for calling Vault, from local configuration if
     it exists, or from the master otherwise
     '''
-    if 'vault' in __opts__ and not __opts__.get('__role', 'minion') == 'master':
+    if 'vault' in __opts__ and __opts__.get('__role', 'minion') == 'master':
         log.debug('Using Vault connection details from local config')
         try:
             return {
