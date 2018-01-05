@@ -1085,7 +1085,7 @@ VALID_OPTS = {
     # Scheduler should be a dictionary
     'schedule': dict,
 
-    # Wheter to fire auth events
+    # Whether to fire auth events
     'auth_events': bool,
 }
 
