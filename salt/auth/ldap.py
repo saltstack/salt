@@ -284,7 +284,11 @@ def auth(username, password):
     '''
     Simple LDAP auth
     '''
-    #If bind credentials are configured, use them instead of user's
+    if not HAS_LDAP:
+        log.error('LDAP authentication requires python-ldap module')
+        return False
+
+    # If bind credentials are configured, use them instead of user's
     if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
         bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
     else:
