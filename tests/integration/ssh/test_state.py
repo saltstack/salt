@@ -172,7 +172,10 @@ class SSHStateTest(SSHCase):
         self.assertIn(ret, ' '.join(get_sls))
 
         # make sure we wait until the earlier state is complete
+        future = time.time() + 120
         while True:
+            if time.time() > future:
+                break
             if ret not in ' '.join(self.run_function('state.running', wipe=False)):
                 break
 
