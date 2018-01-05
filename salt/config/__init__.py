@@ -34,6 +34,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
+import salt.utils.liquid
 import salt.utils.yamlloader as yamlloader
 import salt.utils.zeromq
 import salt.syspaths
@@ -770,6 +771,10 @@ VALID_OPTS = {
     'fileserver_limit_traversal': bool,
     'fileserver_verify_config': bool,
 
+    # Options for the Salt Liquid system
+    'liquid': list,
+    'liquid_always_fetch': bool,
+
     # Optionally apply '*' permissioins to any user. By default '*' is a fallback case that is
     # applied only if the user didn't matched by other matchers.
     'permissive_acl': bool,
@@ -1310,6 +1315,8 @@ DEFAULT_MINION_OPTS = {
     'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
     'gitfs_disable_saltenv_mapping': False,
+    'liquid': [],
+    'liquid_always_fetch': False,
     'unique_jid': False,
     'hash_type': 'sha256',
     'disable_modules': [],
@@ -1561,6 +1568,8 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
     'gitfs_disable_saltenv_mapping': False,
+    'liquid': [],
+    'liquid_always_fetch': False,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -2146,6 +2155,30 @@ def _absolute_path(path, relative_to=None):
             )
             return _abspath
     return path
+
+
+def _get_liquid_opts(opts):
+    '''
+    Returns further opts fetched using the Liquid subsystem.
+    '''
+    if 'liquid' not in opts:
+        log.error('Liquid not in opts, ignoring')
+        return {}
+    # TODO: detect startup and fetch!
+    startup = '__liquid_loaded' not in opts
+    # ^^^ that is a very weak way, must find something smarter and more efficient
+    if startup:
+        # On startup will always fetch the Liquid opts and cache them.
+        log.debug('Reading the liquid opts for the first time')
+        liquid_opts = salt.utils.liquid.cache(opts)
+        opts['__liquid_loaded'] = True
+    elif opts['liquid_always_fetch']:
+        log.debug('Refetching from the liquid sources (liquid_always_fetch is enabled)')
+        liquid_opts = salt.utils.liquid.fetch(opts)
+    else:
+        # If no need to refetch, will read the cached opts.
+        liquid_opts = salt.utils.liquid.get_cache(opts)
+    return liquid_opts
 
 
 def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
@@ -3669,6 +3702,9 @@ def apply_minion_config(overrides=None,
     _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides:
         opts.update(overrides)
+    liquid_opts = _get_liquid_opts(opts)
+    if liquid_opts:
+        opts.update(liquid_opts)
 
     if 'environment' in opts:
         if 'saltenv' in opts:
@@ -3835,6 +3871,9 @@ def apply_master_config(overrides=None, defaults=None):
     _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides:
         opts.update(overrides)
+    liquid_opts = _get_liquid_opts(opts)
+    if liquid_opts:
+        opts.update(liquid_opts)
 
     if 'environment' in opts:
         if 'saltenv' in opts:

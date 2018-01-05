@@ -839,6 +839,25 @@ def call(fun, **kwargs):
     return funcs[fun](*args)
 
 
+def liquid(opts, functions=None, whitelist=None, utils=None):
+    '''
+    Pluggable config loader
+    '''
+    if utils is None:
+        utils = {}
+    return LazyLoader(
+        _module_dirs(opts, u'liquid'),
+        opts,
+        tag=u'liquid',
+        pack={
+            u'__salt__': functions,
+            u'__opts__': opts,
+            u'__utils__': utils,
+        },
+        whitelist=whitelist,
+    )
+
+
 def runner(opts, utils=None, context=None):
     '''
     Directly call a function inside a loader directory

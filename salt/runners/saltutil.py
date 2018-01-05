@@ -58,6 +58,7 @@ def sync_all(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     ret['queues'] = sync_queues(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['pillar'] = sync_pillar(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['utils'] = sync_utils(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['liquid'] = sync_liquid(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['sdb'] = sync_sdb(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['cache'] = sync_cache(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['fileserver'] = sync_fileserver(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
@@ -403,6 +404,32 @@ def sync_utils(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
         salt-run saltutil.sync_utils
     '''
     return salt.utils.extmods.sync(__opts__, 'utils', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                   extmod_blacklist=extmod_blacklist)[0]
+
+
+def sync_liquid(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Sync Liquid modules from ``salt://_liquid`` to the master
+
+    saltenv: ``base``
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    extmod_whitelist
+        comma-seperated list of modules to sync
+
+    extmod_blacklist
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_liquid
+    '''
+    return salt.utils.extmods.sync(__opts__, 'liquid', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
                                    extmod_blacklist=extmod_blacklist)[0]
 
 
