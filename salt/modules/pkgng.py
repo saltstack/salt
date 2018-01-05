@@ -75,7 +75,7 @@ def __virtual__():
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']
-        log.debug('__opts__.providers: {0}'.format(providers))
+        log.debug('__opts__.providers: %s', providers)
         if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
             log.debug('Configuration option \'providers:pkg\' is set to '
                       '\'pkgng\', using \'pkgng\' in favor of \'freebsdpkg\'.')
@@ -2238,7 +2238,7 @@ def _lockcmd(subcmd, pkgname=None, **kwargs):
             continue
         locked_pkgs.append(pkgname)
 
-    log.debug("Locked packages: {0}".format(locked_pkgs))
+    log.debug('Locked packages: %s', ', '.join(locked_pkgs))
     return locked_pkgs
 
 
@@ -2356,7 +2356,7 @@ def _parse_upgrade(stdout):
                     'repo': match.group(4)
                 }
             else:
-                log.error('Unable to parse upgrade: \'{0}\''.format(line))
+                log.error('Unable to parse upgrade: \'%s\'', line)
 
         if section == 'reinstall':
             match = reinstall_regex.match(line)
@@ -2368,7 +2368,7 @@ def _parse_upgrade(stdout):
                     'repo': match.group(3)
                 }
             else:
-                log.error('Unable to parse reinstall: \'{0}\''.format(line))
+                log.error('Unable to parse reinstall: \'%s\'', line)
 
     return result
 
