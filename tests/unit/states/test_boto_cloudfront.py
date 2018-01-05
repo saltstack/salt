@@ -29,6 +29,9 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
             whitelist=['boto3', 'dictdiffer', 'yamldumper'],
             context={},
         )
+        # Force the LazyDict to populate its references. Otherwise the lookup
+        # will fail inside the unit tests.
+        list(utils)
         return {
             boto_cloudfront: {
                 '__utils__': utils,

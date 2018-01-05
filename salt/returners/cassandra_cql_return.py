@@ -120,7 +120,6 @@ some stacktraces that appear to come from the Datastax Python driver.
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import json
 import logging
 import uuid
 import time
@@ -128,6 +127,7 @@ import time
 # Import salt libs
 import salt.returners
 import salt.utils.jid
+import salt.utils.json
 import salt.exceptions
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
@@ -195,8 +195,8 @@ def returner(ret):
     statement_arguments.append('{0}'.format(ret['id']))
     statement_arguments.append('{0}'.format(ret['fun']))
     statement_arguments.append(int(time.time() * 1000))
-    statement_arguments.append('{0}'.format(json.dumps(ret).replace("'", "''")))
-    statement_arguments.append('{0}'.format(json.dumps(ret['return']).replace("'", "''")))
+    statement_arguments.append(salt.utils.json.dumps(ret).replace("'", "''"))
+    statement_arguments.append(salt.utils.json.dumps(ret['return']).replace("'", "''"))
     statement_arguments.append(ret.get('success', False))
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
@@ -262,7 +262,7 @@ def event_return(events):
                  '''
         statement_arguments = [six.text_type(uuid.uuid1()),
                                int(time.time() * 1000),
-                               json.dumps(data).replace("'", "''"),
+                               salt.utils.json.dumps(data).replace("'", "''"),
                                __opts__['id'],
                                tag]
 
@@ -286,14 +286,14 @@ def save_load(jid, load, minions=None):
     '''
     # Load is being stored as a text datatype. Single quotes are used in the
     # VALUES list. Therefore, all single quotes contained in the results from
-    # json.dumps(load) must be escaped Cassandra style.
+    # salt.utils.json.dumps(load) must be escaped Cassandra style.
     query = '''INSERT INTO salt.jids (
                  jid, load
                ) VALUES (?, ?)'''
 
     statement_arguments = [
         jid,
-        json.dumps(load).replace("'", "''")
+        salt.utils.json.dumps(load).replace("'", "''")
     ]
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
@@ -331,7 +331,7 @@ def get_load(jid):
         if data:
             load = data[0].get('load')
             if load:
-                ret = json.loads(load)
+                ret = salt.utils.json.loads(load)
     except CommandExecutionError:
         log.critical('Could not get load from jids table.')
         raise
@@ -359,7 +359,7 @@ def get_jid(jid):
                 minion = row.get('minion_id')
                 full_ret = row.get('full_ret')
                 if minion and full_ret:
-                    ret[minion] = json.loads(full_ret)
+                    ret[minion] = salt.utils.json.loads(full_ret)
     except CommandExecutionError:
         log.critical('Could not select job specific information.')
         raise
@@ -417,7 +417,9 @@ def get_jids():
                 jid = row.get('jid')
                 load = row.get('load')
                 if jid and load:
-                    ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
+                    ret[jid] = salt.utils.jid.format_jid_instance(
+                        jid,
+                        salt.utils.json.loads(load))
     except CommandExecutionError:
         log.critical('Could not get a list of all job ids.')
         raise

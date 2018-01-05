@@ -1,6 +1,4 @@
 # encoding: utf-8
-from __future__ import absolute_import, print_function
-
 '''
 A non-blocking REST API for Salt
 ================================
@@ -186,8 +184,8 @@ a return like::
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
-'''  # pylint: disable=W0105
-# pylint: disable=W0232
+'''
+from __future__ import absolute_import, print_function
 
 # Import Python libs
 import time
@@ -198,7 +196,6 @@ from collections import defaultdict
 
 # pylint: disable=import-error
 import cgi
-import yaml
 import tornado.escape
 import tornado.httpserver
 import tornado.ioloop
@@ -217,6 +214,7 @@ import salt.netapi
 import salt.utils.args
 import salt.utils.event
 import salt.utils.json
+import salt.utils.yaml
 from salt.utils.event import tagify
 import salt.client
 import salt.runner
@@ -225,6 +223,15 @@ from salt.exceptions import EauthAuthenticationError
 
 json = salt.utils.json.import_json()
 logger = logging.getLogger()
+
+
+def _json_dumps(obj, **kwargs):
+    '''
+    Invoke salt.utils.json.dumps using the alternate json module loaded using
+    salt.utils.json.import_json(). This ensures that we properly encode any
+    strings in the object before we perform the serialization.
+    '''
+    return salt.utils.json.dumps(obj, _json_module=json, **kwargs)
 
 # The clients rest_cherrypi supports. We want to mimic the interface, but not
 #     necessarily use the same API under the hood
@@ -391,8 +398,8 @@ class EventListener(object):
 
 class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylint: disable=W0223
     ct_out_map = (
-        ('application/json', json.dumps),
-        ('application/x-yaml', yaml.safe_dump),
+        ('application/json', _json_dumps),
+        ('application/x-yaml', salt.utils.yaml.safe_dump),
     )
 
     def _verify_client(self, low):
@@ -515,11 +522,11 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         '''
         ct_in_map = {
             'application/x-www-form-urlencoded': self._form_loader,
-            'application/json': json.loads,
-            'application/x-yaml': yaml.safe_load,
-            'text/yaml': yaml.safe_load,
+            'application/json': salt.utils.json.loads,
+            'application/x-yaml': salt.utils.yaml.safe_load,
+            'text/yaml': salt.utils.yaml.safe_load,
             # because people are terrible and don't mean what they say
-            'text/plain': json.loads
+            'text/plain': salt.utils.json.loads
         }
 
         try:
@@ -1485,8 +1492,8 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         while True:
             try:
                 event = yield self.application.event_listener.get_event(self)
-                self.write(u'tag: {0}\n'.format(event.get('tag', '')))
-                self.write(u'data: {0}\n\n'.format(json.dumps(event)))
+                self.write('tag: {0}\n'.format(event.get('tag', '')))
+                self.write(str('data: {0}\n\n').format(_json_dumps(event)))  # future lint: disable=blacklisted-function
                 self.flush()
             except TimeoutException:
                 break

@@ -6,12 +6,10 @@ from jinja2 import Environment, DictLoader, exceptions
 import ast
 import copy
 import datetime
-import json
 import os
 import pprint
 import re
 import tempfile
-import yaml
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
@@ -22,11 +20,13 @@ from tests.support.paths import TMP_CONF_DIR
 # Import Salt libs
 import salt.config
 import salt.loader
+import salt.utils.yaml
 from salt.exceptions import SaltRenderError
 
 from salt.ext import six
 from salt.ext.six.moves import builtins
 
+import salt.utils.json
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import (
     SaltCacheLoader,
@@ -625,7 +625,7 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
-        self.assertEqual(dataset, json.loads(rendered))
+        self.assertEqual(dataset, salt.utils.json.loads(rendered))
 
     def test_serialize_yaml(self):
         dataset = {
@@ -643,7 +643,7 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
-        self.assertEqual(dataset, yaml.load(rendered))
+        self.assertEqual(dataset, salt.utils.yaml.safe_load(rendered))
 
     def test_serialize_yaml_str(self):
         dataset = "str value"

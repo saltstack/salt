@@ -13,9 +13,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import copy
 import logging
-import json
 
 # Import Salt libs
+import salt.utils.json
 import salt.utils.platform
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
@@ -68,7 +68,7 @@ def _pshell(cmd, cwd=None, json_depth=2):
         raise CommandExecutionError('Issue executing powershell {0}'.format(cmd), info=results)
 
     try:
-        ret = json.loads(results['stdout'], strict=False)
+        ret = salt.utils.json.loads(results['stdout'], strict=False)
     except ValueError:
         raise CommandExecutionError('No JSON results from powershell', info=results)
 

@@ -13,12 +13,12 @@ from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import 3rd-party libs
-import yaml
 from salt.ext import six
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.yaml
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -132,8 +132,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_key('-L --out json')
         ret = {}
         try:
-            import json
-            ret = json.loads('\n'.join(data))
+            import salt.utils.json
+            ret = salt.utils.json.loads('\n'.join(data))
         except ValueError:
             pass
 
@@ -156,8 +156,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_key('-L --out yaml')
         ret = {}
         try:
-            import yaml
-            ret = yaml.load('\n'.join(data))
+            import salt.utils.yaml
+            ret = salt.utils.yaml.safe_load('\n'.join(data))
         except Exception:
             pass
 
@@ -289,12 +289,10 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
 
         config_file_name = 'master'
         with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = yaml.load(fhr.read())
+            config = salt.utils.yaml.safe_load(fhr)
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
             with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                fhw.write(
-                    yaml.dump(config, default_flow_style=False)
-                )
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
         ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} -L'.format(
