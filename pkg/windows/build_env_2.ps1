@@ -248,7 +248,7 @@ Start_Process_and_test_exitcode "$($ini['Settings']['Scripts2Dir'])\pip.exe" "in
 # Move DLL's to Python Root
 Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
 # The dlls have to be in Python directory and the site-packages\win32 directory
-Move-Item "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['Python2Dir'])" -Force
+Copy-Item "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['Python2Dir'])" -Force
 Move-Item "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['SitePkgs2Dir'])\win32" -Force
 
 # Create gen_py directory
