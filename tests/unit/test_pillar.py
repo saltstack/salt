@@ -316,7 +316,6 @@ class PillarTestCase(TestCase):
                 'osrelease': '13.04',
                 'kernel': 'Linux'
             }
-            
             mock_list_states.return_value = ['foo', 'blah']
             pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
             # Mock getting the proper template files
