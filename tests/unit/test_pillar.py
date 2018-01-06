@@ -296,7 +296,8 @@ class PillarTestCase(TestCase):
             'mocked-minion', 'fake_pillar', 'bar',
             extra_minion_data={'fake_key': 'foo'})
 
-    def test_malformed_pillar_sls(self):
+    @patch('salt.fileclient.Client.list_states')
+    def test_malformed_pillar_sls(self, mock_list_states):
         with patch('salt.pillar.compile_template') as compile_template:
             opts = {
                 'renderer': 'json',
@@ -315,6 +316,8 @@ class PillarTestCase(TestCase):
                 'osrelease': '13.04',
                 'kernel': 'Linux'
             }
+            
+            mock_list_states.return_value = ['foo', 'blah']
             pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
             # Mock getting the proper template files
             pillar.client.get_state = MagicMock(
