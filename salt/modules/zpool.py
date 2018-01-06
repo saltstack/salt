@@ -2,7 +2,11 @@
 '''
 Module for running ZFS zpool command
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor:    Nitin Madhok <nmadhok@clemson.edu>
+:maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:depends:       salt.utils.zfs
+:platform:      illumos,freebsd,linux
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -37,39 +41,6 @@ def __virtual__():
         return (False, "The zpool module cannot be loaded: zfs not supported")
 
 
-@salt.utils.decorators.memoize
-def _check_zpool():
-    '''
-    Looks to see if zpool is present on the system
-    '''
-    return salt.utils.path.which('zpool')
-
-
-@salt.utils.decorators.memoize
-def _check_features():
-    '''
-    Looks to see if zpool-features is available
-    '''
-    # get man location
-    man = salt.utils.path.which('man')
-    if not man:
-        return False
-
-    cmd = '{man} zpool-features'.format(
-        man=man
-    )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    return res['retcode'] == 0
-
-
-@salt.utils.decorators.memoize
-def _check_mkfile():
-    '''
-    Looks to see if mkfile is present on the system
-    '''
-    return salt.utils.path.which('mkfile')
-
-
 def healthy():
     '''
     .. versionadded:: 2016.3.0
@@ -82,12 +53,13 @@ def healthy():
 
         salt '*' zpool.healthy
     '''
-    zpool_cmd = _check_zpool()
-
-    cmd = '{zpool_cmd} status -x'.format(
-        zpool_cmd=zpool_cmd
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='status',
+            flags=['-x'],
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     return res['stdout'] == 'all pools are healthy'
 
 
@@ -109,12 +81,13 @@ def status(zpool=None):
     ret = OrderedDict()
 
     # get zpool list data
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} status{zpool}'.format(
-        zpool_cmd=zpool_cmd,
-        zpool=' {0}'.format(zpool) if zpool else ''
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='status',
+            target=zpool,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     if res['retcode'] != 0:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
         return ret
@@ -200,7 +173,7 @@ def status(zpool=None):
     return zp_data
 
 
-def iostat(zpool=None, sample_time=0):
+def iostat(zpool=None, sample_time=5):
     '''
     .. versionchanged:: 2016.3.0
 
@@ -210,6 +183,9 @@ def iostat(zpool=None, sample_time=0):
         optional name of storage pool
     sample_time : int
         seconds to capture data before output
+        default a sample of 5 seconds is used
+
+        .. versionchanged:: Fluorine
 
     CLI Example:
 
@@ -220,13 +196,15 @@ def iostat(zpool=None, sample_time=0):
     ret = OrderedDict()
 
     # get zpool list data
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} iostat -v{zpool}{sample_time}'.format(
-        zpool_cmd=zpool_cmd,
-        zpool=' {0}'.format(zpool) if zpool else '',
-        sample_time=' {0} 2'.format(sample_time) if sample_time else ''
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='iostat',
+            flags=['-v'],
+            target=[zpool, sample_time, 2]
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
     if res['retcode'] != 0:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
         return ret
@@ -318,7 +296,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Fal
     zpool : string
         optional name of storage pool
     properties : string
-        comma-separated list of properties to list
+        comma-separated list of properties to display
     parsable : boolean
         display numbers in parsable (exact) values
         .. versionadded:: Oxygen
@@ -344,22 +322,28 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Fal
     ret = OrderedDict()
 
     # remove 'frag' property if not available
-    properties = properties.split(',')
-    if 'name' in properties:
+    if not isinstance(properties, list):
+        properties = properties.split(',')
+    while 'name' in properties:
         properties.remove('name')
     properties.insert(0, 'name')
-    if not _check_features() and 'frag' in properties:
-        properties.remove('frag')
+    if not __utils__['zfs.has_feature_flags']():
+        while 'frag' in properties:
+            properties.remove('frag')
 
     # get zpool list data
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} list -H -o {properties}{parsable}{zpool}'.format(
-        zpool_cmd=zpool_cmd,
-        properties=','.join(properties),
-        parsable=' -p' if parsable else '',
-        zpool=' {0}'.format(zpool) if zpool else ''
+    ## FIXME: we now always get parsable output... handle this during parsing instead
+    ##        !! fix test input also !!
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='list',
+            flags=['-H', '-p'],
+            opts={'-o': ','.join(properties)},
+            target=zpool
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
     if res['retcode'] != 0:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
         return ret
@@ -403,19 +387,21 @@ def get(zpool, prop=None, show_source=False, parsable=False):
     '''
     ret = OrderedDict()
     ret[zpool] = OrderedDict()
-
-    properties = 'property,value,source'.split(',')
+    value_properties = ['property', 'value', 'source']
 
     # get zpool list data
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} get -H -o {properties}{parsable} {prop} {zpool}'.format(
-        zpool_cmd=zpool_cmd,
-        properties=','.join(properties),
-        parsable=' -p' if parsable else '',
-        prop=prop if prop else 'all',
-        zpool=zpool
+    ## FIXME: we now always get parsable output... handle this during parsing instead
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='get',
+            flags=['-H', '-p'],
+            opts={'-o': ','.join(value_properties)},
+            property_name=prop if prop else 'all',
+            target=zpool,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
     if res['retcode'] != 0:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
         return ret
@@ -425,8 +411,8 @@ def get(zpool, prop=None, show_source=False, parsable=False):
         zp = zp.split("\t")
         zp_data = {}
 
-        for prop in properties:
-            zp_data[prop] = _conform_value(zp[properties.index(prop)])
+        for prop in value_properties:
+            zp_data[prop] = _conform_value(zp[value_properties.index(prop)])
 
         if show_source:
             ret[zpool][zp_data['property']] = zp_data
@@ -463,14 +449,16 @@ def set(zpool, prop, value):
     value = _conform_value(value)
 
     # get zpool list data
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} set {prop}={value} {zpool}'.format(
-        zpool_cmd=zpool_cmd,
-        prop=prop,
-        value=value,
-        zpool=zpool
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='set',
+            property_name=prop,
+            property_value=value,
+            target=zpool,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
     if res['retcode'] != 0:
         ret[zpool][prop] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
@@ -491,12 +479,14 @@ def exists(zpool):
 
         salt '*' zpool.exists myzpool
     '''
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} list {zpool}'.format(
-        zpool_cmd=zpool_cmd,
-        zpool=zpool
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='list',
+            target=zpool,
+        ),
+        python_shell=False,
+        ignore_retcode=True,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
     if res['retcode'] != 0:
         return False
     return True
@@ -524,13 +514,15 @@ def destroy(zpool, force=False):
     if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
     else:
-        zpool_cmd = _check_zpool()
-        cmd = '{zpool_cmd} destroy {force}{zpool}'.format(
-            zpool_cmd=zpool_cmd,
-            force='-f ' if force else '',
-            zpool=zpool
+        res = __salt__['cmd.run_all'](
+            __utils__['zfs.zpool_command'](
+                command='destroy',
+                flags=['-f'] if force else None,
+                target=zpool,
+            ),
+            python_shell=False,
         )
-        res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
         if res['retcode'] != 0:
             ret[zpool] = 'error destroying storage pool'
             if 'stderr' in res and res['stderr'] != '':
@@ -568,20 +560,20 @@ def scrub(zpool, stop=False, pause=False):
     ret = {}
     ret[zpool] = {}
     if __salt__['zpool.exists'](zpool):
-        zpool_cmd = _check_zpool()
+        action = []
         if stop:
-            action = '-s '
+            action.append('-s')
         elif pause:
             # NOTE: https://github.com/openzfs/openzfs/pull/407
-            action = '-p '
-        else:
-            action = ''
-        cmd = '{zpool_cmd} scrub {action}{zpool}'.format(
-            zpool_cmd=zpool_cmd,
-            action=action,
-            zpool=zpool
+            action.append('-p')
+        res = __salt__['cmd.run_all'](
+            __utils__['zfs.zpool_command'](
+                command='scrub',
+                flags=action,
+                target=zpool,
+            ),
+            python_shell=False,
         )
-        res = __salt__['cmd.run_all'](cmd, python_shell=False)
         ret[zpool] = {}
         if res['retcode'] != 0:
             ret[zpool]['scrubbing'] = False
@@ -671,58 +663,44 @@ def create(zpool, *vdevs, **kwargs):
         ret[zpool] = 'no devices specified'
         return ret
 
-    devs = ' '.join(vdevs)
-    zpool_cmd = _check_zpool()
-    force = kwargs.get('force', False)
-    altroot = kwargs.get('altroot', None)
-    createboot = kwargs.get('createboot', False)
-    mountpoint = kwargs.get('mountpoint', None)
-    properties = kwargs.get('properties', None)
+    # Initialize defaults
+    flags = []
+    opts = {}
+    target = []
+
+    # Set pool and fs properties
+    pool_properties = kwargs.get('properties', None)
     filesystem_properties = kwargs.get('filesystem_properties', None)
-    cmd = '{0} create'.format(zpool_cmd)
 
-    # bootsize implies createboot
-    if properties and 'bootsize' in properties:
-        createboot = True
-
-    # make sure values are in the format zfs expects
-    if properties:
-        for prop in properties:
-            properties[prop] = _conform_value(properties[prop])
-
-    if filesystem_properties:
-        for prop in filesystem_properties:
-            filesystem_properties[prop] = _conform_value(filesystem_properties[prop])
-
-    # apply extra arguments from kwargs
-    if force:  # force creation
-        cmd = '{0} -f'.format(cmd)
-    if createboot:  # create boot paritition
-        cmd = '{0} -B'.format(cmd)
-    if properties:  # create "-o property=value" pairs
-        proplist = []
-        for prop in properties:
-            proplist.append('-o {0}={1}'.format(prop, properties[prop]))
-        cmd = '{0} {1}'.format(cmd, ' '.join(proplist))
-    if filesystem_properties:  # create "-O property=value" pairs
-        fsproplist = []
-        for prop in filesystem_properties:
-            fsproplist.append('-O {0}={1}'.format(prop, filesystem_properties[prop]))
-        cmd = '{0} {1}'.format(cmd, ' '.join(fsproplist))
-    if mountpoint:  # set mountpoint
-        cmd = '{0} -m {1}'.format(cmd, mountpoint)
-    if altroot:  # set altroot
-        cmd = '{0} -R {1}'.format(cmd, altroot)
-    cmd = '{0} {1} {2}'.format(cmd, zpool, devs)
+    if kwargs.get('force', False):
+        flags.append('-f')
+    if kwargs.get('createboot', False) or 'bootsize' in pool_properties:
+        flags.append('-B')
+    if kwargs.get('altroot', False):
+        opts['-R'] = kwargs.get('altroot')
+    if kwargs.get('mountpoint', False):
+        opts['-m'] = kwargs.get('mountpoint')
+    target.append(zpool)
+    target.extend(vdevs)
 
     # Create storage pool
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='create',
+            flags=flags,
+            opts=opts,
+            pool_properties=pool_properties,
+            filesystem_properties=filesystem_properties,
+            target=target,
+        ),
+        python_shell=False,
+    )
 
     # Check and see if the pools is available
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret[zpool] = 'created with {0}'.format(devs)
+        ret[zpool] = 'created with {0}'.format(' '.join(vdevs))
 
     return ret
 
@@ -748,7 +726,7 @@ def add(zpool, *vdevs, **kwargs):
     '''
     ret = {}
 
-    # check for pool
+    # validate parameters
     if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
@@ -757,22 +735,29 @@ def add(zpool, *vdevs, **kwargs):
         ret[zpool] = 'no devices specified'
         return ret
 
-    force = kwargs.get('force', False)
-    devs = ' '.join(vdevs)
+    # try and add vdev
+    # NOTE: watch out for mismatched replication levels
+    flags = []
+    target = []
 
-    # try and add watch out for mismatched replication levels
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} add {force}{zpool} {devs}'.format(
-        zpool_cmd=zpool_cmd,
-        force='-f ' if force else '',
-        zpool=zpool,
-        devs=devs
+    if kwargs.get('force', False):
+        flags.append('-f')
+    target.append(zpool)
+    target.extend(vdevs)
+
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='add',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret[zpool] = 'added {0}'.format(devs)
+        ret[zpool] = 'added {0}'.format(' '.join(vdevs))
 
     return ret
 
@@ -824,16 +809,26 @@ def attach(zpool, device, new_device, force=False):
     if len(ret[zpool]) > 0:
         return ret
 
-    # try and add watch out for mismatched replication levels
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} attach {force}{zpool} {device} {new_device}'.format(
-        zpool_cmd=zpool_cmd,
-        force='-f ' if force else '',
-        zpool=zpool,
-        device=device,
-        new_device=new_device
+    # try and attach
+    # NOTE: watch out for mismatched replication levels
+    flags = []
+    target = []
+
+    if force:
+        flags.append('-f')
+    target.append(zpool)
+    target.append(device)
+    target.append(new_device)
+
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='attach',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
@@ -868,14 +863,16 @@ def detach(zpool, device):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
-    # try and add watch out for mismatched replication levels
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} detach {zpool} {device}'.format(
-        zpool_cmd=zpool_cmd,
-        zpool=zpool,
-        device=device
+    # try and detach
+    # NOTE: watch out for mismatched replication levels
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='detach',
+            target=[zpool, device],
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
@@ -939,23 +936,21 @@ def split(zpool, newzpool, **kwargs):
         ret[zpool] = 'storage pool does not exists'
         return ret
 
-    zpool_cmd = _check_zpool()
-    altroot = kwargs.get('altroot', None)
-    properties = kwargs.get('properties', None)
-    cmd = '{0} split'.format(zpool_cmd)
-
-    # apply extra arguments from kwargs
-    if properties:  # create "-o property=value" pairs
-        proplist = []
-        for prop in properties:
-            proplist.append('-o {0}={1}'.format(prop, _conform_value(properties[prop])))
-        cmd = '{0} {1}'.format(cmd, ' '.join(proplist))
-    if altroot:  # set altroot
-        cmd = '{0} -R {1}'.format(cmd, altroot)
-    cmd = '{0} {1} {2}'.format(cmd, zpool, newzpool)
+    opts = {}
+    pool_properties = kwargs.get('properties', None)
+    if kwargs.get('altroot', False):
+        opts['-R'] = kwargs.get('altroot')
 
     # Create storage pool
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='split',
+            opts=opts,
+            pool_properties=pool_properties,
+            target=[zpool, newzpool],
+        ),
+        python_shell=False,
+    )
 
     # Check and see if the pools is available
     if res['retcode'] != 0:
@@ -1022,19 +1017,31 @@ def replace(zpool, old_device, new_device=None, force=False):
         return ret
 
     # Replace vdevs
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} replace {force}{zpool} {old_device}{new_device}'.format(
-        zpool_cmd=zpool_cmd,
-        zpool=zpool,
-        force='-f ' if force else '',
-        old_device=old_device,
-        new_device=' {0}'.format(new_device) if new_device else ''
+    flags = []
+    target = []
+
+    if force:
+        flags.append('-f')
+    target.append(zpool)
+    target.append(old_device)
+    if new_device:
+        target.append(new_device)
+
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='replace',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
+    elif new_device:
         ret[zpool] = 'replaced {0} with {1}'.format(old_device, new_device)
+    else:
+        ret[zpool] = 'replaced {0}'.format(old_device)
 
     return ret
 
@@ -1052,7 +1059,7 @@ def create_file_vdev(size, *vdevs):
 
     .. code-block:: bash
 
-        salt '*' zpool.create_file_vdev 7g /path/to/vdev1 [/path/to/vdev2] [...]
+        salt '*' zpool.create_file_vdev 7G /path/to/vdev1 [/path/to/vdev2] [...]
 
     .. note::
 
@@ -1068,18 +1075,25 @@ def create_file_vdev(size, *vdevs):
         else:
             dlist.append(vdev)
 
-    mkfile = _check_mkfile()
-    cmd = [mkfile, '{0}'.format(size)]
-    cmd.extend(dlist)
-    __salt__['cmd.run_all'](cmd, python_shell=False)
+    _mkfile_cmd = salt.utils.path.which('mkfile')
+    for vdev in dlist:
+        res = __salt__['cmd.run_all'](
+            '{mkfile} {size} {vdev}'.format(
+                mkfile=_mkfile_cmd,
+                size=size,
+                vdev=vdev,
+            ),
+            python_shell=False,
+        )
+        ret[vdev] = 'failed'
+        if res['retcode'] != 0:
+            if 'stderr' in res and ':' in res['stderr']:
+                ret[vdev] = 'failed: {reason}'.format(
+                    reason=res['stderr'].split(': ')[-1],
+                )
+        elif os.path.isfile(vdev):
+            ret[vdev] = 'created'
 
-    # Makesure the files are there
-    for vdev in vdevs:
-        if not os.path.isfile(vdev):
-            ret[vdev] = 'failed'
-        else:
-            if vdev not in ret:
-                ret[vdev] = 'created'
     return ret
 
 
@@ -1114,14 +1128,20 @@ def export(*pools, **kwargs):
         else:
             pool_present.append(pool)
 
-    zpool = _check_zpool()
-    force = kwargs.get('force', False)
+    flags = []
+
+    if kwargs.get('force', False):
+        flags.append('-f')
+
     for pool in pool_present:
-        if force is True:
-            cmd = '{0} export -f {1}'.format(zpool, pool)
-        else:
-            cmd = '{0} export {1}'.format(zpool, pool)
-        res = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
+        res = __salt__['cmd.run_all'](
+            __utils__['zfs.zpool_command'](
+                command='export',
+                flags=flags,
+                target=pool,
+            ),
+            python_shell=False,
+        )
         if res['retcode'] != 0:
             ret[pool] = res['stderr'] if 'stderr' in res else res['stdout']
         else:
@@ -1174,49 +1194,50 @@ def import_(zpool=None, new_name=None, **kwargs):
     '''
     ret = {}
 
-    zpool_cmd = _check_zpool()
-    force = kwargs.get('force', False)
-    altroot = kwargs.get('altroot', None)
-    mntopts = kwargs.get('mntopts', None)
-    properties = kwargs.get('properties', None)
-    dirs = kwargs.get('dir', None)
-    no_mount = kwargs.get('no_mount', False)
-    only_destroyed = kwargs.get('only_destroyed', False)
-    cmd = '{0} import'.format(zpool_cmd)
+    ## initialize defaults
+    flags = []
+    opts = {}
+    target = []
 
-    # apply extra arguments from kwargs
-    if mntopts:  # set mountpoint
-        cmd = '{0} -o {1}'.format(cmd, mntopts)
-    if properties:  # create "-o property=value" pairs
-        optlist = []
-        for prop in properties:
-            if ' ' in properties[prop]:
-                value = "'{0}'".format(properties[prop])
-            else:
-                value = properties[prop]
-            optlist.append('-o {0}={1}'.format(prop, value))
-        opts = ' '.join(optlist)
-        cmd = '{0} {1}'.format(cmd, opts)
-    if dirs:  # append -d params
-        dirs = dirs.split(',')
-        for d in dirs:
-            cmd = '{0} -d {1}'.format(cmd, d)
-    if only_destroyed:  # only import destroyed pools (-D)
-        force = True
-        cmd = '{0} -D'.format(cmd)
-    if force:  # force import (-f)
-        cmd = '{0} -f'.format(cmd)
-    if no_mount:  # set no mount (-N)
-        cmd = '{0} -N'.format(cmd)
-    if altroot:  # set altroot
-        cmd = '{0} -R {1}'.format(cmd, altroot)
+    ## build flags and options
+    if kwargs.get('force', False):
+        flags.append('-f')
+    if kwargs.get('no_mount', False):
+        flags.append('-N')
+    if kwargs.get('only_destroyed', False):
+        if '-f' not in flags:
+            flags.append('-f')
+        flags.append('-D')
+    if not zpool:
+        flags.append('-a')
+    else:
+        target.append(zpool)
+    if zpool and new_name:
+        target.append(new_name)
+    if kwargs.get('altroot', False):
+        opts['-R'] = kwargs.get('altroot')
+    if kwargs.get('mntopts', False):
+        opts['-o'] = kwargs.get('mntopts')
+    for d in kwargs.get('dir', '').split(','):
+        if '-d' not in opts:
+            opts['-d'] = []
+        opts['-d'].append(d)
 
-    cmd = '{cmd} {zpool}{new_name}'.format(
-        cmd=cmd,
-        zpool='{0}'.format(zpool) if zpool else '-a',
-        new_name=' {0}'.format(new_name) if zpool and new_name else ''
+    ## pool properties
+    pool_properties = kwargs.get('properties', None)
+
+    ## execute import
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='import',
+            flags=flags,
+            opts=opts,
+            pool_properties=pool_properties,
+            target=target,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
     if res['retcode'] != 0 and res['stderr'] != '':
         if zpool:
             ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -1224,7 +1245,8 @@ def import_(zpool=None, new_name=None, **kwargs):
             ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         if zpool:
-            ret[zpool if not new_name else new_name] = 'imported' if __salt__['zpool.exists'](zpool if not new_name else new_name) else 'not found'
+            pool = new_name if zpool and new_name else zpool
+            ret[pool] = 'imported' if __salt__['zpool.exists'](pool) else 'not found'
         else:
             ret = True
     return ret
@@ -1267,23 +1289,31 @@ def online(zpool, *vdevs, **kwargs):
         ret[zpool] = 'no devices specified'
         return ret
 
-    # get expand option
-    expand = kwargs.get('expand', False)
+    # default options
+    flags = []
+    target = []
 
-    devs = ' '.join(vdevs)
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} online {expand}{zpool} {devs}'.format(
-        zpool_cmd=zpool_cmd,
-        expand='-e ' if expand else '',
-        zpool=zpool,
-        devs=devs
+    # set flags and options
+    if kwargs.get('expand', False):
+        flags.append('-e')
+    target.append(zpool)
+    if vdevs:
+        target.extend(vdevs)
+
+    # bring all specified devices online
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='online',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
     )
-    # Bring all specified devices online
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret[zpool] = 'onlined {0}'.format(devs)
+        ret[zpool] = 'onlined {0}'.format(' '.join(vdevs))
     return ret
 
 
@@ -1312,7 +1342,7 @@ def offline(zpool, *vdevs, **kwargs):
 
         salt '*' zpool.offline myzpool /path/to/vdev1 [...] [temporary=True|False]
     '''
-    ret = {}
+    ret = {zpool: {}}
 
     # Check if the pool_name exists
     if not __salt__['zpool.exists'](zpool):
@@ -1323,23 +1353,32 @@ def offline(zpool, *vdevs, **kwargs):
         ret[zpool] = 'no devices specified'
         return ret
 
-    # note: we don't check if the device exists
-    #   a device can be offlined until a replacement is available
-    ret[zpool] = {}
-    devs = ' '.join(vdevs)
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} offline {temp}{zpool} {devs}'.format(
-        zpool_cmd=zpool_cmd,
-        temp='-t ' if kwargs.get('temporary', False) else '',
-        zpool=zpool,
-        devs=devs
+    # default options
+    flags = []
+    target = []
+
+    # set flags and options
+    if kwargs.get('temporary', False):
+        flags.append('-t')
+    target.append(zpool)
+    if vdevs:
+        target.extend(vdevs)
+
+    # bring all specified devices offline
+    # NOTE: we don't check if the device exists
+    #       a device can be offlined until a replacement is available
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='offline',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
     )
-    # Bring all specified devices offline
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret[zpool] = 'offlined {0}'.format(devs)
+        ret[zpool] = 'offlined {0}'.format(' '.join(vdevs))
     return ret
 
 
@@ -1366,14 +1405,15 @@ def labelclear(device, force=False):
     '''
     ret = {}
 
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} labelclear {force}{device}'.format(
-        zpool_cmd=zpool_cmd,
-        force='-f ' if force else '',
-        device=device,
+    # clear label for all specified devices
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='labelclear',
+            flags=['-f'] if force else None,
+            target=device,
+        ),
+        python_shell=False,
     )
-    # Bring all specified devices offline
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     if res['retcode'] != 0:
         ## NOTE: skip the "use '-f' hint"
         res['stderr'] = res['stderr'].split("\n")
@@ -1406,15 +1446,15 @@ def reguid(zpool):
 
         salt '*' zpool.reguid myzpool
     '''
-    ret = {}
-    ret[zpool] = {}
+    ret = {zpool: {}}
 
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} reguid {zpool}'.format(
-        zpool_cmd=zpool_cmd,
-        zpool=zpool
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='reguid',
+            target=zpool,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
     else:
@@ -1437,15 +1477,15 @@ def reopen(zpool):
 
         salt '*' zpool.reopen myzpool
     '''
-    ret = {}
-    ret[zpool] = {}
+    ret = {zpool: {}}
 
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} reopen {zpool}'.format(
-        zpool_cmd=zpool_cmd,
-        zpool=zpool
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='reopen',
+            target=zpool,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     if res['retcode'] != 0:
         ret[zpool] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
     else:
@@ -1477,13 +1517,21 @@ def upgrade(zpool=None, version=None):
     '''
     ret = {}
 
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} upgrade {version}{zpool}'.format(
-        zpool_cmd=zpool_cmd,
-        version='-V {0} '.format(version) if version else '',
-        zpool=zpool if zpool else '-a'
+    flags = []
+    opts = {}
+    if version:
+        opts['-V'] = version
+    if not zpool:
+        flags.append('-a')
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='upgrade',
+            flags=flags,
+            opts=opts,
+            target=zpool,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     if res['retcode'] != 0:
         if zpool:
             ret[zpool] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
@@ -1518,14 +1566,19 @@ def history(zpool=None, internal=False, verbose=False):
     '''
     ret = {}
 
-    zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} history {verbose}{internal}{zpool}'.format(
-        zpool_cmd=zpool_cmd,
-        verbose='-l ' if verbose else '',
-        internal='-i ' if internal else '',
-        zpool=zpool if zpool else ''
+    flags = []
+    if verbose:
+        flags.append('-l')
+    if internal:
+        flags.append('-i')
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zpool_command'](
+            command='history',
+            flags=flags,
+            target=zpool,
+        ),
+        python_shell=False,
     )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     if res['retcode'] != 0:
         if zpool:
             ret[zpool] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
