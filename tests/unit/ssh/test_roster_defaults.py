@@ -9,7 +9,6 @@ from __future__ import absolute_import
 import os
 import shutil
 import tempfile
-import yaml
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
@@ -20,6 +19,7 @@ from tests.support.paths import TMP
 import salt.roster
 import salt.config
 import salt.utils.files
+import salt.utils.yaml
 
 ROSTER = '''
 localhost:
@@ -62,7 +62,7 @@ class SSHRosterDefaults(TestCase):
                 )
             opts = salt.config.master_config(fpath)
             with patch('salt.roster.get_roster_file', MagicMock(return_value=ROSTER)):
-                with patch('salt.template.compile_template', MagicMock(return_value=yaml.load(ROSTER))):
+                with patch('salt.template.compile_template', MagicMock(return_value=salt.utils.yaml.safe_load(ROSTER))):
                     roster = salt.roster.Roster(opts=opts)
                     self.assertEqual(roster.targets('*', 'glob'), expected)
         finally:

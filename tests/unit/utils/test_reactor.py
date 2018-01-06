@@ -6,11 +6,11 @@ import glob
 import logging
 import os
 import textwrap
-import yaml
 
 import salt.loader
 import salt.utils.data
 import salt.utils.reactor as reactor
+import salt.utils.yaml
 
 from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -390,7 +390,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
         Load the reactor config for mocking
         '''
         cls.opts = cls.get_temp_config('master')
-        reactor_config = yaml.safe_load(REACTOR_CONFIG)
+        reactor_config = salt.utils.yaml.safe_load(REACTOR_CONFIG)
         cls.opts.update(reactor_config)
         cls.reactor = reactor.Reactor(cls.opts)
         cls.reaction_map = salt.utils.data.repack_dictlist(reactor_config['reactor'])
