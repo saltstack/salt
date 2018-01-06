@@ -368,6 +368,16 @@ class PillarTestCase(TestCase):
                 ({'foo': 'bar', 'foo2': 'bar2'}, [])
             )
 
+            # Test includes as a list with wildcard
+            compile_template.side_effect = [
+                {'foo': 'bar', 'include': ['bl*']},
+                {'foo2': 'bar2'}
+            ]
+            self.assertEqual(
+                pillar.render_pillar({'base': ['foo.sls']}),
+                ({'foo': 'bar', 'foo2': 'bar2'}, [])
+            )
+
             # Test includes as a list overriding data
             compile_template.side_effect = [
                 {'foo': 'bar', 'include': ['blah']},
