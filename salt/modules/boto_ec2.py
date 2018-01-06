@@ -49,11 +49,11 @@ Connection module for Amazon EC2
 from __future__ import absolute_import
 import logging
 import time
-import json
 
 # Import Salt libs
 import salt.utils.compat
 import salt.utils.data
+import salt.utils.json
 from salt.ext import six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -822,7 +822,7 @@ def _to_blockdev_map(thing):
     if isinstance(thing, BlockDeviceMapping):
         return thing
     if isinstance(thing, six.string_types):
-        thing = json.loads(thing)
+        thing = salt.utils.json.loads(thing)
     if not isinstance(thing, dict):
         log.error("Can't convert '{0}' of type {1} to a "
                   "boto.ec2.blockdevicemapping.BlockDeviceMapping".format(thing, type(thing)))

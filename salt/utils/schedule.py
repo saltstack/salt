@@ -24,7 +24,6 @@ import logging
 import errno
 import random
 import weakref
-import yaml
 
 # Import Salt libs
 import salt.config
@@ -38,6 +37,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.user
+import salt.utils.yaml
 import salt.loader
 import salt.minion
 import salt.payload
@@ -46,7 +46,6 @@ import salt.exceptions
 import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
-from salt.utils.yamldumper import SafeOrderedDumper
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -176,9 +175,8 @@ class Schedule(object):
             with salt.utils.files.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
                     salt.utils.stringutils.to_bytes(
-                        yaml.dump(
-                            {'schedule': self._get_schedule(include_pillar=False)},
-                            Dumper=SafeOrderedDumper
+                        salt.utils.yaml.safe_dump(
+                            {'schedule': self._get_schedule(include_pillar=False)}
                         )
                     )
                 )

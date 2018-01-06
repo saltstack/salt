@@ -59,13 +59,13 @@ import time
 import logging
 import pprint
 import base64
-import yaml
 import collections
 import salt.cache
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.data
 import salt.utils.files
+import salt.utils.yaml
 from salt.utils.versions import LooseVersion
 from salt.ext import six
 import salt.version
@@ -1070,7 +1070,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     )
 
     if isinstance(kwargs.get('volumes'), six.string_types):
-        volumes = yaml.safe_load(kwargs['volumes'])
+        volumes = salt.utils.yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs.get('volumes')
 
@@ -1834,3 +1834,63 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     storageservice.delete_blob(kwargs['container'], kwargs['blob'])
     return True
+
+
+def stop(name, resource_group=None, call=None):
+    '''
+    .. versionadded:: Fluorine
+    Stop a VM
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+         salt-cloud -a stop myminion
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+    if not compconn:
+        compconn = get_conn()
+    if resource_group is None:
+        for group in list_resource_groups():
+            try:
+                instance_stop = compconn.virtual_machines.deallocate(group, name)
+                instance_stop.wait()
+            except CloudError:
+                continue
+    else:
+        instance_stop = compconn.virtual_machines.stop(resource_group, name)
+        instance_stop.wait()
+    return instance_stop
+
+
+def start(name, resource_group=None, call=None):
+    '''
+    .. versionadded:: Fluorine
+    Start a VM
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+         salt-cloud -a start myminion
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+    if not compconn:
+        compconn = get_conn()
+    if resource_group is None:
+        for group in list_resource_groups():
+            try:
+                instance_start = compconn.virtual_machines.start(group, name)
+                instance_start.wait()
+            except CloudError:
+                continue
+    else:
+        instance_start = compconn.virtual_machines.start(resource_group, name)
+        instance_start.wait()
+    return instance_start

@@ -328,7 +328,7 @@ mountpoint to ``web/`` (and restart the ``salt-master`` daemon).
     - Content from mounted git_pillar repos can only be referenced by a top
       file in the same pillar environment.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy

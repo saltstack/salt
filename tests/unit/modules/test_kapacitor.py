@@ -2,9 +2,9 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import json
 
 # Import Salt libs
+import salt.utils.json
 import salt.modules.kapacitor as kapacitor
 
 # Import Salt testing libs
@@ -27,7 +27,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def test_get_task_success(self):
-        http_body = json.dumps({
+        http_body = salt.utils.json.dumps({
             'script': 'test',
             'type': 'stream',
             'dbrps': [{'db': 'db', 'rp': 'rp'}],

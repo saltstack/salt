@@ -4,15 +4,15 @@ Return/control aspects of the grains data
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import, print_function
 import collections
 import copy
 import math
-import json
 
 # Import salt libs
 import salt.utils.data
 import salt.utils.dictupdate
+import salt.utils.json
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 
@@ -74,7 +74,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     if ordered is True:
         grains = __grains__
     else:
-        grains = json.loads(json.dumps(__grains__))
+        grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__))
     return salt.utils.data.traverse_dict_and_list(
         __grains__,
         key,

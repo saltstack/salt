@@ -7,13 +7,13 @@ as ZeroMQ salt, but via ssh.
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-import json
+from __future__ import absolute_import, print_function
 import copy
 
 # Import salt libs
 import salt.loader
 import salt.utils.data
+import salt.utils.json
 import salt.client.ssh
 
 # Import 3rd-party libs
@@ -103,8 +103,12 @@ class FunctionWrapper(object):
             The remote execution function
             '''
             argv = [cmd]
-            argv.extend([json.dumps(arg) for arg in args])
-            argv.extend(['{0}={1}'.format(key, json.dumps(val)) for key, val in six.iteritems(kwargs)])
+            argv.extend([salt.utils.json.dumps(arg) for arg in args])
+            argv.extend(
+                ['{0}={1}'.format(salt.utils.stringutils.to_str(key),
+                                  salt.utils.json.dumps(val))
+                 for key, val in six.iteritems(kwargs)]
+            )
             single = salt.client.ssh.Single(
                     self.opts,
                     argv,
@@ -121,7 +125,7 @@ class FunctionWrapper(object):
                         'stderr': stderr,
                         'retcode': retcode}
             try:
-                ret = json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+                ret = salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
                 if len(ret) < 2 and 'local' in ret:
                     ret = ret['local']
                 ret = ret.get('return', {})

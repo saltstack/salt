@@ -8,13 +8,13 @@ from __future__ import absolute_import
 import os
 import re
 import tempfile
-import yaml
 
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 import salt.utils.files
+import salt.utils.yaml
 import salt.states.syslog_ng as syslog_ng
 import salt.modules.syslog_ng as syslog_ng_module
 
@@ -331,7 +331,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         self._config_generator_template(GIVEN_CONFIG, SHORT_FORM_EXPECTED)
 
     def _config_generator_template(self, yaml_input, expected):
-        parsed_yaml_config = yaml.load(yaml_input["config"])
+        parsed_yaml_config = salt.utils.yaml.safe_load(yaml_input["config"])
         id = yaml_input["id"]
 
         with patch.dict(syslog_ng.__salt__, _SALT_VAR_WITH_MODULE_METHODS):
@@ -357,7 +357,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             syslog_ng_module.write_config(config='@include "scl.conf"')
 
             for i in yaml_inputs:
-                parsed_yaml_config = yaml.load(i["config"])
+                parsed_yaml_config = salt.utils.yaml.safe_load(i["config"])
                 id = i["id"]
                 got = syslog_ng.config(id, config=parsed_yaml_config, write=True)
 

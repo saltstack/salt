@@ -18,11 +18,11 @@ https://technet.microsoft.com/en-us/library/hh848636(v=wps.620).aspx
 # Import Python libs
 from __future__ import absolute_import
 import ast
-import json
 import logging
 import os
 
 # Import salt libs
+import salt.utils.json
 import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.versions
@@ -80,7 +80,7 @@ def _cmd_run(cmd, as_json=False):
 
     if as_json:
         try:
-            items = json.loads(cmd_ret['stdout'], strict=False)
+            items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
             return items
         except ValueError:
             _LOG.error('Unable to parse return data as Json.')

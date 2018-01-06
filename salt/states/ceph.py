@@ -7,9 +7,9 @@ Manage ceph with salt.
 # Import Python Libs
 from __future__ import absolute_import
 import logging
-import json
 
 # Import Salt Libs
+import salt.utils.json
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -48,7 +48,7 @@ def _ordereddict2dict(input_ordered_dict):
     '''
     Convert ordered dictionary to a dictionary
     '''
-    return json.loads(json.dumps(input_ordered_dict))
+    return salt.utils.json.loads(salt.utils.json.dumps(input_ordered_dict))
 
 
 def quorum(name, **kwargs):

@@ -53,12 +53,10 @@ included:
 # Import python libs
 from __future__ import absolute_import
 import os
-import json
 import logging
 import base64
 import pprint
 import inspect
-import yaml
 import datetime
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
@@ -70,6 +68,8 @@ from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-na
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.http
+import salt.utils.json
+import salt.utils.yaml
 import salt.config as config
 from salt.cloud.libcloudfuncs import node_state
 from salt.exceptions import (
@@ -357,7 +357,7 @@ def create_node(**kwargs):
     if firewall_enabled is not None:
         create_data['firewall_enabled'] = firewall_enabled
 
-    data = json.dumps(create_data)
+    data = salt.utils.json.dumps(create_data)
 
     ret = query(command='my/machines', data=data, method='POST',
                 location=location)
@@ -503,7 +503,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
         )
 
     if data:
-        data = json.dumps(data)
+        data = salt.utils.json.dumps(data)
 
     ret = []
     try:
@@ -956,7 +956,7 @@ def import_key(kwargs=None, call=None):
         kwargs['key'] = fp_.read()
 
     send_data = {'name': kwargs['keyname'], 'key': kwargs['key']}
-    kwargs['data'] = json.dumps(send_data)
+    kwargs['data'] = salt.utils.json.dumps(send_data)
 
     rcode, data = query(
         command='my/keys',
@@ -1101,7 +1101,7 @@ def query(action=None,
 
     # post form data
     if not data:
-        data = json.dumps({})
+        data = salt.utils.json.dumps({})
 
     return_content = None
     result = salt.utils.http.query(
@@ -1127,6 +1127,6 @@ def query(action=None,
 
     if 'Content-Length' in result['headers']:
         content = result['text']
-        return_content = yaml.safe_load(content)
+        return_content = salt.utils.yaml.safe_load(content)
 
     return [result['status'], return_content]
