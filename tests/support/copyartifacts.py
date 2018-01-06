@@ -7,7 +7,8 @@ import argparse  # pylint: disable=minimum-python-version
 import os
 import paramiko
 import subprocess
-import yaml
+
+import salt.utils.yaml
 
 
 class DownloadArtifacts(object):
@@ -19,7 +20,7 @@ class DownloadArtifacts(object):
 
     def setup_transport(self):
         # pylint: disable=minimum-python-version
-        config = yaml.load(subprocess.check_output(['bundle', 'exec', 'kitchen', 'diagnose', self.instance]))
+        config = salt.utils.yaml.safe_load(subprocess.check_output(['bundle', 'exec', 'kitchen', 'diagnose', self.instance]))
         # pylint: enable=minimum-python-version
         state = config['instances'][self.instance]['state_file']
         tport = config['instances'][self.instance]['transport']

@@ -168,7 +168,7 @@ More complete example for MySQL (to also show configuration)
             as_list: True
             with_lists: [1,3]
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
@@ -424,10 +424,10 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
         Execute queries, merge and return as a dict.
         '''
         db_name = self._db_name()
-        log.info('Querying {0} for information for {1}'.format(db_name, minion_id))
+        log.info('Querying %s for information for %s', db_name, minion_id)
         #
-        #    log.debug('ext_pillar {0} args: {1}'.format(db_name, args))
-        #    log.debug('ext_pillar {0} kwargs: {1}'.format(db_name, kwargs))
+        #    log.debug('ext_pillar %s args: %s', db_name, args)
+        #    log.debug('ext_pillar %s kwargs: %s', db_name, kwargs)
         #
         # Most of the heavy lifting is in this class for ease of testing.
         qbuffer = self.extract_queries(args, kwargs)
@@ -447,7 +447,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 self.ignore_null = details['ignore_null']
                 self.process_results(cursor.fetchall())
 
-                log.debug('ext_pillar {0}: Return data: {1}'.format(db_name, self))
+                log.debug('ext_pillar %s: Return data: %s', db_name, self)
         return self.result
 
 
