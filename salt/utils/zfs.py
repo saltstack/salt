@@ -84,7 +84,7 @@ def _property_detect_type(name, values):
         value_type = 'bool_alt'
     elif values in ['<size>', '<size> | none']:
         value_type = 'size'
-    elif values in ['<count>', '<count> | none']:
+    elif values in ['<count>', '<count> | none', '<guid>']:
         value_type = 'numeric'
     elif name in ['sharenfs', 'sharesmb', 'canmount']:
         value_type = 'bool'
@@ -236,7 +236,7 @@ def _command(source, command, flags=None, opts=None,
         cmd.append('-O' if source == 'zpool' else '-o')
         cmd.append('{key}={val}'.format(
             key=fsopt,
-            val=to_auto(fsopt, from_auto(fsopt, filesystem_properties[fsopt]), source='zfs', convert_to_human=False),
+            val=to_auto(fsopt, filesystem_properties[fsopt], source='zfs', convert_to_human=False),
         ))
 
     # NOTE: append pool properties (really just options with a key/value)
@@ -247,7 +247,7 @@ def _command(source, command, flags=None, opts=None,
         cmd.append('-o')
         cmd.append('{key}={val}'.format(
             key=fsopt,
-            val=to_auto(fsopt, from_auto(fsopt, pool_properties[fsopt]), source='zpool', convert_to_human=False),
+            val=to_auto(fsopt, pool_properties[fsopt], source='zpool', convert_to_human=False),
         ))
 
     # NOTE: append property and value
@@ -275,7 +275,7 @@ def _command(source, command, flags=None, opts=None,
             #       we do not want to skip False and 0!
             if tgt is None:
                 continue
-            cmd.append(to_str(from_str(tgt)))
+            cmd.append(to_str(tgt))
 
     return ' '.join(cmd)
 
@@ -337,10 +337,13 @@ def property_data_zpool():
         from reading the code.
 
     '''
+    # NOTE: man page also mentions a few short forms
     property_data = _property_parse_cmd(_zpool_cmd(), {
-        'listsnapshots': 'listsnaps',
+        'allocated': 'alloc',
         'autoexpand': 'expand',
         'autoreplace': 'replace',
+        'listsnapshots': 'listsnaps',
+        'fragmentation': 'frag',
     })
 
     # NOTE: zpool status/iostat has a few extra fields
@@ -350,6 +353,9 @@ def property_data_zpool():
         'bandwith-read', 'bandwith-write',
         'read', 'write',
     ]
+    zpool_numeric_extra = [
+        'cksum', 'cap',
+    ]
 
     for prop in zpool_size_extra:
         property_data[prop] = {
@@ -358,11 +364,12 @@ def property_data_zpool():
             'values': '<size>',
         }
 
-    property_data['cksum'] = {
-        'edit': False,
-        'type': 'numeric',
-        'values': '<count>',
-    }
+    for prop in zpool_numeric_extra:
+        property_data[prop] = {
+            'edit': False,
+            'type': 'numeric',
+            'values': '<count>',
+        }
 
     return property_data
 
