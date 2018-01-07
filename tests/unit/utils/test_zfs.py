@@ -2,6 +2,7 @@
 '''
 Tests for the zfs utils library
 
+:codeauthor:    Jorge Schrauwen <sjorge@blackdot.be>
 :maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
 :maturity:      new
 :platform:      illumos,freebsd,linux
