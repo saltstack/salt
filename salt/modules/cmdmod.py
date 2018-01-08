@@ -5,12 +5,11 @@ A module for shelling out.
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import functools
 import glob
-import json
 import logging
 import os
 import shutil
@@ -27,6 +26,7 @@ import tempfile
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.powershell
@@ -48,6 +48,7 @@ from salt.utils.locales import sdecode
 # Only available on POSIX systems, nonfatal on windows
 try:
     import pwd
+    import grp
 except ImportError:
     pass
 
@@ -149,7 +150,7 @@ def _render_cmd(cmd, cwd, template, saltenv='base', pillarenv=None, pillar_overr
         # write out path to temp file
         tmp_path_fn = salt.utils.files.mkstemp()
         with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
-            fp_.write(contents)
+            fp_.write(salt.utils.stringutils.to_str(contents))
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
@@ -223,7 +224,7 @@ def _check_avail(cmd):
     Check to see if the given command can be run
     '''
     if isinstance(cmd, list):
-        cmd = ' '.join([str(x) if not isinstance(x, six.string_types) else x
+        cmd = ' '.join([six.text_type(x) if not isinstance(x, six.string_types) else x
                         for x in cmd])
     bret = True
     wret = False
@@ -254,6 +255,7 @@ def _run(cmd,
          output_loglevel='debug',
          log_callback=None,
          runas=None,
+         group=None,
          shell=DEFAULT_SHELL,
          python_shell=False,
          env=None,
@@ -286,6 +288,7 @@ def _run(cmd,
             .format(shell))
 
     log_callback = _check_cb(log_callback)
+    use_sudo = False
 
     if runas is None and '__context__' in globals():
         runas = __context__.get('runas')
@@ -372,10 +375,11 @@ def _run(cmd,
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
         msg = (
-            u'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
+            'Executing command {0}{1}{0} {2}{3}in directory \'{4}\'{5}'.format(
                 '\'' if not isinstance(cmd, list) else '',
                 _get_stripped(cmd),
                 'as user \'{0}\' '.format(runas) if runas else '',
+                'in group \'{0}\' '.format(group) if group else '',
                 cwd,
                 '. Executing command in the background, no output will be '
                 'logged.' if bg else ''
@@ -405,6 +409,24 @@ def _run(cmd,
             raise CommandExecutionError(
                 'User \'{0}\' is not available'.format(runas)
             )
+
+    if group:
+        if salt.utils.platform.is_windows():
+            msg = 'group is not currently available on Windows'
+            raise SaltInvocationError(msg)
+        if not which_bin(['sudo']):
+            msg = 'group argument requires sudo but not found'
+            raise CommandExecutionError(msg)
+        try:
+            grp.getgrnam(group)
+        except KeyError:
+            raise CommandExecutionError(
+                'Group \'{0}\' is not available'.format(runas)
+            )
+        else:
+            use_sudo = True
+
+    if runas or group:
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
@@ -412,9 +434,19 @@ def _run(cmd,
                 'import sys, os, itertools; '
                 'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items())))'
             )
-            if __grains__['os'] in ['MacOS', 'Darwin']:
-                env_cmd = ('sudo', '-i', '-u', runas, '--',
-                           sys.executable)
+
+            if use_sudo or __grains__['os'] in ['MacOS', 'Darwin']:
+                env_cmd = ['sudo']
+                # runas is optional if use_sudo is set.
+                if runas:
+                    env_cmd.extend(['-u', runas])
+                if group:
+                    env_cmd.extend(['-g', group])
+                if shell != DEFAULT_SHELL:
+                    env_cmd.extend(['-s', '--', shell, '-c'])
+                else:
+                    env_cmd.extend(['-i', '--'])
+                env_cmd.extend([sys.executable])
             elif __grains__['os'] in ['FreeBSD']:
                 env_cmd = ('su', '-', runas, '-c',
                            "{0} -c {1}".format(shell, sys.executable))
@@ -424,6 +456,7 @@ def _run(cmd,
                 env_cmd = ('su', runas, '-c', sys.executable)
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
+            log.debug(log_callback("env command: {0}".format(env_cmd)))
             env_encoded = subprocess.Popen(
                 env_cmd,
                 stdin=subprocess.PIPE,
@@ -433,7 +466,7 @@ def _run(cmd,
                 import itertools
                 env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             elif six.PY3:
-                if isinstance(env_encoded, str):
+                if isinstance(env_encoded, str):  # future lint: disable=blacklisted-function
                     env_encoded = env_encoded.encode(__salt_system_encoding__)
                 env_runas = dict(list(zip(*[iter(env_encoded.split(b'\0'))]*2)))
 
@@ -491,7 +524,7 @@ def _run(cmd,
     kwargs = {'cwd': cwd,
               'shell': python_shell,
               'env': run_env,
-              'stdin': str(stdin) if stdin is not None else stdin,
+              'stdin': six.text_type(stdin) if stdin is not None else stdin,
               'stdout': stdout,
               'stderr': stderr,
               'with_communicate': with_communicate,
@@ -500,7 +533,7 @@ def _run(cmd,
               }
 
     if umask is not None:
-        _umask = str(umask).lstrip('0')
+        _umask = six.text_type(umask).lstrip('0')
 
         if _umask == '':
             msg = 'Zero umask is not allowed.'
@@ -514,11 +547,12 @@ def _run(cmd,
     else:
         _umask = None
 
-    if runas or umask:
+    if runas or group or umask:
         kwargs['preexec_fn'] = functools.partial(
             salt.utils.user.chugid_and_umask,
             runas,
-            _umask)
+            _umask,
+            group)
 
     if not salt.utils.platform.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
@@ -566,7 +600,7 @@ def _run(cmd,
         try:
             proc.run()
         except TimedProcTimeoutError as exc:
-            ret['stdout'] = str(exc)
+            ret['stdout'] = six.text_type(exc)
             ret['stderr'] = ''
             ret['retcode'] = None
             ret['pid'] = proc.process.pid
@@ -577,7 +611,7 @@ def _run(cmd,
         try:
             out = proc.stdout.decode(__salt_system_encoding__)
         except AttributeError:
-            out = u''
+            out = ''
         except UnicodeDecodeError:
             log.error('UnicodeDecodeError while decoding output of cmd {0}'.format(cmd))
             out = proc.stdout.decode(__salt_system_encoding__, 'replace')
@@ -585,7 +619,7 @@ def _run(cmd,
         try:
             err = proc.stderr.decode(__salt_system_encoding__)
         except AttributeError:
-            err = u''
+            err = ''
         except UnicodeDecodeError:
             log.error('UnicodeDecodeError while decoding error of cmd {0}'.format(cmd))
             err = proc.stderr.decode(__salt_system_encoding__, 'replace')
@@ -763,6 +797,7 @@ def run(cmd,
         cwd=None,
         stdin=None,
         runas=None,
+        group=None,
         shell=DEFAULT_SHELL,
         python_shell=None,
         env=None,
@@ -802,6 +837,9 @@ def run(cmd,
     :param str runas: User to run command as. If running on a Windows minion you
       must also pass a password. The target user account must be in the
       Administrators group.
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -959,6 +997,7 @@ def run(cmd,
                                          kwargs.get('__pub_jid', ''))
     ret = _run(cmd,
                runas=runas,
+               group=group,
                shell=shell,
                python_shell=python_shell,
                cwd=cwd,
@@ -998,16 +1037,17 @@ def run(cmd,
             log.error(log_callback(msg))
             if raise_err:
                 raise CommandExecutionError(
-                    log_callback(ret[u'stdout'] if not hide_output else u'')
+                    log_callback(ret['stdout'] if not hide_output else '')
                 )
-        log.log(lvl, u'output: %s', log_callback(ret[u'stdout']))
-    return ret[u'stdout'] if not hide_output else u''
+        log.log(lvl, 'output: %s', log_callback(ret['stdout']))
+    return ret['stdout'] if not hide_output else ''
 
 
 def shell(cmd,
         cwd=None,
         stdin=None,
         runas=None,
+        group=None,
         shell=DEFAULT_SHELL,
         env=None,
         clean_env=False,
@@ -1043,6 +1083,9 @@ def shell(cmd,
     :param str runas: User to run command as. If running on a Windows minion you
       must also pass a password. The target user account must be in the
       Administrators group.
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -1192,6 +1235,7 @@ def shell(cmd,
                cwd=cwd,
                stdin=stdin,
                runas=runas,
+               group=group,
                shell=shell,
                env=env,
                clean_env=clean_env,
@@ -1217,6 +1261,7 @@ def run_stdout(cmd,
                cwd=None,
                stdin=None,
                runas=None,
+               group=None,
                shell=DEFAULT_SHELL,
                python_shell=None,
                env=None,
@@ -1255,6 +1300,9 @@ def run_stdout(cmd,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default shell.
 
@@ -1371,6 +1419,7 @@ def run_stdout(cmd,
                                          kwargs.get('__pub_jid', ''))
     ret = _run(cmd,
                runas=runas,
+               group=group,
                cwd=cwd,
                stdin=stdin,
                shell=shell,
@@ -1418,6 +1467,7 @@ def run_stderr(cmd,
                cwd=None,
                stdin=None,
                runas=None,
+               group=None,
                shell=DEFAULT_SHELL,
                python_shell=None,
                env=None,
@@ -1456,6 +1506,9 @@ def run_stderr(cmd,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -1573,6 +1626,7 @@ def run_stderr(cmd,
                                          kwargs.get('__pub_jid', ''))
     ret = _run(cmd,
                runas=runas,
+               group=group,
                cwd=cwd,
                stdin=stdin,
                shell=shell,
@@ -1620,6 +1674,7 @@ def run_all(cmd,
             cwd=None,
             stdin=None,
             runas=None,
+            group=None,
             shell=DEFAULT_SHELL,
             python_shell=None,
             env=None,
@@ -1660,6 +1715,9 @@ def run_all(cmd,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -1800,6 +1858,7 @@ def run_all(cmd,
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(cmd,
                runas=runas,
+               group=group,
                cwd=cwd,
                stdin=stdin,
                stderr=stderr,
@@ -1837,9 +1896,9 @@ def run_all(cmd,
             )
             log.error(log_callback(msg))
         if ret['stdout']:
-            log.log(lvl, u'stdout: {0}'.format(log_callback(ret['stdout'])))
+            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
         if ret['stderr']:
-            log.log(lvl, u'stderr: {0}'.format(log_callback(ret['stderr'])))
+            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
 
@@ -1852,6 +1911,7 @@ def retcode(cmd,
             cwd=None,
             stdin=None,
             runas=None,
+            group=None,
             shell=DEFAULT_SHELL,
             python_shell=None,
             env=None,
@@ -1887,6 +1947,9 @@ def retcode(cmd,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -1989,6 +2052,7 @@ def retcode(cmd,
     '''
     ret = _run(cmd,
                runas=runas,
+               group=group,
                cwd=cwd,
                stdin=stdin,
                stderr=subprocess.STDOUT,
@@ -2030,6 +2094,7 @@ def _retcode_quiet(cmd,
                    cwd=None,
                    stdin=None,
                    runas=None,
+                   group=None,
                    shell=DEFAULT_SHELL,
                    python_shell=False,
                    env=None,
@@ -2053,6 +2118,7 @@ def _retcode_quiet(cmd,
                    cwd=cwd,
                    stdin=stdin,
                    runas=runas,
+                   group=group,
                    shell=shell,
                    python_shell=python_shell,
                    env=env,
@@ -2075,6 +2141,7 @@ def script(source,
            cwd=None,
            stdin=None,
            runas=None,
+           group=None,
            shell=DEFAULT_SHELL,
            python_shell=None,
            env=None,
@@ -2122,6 +2189,9 @@ def script(source,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run script as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -2275,12 +2345,16 @@ def script(source,
     if not salt.utils.platform.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
-    ret = _run(path + ' ' + str(args) if args else path,
+
+    path = _cmd_quote(path)
+
+    ret = _run(path + ' ' + six.text_type(args) if args else path,
                cwd=cwd,
                stdin=stdin,
                output_loglevel=output_loglevel,
                log_callback=log_callback,
                runas=runas,
+               group=group,
                shell=shell,
                python_shell=python_shell,
                env=env,
@@ -2307,6 +2381,7 @@ def script_retcode(source,
                    cwd=None,
                    stdin=None,
                    runas=None,
+                   group=None,
                    shell=DEFAULT_SHELL,
                    python_shell=None,
                    env=None,
@@ -2356,6 +2431,9 @@ def script_retcode(source,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run script as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -2454,6 +2532,7 @@ def script_retcode(source,
                   cwd=cwd,
                   stdin=stdin,
                   runas=runas,
+                  group=group,
                   shell=shell,
                   python_shell=python_shell,
                   env=env,
@@ -2550,7 +2629,7 @@ def exec_code_all(lang, code, cwd=None, args=None, **kwargs):
         codefile = salt.utils.files.mkstemp()
 
     with salt.utils.files.fopen(codefile, 'w+t', binary=False) as fp_:
-        fp_.write(code)
+        fp_.write(salt.utils.stringutils.to_str(code))
 
     if powershell:
         cmd = [lang, "-File", codefile]
@@ -2601,6 +2680,7 @@ def run_chroot(root,
                cwd=None,
                stdin=None,
                runas=None,
+               group=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
                env=None,
@@ -2641,6 +2721,9 @@ def run_chroot(root,
 
     runas
         User to run script as.
+
+    group
+        Group to run script as.
 
     shell
         Shell to execute under. Defaults to the system default shell.
@@ -2751,13 +2834,14 @@ def run_chroot(root,
         sh_ = '/bin/bash'
 
     if isinstance(cmd, (list, tuple)):
-        cmd = ' '.join([str(i) for i in cmd])
+        cmd = ' '.join([six.text_type(i) for i in cmd])
     cmd = 'chroot {0} {1} -c {2}'.format(root, sh_, _cmd_quote(cmd))
 
     run_func = __context__.pop('cmd.run_chroot.func', run_all)
 
     ret = run_func(cmd,
                    runas=runas,
+                   group=group,
                    cwd=cwd,
                    stdin=stdin,
                    shell=shell,
@@ -2795,7 +2879,7 @@ def run_chroot(root,
     __salt__['mount.umount'](os.path.join(root, 'proc'))
     __salt__['mount.umount'](os.path.join(root, 'dev'))
     if hide_output:
-        ret[u'stdout'] = ret[u'stderr'] = u''
+        ret['stdout'] = ret['stderr'] = ''
     return ret
 
 
@@ -2811,7 +2895,8 @@ def _is_valid_shell(shell):
     if os.path.exists(shells):
         try:
             with salt.utils.files.fopen(shells, 'r') as shell_fp:
-                lines = shell_fp.read().splitlines()
+                lines = [salt.utils.stringutils.to_unicode(x)
+                         for x in shell_fp.read().splitlines()]
             for line in lines:
                 if line.startswith('#'):
                     continue
@@ -2843,7 +2928,8 @@ def shells():
     if os.path.exists(shells_fn):
         try:
             with salt.utils.files.fopen(shells_fn, 'r') as shell_fp:
-                lines = shell_fp.read().splitlines()
+                lines = [salt.utils.stringutils.to_unicode(x)
+                         for x in shell_fp.read().splitlines()]
             for line in lines:
                 line = line.strip()
                 if line.startswith('#'):
@@ -3239,6 +3325,13 @@ def powershell(cmd,
     else:
         encoded_cmd = False
 
+    # Put the whole command inside a try / catch block
+    # Some errors in PowerShell are not "Terminating Errors" and will not be
+    # caught in a try/catch block. For example, the `Get-WmiObject` command will
+    # often return a "Non Terminating Error". To fix this, make sure
+    # `-ErrorAction Stop` is set in the powershell command
+    cmd = 'try {' + cmd + '} catch { "{}" | ConvertTo-JSON}'
+
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
                    cwd=cwd,
@@ -3263,7 +3356,7 @@ def powershell(cmd,
                    **kwargs)
 
     try:
-        return json.loads(response)
+        return salt.utils.json.loads(response)
     except Exception:
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
@@ -3569,7 +3662,7 @@ def powershell_all(cmd,
 
     # If we fail to parse stdoutput we will raise an exception
     try:
-        result = json.loads(stdoutput)
+        result = salt.utils.json.loads(stdoutput)
     except Exception:
         err_msg = "cmd.powershell_all " + \
                   "cannot parse the Powershell output."
@@ -3595,6 +3688,7 @@ def powershell_all(cmd,
 def run_bg(cmd,
         cwd=None,
         runas=None,
+        group=None,
         shell=DEFAULT_SHELL,
         python_shell=None,
         env=None,
@@ -3618,6 +3712,12 @@ def run_bg(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    .. note::
+
+        If the init system is systemd and the backgrounded task should run even if the salt-minion process
+        is restarted, prepend ``systemd-run --scope`` to the command.  This will reparent the process in its
+        own scope separate from salt-minion, and will not be affected by restarting the minion service.
+
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
     :param str cwd: The current working directory to execute the command in.
@@ -3635,6 +3735,9 @@ def run_bg(cmd,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -3755,6 +3858,7 @@ def run_bg(cmd,
                with_communicate=False,
                rstrip=False,
                runas=runas,
+               group=group,
                shell=shell,
                python_shell=python_shell,
                cwd=cwd,

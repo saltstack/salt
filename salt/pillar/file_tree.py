@@ -178,7 +178,7 @@ will result in the following pillar data for minions in the node group
                 file2.txt:
                     Contents of file #2.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import fnmatch
@@ -190,8 +190,10 @@ import salt.loader
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.path
 import salt.utils.stringio
 import salt.template
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -199,7 +201,7 @@ log = logging.getLogger(__name__)
 
 def _on_walk_error(err):
     '''
-    Log os.walk() error.
+    Log salt.utils.path.os_walk() error.
     '''
     log.error('%s: %s', err.filename, err.strerror)
 
@@ -220,7 +222,7 @@ def _check_newline(prefix, file_name, keep_newline):
             if fnmatch.fnmatch(full_path, pattern):
                 return False
         except TypeError:
-            if fnmatch.fnmatch(full_path, str(pattern)):
+            if fnmatch.fnmatch(full_path, six.text_type(pattern)):
                 return False
     return True
 
@@ -239,7 +241,7 @@ def _construct_pillar(top_dir,
     renderers = salt.loader.render(__opts__, __salt__)
 
     norm_top_dir = os.path.normpath(top_dir)
-    for dir_path, dir_names, file_names in os.walk(
+    for dir_path, dir_names, file_names in salt.utils.path.os_walk(
             top_dir, topdown=True, onerror=_on_walk_error,
             followlinks=follow_dir_links):
         # Find current path in pillar tree
@@ -403,7 +405,7 @@ def _ext_pillar(minion_id,
                     match = _res['minions']
                     if minion_id in match:
                         ngroup_dir = os.path.join(
-                            nodegroups_dir, str(nodegroup))
+                            nodegroups_dir, six.text_type(nodegroup))
                         ngroup_pillar = salt.utils.dictupdate.merge(ngroup_pillar,
                             _construct_pillar(ngroup_dir,
                                               follow_dir_links,

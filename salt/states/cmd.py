@@ -232,18 +232,18 @@ To use it, one may pass it like this. Example:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import copy
-import json
 import logging
 
 # Import salt libs
 import salt.utils.args
 import salt.utils.functools
+import salt.utils.json
 from salt.exceptions import CommandExecutionError, SaltRenderError
-from salt.ext.six import string_types
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -264,7 +264,7 @@ def _reinterpreted_state(state):
 
     is_json = False
     try:
-        data = json.loads(out)
+        data = salt.utils.json.loads(out)
         if not isinstance(data, dict):
             return _failout(
                 state,
@@ -317,9 +317,9 @@ def _failout(state, msg):
 
 
 def _is_true(val):
-    if val and str(val).lower() in ('true', 'yes', '1'):
+    if val and six.text_type(val).lower() in ('true', 'yes', '1'):
         return True
-    elif str(val).lower() in ('false', 'no', '0'):
+    elif six.text_type(val).lower() in ('false', 'no', '0'):
         return False
     raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
@@ -339,7 +339,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     cmd_kwargs['bg'] = False
 
     if onlyif is not None:
-        if isinstance(onlyif, string_types):
+        if isinstance(onlyif, six.string_types):
             cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs)
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd != 0:
@@ -354,7 +354,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
                     return {'comment': 'onlyif condition is false: {0}'.format(entry),
                             'skip_watch': True,
                             'result': True}
-        elif not isinstance(onlyif, string_types):
+        elif not isinstance(onlyif, six.string_types):
             if not onlyif:
                 log.debug('Command not run: onlyif did not evaluate to string_type')
                 return {'comment': 'onlyif condition is false',
@@ -362,7 +362,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
                         'result': True}
 
     if unless is not None:
-        if isinstance(unless, string_types):
+        if isinstance(unless, six.string_types):
             cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, python_shell=True, **cmd_kwargs)
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd == 0:
@@ -378,14 +378,14 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
                 return {'comment': 'unless condition is true',
                         'skip_watch': True,
                         'result': True}
-        elif not isinstance(unless, string_types):
+        elif not isinstance(unless, six.string_types):
             if unless:
                 log.debug('Command not run: unless did not evaluate to string_type')
                 return {'comment': 'unless condition is true',
                         'skip_watch': True,
                         'result': True}
 
-    if isinstance(creates, string_types) and os.path.exists(creates):
+    if isinstance(creates, six.string_types) and os.path.exists(creates):
         return {'comment': '{0} exists'.format(creates),
                 'result': True}
     elif isinstance(creates, list) and all([
@@ -831,15 +831,15 @@ def run(name,
            'result': False,
            'comment': ''}
 
-    if u'quiet' in kwargs:
-        quiet = kwargs.pop(u'quiet')
+    if 'quiet' in kwargs:
+        quiet = kwargs.pop('quiet')
         msg = (
-            u'The \'quiet\' argument for cmd.run has been deprecated since '
-            u'2014.1.0 and will be removed as of the Neon release. Please set '
-            u'\'output_loglevel\' to \'quiet\' instead.'
+            'The \'quiet\' argument for cmd.run has been deprecated since '
+            '2014.1.0 and will be removed as of the Neon release. Please set '
+            '\'output_loglevel\' to \'quiet\' instead.'
         )
-        salt.utils.versions.warn_until(u'Neon', msg)
-        ret.setdefault(u'warnings', []).append(msg)
+        salt.utils.versions.warn_until('Neon', msg)
+        ret.setdefault('warnings', []).append(msg)
     else:
         quiet = False
 
@@ -893,7 +893,7 @@ def run(name,
             name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
     except CommandExecutionError as err:
-        ret['comment'] = str(err)
+        ret['comment'] = six.text_type(err)
         return ret
 
     ret['changes'] = cmd_all
@@ -1152,7 +1152,7 @@ def script(name,
     try:
         cmd_all = __salt__['cmd.script'](source, python_shell=True, **cmd_kwargs)
     except (CommandExecutionError, SaltRenderError, IOError) as err:
-        ret['comment'] = str(err)
+        ret['comment'] = six.text_type(err)
         return ret
 
     ret['changes'] = cmd_all
@@ -1212,7 +1212,7 @@ def call(name,
             'name': name
             'changes': {'retval': result},
             'result': True if result is None else bool(result),
-            'comment': result if isinstance(result, string_types) else ''
+            'comment': result if isinstance(result, six.string_types) else ''
         }
     '''
     ret = {'name': name,
@@ -1244,7 +1244,7 @@ def call(name,
         # result must be JSON serializable else we get an error
         ret['changes'] = {'retval': result}
         ret['result'] = True if result is None else bool(result)
-        if isinstance(result, string_types):
+        if isinstance(result, six.string_types):
             ret['comment'] = result
         return ret
 

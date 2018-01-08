@@ -2,13 +2,12 @@
 '''
 Create ssh executor system
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 # Import python libs
 import logging
 import os
 import tarfile
 import tempfile
-import json
 import shutil
 from contextlib import closing
 
@@ -16,6 +15,9 @@ from contextlib import closing
 import salt.client.ssh.shell
 import salt.client.ssh
 import salt.utils.files
+import salt.utils.json
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
@@ -179,13 +181,13 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
             [salt.utils.url.create('_utils')],
             ]
     with salt.utils.files.fopen(lowfn, 'w+') as fp_:
-        fp_.write(json.dumps(chunks))
+        salt.utils.json.dump(chunks, fp_)
     if pillar:
         with salt.utils.files.fopen(pillarfn, 'w+') as fp_:
-            fp_.write(json.dumps(pillar))
+            salt.utils.json.dump(pillar, fp_)
     if roster_grains:
         with salt.utils.files.fopen(roster_grainsfn, 'w+') as fp_:
-            fp_.write(json.dumps(roster_grains))
+            salt.utils.json.dump(roster_grains, fp_)
 
     if id_ is None:
         id_ = ''
@@ -193,7 +195,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
         cachedir = os.path.join('salt-ssh', id_).rstrip(os.sep)
     except AttributeError:
         # Minion ID should always be a str, but don't let an int break this
-        cachedir = os.path.join('salt-ssh', str(id_)).rstrip(os.sep)
+        cachedir = os.path.join('salt-ssh', six.text_type(id_)).rstrip(os.sep)
 
     for saltenv in file_refs:
         # Location where files in this saltenv will be cached
@@ -241,7 +243,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
         cwd = None
     os.chdir(gendir)
     with closing(tarfile.open(trans_tar, 'w:gz')) as tfp:
-        for root, dirs, files in os.walk(gendir):
+        for root, dirs, files in salt.utils.path.os_walk(gendir):
             for name in files:
                 full = os.path.join(root, name)
                 tfp.add(full[len(gendir):].lstrip(os.sep))

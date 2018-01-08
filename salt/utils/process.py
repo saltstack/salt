@@ -232,12 +232,12 @@ def get_pidfile(pidfile):
     '''
     Return the pid from a pidfile as an integer
     '''
-    with salt.utils.files.fopen(pidfile) as pdf:
-        pid = pdf.read()
-    if pid:
+    try:
+        with salt.utils.files.fopen(pidfile) as pdf:
+            pid = pdf.read().strip()
         return int(pid)
-    else:
-        return
+    except (OSError, IOError, TypeError, ValueError):
+        return None
 
 
 def clean_proc(proc, wait_for_kill=10):

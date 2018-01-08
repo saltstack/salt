@@ -9,6 +9,9 @@ from __future__ import absolute_import
 import fnmatch
 import os
 
+# Import Salt libs
+import salt.utils.path
+
 # Import Salt Testing libs
 from tests.support.unit import TestCase
 from tests.support.paths import CODE_DIR
@@ -65,7 +68,7 @@ class BadTestModuleNamesTestCase(TestCase):
         excluded_dirs, included_dirs = tuple(EXCLUDED_DIRS), tuple(INCLUDED_DIRS)
         tests_dir = os.path.join(CODE_DIR, 'tests')
         bad_names = []
-        for root, dirs, files in os.walk(tests_dir):
+        for root, dirs, files in salt.utils.path.os_walk(tests_dir):
             reldir = os.path.relpath(root, CODE_DIR)
             if (reldir.startswith(excluded_dirs) and not self._match_dirs(reldir, included_dirs)) \
                     or reldir.endswith('__pycache__'):

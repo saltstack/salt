@@ -49,6 +49,7 @@ Example Provider Configuration
 # Import python libs
 from __future__ import absolute_import
 import os
+import sys
 import re
 import pprint
 import logging
@@ -58,6 +59,7 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error
+LIBCLOUD_IMPORT_ERROR = None
 try:
     import libcloud
     from libcloud.compute.types import Provider
@@ -78,6 +80,7 @@ try:
         libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBCLOUD = True
 except ImportError:
+    LIBCLOUD_IMPORT_ERROR = sys.exc_info()
     HAS_LIBCLOUD = False
 # pylint: enable=import-error
 
@@ -155,6 +158,9 @@ def get_dependencies():
     '''
     Warn if dependencies aren't met.
     '''
+    if LIBCLOUD_IMPORT_ERROR:
+        log.error("Failure when importing LibCloud: ", exc_info=LIBCLOUD_IMPORT_ERROR)
+        log.error("Note: The libcloud dependency is called 'apache-libcloud' on PyPi/pip.")
     return config.check_driver_dependencies(
         __virtualname__,
         {'libcloud': HAS_LIBCLOUD}

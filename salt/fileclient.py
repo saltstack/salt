@@ -2,7 +2,7 @@
 '''
 Classes that manage file clients
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import contextlib
@@ -124,7 +124,7 @@ class Client(object):
 
         filelist = set()
 
-        for root, dirs, files in os.walk(destdir, followlinks=True):
+        for root, dirs, files in salt.utils.path.os_walk(destdir, followlinks=True):
             for name in files:
                 path = os.path.join(root, name)
                 filelist.add(path)
@@ -359,7 +359,7 @@ class Client(object):
                 )
                 return states
             for path in self.opts['file_roots'][saltenv]:
-                for root, dirs, files in os.walk(path, topdown=True):
+                for root, dirs, files in salt.utils.path.os_walk(path, topdown=True):
                     log.debug(
                         'Searching for states in dirs %s and files %s',
                         dirs, files
@@ -504,7 +504,7 @@ class Client(object):
                     'Path \'{0}\' is not absolute'.format(url_path)
                 )
             if dest is None:
-                with salt.utils.files.fopen(url_path, 'r') as fp_:
+                with salt.utils.files.fopen(url_path, 'rb') as fp_:
                     data = fp_.read()
                 return data
             return url_path
@@ -512,7 +512,7 @@ class Client(object):
         if url_scheme == 'salt':
             result = self.get_file(url, dest, makedirs, saltenv, cachedir=cachedir)
             if result and dest is None:
-                with salt.utils.files.fopen(result, 'r') as fp_:
+                with salt.utils.files.fopen(result, 'rb') as fp_:
                     data = fp_.read()
                 return data
             return result
@@ -893,7 +893,7 @@ class LocalClient(Client):
             return ret
         prefix = prefix.strip('/')
         for path in self.opts['file_roots'][saltenv]:
-            for root, dirs, files in os.walk(
+            for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
                 # Don't walk any directories that match file_ignore_regex or glob
@@ -913,7 +913,7 @@ class LocalClient(Client):
         if saltenv not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][saltenv]:
-            for root, dirs, files in os.walk(
+            for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
                 # Don't walk any directories that match file_ignore_regex or glob
@@ -932,7 +932,7 @@ class LocalClient(Client):
             return ret
         prefix = prefix.strip('/')
         for path in self.opts['file_roots'][saltenv]:
-            for root, dirs, files in os.walk(
+            for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
                 ret.append(sdecode(os.path.relpath(root, path)))
@@ -1232,7 +1232,7 @@ class RemoteClient(Client):
                     data_type = type(data).__name__
                 except AttributeError:
                     # Shouldn't happen, but don't let this cause a traceback.
-                    data_type = str(type(data))
+                    data_type = six.text_type(type(data))
                 transport_tries += 1
                 log.warning(
                     'Data transport is broken, got: %s, type: %s, '

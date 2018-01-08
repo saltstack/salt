@@ -21,6 +21,7 @@ import re
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.decorators as decorators
@@ -78,7 +79,7 @@ def _available_services():
     '''
     available_services = dict()
     for launch_dir in _launchd_paths():
-        for root, dirs, files in os.walk(launch_dir):
+        for root, dirs, files in salt.utils.path.os_walk(launch_dir):
             for filename in files:
                 file_path = os.path.join(root, filename)
                 # Follow symbolic links of files in _launchd_paths

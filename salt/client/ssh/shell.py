@@ -2,21 +2,23 @@
 '''
 Manage transport commands via ssh
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 # Import python libs
 import re
 import os
 import sys
-import json
 import time
 import logging
 import subprocess
 
 # Import salt libs
 import salt.defaults.exitcodes
+import salt.utils.json
 import salt.utils.nb_popen
 import salt.utils.vt
+
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +90,7 @@ class Shell(object):
         self.host = host.strip('[]')
         self.user = user
         self.port = port
-        self.passwd = str(passwd) if passwd else passwd
+        self.passwd = six.text_type(passwd) if passwd else passwd
         self.priv = priv
         self.timeout = timeout
         self.sudo = sudo
@@ -418,7 +420,7 @@ class Shell(object):
                                       'flag:\n{0}').format(stdout)
                         return ret_stdout, '', 254
                 elif buff and buff.endswith('_||ext_mods||_'):
-                    mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
+                    mods_raw = salt.utils.json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
                     term.sendline(mods_raw)
                 if stdout:
                     old_stdout = stdout

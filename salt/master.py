@@ -5,7 +5,7 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python libs
-from __future__ import absolute_import, with_statement
+from __future__ import absolute_import, with_statement, print_function, unicode_literals
 import copy
 import ctypes
 import os
@@ -19,6 +19,7 @@ import logging
 import collections
 import multiprocessing
 import salt.serializers.msgpack
+import threading
 
 # Import third party libs
 try:
@@ -49,6 +50,7 @@ import tornado.gen  # pylint: disable=F0401
 # Import salt libs
 import salt.crypt
 import salt.client
+import salt.client.ssh.client
 import salt.payload
 import salt.pillar
 import salt.state
@@ -80,7 +82,9 @@ import salt.utils.schedule
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
+import salt.utils.ssdp
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.config import DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError
 from salt.transport import iter_transport_opts
 from salt.utils.debug import (
@@ -603,6 +607,18 @@ class Master(SMaster):
                 args=(self.opts, self.key, self.master_key),
                 kwargs=kwargs,
                 name='ReqServer')
+
+            # Fire up SSDP discovery publisher
+            if self.opts[u'discovery']:
+                if salt.utils.ssdp.SSDPDiscoveryServer.is_available():
+                    self.process_manager.add_process(salt.utils.ssdp.SSDPDiscoveryServer(
+                        port=self.opts[u'discovery'].get(u'port', DEFAULT_MASTER_OPTS[u'discovery'][u'port']),
+                        listen_ip=self.opts[u'interface'],
+                        answer={u'mapping': self.opts[u'discovery'].get(u'mapping', {})}).run)
+                else:
+                    log.error(u'Unable to load SSDP: asynchronous IO is not available.')
+                    if sys.version_info.major == 2:
+                        log.error(u'You are using Python 2, please install "trollius" module to enable SSDP discovery.')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -1529,7 +1545,7 @@ class AESFuncs(object):
             'publish_auth')
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, str(load['jid']))
+        jid_fn = os.path.join(auth_cache, six.text_type(load['jid']))
         with salt.utils.files.fopen(jid_fn, 'r') as fp_:
             if not load['id'] == fp_.read():
                 return {}
@@ -1758,8 +1774,8 @@ class ClearFuncs(object):
         except Exception as exc:
             log.error('Exception occurred while introspecting %s: %s', fun, exc)
             return {'error': {'name': exc.__class__.__name__,
-                               'args': exc.args,
-                               'message': str(exc)}}
+                              'args': exc.args,
+                              'message': six.text_type(exc)}}
 
     def wheel(self, clear_load):
         '''
@@ -1943,6 +1959,7 @@ class ClearFuncs(object):
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         # Send it!
+        minions.extend(self._send_ssh_pub(payload))
         self._send_pub(payload)
 
         return {
@@ -2004,6 +2021,21 @@ class ClearFuncs(object):
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.PubServerChannel.factory(opts)
             chan.publish(load)
+
+    def _send_ssh_pub(self, load):
+        '''
+        Take a load and send it across the network to connected minions
+        '''
+        minions = []
+        if self.opts['enable_ssh_minions'] is True and isinstance(load['tgt'], six.string_types):
+            # The isinstances makes sure that syndics work
+            log.debug('Use SSHClient for rostered minions')
+            ssh = salt.client.ssh.client.SSHClient()
+            ssh_minions = ssh._prep_ssh(**load).targets.keys()
+            if ssh_minions:
+                minions.extend(ssh_minions)
+                threading.Thread(target=ssh.cmd, kwargs=load).start()
+        return minions
 
     def _prep_pub(self, minions, jid, clear_load, extra, missing):
         '''

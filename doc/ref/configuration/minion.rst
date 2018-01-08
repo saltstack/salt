@@ -321,6 +321,20 @@ option on the Salt master.
 
     master_port: 4506
 
+.. conf_minion:: publish_port
+
+``publish_port``
+---------------
+
+Default: ``4505``
+
+The port of the master publish server, this needs to coincide with the publish_port
+option on the Salt master.
+
+.. code-block:: yaml
+
+    publish_port: 4505
+
 .. conf_minion:: source_interface_name
 
 ``source_interface_name``
@@ -1025,7 +1039,7 @@ restart.
 
 Default: ``0``
 
-Instructs the minion to ping its master(s) every n number of seconds. Used
+Instructs the minion to ping its master(s) every n number of minutes. Used
 primarily as a mitigation technique against minion disconnects.
 
 .. code-block:: yaml

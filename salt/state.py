@@ -13,7 +13,7 @@ The data sent to the state calls is as follows:
 '''
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import copy
@@ -285,14 +285,14 @@ def format_log(ret):
                             # non-ascii characters like "Français" or "Español". See Issue #33605.
                             msg += '\'{0}\' changed from \'{1}\' to \'{2}\'\n'.format(pkg, old, new)
             if not msg:
-                msg = str(ret['changes'])
+                msg = six.text_type(ret['changes'])
             if ret['result'] is True or ret['result'] is None:
                 log.info(msg)
             else:
                 log.error(msg)
     else:
         # catch unhandled data
-        log.info(str(ret))
+        log.info(six.text_type(ret))
 
 
 def master_compile(master_opts, minion_opts, grains, id_, saltenv):
@@ -506,7 +506,7 @@ class Compiler(object):
                                                 'Illegal requisite "{0}", '
                                                 'is SLS {1}\n'
                                                 ).format(
-                                                    str(req_val),
+                                                    six.text_type(req_val),
                                                     body['__sls__']))
                                             continue
 
@@ -701,9 +701,9 @@ class State(object):
             try:
                 pillar_enc = pillar_enc.lower()
             except AttributeError:
-                pillar_enc = str(pillar_enc).lower()
+                pillar_enc = six.text_type(pillar_enc).lower()
         self._pillar_enc = pillar_enc
-        if initial_pillar is not None:
+        if initial_pillar:
             self.opts['pillar'] = initial_pillar
             if self._pillar_override:
                 self.opts['pillar'] = salt.utils.dictupdate.merge(
@@ -721,7 +721,7 @@ class State(object):
         self.pre = {}
         self.__run_num = 0
         self.jid = jid
-        self.instance_id = str(id(self))
+        self.instance_id = six.text_type(id(self))
         self.inject_globals = {}
         self.mocked = mocked
 
@@ -2406,15 +2406,15 @@ class State(object):
             ret = {'ret': chunk_ret}
             if fire_event is True:
                 tag = salt.utils.event.tagify(
-                        [self.jid, self.opts['id'], str(chunk_ret['name'])], 'state_result'
+                        [self.jid, self.opts['id'], six.text_type(chunk_ret['name'])], 'state_result'
                         )
             elif isinstance(fire_event, six.string_types):
                 tag = salt.utils.event.tagify(
-                        [self.jid, self.opts['id'], str(fire_event)], 'state_result'
+                        [self.jid, self.opts['id'], six.text_type(fire_event)], 'state_result'
                         )
             else:
                 tag = salt.utils.event.tagify(
-                        [self.jid, 'prog', self.opts['id'], str(chunk_ret['__run_num__'])], 'job'
+                        [self.jid, 'prog', self.opts['id'], six.text_type(chunk_ret['__run_num__'])], 'job'
                         )
                 ret['len'] = length
             preload = {'jid': self.jid}
@@ -2580,7 +2580,7 @@ class State(object):
                             failed_requisites.add(key)
 
                 _cmt = 'One or more requisite failed: {0}'.format(
-                    ', '.join(str(i) for i in failed_requisites)
+                    ', '.join(six.text_type(i) for i in failed_requisites)
                 )
                 running[tag] = {
                     'changes': {},
@@ -2996,7 +2996,7 @@ class BaseHighState(object):
             state_top_saltenv = self.opts.get('state_top_saltenv', False)
             if state_top_saltenv \
                     and not isinstance(state_top_saltenv, six.string_types):
-                state_top_saltenv = str(state_top_saltenv)
+                state_top_saltenv = six.text_type(state_top_saltenv)
 
             for saltenv in [state_top_saltenv] if state_top_saltenv \
                     else self._get_envs():
@@ -3306,7 +3306,7 @@ class BaseHighState(object):
         try:
             tops = self.get_tops()
         except SaltRenderError as err:
-            log.error('Unable to render top file: ' + str(err.error))
+            log.error('Unable to render top file: %s', err.error)
             return {}
         return self.merge_tops(tops)
 
@@ -3850,7 +3850,7 @@ class BaseHighState(object):
             top = self.get_top()
         except SaltRenderError as err:
             ret[tag_name]['comment'] = 'Unable to render top file: '
-            ret[tag_name]['comment'] += str(err.error)
+            ret[tag_name]['comment'] += six.text_type(err.error)
             return ret
         except Exception:
             trb = traceback.format_exc()

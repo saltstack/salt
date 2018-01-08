@@ -77,7 +77,7 @@
             ('x-ordering', ['host', 'port']),
             ('additionalProperties', True)]
         )
-        >>> print(json.dumps(HostConfig.serialize(), indent=2))
+        >>> print(salt.utils.json.dumps(HostConfig.serialize(), indent=2))
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "Host Configuration",
@@ -170,7 +170,7 @@
 
     .. code-block:: python
 
-        >>> print json.dumps(MyConfig.serialize(), indent=4)
+        >>> print salt.utils.json.dumps(MyConfig.serialize(), indent=4)
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "My Config",
@@ -282,7 +282,7 @@
 
     .. code-block:: python
 
-        >>> print(json.dumps(MyConfig, indent=4))
+        >>> print(salt.utils.json.dumps(MyConfig, indent=4))
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "My Config",
@@ -328,10 +328,10 @@ import functools
 
 # Import salt libs
 import salt.utils.args
+#import salt.utils.yaml
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
-#import yaml
 from salt.ext import six
 
 BASE_SCHEMA_URL = 'https://non-existing.saltstack.com/schemas'
@@ -871,7 +871,7 @@ class BaseSchemaItem(SchemaItem):
     #                                          width=RENDER_COMMENT_YAML_MAX_LINE_LENGTH,
     #                                          initial_indent='# '))
     #        output += '\n'
-    #        yamled_default_value = yaml.dump(self.default, default_flow_style=False).split('\n...', 1)[0]
+    #        yamled_default_value = salt.utils.yaml.safe_dump(self.default, default_flow_style=False).split('\n...', 1)[0]
     #        output += '# Default: {0}\n'.format(yamled_default_value)
     #        output += '#{0}: {1}\n'.format(name, yamled_default_value)
     #    output += '# <---- '

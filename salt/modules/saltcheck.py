@@ -52,9 +52,10 @@ import logging
 import os
 import time
 from json import loads, dumps
-import yaml
 try:
-    import salt.utils
+    import salt.utils.files
+    import salt.utils.path
+    import salt.utils.yaml
     import salt.client
     import salt.exceptions
 except ImportError:
@@ -556,7 +557,7 @@ class StateTestLoader(object):
             with __utils__['files.fopen'](filepath, 'r') as myfile:
                 # with salt.utils.files.fopen(filepath, 'r') as myfile:
                 # with open(filepath, 'r') as myfile:
-                contents_yaml = yaml.load(myfile)
+                contents_yaml = salt.utils.yaml.safe_load(myfile)
                 for key, value in contents_yaml.items():
                     self.test_dict[key] = value
         except:
@@ -581,8 +582,8 @@ class StateTestLoader(object):
         log.info("gather_files: {}".format(time.time()))
         filepath = filepath + os.sep + 'saltcheck-tests'
         rootdir = filepath
-        # for dirname, subdirlist, filelist in os.walk(rootdir):
-        for dirname, dummy, filelist in os.walk(rootdir):
+        # for dirname, subdirlist, filelist in salt.utils.path.os_walk(rootdir):
+        for dirname, dummy, filelist in salt.utils.path.os_walk(rootdir):
             for fname in filelist:
                 if fname.endswith('.tst'):
                     start_path = dirname + os.sep + fname
@@ -612,8 +613,8 @@ class StateTestLoader(object):
             rootdir = full_path
             if os.path.isdir(full_path):
                 log.info("searching path= {}".format(full_path))
-                # for dirname, subdirlist, filelist in os.walk(rootdir, topdown=True):
-                for dirname, subdirlist, dummy in os.walk(rootdir, topdown=True):
+                # for dirname, subdirlist, filelist in salt.utils.path.os_walk(rootdir, topdown=True):
+                for dirname, subdirlist, dummy in salt.utils.path.os_walk(rootdir, topdown=True):
                     if "saltcheck-tests" in subdirlist:
                         self.gather_files(dirname)
                         log.info("test_files list: {}".format(self.test_files))

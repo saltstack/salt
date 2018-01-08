@@ -247,7 +247,7 @@ def install_ruby(ruby, runas=None):
 
     ret = {}
     ret = _rbenv_exec(['install', ruby], env=env, runas=runas, ret=ret)
-    if ret['retcode'] == 0:
+    if ret is not False and ret['retcode'] == 0:
         rehash(runas=runas)
         return ret['stderr']
     else:

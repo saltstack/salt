@@ -6,7 +6,7 @@ tests.unit.utils.test_configparser
 Test the funcs in the custom parsers in salt.utils.configparser
 '''
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import errno
 import logging

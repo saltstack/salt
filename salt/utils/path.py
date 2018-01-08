@@ -401,3 +401,15 @@ def safe_path(path, allow_path=None):
                 good_path = True
 
     return good_path
+
+
+def os_walk(top, *args, **kwargs):
+    '''
+    This is a helper to ensure that we get unicode paths when walking a
+    filesystem. The reason for this is that when using os.walk, the paths in
+    the generator which is returned are all the same type as the top directory
+    passed in. This can cause problems when a str path is passed and the
+    filesystem underneath that path contains files with unicode characters in
+    the filename.
+    '''
+    return os.walk(salt.utils.stringutils.to_unicode(top), *args, **kwargs)

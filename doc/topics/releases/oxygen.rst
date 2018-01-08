@@ -107,6 +107,15 @@ Salt CLI.
 
     salt myminion docker.create image=foo/bar:baz command=/path/to/command start=True
 
+Use SaltSSH Minions like regular Master-Minions
+-----------------------------------------------
+
+The Master process can now also call SSH minions as if they were connected to
+the master using ZeroMQ.  By setting `enable_ssh_minions: True` in the the
+master config file, the master will create a SaltSSH client process which
+connects to the minion and returns the output for the `salt` commandline to use
+like a regular minion. This can be used anywhere the LocalClient is used.
+
 Comparison Operators in Package Installation
 --------------------------------------------
 
@@ -127,6 +136,17 @@ by any master tops matches that are not matched via a top file.
 
 To make master tops matches execute first, followed by top file matches, set
 the new :conf_minion:`master_tops_first` minion config option to ``True``.
+
+Several Jinja Filters Renamed
+-----------------------------
+
+The following Jinja filters (originally added in 2017.7.0) have been renamed
+due to the fact that they were inaccurately named when initially added. The
+original names will be supported until the Neon release of Salt.
+
+- :jinja_ref:`rand_str` renamed to :jinja_ref:`random_hash`
+- :jinja_ref:`jinja_decode_dict` renamed to :jinja_ref:`jinja_encode_dict`
+- :jinja_ref:`jinja_decode_list` renamed to :jinja_ref:`jinja_encode_list`
 
 Return Codes for Runner/Wheel Functions
 ---------------------------------------
@@ -222,6 +242,63 @@ The new grains added are:
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
 * ``swap_total``: Show the configured swap_total for Linux, *BSD, OS X and Solaris/SunOS
 
+Salt Minion Autodiscovery
+------------------------
+
+Salt Minion now no longer need to be configured against a specifig DNS name or IP address of a Master.
+
+For this feature Salt Master now requires port 4520 for UDP broadcast packets to be opened
+and the Salt Minion be able to send UDP packets to the same port.
+
+Connection to a type instead of DNS
+===================================
+
+By now each Minion was connecting to a Master by DNS or IP address. From now on it is possible
+also to connect to a _type_ of a Master. For example, in a network there are three different
+Masters, each corresponds for a particular niche or environment or specific role etc. The Minion
+is supposed to connect only to one of those Masters that is described approriately.
+
+To achieve such an effect, each `/etc/salt/master` configuration should have a `discovery` option,
+which should have a `mapping` element with arbitrary key/value pairs. The same configuration shoul
+be on the Minion, so then when mapping matches, Minion recognises Master as its connection target.
+
+Example for Master configuration (`/etc/salt/master`):
+
+.. code-block:: yaml
+
+       discovery:
+         mapping:
+           description: SES 5.0
+           node: 1
+
+The example above describes a system that is running a particular product, where `description` is
+an arbitrary key and `SES 5.0` is just a string. In order to match exactly this Master, the
+following configuration at Minion should be present:
+
+.. code-block:: yaml
+
+       discovery:
+         match: all  # Can be "all" or "any"
+         mapping:
+           description: SES 5.0
+           node: 1
+
+Notice `match` criteria is set to `all`. This would mean that from all found Masters select only
+that, which `description` is set to `SES 5.0` _and_ `node` is set to `1`. All other Masters will
+be ignored.
+
+
+Limitations
+===========
+
+This feature has a couple of _temporary_ limitations that are subject to change in the future:
+
+- Only one Master on the network is supported. Currently the Minion cannot select which Master
+  out of few the same to choose. This will change to choosing the Master that is least loaded.
+- Minions will accept _any_ master that matches connection criteria without any particular
+  security applied (priv/pub key check, signature, fingerprint etc). That implies that administrator
+  is expected to know his network and make sure it is clean.
+
 Grains Changes
 --------------
 
@@ -243,6 +320,12 @@ New support for Cisco UCS Chassis
 
 The salt proxy minion now allows for control of Cisco USC chassis. See
 the ``cimc`` modules for details.
+
+New support for Cassandra v3
+----------------------------
+
+The ``cassandra_cql`` module now supports Cassandra v3 which has changed
+its internal schema to define keyspaces and columns.
 
 New salt-ssh roster
 -------------------

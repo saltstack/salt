@@ -45,7 +45,7 @@ configuration remains unchanged.
     :ref:`here <docker-authentication>` for more information on how to
     configure access to docker registries in :ref:`Pillar <pillar>` data.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import os
@@ -1669,7 +1669,7 @@ def running(name,
         ret['comment'] = 'The \'image\' argument is required'
         return ret
     elif not isinstance(image, six.string_types):
-        image = str(image)
+        image = six.text_type(image)
 
     try:
         networks = _parse_networks(networks)
@@ -2175,7 +2175,7 @@ def run(name,
         ret['comment'] = 'The \'image\' argument is required'
         return ret
     elif not isinstance(image, six.string_types):
-        image = str(image)
+        image = six.text_type(image)
 
     cret = mod_run_check(onlyif, unless, creates)
     if isinstance(cret, dict):
@@ -2253,6 +2253,7 @@ def run(name,
             force=force,
             **kwargs)
     except Exception as exc:
+        log.exception('Encountered error running container')
         ret['result'] = False
         ret['comment'] = 'Encountered error running container: {0}'.format(exc)
     else:
@@ -2351,11 +2352,11 @@ def stopped(name=None,
         targets = []
         for target in containers:
             if not isinstance(target, six.string_types):
-                target = str(target)
+                target = six.text_type(target)
             targets.append(target)
     elif name:
         if not isinstance(name, six.string_types):
-            targets = [str(name)]
+            targets = [six.text_type(name)]
         else:
             targets = [name]
 

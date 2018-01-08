@@ -12,6 +12,7 @@ import os
 # import salt libs
 import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 import salt.utils.mac_utils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -330,7 +331,7 @@ def list_downloads():
        salt '*' softwareupdate.list_downloads
     '''
     outfiles = []
-    for root, subFolder, files in os.walk('/Library/Updates'):
+    for root, subFolder, files in salt.utils.path.os_walk('/Library/Updates'):
         for f in files:
             outfiles.append(os.path.join(root, f))
 

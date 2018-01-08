@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 import os
 import sys
-import json
 import shutil
 import tarfile
 import zipfile
@@ -72,6 +71,8 @@ except ImportError:
 import salt
 import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.json
+import salt.utils.path
 import salt.exceptions
 import salt.version
 
@@ -240,14 +241,14 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         # Get python 3 tops
         py_shell_cmd = (
             python3_bin + ' -c \'import sys; import json; import salt.utils.thin; '
-            'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))))); exit(0);\' '
-            '\'{0}\''.format(json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
+            'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);\' '
+            '\'{0}\''.format(salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:
-                tops = json.loads(stdout)
+                tops = salt.utils.json.loads(stdout)
                 tops_py_version_mapping['3'] = tops
             except ValueError:
                 pass
@@ -256,14 +257,14 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         py_shell_cmd = (
             python2_bin + ' -c \'from __future__ import print_function; '
             'import sys; import json; import salt.utils.thin; '
-            'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))))); exit(0);\' '
-            '\'{0}\''.format(json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
+            'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);\' '
+            '\'{0}\''.format(salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:
-                tops = json.loads(stdout.decode('utf-8'))
+                tops = salt.utils.json.loads(stdout.decode('utf-8'))
                 tops_py_version_mapping['2'] = tops
             except ValueError:
                 pass
@@ -300,7 +301,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                     elif compress == 'zip':
                         tfp.write(base, arcname=os.path.join('py{0}'.format(py_ver), base))
                 continue
-            for root, dirs, files in os.walk(base, followlinks=True):
+            for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
                     if not name.endswith(('.pyc', '.pyo')):
                         if compress == 'gzip':
@@ -425,14 +426,14 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
         # Get python 3 tops
         py_shell_cmd = (
             python3_bin + ' -c \'import sys; import json; import salt.utils.thin; '
-            'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))))); exit(0);\' '
-            '\'{0}\''.format(json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
+            'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);\' '
+            '\'{0}\''.format(salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:
-                tops = json.loads(stdout)
+                tops = salt.utils.json.loads(stdout)
                 tops_py_version_mapping['3'] = tops
             except ValueError:
                 pass
@@ -441,14 +442,14 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
         py_shell_cmd = (
             python2_bin + ' -c \'from __future__ import print_function; '
             'import sys; import json; import salt.utils.thin; '
-            'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))))); exit(0);\' '
-            '\'{0}\''.format(json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
+            'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);\' '
+            '\'{0}\''.format(salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:
-                tops = json.loads(stdout.decode('utf-8'))
+                tops = salt.utils.json.loads(stdout.decode('utf-8'))
                 tops_py_version_mapping['2'] = tops
             except ValueError:
                 pass
@@ -511,6 +512,8 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
         'salt/utils/vt.py',
         'salt/utils/templates.py',
         'salt/utils/aggregation.py',
+        'salt/utils/yaml.py',
+        'salt/utils/yamldumper.py',
         'salt/utils/yamlloader.py',
         'salt/utils/event.py',
         'salt/serializers',
@@ -594,7 +597,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
                 # top is a single file module
                 tfp.add(base, arcname=os.path.join('py{0}'.format(py_ver), base))
                 continue
-            for root, dirs, files in os.walk(base, followlinks=True):
+            for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
                     if name.endswith(('.pyc', '.pyo')):
                         continue

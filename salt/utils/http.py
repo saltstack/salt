@@ -9,12 +9,13 @@ and the like, but also useful for basic HTTP testing.
 # Import python libs
 from __future__ import absolute_import
 import cgi
-import json
 import logging
-import os.path
+import os
 import pprint
 import socket
-import yaml
+import io
+import zlib
+import gzip
 import re
 
 import ssl
@@ -41,9 +42,11 @@ import salt.loader
 import salt.syspaths
 import salt.utils.args
 import salt.utils.files
+import salt.utils.json
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.version
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
@@ -92,6 +95,37 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 USERAGENT = 'Salt/{0}'.format(salt.version.__version__)
+
+
+def __decompressContent(coding, pgctnt):
+    '''
+    Decompress returned HTTP content depending on the specified encoding.
+    Currently supports identity/none, deflate, and gzip, which should
+    cover 99%+ of the content on the internet.
+    '''
+
+    log.trace("Decompressing %s byte content with compression type: %s", len(pgctnt), coding)
+
+    if coding == 'deflate':
+        pgctnt = zlib.decompress(pgctnt, -zlib.MAX_WBITS)
+
+    elif coding == 'gzip':
+        buf = io.BytesIO(pgctnt)
+        f = gzip.GzipFile(fileobj=buf)
+        pgctnt = f.read()
+
+    elif coding == "sdch":
+        raise ValueError("SDCH compression is not currently supported")
+    elif coding == "br":
+        raise ValueError("Brotli compression is not currently supported")
+    elif coding == "compress":
+        raise ValueError("LZW compression is not currently supported")
+
+    elif coding == 'identity':
+        pass
+
+    log.trace("Content size after decompression: %s", len(pgctnt))
+    return pgctnt
 
 
 @jinja_filter('http_query')
@@ -197,6 +231,8 @@ def query(url,
     log_url = sanitize_url(url_full, hide_fields)
 
     log.debug('Requesting URL {0} using {1} method'.format(log_url, method))
+    log.debug("Using backend: %s", backend)
+
     if method == 'POST' and log.isEnabledFor(logging.TRACE):
         # Make sure no secret fields show up in logs
         if isinstance(data, dict):
@@ -427,6 +463,8 @@ def query(url,
                     'charset' in res_params and \
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result.body.decode('utf-8')
         ret['body'] = result_text
     else:
         # Tornado
@@ -545,6 +583,14 @@ def query(url,
     log.debug('Response Status Code: {0}'.format(result_status_code))
     log.trace('Response Headers: {0}'.format(result_headers))
     log.trace('Response Cookies: {0}'.format(sess_cookies))
+    # log.trace("Content: %s", result_text)
+
+    coding = result_headers.get('Content-Encoding', "identity")
+
+    # Requests will always decompress the content, and working around that is annoying.
+    if backend != 'requests':
+        result_text = __decompressContent(coding, result_text)
+
     try:
         log.trace('Response Text: {0}'.format(result_text))
     except UnicodeEncodeError as exc:
@@ -604,14 +650,14 @@ def query(url,
             return ret
 
         if decode_type == 'json':
-            ret['dict'] = json.loads(salt.utils.stringutils.to_str(result_text))
+            ret['dict'] = salt.utils.json.loads(result_text)
         elif decode_type == 'xml':
             ret['dict'] = []
             items = ET.fromstring(result_text)
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
         elif decode_type == 'yaml':
-            ret['dict'] = yaml.safe_load(result_text)
+            ret['dict'] = salt.utils.yaml.safe_load(result_text)
         else:
             text = True
 

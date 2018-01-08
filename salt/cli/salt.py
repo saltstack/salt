@@ -181,7 +181,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 for full_ret in self.local_client.cmd_cli(**kwargs):
                     ret_, out, retcode = self._format_ret(full_ret)
                     ret.update(ret_)
-                self._output_ret(ret, out)
+                self._output_ret(ret, out, retcode=retcode)
             else:
                 if self.options.verbose:
                     kwargs['verbose'] = True
@@ -190,7 +190,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     try:
                         ret_, out, retcode = self._format_ret(full_ret)
                         retcodes.append(retcode)
-                        self._output_ret(ret_, out)
+                        self._output_ret(ret_, out, retcode=retcode)
                         ret.update(full_ret)
                     except KeyError:
                         errors.append(full_ret)
@@ -212,7 +212,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
         except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
             ret = str(exc)
-            self._output_ret(ret, '')
+            self._output_ret(ret, '', retcode=1)
 
     def _preview_target(self):
         '''
@@ -352,7 +352,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                                   'Requested job was still run but output cannot be displayed.\n')
         salt.output.update_progress(self.config, progress, self.progress_bar, out)
 
-    def _output_ret(self, ret, out):
+    def _output_ret(self, ret, out, retcode=0):
         '''
         Print the output from a single return to the terminal
         '''
@@ -362,7 +362,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             self._print_docs(ret)
         else:
             # Determine the proper output method and run it
-            salt.output.display_output(ret, out, self.config)
+            salt.output.display_output(ret,
+                                       out=out,
+                                       opts=self.config,
+                                       _retcode=retcode)
         if not ret:
             sys.stderr.write('ERROR: No return received\n')
             sys.exit(2)

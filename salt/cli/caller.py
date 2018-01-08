@@ -145,8 +145,10 @@ class BaseCaller(object):
                 print_ret = ret.get('return', {})
             salt.output.display_output(
                     {'local': print_ret},
-                    out,
-                    self.opts)
+                    out=out,
+                    opts=self.opts,
+                    _retcode=ret.get('retcode', 0))
+            # _retcode will be available in the kwargs of the outputter function
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
         except SaltInvocationError as err:
@@ -372,8 +374,10 @@ class RAETCaller(BaseCaller):
                 self.process.terminate()
             salt.output.display_output(
                     {'local': print_ret},
-                    ret.get('out', 'nested'),
-                    self.opts)
+                    out=ret.get('out', 'nested'),
+                    opts=self.opts,
+                    _retcode=ret.get('retcode', 0))
+            # _retcode will be available in the kwargs of the outputter function
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
 

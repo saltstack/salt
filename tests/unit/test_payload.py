@@ -8,7 +8,7 @@
 '''
 
 # Import Salt libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import errno
 import threading
@@ -84,9 +84,10 @@ class SREQTestCase(TestCase):
                     #  Wait for next request from client
                     message = socket.recv(zmq.NOBLOCK)
                     msg_deserialized = payload.loads(message)
-                    log.info('Echo server received message: {0}'.format(msg_deserialized))
+                    log.info('Echo server received message: %s', msg_deserialized)
                     if isinstance(msg_deserialized['load'], dict) and msg_deserialized['load'].get('sleep'):
-                        log.info('Test echo server sleeping for {0} seconds'.format(msg_deserialized['load']['sleep']))
+                        log.info('Test echo server sleeping for %s seconds',
+                                 msg_deserialized['load']['sleep'])
                         time.sleep(msg_deserialized['load']['sleep'])
                     socket.send(message)
                 except zmq.ZMQError as exc:

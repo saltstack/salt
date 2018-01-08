@@ -3,7 +3,7 @@
 Tests for the file state
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import os
 import textwrap
@@ -99,11 +99,11 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         state_key = 'cmd_|-{0}_|-{0}_|-run'.format(self.test_tmp_path)
         with salt.utils.files.fopen(self.state_file, 'w') as fb_:
-            fb_.write(textwrap.dedent('''
+            fb_.write(salt.utils.stringutils.to_str(textwrap.dedent('''
                 {0}:
                   cmd.run:
                     - unless: echo cheese > {1}
-                '''.format(self.test_tmp_path, self.test_file)))
+                '''.format(self.test_tmp_path, self.test_file))))
 
         ret = self.run_function('state.sls', [self.state_name])
         self.assertTrue(ret[state_key]['result'])
@@ -130,11 +130,11 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         state_key = 'cmd_|-echo >> {0}_|-echo >> {0}_|-run'.format(self.test_file)
         with salt.utils.files.fopen(self.state_file, 'w') as fb_:
-            fb_.write(textwrap.dedent('''
+            fb_.write(salt.utils.stringutils.to_str(textwrap.dedent('''
                 echo >> {0}:
                   cmd.run:
                     - creates: {0}
-                '''.format(self.test_file)))
+                '''.format(self.test_file))))
 
         ret = self.run_function('state.sls', [self.state_name])
         self.assertTrue(ret[state_key]['result'])
@@ -147,11 +147,11 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         os.remove(self.test_file)
         state_key = 'cmd_|-echo >> {0}_|-echo >> {0}_|-run'.format(self.test_file)
         with salt.utils.files.fopen(self.state_file, 'w') as fb_:
-            fb_.write(textwrap.dedent('''
+            fb_.write(salt.utils.stringutils.to_str(textwrap.dedent('''
                 echo >> {0}:
                   cmd.run:
                     - creates: {0}
-                '''.format(self.test_file)))
+                '''.format(self.test_file))))
 
         ret = self.run_function('state.sls', [self.state_name])
         self.assertTrue(ret[state_key]['result'])
@@ -163,10 +163,10 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         state_key = 'cmd_|-echo test > {0}_|-echo test > {0}_|-run'.format(self.test_file)
         with salt.utils.files.fopen(self.state_file, 'w') as fb_:
-            fb_.write(textwrap.dedent('''
+            fb_.write(salt.utils.stringutils.to_str(textwrap.dedent('''
                 echo test > {0}:
                   cmd.run
-                '''.format(self.test_file)))
+                '''.format(self.test_file))))
 
         ret = self.run_function('state.sls', [self.state_name])
         self.assertTrue(ret[state_key]['result'])
@@ -194,7 +194,7 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
         biscuits_key = 'cmd_|-biscuits_|-echo biscuits_|-wait'
 
         with salt.utils.files.fopen(self.state_file, 'w') as fb_:
-            fb_.write(textwrap.dedent('''
+            fb_.write(salt.utils.stringutils.to_str(textwrap.dedent('''
                 saltines:
                   cmd.run:
                     - name: echo changed=true
@@ -207,7 +207,7 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
                     - cwd: /
                     - watch:
                         - cmd: saltines
-                '''))
+                ''')))
 
         ret = self.run_function('state.sls', [self.state_name])
         self.assertTrue(ret[saltines_key]['result'])

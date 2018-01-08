@@ -4,13 +4,13 @@ Sudo executor module
 '''
 # Import python libs
 from __future__ import absolute_import
-import json
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
+import salt.utils.json
 import salt.utils.path
 import salt.syspaths
 
@@ -70,7 +70,7 @@ def execute(opts, data, func, args, kwargs):
     cmd_ret = __salt__['cmd.run_all'](cmd, use_vt=True, python_shell=False)
 
     if cmd_ret['retcode'] == 0:
-        cmd_meta = json.loads(cmd_ret['stdout'])['local']
+        cmd_meta = salt.utils.json.loads(cmd_ret['stdout'])['local']
         ret = cmd_meta['return']
         __context__['retcode'] = cmd_meta.get('retcode', 0)
     else:

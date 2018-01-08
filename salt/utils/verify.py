@@ -28,6 +28,7 @@ from salt.exceptions import SaltClientError, SaltSystemExit, \
     CommandExecutionError
 import salt.defaults.exitcodes
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 import salt.utils.versions
@@ -269,7 +270,7 @@ def verify_env(
                 fsubdir = os.path.join(dir_, subdir)
                 if '{0}jobs'.format(os.path.sep) in fsubdir:
                     continue
-                for root, dirs, files in os.walk(fsubdir):
+                for root, dirs, files in salt.utils.path.os_walk(fsubdir):
                     for name in files:
                         if name.startswith('.'):
                             continue
@@ -577,7 +578,14 @@ def win_verify_env(
 
     # Make sure the file_roots is not set to something unsafe since permissions
     # on that directory are reset
-    if not salt.utils.path.safe_path(path=path):
+
+    # `salt.utils.path.safe_path` will consider anything inside `C:\Windows` to
+    # be unsafe. In some instances the test suite uses
+    # `C:\Windows\Temp\salt-tests-tmpdir\rootdir` as the file_roots. So, we need
+    # to consider anything in `C:\Windows\Temp` to be safe
+    system_root = os.environ.get('SystemRoot', r'C:\Windows')
+    allow_path = '\\'.join([system_root, 'TEMP'])
+    if not salt.utils.path.safe_path(path=path, allow_path=allow_path):
         raise CommandExecutionError(
             '`file_roots` set to a possibly unsafe location: {0}'.format(path)
         )

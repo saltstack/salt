@@ -3,7 +3,7 @@
 Integration tests for the docker_network states
 '''
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import functools
 import logging

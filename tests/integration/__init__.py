@@ -10,7 +10,6 @@ import os
 import re
 import sys
 import copy
-import json
 import time
 import stat
 import errno
@@ -55,6 +54,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.log.setup as salt_log_setup
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
@@ -68,7 +68,6 @@ except ImportError:
     pass
 
 # Import 3rd-party libs
-import yaml
 import msgpack
 from salt.ext import six
 from salt.ext.six.moves import cStringIO
@@ -808,7 +807,26 @@ class TestDaemon(object):
                 os.path.join(FILES, 'pillar', 'base'),
             ]
         }
+        minion_opts['pillar_roots'] = {
+            'base': [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(FILES, 'pillar', 'base'),
+            ]
+        }
         master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
+            'base': [
+                os.path.join(FILES, 'file', 'base'),
+                # Let's support runtime created files that can be used like:
+                #   salt://my-temp-file.txt
+                RUNTIME_VARS.TMP_STATE_TREE
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(FILES, 'file', 'prod'),
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE
+            ]
+        }
+        minion_opts['file_roots'] = {
             'base': [
                 os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
@@ -915,24 +933,18 @@ class TestDaemon(object):
         for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
             with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
-                fp_.write(yaml.dump(computed_config, default_flow_style=False))
+                salt.utils.yaml.safe_dump(computed_config, fp_, default_flow_style=False)
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(sub_minion_computed_config, default_flow_style=False)
-            )
+            salt.utils.yaml.safe_dump(sub_minion_computed_config, wfh, default_flow_style=False)
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'master'))
 
         syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(syndic_master_computed_config, default_flow_style=False)
-            )
+            salt.utils.yaml.safe_dump(syndic_master_computed_config, wfh, default_flow_style=False)
         syndic_computed_config = copy.deepcopy(syndic_opts)
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(syndic_computed_config, default_flow_style=False)
-            )
+            salt.utils.yaml.safe_dump(syndic_computed_config, wfh, default_flow_style=False)
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'master'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 

@@ -19,7 +19,6 @@ except ImportError:
     pass
 
 # Import 3rd-party libs
-import yaml
 try:
     import git  # pylint: disable=unused-import
     HAS_GITPYTHON = True
@@ -39,6 +38,7 @@ import salt.fileserver.gitfs as gitfs
 import salt.utils.gitfs
 import salt.utils.platform
 import salt.utils.win_functions
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                   - baz:
                     - mountpoint: abc
         ''')
-        with patch.dict(gitfs.__opts__, yaml.safe_load(opts_override)):
+        with patch.dict(gitfs.__opts__, salt.utils.yaml.safe_load(opts_override)):
             git_fs = salt.utils.gitfs.GitFS(
                 gitfs.__opts__,
                 gitfs.__opts__['gitfs_remotes'],

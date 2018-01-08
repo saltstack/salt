@@ -15,7 +15,6 @@ import time
 import codecs
 import logging
 import types
-import yaml
 from copy import deepcopy
 
 # pylint: disable=import-error,no-name-in-module
@@ -34,6 +33,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
+import salt.utils.yaml
 import salt.utils.yamlloader as yamlloader
 import salt.utils.zeromq
 import salt.syspaths
@@ -1005,7 +1005,7 @@ VALID_OPTS = {
 
     'queue_dirs': list,
 
-    # Instructs the minion to ping its master(s) every n number of seconds. Used
+    # Instructs the minion to ping its master(s) every n number of minutes. Used
     # primarily as a mitigation technique against minion disconnects.
     'ping_interval': int,
 
@@ -1156,6 +1156,36 @@ VALID_OPTS = {
 
     # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
     'docker.compare_container_networks': dict,
+
+    # SSDP discovery publisher description.
+    # Contains publisher configuration and minion mapping.
+    # Setting it to False disables discovery
+    'discovery': (dict, bool),
+
+    # SSDP discovery mapping
+    # Defines arbitrary data for description and grouping minions across various types of masters,
+    # especially when masters are not related to each other.
+    'mapping': dict,
+
+    # SSDP discovery mapping matcher policy
+    # Values: "any" where at least one key/value pair should be found or
+    # "all", where every key/value should be identical
+    'match': str,
+
+    # Port definition.
+    'port': int,
+
+    # SSDP discovery attempts to send query to the Universe
+    'attempts': int,
+
+    # SSDP discovery pause between the attempts
+    'pause': int,
+
+    # Scheduler should be a dictionary
+    'schedule': dict,
+
+    # Enable calling ssh minions from the salt master
+    'enable_ssh_minions': bool,
 }
 
 # default configurations
@@ -1440,6 +1470,14 @@ DEFAULT_MINION_OPTS = {
         'automatic': ['IPAddress', 'Gateway',
                       'GlobalIPv6Address', 'IPv6Gateway'],
     },
+    'discovery': {
+        'attempts': 3,
+        'pause': 5,
+        'port': 4520,
+        'match': 'any',
+        'mapping': {},
+    },
+    'schedule': {},
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1485,6 +1523,7 @@ DEFAULT_MASTER_OPTS = {
     'env_order': [],
     'saltenv': None,
     'lock_saltenv': False,
+    'pillarenv': None,
     'default_top': 'base',
     'file_client': 'local',
     'git_pillar_base': 'master',
@@ -1758,6 +1797,13 @@ DEFAULT_MASTER_OPTS = {
     'salt_cp_chunk_size': 98304,
     'require_minion_sign_messages': False,
     'drop_messages_signature_fail': False,
+    'discovery': {
+        'port': 4520,
+        'mapping': {},
+    },
+    'schedule': {},
+    'enable_ssh': False,
+    'enable_ssh_minions': False,
 }
 
 
@@ -2052,11 +2098,8 @@ def _read_conf_file(path):
     log.debug('Reading configuration from {0}'.format(path))
     with salt.utils.files.fopen(path, 'r') as conf_file:
         try:
-            conf_opts = yamlloader.load(
-                conf_file.read(),
-                Loader=yamlloader.SaltYamlSafeLoader,
-            ) or {}
-        except yaml.YAMLError as err:
+            conf_opts = salt.utils.yaml.safe_load(conf_file) or {}
+        except salt.utils.yaml.YAMLError as err:
             message = 'Error parsing configuration file: {0} - {1}'.format(path, err)
             log.error(message)
             raise salt.exceptions.SaltConfigurationError(message)
@@ -3718,10 +3761,6 @@ def apply_minion_config(overrides=None,
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
-
-    # if there is no schedule option yet, add an empty scheduler
-    if 'schedule' not in opts:
-        opts['schedule'] = {}
 
     # Make sure hash_type is lowercase
     opts['hash_type'] = opts['hash_type'].lower()

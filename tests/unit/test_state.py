@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import os
 import tempfile
@@ -37,7 +37,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # function doesn't return anything. However, we do want
         # to make sure that the function doesn't stacktrace when
         # called.
-        ret = {'changes': {u'Français': {'old': 'something old',
+        ret = {'changes': {'Français': {'old': 'something old',
                                          'new': 'something new'}},
                'result': True}
         salt.state.format_log(ret)
@@ -56,7 +56,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                 OrderedDict([
                                     ('file', OrderedDict(
                                         [('test1', 'test')]))])])]),
-                        'installed', {'order': 10000}]), ('__sls__', u'issue_35226'), ('__env__', 'base')])}
+                        'installed', {'order': 10000}]), ('__sls__', 'issue_35226'), ('__env__', 'base')])}
             minion_opts = self.get_temp_config('minion')
             minion_opts['pillar'] = {'git': OrderedDict([('test1', 'test')])}
             state_obj = salt.state.State(minion_opts)
@@ -496,5 +496,5 @@ class StateReturnsTestCase(TestCase):
             # Not suitable for export as is
             salt.state.State.verify_ret_for_export(ret)
         salt.state.State.munge_ret_for_export(ret)
-        self.assertIsInstance(ret[u'comment'], six.string_types)
+        self.assertIsInstance(ret['comment'], six.string_types)
         salt.state.State.verify_ret_for_export(ret)

@@ -317,7 +317,7 @@ def get_site_packages(venv):
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
         'from distutils import sysconfig; '
-            'print sysconfig.get_python_lib()'
+            'print(sysconfig.get_python_lib())'
     )
 
     if ret['retcode'] != 0:

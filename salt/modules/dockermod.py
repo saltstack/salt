@@ -212,6 +212,7 @@ from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-bui
 import salt.utils.docker.translate.container
 import salt.utils.docker.translate.network
 import salt.utils.functools
+import salt.utils.json
 import salt.utils.path
 import salt.pillar
 import salt.exceptions
@@ -357,7 +358,7 @@ def _get_client(timeout=NOTSET, **kwargs):
             python_shell=False)
         try:
             docker_machine_json = \
-                json.loads(__utils__['stringutils.to_str'](docker_machine_json))
+                salt.utils.json.loads(docker_machine_json)
             docker_machine_tls = \
                 docker_machine_json['HostOptions']['AuthOptions']
             docker_machine_ip = docker_machine_json['Driver']['IPAddress']
@@ -629,6 +630,7 @@ def _client_wrapper(attr, *args, **kwargs):
         )
         ret = func(*args, **kwargs)
     except docker.errors.APIError as exc:
+        log.exception('Encountered error running API function %s', attr)
         if catch_api_errors:
             # Generic handling of Docker API errors
             raise CommandExecutionError(
@@ -1246,8 +1248,10 @@ def compare_networks(first, second, ignore='Name,Id,Created,Containers'):
                 if bool(subval1) is bool(subval2) is False:
                     continue
                 elif subkey == 'Config':
-                    config1 = sorted(val1['Config'])
-                    config2 = sorted(val2.get('Config', []))
+                    kvsort = lambda x: (list(six.iterkeys(x)),
+                                        list(six.itervalues(x)))
+                    config1 = sorted(val1['Config'], key=kvsort)
+                    config2 = sorted(val2.get('Config', []), key=kvsort)
                     if config1 != config2:
                         ret.setdefault('IPAM', {})['Config'] = {
                             'old': config1, 'new': config2
@@ -2045,7 +2049,10 @@ def logs(name, **kwargs):
                     kwargs['since'], exc
                 )
 
-    return _client_wrapper('logs', name, **kwargs)
+    # logs() returns output as bytestrings
+    return salt.utils.stringutils.to_unicode(
+        _client_wrapper('logs', name, **kwargs)
+    )
 
 
 def pid(name):
@@ -2350,13 +2357,13 @@ def version():
     ret = _client_wrapper('version')
     version_re = re.compile(VERSION_RE)
     if 'Version' in ret:
-        match = version_re.match(str(ret['Version']))
+        match = version_re.match(six.text_type(ret['Version']))
         if match:
             ret['VersionInfo'] = tuple(
                 [int(x) for x in match.group(1).split('.')]
             )
     if 'ApiVersion' in ret:
-        match = version_re.match(str(ret['ApiVersion']))
+        match = version_re.match(six.text_type(ret['ApiVersion']))
         if match:
             ret['ApiVersionInfo'] = tuple(
                 [int(x) for x in match.group(1).split('.')]
@@ -3336,7 +3343,7 @@ def run_container(image,
                                             ret['Id'],
                                             stream=True,
                                             timestamps=False):
-                    output.append(line)
+                    output.append(salt.utils.stringutils.to_unicode(line))
             except CommandExecutionError:
                 msg = (
                     'Failed to get logs from container. This may be because '
@@ -3935,9 +3942,9 @@ def build(path=None,
             )
         else:
             if not isinstance(repository, six.string_types):
-                repository = str(repository)
+                repository = six.text_type(repository)
             if not isinstance(tag, six.string_types):
-                tag = str(tag)
+                tag = six.text_type(tag)
 
     # For the build function in the low-level API, the "tag" refers to the full
     # tag (e.g. myuser/myimage:mytag). This is different than in other
@@ -3965,12 +3972,7 @@ def build(path=None,
 
     stream_data = []
     for line in response:
-        stream_data.extend(
-            json.loads(
-                __utils__['stringutils.to_str'](line),
-                cls=DockerJSONDecoder
-            )
-        )
+        stream_data.extend(salt.utils.json.loads(line, cls=DockerJSONDecoder))
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
@@ -4075,9 +4077,9 @@ def commit(name,
         respository = image
 
     if not isinstance(repository, six.string_types):
-        repository = str(repository)
+        repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
-        tag = str(tag)
+        tag = six.text_type(tag)
 
     time_started = time.time()
     response = _client_wrapper(
@@ -4226,9 +4228,9 @@ def import_(source,
         respository = image
 
     if not isinstance(repository, six.string_types):
-        repository = str(repository)
+        repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
-        tag = str(tag)
+        tag = six.text_type(tag)
 
     path = __salt__['container_resource.cache_file'](source)
 
@@ -4505,7 +4507,7 @@ def pull(image,
     for event in response:
         log.debug('pull event: %s', event)
         try:
-            event = json.loads(__utils__['stringutils.to_str'](event))
+            event = salt.utils.json.loads(event)
         except Exception as exc:
             raise CommandExecutionError(
                 'Unable to interpret API event: \'{0}\''.format(event),
@@ -4575,7 +4577,7 @@ def push(image,
         salt myminion docker.push myuser/mycontainer:mytag
     '''
     if not isinstance(image, six.string_types):
-        image = str(image)
+        image = six.text_type(image)
 
     kwargs = {'stream': True,
               'client_timeout': client_timeout}
@@ -4599,7 +4601,7 @@ def push(image,
     # Iterate through API response and collect information
     for event in response:
         try:
-            event = json.loads(__utils__['stringutils.to_str'](event))
+            event = salt.utils.json.loads(event)
         except Exception as exc:
             raise CommandExecutionError(
                 'Unable to interpret API event: \'{0}\''.format(event),
@@ -4846,6 +4848,8 @@ def save(name,
 
         try:
             with __utils__['files.fopen'](saved_path, 'rb') as uncompressed:
+                # No need to decode on read and encode on on write, since we're
+                # reading and immediately writing out bytes.
                 if compression != 'gzip':
                     # gzip doesn't use a Compressor object, it uses a .open()
                     # method to open the filehandle. If not using gzip, we need
@@ -4940,9 +4944,9 @@ def tag_(name, repository, tag='latest', force=False, image=None):
         respository = image
 
     if not isinstance(repository, six.string_types):
-        repository = str(repository)
+        repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
-        tag = str(tag)
+        tag = six.text_type(tag)
 
     image_id = inspect_image(name)['Id']
     response = _client_wrapper('tag',
@@ -5952,7 +5956,7 @@ def _script(name,
 
     ret = run_all(
         name,
-        path + ' ' + str(args) if args else path,
+        path + ' ' + six.text_type(args) if args else path,
         exec_driver=exec_driver,
         stdin=stdin,
         python_shell=python_shell,
@@ -6423,30 +6427,30 @@ def _generate_tmp_path():
         'salt.docker.{0}'.format(uuid.uuid4().hex[:6]))
 
 
-def _prepare_trans_tar(name, mods=None, saltenv='base', pillar=None):
+def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None):
     '''
     Prepares a self contained tarball that has the state
     to be applied in the container
     '''
-    chunks = _compile_state(mods, saltenv)
+    chunks = _compile_state(sls_opts, mods)
     # reuse it from salt.ssh, however this function should
     # be somewhere else
     refs = salt.client.ssh.state.lowstate_file_refs(chunks)
     _mk_fileclient()
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-        __opts__,
+        sls_opts,
         __context__['cp.fileclient'],
         chunks, refs, pillar, name)
     return trans_tar
 
 
-def _compile_state(mods=None, saltenv='base'):
+def _compile_state(sls_opts, mods=None):
     '''
     Generates the chunks of lowdata from the list of modules
     '''
-    st_ = HighState(__opts__)
+    st_ = HighState(sls_opts)
 
-    high_data, errors = st_.render_highstate({saltenv: mods})
+    high_data, errors = st_.render_highstate({sls_opts['saltenv']: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
     errors += st_.state.verify_high(high_data)
@@ -6462,26 +6466,6 @@ def _compile_state(mods=None, saltenv='base'):
 
     # Compile and verify the raw chunks
     return st_.state.compile_high_data(high_data)
-
-
-def _gather_pillar(pillarenv, pillar_override, **grains):
-    '''
-    Gathers pillar with a custom set of grains, which should
-    be first retrieved from the container
-    '''
-    pillar = salt.pillar.get_pillar(
-        __opts__,
-        grains,
-        # Not sure if these two are correct
-        __opts__['id'],
-        __opts__['saltenv'],
-        pillar_override=pillar_override,
-        pillarenv=pillarenv
-    )
-    ret = pillar.compile_pillar()
-    if pillar_override and isinstance(pillar_override, dict):
-        ret.update(pillar_override)
-    return ret
 
 
 def call(name, function, *args, **kwargs):
@@ -6572,7 +6556,7 @@ def call(name, function, *args, **kwargs):
         run_all(name, subprocess.list2cmdline(rm_thin_argv))
 
 
-def sls(name, mods=None, saltenv='base', **kwargs):
+def sls(name, mods=None, **kwargs):
     '''
     Apply the states defined by the specified SLS modules to the running
     container
@@ -6592,6 +6576,24 @@ def sls(name, mods=None, saltenv='base', **kwargs):
         Specify the environment from which to retrieve the SLS indicated by the
         `mods` parameter.
 
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+        .. versionadded:: Oxygen
+
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
+        .. versionadded:: Oxygen
+
     CLI Example:
 
     .. code-block:: bash
@@ -6601,13 +6603,30 @@ def sls(name, mods=None, saltenv='base', **kwargs):
     '''
     mods = [item.strip() for item in mods.split(',')] if mods else []
 
+    # Figure out the saltenv/pillarenv to use
+    pillar_override = kwargs.pop('pillar', None)
+    if 'saltenv' not in kwargs:
+        kwargs['saltenv'] = 'base'
+    sls_opts = __utils__['state.get_sls_opts'](__opts__, **kwargs)
+
     # gather grains from the container
     grains = call(name, 'grains.items')
 
     # compile pillar with container grains
-    pillar = _gather_pillar(saltenv, {}, **grains)
+    pillar = salt.pillar.get_pillar(
+        __opts__,
+        grains,
+        __opts__['id'],
+        pillar_override=pillar_override,
+        pillarenv=sls_opts['pillarenv']).compile_pillar()
+    if pillar_override and isinstance(pillar_override, dict):
+        pillar.update(pillar_override)
 
-    trans_tar = _prepare_trans_tar(name, mods=mods, saltenv=saltenv, pillar=pillar)
+    trans_tar = _prepare_trans_tar(
+        name,
+        sls_opts,
+        mods=mods,
+        pillar=pillar)
 
     # where to put the salt trans tar
     trans_dest_path = _generate_tmp_path()
@@ -6657,7 +6676,6 @@ def sls_build(repository,
               tag='latest',
               base='opensuse/python',
               mods=None,
-              saltenv='base',
               dryrun=False,
               **kwargs):
     '''
@@ -6696,6 +6714,24 @@ def sls_build(repository,
     saltenv : base
         Specify the environment from which to retrieve the SLS indicated by the
         `mods` parameter.
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+        .. versionadded:: Oxygen
+
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
+        .. versionadded:: Oxygen
 
     dryrun: False
         when set to True the container will not be commited at the end of
@@ -6740,7 +6776,7 @@ def sls_build(repository,
         start_(id_)
 
         # Now execute the state into the container
-        ret = sls(id_, mods, saltenv, **kwargs)
+        ret = sls(id_, mods, **kwargs)
         # fail if the state was not successful
         if not dryrun and not __utils__['state.check_result'](ret):
             raise CommandExecutionError(ret)

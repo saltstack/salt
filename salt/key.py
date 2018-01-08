@@ -5,10 +5,9 @@ used to manage salt keys directly without interfacing with the CLI.
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
-import json
 import stat
 import shutil
 import fnmatch
@@ -27,9 +26,11 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.json
 import salt.utils.kinds
 import salt.utils.master
 import salt.utils.sdb
+import salt.utils.stringutils
 import salt.utils.user
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -125,7 +126,8 @@ class KeyCLI(object):
             if 'token' in self.opts:
                 try:
                     with salt.utils.files.fopen(os.path.join(self.opts['key_dir'], '.root_key'), 'r') as fp_:
-                        low['key'] = fp_.readline()
+                        low['key'] = \
+                            salt.utils.stringutils.to_unicode(fp_.readline())
                 except IOError:
                     low['token'] = self.opts['token']
             #
@@ -606,7 +608,9 @@ class Key(object):
                 for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(dir_)):
                     if not fn_.startswith('.'):
                         if os.path.isfile(os.path.join(dir_, fn_)):
-                            ret[os.path.basename(dir_)].append(fn_)
+                            ret[os.path.basename(dir_)].append(
+                                salt.utils.stringutils.to_unicode(fn_)
+                            )
             except (OSError, IOError):
                 # key dir kind is not created yet, just skip
                 continue
@@ -664,7 +668,8 @@ class Key(object):
             for key in salt.utils.data.sorted_ignorecase(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
                 with salt.utils.files.fopen(path, 'r') as fp_:
-                    ret[status][key] = fp_.read()
+                    ret[status][key] = \
+                        salt.utils.stringutils.to_unicode(fp_.read())
         return ret
 
     def key_str_all(self):
@@ -677,7 +682,8 @@ class Key(object):
             for key in salt.utils.data.sorted_ignorecase(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
                 with salt.utils.files.fopen(path, 'r') as fp_:
-                    ret[status][key] = fp_.read()
+                    ret[status][key] = \
+                        salt.utils.stringutils.to_unicode(fp_.read())
         return ret
 
     def accept(self, match=None, match_dict=None, include_rejected=False, include_denied=False):
@@ -1027,10 +1033,11 @@ class RaetKey(Key):
                 path = os.path.join(road_cache, road)
                 with salt.utils.files.fopen(path, 'rb') as fp_:
                     if ext == '.json':
-                        data = json.load(fp_)
+                        data = salt.utils.json.load(fp_)
                     elif ext == '.msgpack':
                         data = msgpack.load(fp_)
-                    if data['role'] not in minions:
+                    role = salt.utils.stringutils.to_unicode(data['role'])
+                    if role not in minions:
                         os.remove(path)
 
     def gen_keys(self, keydir=None, keyname=None, keysize=None, user=None):

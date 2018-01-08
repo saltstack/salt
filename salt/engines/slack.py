@@ -94,13 +94,11 @@ In addition, other groups are being loaded from pillars.
 from __future__ import absolute_import
 import ast
 import datetime
-import json
 import itertools
 import logging
 import time
 import re
 import traceback
-import yaml
 
 log = logging.getLogger(__name__)
 
@@ -118,8 +116,9 @@ import salt.runner
 import salt.utils.args
 import salt.utils.event
 import salt.utils.http
+import salt.utils.json
 import salt.utils.slack
-from salt.utils.yamldumper import OrderedDumper
+import salt.utils.yaml
 
 __virtualname__ = 'slack'
 
@@ -372,8 +371,8 @@ class SlackClient(object):
             log.warn('Got a message that I could not log.  The reason is: {}'.format(uee))
 
         # Convert UTF to string
-        _text = json.dumps(_text)
-        _text = yaml.safe_load(_text)
+        _text = salt.utils.json.dumps(_text)
+        _text = salt.utils.yaml.safe_load(_text)
 
         if not _text:
             raise ValueError('_text has no value')
@@ -561,7 +560,7 @@ class SlackClient(object):
         '''
         Print out YAML using the block mode
         '''
-        params = dict(Dumper=OrderedDumper)
+        params = {}
         if 'output_indent' not in __opts__:
             # default indentation
             params.update(default_flow_style=False)
@@ -573,8 +572,8 @@ class SlackClient(object):
             params.update(default_flow_style=True,
                           indent=0)
         try:
-            #return yaml.dump(data, **params).replace("\n\n", "\n")
-            return json.dumps(data, sort_keys=True, indent=1)
+            #return salt.utils.yaml.safe_dump(data, **params).replace("\n\n", "\n")
+            return salt.utils.json.dumps(data, sort_keys=True, indent=1)
         # pylint: disable=broad-except
         except Exception as exc:
             import pprint
@@ -626,8 +625,8 @@ class SlackClient(object):
                 # emulate lookup_jid's return, which is just minion:return
                 # pylint is tripping
                 # pylint: disable=missing-whitespace-after-comma
-                job_data = json.dumps({key:val['return'] for key, val in jid_result.items()})
-                results[jid] = yaml.load(job_data)
+                job_data = salt.utils.json.dumps({key:val['return'] for key, val in jid_result.items()})
+                results[jid] = salt.utils.yaml.safe_load(job_data)
 
         return results
 
@@ -692,7 +691,7 @@ class SlackClient(object):
                         content=return_text)
                     # Handle unicode return
                     log.debug('Got back {} via the slack client'.format(r))
-                    resp = yaml.safe_load(json.dumps(r))
+                    resp = salt.utils.yaml.safe_load(salt.utils.json.dumps(r))
                     if 'ok' in resp and resp['ok'] is False:
                         this_job['channel'].send_message('Error: {0}'.format(resp['error']))
                     del outstanding[jid]

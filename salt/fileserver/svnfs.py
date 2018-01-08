@@ -58,6 +58,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
+import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
@@ -754,7 +755,7 @@ def _file_lists(load, form):
                     # svnfs root (global or per-remote) does not exist in env
                     continue
 
-            for root, dirs, files in os.walk(env_root):
+            for root, dirs, files in salt.utils.path.os_walk(env_root):
                 relpath = os.path.relpath(root, env_root)
                 dir_rel_fn = os.path.join(repo['mountpoint'], relpath)
                 if relpath != '.':

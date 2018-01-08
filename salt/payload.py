@@ -6,7 +6,7 @@ in here
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # import sys  # Use if sys is commented out below
 import logging
 import gc
@@ -201,9 +201,9 @@ class Serial(object):
                 # This is a spurious lint failure as we are gating this check
                 # behind a check for six.PY2.
                 if six.PY2 and isinstance(obj, long) and long > pow(2, 64):  # pylint: disable=incompatible-py3-code
-                    return str(obj)
+                    return six.text_type(obj)
                 elif six.PY3 and isinstance(obj, int) and int > pow(2, 64):
-                    return str(obj)
+                    return six.text_type(obj)
                 else:
                     return obj
             if msgpack.version >= (0, 4, 0):
@@ -252,12 +252,12 @@ class Serial(object):
                 if isinstance(obj, immutabletypes.ImmutableSet):
                     return set(obj)
 
-            if "datetime.datetime" in str(e):
+            if "datetime.datetime" in six.text_type(e):
                 if msgpack.version >= (0, 4, 0):
                     return msgpack.dumps(datetime_encoder(msg), use_bin_type=use_bin_type)
                 else:
                     return msgpack.dumps(datetime_encoder(msg))
-            elif "Immutable" in str(e):
+            elif "Immutable" in six.text_type(e):
                 if msgpack.version >= (0, 4, 0):
                     return msgpack.dumps(msg, default=immutable_encoder, use_bin_type=use_bin_type)
                 else:
