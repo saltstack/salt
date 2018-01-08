@@ -53,7 +53,7 @@ class OutputReturnTest(ShellCase):
         '''
         Tests the return of pprint-formatted data
         '''
-        expected = ["{'local': True}"]
+        expected = ["{u'local': True}"]
         ret = self.run_call('test.ping --out=pprint')
         self.assertEqual(ret, expected)
 
@@ -61,7 +61,7 @@ class OutputReturnTest(ShellCase):
         '''
         Tests the return of raw-formatted data
         '''
-        expected = ["{'local': True}"]
+        expected = ["{u'local': True}"]
         ret = self.run_call('test.ping --out=raw')
         self.assertEqual(ret, expected)
 
