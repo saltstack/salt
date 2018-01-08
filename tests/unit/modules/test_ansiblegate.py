@@ -56,7 +56,6 @@ class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
     def test_ansible_module_help(self):
         '''
         Test help extraction from the module
-        :return:
         '''
         class Module(object):
             '''
@@ -86,7 +85,6 @@ description:
     def test_module_resolver_modlist(self):
         '''
         Test Ansible resolver modules list.
-        :return:
         '''
         self.assertEqual(self.resolver.get_modules_list(),
                          ['four.five.six', 'one.two.three', 'three.six.one'])
@@ -106,7 +104,6 @@ description:
     def test_resolver_module_loader_failure(self):
         '''
         Test Ansible module loader.
-        :return:
         '''
         mod = 'four.five.six'
         self.assertRaises(ImportError, self.resolver.load_module, mod)
@@ -117,20 +114,20 @@ description:
     def test_resolver_module_loader(self):
         '''
         Test Ansible module loader.
-        :return:
         '''
         with patch('salt.modules.ansiblegate.importlib', MagicMock()),\
-            patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
+                patch('salt.modules.ansiblegate.importlib.import_module',
+                      lambda x: x):
             self.assertEqual(self.resolver.load_module('four.five.six'),
                              'ansible.modules.four.five.six')
 
     def test_resolver_module_loader_import_failure(self):
         '''
         Test Ansible module loader failure.
-        :return:
         '''
         with patch('salt.modules.ansiblegate.importlib', MagicMock()),\
-             patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
+                patch('salt.modules.ansiblegate.importlib.import_module',
+                      lambda x: x):
             self.assertRaises(LoaderError,
                               self.resolver.load_module,
                               'something.strange')
@@ -138,7 +135,6 @@ description:
     def test_virtual_function_no_ansible_installed(self):
         '''
         Test Ansible module __virtual__ when ansible is not installed on the minion.
-        :return:
         '''
         with patch('salt.modules.ansiblegate.ansible', None):
             self.assertEqual(ansible.__virtual__(),
@@ -151,7 +147,6 @@ description:
     def test_virtual_function_ansible_is_installed(self):
         '''
         Test Ansible module __virtual__ when ansible is installed on the minion.
-        :return:
         '''
         resolver = MagicMock()
         resolver.resolve = MagicMock()
