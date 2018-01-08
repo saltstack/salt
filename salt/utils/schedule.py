@@ -1030,8 +1030,8 @@ class Schedule(object):
                     else:
                         data['_skip_reason'] = 'skip_explicit'
                         data['run'] = False
-                else:
-                    data['run'] = True
+            else:
+                data['run'] = True
             return data
 
         def _handle_skip_during_range(data):
@@ -1325,23 +1325,19 @@ class Schedule(object):
                     if 'func' in data:
                         func = data['func']
 
-                log.debug('=== before data {} ==='.format(data))
                 if 'skip_explicit' in data:
                     log.debug('=== before data {} ==='.format(data))
                     data = _handle_skip_explicit(data)
-                    log.debug('=== after data {} ==='.format(data))
                     run = data['run']
                     # Override the functiton if passed back
                     if 'func' in data:
                         func = data['func']
 
             # If the job item has continue, then we continue
-            if '_continue' in data and data['continue']:
-                log.debug('=== continuing ===')
+            if '_continue' in data and data['_continue']:
                 continue
 
             if not run:
-                log.debug('===  not run continuing ===')
                 continue
 
             miss_msg = ''
