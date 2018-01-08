@@ -212,7 +212,7 @@ class Serial(object):
                     return msgpack.dumps(verylong_encoder(msg), use_bin_type=use_bin_type)
                 else:
                     return msgpack.dumps(verylong_encoder(msg))
-            except TypeError as e:
+            except TypeError as exc:
                 # msgpack doesn't support datetime.datetime or datetime.date datatype
                 # So here we convert it to a string.
                 # Note that if you want to be able to decode data, you will have to wrap
@@ -222,9 +222,15 @@ class Serial(object):
                 # an ext_hook callable when unpacking (decoding) the msgpack.ExtType object.
                 # See also: https://pypi.python.org/pypi/msgpack-python
                 def datetime_encode(obj):
+                    '''
+                    Convert datetime.datetime object to formatted string
+                    '''
                     return obj.strftime('%Y%m%dT%H:%M:%S.%f')
 
                 def date_encode(obj):
+                    '''
+                    Convert datetime.date object to formatted string
+                    '''
                     return obj.strftime('%Y%m%d')
 
                 def recursive_encoder(obj, datatype, fn_encode):
@@ -256,6 +262,9 @@ class Serial(object):
                         return obj
 
                 def immutable_encoder(obj):
+                    '''
+                    Convert immutable dict,list,set to regular dict,list,set
+                    '''
                     log.debug('IMMUTABLE OBJ: %s', obj)
                     if isinstance(obj, immutabletypes.ImmutableDict):
                         return dict(obj)
@@ -266,11 +275,11 @@ class Serial(object):
 
                 fixed_message_data = None
 
-                if 'datetime.datetime' in six.text_type(e):
+                if 'datetime.datetime' in six.text_type(exc):
                     fixed_message_data = recursive_encoder(msg, datetime.datetime, datetime_encode)
-                elif 'datetime.date' in six.text_type(e):
+                elif 'datetime.date' in six.text_type(exc):
                     fixed_message_data = recursive_encoder(msg, datetime.date, date_encode)
-                elif 'Immutable' in six.text_type(e):
+                elif 'Immutable' in six.text_type(exc):
                     fixed_message_data = immutable_encoder(msg)
 
                 if fixed_message_data is not None:
