@@ -37,11 +37,11 @@ mysql:
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import yaml
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.json
+import salt.utils.yaml
 import salt.exceptions
 
 # Import 3rd-party libs
@@ -54,36 +54,6 @@ try:
     HAS_OSLO = True
 except ImportError:
     pass
-
-if hasattr(yaml, 'CSafeLoader'):
-    YamlLoader = yaml.CSafeLoader
-else:
-    YamlLoader = yaml.SafeLoader
-
-if hasattr(yaml, 'CSafeDumper'):
-    YamlDumper = yaml.CSafeDumper
-else:
-    YamlDumper = yaml.SafeDumper
-
-
-def _represent_yaml_str(self, node):
-    '''
-    Represent for yaml
-    '''
-    return self.represent_scalar(node)
-YamlDumper.add_representer('tag:yaml.org,2002:str',
-                           _represent_yaml_str)
-YamlDumper.add_representer('tag:yaml.org,2002:timestamp',
-                           _represent_yaml_str)
-
-
-def _construct_yaml_str(self, node):
-    '''
-    Construct for yaml
-    '''
-    return self.construct_scalar(node)
-YamlLoader.add_constructor('tag:yaml.org,2002:timestamp',
-                           _construct_yaml_str)
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -108,12 +78,9 @@ def _parse_template(tmpl_str):
         tpl = salt.utils.json.loads(tmpl_str)
     else:
         try:
-            tpl = yaml.load(tmpl_str, Loader=YamlLoader)
-        except yaml.YAMLError:
-            try:
-                tpl = yaml.load(tmpl_str, Loader=yaml.SafeLoader)
-            except yaml.YAMLError as yea:
-                raise ValueError(yea)
+            tpl = salt.utils.yaml.safe_load(tmpl_str)
+        except salt.utils.yaml.YAMLError as exc:
+            raise ValueError(six.text_type(exc))
         else:
             if tpl is None:
                 tpl = {}
@@ -220,7 +187,7 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
                             tpl = tpl.decode('utf-8')
                         template_parse = _parse_template(tpl)
                         if 'heat_template_version' in template_parse:
-                            template_new = yaml.dump(template_parse, Dumper=YamlDumper)
+                            template_new = salt.utils.yaml.safe_dump(template_parse)
                         else:
                             template_new = jsonutils.dumps(template_parse, indent=2, ensure_ascii=False)
                         salt.utils.files.safe_rm(template_tmp_file)
