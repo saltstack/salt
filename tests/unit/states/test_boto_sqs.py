@@ -28,6 +28,9 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
             whitelist=['boto3', 'yamldumper'],
             context={}
         )
+        # Force the LazyDict to populate its references. Otherwise the lookup
+        # will fail inside the unit tests.
+        list(utils)
         return {
             boto_sqs: {
                 '__utils__': utils,
