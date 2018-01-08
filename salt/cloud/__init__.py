@@ -37,6 +37,7 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.verify
+import salt.utils.yaml
 import salt.syspaths
 from salt.template import compile_template
 
@@ -48,7 +49,6 @@ except ImportError:
         import Crypto.Random
     except ImportError:
         pass  # pycrypto < 2.1
-import yaml
 from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 
@@ -1393,7 +1393,7 @@ class Cloud(object):
 
         try:
             with salt.utils.files.fopen(self.opts['conf_file'], 'r') as mcc:
-                main_cloud_config = yaml.safe_load(mcc)
+                main_cloud_config = salt.utils.yaml.safe_load(mcc)
             if not main_cloud_config:
                 main_cloud_config = {}
         except KeyError:

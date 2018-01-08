@@ -206,13 +206,13 @@ import os
 import logging
 import socket
 import pprint
-import yaml
 
 # Import Salt Libs
 from salt.ext import six
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.pycrypto
+import salt.utils.yaml
 import salt.client
 from salt.utils.openstack import nova
 try:
@@ -1276,7 +1276,7 @@ def volume_create_attach(name, call=None, **kwargs):
         )
 
     if type(kwargs['volumes']) is str:
-        volumes = yaml.safe_load(kwargs['volumes'])
+        volumes = salt.utils.yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
 

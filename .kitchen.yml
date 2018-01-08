@@ -13,7 +13,7 @@ driver:
   use_sudo: false
   hostname: salt
   privileged: true
-  username: root
+  username: kitchen
   volume:
     - /var/run/docker.sock:/docker.sock
   cap_add:
@@ -22,17 +22,17 @@ driver:
   provision_command:
     - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
 transport:
-  name: sftp
+  name: rsync
 <% end %>
 
-sudo: true
 provisioner:
   name: salt_solo
   salt_install: bootstrap
   salt_version: latest
   salt_bootstrap_url: https://bootstrap.saltstack.com
-  salt_bootstrap_options: -X stable <%= version %>
+  salt_bootstrap_options: -X -p rsync stable <%= version %>
   log_level: info
+  sudo: true
   require_chef: false
   remote_states:
     name: git://github.com/saltstack/salt-jenkins.git
@@ -62,7 +62,7 @@ platforms:
       image: fedora:latest
       run_command: /usr/lib/systemd/systemd
     provisioner:
-      salt_bootstrap_options: -X git v<%= version %> >/dev/null
+      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
   - name: centos-7
     driver_config:
       run_command: /usr/lib/systemd/systemd
@@ -72,7 +72,7 @@ platforms:
       provision_command:
         - yum install -y upstart
     provisioner:
-      salt_bootstrap_options: -P -y -x python2.7 -X git v<%= version %> >/dev/null
+      salt_bootstrap_options: -P -p rsync -y -x python2.7 -X git v<%= version %> >/dev/null
   - name: ubuntu-rolling
     driver_config:
       image: ubuntu:rolling
@@ -106,7 +106,7 @@ platforms:
         - systemctl enable sshd
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
     provisioner:
-      salt_bootstrap_options: -X git v<%= version %> >/dev/null
+      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
   - name: opensuse
     driver_config:
       run_command: /usr/lib/systemd/systemd
@@ -114,7 +114,7 @@ platforms:
         - systemctl enable sshd.service
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
     provisioner:
-      salt_bootstrap_options: -X git v<%= version %> >/dev/null
+      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
 <% if vagrant != false %>
   - name: windows-2012r2
     driver:
@@ -200,7 +200,7 @@ verifier:
   xml: /tmp/xml-unittests-output/
   coverage_xml: /tmp/coverage.xml
   save:
-    /tmp/xml-unittests-output/: artifacts/unittests
+    /tmp/xml-unittests-output: artifacts/
     /tmp/coverage.xml: artifacts/coverage/coverage.xml
     /var/log/salt/minion: artifacts/logs/minion
     /tmp/salt-runtests.log: artifacts/logs/salt-runtests.log

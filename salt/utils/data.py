@@ -12,11 +12,11 @@ import copy
 import fnmatch
 import logging
 import re
-import yaml
 
 # Import Salt libs
 import salt.utils.dictupdate
 import salt.utils.stringutils
+import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
@@ -473,8 +473,8 @@ def repack_dictlist(data,
     '''
     if isinstance(data, six.string_types):
         try:
-            data = yaml.safe_load(data)
-        except yaml.parser.ParserError as err:
+            data = salt.utils.yaml.safe_load(data)
+        except salt.utils.yaml.parser.ParserError as err:
             log.error(err)
             return {}
 
