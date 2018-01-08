@@ -577,7 +577,7 @@ class Client(object):
                 ftp = ftplib.FTP()
                 ftp.connect(url_data.hostname, url_data.port)
                 ftp.login(url_data.username, url_data.password)
-				remote_file_path = url_data.path.lstrip('/')
+                remote_file_path = url_data.path.lstrip('/')
                 with salt.utils.files.fopen(dest, 'wb') as fp_:
                     ftp.retrbinary('RETR {0}'.format(remote_file_path), fp_.write)
                 ftp.quit()
