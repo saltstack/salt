@@ -956,12 +956,12 @@ The TCP port for ``mworkers`` to connect to on the master.
 
     tcp_master_workers: 4515
 
-.. conf_master:: master_job_cache
+.. conf_master:: auth_events
 
 ``auth_events``
 --------------------
 
-.. versionadded:: 2017.7.0
+.. versionadded:: 2017.7.3
 
 Default: ``True``
 
