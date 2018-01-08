@@ -22,6 +22,7 @@ try:
 except ImportError as import_error:
     pytest = None
 NO_PYTEST = not bool(pytest)
+import os
 
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
@@ -37,14 +38,13 @@ from salt.exceptions import LoaderError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(NO_PYTEST, False)
 class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         self.resolver = ansible.AnsibleModuleResolver({})
         self.resolver._modules_map = {
-            'one.two.three': '/one/two/three.py',
-            'four.five.six': '/four/five/six.py',
-            'three.six.one': '/three/six/one.py',
+            'one.two.three': os.sep + os.path.join('one', 'two', 'three.py'),
+            'four.five.six': os.sep + os.path.join('four', 'five', 'six.py'),
+            'three.six.one': os.sep + os.path.join('three', 'six', 'one.py'),
         }
 
     def tearDown(self):
@@ -75,25 +75,33 @@ description:
         """
 
         with patch.object(ansible, '_resolver', self.resolver), \
-            patch.object(ansible._resolver, 'load_module', MagicMock(return_value=Module())):
+                patch.object(ansible._resolver, 'load_module',
+                             MagicMock(return_value=Module())):
             ret = ansible.help('dummy')
-            assert sorted(ret.get('Available sections on module "{0}"'.format(
-                Module().__name__))) == ['one', 'two']
-            assert ret.get('Description') == 'describe the second part'
+            self.assertEqual(sorted(ret.get('Available sections on module "{0}"'
+                                            ''.format(Module().__name__))),
+                             ['one', 'two'])
+            self.assertEqual(ret.get('Description'), 'describe the second part')
 
     def test_module_resolver_modlist(self):
         '''
         Test Ansible resolver modules list.
         :return:
         '''
-        assert self.resolver.get_modules_list() == ['four.five.six', 'one.two.three', 'three.six.one']
+        self.assertEqual(self.resolver.get_modules_list(),
+                         ['four.five.six', 'one.two.three', 'three.six.one'])
         for ptr in ['five', 'fi', 've']:
-            assert self.resolver.get_modules_list(ptr) == ['four.five.six']
+            self.assertEqual(self.resolver.get_modules_list(ptr),
+                             ['four.five.six'])
         for ptr in ['si', 'ix', 'six']:
-            assert self.resolver.get_modules_list(ptr) == ['four.five.six', 'three.six.one']
-        assert self.resolver.get_modules_list('one') == ['one.two.three', 'three.six.one']
-        assert self.resolver.get_modules_list('one.two') == ['one.two.three']
-        assert self.resolver.get_modules_list('four') == ['four.five.six']
+            self.assertEqual(self.resolver.get_modules_list(ptr),
+                             ['four.five.six', 'three.six.one'])
+        self.assertEqual(self.resolver.get_modules_list('one'),
+                         ['one.two.three', 'three.six.one'])
+        self.assertEqual(self.resolver.get_modules_list('one.two'),
+                         ['one.two.three'])
+        self.assertEqual(self.resolver.get_modules_list('four'),
+                         ['four.five.six'])
 
     def test_resolver_module_loader_failure(self):
         '''
@@ -101,12 +109,10 @@ description:
         :return:
         '''
         mod = 'four.five.six'
-        with pytest.raises(ImportError) as import_error:
-            self.resolver.load_module(mod)
+        self.assertRaises(ImportError, self.resolver.load_module, mod)
 
         mod = 'i.even.do.not.exist.at.all'
-        with pytest.raises(LoaderError) as loader_error:
-            self.resolver.load_module(mod)
+        self.assertRaises(LoaderError, self.resolver.load_module, mod)
 
     def test_resolver_module_loader(self):
         '''
@@ -115,7 +121,8 @@ description:
         '''
         with patch('salt.modules.ansiblegate.importlib', MagicMock()),\
             patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
-            assert self.resolver.load_module('four.five.six') == 'ansible.modules.four.five.six'
+            self.assertEqual(self.resolver.load_module('four.five.six'),
+                             'ansible.modules.four.five.six')
 
     def test_resolver_module_loader_import_failure(self):
         '''
@@ -123,9 +130,10 @@ description:
         :return:
         '''
         with patch('salt.modules.ansiblegate.importlib', MagicMock()),\
-            patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
-            with pytest.raises(LoaderError) as loader_error:
-                self.resolver.load_module('something.strange')
+             patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
+            self.assertRaises(LoaderError,
+                              self.resolver.load_module,
+                              'something.strange')
 
     def test_virtual_function_no_ansible_installed(self):
         '''
@@ -133,7 +141,8 @@ description:
         :return:
         '''
         with patch('salt.modules.ansiblegate.ansible', None):
-            assert ansible.__virtual__() == (False, 'Ansible is not installed on this system')
+            self.assertEqual(ansible.__virtual__(),
+                             (False, 'Ansible is not installed on this system'))
 
     @patch('salt.modules.ansiblegate.ansible', MagicMock())
     @patch('salt.modules.ansiblegate.list', MagicMock())
@@ -148,4 +157,4 @@ description:
         resolver.resolve = MagicMock()
         resolver.resolve.install = MagicMock()
         with patch('salt.modules.ansiblegate.AnsibleModuleResolver', resolver):
-            assert ansible.__virtual__() == (True, None)
+            self.assertEqual(ansible.__virtual__(), (True, None))
