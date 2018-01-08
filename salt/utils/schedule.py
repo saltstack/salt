@@ -1281,7 +1281,7 @@ class Schedule(object):
             run = False
 
             # Skip anything that is a global schedule setting
-            if job in _hidden:
+            if job in _hidden or not data:
                 continue
 
             if not isinstance(data, dict):
