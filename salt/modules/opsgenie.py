@@ -22,12 +22,12 @@ Module for sending data to OpsGenie
 '''
 # Import Python libs
 from __future__ import absolute_import
-import json
 import logging
 import requests
 
 # Import Salt libs
 import salt.exceptions
+import salt.utils.json
 
 API_ENDPOINT = "https://api.opsgenie.com/v1/json/saltstack?apiKey="
 
@@ -93,6 +93,8 @@ def post_data(api_key=None, name='OpsGenie Execution Module', reason=None,
     log.debug('Below data will be posted:\n' + str(data))
     log.debug('API Key:' + api_key + '\t API Endpoint:' + API_ENDPOINT)
 
-    response = requests.post(url=API_ENDPOINT + api_key, data=json.dumps(data),
-                             headers={'Content-Type': 'application/json'})
+    response = requests.post(
+        url=API_ENDPOINT + api_key,
+        data=salt.utils.json.dumps(data),
+        headers={'Content-Type': 'application/json'})
     return response.status_code, response.text

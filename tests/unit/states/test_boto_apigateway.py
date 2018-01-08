@@ -17,13 +17,13 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 import salt.config
 import salt.loader
 import salt.utils.files
+import salt.utils.yaml
 from salt.utils.versions import LooseVersion
 
 # pylint: disable=import-error,no-name-in-module
 from tests.unit.modules.test_boto_apigateway import BotoApiGatewayTestCaseMixin
 
 # Import 3rd-party libs
-import yaml
 from salt.ext.six.moves import range
 try:
     import boto3
@@ -57,99 +57,99 @@ error_content = {
   }
 }
 
-api_ret = dict(description=u'{\n    "context": "See deployment or stage description",\n    "provisioned_by": "Salt boto_apigateway.present State"\n}',
+api_ret = dict(description='{\n    "context": "See deployment or stage description",\n    "provisioned_by": "Salt boto_apigateway.present State"\n}',
                createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
-               id=u'vni0vq8wzi',
-               name=u'unit test api')
+               id='vni0vq8wzi',
+               name='unit test api')
 
-no_apis_ret = {u'items': []}
+no_apis_ret = {'items': []}
 
-apis_ret = {u'items': [api_ret]}
+apis_ret = {'items': [api_ret]}
 
-mock_model_ret = dict(contentType=u'application/json',
-                      description=u'mock model',
-                      id=u'123abc',
-                      name=u'mock model',
-                      schema=(u'{\n'
-                              u'    "$schema": "http://json-schema.org/draft-04/schema#",\n'
-                              u'    "properties": {\n'
-                              u'        "field": {\n'
-                              u'            "type": "string"\n'
-                              u'        }\n'
-                              u'    }\n'
-                              u'}'))
+mock_model_ret = dict(contentType='application/json',
+                      description='mock model',
+                      id='123abc',
+                      name='mock model',
+                      schema=('{\n'
+                              '    "$schema": "http://json-schema.org/draft-04/schema#",\n'
+                              '    "properties": {\n'
+                              '        "field": {\n'
+                              '            "type": "string"\n'
+                              '        }\n'
+                              '    }\n'
+                              '}'))
 
-models_ret = {u'items': [dict(contentType=u'application/json',
-                              description=u'Error',
-                              id=u'50nw8r',
-                              name=u'Error',
-                              schema=(u'{\n'
-                                      u'    "$schema": "http://json-schema.org/draft-04/schema#",\n'
-                                      u'    "properties": {\n'
-                                      u'        "code": {\n'
-                                      u'            "format": "int32",\n'
-                                      u'            "type": "integer"\n'
-                                      u'        },\n'
-                                      u'        "fields": {\n'
-                                      u'            "type": "string"\n'
-                                      u'        },\n'
-                                      u'        "message": {\n'
-                                      u'            "type": "string"\n'
-                                      u'        }\n'
-                                      u'    },\n'
-                                      u'    "title": "Error Schema",\n'
-                                      u'    "type": "object"\n'
-                                      u'}')),
-                         dict(contentType=u'application/json',
-                              description=u'User',
-                              id=u'terlnw',
-                              name=u'User',
-                              schema=(u'{\n'
-                                      u'    "$schema": "http://json-schema.org/draft-04/schema#",\n'
-                                      u'    "properties": {\n'
-                                      u'        "password": {\n'
-                                      u'            "description": "A password for the new user",\n'
-                                      u'            "type": "string"\n'
-                                      u'        },\n'
-                                      u'        "username": {\n'
-                                      u'            "description": "A unique username for the user",\n'
-                                      u'            "type": "string"\n'
-                                      u'        }\n'
-                                      u'    },\n'
-                                      u'    "title": "User Schema",\n'
-                                      u'    "type": "object"\n'
-                                      u'}'))]}
+models_ret = {'items': [dict(contentType='application/json',
+                              description='Error',
+                              id='50nw8r',
+                              name='Error',
+                              schema=('{\n'
+                                      '    "$schema": "http://json-schema.org/draft-04/schema#",\n'
+                                      '    "properties": {\n'
+                                      '        "code": {\n'
+                                      '            "format": "int32",\n'
+                                      '            "type": "integer"\n'
+                                      '        },\n'
+                                      '        "fields": {\n'
+                                      '            "type": "string"\n'
+                                      '        },\n'
+                                      '        "message": {\n'
+                                      '            "type": "string"\n'
+                                      '        }\n'
+                                      '    },\n'
+                                      '    "title": "Error Schema",\n'
+                                      '    "type": "object"\n'
+                                      '}')),
+                         dict(contentType='application/json',
+                              description='User',
+                              id='terlnw',
+                              name='User',
+                              schema=('{\n'
+                                      '    "$schema": "http://json-schema.org/draft-04/schema#",\n'
+                                      '    "properties": {\n'
+                                      '        "password": {\n'
+                                      '            "description": "A password for the new user",\n'
+                                      '            "type": "string"\n'
+                                      '        },\n'
+                                      '        "username": {\n'
+                                      '            "description": "A unique username for the user",\n'
+                                      '            "type": "string"\n'
+                                      '        }\n'
+                                      '    },\n'
+                                      '    "title": "User Schema",\n'
+                                      '    "type": "object"\n'
+                                      '}'))]}
 
-root_resources_ret = {u'items': [dict(id=u'bgk0rk8rqb',
-                                      path=u'/')]}
+root_resources_ret = {'items': [dict(id='bgk0rk8rqb',
+                                      path='/')]}
 
-resources_ret = {u'items': [dict(id=u'bgk0rk8rqb',
-                                 path=u'/'),
-                            dict(id=u'9waiaz',
-                                 parentId=u'bgk0rk8rqb',
-                                 path=u'/users',
-                                 pathPart=u'users',
-                                 resourceMethods={u'POST': {}})]}
+resources_ret = {'items': [dict(id='bgk0rk8rqb',
+                                 path='/'),
+                            dict(id='9waiaz',
+                                 parentId='bgk0rk8rqb',
+                                 path='/users',
+                                 pathPart='users',
+                                 resourceMethods={'POST': {}})]}
 
-no_resources_ret = {u'items': []}
+no_resources_ret = {'items': []}
 
 stage1_deployment1_ret = dict(cacheClusterEnabled=False,
                               cacheClusterSize=0.5,
                               cacheClusterStatus='NOT_AVAILABLE',
                               createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
-                              deploymentId=u'kobnrb',
-                              description=(u'{\n'
-                                           u'    "current_deployment_label": {\n'
-                                           u'        "api_name": "unit test api",\n'
-                                           u'        "swagger_file": "temp-swagger-sample.yaml",\n'
-                                           u'        "swagger_file_md5sum": "4fb17e43bab3a96e7f2410a1597cd0a5",\n'
-                                           u'        "swagger_info_object": {\n'
-                                           u'            "description": "salt boto apigateway unit test service",\n'
-                                           u'            "title": "salt boto apigateway unit test service",\n'
-                                           u'            "version": "0.0.0"\n'
-                                           u'        }\n'
-                                           u'    }\n'
-                                           u'}'),
+                              deploymentId='kobnrb',
+                              description=('{\n'
+                                           '    "current_deployment_label": {\n'
+                                           '        "api_name": "unit test api",\n'
+                                           '        "swagger_file": "temp-swagger-sample.yaml",\n'
+                                           '        "swagger_file_md5sum": "4fb17e43bab3a96e7f2410a1597cd0a5",\n'
+                                           '        "swagger_info_object": {\n'
+                                           '            "description": "salt boto apigateway unit test service",\n'
+                                           '            "title": "salt boto apigateway unit test service",\n'
+                                           '            "version": "0.0.0"\n'
+                                           '        }\n'
+                                           '    }\n'
+                                           '}'),
                               lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                               methodSettings=dict(),
                               stageName='test',
@@ -159,19 +159,19 @@ stage1_deployment1_vars_ret = dict(cacheClusterEnabled=False,
                                    cacheClusterSize=0.5,
                                    cacheClusterStatus='NOT_AVAILABLE',
                                    createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
-                                   deploymentId=u'kobnrb',
-                                   description=(u'{\n'
-                                                u'    "current_deployment_label": {\n'
-                                                u'        "api_name": "unit test api",\n'
-                                                u'        "swagger_file": "temp-swagger-sample.yaml",\n'
-                                                u'        "swagger_file_md5sum": "4fb17e43bab3a96e7f2410a1597cd0a5",\n'
-                                                u'        "swagger_info_object": {\n'
-                                                u'            "description": "salt boto apigateway unit test service",\n'
-                                                u'            "title": "salt boto apigateway unit test service",\n'
-                                                u'            "version": "0.0.0"\n'
-                                                u'        }\n'
-                                                u'    }\n'
-                                                u'}'),
+                                   deploymentId='kobnrb',
+                                   description=('{\n'
+                                                '    "current_deployment_label": {\n'
+                                                '        "api_name": "unit test api",\n'
+                                                '        "swagger_file": "temp-swagger-sample.yaml",\n'
+                                                '        "swagger_file_md5sum": "4fb17e43bab3a96e7f2410a1597cd0a5",\n'
+                                                '        "swagger_info_object": {\n'
+                                                '            "description": "salt boto apigateway unit test service",\n'
+                                                '            "title": "salt boto apigateway unit test service",\n'
+                                                '            "version": "0.0.0"\n'
+                                                '        }\n'
+                                                '    }\n'
+                                                '}'),
                                    lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                                    methodSettings=dict(),
                                    stageName='test',
@@ -181,19 +181,19 @@ stage1_deployment2_ret = dict(cacheClusterEnabled=False,
                               cacheClusterSize=0.5,
                               cacheClusterStatus='NOT_AVAILABLE',
                               createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
-                              deploymentId=u'kobnrc',
-                              description=(u'{\n'
-                                           u'    "current_deployment_label": {\n'
-                                           u'        "api_name": "unit test api",\n'
-                                           u'        "swagger_file": "temp-swagger-sample.yaml",\n'
-                                           u'        "swagger_file_md5sum": "5fd538c4336ed5c54b4bf39ddf97c661",\n'
-                                           u'        "swagger_info_object": {\n'
-                                           u'            "description": "salt boto apigateway unit test service",\n'
-                                           u'            "title": "salt boto apigateway unit test service",\n'
-                                           u'            "version": "0.0.2"\n'
-                                           u'        }\n'
-                                           u'    }\n'
-                                           u'}'),
+                              deploymentId='kobnrc',
+                              description=('{\n'
+                                           '    "current_deployment_label": {\n'
+                                           '        "api_name": "unit test api",\n'
+                                           '        "swagger_file": "temp-swagger-sample.yaml",\n'
+                                           '        "swagger_file_md5sum": "5fd538c4336ed5c54b4bf39ddf97c661",\n'
+                                           '        "swagger_info_object": {\n'
+                                           '            "description": "salt boto apigateway unit test service",\n'
+                                           '            "title": "salt boto apigateway unit test service",\n'
+                                           '            "version": "0.0.2"\n'
+                                           '        }\n'
+                                           '    }\n'
+                                           '}'),
                               lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                               methodSettings=dict(),
                               stageName='test',
@@ -203,55 +203,55 @@ stage2_ret = dict(cacheClusterEnabled=False,
                   cacheClusterSize=0.5,
                   cacheClusterStatus='NOT_AVAILABLE',
                   createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
-                  deploymentId=u'kobnrb',
-                  description=(u'{\n'
-                               u'    "current_deployment_label": {\n'
-                               u'        "api_name": "unit test api",\n'
-                               u'        "swagger_file": "temp-swagger-sample.yaml",\n'
-                               u'        "swagger_file_md5sum": "4fb17e43bab3a96e7f2410a1597cd0a5",\n'
-                               u'        "swagger_info_object": {\n'
-                               u'            "description": "salt boto apigateway unit test service",\n'
-                               u'            "title": "salt boto apigateway unit test service",\n'
-                               u'            "version": "0.0.0"\n'
-                               u'        }\n'
-                               u'    }\n'
-                               u'}'),
+                  deploymentId='kobnrb',
+                  description=('{\n'
+                               '    "current_deployment_label": {\n'
+                               '        "api_name": "unit test api",\n'
+                               '        "swagger_file": "temp-swagger-sample.yaml",\n'
+                               '        "swagger_file_md5sum": "4fb17e43bab3a96e7f2410a1597cd0a5",\n'
+                               '        "swagger_info_object": {\n'
+                               '            "description": "salt boto apigateway unit test service",\n'
+                               '            "title": "salt boto apigateway unit test service",\n'
+                               '            "version": "0.0.0"\n'
+                               '        }\n'
+                               '    }\n'
+                               '}'),
                   lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                   methodSettings=dict(),
                   stageName='dev',
                   variables=dict())
 
-stages_stage2_ret = {u'item': [stage2_ret]}
+stages_stage2_ret = {'item': [stage2_ret]}
 
-no_stages_ret = {u'item': []}
+no_stages_ret = {'item': []}
 
 deployment1_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
-                       description=(u'{\n'
-                                    u'    "api_name": "unit test api",\n'
-                                    u'    "swagger_file": "temp-swagger-sample.yaml",\n'
-                                    u'    "swagger_file_md5sum": "99cd44f491f25a8e8bb468b0a8e23a0a",\n'
-                                    u'    "swagger_info_object": {\n'
-                                    u'        "description": "salt boto apigateway unit test service",\n'
-                                    u'        "title": "salt boto apigateway unit test service",\n'
-                                    u'        "version": "0.0.0"\n'
-                                    u'    }\n'
-                                    u'}'),
-                       id=u'kobnrb')
+                       description=('{\n'
+                                    '    "api_name": "unit test api",\n'
+                                    '    "swagger_file": "temp-swagger-sample.yaml",\n'
+                                    '    "swagger_file_md5sum": "693c57997a12a2446bb5c08c793d943c",\n'
+                                    '    "swagger_info_object": {\n'
+                                    '        "description": "salt boto apigateway unit test service",\n'
+                                    '        "title": "salt boto apigateway unit test service",\n'
+                                    '        "version": "0.0.0"\n'
+                                    '    }\n'
+                                    '}'),
+                       id='kobnrb')
 
 deployment2_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
-                       description=(u'{\n'
-                                    u'    "api_name": "unit test api",\n'
-                                    u'    "swagger_file": "temp-swagger-sample.yaml",\n'
-                                    u'    "swagger_file_md5sum": "5fd538c4336ed5c54b4bf39ddf97c661",\n'
-                                    u'    "swagger_info_object": {\n'
-                                    u'        "description": "salt boto apigateway unit test service",\n'
-                                    u'        "title": "salt boto apigateway unit test service",\n'
-                                    u'        "version": "0.0.2"\n'
-                                    u'    }\n'
-                                    u'}'),
-                       id=u'kobnrc')
+                       description=('{\n'
+                                    '    "api_name": "unit test api",\n'
+                                    '    "swagger_file": "temp-swagger-sample.yaml",\n'
+                                    '    "swagger_file_md5sum": "5fd538c4336ed5c54b4bf39ddf97c661",\n'
+                                    '    "swagger_info_object": {\n'
+                                    '        "description": "salt boto apigateway unit test service",\n'
+                                    '        "title": "salt boto apigateway unit test service",\n'
+                                    '        "version": "0.0.2"\n'
+                                    '    }\n'
+                                    '}'),
+                       id='kobnrc')
 
-deployments_ret = {u'items': [deployment1_ret, deployment2_ret]}
+deployments_ret = {'items': [deployment1_ret, deployment2_ret]}
 
 function_ret = dict(FunctionName='unit_test_api_users_post',
                     Runtime='python2.7',
@@ -346,7 +346,7 @@ class TempSwaggerFile(object):
                                                                        'name': 'NewUser',
                                                                        'schema': {'$ref': '#/definitions/User'}}],
                                                        'produces': ['application/json'],
-                                                       'description': 'Creates a new user.\n',
+                                                       'description': 'Creates a new user.',
                                                        'tags': ['Auth'],
                                                        'consumes': ['application/json'],
                                                        'summary': 'Registers a new user'}}},
@@ -370,8 +370,8 @@ class TempSwaggerFile(object):
 
     def __enter__(self):
         self.swaggerfile = 'temp-swagger-sample.yaml'
-        with salt.utils.files.fopen(self.swaggerfile, 'w') as f:
-            f.write(yaml.dump(self.swaggerdict))
+        with salt.utils.files.fopen(self.swaggerfile, 'w') as fp_:
+            salt.utils.yaml.safe_dump(self.swaggerdict, fp_)
         return self.swaggerfile
 
     def __exit__(self, objtype, value, traceback):

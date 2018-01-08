@@ -786,6 +786,7 @@ class SMinion(MinionBase):
     '''
     def __init__(self, opts):
         # Late setup of the opts grains, so we can log from the grains module
+        import salt.loader
         opts['grains'] = salt.loader.grains(opts)
         super(SMinion, self).__init__(opts)
 
@@ -803,8 +804,7 @@ class SMinion(MinionBase):
 
         # If configured, cache pillar data on the minion
         if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
-            import yaml
-            from salt.utils.yamldumper import SafeOrderedDumper
+            import salt.utils.yaml
             pdir = os.path.join(self.opts['cachedir'], 'pillar')
             if not os.path.isdir(pdir):
                 os.makedirs(pdir, 0o700)
@@ -815,21 +815,11 @@ class SMinion(MinionBase):
                 penv = 'base'
             cache_top = {penv: {self.opts['id']: ['cache']}}
             with salt.utils.files.fopen(ptop, 'wb') as fp_:
-                fp_.write(
-                    yaml.dump(
-                        cache_top,
-                        Dumper=SafeOrderedDumper
-                    )
-                )
+                salt.utils.yaml.safe_dump(cache_top, fp_)
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
             with salt.utils.files.fopen(cache_sls, 'wb') as fp_:
-                fp_.write(
-                    yaml.dump(
-                        self.opts['pillar'],
-                        Dumper=SafeOrderedDumper
-                    )
-                )
+                salt.utils.yaml.safe_dump(self.opts['pillar'], fp_)
                 os.chmod(cache_sls, 0o600)
 
     def gen_modules(self, initial_load=False):
@@ -1594,7 +1584,8 @@ class Minion(MinionBase):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True
-                elif minion_instance.opts['grains'].get('minion_blackout', False):
+                # use minion_blackout_whitelist from grains if it exists
+                if minion_instance.opts['grains'].get('minion_blackout', False):
                     whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True

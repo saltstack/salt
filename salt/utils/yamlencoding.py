@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import io
 
 # Import 3rd-party libs
-import yaml
+import yaml  # pylint: disable=blacklisted-import
 from salt.ext import six
 
 # Import salt libs

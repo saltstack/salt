@@ -19,9 +19,11 @@ In the minion configuration file, the following block is required:
 '''
 from __future__ import absolute_import
 
-# import python std lib
-import json
+# Import Python libs
 import logging
+
+# Import Salt libs
+import salt.utils.json
 
 # import third party
 try:
@@ -115,7 +117,7 @@ def _http_request(url,
     log.debug('Querying {}'.format(url))
     req = session.post(url,
                        headers=headers,
-                       data=json.dumps(data))
+                       data=salt.utils.json.dumps(data))
     req_body = req.json()
     ret = _default_ret()
     log.debug('Status code: %d', req.status_code)

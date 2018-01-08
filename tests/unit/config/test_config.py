@@ -25,6 +25,7 @@ import salt.minion
 import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.yaml
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
@@ -32,9 +33,6 @@ from salt.exceptions import (
     SaltConfigurationError,
     SaltCloudConfigError
 )
-
-# Import Third-Party Libs
-import yaml
 
 log = logging.getLogger(__name__)
 
@@ -1133,7 +1131,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             default_config = sconfig.cloud_config(config_file_path)
             default_config['deploy_scripts_search_path'] = deploy_dir_path
             with salt.utils.files.fopen(config_file_path, 'w') as cfd:
-                cfd.write(yaml.dump(default_config, default_flow_style=False))
+                salt.utils.yaml.safe_dump(default_config, cfd, default_flow_style=False)
 
             default_config = sconfig.cloud_config(config_file_path)
 

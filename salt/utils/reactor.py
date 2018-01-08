@@ -20,11 +20,11 @@ import salt.utils.data
 import salt.utils.event
 import salt.utils.files
 import salt.utils.process
+import salt.utils.yaml
 import salt.wheel
 import salt.defaults.exitcodes
 
 # Import 3rd-party libs
-import yaml
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -111,7 +111,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         if isinstance(self.opts['reactor'], six.string_types):
             try:
                 with salt.utils.files.fopen(self.opts['reactor']) as fp_:
-                    react_map = yaml.safe_load(fp_.read())
+                    react_map = salt.utils.yaml.safe_load(fp_)
             except (OSError, IOError):
                 log.error(
                     'Failed to read reactor map: "{0}"'.format(
@@ -148,7 +148,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             log.debug('Reading reactors from yaml {0}'.format(self.opts['reactor']))
             try:
                 with salt.utils.files.fopen(self.opts['reactor']) as fp_:
-                    react_map = yaml.safe_load(fp_.read())
+                    react_map = salt.utils.yaml.safe_load(fp_)
             except (OSError, IOError):
                 log.error(
                     'Failed to read reactor map: "{0}"'.format(

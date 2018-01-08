@@ -158,7 +158,6 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import json
 import logging
 import logging.handlers
 import datetime
@@ -166,6 +165,7 @@ import datetime
 # Import salt libs
 from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
+import salt.utils.json
 import salt.utils.network
 
 # Import Third party libs
@@ -325,7 +325,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 continue
 
             message_dict['@fields'][key] = repr(value)
-        return json.dumps(message_dict)
+        return salt.utils.json.dumps(message_dict)
 
     def format_v1(self, record):
         message_dict = {
@@ -369,7 +369,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 continue
 
             message_dict[key] = repr(value)
-        return json.dumps(message_dict)
+        return salt.utils.json.dumps(message_dict)
 
 
 class DatagramLogstashHandler(logging.handlers.DatagramHandler):

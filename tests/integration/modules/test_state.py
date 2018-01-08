@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import shutil
+import tempfile
 import textwrap
 import threading
 import time
@@ -330,44 +331,28 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 os.unlink(testfile)
 
     def test_include(self):
-        fnames = (
-            os.path.join(TMP, 'include-test'),
-            os.path.join(TMP, 'to-include-test')
-        )
-        exclude_test_file = os.path.join(
-            TMP, 'exclude-test'
-        )
-        try:
-            ret = self.run_function('state.sls', mods='include-test')
-            self.assertSaltTrueReturn(ret)
-
-            for fname in fnames:
-                self.assertTrue(os.path.isfile(fname))
-            self.assertFalse(os.path.isfile(exclude_test_file))
-        finally:
-            for fname in list(fnames) + [exclude_test_file]:
-                if os.path.isfile(fname):
-                    os.remove(fname)
+        tempdir = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
+        pillar = {}
+        for path in ('include-test', 'to-include-test', 'exclude-test'):
+            pillar[path] = os.path.join(tempdir, path)
+        ret = self.run_function('state.sls', mods='include-test', pillar=pillar)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(pillar['include-test']))
+        self.assertTrue(os.path.isfile(pillar['to-include-test']))
+        self.assertFalse(os.path.isfile(pillar['exclude-test']))
 
     def test_exclude(self):
-        fnames = (
-            os.path.join(TMP, 'include-test'),
-            os.path.join(TMP, 'exclude-test')
-        )
-        to_include_test_file = os.path.join(
-            TMP, 'to-include-test'
-        )
-        try:
-            ret = self.run_function('state.sls', mods='exclude-test')
-            self.assertSaltTrueReturn(ret)
-
-            for fname in fnames:
-                self.assertTrue(os.path.isfile(fname))
-            self.assertFalse(os.path.isfile(to_include_test_file))
-        finally:
-            for fname in list(fnames) + [to_include_test_file]:
-                if os.path.isfile(fname):
-                    os.remove(fname)
+        tempdir = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
+        pillar = {}
+        for path in ('include-test', 'exclude-test', 'to-include-test'):
+            pillar[path] = os.path.join(tempdir, path)
+        ret = self.run_function('state.sls', mods='exclude-test', pillar=pillar)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(pillar['include-test']))
+        self.assertTrue(os.path.isfile(pillar['exclude-test']))
+        self.assertFalse(os.path.isfile(pillar['to-include-test']))
 
     @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
@@ -1665,10 +1650,10 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         helper class to add pillar data at runtime
         '''
-        import yaml
+        import salt.utils.yaml
         with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE,
                                                  'pillar.sls'), 'w') as fp:
-            fp.write(yaml.dump(pillar))
+            salt.utils.yaml.safe_dump(pillar, fp)
 
         with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
             fp.write(textwrap.dedent('''\
