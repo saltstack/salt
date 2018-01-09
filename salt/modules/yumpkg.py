@@ -1519,13 +1519,17 @@ def install(name=None,
             norm_epoch = lambda x, y: x.split(':', 1)[-1] \
                 if ':' not in y \
                 else x
+
             cver = old_as_list.get(pkgname, [])
             if reinstall and cver:
                 for ver in cver:
-                    ver = norm_epoch(ver, version_num)
+                    # if diff_attr was provided, version number is directly
+                    # in ver, otherwise its a dict.
+                    ver2 = ver['version'] if diff_attr else ver
+                    ver2 = norm_epoch(ver2, version_num)
                     if salt.utils.versions.compare(ver1=version_num,
                                                    oper='==',
-                                                   ver2=ver,
+                                                   ver2=ver2,
                                                    cmp_func=version_cmp):
                         # This version is already installed, so we need to
                         # reinstall.
@@ -1536,10 +1540,13 @@ def install(name=None,
                     to_install.append((pkgname, pkgstr))
                 else:
                     for ver in cver:
-                        ver = norm_epoch(ver, version_num)
+                        # if diff_attr was provided, version number is directly
+                        # in ver, otherwise its a dict.
+                        ver2 = ver['version'] if diff_attr else ver
+                        ver2 = norm_epoch(ver2, version_num)
                         if salt.utils.versions.compare(ver1=version_num,
                                                        oper='>=',
-                                                       ver2=ver,
+                                                       ver2=ver2,
                                                        cmp_func=version_cmp):
                             to_install.append((pkgname, pkgstr))
                             break

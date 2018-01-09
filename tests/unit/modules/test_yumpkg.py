@@ -27,6 +27,76 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {yumpkg: {'rpm': None}}
 
+    def test_install_pkg(self):
+        '''
+        Test package installation.
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'python-urlgrabber_|-(none)_|-3.10_|-8.el7_|-noarch_|-(none)_|-1487838471',
+            'alsa-lib_|-(none)_|-1.1.1_|-1.el7_|-x86_64_|-(none)_|-1487838475',
+            'gnupg2_|-(none)_|-2.0.22_|-4.el7_|-x86_64_|-(none)_|-1487838477',
+            'rpm-python_|-(none)_|-4.11.3_|-21.el7_|-x86_64_|-(none)_|-1487838477',
+            'pygpgme_|-(none)_|-0.3_|-9.el7_|-x86_64_|-(none)_|-1487838478',
+            'yum_|-(none)_|-3.4.3_|-150.el7.centos_|-noarch_|-(none)_|-1487838479',
+            'lzo_|-(none)_|-2.06_|-8.el7_|-x86_64_|-(none)_|-1487838479',
+            'qrencode-libs_|-(none)_|-3.4.1_|-3.el7_|-x86_64_|-(none)_|-1487838480',
+            'ustr_|-(none)_|-1.0.4_|-16.el7_|-x86_64_|-(none)_|-1487838480',
+            'shadow-utils_|-2_|-4.1.5.1_|-24.el7_|-x86_64_|-(none)_|-1487838481',
+            'util-linux_|-(none)_|-2.23.2_|-33.el7_|-x86_64_|-(none)_|-1487838484',
+            'openssh_|-(none)_|-6.6.1p1_|-33.el7_3_|-x86_64_|-(none)_|-1487838485',
+            'virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486',
+        ]
+        with patch.dict(yumpkg.__grains__, {'osarch': 'x86_64', 'os': 'RedHat'}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 0})}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'python-urlgrabber': '0.0.1'}, 'repository'))}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(yumpkg.__salt__, {'config.get': MagicMock()}), \
+             patch.dict(yumpkg.__salt__, {'lowpkg.version_cmp': MagicMock(return_value=-1)}):
+            pkgs = yumpkg.install(name='python-urlgrabber')
+            self.assertEqual(pkgs, {})
+
+    def test_install_pkg_with_diff_attr(self):
+        '''
+        Test package installation with diff_attr.
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'python-urlgrabber_|-(none)_|-3.10_|-8.el7_|-noarch_|-(none)_|-1487838471',
+            'alsa-lib_|-(none)_|-1.1.1_|-1.el7_|-x86_64_|-(none)_|-1487838475',
+            'gnupg2_|-(none)_|-2.0.22_|-4.el7_|-x86_64_|-(none)_|-1487838477',
+            'rpm-python_|-(none)_|-4.11.3_|-21.el7_|-x86_64_|-(none)_|-1487838477',
+            'pygpgme_|-(none)_|-0.3_|-9.el7_|-x86_64_|-(none)_|-1487838478',
+            'yum_|-(none)_|-3.4.3_|-150.el7.centos_|-noarch_|-(none)_|-1487838479',
+            'lzo_|-(none)_|-2.06_|-8.el7_|-x86_64_|-(none)_|-1487838479',
+            'qrencode-libs_|-(none)_|-3.4.1_|-3.el7_|-x86_64_|-(none)_|-1487838480',
+            'ustr_|-(none)_|-1.0.4_|-16.el7_|-x86_64_|-(none)_|-1487838480',
+            'shadow-utils_|-2_|-4.1.5.1_|-24.el7_|-x86_64_|-(none)_|-1487838481',
+            'util-linux_|-(none)_|-2.23.2_|-33.el7_|-x86_64_|-(none)_|-1487838484',
+            'openssh_|-(none)_|-6.6.1p1_|-33.el7_3_|-x86_64_|-(none)_|-1487838485',
+            'virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486',
+        ]
+        with patch.dict(yumpkg.__grains__, {'osarch': 'x86_64', 'os': 'RedHat'}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 0})}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'python-urlgrabber': '0.0.1'}, 'repository'))}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(yumpkg.__salt__, {'config.get': MagicMock()}), \
+             patch.dict(yumpkg.__salt__, {'lowpkg.version_cmp': MagicMock(return_value=-1)}):
+            pkgs = yumpkg.install(name='python-urlgrabber', diff_attr=['epoch', 'release', 'arch'], reinstall=True)
+            self.assertEqual(pkgs, {})
+
     def test_list_pkgs(self):
         '''
         Test packages listing.
