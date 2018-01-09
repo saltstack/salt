@@ -1355,7 +1355,7 @@ class AESFuncs(object):
                                        'data',
                                        {'grains': load['grains'],
                                         'pillar': data})
-            if salt.opts.get('minion_data_cache_events') is True:
+            if self.opts.get('minion_data_cache_events') is True:
                 self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
         return data
 
