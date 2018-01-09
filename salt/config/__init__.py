@@ -1084,6 +1084,9 @@ VALID_OPTS = {
 
     # Scheduler should be a dictionary
     'schedule': dict,
+
+    # Whether to fire auth events
+    'auth_events': bool,
 }
 
 # default configurations
@@ -1650,6 +1653,7 @@ DEFAULT_MASTER_OPTS = {
     'require_minion_sign_messages': False,
     'drop_messages_signature_fail': False,
     'schedule': {},
+    'auth_events': True,
 }
 
 
