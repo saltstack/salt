@@ -49,12 +49,13 @@ Example:
 
 # Import python libs
 from __future__ import absolute_import
-import json
 import logging
+
+# Import Salt libs
+import salt.utils.json
 
 # Import 3rd-party libs
 from salt.ext import six
-import json
 
 # TODO:
 #
@@ -82,12 +83,12 @@ def _get_salt_params():
             sd_os = {'code': 'mac', 'name': 'Mac'}
         else:
             sd_os = {'code': all_grains['kernel'].lower(), 'name': all_grains['kernel']}
-        params['os'] = json.dumps(sd_os)
+        params['os'] = salt.utils.json.dumps(sd_os)
         params['cpuCores'] = all_stats['cpuinfo']['cpu cores']
         params['installedRAM'] = str(int(all_stats['meminfo']['MemTotal']['value']) / 1024)
         params['swapSpace'] = str(int(all_stats['meminfo']['SwapTotal']['value']) / 1024)
-        params['privateIPs'] = json.dumps(all_grains['fqdn_ip4'])
-        params['privateDNS'] = json.dumps(all_grains['fqdn'])
+        params['privateIPs'] = salt.utils.json.dumps(all_grains['fqdn_ip4'])
+        params['privateDNS'] = salt.utils.json.dumps(all_grains['fqdn'])
     except KeyError:
         pass
 

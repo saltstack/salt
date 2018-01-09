@@ -29,7 +29,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 # Import python libs
 from __future__ import absolute_import
 import time
-import json
 import pprint
 import logging
 import hmac
@@ -41,6 +40,7 @@ from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=i
 from salt.ext.six.moves import range
 import salt.utils.cloud
 import salt.utils.data
+import salt.utils.json
 import salt.config as config
 from salt.exceptions import (
     SaltCloudNotFound,
@@ -156,8 +156,7 @@ def query(params=None):
                     if isinstance(value[i - 1], dict):
                         for sk, sv in value[i - 1].items():
                             if isinstance(sv, dict) or isinstance(sv, list):
-                                # sv = json_dump(sv)
-                                sv = json.dumps(sv, separators=(',', ':'))
+                                sv = salt.utils.json.dumps(sv, separators=(',', ':'))
                             real_parameters['{0}.{1}.{2}'.format(key, i, sk)] = sv
                     else:
                         real_parameters['{0}.{1}'.format(key, i)] = value[i - 1]
@@ -188,7 +187,7 @@ def query(params=None):
     log.debug(request.url)
 
     content = request.text
-    result = json.loads(content, object_hook=salt.utils.data.encode_dict)
+    result = salt.utils.json.loads(content, object_hook=salt.utils.data.encode_dict)
 
     # print('response:')
     # pprint.pprint(result)

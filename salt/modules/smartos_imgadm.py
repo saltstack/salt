@@ -6,9 +6,9 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
 
 # Import Salt libs
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.decorators as decorators
@@ -144,7 +144,7 @@ def avail(search=None, verbose=False):
         ret['Error'] = _exit_status(retcode)
         return ret
 
-    for image in json.loads(res['stdout']):
+    for image in salt.utils.json.loads(res['stdout']):
         if image['manifest']['disabled'] or not image['manifest']['public']:
             continue
         if search and search not in image['manifest']['name']:
@@ -178,7 +178,7 @@ def list_installed(verbose=False):
         ret['Error'] = _exit_status(retcode)
         return ret
 
-    for image in json.loads(res['stdout']):
+    for image in salt.utils.json.loads(res['stdout']):
         result[image['manifest']['uuid']] = _parse_image_meta(image, verbose)
 
     return result
@@ -205,7 +205,7 @@ def show(uuid):
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret = json.loads(res['stdout'])
+    ret = salt.utils.json.loads(res['stdout'])
     return ret
 
 
@@ -230,7 +230,7 @@ def get(uuid):
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret = json.loads(res['stdout'])
+    ret = salt.utils.json.loads(res['stdout'])
     return ret
 
 

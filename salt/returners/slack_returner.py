@@ -79,7 +79,6 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import yaml
 import pprint
 import logging
 
@@ -91,7 +90,7 @@ from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # Import Salt Libs
 import salt.returners
 import salt.utils.slack
-from salt.utils.yamldumper import SafeOrderedDumper
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -212,7 +211,7 @@ def returner(ret):
         returns = dict((key, value) for key, value in returns.items() if value['result'] is not True or value['changes'])
 
     if yaml_format is True:
-        returns = yaml.dump(returns, Dumper=SafeOrderedDumper)
+        returns = salt.utils.yaml.safe_dump(returns)
     else:
         returns = pprint.pformat(returns)
 
