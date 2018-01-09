@@ -1525,7 +1525,7 @@ def comment_line(path,
                                 # Write the existing line (no change)
                                 wline = line
                             wline = salt.utils.stringutils.to_bytes(wline) \
-                                if salt.utils.platform.is_windows() \
+                                if six.PY2 and salt.utils.platform.is_windows() \
                                 else salt.utils.stringutils.to_str(wline)
                             w_file.write(wline)
                         except (OSError, IOError) as exc:
