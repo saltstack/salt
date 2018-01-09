@@ -284,7 +284,7 @@ def state(name,
         return state_ret
 
     if test is not None or __opts__.get('test'):
-        cmd_kw['kwarg']['test'] = test if test is not None else opts.get('test')
+        cmd_kw['kwarg']['test'] = test if test is not None else __opts__.get('test')
 
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
