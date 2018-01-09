@@ -53,8 +53,8 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.versions
 import salt.utils.vt
+import salt.utils.yaml
 from salt.utils.nb_popen import NonBlockingPopen
-from salt.utils.yamldumper import SafeOrderedDumper
 from salt.utils.validate.path import is_writeable
 
 # Import salt cloud libs
@@ -72,7 +72,6 @@ from salt.exceptions import (
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin,W0611
 from jinja2 import Template
-import yaml
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
 # Windows. This import has to be below where we import salt.utils.platform!
@@ -287,10 +286,10 @@ def salt_config_to_yaml(configuration, line_break='\n'):
     '''
     Return a salt configuration dictionary, master or minion, as a yaml dump
     '''
-    return yaml.dump(configuration,
-                     line_break=line_break,
-                     default_flow_style=False,
-                     Dumper=SafeOrderedDumper)
+    return salt.utils.yaml.safe_dump(
+        configuration,
+        line_break=line_break,
+        default_flow_style=False)
 
 
 def bootstrap(vm_, opts=None):

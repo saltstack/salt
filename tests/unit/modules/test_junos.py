@@ -1497,7 +1497,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
     def test_rpc_write_file_format_json(self):
         with patch('jnpr.junos.device.Device.execute') as mock_execute, \
-                patch('salt.modules.junos.json.dumps') as mock_dumps:
+                patch('salt.utils.json.dumps') as mock_dumps:
             mock_dumps.return_value = 'json rpc reply'
             m = mock_open()
             with patch('salt.utils.files.fopen', m, create=True):

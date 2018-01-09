@@ -36,6 +36,7 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.version
 import salt.exceptions
 from salt.utils.verify import verify_env
@@ -43,7 +44,6 @@ from salt.utils.immutabletypes import freeze
 from salt._compat import ElementTree as etree
 
 # Import 3rd-party libs
-import yaml
 from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
@@ -118,7 +118,7 @@ class AdaptedConfigurationTestCaseMixin(object):
         rdict['config_dir'] = conf_dir
         rdict['conf_file'] = os.path.join(conf_dir, config_for)
         with salt.utils.files.fopen(rdict['conf_file'], 'w') as wfh:
-            wfh.write(yaml.dump(rdict, default_flow_style=False))
+            salt.utils.yaml.safe_dump(rdict, wfh, default_flow_style=False)
         return rdict
 
     @staticmethod

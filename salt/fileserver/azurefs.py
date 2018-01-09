@@ -47,10 +47,8 @@ permissions.
 # Import python libs
 from __future__ import absolute_import
 import base64
-import json
 import logging
 import os
-import os.path
 import shutil
 
 # Import salt libs
@@ -58,6 +56,7 @@ import salt.fileserver
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
+import salt.utils.json
 import salt.utils.path
 from salt.utils.versions import LooseVersion
 
@@ -260,7 +259,7 @@ def update():
         with salt.utils.files.fopen(lk_fn, 'w+') as fp_:
             fp_.write('')
         with salt.utils.files.fopen(container_list, 'w') as fp_:
-            fp_.write(json.dumps(blob_names))
+            salt.utils.json.dump(blob_names, fp_)
         try:
             os.unlink(lk_fn)
         except Exception:
@@ -314,7 +313,7 @@ def file_list(load):
             if not os.path.exists(container_list):
                 continue
             with salt.utils.files.fopen(container_list, 'r') as fp_:
-                ret.update(set(json.load(fp_)))
+                ret.update(set(salt.utils.json.load(fp_)))
     except Exception as exc:
         log.error('azurefs: an error ocurred retrieving file lists. '
                   'It should be resolved next time the fileserver '

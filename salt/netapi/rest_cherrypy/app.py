@@ -585,7 +585,6 @@ import collections
 import itertools
 import functools
 import logging
-import json
 import os
 import signal
 import tarfile
@@ -607,7 +606,6 @@ except ImportError:
     cpstats = None
     logger.warn('Import of cherrypy.cpstats failed.')
 
-import yaml
 # pylint: enable=import-error, 3rd-party-module-not-gated
 
 # Import Salt libs
@@ -615,8 +613,10 @@ import salt
 import salt.auth
 import salt.exceptions
 import salt.utils.event
+import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
+import salt.utils.yaml
 from salt.ext import six
 from salt.ext.six import BytesIO
 
@@ -835,9 +835,9 @@ def cors_tool():
 # Maps Content-Type to serialization functions; this is a tuple of tuples to
 # preserve order of preference.
 ct_out_map = (
-    ('application/json', json.dumps),
+    ('application/json', salt.utils.json.dumps),
     ('application/x-yaml', functools.partial(
-        yaml.safe_dump, default_flow_style=False)),
+        salt.utils.yaml.safe_dump, default_flow_style=False)),
 )
 
 
@@ -975,7 +975,7 @@ def json_processor(entity):
         body = salt.utils.stringutils.to_unicode(contents.read())
         del contents
     try:
-        cherrypy.serving.request.unserialized_data = json.loads(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.json.loads(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid JSON document')
 
@@ -998,7 +998,7 @@ def yaml_processor(entity):
         contents.seek(0)
         body = salt.utils.stringutils.to_unicode(contents.read())
     try:
-        cherrypy.serving.request.unserialized_data = yaml.safe_load(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.yaml.safe_load(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
 
@@ -1024,7 +1024,7 @@ def text_processor(entity):
         contents.seek(0)
         body = salt.utils.stringutils.to_unicode(contents.read())
     try:
-        cherrypy.serving.request.unserialized_data = json.loads(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.json.loads(body)
     except ValueError:
         cherrypy.serving.request.unserialized_data = body
 
@@ -2334,12 +2334,12 @@ class Events(object):
                     listen=True)
             stream = event.iter_events(full=True, auto_reconnect=True)
 
-            yield u'retry: {0}\n'.format(400)
+            yield str('retry: 400\n')  # future lint: disable=blacklisted-function
 
             while True:
                 data = next(stream)
-                yield u'tag: {0}\n'.format(data.get('tag', ''))
-                yield u'data: {0}\n\n'.format(json.dumps(data))
+                yield str('tag: {0}\n').format(data.get('tag', ''))  # future lint: disable=blacklisted-function
+                yield str('data: {0}\n\n').format(salt.utils.json.dumps(data))  # future lint: disable=blacklisted-function
 
         return listen()
 
@@ -2520,8 +2520,10 @@ class WebsocketEndpoint(object):
                         if 'format_events' in kwargs:
                             SaltInfo.process(data, salt_token, self.opts)
                         else:
-                            handler.send('data: {0}\n\n'.format(
-                                json.dumps(data)), False)
+                            handler.send(
+                                str('data: {0}\n\n').format(salt.utils.json.dumps(data)),  # future lint: disable=blacklisted-function
+                                False
+                            )
                     except UnicodeDecodeError:
                         logger.error(
                                 "Error: Salt event has non UTF-8 data:\n{0}"

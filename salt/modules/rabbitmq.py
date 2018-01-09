@@ -4,26 +4,25 @@ Module to provide RabbitMQ compatibility to Salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 '''
+# Import Python libs
 from __future__ import absolute_import
-
-# Import python libs
-import json
-import re
 import logging
 import os
-import os.path
 import random
+import re
 import string
 
-# Import salt libs
+# Import Salt libs
 import salt.utils.itertools
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+
+# Import 3rd-party libs
 from salt.ext import six
-from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range
-from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -866,7 +865,7 @@ def set_policy(vhost, name, pattern, definition, priority=None, apply_to=None, r
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     if isinstance(definition, dict):
-        definition = json.dumps(definition)
+        definition = salt.utils.json.dumps(definition)
     if not isinstance(definition, six.string_types):
         raise SaltInvocationError(
             'The \'definition\' argument must be a dictionary or JSON string'
