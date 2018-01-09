@@ -1674,7 +1674,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', ['core'])
 
         for key, val in ret.items():
-            self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is set to be changed')
+            self.assertEqual(val['comment'], 'The file {0}/testfile is set to be changed'.format(TMP))
             self.assertEqual(val['changes'], {})
 
     def test_state_sls_id_test_state_test_post_run(self):
@@ -1684,14 +1684,14 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_function('state.sls', ['core'])
         for key, val in ret.items():
-            self.assertEqual(val['comment'], 'File /tmp/salt-tests-tmpdir/testfile updated')
+            self.assertEqual(val['comment'], 'File {0}/testfile updated'.format(TMP))
             self.assertEqual(val['changes']['diff'], 'New file')
 
         self._add_runtime_pillar(pillar={'test': True})
         ret = self.run_function('state.sls', ['core'])
 
         for key, val in ret.items():
-            self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is in the correct state')
+            self.assertEqual(val['comment'], 'The file {0}/testfile is in the correct state'.format(TMP))
             self.assertEqual(val['changes'], {})
 
     def test_state_sls_id_test_true(self):
@@ -1700,7 +1700,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_function('state.sls', ['core'], test=True)
         for key, val in ret.items():
-            self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is set to be changed')
+            self.assertEqual(val['comment'], 'The file {0}/testfile is set to be changed'.format(TMP))
             self.assertEqual(val['changes'], {})
 
     def test_state_sls_id_test_true_post_run(self):
@@ -1710,13 +1710,13 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_function('state.sls', ['core'])
         for key, val in ret.items():
-            self.assertEqual(val['comment'], 'File /tmp/salt-tests-tmpdir/testfile updated')
+            self.assertEqual(val['comment'], 'File {0}/testfile updated'.format(TMP))
             self.assertEqual(val['changes']['diff'], 'New file')
 
         ret = self.run_function('state.sls', ['core'], test=True)
 
         for key, val in ret.items():
-            self.assertEqual(val['comment'], 'The file /tmp/salt-tests-tmpdir/testfile is in the correct state')
+            self.assertEqual(val['comment'], 'The file {0}/testfile is in the correct state'.format(TMP))
             self.assertEqual(val['changes'], {})
 
     def test_state_sls_id_test_false_pillar_true(self):
@@ -1729,7 +1729,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', ['core'], test=False)
 
         for key, val in ret.items():
-            self.assertEqual(val['comment'], 'File /tmp/salt-tests-tmpdir/testfile updated')
+            self.assertEqual(val['comment'], 'File {0}/testfile updated'.format(TMP))
             self.assertEqual(val['changes']['diff'], 'New file')
 
     def tearDown(self):
