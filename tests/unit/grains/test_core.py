@@ -499,6 +499,7 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.1991-05.com.microsoft:simon-x1'])
 
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_aix_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
             return_value='initiator_name iqn.localhost.hostid.7f000001'
@@ -514,6 +515,8 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.localhost.hostid.7f000001'])
 
+    @skipIf(salt.utils.platform.is_darwin(), 'MacOSX iscsi grains not supported')
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_linux_iscsi_iqn_grains(self):
         _iscsi_file = '## DO NOT EDIT OR REMOVE THIS FILE!\n' \
                       '## If you remove this file, the iSCSI daemon will not start.\n' \
@@ -617,6 +620,7 @@ SwapTotal:       4789244 kB'''
         self.assertEqual(os_grains.get('mem_total'), 15895)
         self.assertEqual(os_grains.get('swap_total'), 4676)
 
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_bsd_memdata(self):
         '''
         Test to memdata on *BSD systems
@@ -686,6 +690,7 @@ SwapTotal:       4789244 kB'''
         self.assertEqual(os_grains.get('mem_total'), 2023)
         self.assertEqual(os_grains.get('swap_total'), 400)
 
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_docker_virtual(self):
         '''
         Test if OS grains are parsed correctly in Ubuntu Xenial Xerus

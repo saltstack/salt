@@ -3,7 +3,7 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import fnmatch
@@ -99,13 +99,13 @@ def clean_fsbackend(opts):
                 'envs.p'
             )
             if os.path.isfile(env_cache):
-                log.debug('Clearing {0}fs env cache'.format(backend))
+                log.debug('Clearing %sfs env cache', backend)
                 try:
                     os.remove(env_cache)
                 except OSError as exc:
                     log.critical(
-                        'Unable to clear env cache file {0}: {1}'
-                        .format(env_cache, exc)
+                        'Unable to clear env cache file %s: %s',
+                        env_cache, exc
                     )
 
             file_lists_dir = os.path.join(
@@ -123,8 +123,8 @@ def clean_fsbackend(opts):
                     os.remove(cache_file)
                 except OSError as exc:
                     log.critical(
-                        'Unable to file_lists cache file {0}: {1}'
-                        .format(cache_file, exc)
+                        'Unable to file_lists cache file %s: %s',
+                        cache_file, exc
                     )
 
 
@@ -194,7 +194,7 @@ def mk_key(opts, user):
         )
 
     if os.path.exists(keyfile):
-        log.debug('Removing stale keyfile: {0}'.format(keyfile))
+        log.debug('Removing stale keyfile: %s', keyfile)
         if salt.utils.platform.is_windows() and not os.access(keyfile, os.W_OK):
             # Cannot delete read-only files on Windows.
             os.chmod(keyfile, stat.S_IRUSR | stat.S_IWUSR)
@@ -203,7 +203,7 @@ def mk_key(opts, user):
     key = salt.crypt.Crypticle.generate_key_string()
     cumask = os.umask(191)
     with salt.utils.files.fopen(keyfile, 'w+') as fp_:
-        fp_.write(key)
+        fp_.write(salt.utils.stringutils.to_str(key))
     os.umask(cumask)
     # 600 octal: Read and write access to the owner only.
     # Write access is necessary since on subsequent runs, if the file
@@ -265,7 +265,7 @@ def fileserver_update(fileserver):
         fileserver.update()
     except Exception as exc:
         log.error(
-            'Exception {0} occurred in file server update'.format(exc),
+            'Exception %s occurred in file server update', exc,
             exc_info_on_loglevel=logging.DEBUG
         )
 
@@ -311,8 +311,7 @@ class AutoKey(object):
             return False
 
         if not self.check_permissions(signing_file):
-            message = 'Wrong permissions for {0}, ignoring content'
-            log.warning(message.format(signing_file))
+            log.warning('Wrong permissions for %s, ignoring content', signing_file)
             return False
 
         with salt.utils.files.fopen(signing_file, 'r') as fp_:
@@ -340,7 +339,7 @@ class AutoKey(object):
                     stub_file = os.path.join(autosign_dir, f)
                     mtime = os.path.getmtime(stub_file)
                     if mtime < min_time:
-                        log.warning('Autosign keyid expired {0}'.format(stub_file))
+                        log.warning('Autosign keyid expired %s', stub_file)
                         os.remove(stub_file)
 
         stub_file = os.path.join(autosign_dir, keyid)
@@ -353,24 +352,26 @@ class AutoKey(object):
         '''
         Check for matching grains in the autosign_grains_dir.
         '''
-        if not autosign_grains or u'autosign_grains_dir' not in self.opts:
+        if not autosign_grains or 'autosign_grains_dir' not in self.opts:
             return False
 
-        autosign_grains_dir = self.opts[u'autosign_grains_dir']
+        autosign_grains_dir = self.opts['autosign_grains_dir']
         for root, dirs, filenames in os.walk(autosign_grains_dir):
             for grain in filenames:
                 if grain in autosign_grains:
                     grain_file = os.path.join(autosign_grains_dir, grain)
 
                     if not self.check_permissions(grain_file):
-                        message = 'Wrong permissions for {0}, ignoring content'
-                        log.warning(message.format(grain_file))
+                        log.warning(
+                            'Wrong permissions for %s, ignoring content',
+                            grain_file
+                        )
                         continue
 
-                    with salt.utils.files.fopen(grain_file, u'r') as f:
+                    with salt.utils.files.fopen(grain_file, 'r') as f:
                         for line in f:
                             line = line.strip()
-                            if line.startswith(u'#'):
+                            if line.startswith('#'):
                                 continue
                             if autosign_grains[grain] == line:
                                 return True
@@ -535,10 +536,8 @@ class RemoteFuncs(object):
             except Exception as exc:
                 # If anything happens in the top generation, log it and move on
                 log.error(
-                    'Top function {0} failed with error {1} for minion '
-                    '{2}'.format(
-                        fun, exc, load['id']
-                    )
+                    'Top function %s failed with error %s for minion %s',
+                    fun, exc, load['id']
                 )
         return ret
 
@@ -566,11 +565,11 @@ class RemoteFuncs(object):
         expr_form = load.get('expr_form')
         if expr_form is not None and 'tgt_type' not in load:
             salt.utils.versions.warn_until(
-                u'Neon',
-                u'_mine_get: minion {0} uses pre-Nitrogen API key '
-                u'"expr_form". Accepting for backwards compatibility '
-                u'but this is not guaranteed '
-                u'after the Neon release'.format(load['id'])
+                'Neon',
+                '_mine_get: minion {0} uses pre-Nitrogen API key '
+                '"expr_form". Accepting for backwards compatibility '
+                'but this is not guaranteed '
+                'after the Neon release'.format(load['id'])
             )
             match_type = expr_form
         else:
@@ -664,9 +663,8 @@ class RemoteFuncs(object):
 
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
             log.error(
-                'Exceeding file_recv_max_size limit: {0}'.format(
-                    file_recv_max_size
-                )
+                'Exceeding file_recv_max_size limit: %s',
+                file_recv_max_size
             )
             return False
         # Normalize Windows paths
@@ -704,7 +702,7 @@ class RemoteFuncs(object):
         if any(key not in load for key in ('id', 'grains')):
             return False
 #        pillar = salt.pillar.Pillar(
-        log.debug('Master _pillar using ext: {0}'.format(load.get('ext')))
+        log.debug('Master _pillar using ext: %s', load.get('ext'))
         pillar = salt.pillar.get_pillar(
                 self.opts,
                 load['grains'],
@@ -762,7 +760,7 @@ class RemoteFuncs(object):
             # save the load, since we don't have it
             saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
             self.mminion.returners[saveload_fstr](load['jid'], load)
-        log.info('Got return from {id} for job {jid}'.format(**load))
+        log.info('Got return from %s for job %s', load['id'], load['jid'])
         self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(load, salt.utils.event.tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
@@ -822,11 +820,7 @@ class RemoteFuncs(object):
         if not good:
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warning(
-                    'Minion id {0} is not who it says it is!'.format(
-                    load['id']
-                    )
-            )
+            log.warning('Minion id %s is not who it says it is!', load['id'])
             return {}
         # Prepare the runner object
         opts = {}
@@ -912,7 +906,7 @@ class RemoteFuncs(object):
                 'publish_auth')
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, str(ret['jid']))
+        jid_fn = os.path.join(auth_cache, six.text_type(ret['jid']))
         with salt.utils.files.fopen(jid_fn, 'w+') as fp_:
             fp_.write(load['id'])
         return ret
@@ -1077,11 +1071,10 @@ class LocalFuncs(object):
                                        load.get('kwarg', {}),
                                        username)
         except Exception as exc:
-            log.error('Exception occurred while '
-                      'introspecting {0}: {1}'.format(fun, exc))
+            log.exception('Exception occurred while introspecting %s')
             return {'error': {'name': exc.__class__.__name__,
                               'args': exc.args,
-                              'message': str(exc)}}
+                              'message': six.text_type(exc)}}
 
     def wheel(self, load):
         '''
@@ -1136,8 +1129,7 @@ class LocalFuncs(object):
             return {'tag': tag,
                     'data': data}
         except Exception as exc:
-            log.error('Exception occurred while '
-                      'introspecting {0}: {1}'.format(fun, exc))
+            log.exception('Exception occurred while introspecting %s', fun)
             data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                         fun,
                                         exc.__class__.__name__,
@@ -1179,12 +1171,9 @@ class LocalFuncs(object):
         if publisher_acl.user_is_blacklisted(load['user']) or \
                 publisher_acl.cmd_is_blacklisted(load['fun']):
             log.error(
-                '{user} does not have permissions to run {function}. Please '
-                'contact your local administrator if you believe this is in '
-                'error.\n'.format(
-                    user=load['user'],
-                    function=load['fun']
-                )
+                '%s does not have permissions to run %s. Please contact '
+                'your local administrator if you believe this is in error.',
+                load['user'], load['fun']
             )
             return ''
 
@@ -1237,7 +1226,7 @@ class LocalFuncs(object):
             if auth_type == 'token':
                 username = auth_check.get('username')
                 load['user'] = username
-                log.debug('Minion tokenized user = "{0}"'.format(username))
+                log.debug('Minion tokenized user = "%s"', username)
             elif auth_type == 'eauth':
                 # The username we are attempting to auth with
                 load['user'] = self.loadauth.load_name(extra)
@@ -1284,13 +1273,12 @@ class LocalFuncs(object):
             except KeyError:
                 log.critical(
                     'The specified returner used for the external job cache '
-                    '"{0}" does not have a save_load function!'.format(
-                        self.opts['ext_job_cache']
-                    )
+                    '"%s" does not have a save_load function!',
+                    self.opts['ext_job_cache']
                 )
             except Exception:
                 log.critical(
-                    'The specified returner threw a stack trace:\n',
+                    'The specified returner threw a stack trace:',
                     exc_info=True
                 )
 
@@ -1301,13 +1289,12 @@ class LocalFuncs(object):
         except KeyError:
             log.critical(
                 'The specified returner used for the master job cache '
-                '"{0}" does not have a save_load function!'.format(
-                    self.opts['master_job_cache']
-                )
+                '"%s" does not have a save_load function!',
+                self.opts['master_job_cache']
             )
         except Exception:
             log.critical(
-                'The specified returner threw a stack trace:\n',
+                'The specified returner threw a stack trace:',
                 exc_info=True
             )
         # Altering the contents of the publish load is serious!! Changes here
@@ -1347,18 +1334,16 @@ class LocalFuncs(object):
 
         if 'user' in load:
             log.info(
-                'User {user} Published command {fun} with jid {jid}'.format(
-                    **load
-                )
+                'User %s Published command %s with jid %s',
+                load['user'], load['fun'], load['jid']
             )
             pub_load['user'] = load['user']
         else:
             log.info(
-                'Published command {fun} with jid {jid}'.format(
-                    **load
-                )
+                'Published command %s with jid %s',
+                load['fun'], load['jid']
             )
-        log.debug('Published command details {0}'.format(pub_load))
+        log.debug('Published command details %s', pub_load)
 
         return {'ret': {
                     'jid': load['jid'],
