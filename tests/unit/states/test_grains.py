@@ -7,7 +7,6 @@ from __future__ import absolute_import
 
 # Import Python libs
 import os
-import yaml
 import contextlib
 
 # Import Salt Testing libs
@@ -18,6 +17,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.yaml
 import salt.modules.grains as grainsmod
 import salt.states.grains as grains
 
@@ -77,9 +77,8 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 else:
                     grains_file = os.path.join(
                         os.path.dirname(grains.__opts__['conf_file']), 'grains')
-                cstr = yaml.safe_dump(grains_data, default_flow_style=False)
                 with salt.utils.files.fopen(grains_file, "w+") as grf:
-                    grf.write(cstr)
+                    salt.utils.yaml.safe_dump(grains_data, grf, default_flow_style=False)
                 yield
 
     # 'exists' function tests: 2

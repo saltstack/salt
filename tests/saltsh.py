@@ -42,14 +42,11 @@ import salt.runner
 import jinja2
 from salt.ext.six.moves import builtins  # pylint: disable=import-error
 
-
-# pylint: disable=W0611
+# pylint: disable=unused-import
 # These are imported to be available in the spawned shell
-
-
-import yaml
+import salt.utils.yaml
 import pprint
-
+# pylint: enable=unused-import
 
 HISTFILE = '{HOME}/.saltsh_history'.format(**os.environ)
 

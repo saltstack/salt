@@ -8,7 +8,6 @@ This module provides the point of entry to SPM, the Salt Package Manager
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import yaml
 import tarfile
 import shutil
 import hashlib
@@ -36,7 +35,7 @@ import salt.utils.http as http
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_functions
-from salt.utils.yamldumper import SafeOrderedDumper
+import salt.utils.yaml
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -255,7 +254,7 @@ class SPMClient(object):
 
                     formula_tar = tarfile.open(pkg, 'r:bz2')
                     formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
-                    formula_def = yaml.safe_load(formula_ref)
+                    formula_def = salt.utils.yaml.safe_load(formula_ref)
 
                     file_map[pkg_name] = pkg
                     to_, op_, re_ = self._check_all_deps(
@@ -459,7 +458,7 @@ class SPMClient(object):
         self.ui.status('... installing {0}'.format(pkg_name))
         formula_tar = tarfile.open(pkg_file, 'r:bz2')
         formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
-        formula_def = yaml.safe_load(formula_ref)
+        formula_def = salt.utils.yaml.safe_load(formula_ref)
 
         for field in ('version', 'release', 'summary', 'description'):
             if field not in formula_def:
@@ -625,7 +624,7 @@ class SPMClient(object):
         for repo_file in repo_files:
             repo_path = '{0}.d/{1}'.format(self.opts['spm_repos_config'], repo_file)
             with salt.utils.files.fopen(repo_path) as rph:
-                repo_data = yaml.safe_load(rph)
+                repo_data = salt.utils.yaml.safe_load(rph)
                 for repo in repo_data:
                     if repo_data[repo].get('enabled', True) is False:
                         continue
@@ -662,7 +661,7 @@ class SPMClient(object):
         try:
             if query:
                 if 'SPM-METADATA' in dl_path:
-                    response = yaml.safe_load(query.get('text', '{}'))
+                    response = salt.utils.yaml.safe_load(query.get('text', '{}'))
                 else:
                     response = query.get('text')
             else:
@@ -683,7 +682,7 @@ class SPMClient(object):
             if dl_path.startswith('file://'):
                 dl_path = dl_path.replace('file://', '')
                 with salt.utils.files.fopen(dl_path, 'r') as rpm:
-                    metadata = yaml.safe_load(rpm)
+                    metadata = salt.utils.yaml.safe_load(rpm)
             else:
                 metadata = self._query_http(dl_path, repo_info)
 
@@ -738,7 +737,7 @@ class SPMClient(object):
                 spm_name = '-'.join(comps[:-2])
                 spm_fh = tarfile.open(spm_path, 'r:bz2')
                 formula_handle = spm_fh.extractfile('{0}/FORMULA'.format(spm_name))
-                formula_conf = yaml.safe_load(formula_handle.read())
+                formula_conf = salt.utils.yaml.safe_load(formula_handle.read())
 
                 use_formula = True
                 if spm_name in repo_metadata:
@@ -784,13 +783,12 @@ class SPMClient(object):
 
         metadata_filename = '{0}/SPM-METADATA'.format(repo_path)
         with salt.utils.files.fopen(metadata_filename, 'w') as mfh:
-            yaml.dump(
+            salt.utils.yaml.safe_dump(
                 repo_metadata,
                 mfh,
                 indent=4,
                 canonical=False,
                 default_flow_style=False,
-                Dumper=SafeOrderedDumper
             )
 
         log.debug('Wrote %s', metadata_filename)
@@ -900,7 +898,7 @@ class SPMClient(object):
 
         formula_tar = tarfile.open(pkg_file, 'r:bz2')
         formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
-        formula_def = yaml.safe_load(formula_ref)
+        formula_def = salt.utils.yaml.safe_load(formula_ref)
 
         self.ui.status(self._get_info(formula_def))
 
@@ -1017,7 +1015,7 @@ class SPMClient(object):
         if not os.path.exists(formula_path):
             raise SPMPackageError('Formula file {0} not found'.format(formula_path))
         with salt.utils.files.fopen(formula_path) as fp_:
-            formula_conf = yaml.safe_load(fp_)
+            formula_conf = salt.utils.yaml.safe_load(fp_)
 
         for field in ('name', 'version', 'release', 'summary', 'description'):
             if field not in formula_conf:

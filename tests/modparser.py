@@ -12,8 +12,8 @@ import sys
 import os
 import modulefinder
 import pprint
-import yaml
 import salt.utils.json
+import salt.utils.yaml
 
 
 def parse():
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     try:
         scand = scan(opts)
         if opts['format'] == 'yaml':
-            print(yaml.dump(scand))
+            print(salt.utils.yaml.safe_dump(scand))
         if opts['format'] == 'json':
             print(salt.utils.json.dumps(scand))
         else:

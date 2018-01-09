@@ -98,7 +98,10 @@ def _find_utmp():
             result[os.stat(utmp).st_mtime] = utmp
         except Exception:
             pass
-    return result[sorted(result).pop()]
+    if result > 0:
+        return result[sorted(result).pop()]
+    else:
+        return False
 
 
 def _default_runlevel():
@@ -149,12 +152,14 @@ def _runlevel():
     '''
     if 'upstart._runlevel' in __context__:
         return __context__['upstart._runlevel']
-    out = __salt__['cmd.run'](['runlevel', '{0}'.format(_find_utmp())], python_shell=False)
-    try:
-        ret = out.split()[1]
-    except IndexError:
-        # The runlevel is unknown, return the default
-        ret = _default_runlevel()
+    ret = _default_runlevel()
+    utmp = _find_utmp()
+    if utmp:
+        out = __salt__['cmd.run'](['runlevel', '{0}'.format(utmp)], python_shell=False)
+        try:
+            ret = out.split()[1]
+        except IndexError:
+            pass
     __context__['upstart._runlevel'] = ret
     return ret
 
