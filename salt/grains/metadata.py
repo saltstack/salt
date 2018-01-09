@@ -17,12 +17,12 @@ metadata server set `metadata_server_grains: True`.
 from __future__ import absolute_import
 
 # Import python libs
-import json
 import os
 import socket
 
 # Import salt libs
 import salt.utils.http as http
+import salt.utils.json
 
 
 # metadata server information
@@ -69,7 +69,7 @@ def _search(prefix="latest/"):
             # (gtmanfred) This try except block is slightly faster than
             # checking if the string starts with a curly brace
             try:
-                ret[line] = json.loads(retdata)
+                ret[line] = salt.utils.json.loads(retdata)
             except ValueError:
                 ret[line] = retdata
     return ret

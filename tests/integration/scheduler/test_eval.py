@@ -16,12 +16,19 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
+from tests.support.unit import skipIf
 import tests.integration as integration
 
 # Import Salt libs
 import salt.utils.schedule
 
 from salt.modules.test import ping as ping
+
+try:
+    import croniter  # pylint: disable=W0611
+    HAS_CRONITER = True
+except ImportError:
+    HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
@@ -212,5 +219,56 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Evaluate at the run time
         self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
+
+    @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
+    def test_eval_cron(self):
+        '''
+        verify that scheduled job runs
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'cron': '0 16 29 11 *'
+            }
+          }
+        }
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        with patch('croniter.croniter.get_next', MagicMock(return_value=run_time)):
+            self.schedule.eval(now=run_time)
+
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
+
+    @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
+    def test_eval_cron_loop_interval(self):
+        '''
+        verify that scheduled job runs
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'cron': '0 16 29 11 *'
+            }
+          }
+        }
+        # Randomn second loop interval
+        LOOP_INTERVAL = random.randint(0, 59)
+        self.schedule.opts['loop_interval'] = LOOP_INTERVAL
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        with patch('croniter.croniter.get_next', MagicMock(return_value=run_time)):
+            self.schedule.eval(now=run_time)
+
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)

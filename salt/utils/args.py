@@ -18,6 +18,7 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
+import salt.utils.yaml
 
 
 if six.PY3:
@@ -154,19 +155,19 @@ def yamlify_arg(arg):
 
     try:
         # Explicit late import to avoid circular import. DO NOT MOVE THIS.
-        import salt.utils.yamlloader as yamlloader
+        import salt.utils.yaml
         original_arg = arg
         if '#' in arg:
             # Only yamlify if it parses into a non-string type, to prevent
             # loss of content due to # as comment character
-            parsed_arg = yamlloader.load(arg, Loader=yamlloader.SaltYamlSafeLoader)
+            parsed_arg = salt.utils.yaml.safe_load(arg)
             if isinstance(parsed_arg, six.string_types) or parsed_arg is None:
                 return arg
             return parsed_arg
         if arg == 'None':
             arg = None
         else:
-            arg = yamlloader.load(arg, Loader=yamlloader.SaltYamlSafeLoader)
+            arg = salt.utils.yaml.safe_load(arg)
 
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces

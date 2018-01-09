@@ -12,11 +12,11 @@ import copy
 import fnmatch
 import logging
 import re
-import yaml
 
 # Import Salt libs
 import salt.utils.dictupdate
 import salt.utils.stringutils
+import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
@@ -67,76 +67,143 @@ def compare_lists(old=None, new=None):
     return ret
 
 
-def decode_dict(data):
+def decode(data, preserve_dict_class=False, preserve_tuples=False):
     '''
-    Decode all values to Unicode
+    Generic function which will decode whichever type is passed, if necessary
     '''
-    rv = {}
+    if isinstance(data, six.string_types):
+        if six.PY2 and isinstance(data, str):
+            return data.decode('utf-8')
+        else:
+            return data
+    elif isinstance(data, collections.Mapping):
+        return decode_dict(data, preserve_dict_class, preserve_tuples)
+    elif isinstance(data, list):
+        return decode_list(data, preserve_dict_class, preserve_tuples)
+    elif isinstance(data, tuple):
+        return decode_tuple(data, preserve_dict_class) if preserve_tuples \
+            else decode_list(data, preserve_dict_class, preserve_tuples)
+    else:
+        return data
+
+
+def decode_dict(data, preserve_dict_class=False, preserve_tuples=False):
+    '''
+    Decode all string values to Unicode
+    '''
+    # Make sure we preserve OrderedDicts
+    rv = data.__class__() if preserve_dict_class else {}
     for key, value in six.iteritems(data):
         if six.PY2 and isinstance(key, str):
-            key = key.decode(__salt_system_encoding__)
+            key = key.decode('utf-8')
         if six.PY2 and isinstance(value, str):
-            value = value.decode(__salt_system_encoding__)
+            value = value.decode('utf-8')
         elif isinstance(value, list):
-            value = decode_list(value)
-        elif isinstance(value, dict):
-            value = decode_dict(value)
+            value = decode_list(value, preserve_dict_class, preserve_tuples)
+        elif isinstance(value, tuple):
+            value = decode_tuple(value, preserve_dict_class) if preserve_tuples \
+                else decode_list(value, preserve_dict_class, preserve_tuples)
+        elif isinstance(value, collections.Mapping):
+            value = decode_dict(value, preserve_dict_class, preserve_tuples)
         rv[key] = value
     return rv
 
 
-def decode_list(data):
+def decode_list(data, preserve_dict_class=False, preserve_tuples=False):
     '''
-    Decode all values to Unicode
+    Decode all string values to Unicode
     '''
     rv = []
     for item in data:
-        if six.PY2 and isinstance(item, six.text_type):
-            item = item.decode(__salt_system_encoding__)
+        if six.PY2 and isinstance(item, str):
+            item = item.decode('utf-8')
         elif isinstance(item, list):
-            item = decode_list(item)
-        elif isinstance(item, dict):
-            item = decode_dict(item)
+            item = decode_list(item, preserve_dict_class, preserve_tuples)
+        elif isinstance(item, tuple):
+            item = decode_tuple(item, preserve_dict_class) if preserve_tuples \
+                else decode_list(item, preserve_dict_class, preserve_tuples)
+        elif isinstance(item, collections.Mapping):
+            item = decode_dict(item, preserve_dict_class, preserve_tuples)
         rv.append(item)
     return rv
 
 
+def decode_tuple(data, preserve_dict_class=False):
+    '''
+    Decode all string values to Unicode
+    '''
+    return tuple(decode_list(data, preserve_dict_class, True))
+
+
+def encode(data, preserve_dict_class=False, preserve_tuples=False):
+    '''
+    Generic function which will encode whichever type is passed, if necessary
+    '''
+    if isinstance(data, six.string_types):
+        if six.PY2 and isinstance(data, six.text_type):
+            return data.encode('utf-8')
+        else:
+            return data
+    elif isinstance(data, collections.Mapping):
+        return encode_dict(data, preserve_dict_class, preserve_tuples)
+    elif isinstance(data, list):
+        return encode_list(data, preserve_dict_class, preserve_tuples)
+    elif isinstance(data, tuple):
+        return encode_tuple(data, preserve_dict_class) if preserve_tuples \
+            else encode_list(data, preserve_dict_class, preserve_tuples)
+    else:
+        return data
+
+
 @jinja_filter('json_decode_dict')  # Remove this for Neon
 @jinja_filter('json_encode_dict')
-def encode_dict(data):
+def encode_dict(data, preserve_dict_class=False, preserve_tuples=False):
     '''
-    Encode all values to bytes
+    Encode all string values to bytes
     '''
-    rv = {}
+    rv = data.__class__() if preserve_dict_class else {}
     for key, value in six.iteritems(data):
         if six.PY2 and isinstance(key, six.text_type):
-            key = key.encode(__salt_system_encoding__)
+            key = key.encode('utf-8')
         if six.PY2 and isinstance(value, six.text_type):
-            value = value.encode(__salt_system_encoding__)
+            value = value.encode('utf-8')
         elif isinstance(value, list):
-            value = encode_list(value)
-        elif isinstance(value, dict):
-            value = encode_dict(value)
+            value = encode_list(value, preserve_dict_class, preserve_tuples)
+        elif isinstance(value, tuple):
+            value = encode_tuple(value, preserve_dict_class) if preserve_tuples \
+                else encode_list(value, preserve_dict_class, preserve_tuples)
+        elif isinstance(value, collections.Mapping):
+            value = encode_dict(value, preserve_dict_class, preserve_tuples)
         rv[key] = value
     return rv
 
 
 @jinja_filter('json_decode_list')  # Remove this for Neon
 @jinja_filter('json_encode_list')
-def encode_list(data):
+def encode_list(data, preserve_dict_class=False, preserve_tuples=False):
     '''
-    Encode all values to bytes
+    Encode all string values to bytes
     '''
     rv = []
     for item in data:
-        if isinstance(item, six.text_type) and six.PY2:
-            item = item.encode(__salt_system_encoding__)
+        if six.PY2 and isinstance(item, six.text_type):
+            item = item.encode('utf-8')
         elif isinstance(item, list):
-            item = encode_list(item)
-        elif isinstance(item, dict):
-            item = encode_dict(item)
+            item = encode_list(item, preserve_dict_class, preserve_tuples)
+        elif isinstance(item, tuple):
+            item = encode_tuple(item, preserve_dict_class) if preserve_tuples \
+                else encode_list(item, preserve_dict_class, preserve_tuples)
+        elif isinstance(item, collections.Mapping):
+            item = encode_dict(item, preserve_dict_class, preserve_tuples)
         rv.append(item)
     return rv
+
+
+def encode_tuple(data, preserve_dict_class=False):
+    '''
+    Encode all string values to Unicode
+    '''
+    return tuple(encode_list(data, preserve_dict_class, True))
 
 
 @jinja_filter('exactly_n_true')
@@ -406,8 +473,8 @@ def repack_dictlist(data,
     '''
     if isinstance(data, six.string_types):
         try:
-            data = yaml.safe_load(data)
-        except yaml.parser.ParserError as err:
+            data = salt.utils.yaml.safe_load(data)
+        except salt.utils.yaml.parser.ParserError as err:
             log.error(err)
             return {}
 

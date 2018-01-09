@@ -2,7 +2,6 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import json
 import logging
 import os
 
@@ -14,6 +13,7 @@ from tests.support.paths import FILES
 
 # Import Salt libs
 from salt.ext import six
+import salt.utils.json
 import salt.utils.virtualbox
 
 # Create the cloud instance name to be used throughout the tests
@@ -77,7 +77,7 @@ class VirtualboxCloudTestCase(ShellCase):
         if len(output) is 0:
             return dict()
         else:
-            return json.loads("".join(output))
+            return salt.utils.json.loads(''.join(output))
 
     def run_cloud_function(self, function, kw_function_args=None, **kwargs):
         """

@@ -11,13 +11,13 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
+import salt.utils.yaml
 import salt.modules.virt as virt
 import salt.modules.config as config
 from salt._compat import ElementTree as ET
 import salt.config
 
 # Import third party libs
-import yaml
 from salt.ext import six
 
 
@@ -329,8 +329,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 '''
         with patch('salt.modules.virt._nic_profile') as nic_profile, \
                 patch('salt.modules.virt._disk_profile') as disk_profile:
-            disk_profile.return_value = yaml.load(diskp_yaml)
-            nic_profile.return_value = yaml.load(nicp_yaml)
+            disk_profile.return_value = salt.utils.yaml.safe_load(diskp_yaml)
+            nic_profile.return_value = salt.utils.yaml.safe_load(nicp_yaml)
             diskp = virt._disk_profile('noeffect', 'esxi')
             nicp = virt._nic_profile('noeffect', 'esxi')
             xml_data = virt._gen_xml(
@@ -376,8 +376,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 '''
         with patch('salt.modules.virt._nic_profile') as nic_profile, \
                 patch('salt.modules.virt._disk_profile') as disk_profile:
-            disk_profile.return_value = yaml.load(diskp_yaml)
-            nic_profile.return_value = yaml.load(nicp_yaml)
+            disk_profile.return_value = salt.utils.yaml.safe_load(diskp_yaml)
+            nic_profile.return_value = salt.utils.yaml.safe_load(nicp_yaml)
             diskp = virt._disk_profile('noeffect', 'kvm')
             nicp = virt._nic_profile('noeffect', 'kvm')
             xml_data = virt._gen_xml(
@@ -455,7 +455,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                    bridge: br1
                    model: virtio
         '''
-        mock_config = yaml.load(yaml_config)
+        mock_config = salt.utils.yaml.safe_load(yaml_config)
         with patch.dict(salt.modules.config.__opts__, mock_config):
 
             for name in six.iterkeys(mock_config['virt.nic']):

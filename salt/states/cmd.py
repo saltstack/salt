@@ -236,12 +236,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import copy
-import json
 import logging
 
 # Import salt libs
 import salt.utils.args
 import salt.utils.functools
+import salt.utils.json
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.ext import six
 
@@ -264,7 +264,7 @@ def _reinterpreted_state(state):
 
     is_json = False
     try:
-        data = json.loads(out)
+        data = salt.utils.json.loads(out)
         if not isinstance(data, dict):
             return _failout(
                 state,

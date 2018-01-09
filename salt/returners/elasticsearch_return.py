@@ -100,11 +100,11 @@ import datetime
 from datetime import tzinfo, timedelta
 import uuid
 import logging
-import json
 
 # Import Salt libs
 import salt.returners
 import salt.utils.jid
+import salt.utils.json
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -329,7 +329,7 @@ def returner(ret):
     # Post the payload
     ret = __salt__['elasticsearch.document_create'](index=index,
                                                     doc_type=options['doc_type'],
-                                                    body=json.dumps(data))
+                                                    body=salt.utils.json.dumps(data))
 
 
 def event_return(events):
@@ -358,7 +358,7 @@ def event_return(events):
     ret = __salt__['elasticsearch.document_create'](index=index,
                                                     doc_type=doc_type,
                                                     id=uuid.uuid4(),
-                                                    body=json.dumps(data))
+                                                    body=salt.utils.json.dumps(data))
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
@@ -389,7 +389,7 @@ def save_load(jid, load, minions=None):
     ret = __salt__['elasticsearch.document_create'](index=index,
                                                     doc_type=doc_type,
                                                     id=jid,
-                                                    body=json.dumps(data))
+                                                    body=salt.utils.json.dumps(data))
 
 
 def get_load(jid):
@@ -407,5 +407,5 @@ def get_load(jid):
                                                   id=jid,
                                                   doc_type=doc_type)
     if data:
-        return json.loads(data)
+        return salt.utils.json.loads(data)
     return {}

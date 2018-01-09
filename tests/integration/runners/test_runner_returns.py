@@ -7,7 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import os
 import tempfile
-import yaml
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -18,6 +17,7 @@ import salt.payload
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.yaml
 
 
 class RunnerReturnsTest(ShellCase):
@@ -73,7 +73,7 @@ class RunnerReturnsTest(ShellCase):
         '''
         Dump the config dict to the conf file
         '''
-        self.conf.write(yaml.dump(data, default_flow_style=False))
+        self.conf.write(salt.utils.yaml.safe_dump(data, default_flow_style=False))
         self.conf.flush()
 
     def test_runner_returns_disabled(self):
@@ -125,6 +125,10 @@ class RunnerReturnsTest(ShellCase):
         self.clean_return(deserialized['return'])
 
         # Now we have something sane we can reliably compare in an assert.
+        if 'SUDO_USER' in os.environ:
+            user = 'sudo_{0}'.format(os.environ['SUDO_USER'])
+        else:
+            user = RUNTIME_VARS.RUNNING_TESTS_USER
         self.assertEqual(
             deserialized,
             {'return': {'fun': 'runner.test.arg',
@@ -132,5 +136,5 @@ class RunnerReturnsTest(ShellCase):
                         'jid': jid,
                         'return': {'args': ['foo'], 'kwargs': {'bar': 'hello world!'}},
                         'success': True,
-                        'user': RUNTIME_VARS.RUNNING_TESTS_USER}}
+                        'user': user}}
         )

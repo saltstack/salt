@@ -27,7 +27,7 @@ import salt.ext.six.moves.http_client as http_client
 # Import python libs
 import logging
 import time
-import json
+import salt.utils.json
 from salt.exceptions import (CommandExecutionError, MinionError)
 from salt.ext import six
 
@@ -108,13 +108,13 @@ def _query(lamp_id, state, action='', method='GET'):
           + (action and "/{0}".format(action) or '')
     conn = http_client.HTTPConnection(CONFIG['host'])
     if method == 'PUT':
-        conn.request(method, url, json.dumps(state))
+        conn.request(method, url, salt.utils.json.dumps(state))
     else:
         conn.request(method, url)
     resp = conn.getresponse()
 
     if resp.status == http_client.OK:
-        res = json.loads(resp.read())
+        res = salt.utils.json.loads(resp.read())
     else:
         err = "HTTP error: {0}, {1}".format(resp.status, resp.reason)
     conn.close()

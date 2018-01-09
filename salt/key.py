@@ -8,7 +8,6 @@ used to manage salt keys directly without interfacing with the CLI.
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
-import json
 import stat
 import shutil
 import fnmatch
@@ -27,6 +26,7 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.json
 import salt.utils.kinds
 import salt.utils.master
 import salt.utils.sdb
@@ -1032,10 +1032,8 @@ class RaetKey(Key):
                     continue
                 path = os.path.join(road_cache, road)
                 with salt.utils.files.fopen(path, 'rb') as fp_:
-                    # Do not use to_unicode to decode this. It needs to stay as
-                    # bytes to be deserialized.
                     if ext == '.json':
-                        data = json.load(fp_)
+                        data = salt.utils.json.load(fp_)
                     elif ext == '.msgpack':
                         data = msgpack.load(fp_)
                     role = salt.utils.stringutils.to_unicode(data['role'])
