@@ -9,6 +9,7 @@ import stat
 # Import Salt libs
 import salt.config
 import salt.daemons.masterapi as masterapi
+import salt.utils.platform
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -43,11 +44,15 @@ def patch_check_permissions(uid=1, groups=None, is_windows=False, permissive_pki
         @wraps(func)
         def wrapper(self):
             self.auto_key.opts['permissive_pki_access'] = permissive_pki
-            with patch('os.stat', self.os_stat_mock), \
-                 patch('os.getuid', MagicMock(return_value=uid)), \
-                 patch('salt.utils.user.get_gid_list', MagicMock(return_value=groups)), \
-                 patch('salt.utils.platform.is_windows', MagicMock(return_value=is_windows)):
-                func(self)
+            if salt.utils.platform.is_windows():
+                with patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
+                    func(self)
+            else:
+                with patch('os.stat', self.os_stat_mock), \
+                     patch('os.getuid', MagicMock(return_value=uid)), \
+                     patch('salt.utils.user.get_gid_list', MagicMock(return_value=groups)), \
+                     patch('salt.utils.platform.is_windows', MagicMock(return_value=is_windows)):
+                    func(self)
         return wrapper
     return decorator
 
@@ -85,7 +90,10 @@ class AutoKeyTest(TestCase):
         Assert that no file is accepted, when others can write to it
         '''
         self.stats['testfile'] = {'mode': gen_permissions('', '', 'w'), 'gid': 1}
-        self.assertFalse(self.auto_key.check_permissions('testfile'))
+        if salt.utils.platform.is_windows():
+            self.assertTrue(self.auto_key.check_permissions('testfile'))
+        else:
+            self.assertFalse(self.auto_key.check_permissions('testfile'))
 
     @patch_check_permissions()
     def test_check_permissions_group_can_write_not_permissive(self):
@@ -93,7 +101,10 @@ class AutoKeyTest(TestCase):
         Assert that a file is accepted, when group can write to it and perkissive_pki_access=False
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}
-        self.assertFalse(self.auto_key.check_permissions('testfile'))
+        if salt.utils.platform.is_windows():
+            self.assertTrue(self.auto_key.check_permissions('testfile'))
+        else:
+            self.assertFalse(self.auto_key.check_permissions('testfile'))
 
     @patch_check_permissions(permissive_pki=True)
     def test_check_permissions_group_can_write_permissive(self):
@@ -119,7 +130,10 @@ class AutoKeyTest(TestCase):
         salt is root and **not** in the file owning group
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}
-        self.assertFalse(self.auto_key.check_permissions('testfile'))
+        if salt.utils.platform.is_windows():
+            self.assertTrue(self.auto_key.check_permissions('testfile'))
+        else:
+            self.assertFalse(self.auto_key.check_permissions('testfile'))
 
     @patch_check_permissions()
     def test_check_permissions_only_owner_can_write(self):
