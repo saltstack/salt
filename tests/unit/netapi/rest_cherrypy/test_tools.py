@@ -2,14 +2,16 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import yaml
 
 # Import Salt libs
 import salt.utils.json
-from tests.support.cherrypy_testclasses import BaseToolsTest
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
+
+# Import Salt libs
+from tests.support.cherrypy_testclasses import BaseToolsTest
 
 
 class TestOutFormats(BaseToolsTest):
@@ -80,7 +82,7 @@ class TestInFormats(BaseToolsTest):
     def test_yaml_ctype(self):
         data = {'valid': 'stuff'}
         request, response = self.request('/', method='POST',
-            body=yaml.dump(data), headers=(
+            body=salt.utils.yaml.safe_dump(data), headers=(
                 ('Content-type', 'application/x-yaml'),
         ))
         self.assertEqual(response.status, '200 OK')

@@ -17,7 +17,6 @@ import glob
 import random
 import ctypes
 import tempfile
-import yaml
 import re
 import datetime
 import ast
@@ -177,7 +176,7 @@ def _parse_openssl_req(csr_filename):
     output = re.sub(r': rsaEncryption', ':', output)
     output = re.sub(r'[0-9a-f]{2}:', '', output)
 
-    return yaml.safe_load(output)
+    return salt.utils.yaml.safe_load(output)
 
 
 def _get_csr_extensions(csr):
@@ -266,7 +265,7 @@ def _parse_openssl_crl(crl_filename):
 
         rev_sn = revoked.split('\n')[0].strip()
         revoked = rev_sn + ':\n' + '\n'.join(revoked.split('\n')[1:])
-        rev_yaml = yaml.safe_load(revoked)
+        rev_yaml = salt.utils.yaml.safe_load(revoked)
         # pylint: disable=unused-variable
         for rev_item, rev_values in six.iteritems(rev_yaml):
             # pylint: enable=unused-variable

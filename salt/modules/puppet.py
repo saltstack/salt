@@ -15,10 +15,10 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import yaml
 from salt.ext import six
 from salt.ext.six.moves import range
 log = logging.getLogger(__name__)
@@ -312,7 +312,7 @@ def summary():
 
     try:
         with salt.utils.files.fopen(puppet.lastrunfile, 'r') as fp_:
-            report = yaml.safe_load(fp_.read())
+            report = salt.utils.yaml.safe_load(fp_)
         result = {}
 
         if 'time' in report:
@@ -330,7 +330,7 @@ def summary():
         if 'resources' in report:
             result['resources'] = report['resources']
 
-    except yaml.YAMLError as exc:
+    except salt.utils.yaml.YAMLError as exc:
         raise CommandExecutionError(
             'YAML error parsing puppet run summary: {0}'.format(exc)
         )

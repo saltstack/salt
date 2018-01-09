@@ -58,7 +58,6 @@ log = logging.getLogger(__name__)
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Import third party libs
-import yaml
 from salt.ext import six
 try:
     import boto
@@ -522,18 +521,11 @@ def get_cloud_init_mime(cloud_init):
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
         cloud_config = cloud_init['cloud-config']
-        _cloud_config = email.mime.text.MIMEText(_safe_dump(cloud_config),
-                                                 'cloud-config')
+        _cloud_config = email.mime.text.MIMEText(
+            salt.utils.yaml.safe_dump(cloud_config, default_flow_style=False),
+            'cloud-config')
         _cloud_init.attach(_cloud_config)
     return _cloud_init.as_string()
-
-
-def _safe_dump(data):
-    def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(six.iteritems(data))
-    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
-                         Dumper=yaml.dumper.SafeDumper)
-    return yaml.safe_dump(data, default_flow_style=False)
 
 
 def launch_configuration_exists(name, region=None, key=None, keyid=None,

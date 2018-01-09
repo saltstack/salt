@@ -22,7 +22,6 @@ import datetime
 from xml.etree import ElementTree
 
 # Import third party libs
-import yaml
 import jinja2
 import jinja2.exceptions
 from salt.ext import six
@@ -42,6 +41,7 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
+import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -400,7 +400,7 @@ def _qemu_image_create(vm_name,
         qcow2 = False
         if salt.utils.path.which('qemu-img'):
             res = __salt__['cmd.run']('qemu-img info {}'.format(sfn))
-            imageinfo = yaml.load(res)
+            imageinfo = salt.utils.yaml.safe_load(res)
             qcow2 = imageinfo['file format'] == 'qcow2'
         try:
             if enable_qcow and qcow2:
@@ -1134,9 +1134,9 @@ def get_disks(vm_):
                     continue
                 output.append(line)
             output = '\n'.join(output)
-            disks[dev].update(yaml.safe_load(output))
+            disks[dev].update(salt.utils.yaml.safe_load(output))
         except TypeError:
-            disks[dev].update(yaml.safe_load('image: Does not exist'))
+            disks[dev].update({'image': 'Does not exist'})
     return disks
 
 
@@ -1594,7 +1594,7 @@ def seed_non_shared_migrate(disks, force=False):
         size = data['virtual size'].split()[1][1:]
         if os.path.isfile(fn_) and not force:
             # the target exists, check to see if it is compatible
-            pre = yaml.safe_load(subprocess.Popen('qemu-img info arch',
+            pre = salt.utils.yaml.safe_load(subprocess.Popen('qemu-img info arch',
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0])
             if pre['file format'] != data['file format']\
