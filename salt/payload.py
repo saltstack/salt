@@ -317,6 +317,7 @@ class Serial(object):
                     'Unable to serialize message! Consider upgrading msgpack. '
                     'Message which failed was %s, with exception %s', msg, exc
                 )
+                break
 
     def dump(self, msg, fn_):
         '''
