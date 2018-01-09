@@ -359,7 +359,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     __salt__['cmd.run'](cmd, cwd=abspath_debname)
     cmd = 'rm -f {0}'.format(os.path.basename(spec_pathfile))
     __salt__['cmd.run'](cmd, cwd=abspath_debname)
-    cmd = 'debuild -S -uc -us'
+    cmd = 'debuild -S -uc -us -sa'
     __salt__['cmd.run'](cmd, cwd=abspath_debname, python_shell=True)
 
     cmd = 'rm -fR {0}'.format(abspath_debname)
