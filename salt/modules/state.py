@@ -1041,7 +1041,6 @@ def highstate(test=None, queue=False, **kwargs):
         return ['Pillar failed to render with the following messages:'] + errors
 
     st_.push_active()
-    ret = {}
     orchestration_jid = kwargs.get('orchestration_jid')
     snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
     try:
