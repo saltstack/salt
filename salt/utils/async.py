@@ -94,8 +94,6 @@ class SyncWrapper(object):
                 # their associated io_loop is closed to allow for proper
                 # cleanup.
                 self.async.close()
-            # Other things should be deallocated after the io_loop closes.
-            # See Issue #26889.
             del self.async
             self.io_loop.close()
             del self.io_loop
