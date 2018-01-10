@@ -370,4 +370,3 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
                      '2017-13-13T13:00:00',
                      '%Y-%m-%dT%H:%M:%S')
         self.assertEqual(ret['_error'], _expected)
-
