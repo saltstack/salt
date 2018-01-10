@@ -1905,7 +1905,6 @@ class State(object):
 
             self.state_con.pop('runas', None)
             self.state_con.pop('runas_password', None)
-            self.verify_ret_for_export(ret)
 
         # If format_call got any warnings, let's show them to the user
         if 'warnings' in cdata:
