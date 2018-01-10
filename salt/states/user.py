@@ -88,6 +88,10 @@ def _changes(name,
     attributes supported as integers only.
     '''
 
+    # Set gid to None in cases an empty string is passed
+    if gid == '':
+       gid = None
+
     if 'shadow.info' in __salt__:
         lshad = __salt__['shadow.info'](name)
 
