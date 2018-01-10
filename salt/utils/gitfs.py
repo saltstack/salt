@@ -4,7 +4,7 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 '''
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import contextlib
 import distutils
@@ -14,7 +14,6 @@ import glob
 import hashlib
 import logging
 import os
-import re
 import shlex
 import shutil
 import stat
@@ -70,19 +69,19 @@ AUTH_PARAMS = ('user', 'password', 'pubkey', 'privkey', 'passphrase',
 PER_SALTENV_PARAMS = ('mountpoint', 'root', 'ref')
 
 _RECOMMEND_GITPYTHON = (
-    'GitPython is installed, you may wish to set {0}_provider to '
-    '\'gitpython\' to use GitPython for {0} support.'
+    'GitPython is installed, you may wish to set %s_provider to '
+    '\'gitpython\' to use GitPython for %s support.'
 )
 
 _RECOMMEND_PYGIT2 = (
-    'pygit2 is installed, you may wish to set {0}_provider to '
-    '\'pygit2\' to use pygit2 for for {0} support.'
+    'pygit2 is installed, you may wish to set %s_provider to '
+    '\'pygit2\' to use pygit2 for for %s support.'
 )
 
 _INVALID_REPO = (
-    'Cache path {0} (corresponding remote: {1}) exists but is not a valid '
+    'Cache path %s (corresponding remote: %s) exists but is not a valid '
     'git repository. You will need to manually delete this directory on the '
-    'master to continue to use this {2} remote.'
+    'master to continue to use this %s remote.'
 )
 
 log = logging.getLogger(__name__)
@@ -221,7 +220,7 @@ class GitProvider(object):
                 'The following parameter names are restricted to per-remote '
                 'use only: %s. This is a bug, please report it.',
                 ', '.join(per_remote_collisions)
-                )
+            )
 
         try:
             valid_per_remote_params = override_params + per_remote_only
@@ -448,7 +447,8 @@ class GitProvider(object):
 
         ret = set()
         for ref in refs:
-            ref = re.sub('^refs/', '', ref)
+            if ref.startswith('refs/'):
+                ref = ref[5:]
             rtype, rname = ref.split('/', 1)
             if rtype == 'remotes' and use_branches:
                 parted = rname.partition('/')
@@ -744,7 +744,7 @@ class GitProvider(object):
         try:
             fh_ = os.open(self._get_lock_file(lock_type),
                           os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            with os.fdopen(fh_, 'w'):
+            with os.fdopen(fh_, 'wb'):
                 # Write the lock file and close the filehandle
                 os.write(fh_, six.b(six.text_type(os.getpid())))
         except (OSError, IOError) as exc:
@@ -1153,7 +1153,7 @@ class GitPython(GitProvider):
             try:
                 self.repo = git.Repo(self.cachedir)
             except git.exc.InvalidGitRepositoryError:
-                log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
+                log.error(_INVALID_REPO, self.cachedir, self.url, self.role)
                 return new
 
         self.gitdir = salt.utils.path.join(self.repo.working_dir, '.git')
@@ -1583,7 +1583,7 @@ class Pygit2(GitProvider):
                     pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
                     self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
-                log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
+                log.error(_INVALID_REPO, self.cachedir, self.url, self.role)
                 return new
 
         self.gitdir = salt.utils.path.join(self.repo.workdir, '.git')
@@ -2181,8 +2181,7 @@ class GitBase(object):
                 log.critical(
                     'The following %s remotes have conflicting cachedirs: '
                     '%s. Resolve this using a per-remote parameter called '
-                    '\'name\'.',
-                    self.role, ', '.join(cachedir_map[dirname])
+                    '\'name\'.', self.role, ', '.join(cachedir_map[dirname])
                 )
                 failhard(self.role)
 
@@ -2222,9 +2221,7 @@ class GitBase(object):
                     )
                     failed.append(rdir)
                 else:
-                    log.debug(
-                        '%s removed old cachedir %s', self.role, rdir
-                    )
+                    log.debug('%s removed old cachedir %s', self.role, rdir)
         for fdir in failed:
             to_remove.remove(fdir)
         ret = bool(to_remove)
@@ -2429,8 +2426,7 @@ class GitBase(object):
                     self.provider = 'gitpython'
         if not hasattr(self, 'provider'):
             log.critical(
-                'No suitable %s provider module is installed.',
-                self.role
+                'No suitable %s provider module is installed.', self.role
             )
             failhard(self.role)
 
@@ -2440,7 +2436,7 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_PYGIT2 and 'pygit2' in self.git_providers:
-                log.error(_RECOMMEND_PYGIT2.format(self.role))
+                log.error(_RECOMMEND_PYGIT2, self.role, self.role)
 
         if not HAS_GITPYTHON:
             if not quiet:
@@ -2491,7 +2487,7 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_GITPYTHON and 'gitpython' in self.git_providers:
-                log.error(_RECOMMEND_GITPYTHON.format(self.role))
+                log.error(_RECOMMEND_GITPYTHON, self.role, self.role)
 
         if not HAS_PYGIT2:
             if not quiet:
@@ -2565,19 +2561,17 @@ class GitBase(object):
                 )
                 for repo in self.remotes:
                     fp_.write(
-                        '{0} = {1}\n'.format(
-                            repo.cachedir_basename,
-                            repo.id
+                        salt.utils.stringutils.to_str(
+                            '{0} = {1}\n'.format(
+                                repo.cachedir_basename,
+                                repo.id
+                            )
                         )
                     )
         except OSError:
             pass
         else:
-            log.info(
-                'Wrote new %s remote map to %s',
-                self.role,
-                remote_map
-            )
+            log.info('Wrote new %s remote map to %s', self.role, remote_map)
 
     def do_checkout(self, repo):
         '''
@@ -2757,13 +2751,13 @@ class GitFS(GitBase):
             salt.fileserver.wait_lock(lk_fn, dest)
             if os.path.isfile(blobshadest) and os.path.isfile(dest):
                 with salt.utils.files.fopen(blobshadest, 'r') as fp_:
-                    sha = fp_.read()
+                    sha = salt.utils.stringutils.to_unicode(fp_.read())
                     if sha == blob_hexsha:
                         fnd['rel'] = path
                         fnd['path'] = dest
                         return _add_file_stat(fnd, blob_mode)
-            with salt.utils.files.fopen(lk_fn, 'w+') as fp_:
-                fp_.write('')
+            with salt.utils.files.fopen(lk_fn, 'w'):
+                pass
             for filename in glob.glob(hashes_glob):
                 try:
                     os.remove(filename)
@@ -2798,10 +2792,8 @@ class GitFS(GitBase):
         required_load_keys = set(['path', 'loc', 'saltenv'])
         if not all(x in load for x in required_load_keys):
             log.debug(
-                'Not all of the required keys present in payload. '
-                'Missing: {0}'.format(
-                    ', '.join(required_load_keys.difference(load))
-                )
+                'Not all of the required keys present in payload. Missing: %s',
+                ', '.join(required_load_keys.difference(load))
             )
             return ret
         if not fnd['path']:
@@ -2861,10 +2853,7 @@ class GitFS(GitBase):
             try:
                 os.makedirs(self.file_list_cachedir)
             except os.error:
-                log.error(
-                    'Unable to make cachedir %s',
-                    self.file_list_cachedir
-                )
+                log.error('Unable to make cachedir %s', self.file_list_cachedir)
                 return []
         list_cache = salt.utils.path.join(
             self.file_list_cachedir,
