@@ -973,6 +973,22 @@ a minion performs an authentication check with the master.
 
     auth_events: True
 
+.. conf_master:: minion_data_cache_events
+
+``minion_data_cache_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire minion data cache events.  Minion data
+cache events are fired when a minion requests a minion data cache refresh.
+
+.. code-block:: yaml
+
+    minion_data_cache_events: True
+
 .. _salt-ssh-configuration:
 
 Salt-SSH Configuration

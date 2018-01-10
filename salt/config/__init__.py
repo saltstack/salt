@@ -1087,6 +1087,9 @@ VALID_OPTS = {
 
     # Whether to fire auth events
     'auth_events': bool,
+
+    # Whether to fire Minion data cache refresh events
+    'minion_data_cache_events': bool,
 }
 
 # default configurations
@@ -1654,6 +1657,7 @@ DEFAULT_MASTER_OPTS = {
     'drop_messages_signature_fail': False,
     'schedule': {},
     'auth_events': True,
+    'minion_data_cache_events': True,
 }
 
 
