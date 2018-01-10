@@ -1900,8 +1900,7 @@ class State(object):
             }
         finally:
             if low.get('__prereq__'):
-                sys.modules[self.states[cdata['full']].__module__].__opts__[
-                    'test'] = test
+                sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = test
 
             self.state_con.pop('runas', None)
             self.state_con.pop('runas_password', None)
