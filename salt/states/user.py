@@ -459,6 +459,11 @@ def present(name,
 
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
+        if not gid:
+            ret['comment'] = 'Default group with name "{0}" ' \
+                             'is not present'.format(name)
+            ret['result'] = False
+            return ret
 
     changes = _changes(name,
                        uid,
