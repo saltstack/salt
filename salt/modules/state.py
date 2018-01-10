@@ -991,10 +991,9 @@ def highstate(test=None, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
+
     orig_test = __opts__.get('test', None)
-
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-
     opts['test'] = _get_test_value(test, **kwargs)
 
     if 'env' in kwargs:
