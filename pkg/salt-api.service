@@ -9,6 +9,7 @@ NotifyAccess=all
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-api
 TimeoutStopSec=3
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target

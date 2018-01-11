@@ -8,6 +8,7 @@ Type=notify
 NotifyAccess=all
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-syndic
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
