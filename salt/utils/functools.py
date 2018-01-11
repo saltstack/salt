@@ -45,7 +45,7 @@ def alias_function(fun, name, doc=None):
     '''
     alias_fun = types.FunctionType(fun.__code__,
                                    fun.__globals__,
-                                   six.text_type(name),  # future lint: disable=blacklisted-function
+                                   str(name),  # future lint: disable=blacklisted-function
                                    fun.__defaults__,
                                    fun.__closure__)
     alias_fun.__dict__.update(fun.__dict__)
