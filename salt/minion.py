@@ -2000,7 +2000,7 @@ class Minion(MinionBase):
                 salt.utils.minion.cache_jobs(self.opts, load['jid'], ret)
 
         load = {'cmd': ret_cmd,
-                'load': jids.values()}
+                'load': list(six.itervalues(jids))}
 
         def timeout_handler(*_):
             log.warning(
@@ -3172,7 +3172,7 @@ class SyndicManager(MinionBase):
             if res:
                 self.delayed = []
         for master in list(six.iterkeys(self.job_rets)):
-            values = self.job_rets[master].values()
+            values = list(six.itervalues(self.job_rets[master]))
             res = self._return_pub_syndic(values, master_id=master)
             if res:
                 del self.job_rets[master]
