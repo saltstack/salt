@@ -11,8 +11,8 @@ The publisher ACL system is configured in the master configuration file via the
 ``publisher_acl`` configuration option. Under the ``publisher_acl``
 configuration option the users open to send commands are specified and then a
 list of regular expressions which specify the minion functions which will be
-made available to specified user. This configuration is much like the ``peer``
-configuration:
+made available to specified user. This configuration is much like the
+:ref:`external_auth <acl-eauth>` configuration:
 
 .. code-block:: yaml
 
@@ -28,6 +28,16 @@ configuration:
       # Allow managers to use saltutil module functions
       manager_.*:
         - saltutil.*
+      # Allow users to use only my_mod functions on "web*" minions with specific arguments.
+      user_.*:
+        - web*:
+          - 'my_mod.*':
+              args:
+                - 'a.*'
+                - 'b.*'
+              kwargs:
+                'kwa': 'kwa.*'
+                'kwb': 'kwb'
 
 Permission Issues
 -----------------
