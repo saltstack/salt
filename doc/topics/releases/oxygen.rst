@@ -69,6 +69,174 @@ Additionally, the ``tag`` argument must now be explicitly passed to the
 :py:func:`docker_image.present <salt.states.docker_image.present>` state,
 unless the image is being pulled from a docker registry.
 
+``utils`` functions moved into separate modules
+===============================================
+
+The Salt utility functions from ``salt.utils`` have been moved into different
+modules, grouped logically based on their functionality. This change is
+backwards compatible, but the old imports will no longer be supported starting
+with release Neon.
+
+The functions have been moved as follows:
+
+- ``salt.utils.appendproctitle``: use ``salt.utils.process.appendproctitle`` 
+  instead.
+- ``salt.utils.daemonize``: use ``salt.utils.process.daemonize`` instead.
+- ``salt.utils.daemonize_if``: use ``salt.utils.process.daemonize_if`` instead.
+- ``salt.utils.reinit_crypto``: use ``salt.utils.crypt.reinit_crypto`` instead.
+- ``salt.utils.pem_finger``: use ``salt.utils.crypt.pem_finger`` instead.
+- ``salt.utils.to_bytes``: use ``salt.utils.stringutils.to_bytes`` instead.
+- ``salt.utils.to_str``: use ``salt.utils.stringutils.to_str`` instead.
+- ``salt.utils.to_unicode``: use ``salt.utils.stringutils.to_unicode`` instead.
+- ``salt.utils.str_to_num``: use ``salt.utils.stringutils.to_num`` instead.
+- ``salt.utils.is_quoted``: use ``salt.utils.stringutils.is_quoted`` instead.
+- ``salt.utils.dequote``: use ``salt.utils.stringutils.dequote`` instead.
+- ``salt.utils.is_hex``: use ``salt.utils.stringutils.is_hex`` instead.
+- ``salt.utils.is_bin_str``: use ``salt.utils.stringutils.is_bin_str`` instead.
+- ``salt.utils.rand_string``: use ``salt.utils.stringutils.random`` instead.
+- ``salt.utils.contains_whitespace``: use 
+  ``salt.utils.stringutils.contains_whitespace`` instead.
+- ``salt.utils.build_whitespace_split_regex``: use 
+  ``salt.utils.stringutils.build_whitespace_split_regex`` instead.
+- ``salt.utils.expr_match``: use ``salt.utils.stringutils.expr_match`` instead.
+- ``salt.utils.check_whitelist_blacklist``: use 
+  ``salt.utils.stringutils.check_whitelist_blacklist`` instead.
+- ``salt.utils.check_include_exclude``: use 
+  ``salt.utils.stringutils.check_include_exclude`` instead.
+- ``salt.utils.print_cli``: use ``salt.utils.stringutils.print_cli`` instead.
+- ``salt.utils.clean_kwargs``: use ``salt.utils.args.clean_kwargs`` instead.
+- ``salt.utils.invalid_kwargs``: use ``salt.utils.args.invalid_kwargs`` 
+  instead.
+- ``salt.utils.shlex_split``: use ``salt.utils.args.shlex_split`` instead.
+- ``salt.utils.arg_lookup``: use ``salt.utils.args.arg_lookup`` instead.
+- ``salt.utils.argspec_report``: use ``salt.utils.args.argspec_report`` 
+  instead.
+- ``salt.utils.split_input``: use ``salt.utils.args.split_input`` instead.
+- ``salt.utils.test_mode``: use ``salt.utils.args.test_mode`` instead.
+- ``salt.utils.format_call``: use ``salt.utils.args.format_call`` instead.
+- ``salt.utils.which``: use ``salt.utils.path.which`` instead.
+- ``salt.utils.which_bin``: use ``salt.utils.path.which_bin`` instead.
+- ``salt.utils.path_join``: use ``salt.utils.path.join`` instead.
+- ``salt.utils.check_or_die``: use ``salt.utils.path.check_or_die`` instead.
+- ``salt.utils.sanitize_win_path_string``: use 
+  ``salt.utils.path.sanitize_win_path`` instead.
+- ``salt.utils.rand_str``: use ``salt.utils.hashutils.random_hash`` instead.
+- ``salt.utils.get_hash``: use ``salt.utils.hashutils.get_hash`` instead.
+- ``salt.utils.is_windows``: use ``salt.utils.platform.is_windows`` instead.
+- ``salt.utils.is_proxy``: use ``salt.utils.platform.is_proxy`` instead.
+- ``salt.utils.is_linux``: use ``salt.utils.platform.is_linux`` instead.
+- ``salt.utils.is_darwin``: use ``salt.utils.platform.is_darwin`` instead.
+- ``salt.utils.is_sunos``: use ``salt.utils.platform.is_sunos`` instead.
+- ``salt.utils.is_smartos``: use ``salt.utils.platform.is_smartos`` instead.
+- ``salt.utils.is_smartos_globalzone``: use 
+  ``salt.utils.platform.is_smartos_globalzone`` instead.
+- ``salt.utils.is_smartos_zone``: use ``salt.utils.platform.is_smartos_zone`` 
+  instead.
+- ``salt.utils.is_freebsd``: use ``salt.utils.platform.is_freebsd`` instead.
+- ``salt.utils.is_netbsd``: use ``salt.utils.platform.is_netbsd`` instead.
+- ``salt.utils.is_openbsd``: use ``salt.utils.platform.is_openbsd`` instead.
+- ``salt.utils.is_aix``: use ``salt.utils.platform.is_aix`` instead.
+- ``salt.utils.safe_rm``: use ``salt.utils.files.safe_rm`` instead.
+- ``salt.utils.is_empty``: use ``salt.utils.files.is_empty`` instead.
+- ``salt.utils.fopen``: use ``salt.utils.files.fopen`` instead.
+- ``salt.utils.flopen``: use ``salt.utils.files.flopen`` instead.
+- ``salt.utils.fpopen``: use ``salt.utils.files.fpopen`` instead.
+- ``salt.utils.rm_rf``: use ``salt.utils.files.rm_rf`` instead.
+- ``salt.utils.mkstemp``: use ``salt.utils.files.mkstemp`` instead.
+- ``salt.utils.istextfile``: use ``salt.utils.files.is_text_file`` instead.
+- ``salt.utils.is_bin_file``: use ``salt.utils.files.is_binary`` instead.
+- ``salt.utils.list_files``: use ``salt.utils.files.list_files`` instead.
+- ``salt.utils.safe_walk``: use ``salt.utils.files.safe_walk`` instead.
+- ``salt.utils.st_mode_to_octal``: use ``salt.utils.files.st_mode_to_octal`` 
+  instead.
+- ``salt.utils.normalize_mode``: use ``salt.utils.files.normalize_mode`` 
+  instead.
+- ``salt.utils.human_size_to_bytes``: use 
+  ``salt.utils.files.human_size_to_bytes`` instead.
+- ``salt.utils.backup_minion``: use ``salt.utils.files.backup_minion`` instead.
+- ``salt.utils.str_version_to_evr``: use ``salt.utils.pkg.rpm.version_to_evr``
+  instead.
+- ``salt.utils.parse_docstring``: use ``salt.utils.doc.parse_docstring`` 
+  instead.
+- ``salt.utils.compare_versions``: use ``salt.utils.versions.compare`` instead.
+- ``salt.utils.version_cmp``: use ``salt.utils.versions.version_cmp`` instead.
+- ``salt.utils.warn_until``: use ``salt.utils.versions.warn_until`` instead.
+- ``salt.utils.kwargs_warn_until``: use 
+  ``salt.utils.versions.kwargs_warn_until`` instead.
+- ``salt.utils.get_color_theme``: use ``salt.utils.color.get_color_theme`` 
+  instead.
+- ``salt.utils.get_colors``: use ``salt.utils.color.get_colors`` instead.
+- ``salt.utils.gen_state_tag``: use ``salt.utils.state.gen_tag`` instead.
+- ``salt.utils.search_onfail_requisites``: use 
+  ``salt.utils.state.search_onfail_requisites`` instead.
+- ``salt.utils.check_state_result``: use ``salt.utils.state.check_result`` 
+  instead.
+- ``salt.utils.get_user``: use ``salt.utils.user.get_user`` instead.
+- ``salt.utils.get_uid``: use ``salt.utils.user.get_uid`` instead.
+- ``salt.utils.get_specific_user``: use ``salt.utils.user.get_specific_user`` 
+  instead.
+- ``salt.utils.chugid``: use ``salt.utils.user.chugid`` instead.
+- ``salt.utils.chugid_and_umask``: use ``salt.utils.user.chugid_and_umask`` 
+  instead.
+- ``salt.utils.get_default_group``: use ``salt.utils.user.get_default_group`` 
+  instead.
+- ``salt.utils.get_group_list``: use ``salt.utils.user.get_group_list`` 
+  instead.
+- ``salt.utils.get_group_dict``: use ``salt.utils.user.get_group_dict`` 
+  instead.
+- ``salt.utils.get_gid_list``: use ``salt.utils.user.get_gid_list`` instead.
+- ``salt.utils.get_gid``: use ``salt.utils.user.get_gid`` instead.
+- ``salt.utils.enable_ctrl_logoff_handler``: use 
+  ``salt.utils.win_functions.enable_ctrl_logoff_handler`` instead.
+- ``salt.utils.traverse_dict``: use ``salt.utils.data.traverse_dict`` instead.
+- ``salt.utils.traverse_dict_and_list``: use 
+  ``salt.utils.data.traverse_dict_and_list`` instead.
+- ``salt.utils.filter_by``: use ``salt.utils.data.filter_by`` instead.
+- ``salt.utils.subdict_match``: use ``salt.utils.data.subdict_match`` instead.
+- ``salt.utils.substr_in_list``: use ``salt.utils.data.substr_in_list`` instead.
+- ``salt.utils.is_dictlist``: use ``salt.utils.data.is_dictlist``.
+- ``salt.utils.repack_dictlist``: use ``salt.utils.data.repack_dictlist`` 
+  instead.
+- ``salt.utils.compare_dicts``: use ``salt.utils.data.compare_dicts`` instead.
+- ``salt.utils.compare_lists``: use ``salt.utils.data.compare_lists`` instead.
+- ``salt.utils.decode_dict``: use ``salt.utils.data.decode_dict`` instead.
+- ``salt.utils.decode_list``: use ``salt.utils.data.encode_list`` instead.
+- ``salt.utils.exactly_n``: use ``salt.utils.data.exactly_n`` instead.
+- ``salt.utils.exactly_one``: use ``salt.utils.data.exactly_one`` instead.
+- ``salt.utils.is_list``: use ``salt.utils.data.is_list`` instead.
+- ``salt.utils.is_iter``: use ``salt.utils.data.is_iter`` instead.
+- ``salt.utils.isorted``: use ``salt.utils.data.sorted_ignorecase`` instead.
+- ``salt.utils.is_true``: use ``salt.utils.data.is_true`` instead.
+- ``salt.utils.mysql_to_dict``: use ``salt.utils.data.mysql_to_dict`` instead.
+- ``salt.utils.simple_types_filter``: use 
+  ``salt.utils.data.simple_types_filter`` instead.
+- ``salt.utils.ip_bracket``: use ``salt.utils.zeromq.ip_bracket`` instead.
+- ``salt.utils.gen_mac``: use ``salt.utils.network.gen_mac`` instead.
+- ``salt.utils.mac_str_to_bytes``: use ``salt.utils.network.mac_str_to_bytes`` 
+  instead.
+- ``salt.utils.refresh_dns``: use ``salt.utils.network.refresh_dns`` instead.
+- ``salt.utils.dns_check``: use ``salt.utils.network.dns_check`` instead.
+- ``salt.utils.get_context``: use ``salt.utils.templates.get_context`` instead.
+- ``salt.utils.get_master_key``: use ``salt.utils.master.get_master_key`` 
+  instead.
+- ``salt.utils.get_values_of_matching_keys``: use 
+  ``salt.utils.master.get_values_of_matching_keys`` instead.
+- ``salt.utils.date_cast``: use ``salt.utils.dateutils.date_cast`` instead.
+- ``salt.utils.date_format``: use ``salt.utils.dateutils.strftime`` instead.
+- ``salt.utils.total_seconds``: use ``salt.utils.dateutils.total_seconds`` 
+  instead.
+- ``salt.utils.find_json``: use ``salt.utils.json.find_json`` instead.
+- ``salt.utils.import_json``: use ``salt.utils.json.import_json`` instead.
+- ``salt.utils.namespaced_function``: use 
+  ``salt.utils.functools.namespaced_function`` instead.
+- ``salt.utils.alias_function``: use ``salt.utils.functools.alias_function`` 
+  instead.
+- ``salt.utils.profile_func``: use ``salt.utils.profile.profile_func`` instead.
+- ``salt.utils.activate_profile``: use ``salt.utils.profile.activate_profile`` 
+  instead.
+- ``salt.utils.output_profile``: use ``salt.utils.profile.output_profile`` 
+  instead.
+
 State and Execution Module Support for ``docker run`` Functionality
 ===================================================================
 
