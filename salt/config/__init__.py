@@ -1194,6 +1194,12 @@ VALID_OPTS = {
     # Scheduler should be a dictionary
     'schedule': dict,
 
+    # Whether to fire auth events
+    'auth_events': bool,
+
+    # Whether to fire Minion data cache refresh events
+    'minion_data_cache_events': bool,
+
     # Enable calling ssh minions from the salt master
     'enable_ssh_minions': bool,
 }
@@ -1832,6 +1838,8 @@ DEFAULT_MASTER_OPTS = {
         'mapping': {},
     },
     'schedule': {},
+    'auth_events': True,
+    'minion_data_cache_events': True,
     'enable_ssh': False,
     'enable_ssh_minions': False,
 }
@@ -2357,7 +2365,8 @@ def minion_config(path,
                   defaults=None,
                   cache_minion_id=False,
                   ignore_config_errors=True,
-                  minion_id=None):
+                  minion_id=None,
+                  role='minion'):
     '''
     Reads in the minion configuration file and sets up special options
 
@@ -2397,6 +2406,7 @@ def minion_config(path,
     opts = apply_minion_config(overrides, defaults,
                                cache_minion_id=cache_minion_id,
                                minion_id=minion_id)
+    opts['__role'] = role
     apply_sdb(opts)
     _validate_opts(opts)
     return opts

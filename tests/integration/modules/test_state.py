@@ -1753,7 +1753,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(val['changes']['diff'], 'New file')
 
     def tearDown(self):
-        nonbase_file = '/tmp/nonbase_env'
+        nonbase_file = os.path.join(TMP, 'nonbase_env')
         if os.path.isfile(nonbase_file):
             os.remove(nonbase_file)
 
