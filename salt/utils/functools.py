@@ -10,6 +10,7 @@ import types
 
 # Import 3rd-party libs
 from salt.ext import six
+import salt.utils.stringutils
 
 
 def namespaced_function(function, global_dict, defaults=None, preserve_context=False):
@@ -45,7 +46,7 @@ def alias_function(fun, name, doc=None):
     '''
     alias_fun = types.FunctionType(fun.__code__,
                                    fun.__globals__,
-                                   str(name),  # future lint: disable=blacklisted-function
+                                   salt.utils.stringutils.to_str(name),  # future lint: disable=blacklisted-function
                                    fun.__defaults__,
                                    fun.__closure__)
     alias_fun.__dict__.update(fun.__dict__)
