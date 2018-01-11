@@ -3,7 +3,7 @@
 Utility functions to modify other functions
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Python libs
 import types
@@ -45,7 +45,7 @@ def alias_function(fun, name, doc=None):
     '''
     alias_fun = types.FunctionType(fun.__code__,
                                    fun.__globals__,
-                                   str(name),  # future lint: disable=blacklisted-function
+                                   six.text_type(name),  # future lint: disable=blacklisted-function
                                    fun.__defaults__,
                                    fun.__closure__)
     alias_fun.__dict__.update(fun.__dict__)

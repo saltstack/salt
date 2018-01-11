@@ -7,7 +7,7 @@ and the like, but also useful for basic HTTP testing.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import cgi
 import logging
 import os
@@ -230,7 +230,7 @@ def query(url,
     # Make sure no secret fields show up in logs
     log_url = sanitize_url(url_full, hide_fields)
 
-    log.debug('Requesting URL {0} using {1} method'.format(log_url, method))
+    log.debug('Requesting URL %s using %s method', log_url, method)
     log.debug("Using backend: %s", backend)
 
     if method == 'POST' and log.isEnabledFor(logging.TRACE):
@@ -242,9 +242,9 @@ def query(url,
                     for field in hide_fields:
                         if item == field:
                             log_data[item] = 'XXXXXXXXXX'
-            log.trace('Request POST Data: {0}'.format(pprint.pformat(log_data)))
+            log.trace('Request POST Data: %s', pprint.pformat(log_data))
         else:
-            log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))
+            log.trace('Request POST Data: %s', pprint.pformat(data))
 
     if header_file is not None:
         header_tpl = _render(
@@ -298,7 +298,7 @@ def query(url,
         sess = requests.Session()
         sess.auth = auth
         sess.headers.update(header_dict)
-        log.trace('Request Headers: {0}'.format(sess.headers))
+        log.trace('Request Headers: %s', sess.headers)
         sess_cookies = sess.cookies
         sess.verify = verify_ssl
     elif backend == 'urllib2':
@@ -341,8 +341,8 @@ def query(url,
                 if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                     req_kwargs['cert'] = cert
             else:
-                log.error('The client-side certificate path that was passed is '
-                          'not valid: {0}'.format(cert))
+                log.error('The client-side certificate path that'
+                          ' was passed is not valid: %s', cert)
 
         result = sess.request(
             method, url, params=params, data=data, **req_kwargs
@@ -363,7 +363,8 @@ def query(url,
                 'body': result.content,
             }
 
-        log.debug('Final URL location of Response: {0}'.format(sanitize_url(result.url, hide_fields)))
+        log.debug('Final URL location of Response: %s',
+                  sanitize_url(result.url, hide_fields))
 
         result_status_code = result.status_code
         result_headers = result.headers
@@ -385,10 +386,10 @@ def query(url,
             handlers[0] = urllib_request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
                 log.warning('match_hostname() not available, SSL hostname checking '
-                         'not available. THIS CONNECTION MAY NOT BE SECURE!')
+                            'not available. THIS CONNECTION MAY NOT BE SECURE!')
             elif verify_ssl is False:
                 log.warning('SSL certificate verification has been explicitly '
-                         'disabled. THIS CONNECTION MAY NOT BE SECURE!')
+                            'disabled. THIS CONNECTION MAY NOT BE SECURE!')
             else:
                 if ':' in hostname:
                     hostname, port = hostname.split(':')
@@ -406,10 +407,9 @@ def query(url,
                 except CertificateError as exc:
                     ret['error'] = (
                         'The certificate was invalid. '
-                        'Error returned was: {0}'.format(
-                            pprint.pformat(exc)
+                        'Error returned was: %s',
+                        pprint.pformat(exc)
                         )
-                    )
                     return ret
 
                 # Client-side cert handling
@@ -423,7 +423,7 @@ def query(url,
                             cert_chain = cert
                     else:
                         log.error('The client-side certificate path that was '
-                                  'passed is not valid: {0}'.format(cert))
+                                  'passed is not valid: %s', cert)
                         return
                     if hasattr(ssl, 'SSLContext'):
                         # Python >= 2.7.9
@@ -447,7 +447,7 @@ def query(url,
         try:
             result = opener.open(request)
         except URLError as exc:
-            return {'Error': str(exc)}
+            return {'Error': six.text_type(exc)}
         if stream is True or handle is True:
             return {
                 'handle': result,
@@ -478,8 +478,8 @@ def query(url,
                     req_kwargs['client_cert'] = cert[0]
                     req_kwargs['client_key'] = cert[1]
             else:
-                log.error('The client-side certificate path that was passed is '
-                          'not valid: {0}'.format(cert))
+                log.error('The client-side certificate path that '
+                          'was passed is not valid: %s', cert)
 
         if isinstance(data, dict):
             data = _urlencode(data)
@@ -540,12 +540,12 @@ def query(url,
             )
         except tornado.httpclient.HTTPError as exc:
             ret['status'] = exc.code
-            ret['error'] = str(exc)
+            ret['error'] = six.text_type(exc)
             return ret
         except socket.gaierror as exc:
             if status is True:
                 ret['status'] = 0
-            ret['error'] = str(exc)
+            ret['error'] = six.text_type(exc)
             return ret
 
         if stream is True or handle is True:
@@ -578,9 +578,9 @@ def query(url,
             result_headers_dict[comps[0].strip()] = ':'.join(comps[1:]).strip()
         result_headers = result_headers_dict
 
-    log.debug('Response Status Code: {0}'.format(result_status_code))
-    log.trace('Response Headers: {0}'.format(result_headers))
-    log.trace('Response Cookies: {0}'.format(sess_cookies))
+    log.debug('Response Status Code: %s', result_status_code)
+    log.trace('Response Headers: %s', result_headers)
+    log.trace('Response Cookies: %s', sess_cookies)
     # log.trace("Content: %s", result_text)
 
     coding = result_headers.get('Content-Encoding', "identity")
@@ -590,10 +590,10 @@ def query(url,
         result_text = __decompressContent(coding, result_text)
 
     try:
-        log.trace('Response Text: {0}'.format(result_text))
+        log.trace('Response Text: %s', result_text)
     except UnicodeEncodeError as exc:
-        log.trace(('Cannot Trace Log Response Text: {0}. This may be due to '
-                  'incompatibilities between requests and logging.').format(exc))
+        log.trace('Cannot Trace Log Response Text: %s. This may be due to '
+                  'incompatibilities between requests and logging.', exc)
 
     if text_out is not None:
         with salt.utils.files.fopen(text_out, 'w') as tof:
@@ -756,7 +756,7 @@ def update_ca_bundle(
     if source is None:
         source = opts.get('ca_bundle_url', 'http://curl.haxx.se/ca/cacert.pem')
 
-    log.debug('Attempting to download {0} to {1}'.format(source, target))
+    log.debug('Attempting to download %s to %s', source, target)
     query(
         source,
         text=True,
@@ -780,31 +780,28 @@ def update_ca_bundle(
         for cert_file in merge_files:
             if os.path.exists(cert_file):
                 log.debug(
-                    'Queueing up {0} to be appended to {1}'.format(
-                        cert_file, target
-                    )
+                    'Queueing up %s to be appended to %s',
+                    cert_file, target
                 )
                 try:
                     with salt.utils.files.fopen(cert_file, 'r') as fcf:
                         merge_content = '\n'.join((merge_content, fcf.read()))
                 except IOError as exc:
                     log.error(
-                        'Reading from {0} caused the following error: {1}'.format(
-                            cert_file, exc
-                        )
+                        'Reading from %s caused the following error: %s',
+                        cert_file, exc
                     )
 
         if merge_content:
-            log.debug('Appending merge_files to {0}'.format(target))
+            log.debug('Appending merge_files to %s', target)
             try:
                 with salt.utils.files.fopen(target, 'a') as tfp:
                     tfp.write('\n')
                     tfp.write(merge_content)
             except IOError as exc:
                 log.error(
-                    'Writing to {0} caused the following error: {1}'.format(
-                        target, exc
-                    )
+                    'Writing to %s caused the following error: %s',
+                    target, exc
                 )
 
 
@@ -823,8 +820,8 @@ def _render(template, render, renderer, template_dict, opts):
         ret = compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
         if salt.utils.stringio.is_readable(ret):
             ret = ret.read()
-        if str(ret).startswith('#!') and not str(ret).startswith('#!/'):
-            ret = str(ret).split('\n', 1)[1]
+        if six.text_type(ret).startswith('#!') and not six.text_type(ret).startswith('#!/'):
+            ret = six.text_type(ret).split('\n', 1)[1]
         return ret
     with salt.utils.files.fopen(template, 'r') as fh_:
         return fh_.read()
@@ -947,7 +944,7 @@ def sanitize_url(url, hide_fields):
             log_url += url_tmp
         return log_url.rstrip('&')
     else:
-        return str(url)
+        return six.text_type(url)
 
 
 def _sanitize_url_components(comp_list, field):
