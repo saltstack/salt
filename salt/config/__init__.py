@@ -3800,8 +3800,29 @@ def apply_minion_config(overrides=None,
 
     # Check and update TLS/SSL configuration
     _update_ssl_config(opts)
+    _update_discovery_config(opts)
 
     return opts
+
+
+def _update_discovery_config(opts, minion=True):
+    '''
+    Update discovery config for all instances.
+
+    :param opts:
+    :return:
+    '''
+    if opts.get('discovery') not in (None, False):
+        if opts['discovery'] is True:
+            opts['discovery'] = {}
+        discovery_config = {'attempts': 3, 'pause': 5, 'port': 4520, 'match': 'any', 'mapping': {}}
+        for key in opts['discovery'].keys():
+            if key not in discovery_config:
+                raise salt.exceptions.SaltConfigurationError('Unknown discovery option: {0}'.format(key))
+        if not minion:
+            for key in ['attempts', 'pause', 'match']:
+                del discovery_config[key]
+        opts['discovery'] = salt.utils.dictupdate.update(discovery_config, opts['discovery'], True, True)
 
 
 def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_config_errors=False):
@@ -3997,6 +4018,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     # Check and update TLS/SSL configuration
     _update_ssl_config(opts)
+    _update_discovery_config(opts, minion=False)
 
     return opts
 
