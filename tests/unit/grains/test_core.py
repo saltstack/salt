@@ -24,13 +24,15 @@ import salt.utils
 import salt.grains.core as core
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
+if six.PY3:
+    import ipaddress
+else:
+    from salt.ext import ipaddress
 
 log = logging.getLogger(__name__)
 
 # Globals
-IPv4Address = salt.ext.ipaddress.IPv4Address
-IPv6Address = salt.ext.ipaddress.IPv6Address
 IP4_LOCAL = '127.0.0.1'
 IP4_ADD1 = '10.0.0.1'
 IP4_ADD2 = '10.0.0.2'
@@ -599,11 +601,11 @@ PATCHLEVEL = 3
         https://github.com/saltstack/salt/issues/41230
         '''
         resolv_mock = {'domain': '', 'sortlist': [], 'nameservers':
-                   [IPv4Address(IP4_ADD1),
-                    IPv6Address(IP6_ADD1)], 'ip4_nameservers':
-                   [IPv4Address(IP4_ADD1)],
+                   [ipaddress.IPv4Address(IP4_ADD1),
+                    ipaddress.IPv6Address(IP6_ADD1)], 'ip4_nameservers':
+                   [ipaddress.IPv4Address(IP4_ADD1)],
                    'search': ['test.saltstack.com'], 'ip6_nameservers':
-                   [IPv6Address(IP6_ADD1)], 'options': []}
+                   [ipaddress.IPv6Address(IP6_ADD1)], 'options': []}
         ret = {'dns': {'domain': '', 'sortlist': [], 'nameservers':
                        [IP4_ADD1, IP6_ADD1], 'ip4_nameservers':
                        [IP4_ADD1], 'search': ['test.saltstack.com'],
