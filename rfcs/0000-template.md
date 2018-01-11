@@ -1,4 +1,4 @@
-- Feature Name: (fill with a unique ident, my_awesome_feature)
+- Feature Name: (fill with a unique identifier, ex: my_awesome_feature)
 - Start Date: (fill with today's date, YYYY-MM-DD)
 - RFC PR: (leave this empty)
 - Salt Issue: (leave this empty)
@@ -25,6 +25,7 @@ with the product to understand, and for somebody familiar with the internals to 
 - Examples of how the feature is used.
 - Corner-cases
 - A basic code example in case the proposal involves a new or changed API
+- Outline of a test plan for this feature. How do you plan to test it? Can it be automated?
 
 ## Alternatives
 [alternatives]: #alternatives
@@ -48,4 +49,3 @@ Why should we *not* do this? Please consider:
 
 
 There are tradeoffs to choosing any path. Attempt to identify them here.
-
