@@ -25,7 +25,6 @@ import logging
 import time
 
 # Import third party libs
-import yaml
 # pylint: disable=no-name-in-module,import-error,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves.urllib.error import HTTPError
@@ -47,6 +46,7 @@ import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.systemd
 import salt.utils.versions
+import salt.utils.yaml
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -2205,12 +2205,18 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 if repo_info:
                     return {repo: repo_info}
                 else:
+                    env = None
+                    http_proxy_url = _get_http_proxy_url()
+                    if http_proxy_url:
+                        env = {'http_proxy': http_proxy_url,
+                               'https_proxy': http_proxy_url}
                     if float(__grains__['osrelease']) < 12.04:
                         cmd = ['apt-add-repository', repo]
                     else:
                         cmd = ['apt-add-repository', '-y', repo]
                     out = __salt__['cmd.run_all'](cmd,
                                                   python_shell=False,
+                                                  env=env,
                                                   **kwargs)
                     if out['retcode']:
                         raise CommandExecutionError(
@@ -2644,8 +2650,8 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
 
     if isinstance(selection, six.string_types):
         try:
-            selection = yaml.safe_load(selection)
-        except (yaml.parser.ParserError, yaml.scanner.ScannerError) as exc:
+            selection = salt.utils.yaml.safe_load(selection)
+        except (salt.utils.yaml.parser.ParserError, salt.utils.yaml.scanner.ScannerError) as exc:
             raise SaltInvocationError(
                 'Improperly-formatted selection: {0}'.format(exc)
             )

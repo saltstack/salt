@@ -13,7 +13,6 @@ import logging
 import os
 import pprint
 import socket
-import yaml
 import io
 import zlib
 import gzip
@@ -48,6 +47,7 @@ import salt.utils.json
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.version
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
@@ -464,6 +464,8 @@ def query(url,
                     'charset' in res_params and \
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result.body.decode('utf-8')
         ret['body'] = result_text
     else:
         # Tornado
@@ -656,7 +658,7 @@ def query(url,
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
         elif decode_type == 'yaml':
-            ret['dict'] = salt.utils.data.decode(yaml.safe_load(result_text))
+            ret['dict'] = salt.utils.data.decode(salt.utils.yaml.safe_load(result_text))
         else:
             text = True
 

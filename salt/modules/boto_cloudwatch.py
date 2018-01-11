@@ -48,7 +48,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import yaml
+import yaml  # pylint: disable=blacklisted-import
 
 import salt.utils.json
 import salt.utils.odict as odict
@@ -100,31 +100,27 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
 
 
 def _safe_dump(data):
-    ###########################################
-    # this presenter magic makes yaml.safe_dump
-    # work with the objects returned from
-    # boto.describe_alarms()
-    ###########################################
-    def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(list(data.items()))
-
-    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
-                         Dumper=yaml.dumper.SafeDumper)
+    '''
+    this presenter magic makes yaml.safe_dump
+    work with the objects returned from
+    boto.describe_alarms()
+    '''
+    custom_dumper = __utils__['yaml.get_dumper']('SafeOrderedDumper')
 
     def boto_listelement_presenter(dumper, data):
         return dumper.represent_list(list(data))
 
     yaml.add_representer(boto.ec2.cloudwatch.listelement.ListElement,
                          boto_listelement_presenter,
-                         Dumper=yaml.dumper.SafeDumper)
+                         Dumper=custom_dumper)
 
     def dimension_presenter(dumper, data):
         return dumper.represent_dict(dict(data))
 
     yaml.add_representer(boto.ec2.cloudwatch.dimension.Dimension,
-                         dimension_presenter, Dumper=yaml.dumper.SafeDumper)
+                         dimension_presenter, Dumper=custom_dumper)
 
-    return yaml.safe_dump(data)
+    return __utils__['yaml.dump'](data, Dumper=custom_dumper)
 
 
 def get_all_alarms(region=None, prefix=None, key=None, keyid=None,

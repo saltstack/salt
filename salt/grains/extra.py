@@ -6,12 +6,12 @@ from __future__ import absolute_import
 import os
 
 # Import third party libs
-import yaml
 import logging
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.yaml
 
 __proxyenabled__ = ['*']
 log = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def config():
         log.debug('Loading static grains from %s', gfn)
         with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
-                return yaml.safe_load(fp_.read())
+                return salt.utils.yaml.safe_load(fp_)
             except Exception:
                 log.warning("Bad syntax in grains file! Skipping.")
                 return {}

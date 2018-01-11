@@ -20,7 +20,6 @@ import getpass
 import logging
 import optparse
 import traceback
-import yaml
 from functools import partial
 
 
@@ -39,13 +38,13 @@ import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.xdg
+import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 from salt.utils.verify import verify_files
 import salt.exceptions
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.utils.yamldumper import SafeOrderedDumper
 
 
 def _sorted(mixins_or_funcs):
@@ -974,7 +973,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                 try:
                     os.unlink(self.config['pidfile'])
                 except OSError as err:
-                    self.info(
+                    logging.getLogger(__name__).info(
                         'PIDfile could not be deleted: {0}'.format(
                             self.config['pidfile']
                         )
@@ -2091,11 +2090,9 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
         if self.options.config_dump:
             cfg = config.master_config(self.get_config_file_path())
             sys.stdout.write(
-                yaml.dump(
+                salt.utils.yaml.safe_dump(
                     cfg,
-                    default_flow_style=False,
-                    Dumper=SafeOrderedDumper
-                )
+                    default_flow_style=False)
             )
             sys.exit(salt.defaults.exitcodes.EX_OK)
 

@@ -33,13 +33,13 @@ import os
 import sys
 import logging
 import importlib
-import yaml
 import fnmatch
 import subprocess
 
 import salt.utils.json
 from salt.exceptions import LoaderError, CommandExecutionError
-from salt.utils import timed_subprocess
+import salt.utils.timed_subprocess
+import salt.utils.yaml
 
 try:
     import ansible
@@ -153,11 +153,13 @@ class AnsibleModuleCaller(object):
         js_args = str('{{"ANSIBLE_MODULE_ARGS": {args}}}')  # future lint: disable=blacklisted-function
         js_args = js_args.format(args=salt.utils.json.dumps(kwargs))
 
-        proc_out = timed_subprocess.TimedProc(["echo", "{0}".format(js_args)],
-                                              stdout=subprocess.PIPE, timeout=self.timeout)
+        proc_out = salt.utils.timed_subprocess.TimedProc(
+            ["echo", "{0}".format(js_args)],
+            stdout=subprocess.PIPE, timeout=self.timeout)
         proc_out.run()
-        proc_exc = timed_subprocess.TimedProc(['python', module.__file__],
-                                              stdin=proc_out.stdout, stdout=subprocess.PIPE, timeout=self.timeout)
+        proc_exc = salt.utils.timed_subprocess.TimedProc(
+            ['python', module.__file__],
+            stdin=proc_out.stdout, stdout=subprocess.PIPE, timeout=self.timeout)
         proc_exc.run()
 
         try:
@@ -244,7 +246,7 @@ def help(module=None, *args):
     ret = {}
     for docset in module.DOCUMENTATION.split('---'):
         try:
-            docset = yaml.load(docset)
+            docset = salt.utils.yaml.safe_load(docset)
             if docset:
                 doc.update(docset)
         except Exception as err:

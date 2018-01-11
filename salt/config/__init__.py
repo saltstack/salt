@@ -15,7 +15,6 @@ import time
 import codecs
 import logging
 import types
-import yaml
 from copy import deepcopy
 
 # pylint: disable=import-error,no-name-in-module
@@ -34,6 +33,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
+import salt.utils.yaml
 import salt.utils.yamlloader as yamlloader
 import salt.utils.zeromq
 import salt.syspaths
@@ -2098,11 +2098,8 @@ def _read_conf_file(path):
     log.debug('Reading configuration from {0}'.format(path))
     with salt.utils.files.fopen(path, 'r') as conf_file:
         try:
-            conf_opts = yamlloader.load(
-                conf_file.read(),
-                Loader=yamlloader.SaltYamlSafeLoader,
-            ) or {}
-        except yaml.YAMLError as err:
+            conf_opts = salt.utils.yaml.safe_load(conf_file) or {}
+        except salt.utils.yaml.YAMLError as err:
             message = 'Error parsing configuration file: {0} - {1}'.format(path, err)
             log.error(message)
             raise salt.exceptions.SaltConfigurationError(message)
@@ -3385,12 +3382,12 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer', 'oneandone']
+    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer', 'oneandone', 'profitbricks']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
                         'softlayer', 'softlayer_hw', 'vmware', 'vsphere',
-                        'virtualbox', 'profitbricks', 'libvirt', 'oneandone']
+                        'virtualbox', 'libvirt', 'oneandone']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
