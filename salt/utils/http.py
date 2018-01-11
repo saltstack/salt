@@ -42,6 +42,7 @@ import salt.config
 import salt.loader
 import salt.syspaths
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.network
@@ -655,7 +656,7 @@ def query(url,
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
         elif decode_type == 'yaml':
-            ret['dict'] = yaml.safe_load(result_text)
+            ret['dict'] = salt.utils.data.decode(yaml.safe_load(result_text))
         else:
             text = True
 
