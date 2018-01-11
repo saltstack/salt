@@ -9,7 +9,6 @@ import os
 import re
 import sys
 import glob
-import getpass
 import time
 import codecs
 import logging
@@ -33,7 +32,6 @@ import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yaml
-import salt.utils.yamlloader as yamlloader
 import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
