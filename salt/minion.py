@@ -734,7 +734,7 @@ class MinionBase(object):
                     break
 
             if masters:
-                policy = self.opts.get('discovery', {}).get('match', DEFAULT_MINION_OPTS['discovery']['match'])
+                policy = self.opts.get(u'discovery', {}).get(u'match', 'any')
                 if policy not in ['any', 'all']:
                     log.error('SSDP configuration matcher failure: unknown value "{0}". '
                               'Should be "any" or "all"'.format(policy))
