@@ -3,12 +3,13 @@
 from __future__ import absolute_import
 
 # Import Salt libs
+from tests.support.mock import patch
 from tests.support.unit import TestCase, LOREM_IPSUM
 import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+from salt.ext.six.moves import builtins, range  # pylint: disable=redefined-builtin
 
 
 class StringutilsTestCase(TestCase):
@@ -65,6 +66,10 @@ class StringutilsTestCase(TestCase):
             self.assertEqual(salt.utils.stringutils.to_str(un, 'utf-8'), ut)
             self.assertEqual(salt.utils.stringutils.to_str(bytearray(ut), 'utf-8'), ut)
 
+            # Test utf-8 fallback with Windows default codepage
+            with patch.object(builtins, '__salt_system_encoding__', 'CP1252'):
+                self.assertEqual(salt.utils.stringutils.to_str(u'Ψ'), u'Ψ'.encode('utf-8'))
+
     def test_to_bytes(self):
         for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
             self.assertRaises(TypeError, salt.utils.stringutils.to_bytes, x)
@@ -75,6 +80,10 @@ class StringutilsTestCase(TestCase):
             self.assertEqual(salt.utils.stringutils.to_bytes(ut), ut)
             self.assertEqual(salt.utils.stringutils.to_bytes(bytearray(ut)), ut)
             self.assertEqual(salt.utils.stringutils.to_bytes(un, 'utf-8'), ut)
+
+            # Test utf-8 fallback with ascii default encoding
+            with patch.object(builtins, '__salt_system_encoding__', 'ascii'):
+                self.assertEqual(salt.utils.stringutils.to_bytes('Ψ'), b'\xce\xa8')
         else:
             self.assertEqual(salt.utils.stringutils.to_bytes('xyzzy'), 'xyzzy')
             ut = ''.join([chr(x) for x in (0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29)])
@@ -96,6 +105,10 @@ class StringutilsTestCase(TestCase):
             ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
             un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
             self.assertEqual(salt.utils.stringutils.to_unicode(ut, 'utf-8'), un)
+
+            # Test utf-8 fallback with ascii default encoding
+            with patch.object(builtins, '__salt_system_encoding__', 'ascii'):
+                self.assertEqual(salt.utils.stringutils.to_unicode(u'Ψ'.encode('utf-8')), u'Ψ')
 
     def test_build_whitespace_split_regex(self):
         expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
