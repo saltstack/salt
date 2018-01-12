@@ -26,7 +26,7 @@ from salt.ext.six.moves import map
 
 __virtualname__ = 'wtmp'
 WTMP = '/var/log/wtmp'
-FMT = 'hi32s4s32s256shhiii4i20x'
+FMT = b'hi32s4s32s256shhiii4i20x'
 FIELDS = [
           'type',
           'PID',
