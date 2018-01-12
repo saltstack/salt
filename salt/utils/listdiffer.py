@@ -21,6 +21,7 @@ from salt.utils.dictdiffer import recursive_diff
 
 from salt.ext import six
 
+
 def list_diff(list_a, list_b, key):
     return ListDictDiffer(list_a, list_b, key)
 

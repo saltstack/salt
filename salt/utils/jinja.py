@@ -846,7 +846,7 @@ class SerializerExtension(Extension, object):
             return salt.utils.data.decode(salt.utils.yaml.safe_load(value))
         except AttributeError:
             raise TemplateRuntimeError(
-                'Unable to load yaml from %s', value)
+                'Unable to load yaml from {0}'.format(value))
 
     def load_json(self, value):
         if isinstance(value, TemplateModule):
