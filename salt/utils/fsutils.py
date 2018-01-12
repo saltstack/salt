@@ -7,7 +7,7 @@ Run-time utilities
 
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import re
 import os
 import logging
@@ -28,10 +28,10 @@ def _verify_run(out, cmd=None):
     '''
     if out.get('retcode', 0) and out['stderr']:
         if cmd:
-            log.debug('Command: \'{0}\''.format(cmd))
+            log.debug('Command: \'%s\'', cmd)
 
-        log.debug('Return code: {0}'.format(out.get('retcode')))
-        log.debug('Error output:\n{0}'.format(out.get('stderr', 'N/A')))
+        log.debug('Return code: %s', out.get('retcode'))
+        log.debug('Error output:\n%s', out.get('stderr', 'N/A'))
 
         raise CommandExecutionError(out['stderr'])
 

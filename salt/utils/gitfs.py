@@ -4,7 +4,7 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import copy
 import contextlib
 import distutils
@@ -147,7 +147,7 @@ def enforce_types(key, val):
                     ret = item
                     break
             except TypeError:
-                if key.endswith('_' + str(item)):
+                if key.endswith('_' + six.text_type(item)):
                     ret = item
                     break
         else:
@@ -211,10 +211,9 @@ class GitProvider(object):
         if per_remote_collisions:
             log.critical(
                 'The following parameter names are restricted to per-remote '
-                'use only: {0}. This is a bug, please report it.'.format(
-                    ', '.join(per_remote_collisions)
+                'use only: %s. This is a bug, please report it.',
+                ', '.join(per_remote_collisions)
                 )
-            )
 
         try:
             valid_per_remote_params = override_params + per_remote_only
@@ -738,7 +737,7 @@ class GitProvider(object):
                           os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fh_, 'w'):
                 # Write the lock file and close the filehandle
-                os.write(fh_, six.b(str(os.getpid())))
+                os.write(fh_, six.b(six.text_type(os.getpid())))
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
                 with salt.utils.files.fopen(self._get_lock_file(lock_type), 'r') as fd_:
@@ -1569,7 +1568,7 @@ class Pygit2(GitProvider):
                     import pwd
                     # https://github.com/libgit2/pygit2/issues/339
                     # https://github.com/libgit2/libgit2/issues/2122
-                    if "Error stat'ing config file" not in str(exc):
+                    if "Error stat'ing config file" not in six.text_type(exc):
                         raise
                     home = pwd.getpwnam(salt.utils.user.get_user()).pw_dir
                     pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
@@ -2210,13 +2209,13 @@ class GitBase(object):
                     shutil.rmtree(rdir)
                 except OSError as exc:
                     log.error(
-                        'Unable to remove old {0} remote cachedir {1}: {2}'
-                        .format(self.role, rdir, exc)
+                        'Unable to remove old %s remote cachedir %s: %s',
+                        self.role, rdir, exc
                     )
                     failed.append(rdir)
                 else:
                     log.debug(
-                        '{0} removed old cachedir {1}'.format(self.role, rdir)
+                        '%s removed old cachedir %s', self.role, rdir
                     )
         for fdir in failed:
             to_remove.remove(fdir)
@@ -2335,7 +2334,7 @@ class GitBase(object):
             serial = salt.payload.Serial(self.opts)
             with salt.utils.files.fopen(self.env_cache, 'wb+') as fp_:
                 fp_.write(serial.dumps(new_envs))
-                log.trace('Wrote env cache data to {0}'.format(self.env_cache))
+                log.trace('Wrote env cache data to %s', self.env_cache)
 
         # if there is a change, fire an event
         if self.opts.get('fileserver_events', False):
@@ -2378,13 +2377,13 @@ class GitBase(object):
                 except AttributeError:
                     # Should only happen if someone does something silly like
                     # set the provider to a numeric value.
-                    desired_provider = str(desired_provider).lower()
+                    desired_provider = six.text_type(desired_provider).lower()
                 if desired_provider not in self.git_providers:
                     log.critical(
-                        'Invalid {0}_provider \'{1}\'. Valid choices are: {2}'
-                        .format(self.role,
-                                desired_provider,
-                                ', '.join(self.git_providers))
+                        'Invalid %s_provider \'%s\'. Valid choices are: %s',
+                        self.role,
+                        desired_provider,
+                        ', '.join(self.git_providers)
                     )
                     failhard(self.role)
                 elif desired_provider == 'pygit2' and self.verify_pygit2():
@@ -2393,8 +2392,8 @@ class GitBase(object):
                     self.provider = 'gitpython'
         if not hasattr(self, 'provider'):
             log.critical(
-                'No suitable {0} provider module is installed.'
-                .format(self.role)
+                'No suitable %s provider module is installed.',
+                self.role
             )
             failhard(self.role)
 
@@ -2445,7 +2444,7 @@ class GitBase(object):
             return False
 
         self.opts['verified_{0}_provider'.format(self.role)] = 'gitpython'
-        log.debug('gitpython {0}_provider enabled'.format(self.role))
+        log.debug('gitpython %s_provider enabled', self.role)
         return True
 
     def verify_pygit2(self, quiet=False):
@@ -2509,7 +2508,7 @@ class GitBase(object):
             return False
 
         self.opts['verified_{0}_provider'.format(self.role)] = 'pygit2'
-        log.debug('pygit2 {0}_provider enabled'.format(self.role))
+        log.debug('pygit2 %s_provider enabled', self.role)
         return True
 
     def write_remote_map(self):
@@ -2538,10 +2537,9 @@ class GitBase(object):
             pass
         else:
             log.info(
-                'Wrote new {0} remote map to {1}'.format(
-                    self.role,
-                    remote_map
-                )
+                'Wrote new %s remote map to %s',
+                self.role,
+                remote_map
             )
 
     def do_checkout(self, repo):
@@ -2827,9 +2825,8 @@ class GitFS(GitBase):
                 os.makedirs(self.file_list_cachedir)
             except os.error:
                 log.error(
-                    'Unable to make cachedir {0}'.format(
-                        self.file_list_cachedir
-                    )
+                    'Unable to make cachedir %s',
+                    self.file_list_cachedir
                 )
                 return []
         list_cache = salt.utils.path.join(
