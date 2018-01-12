@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
-import os.path
+from __future__ import absolute_import, print_function, unicode_literals
+import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -13,6 +13,7 @@ from tests.support.paths import TESTS_DIR
 # Import Salt libs
 import salt.utils.boto
 import salt.utils.boto3
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion
 
@@ -114,7 +115,7 @@ def _has_required_boto3():
         else:
             return True
     except AttributeError as exc:
-        if "has no attribute '__version__'" not in str(exc):
+        if "has no attribute '__version__'" not in six.text_type(exc):
             raise
         return False
 

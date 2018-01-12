@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from collections import namedtuple
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 import salt.utils.args
 
 # Import Salt Testing Libs
@@ -29,7 +30,7 @@ class ArgsTestCase(TestCase):
         Test passing a jid on the command line
         '''
         cmd = salt.utils.args.condition_input(['*', 'foo.bar', 20141020201325675584], None)
-        self.assertIsInstance(cmd[2], str)
+        self.assertIsInstance(cmd[2], six.text_type)
 
     def test_clean_kwargs(self):
         self.assertDictEqual(salt.utils.args.clean_kwargs(foo='bar'), {'foo': 'bar'})

@@ -393,7 +393,12 @@ def uuid_(val):
 
         f4efeff8-c219-578a-bad7-3dc280612ec8
     '''
-    return six.text_type(uuid.uuid5(GLOBAL_UUID, six.text_type(val)))
+    return six.text_type(
+        uuid.uuid5(
+            GLOBAL_UUID,
+            salt.utils.data.encode(val)
+        )
+    )
 
 
 ### List-related filters
