@@ -188,9 +188,9 @@ def cert(name,
         cmd.append('--tls-sni-01-port {}'.format(tls_sni_01_port))
     if tls_sni_01_address:
         cmd.append('--tls-sni-01-address {}'.format(tls_sni_01_address))
-    if http_01_port in kwargs:
+    if http_01_port:
         cmd.append('--http-01-port {}'.format(http_01_port))
-    if http_01_address in kwargs:
+    if http_01_address:
         cmd.append('--http-01-address {}'.format(http_01_address))
 
     res = __salt__['cmd.run_all'](' '.join(cmd))
