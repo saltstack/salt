@@ -583,8 +583,7 @@ def _run(cmd,
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
                 'reason: '.format(
-                    cmd if _check_loglevel(output_loglevel) is not None
-                        else 'REDACTED',
+                    cmd if _check_loglevel(output_loglevel) is not None else 'REDACTED',
                     new_kwargs
                 )
             )
@@ -637,11 +636,11 @@ def _run(cmd,
         ret['stdout'] = out
         ret['stderr'] = err
     else:
-        to = ''
+        formatted_timeout = ''
         if timeout:
-            to = ' (timeout: {0}s)'.format(timeout)
+            formatted_timeout = ' (timeout: {0}s)'.format(timeout)
         if _check_loglevel(output_loglevel) is not None:
-            msg = 'Running {0} in VT{1}'.format(cmd, to)
+            msg = 'Running {0} in VT{1}'.format(cmd, formatted_timeout)
             log.debug(log_callback(msg))
         stdout, stderr = '', ''
         now = time.time()
@@ -650,18 +649,20 @@ def _run(cmd,
         else:
             will_timeout = -1
         try:
-            proc = salt.utils.vt.Terminal(cmd,
-                               shell=True,
-                               log_stdout=True,
-                               log_stderr=True,
-                               cwd=cwd,
-                               preexec_fn=new_kwargs.get('preexec_fn', None),
-                               env=run_env,
-                               log_stdin_level=output_loglevel,
-                               log_stdout_level=output_loglevel,
-                               log_stderr_level=output_loglevel,
-                               stream_stdout=True,
-                               stream_stderr=True)
+            proc = salt.utils.vt.Terminal(
+                    cmd,
+                    shell=True,
+                    log_stdout=True,
+                    log_stderr=True,
+                    cwd=cwd,
+                    preexec_fn=new_kwargs.get('preexec_fn', None),
+                    env=run_env,
+                    log_stdin_level=output_loglevel,
+                    log_stdout_level=output_loglevel,
+                    log_stderr_level=output_loglevel,
+                    stream_stdout=True,
+                    stream_stderr=True
+            )
             ret['pid'] = proc.pid
             while proc.has_unread_data:
                 try:
@@ -1047,28 +1048,28 @@ def run(cmd,
 
 
 def shell(cmd,
-        cwd=None,
-        stdin=None,
-        runas=None,
-        group=None,
-        shell=DEFAULT_SHELL,
-        env=None,
-        clean_env=False,
-        template=None,
-        rstrip=True,
-        umask=None,
-        output_loglevel='debug',
-        log_callback=None,
-        hide_output=False,
-        timeout=None,
-        reset_system_locale=True,
-        ignore_retcode=False,
-        saltenv='base',
-        use_vt=False,
-        bg=False,
-        password=None,
-        prepend_path=None,
-        **kwargs):
+          cwd=None,
+          stdin=None,
+          runas=None,
+          group=None,
+          shell=DEFAULT_SHELL,
+          env=None,
+          clean_env=False,
+          template=None,
+          rstrip=True,
+          umask=None,
+          output_loglevel='debug',
+          log_callback=None,
+          hide_output=False,
+          timeout=None,
+          reset_system_locale=True,
+          ignore_retcode=False,
+          saltenv='base',
+          use_vt=False,
+          bg=False,
+          password=None,
+          prepend_path=None,
+          **kwargs):
     '''
     Execute the passed command and return the output as a string.
 
@@ -3125,26 +3126,26 @@ def shell_info(shell, list_modules=False):
 
 
 def powershell(cmd,
-        cwd=None,
-        stdin=None,
-        runas=None,
-        shell=DEFAULT_SHELL,
-        env=None,
-        clean_env=False,
-        template=None,
-        rstrip=True,
-        umask=None,
-        output_loglevel='debug',
-        hide_output=False,
-        timeout=None,
-        reset_system_locale=True,
-        ignore_retcode=False,
-        saltenv='base',
-        use_vt=False,
-        password=None,
-        depth=None,
-        encode_cmd=False,
-        **kwargs):
+               cwd=None,
+               stdin=None,
+               runas=None,
+               shell=DEFAULT_SHELL,
+               env=None,
+               clean_env=False,
+               template=None,
+               rstrip=True,
+               umask=None,
+               output_loglevel='debug',
+               hide_output=False,
+               timeout=None,
+               reset_system_locale=True,
+               ignore_retcode=False,
+               saltenv='base',
+               use_vt=False,
+               password=None,
+               depth=None,
+               encode_cmd=False,
+               **kwargs):
     '''
     Execute the passed PowerShell command and return the output as a dictionary.
 
@@ -3632,27 +3633,29 @@ def powershell_all(cmd,
         encoded_cmd = False
 
     # Retrieve the response, while overriding shell with 'powershell'
-    response = run_all(cmd,
-                   cwd=cwd,
-                   stdin=stdin,
-                   runas=runas,
-                   shell='powershell',
-                   env=env,
-                   clean_env=clean_env,
-                   template=template,
-                   rstrip=rstrip,
-                   umask=umask,
-                   output_loglevel=output_loglevel,
-                   quiet=quiet,
-                   timeout=timeout,
-                   reset_system_locale=reset_system_locale,
-                   ignore_retcode=ignore_retcode,
-                   saltenv=saltenv,
-                   use_vt=use_vt,
-                   python_shell=python_shell,
-                   password=password,
-                   encoded_cmd=encoded_cmd,
-                   **kwargs)
+    response = run_all(
+            cmd,
+            cwd=cwd,
+            stdin=stdin,
+            runas=runas,
+            shell='powershell',
+            env=env,
+            clean_env=clean_env,
+            template=template,
+            rstrip=rstrip,
+            umask=umask,
+            output_loglevel=output_loglevel,
+            quiet=quiet,
+            timeout=timeout,
+            reset_system_locale=reset_system_locale,
+            ignore_retcode=ignore_retcode,
+            saltenv=saltenv,
+            use_vt=use_vt,
+            python_shell=python_shell,
+            password=password,
+            encoded_cmd=encoded_cmd,
+            **kwargs
+    )
     stdoutput = response['stdout']
 
     # if stdoutput is the empty string and force_list is True we return an empty list
@@ -3689,24 +3692,24 @@ def powershell_all(cmd,
 
 
 def run_bg(cmd,
-        cwd=None,
-        runas=None,
-        group=None,
-        shell=DEFAULT_SHELL,
-        python_shell=None,
-        env=None,
-        clean_env=False,
-        template=None,
-        umask=None,
-        timeout=None,
-        output_loglevel='debug',
-        log_callback=None,
-        reset_system_locale=True,
-        ignore_retcode=False,
-        saltenv='base',
-        password=None,
-        prepend_path=None,
-        **kwargs):
+           cwd=None,
+           runas=None,
+           group=None,
+           shell=DEFAULT_SHELL,
+           python_shell=None,
+           env=None,
+           clean_env=False,
+           template=None,
+           umask=None,
+           timeout=None,
+           output_loglevel='debug',
+           log_callback=None,
+           reset_system_locale=True,
+           ignore_retcode=False,
+           saltenv='base',
+           password=None,
+           prepend_path=None,
+           **kwargs):
     r'''
     .. versionadded: 2016.3.0
 
