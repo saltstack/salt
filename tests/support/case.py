@@ -17,7 +17,6 @@ from __future__ import absolute_import
 import os
 import re
 import sys
-import json
 import time
 import stat
 import errno
@@ -36,6 +35,7 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTe
 from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
+import salt.utils.json
 from salt.ext import six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
@@ -655,13 +655,13 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
         })
 
         import salt.utils.files
-        import yaml
+        import salt.utils.yaml
 
         if not os.path.isdir(config['formula_path']):
             os.makedirs(config['formula_path'])
 
         with salt.utils.files.fopen(os.path.join(self._tmp_spm, 'spm'), 'w') as fp:
-            fp.write(yaml.dump(config))
+            salt.utils.yaml.safe_dump(config, fp)
 
         return config
 
@@ -827,7 +827,7 @@ class SSHCase(ShellCase):
         log.debug('SSHCase run_function executed %s with arg %s', function, arg)
         log.debug('SSHCase JSON return: %s', ret)
         try:
-            return json.loads(ret)['localhost']
+            return salt.utils.json.loads(ret)['localhost']
         except Exception:
             return ret
 

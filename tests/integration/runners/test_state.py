@@ -6,13 +6,11 @@ Tests for the state runner
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
-import json
 import os
 import shutil
 import signal
 import tempfile
 import textwrap
-import yaml
 import threading
 from salt.ext.six.moves import queue
 
@@ -25,7 +23,9 @@ from tests.support.paths import TMP
 import salt.utils.platform
 import salt.utils.event
 import salt.utils.files
+import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -94,7 +94,7 @@ class StateRunnerTest(ShellCase):
         See https://github.com/saltstack/salt/issues/43204
         '''
         self.run_run('saltutil.sync_modules')
-        ret = json.loads(
+        ret = salt.utils.json.loads(
             '\n'.join(
                 self.run_run('state.orchestrate orch.issue43204 --out=json')
             )
@@ -275,7 +275,7 @@ class OrchEventTest(ShellCase):
         '''
         Dump the config dict to the conf file
         '''
-        self.conf.write(yaml.dump(data, default_flow_style=False))
+        self.conf.write(salt.utils.yaml.safe_dump(data, default_flow_style=False))
         self.conf.flush()
 
     def test_jid_in_ret_event(self):

@@ -407,11 +407,6 @@ class GitProvider(object):
         self.linkdir = salt.utils.path.join(cache_root,
                                             'links',
                                             self.cachedir_basename)
-        try:
-            # Remove linkdir if it exists
-            salt.utils.files.rm_rf(self.linkdir)
-        except OSError:
-            pass
 
         if not os.path.isdir(self.cachedir):
             os.makedirs(self.cachedir)
@@ -835,17 +830,55 @@ class GitProvider(object):
         return success, failed
 
     @contextlib.contextmanager
-    def gen_lock(self, lock_type='update'):
+    def gen_lock(self, lock_type='update', timeout=0, poll_interval=0.5):
         '''
         Set and automatically clear a lock
         '''
+        if not isinstance(lock_type, six.string_types):
+            raise GitLockError(
+                errno.EINVAL,
+                'Invalid lock_type \'{0}\''.format(lock_type)
+            )
+
+        # Make sure that we have a positive integer timeout, otherwise just set
+        # it to zero.
+        try:
+            timeout = int(timeout)
+        except ValueError:
+            timeout = 0
+        else:
+            if timeout < 0:
+                timeout = 0
+
+        if not isinstance(poll_interval, (six.integer_types, float)) \
+                or poll_interval < 0:
+            poll_interval = 0.5
+
+        if poll_interval > timeout:
+            poll_interval = timeout
+
         lock_set = False
         try:
-            self._lock(lock_type=lock_type, failhard=True)
-            lock_set = True
-            yield
-        except (OSError, IOError, GitLockError) as exc:
-            raise GitLockError(exc.errno, exc.strerror)
+            time_start = time.time()
+            while True:
+                try:
+                    self._lock(lock_type=lock_type, failhard=True)
+                    lock_set = True
+                    yield
+                    # Break out of his loop once we've yielded the lock, to
+                    # avoid continued attempts to iterate and establish lock
+                    break
+                except (OSError, IOError, GitLockError) as exc:
+                    if not timeout or time.time() - time_start > timeout:
+                        raise GitLockError(exc.errno, exc.strerror)
+                    else:
+                        log.debug(
+                            'A %s lock is already present for %s remote '
+                            '\'%s\', sleeping %f second(s)',
+                            lock_type, self.role, self.id, poll_interval
+                        )
+                        time.sleep(poll_interval)
+                        continue
         finally:
             if lock_set:
                 self.clear_lock(lock_type=lock_type)
@@ -960,6 +993,42 @@ class GitProvider(object):
                 self.url = self.id
         else:
             self.url = self.id
+
+    @property
+    def linkdir_walk(self):
+        '''
+        Return the expected result of an os.walk on the linkdir, based on the
+        mountpoint value.
+        '''
+        try:
+            # Use cached linkdir_walk if we've already run this
+            return self._linkdir_walk
+        except AttributeError:
+            self._linkdir_walk = []
+            try:
+                parts = self._mountpoint.split('/')
+            except AttributeError:
+                log.error(
+                    '%s class is missing a \'_mountpoint\' attribute',
+                    self.__class__.__name__
+                )
+            else:
+                for idx, item in enumerate(parts[:-1]):
+                    try:
+                        dirs = [parts[idx + 1]]
+                    except IndexError:
+                        dirs = []
+                    self._linkdir_walk.append((
+                        salt.utils.path_join(self.linkdir, *parts[:idx + 1]),
+                        dirs,
+                        []
+                    ))
+                try:
+                    # The linkdir itself goes at the beginning
+                    self._linkdir_walk.insert(0, (self.linkdir, [parts[0]], []))
+                except IndexError:
+                    pass
+            return self._linkdir_walk
 
     def setup_callbacks(self):
         '''
@@ -2857,69 +2926,123 @@ class GitPillar(GitBase):
                     base_branch = self.opts['{0}_base'.format(self.role)]
                     env = 'base' if repo.branch == base_branch else repo.branch
                 if repo._mountpoint:
-                    if self.link_mountpoint(repo, cachedir):
+                    if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env
                         self.pillar_linked_dirs.append(repo.linkdir)
                 else:
                     self.pillar_dirs[cachedir] = env
 
-    def link_mountpoint(self, repo, cachedir):
+    def link_mountpoint(self, repo):
         '''
-        Ensure that the mountpoint is linked to the passed cachedir
+        Ensure that the mountpoint is present in the correct location and
+        points at the correct path
         '''
-        lcachelink = salt.utils.path.join(repo.linkdir, repo._mountpoint)
-        if not os.path.islink(lcachelink):
-            ldirname = os.path.dirname(lcachelink)
-            try:
-                os.symlink(cachedir, lcachelink)
-            except OSError as exc:
-                if exc.errno == errno.ENOENT:
-                    # The parent dir does not exist, create it and then
-                    # re-attempt to create the symlink
+        lcachelink = salt.utils.path_join(repo.linkdir, repo._mountpoint)
+        wipe_linkdir = False
+        create_link = False
+        try:
+            with repo.gen_lock(lock_type='mountpoint', timeout=10):
+                walk_results = list(os.walk(repo.linkdir, followlinks=False))
+                if walk_results != repo.linkdir_walk:
+                    log.debug(
+                        'Results of walking %s differ from expected results',
+                        repo.linkdir
+                    )
+                    log.debug('Walk results: %s', walk_results)
+                    log.debug('Expected results: %s', repo.linkdir_walk)
+                    wipe_linkdir = True
+                else:
+                    if not all(not salt.utils.path.islink(x[0])
+                               and os.path.isdir(x[0])
+                               for x in walk_results[:-1]):
+                        log.debug(
+                            'Linkdir parents of %s are not all directories',
+                            lcachelink
+                        )
+                        wipe_linkdir = True
+                    elif not salt.utils.path.islink(lcachelink):
+                        wipe_linkdir = True
+                    else:
+                        try:
+                            ldest = salt.utils.path.readlink(lcachelink)
+                        except Exception:
+                            log.debug(
+                                'Failed to read destination of %s', lcachelink
+                            )
+                            wipe_linkdir = True
+                        else:
+                            if ldest != repo.cachedir:
+                                log.debug(
+                                    'Destination of %s (%s) does not match '
+                                    'the expected value (%s)',
+                                    lcachelink, ldest, repo.cachedir
+                                )
+                                # Since we know that the parent dirs of the
+                                # link are set up properly, all we need to do
+                                # is remove the symlink and let it be created
+                                # below.
+                                try:
+                                    if salt.utils.is_windows() \
+                                            and not ldest.startswith('\\\\') \
+                                            and os.path.isdir(ldest):
+                                        # On Windows, symlinks to directories
+                                        # must be removed as if they were
+                                        # themselves directories.
+                                        shutil.rmtree(lcachelink)
+                                    else:
+                                        os.remove(lcachelink)
+                                except Exception as exc:
+                                    log.exception(
+                                        'Failed to remove existing git_pillar '
+                                        'mountpoint link %s: %s',
+                                        lcachelink, exc.__str__()
+                                    )
+                                wipe_linkdir = False
+                                create_link = True
+
+                if wipe_linkdir:
+                    # Wiping implies that we need to create the link
+                    create_link = True
                     try:
+                        shutil.rmtree(repo.linkdir)
+                    except OSError:
+                        pass
+                    try:
+                        ldirname = os.path.dirname(lcachelink)
                         os.makedirs(ldirname)
+                        log.debug('Successfully made linkdir parent %s', ldirname)
                     except OSError as exc:
                         log.error(
-                            'Failed to create path %s: %s',
+                            'Failed to os.makedirs() linkdir parent %s: %s',
                             ldirname, exc.__str__()
                         )
                         return False
-                    else:
-                        try:
-                            os.symlink(cachedir, lcachelink)
-                        except OSError:
-                            log.error(
-                                'Could not create symlink to %s at path %s: %s',
-                                cachedir, lcachelink, exc.__str__()
-                            )
-                            return False
-                elif exc.errno == errno.EEXIST:
-                    # A file or dir already exists at this path, remove it and
-                    # then re-attempt to create the symlink
+
+                if create_link:
                     try:
-                        salt.utils.files.rm_rf(lcachelink)
+                        os.symlink(repo.cachedir, lcachelink)
+                        log.debug(
+                            'Successfully linked %s to cachedir %s',
+                            lcachelink, repo.cachedir
+                        )
+                        return True
                     except OSError as exc:
                         log.error(
-                            'Failed to remove file/dir at path %s: %s',
-                            lcachelink, exc.__str__()
+                            'Failed to create symlink to %s at path %s: %s',
+                            repo.cachedir, lcachelink, exc.__str__()
                         )
                         return False
-                    else:
-                        try:
-                            os.symlink(cachedir, lcachelink)
-                        except OSError:
-                            log.error(
-                                'Could not create symlink to %s at path %s: %s',
-                                cachedir, lcachelink, exc.__str__()
-                            )
-                            return False
-                else:
-                    # Other kind of error encountered
-                    log.error(
-                        'Could not create symlink to %s at path %s: %s',
-                        cachedir, lcachelink, exc.__str__()
-                    )
-                    return False
+        except GitLockError:
+            log.error(
+                'Timed out setting mountpoint lock for %s remote \'%s\'. If '
+                'this error persists, it may be because an earlier %s '
+                'checkout was interrupted. The lock can be cleared by running '
+                '\'salt-run cache.clear_git_lock %s type=mountpoint\', or by '
+                'manually removing %s.',
+                self.role, repo.id, self.role, self.role,
+                repo._get_lock_file(lock_type='mountpoint')
+            )
+            return False
         return True
 
 

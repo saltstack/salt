@@ -90,7 +90,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import python libs
-import json
 try:
     import syslog
     HAS_SYSLOG = True
@@ -99,6 +98,7 @@ except ImportError:
 
 # Import Salt libs
 import salt.utils.jid
+import salt.utils.json
 import salt.returners
 from salt.ext import six
 
@@ -202,7 +202,7 @@ def returner(ret):
         syslog.openlog(_options.get('tag', 'salt-minion'), logoption)
 
     # Send log of given level and facility
-    syslog.syslog(facility | level, '{0}'.format(json.dumps(ret)))
+    syslog.syslog(facility | level, salt.utils.json.dumps(ret))
 
     # Close up to reset syslog to defaults
     syslog.closelog()

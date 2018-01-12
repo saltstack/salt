@@ -80,18 +80,18 @@ the time of execution.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import json
 import smtplib
 import cgi
 from email.mime.text import MIMEText
 
-import yaml
 from salt.ext.six.moves import range
 from salt.ext.six.moves import StringIO
 from salt.ext import six
 
 import salt.utils.files
+import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.returners
 
 log = logging.getLogger(__name__)
@@ -424,10 +424,10 @@ def _produce_output(report, failed, setup):
     log.debug('highstate output format: %s', report_format)
 
     if report_format == 'json':
-        report_text = json.dumps(report)
+        report_text = salt.utils.json.dumps(report)
     elif report_format == 'yaml':
         string_file = StringIO()
-        yaml.safe_dump(report, string_file, default_flow_style=False)
+        salt.utils.yaml.safe_dump(report, string_file, default_flow_style=False)
         string_file.seek(0)
         report_text = string_file.read()
     else:
@@ -494,7 +494,7 @@ def __test_html():
     '''
     with salt.utils.files.fopen('test.rpt', 'r') as input_file:
         data_text = salt.utils.stringutils.to_unicode(input_file.read())
-    data = yaml.safe_load(data_text)
+    data = salt.utils.yaml.safe_load(data_text)
 
     string_file = StringIO()
     _generate_html(data, string_file)

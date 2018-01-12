@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-'''test for pillar file_tree.py'''
+'''
+test for pillar file_tree.py
+'''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import tempfile
@@ -17,6 +19,7 @@ from tests.support.helpers import TestsLoggingHandler
 
 # Import Salt Libs
 import salt.utils.files
+import salt.utils.stringutils
 import salt.pillar.file_tree as file_tree
 
 
@@ -88,7 +91,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
             filepath = os.path.join(pillar_path, filename)
             os.makedirs(os.path.dirname(filepath))
             with salt.utils.files.fopen(filepath, 'w') as data_file:
-                data_file.write(FILE_DATA[filename])
+                data_file.write(salt.utils.stringutils.to_str(FILE_DATA[filename]))
         return pillar_path
 
     def test_absolute_path(self):

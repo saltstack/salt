@@ -753,7 +753,7 @@ This proxymodule enables "package" installation.
     from __future__ import absolute_import
 
     # Import python libs
-    import json
+    import salt.utils.json
     import logging
 
     # Import Salt's libs
@@ -821,7 +821,7 @@ This proxymodule enables "package" installation.
                 jsonret.append(ln_)
             if '}' in ln_:
                 in_json = False
-        return json.loads('\n'.join(jsonret))
+        return salt.utils.json.loads('\n'.join(jsonret))
 
 
     def package_list():

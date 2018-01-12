@@ -38,7 +38,6 @@ keys make the engine interactive.
 from __future__ import absolute_import
 import logging
 import time
-import json
 import os
 
 
@@ -52,6 +51,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.http
+import salt.utils.json
 import salt.runner
 import salt.client
 import salt.loader
@@ -93,10 +93,11 @@ def _publish_file(token, room, filepath, message='', outputter=None, api_url=Non
     url = "{0}/v2/room/{1}/share/file".format(api_url, room)
     headers = {'Content-type': 'multipart/related; boundary=boundary123456'}
     headers['Authorization'] = "Bearer " + token
-    msg = json.dumps({'message': message})
+    msg = salt.utils.json.dumps({'message': message})
 
+    # future lint: disable=blacklisted-function
     with salt.utils.files.fopen(filepath, 'rb') as rfh:
-        payload = """\
+        payload = str("""\
 --boundary123456
 Content-Type: application/json; charset=UTF-8
 Content-Disposition: attachment; name="metadata"
@@ -109,7 +110,10 @@ Content-Disposition: attachment; name="file"; filename="{1}"
 {2}
 
 --boundary123456--\
-""".format(msg, os.path.basename(filepath), rfh.read())
+""").format(msg,
+            os.path.basename(salt.utils.stringutils.to_str(filepath)),
+            salt.utils.stringutils.to_str(rfh.read()))
+    # future lint: enable=blacklisted-function
 
     salt.utils.http.query(url, method='POST', header_dict=headers, data=payload)
 
@@ -414,7 +418,7 @@ def start(token,
             else:
                 tmp_path_fn = salt.utils.files.mkstemp()
                 with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
-                    fp_.write(json.dumps(ret, sort_keys=True, indent=4))
+                    salt.utils.json.dump(ret, fp_, sort_keys=True, indent=4)
                 _publish_file(token, room, tmp_path_fn, message=message_string, api_url=api_url)
                 salt.utils.files.safe_rm(tmp_path_fn)
         time.sleep(wait_time or _DEFAULT_SLEEP)

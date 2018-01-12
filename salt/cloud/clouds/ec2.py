@@ -75,7 +75,6 @@ import time
 import uuid
 import pprint
 import logging
-import yaml
 
 # Import libs for talking to the EC2 API
 import hmac
@@ -84,7 +83,6 @@ import binascii
 import datetime
 import base64
 import msgpack
-import json
 import re
 import decimal
 
@@ -92,6 +90,8 @@ import decimal
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.json
+import salt.utils.yaml
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
@@ -2840,7 +2840,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         kwargs['instance_id'] = _get_node(name)['instanceId']
 
     if isinstance(kwargs['volumes'], six.string_types):
-        volumes = yaml.safe_load(kwargs['volumes'])
+        volumes = salt.utils.yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
 
@@ -4109,7 +4109,7 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     # Allow tags to be set upon creation
     if 'tags' in kwargs:
         if isinstance(kwargs['tags'], six.string_types):
-            tags = yaml.safe_load(kwargs['tags'])
+            tags = salt.utils.yaml.safe_load(kwargs['tags'])
         else:
             tags = kwargs['tags']
 
@@ -4845,7 +4845,7 @@ def _parse_pricing(url, name):
 
     # Turn the data into something that's easier/faster to process
     regions = {}
-    price_json = json.loads(price_js)
+    price_json = salt.utils.json.loads(price_js)
     for region in price_json['config']['regions']:
         sizes = {}
         for itype in region['instanceTypes']:
