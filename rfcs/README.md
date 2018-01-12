@@ -35,7 +35,11 @@ In short, to get a major feature added to Salt, one usually first gets the RFC m
 
 ## The RFC life-cycle
 
-To be defined.
+- Once an RFC becomes active, the feature may be implemented and submitted as a pull request to the Salt repository.
+- This still does not mean the feature will be merged, only that the core team has agreed to it in principle.
+- The fact that a given RFC has been accepted implies nothing about its implementation priority.
+- Modifications to active RFC's can be done in follow-up pull requests.
+- We should strive to write each RFC in a way that it will reflect the final design of the feature; However, if during implementation things change, the RFC document should be updated accordingly.
 
 ## Implementing an RFC
 
