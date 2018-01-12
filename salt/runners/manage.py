@@ -105,10 +105,7 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
         gather_job_timeout = __opts__['gather_job_timeout']
 
     res = _ping(tgt, tgt_type, timeout, gather_job_timeout)
-    if not res:
-        ret['up'], ret['down'] = ([], [])
-    else:
-        ret['up'], ret['down'] = res
+    ret['up'], ret['down'] = ([], []) if not res else res
     return ret
 
 
@@ -547,7 +544,7 @@ def get_stats(estate=None, stack='road'):
         event = salt.utils.raetevent.StatsEvent(__opts__, __opts__['sock_dir'], tag=tag, estate=estate)
         stats = event.get_event(wait=60, tag=tag)
     else:
-        #TODO: implement 0MQ analog
+        # TODO: implement 0MQ analog
         stats = 'Not implemented'
 
     return stats
