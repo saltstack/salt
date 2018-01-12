@@ -281,6 +281,54 @@ Salt Minion now no longer need to be configured against a specifig DNS name or I
 For this feature Salt Master now requires port 4520 for UDP broadcast packets to be opened
 and the Salt Minion be able to send UDP packets to the same port.
 
+Configuration
+=============
+
+By default, automatic discovery is disabled.
+
+Warning: due to the current limitations that will be changing in a future, before you turn on autodiscovery,
+make sure your network is secured and trusted. See the limitations below.
+
+Autodiscovery is configured on Master and Minion. Both of them are configured via ``discovery`` option
+as follows:
+
+**Master configuration**
+
+To simply enable it by default, accepting all kind of minions, is enough to set it to True:
+
+.. code-block:: yaml
+
+       discovery: true
+
+Sub-option `mapping` allows autodiscovery help Minions to find a proper Master for them. The mapping contains
+just an arbitrary set of key/value strings that would match either any of them or all of them. Default is empty.
+
+Example:
+
+.. code-block:: yaml
+
+       discovery:
+         mapping:
+           description: SES 5.0
+           node: 1
+
+More of this below.
+
+It is also possible to change default ``4520`` port, by setting another integer value to the ``port`` option within
+the discovery system. However, this should be also pre-configured on the minions as well.
+
+**Minion configuration**
+
+Additionally to the identical configuration as on a Master, there are two more options available on a Minion:
+
+- ``attempts`` will set how many "ping" broadcast requests should be sent to the network, waiting for any Master
+   response. Each attempt takes a couple of seconds, so raising it to the higher value will
+   result to a slower startup of the Minion. Generally, on a properly configured networks, the autodiscovery
+   supposed to be all set right after the first attempt. Default is set to 3 attempts.
+- ``match`` can have values ``all`` or ``any``. Match is always coming together with ``mapping``, and essentially means
+  "match any/all of mapping values to the target". Default is set to ``any``.
+- ``pause`` is an interval in seconds between attempts. Default is set to five (5) seconds.
+
 Connection to a type instead of DNS
 ===================================
 
