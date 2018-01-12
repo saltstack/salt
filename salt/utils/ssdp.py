@@ -27,10 +27,11 @@ import random
 import socket
 from collections import OrderedDict
 
-from salt.utils import json
-json = json.import_json()
-if not hasattr(json, 'dumps'):
-    json = None
+import salt.utils.json
+
+_json = salt.utils.json.import_json()
+if not hasattr(_json, 'dumps'):
+    _json = None
 
 try:
     import asyncio
@@ -80,7 +81,7 @@ class SSDPBase(object):
         Return True if the USSDP dependencies are satisfied.
         :return:
         '''
-        return bool(asyncio and json)
+        return bool(asyncio and _json)
 
     @staticmethod
     def get_self_ip():
@@ -186,7 +187,13 @@ class SSDPFactory(SSDPBase):
                 return
 
             self.log.debug('Received "{}" from {}'.format(message, "{}:{}".format(*addr)))
-            self._sendto('{0}:@:{1}'.format(self.signature, json.dumps(self.answer)), addr)
+            self._sendto(
+                str('{0}:@:{1}').format(  # future lint: disable=blacklisted-function
+                    self.signature,
+                    salt.utils.json.dumps(self.answer, _json_module=_json)
+                ),
+                addr
+            )
         else:
             if self.disable_hidden:
                 self._sendto('{0}:E:{1}'.format(self.signature, 'Invalid packet signature').encode(), addr)
@@ -393,5 +400,7 @@ class SSDPDiscoveryClient(SSDPBase):
                     else:
                         if addr not in masters:
                             masters[addr] = []
-                        masters[addr].append(json.loads(msg.split(':@:')[-1]))
+                        masters[addr].append(
+                            salt.utils.json.loads(msg.split(':@:')[-1], _json_module=_json)
+                        )
         return masters

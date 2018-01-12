@@ -50,7 +50,6 @@ from __future__ import absolute_import
 import datetime
 import time
 import logging
-import json
 import sys
 import time
 import email.mime.multipart
@@ -59,7 +58,6 @@ log = logging.getLogger(__name__)
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Import third party libs
-import yaml
 from salt.ext import six
 try:
     import boto
@@ -79,6 +77,7 @@ except ImportError:
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.json
 import salt.utils.odict as odict
 
 
@@ -235,13 +234,13 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if isinstance(availability_zones, six.string_types):
-        availability_zones = json.loads(availability_zones)
+        availability_zones = salt.utils.json.loads(availability_zones)
     if isinstance(load_balancers, six.string_types):
-        load_balancers = json.loads(load_balancers)
+        load_balancers = salt.utils.json.loads(load_balancers)
     if isinstance(vpc_zone_identifier, six.string_types):
-        vpc_zone_identifier = json.loads(vpc_zone_identifier)
+        vpc_zone_identifier = salt.utils.json.loads(vpc_zone_identifier)
     if isinstance(tags, six.string_types):
-        tags = json.loads(tags)
+        tags = salt.utils.json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
     if tags:
@@ -261,11 +260,11 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
                                  propagate_at_launch=propagate_at_launch)
             _tags.append(_tag)
     if isinstance(termination_policies, six.string_types):
-        termination_policies = json.loads(termination_policies)
+        termination_policies = salt.utils.json.loads(termination_policies)
     if isinstance(suspended_processes, six.string_types):
-        suspended_processes = json.loads(suspended_processes)
+        suspended_processes = salt.utils.json.loads(suspended_processes)
     if isinstance(scheduled_actions, six.string_types):
-        scheduled_actions = json.loads(scheduled_actions)
+        scheduled_actions = salt.utils.json.loads(scheduled_actions)
     retries = 30
     while True:
         try:
@@ -325,19 +324,19 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
     if not conn:
         return False, "failed to connect to AWS"
     if isinstance(availability_zones, six.string_types):
-        availability_zones = json.loads(availability_zones)
+        availability_zones = salt.utils.json.loads(availability_zones)
     if isinstance(load_balancers, six.string_types):
-        load_balancers = json.loads(load_balancers)
+        load_balancers = salt.utils.json.loads(load_balancers)
     if isinstance(vpc_zone_identifier, six.string_types):
-        vpc_zone_identifier = json.loads(vpc_zone_identifier)
+        vpc_zone_identifier = salt.utils.json.loads(vpc_zone_identifier)
     if isinstance(tags, six.string_types):
-        tags = json.loads(tags)
+        tags = salt.utils.json.loads(tags)
     if isinstance(termination_policies, six.string_types):
-        termination_policies = json.loads(termination_policies)
+        termination_policies = salt.utils.json.loads(termination_policies)
     if isinstance(suspended_processes, six.string_types):
-        suspended_processes = json.loads(suspended_processes)
+        suspended_processes = salt.utils.json.loads(suspended_processes)
     if isinstance(scheduled_actions, six.string_types):
-        scheduled_actions = json.loads(scheduled_actions)
+        scheduled_actions = salt.utils.json.loads(scheduled_actions)
 
     # Massage our tagset into  add / remove lists
     # Use a boto3 call here b/c the boto2 call doeesn't implement filters
@@ -510,7 +509,7 @@ def get_cloud_init_mime(cloud_init):
         salt myminion boto.get_cloud_init_mime <cloud init>
     '''
     if isinstance(cloud_init, six.string_types):
-        cloud_init = json.loads(cloud_init)
+        cloud_init = salt.utils.json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
     if 'boothooks' in cloud_init:
         for script_name, script in six.iteritems(cloud_init['boothooks']):
@@ -522,18 +521,11 @@ def get_cloud_init_mime(cloud_init):
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
         cloud_config = cloud_init['cloud-config']
-        _cloud_config = email.mime.text.MIMEText(_safe_dump(cloud_config),
-                                                 'cloud-config')
+        _cloud_config = email.mime.text.MIMEText(
+            salt.utils.yaml.safe_dump(cloud_config, default_flow_style=False),
+            'cloud-config')
         _cloud_init.attach(_cloud_config)
     return _cloud_init.as_string()
-
-
-def _safe_dump(data):
-    def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(six.iteritems(data))
-    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
-                         Dumper=yaml.dumper.SafeDumper)
-    return yaml.safe_dump(data, default_flow_style=False)
 
 
 def launch_configuration_exists(name, region=None, key=None, keyid=None,
@@ -655,9 +647,9 @@ def create_launch_configuration(name, image_id, key_name=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if isinstance(security_groups, six.string_types):
-        security_groups = json.loads(security_groups)
+        security_groups = salt.utils.json.loads(security_groups)
     if isinstance(block_device_mappings, six.string_types):
-        block_device_mappings = json.loads(block_device_mappings)
+        block_device_mappings = salt.utils.json.loads(block_device_mappings)
     _bdms = []
     if block_device_mappings:
         # Boto requires objects for the mappings and the devices.

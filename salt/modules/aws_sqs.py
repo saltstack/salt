@@ -6,9 +6,9 @@ Support for the Amazon Simple Queue Service.
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import json
 
 # Import salt libs
+import salt.utils.json
 import salt.utils.path
 from salt.ext import six
 
@@ -65,7 +65,7 @@ def _run_aws(cmd, region, opts, user, **kwargs):
 
     rtn = __salt__['cmd.run'](cmd, runas=user, python_shell=False)
 
-    return json.loads(rtn) if rtn else ''
+    return salt.utils.json.loads(rtn) if rtn else ''
 
 
 def receive_message(queue, region, num=1, opts=None, user=None):

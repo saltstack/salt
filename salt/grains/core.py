@@ -811,11 +811,13 @@ def _virtual(osdata):
         if os.path.isfile('/proc/1/cgroup'):
             try:
                 with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
-                    if ':/lxc/' in fhr.read():
-                        grains['virtual_subtype'] = 'LXC'
-                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
                     fhr_contents = fhr.read()
-                    if ':/docker/' in fhr_contents or ':/system.slice/docker' in fhr_contents:
+                if ':/lxc/' in fhr_contents:
+                    grains['virtual_subtype'] = 'LXC'
+                else:
+                    if any(x in fhr_contents
+                           for x in (':/system.slice/docker', ':/docker/',
+                                     ':/docker-ce/')):
                         grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
@@ -2577,7 +2579,7 @@ def _windows_wwns():
     '''
     Return Fibre Channel port WWNs from a Windows host.
     '''
-    ps_cmd = r'Get-WmiObject -class MSFC_FibrePortHBAAttributes -namespace "root\WMI" | Select -Expandproperty Attributes | %{($_.PortWWN | % {"{0:x2}" -f $_}) -join ""}'
+    ps_cmd = r'Get-WmiObject -ErrorAction Stop -class MSFC_FibrePortHBAAttributes -namespace "root\WMI" | Select -Expandproperty Attributes | %{($_.PortWWN | % {"{0:x2}" -f $_}) -join ""}'
 
     ret = []
 

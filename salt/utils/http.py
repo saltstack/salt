@@ -9,12 +9,10 @@ and the like, but also useful for basic HTTP testing.
 # Import python libs
 from __future__ import absolute_import
 import cgi
-import json
 import logging
-import os.path
+import os
 import pprint
 import socket
-import yaml
 import io
 import zlib
 import gzip
@@ -44,9 +42,11 @@ import salt.loader
 import salt.syspaths
 import salt.utils.args
 import salt.utils.files
+import salt.utils.json
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.version
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
@@ -463,6 +463,8 @@ def query(url,
                     'charset' in res_params and \
                     not isinstance(result_text, six.text_type):
                 result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result.body.decode('utf-8')
         ret['body'] = result_text
     else:
         # Tornado
@@ -648,14 +650,14 @@ def query(url,
             return ret
 
         if decode_type == 'json':
-            ret['dict'] = json.loads(salt.utils.stringutils.to_str(result_text))
+            ret['dict'] = salt.utils.json.loads(result_text)
         elif decode_type == 'xml':
             ret['dict'] = []
             items = ET.fromstring(result_text)
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
         elif decode_type == 'yaml':
-            ret['dict'] = yaml.safe_load(result_text)
+            ret['dict'] = salt.utils.yaml.safe_load(result_text)
         else:
             text = True
 

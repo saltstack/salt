@@ -22,24 +22,24 @@ Please check Installation_ for complete details.
 .. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
 '''
 from __future__ import absolute_import
-
-import json
 import logging
+
 log = logging.getLogger(__file__)
 
 # Import third party libs
 try:
-    import yaml
-    # pylint: disable=W0611
+    # pylint: disable=unused-import
     import napalm_yang
     HAS_NAPALM_YANG = True
-    # pylint: enable=W0611
+    # pylint: enable=unused-import
 except ImportError:
     HAS_NAPALM_YANG = False
 
 # Import salt modules
 import salt.utils.files
+import salt.utils.json
 import salt.utils.napalm
+import salt.utils.yaml
 
 # ------------------------------------------------------------------------------
 # state properties
@@ -157,7 +157,7 @@ def managed(name,
         data = {'to_dict': data}
     data = [data]
     with salt.utils.files.fopen(temp_file, 'w') as file_handle:
-        yaml.safe_dump(json.loads(json.dumps(data)), file_handle, encoding='utf-8', allow_unicode=True)
+        salt.utils.yaml.safe_dump(salt.utils.json.loads(salt.utils.json.dumps(data)), file_handle, encoding='utf-8')
     device_config = __salt__['napalm_yang.parse'](*models,
                                                   config=True,
                                                   profiles=profiles)

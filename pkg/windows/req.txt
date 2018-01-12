@@ -1,7 +1,7 @@
 backports-abc==0.5
 backports.ssl-match-hostname==3.5.0.1
 certifi
-cffi==1.11.2
+cffi==1.10.0
 cryptography==2.1.4
 enum34==1.1.6
 futures==3.1.1
@@ -11,6 +11,7 @@ idna==2.6
 ioloop==0.1a0
 ipaddress==1.0.18
 Jinja2==2.10
+libnacl==1.6.1
 lxml==4.1.1
 Mako==1.0.7
 MarkupSafe==1.0
