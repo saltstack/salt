@@ -4,7 +4,7 @@ Define some generic socket functions for network modules
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import itertools
 import os
 import re
@@ -354,7 +354,7 @@ def _ip_options(ip_obj, version, options=None):
     }
 
     if not options:
-        return str(ip_obj)  # IP version already checked
+        return six.text_type(ip_obj)  # IP version already checked
 
     options_list = [option.strip() for option in options.split(',')]
 
@@ -365,7 +365,7 @@ def _ip_options(ip_obj, version, options=None):
                 return None
                 # stop at first failed test
             # else continue
-    return str(ip_obj)
+    return six.text_type(ip_obj)
 
 
 def _is_ipv(ip, version, options=None):
@@ -504,13 +504,13 @@ def ip_host(value, options=None, version=None):
     if not ipaddr_filter_out:
         return
     if not isinstance(value, (list, tuple, types.GeneratorType)):
-        return str(ipaddress.ip_interface(ipaddr_filter_out[0]))
-    return [str(ipaddress.ip_interface(ip_a)) for ip_a in ipaddr_filter_out]
+        return six.text_type(ipaddress.ip_interface(ipaddr_filter_out[0]))
+    return [six.text_type(ipaddress.ip_interface(ip_a)) for ip_a in ipaddr_filter_out]
 
 
 def _network_hosts(ip_addr_entry):
     return [
-        str(host)
+        six.text_type(host)
         for host in ipaddress.ip_network(ip_addr_entry, strict=False).hosts()
     ]
 
@@ -967,7 +967,7 @@ def get_net_start(ipaddr, netmask):
     Return the address of the network
     '''
     net = ipaddress.ip_network('{0}/{1}'.format(ipaddr, netmask), strict=False)
-    return str(net.network_address)
+    return six.text_type(net.network_address)
 
 
 def get_net_size(mask):
@@ -990,7 +990,7 @@ def calc_net(ipaddr, netmask=None):
     if netmask is not None:
         ipaddr = '{0}/{1}'.format(ipaddr, netmask)
 
-    return str(ipaddress.ip_network(ipaddr, strict=False))
+    return six.text_type(ipaddress.ip_network(ipaddr, strict=False))
 
 
 def _ipv4_to_bits(ipaddr):
@@ -1120,7 +1120,7 @@ def _subnets(proto='inet', interfaces_=None):
                 intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], dflt_cidr))
             if not intf.is_loopback:
                 ret.add(intf.network)
-    return [str(net) for net in sorted(ret)]
+    return [six.text_type(net) for net in sorted(ret)]
 
 
 def subnets(interfaces=None):
@@ -1185,7 +1185,7 @@ def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto
             addr = ipaddress.ip_address(addr.get('address'))
             if not addr.is_loopback or include_loopback:
                 ret.add(addr)
-    return [str(addr) for addr in sorted(ret)]
+    return [six.text_type(addr) for addr in sorted(ret)]
 
 
 def ip_addrs(interface=None, include_loopback=False, interface_data=None):

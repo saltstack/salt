@@ -13,7 +13,7 @@
 
         http://code.activestate.com/recipes/440554/
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import python libs
 import os
