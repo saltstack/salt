@@ -1170,25 +1170,6 @@ VALID_OPTS = {
     # Setting it to False disables discovery
     'discovery': (dict, bool),
 
-    # SSDP discovery mapping
-    # Defines arbitrary data for description and grouping minions across various types of masters,
-    # especially when masters are not related to each other.
-    'mapping': dict,
-
-    # SSDP discovery mapping matcher policy
-    # Values: "any" where at least one key/value pair should be found or
-    # "all", where every key/value should be identical
-    'match': six.string_types,
-
-    # Port definition.
-    'port': int,
-
-    # SSDP discovery attempts to send query to the Universe
-    'attempts': int,
-
-    # SSDP discovery pause between the attempts
-    'pause': int,
-
     # Scheduler should be a dictionary
     'schedule': dict,
 
