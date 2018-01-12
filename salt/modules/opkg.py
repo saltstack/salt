@@ -1042,5 +1042,5 @@ def owner(*paths):
         else:
             ret[path] = ''
     if len(ret) == 1:
-        return six.itervalues(ret)
+        return next(six.itervalues(ret))
     return ret
