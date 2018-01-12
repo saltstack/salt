@@ -1678,7 +1678,6 @@ def remove(name=None, pkgs=None, **kwargs):
 
             # os.path.expandvars is not required as we run everything through cmd.exe /s /c
 
-
             if kwargs.get('extra_uninstall_flags'):
                 uninstall_flags = '{0} {1}'.format(
                     uninstall_flags, kwargs.get('extra_uninstall_flags', ''))
