@@ -106,7 +106,7 @@ def _get_moto_version():
     Returns the moto version
     '''
     try:
-        return LooseVersion(moto.__version__)
+        return LooseVersion(six.text_type(moto.__version__))
     except AttributeError:
         try:
             return LooseVersion(pkg_resources.get_distribution('moto').version)
