@@ -104,7 +104,11 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
     if not gather_job_timeout:
         gather_job_timeout = __opts__['gather_job_timeout']
 
-    ret['up'], ret['down'] = _ping(tgt, tgt_type, timeout, gather_job_timeout)
+    res = _ping(tgt, tgt_type, timeout, gather_job_timeout)
+    if not res:
+        ret['up'], ret['down'] = ([], [])
+    else:
+        ret['up'], ret['down'] = res
     return ret
 
 
