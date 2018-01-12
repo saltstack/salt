@@ -563,7 +563,6 @@ class AsyncAuth(object):
                     )
                 continue
             break
-
         if not isinstance(creds, dict) or 'aes' not in creds:
             if self.opts.get('detect_mode') is True:
                 error = SaltClientError('-|RETRY|-')
