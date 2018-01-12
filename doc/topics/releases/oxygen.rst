@@ -271,7 +271,7 @@ The new grains added are:
 
 * ``fc_wwn``: Show all fibre channel world wide port names for a host
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
-* ``swap_total``: Show the configured swap_total for Linux, *BSD, OS X and Solaris/SunOS
+* ``swap_total``: Show the configured swap_total for Linux, \*BSD, OS X and Solaris/SunOS
 
 Salt Minion Autodiscovery
 ------------------------
@@ -1288,6 +1288,24 @@ executing a second attempt to set up a service or begin to execute a separate
 thread of states because of a failure.
 
 The ``onfail_any`` requisite is applied in the same way as ``require_any`` and ``watch_any``:
+
+Basic Slots support in states compiler
+--------------------------------------
+
+Slots extend the state syntax and allows you to do things right before the
+state function is executed. So you can make a decision in the last moment right
+before a state is executed.
+
+Slot syntax looks close to the simple python function call. Here is a simple example:
+
+.. code-block:: yaml
+
+    copy-some-file:
+      file.copy:
+        - name: __slot__:salt:test.echo(text=/tmp/some_file)
+        - source: __slot__:salt:test.echo(/etc/hosts)
+
+Read more :ref:`here <slots-subsystem>`.
 
 Deprecations
 ------------
