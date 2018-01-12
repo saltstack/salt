@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -500,21 +500,20 @@ class LogSettingsParserTests(TestCase):
         log_file_name = self.logfile_config_setting_name
         opts = self.default_config.copy()
         opts.update({'log_file': log_file})
-        if log_file_name is not 'log_file':
-            opts.update({log_file_name:
-                         getattr(self, log_file_name)})
+        if log_file_name != 'log_file':
+            opts.update({log_file_name: log_file})
 
-        if log_file_name is 'key_logfile':
+        if log_file_name == 'key_logfile':
             self.skipTest('salt-key creates log file outside of parse_args.')
 
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
 
-        if log_file_name is 'log_file':
+        if log_file_name == 'log_file':
             self.assertEqual(os.path.getsize(log_file), 0)
         else:
-            self.assertEqual(os.path.getsize(getattr(self, log_file_name)), 0)
+            self.assertEqual(os.path.getsize(getattr(self, 'log_file')), 0)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

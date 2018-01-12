@@ -12,7 +12,7 @@
 # pylint: disable=attribute-defined-outside-init,no-self-use
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import signal
@@ -30,6 +30,7 @@ import salt.log.setup as log
 import salt.syspaths as syspaths
 import salt.version as version
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.kinds as kinds
@@ -176,6 +177,9 @@ class OptionParser(optparse.OptionParser, object):
             options.__dict__.update(new_options.__dict__)
             args.extend(new_args)
 
+        if six.PY2:
+            args = salt.utils.data.decode(args)
+
         if options.versions_report:
             self.print_versions_report()
 
@@ -223,9 +227,8 @@ class OptionParser(optparse.OptionParser, object):
 
         if self.config.get('conf_file', None) is not None:  # pylint: disable=no-member
             logging.getLogger(__name__).debug(
-                'Configuration file path: {0}'.format(
-                    self.config['conf_file']  # pylint: disable=no-member
-                )
+                'Configuration file path: %s',
+                self.config['conf_file']  # pylint: disable=no-member
             )
         # Retain the standard behavior of optparse to return options and args
         return options, args
@@ -259,9 +262,8 @@ class OptionParser(optparse.OptionParser, object):
                 logger = logging.getLogger(__name__)
                 logger.exception(err)
                 logger.error(
-                    'Error while processing {0}: {1}'.format(
-                        mixin_before_exit_func, traceback.format_exc(err)
-                    )
+                    'Error while processing %s: %s',
+                    mixin_before_exit_func, traceback.format_exc(err)
                 )
         if self._setup_mp_logging_listener_ is True:
             # Stop the logging queue listener process
@@ -271,11 +273,12 @@ class OptionParser(optparse.OptionParser, object):
         optparse.OptionParser.exit(self, status, msg)
 
     def error(self, msg):
-        """error(msg : string)
+        '''
+        error(msg : string)
 
         Print a usage message incorporating 'msg' to stderr and exit.
         This keeps option parsing exit status uniform for all parsing errors.
-        """
+        '''
         self.print_usage(sys.stderr)
         self.exit(salt.defaults.exitcodes.EX_USAGE, '{0}: error: {1}\n'.format(self.get_prog_name(), msg))
 
@@ -403,7 +406,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
 
         # Make sure we let the user know that we will be loading a Saltfile
         logging.getLogger(__name__).info(
-            'Loading Saltfile from \'{0}\''.format(self.options.saltfile)
+            'Loading Saltfile from \'%s\'', self.options.saltfile
         )
 
         try:
@@ -522,7 +525,7 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
         config_dir = os.environ.get(self._default_config_dir_env_var_, None)
         if not config_dir:
             config_dir = self._default_config_dir_
-            logging.getLogger(__name__).debug('SYSPATHS setup as: {0}'.format(syspaths.CONFIG_DIR))
+            logging.getLogger(__name__).debug('SYSPATHS setup as: %s', syspaths.CONFIG_DIR)
         self.add_option(
             '-c', '--config-dir', default=config_dir,
             help=('Pass in an alternative configuration directory. Default: '
@@ -548,9 +551,7 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
             try:
                 self.config.update(self.setup_config())
             except (IOError, OSError) as exc:
-                self.error(
-                    'Failed to load configuration: {0}'.format(exc)
-                )
+                self.error('Failed to load configuration: {0}'.format(exc))
 
     def get_config_file_path(self, configfile=None):
         if configfile is None:
@@ -792,13 +793,10 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                         self._default_logging_logfile_
                     )
                     logging.getLogger(__name__).debug(
-                        'The user \'{0}\' is not allowed to write to \'{1}\'. '
+                        'The user \'%s\' is not allowed to write to \'%s\'. '
                         'The log file will be stored in '
-                        '\'~/.salt/\'{2}\'.log\''.format(
-                            current_user,
-                            logfile,
-                            logfile_basename
-                        )
+                        '\'~/.salt/\'%s\'.log\'',
+                        current_user, logfile, logfile_basename
                     )
                     logfile = os.path.join(
                         user_salt_dir, '{0}.log'.format(logfile_basename)
@@ -1049,7 +1047,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
             msg += ' received a SIGINT.'
         elif signum == signal.SIGTERM:
             msg += ' received a SIGTERM.'
-        logging.getLogger(__name__).warning('{0} Exiting.'.format(msg))
+        logging.getLogger(__name__).warning('%s Exiting.', msg)
         self.shutdown(exitmsg='{0} Exited.'.format(msg))
 
     def shutdown(self, exitcode=0, exitmsg=None):
@@ -1357,10 +1355,10 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         if self.options.output_file is not None and self.options.output_file_append is False:
             if os.path.isfile(self.options.output_file):
                 try:
-                    with salt.utils.files.fopen(self.options.output_file, 'w') as ofh:
+                    with salt.utils.files.fopen(self.options.output_file, 'w'):
                         # Make this a zero length filename instead of removing
                         # it. This way we keep the file permissions.
-                        ofh.write('')
+                        pass
                 except (IOError, OSError) as exc:
                     self.error(
                         '{0}: Access denied: {1}'.format(
@@ -2522,7 +2520,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                 self.options.rotate_aes_key = False
 
     def process_preserve_minions(self):
-        if hasattr(self.options, 'preserve_minions') and isinstance(self.options.preserve_minions, str):
+        if hasattr(self.options, 'preserve_minions') and isinstance(self.options.preserve_minions, six.string_types):
             if self.options.preserve_minions.lower() == 'true':
                 self.options.preserve_minions = True
             elif self.options.preserve_minions.lower() == 'false':
