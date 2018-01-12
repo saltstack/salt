@@ -146,7 +146,7 @@ class SaltSwift(object):
         except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: %s: %s', (exc.code, exc.msg)
+                log.error('    Code: %s: %s', exc.code, exc.msg)
             log.error('    Content: \n%s', getattr(exc, 'read', lambda: six.text_type(exc))())
             return False
 
