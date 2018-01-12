@@ -255,13 +255,13 @@ VALID_OPTS = {
     'autoload_dynamic_modules': bool,
 
     # Force the minion into a single environment when it fetches files from the master
-    'saltenv': six.string_types,
+    'saltenv': (type(None), six.string_types),
 
     # Prevent saltenv from being overriden on the command line
     'lock_saltenv': bool,
 
     # Force the minion into a single pillar root when it fetches pillar data from the master
-    'pillarenv': six.string_types,
+    'pillarenv': (type(None), six.string_types),
 
     # Make the pillarenv always match the effective saltenv
     'pillarenv_from_saltenv': bool,
@@ -269,7 +269,7 @@ VALID_OPTS = {
     # Allows a user to provide an alternate name for top.sls
     'state_top': six.string_types,
 
-    'state_top_saltenv': six.string_types,
+    'state_top_saltenv': (type(None), six.string_types),
 
     # States to run when a minion starts up
     'startup_states': six.string_types,
@@ -405,7 +405,7 @@ VALID_OPTS = {
     'log_level': six.string_types,
 
     # The log level to log to a given file
-    'log_level_logfile': six.string_types,
+    'log_level_logfile': (type(None), six.string_types),
 
     # The format to construct dates in log files
     'log_datefmt': six.string_types,
@@ -497,10 +497,10 @@ VALID_OPTS = {
     'permissive_pki_access': bool,
 
     # The passphrase of the master's private key
-    'key_pass': six.string_types,
+    'key_pass': (type(None), six.string_types),
 
     # The passphrase of the master's private signing key
-    'signing_key_pass': six.string_types,
+    'signing_key_pass': (type(None), six.string_types),
 
     # The path to a directory to pull in configuration file includes
     'default_include': six.string_types,
@@ -1027,8 +1027,8 @@ VALID_OPTS = {
     'max_minions': int,
 
 
-    'username': six.string_types,
-    'password': six.string_types,
+    'username': (type(None), six.string_types),
+    'password': (type(None), six.string_types),
 
     # Use zmq.SUSCRIBE to limit listening sockets to only process messages bound for them
     'zmq_filtering': bool,
@@ -1356,7 +1356,7 @@ DEFAULT_MINION_OPTS = {
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': None,
+    'ipv6': False,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
@@ -2008,8 +2008,10 @@ def _validate_opts(opts):
 
     errors = []
 
-    err = ('Key \'{0}\' with value {1} has an invalid type of {2}, a {3} is '
-           'required for this value')
+    err = (
+        'Config option \'{0}\' with value {1} has an invalid type of {2}, a '
+        '{3} is required for this option'
+    )
     for key, val in six.iteritems(opts):
         if key in VALID_OPTS:
             if val is None:
