@@ -29,10 +29,6 @@ import salt.utils.json
 try:
     import docker
     HAS_DOCKER = True
-    def __init__(self):
-        __context__['client'] = docker.from_env()
-        __context__['server_name'] = __grains__['id']
-
 except ImportError:
     HAS_DOCKER = False
 
@@ -46,6 +42,12 @@ def __virtual__():
     if HAS_DOCKER:
         return __virtualname__
     return False, 'The swarm module failed to load: Docker python module is not avaialble.'
+
+
+def __init__(self):
+    if HAS_DOCKER:
+        __context__['client'] = docker.from_env()
+    __context__['server_name'] = __grains__['id']
 
 
 def swarm_tokens():
