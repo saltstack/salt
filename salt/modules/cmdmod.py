@@ -521,16 +521,19 @@ def _run(cmd,
     if python_shell is None:
         python_shell = False
 
-    kwargs = {'cwd': cwd,
-              'shell': python_shell,
-              'env': run_env,
-              'stdin': six.text_type(stdin) if stdin is not None else stdin,
-              'stdout': stdout,
-              'stderr': stderr,
-              'with_communicate': with_communicate,
-              'timeout': timeout,
-              'bg': bg,
-              }
+    new_kwargs = {'cwd': cwd,
+                  'shell': python_shell,
+                  'env': run_env,
+                  'stdin': six.text_type(stdin) if stdin is not None else stdin,
+                  'stdout': stdout,
+                  'stderr': stderr,
+                  'with_communicate': with_communicate,
+                  'timeout': timeout,
+                  'bg': bg,
+                  }
+
+    if 'stdin_binary' in kwargs:
+        new_kwargs['stdin_binary'] = kwargs['stdin_binary']
 
     if umask is not None:
         _umask = six.text_type(umask).lstrip('0')
@@ -548,18 +551,18 @@ def _run(cmd,
         _umask = None
 
     if runas or group or umask:
-        kwargs['preexec_fn'] = functools.partial(
-            salt.utils.user.chugid_and_umask,
-            runas,
-            _umask,
-            group)
+        new_kwargs['preexec_fn'] = functools.partial(
+                salt.utils.user.chugid_and_umask,
+                runas,
+                _umask,
+                group)
 
     if not salt.utils.platform.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
         # stdin/stdout/stderr
-        if kwargs['shell'] is True:
-            kwargs['executable'] = shell
-        kwargs['close_fds'] = True
+        if new_kwargs['shell'] is True:
+            new_kwargs['executable'] = shell
+        new_kwargs['close_fds'] = True
 
     if not os.path.isabs(cwd) or not os.path.isdir(cwd):
         raise CommandExecutionError(
@@ -575,14 +578,14 @@ def _run(cmd,
     if not use_vt:
         # This is where the magic happens
         try:
-            proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+            proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
         except (OSError, IOError) as exc:
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
                 'reason: '.format(
                     cmd if _check_loglevel(output_loglevel) is not None
                         else 'REDACTED',
-                    kwargs
+                    new_kwargs
                 )
             )
             try:
@@ -652,7 +655,7 @@ def _run(cmd,
                                log_stdout=True,
                                log_stderr=True,
                                cwd=cwd,
-                               preexec_fn=kwargs.get('preexec_fn', None),
+                               preexec_fn=new_kwargs.get('preexec_fn', None),
                                env=run_env,
                                log_stdin_level=output_loglevel,
                                log_stdout_level=output_loglevel,
