@@ -294,13 +294,13 @@ as follows:
 
 **Master configuration**
 
-To simply enable it by default, accepting all kind of minions, is enough to set it to True:
+To simply enable it by default, accepting all kinds of minions, it is enough to set it to True:
 
 .. code-block:: yaml
 
        discovery: true
 
-Sub-option `mapping` allows autodiscovery help Minions to find a proper Master for them. The mapping contains
+Sub-option `mapping` allows autodiscovery to help Minions to find a proper Master for them. The mapping contains
 just an arbitrary set of key/value strings that would match either any of them or all of them. Default is empty.
 
 Example:
@@ -323,7 +323,7 @@ Additionally to the identical configuration as on a Master, there are two more o
 
 - ``attempts`` will set how many "ping" broadcast requests should be sent to the network, waiting for any Master
    response. Each attempt takes a couple of seconds, so raising it to the higher value will
-   result to a slower startup of the Minion. Generally, on a properly configured networks, the autodiscovery
+   result to a slower startup of the Minion. Generally, on a properly configured network, the autodiscovery is
    supposed to be all set right after the first attempt. Default is set to 3 attempts.
 - ``match`` can have values ``all`` or ``any``. Match is always coming together with ``mapping``, and essentially means
   "match any/all of mapping values to the target". Default is set to ``any``.
