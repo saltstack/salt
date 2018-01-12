@@ -9,7 +9,6 @@ import time
 # Import Salt Testing Libs
 from tests.support.case import SSHCase
 from tests.support.paths import TMP
-from tests.support.unit import skipIf
 
 # Import Salt Libs
 from salt.ext import six
