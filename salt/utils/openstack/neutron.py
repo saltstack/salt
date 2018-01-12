@@ -5,7 +5,7 @@ Neutron class
 
 
 # Import python libs
-from __future__ import absolute_import, with_statement
+from __future__ import absolute_import, with_statement, unicode_literals
 import logging
 
 # Import third party libs
