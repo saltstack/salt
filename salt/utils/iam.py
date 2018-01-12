@@ -4,7 +4,7 @@ Connection library for Amazon IAM
 
 :depends: requests
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Python libs
 import logging
@@ -42,12 +42,12 @@ def _retry_get_url(url, num_retries=10, timeout=5):
             pass
 
         log.warning(
-            'Caught exception reading from URL. Retry no. {0}'.format(i)
+            'Caught exception reading from URL. Retry no. %s', i
         )
         log.warning(pprint.pformat(exc))
         time.sleep(2 ** i)
     log.error(
-        'Failed to read from URL for {0} times. Giving up.'.format(num_retries)
+        'Failed to read from URL for %s times. Giving up.', num_retries
     )
     return ''
 
@@ -59,5 +59,5 @@ def _convert_key_to_str(key):
     if isinstance(key, six.text_type):
         # the secret key must be bytes and not unicode to work
         #  properly with hmac.new (see http://bugs.python.org/issue5285)
-        return str(key)
+        return six.text_type(key)
     return key
