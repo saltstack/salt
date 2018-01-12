@@ -496,6 +496,9 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
             if self.auth.authenticated:
+                if self.auth.creds != None and self.opts['transport'] == 'tcp':
+                    self.auth.creds['publish_port'] = self.opts['tcp_pub_port']
+
                 self.message_client = SaltMessageClientPool(
                     self.opts,
                     args=(self.opts, self.opts['master_ip'], int(self.auth.creds['publish_port']),),
