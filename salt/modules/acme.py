@@ -36,8 +36,8 @@ import salt.utils.path
 log = logging.getLogger(__name__)
 
 LEA = salt.utils.path.which_bin(['certbot', 'letsencrypt',
-                            'certbot-auto', 'letsencrypt-auto',
-                            '/opt/letsencrypt/letsencrypt-auto'])
+                                 'certbot-auto', 'letsencrypt-auto',
+                                 '/opt/letsencrypt/letsencrypt-auto'])
 LE_LIVE = '/etc/letsencrypt/live/'
 
 
@@ -146,10 +146,10 @@ def cert(name,
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):
-        log.debug('Certificate {0} does not exist (yet)'.format(cert_file))
+        log.debug('Certificate %s does not exist (yet)', cert_file)
         renew = False
     elif needs_renewal(name, renew):
-        log.debug('Certificate {0} will be renewed'.format(cert_file))
+        log.debug('Certificate %s will be renewed', cert_file)
         cmd.append('--renew-by-default')
         renew = True
     if server:
@@ -197,9 +197,8 @@ def cert(name,
 
     if res['retcode'] != 0:
         return {'result': False,
-                'comment': 'Certificate {0} renewal failed with:\n{1}{2}' \
-                           ''.format(name, res['stdout'], res['stderr'])
-               }
+                'comment': 'Certificate {0} renewal failed with:\n{1}{2}'
+                           ''.format(name, res['stdout'], res['stderr'])}
 
     if 'no action taken' in res['stdout']:
         return {'result': None,
@@ -258,16 +257,15 @@ def info(name):
     cert_file = _cert_file(name, 'cert')
     # Use the salt module if available
     if 'tls.cert_info' in __salt__:
-        info = __salt__['tls.cert_info'](cert_file)
+        cert_info = __salt__['tls.cert_info'](cert_file)
         # Strip out the extensions object contents;
         # these trip over our poor state output
         # and they serve no real purpose here anyway
-        info['extensions'] = info['extensions'].keys()
-        return info
+        cert_info['extensions'] = cert_info['extensions'].keys()
+        return cert_info
     # Cobble it together using the openssl binary
-    else:
-        openssl_cmd = 'openssl x509 -in {0} -noout -text'.format(cert_file)
-        return __salt__['cmd.run'](openssl_cmd, output_loglevel='quiet')
+    openssl_cmd = 'openssl x509 -in {0} -noout -text'.format(cert_file)
+    return __salt__['cmd.run'](openssl_cmd, output_loglevel='quiet')
 
 
 def expires(name):
