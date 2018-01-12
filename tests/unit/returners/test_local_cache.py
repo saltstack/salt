@@ -12,6 +12,7 @@ import os
 import shutil
 import logging
 import tempfile
+import time
 
 # Import Salt Testing libs
 from tests.integration import AdaptedConfigurationTestCaseMixin
@@ -70,6 +71,10 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # Create temp job cache dir without files in it.
         jid_dir, jid_file = self._make_tmp_jid_dirs(create_files=False)
+
+        # File timestamps on Windows aren't as precise. Let a little time pass
+        if salt.utils.platform.is_windows():
+            time.sleep(.01)
 
         # Make sure there are no files in the directory before continuing
         self.assertEqual(jid_file, None)
@@ -132,6 +137,10 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # Create temp job cache dir and jid file
         jid_dir, jid_file = self._make_tmp_jid_dirs()
+
+        # File timestamps on Windows aren't as precise. Let a little time pass
+        if salt.utils.platform.is_windows():
+            time.sleep(.01)
 
         # Make sure there is a jid directory
         jid_dir_name = jid_file.rpartition('/')[2]
