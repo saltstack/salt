@@ -273,10 +273,10 @@ The new grains added are:
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
 * ``swap_total``: Show the configured swap_total for Linux, \*BSD, OS X and Solaris/SunOS
 
-Salt Minion Autodiscovery
+Salt Minion Auto-discovery
 ------------------------
 
-Salt Minion now no longer need to be configured against a specifig DNS name or IP address of a Master.
+Salt Minion now no longer need to be configured against a specific DNS name or IP address of a Master.
 
 For this feature Salt Master now requires port 4520 for UDP broadcast packets to be opened
 and the Salt Minion be able to send UDP packets to the same port.
@@ -286,10 +286,11 @@ Configuration
 
 By default, automatic discovery is disabled.
 
-Warning: due to the current limitations that will be changing in a future, before you turn on autodiscovery,
-make sure your network is secured and trusted. See the limitations below.
+..warning::
+   Due to the current limitations that will be changing in a future, before you turn on auto-discovery,
+   make sure your network is secured and trusted.
 
-Autodiscovery is configured on Master and Minion. Both of them are configured via ``discovery`` option
+Auto-discovery is configured on Master and Minion. Both of them are configured via ``discovery`` option
 as follows:
 
 **Master configuration**
@@ -300,7 +301,7 @@ To simply enable it by default, accepting all kinds of minions, it is enough to 
 
        discovery: true
 
-Sub-option `mapping` allows autodiscovery to help Minions to find a proper Master for them. The mapping contains
+Sub-option `mapping` allows auto-discovery to help Minions to find a proper Master for them. The mapping contains
 just an arbitrary set of key/value strings that would match either any of them or all of them. Default is empty.
 
 Example:
@@ -312,14 +313,22 @@ Example:
            description: SES 5.0
            node: 1
 
-More of this below.
+It is also possible to change the port used from the default of ``4520``, by
+setting a ``port`` option under the Master's ``discovery`` configuration:
 
-It is also possible to change default ``4520`` port, by setting another integer value to the ``port`` option within
-the discovery system. However, this should be also pre-configured on the minions as well.
+.. code-block:: yaml
+
+    discovery:
+      port: 4567
+
+.. note::
+    When using a port number other than the default, the Minion's ``discovery``
+    configuraton must *also* have a port specified, otherwise the Minion will
+    still attempt to contact the Master on port ``4520``.
 
 **Minion configuration**
 
-Additionally to the identical configuration as on a Master, there are two more options available on a Minion:
+In addition to the ``mapping`` and ``port`` options, the following additional options are available to Minions:
 
 - ``attempts`` will set how many "ping" broadcast requests should be sent to the network, waiting for any Master
    response. Each attempt takes a couple of seconds, so raising it to the higher value will
@@ -338,7 +347,7 @@ Masters, each corresponds for a particular niche or environment or specific role
 is supposed to connect only to one of those Masters that is described approriately.
 
 To achieve such an effect, each `/etc/salt/master` configuration should have a `discovery` option,
-which should have a `mapping` element with arbitrary key/value pairs. The same configuration shoul
+which should have a `mapping` element with arbitrary key/value pairs. The same configuration should
 be on the Minion, so then when mapping matches, Minion recognises Master as its connection target.
 
 Example for Master configuration (`/etc/salt/master`):
