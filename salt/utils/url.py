@@ -48,9 +48,9 @@ def create(path, saltenv=None):
         path = salt.utils.path.sanitize_win_path(path)
     path = sdecode(path)
 
-    query = u'saltenv={0}'.format(saltenv) if saltenv else ''
+    query = 'saltenv={0}'.format(saltenv) if saltenv else ''
     url = sdecode(urlunparse(('file', '', path, '', query, '')))
-    return u'salt://{0}'.format(url[len('file:///'):])
+    return 'salt://{0}'.format(url[len('file:///'):])
 
 
 def is_escaped(url):
@@ -82,13 +82,13 @@ def escape(url):
         if url.startswith('|'):
             return url
         else:
-            return u'|{0}'.format(url)
+            return '|{0}'.format(url)
     elif scheme == 'salt':
         path, saltenv = parse(url)
         if path.startswith('|'):
             return create(path, saltenv)
         else:
-            return create(u'|{0}'.format(path), saltenv)
+            return create('|{0}'.format(path), saltenv)
     else:
         return url
 

@@ -239,10 +239,13 @@ def pvcreate(devices, override=True, **kwargs):
              'pvmetadatacopies', 'metadatacopies', 'metadataignore',
              'restorefile', 'norestorefile', 'labelsector',
              'setphysicalvolumesize')
+    no_parameter = ('force', 'norestorefile')
     for var in kwargs:
         if kwargs[var] and var in valid:
+            cmd.extend(['--{0}'.format(var), kwargs[var]])
+        elif kwargs[var] and var in no_parameter:
             cmd.append('--{0}'.format(var))
-            cmd.append(kwargs[var])
+
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out.get('retcode'):
         raise CommandExecutionError(out.get('stderr'))

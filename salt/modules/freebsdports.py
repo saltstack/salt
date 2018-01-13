@@ -25,6 +25,7 @@ import logging
 # Import salt libs
 import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 from salt.ext.six import string_types
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext import six
@@ -470,7 +471,7 @@ def list_all():
     '''
     if 'ports.list_all' not in __context__:
         __context__['ports.list_all'] = []
-        for path, dirs, files in os.walk('/usr/ports'):
+        for path, dirs, files in salt.utils.path.os_walk('/usr/ports'):
             stripped = path[len('/usr/ports'):]
             if stripped.count('/') != 2 or stripped.endswith('/CVS'):
                 continue

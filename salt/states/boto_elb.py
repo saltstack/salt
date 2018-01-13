@@ -396,6 +396,9 @@ def present(name, listeners, availability_zones=None, subnets=None,
     ret['result'] = ret['result'] if _ret['result'] else _ret['result']
     if ret['result'] is False:
         return ret
+    exists = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
+    if not exists and __opts__['test']:
+        return ret
 
     if attributes:
         _ret = _attributes_present(name, attributes, region, key, keyid, profile)

@@ -177,7 +177,7 @@ def sources_add(name, ruby=None, user=None):
         ret['comment'] = 'Gem source is already added.'
         return ret
     if __opts__['test']:
-        ret['comment'] = 'The gem source {0} would have been removed.'.format(name)
+        ret['comment'] = 'The gem source {0} would have been added.'.format(name)
         return ret
     if __salt__['gem.sources_add'](source_uri=name, ruby=ruby, runas=user):
         ret['result'] = True
@@ -212,7 +212,7 @@ def sources_remove(name, ruby=None, user=None):
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'The gem source would have been removed'
+        ret['comment'] = 'The gem source would have been removed.'
         return ret
 
     if __salt__['gem.sources_remove'](source_uri=name, ruby=ruby, runas=user):

@@ -34,6 +34,7 @@ import salt.fileserver
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
+import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
@@ -275,7 +276,7 @@ def file_list(load):
             continue
         walk_dir = os.path.join(minion_files_dir, prefix)
         # Do not follow links for security reasons
-        for root, _, files in os.walk(walk_dir, followlinks=False):
+        for root, _, files in salt.utils.path.os_walk(walk_dir, followlinks=False):
             for fname in files:
                 # Ignore links for security reasons
                 if os.path.islink(os.path.join(root, fname)):
@@ -354,7 +355,7 @@ def dir_list(load):
             continue
         walk_dir = os.path.join(minion_files_dir, prefix)
         # Do not follow links for security reasons
-        for root, _, _ in os.walk(walk_dir, followlinks=False):
+        for root, _, _ in salt.utils.path.os_walk(walk_dir, followlinks=False):
             relpath = os.path.relpath(root, minion_files_dir)
             # Ensure that the current directory and directories outside of
             # the minion dir do not end up in return list

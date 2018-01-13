@@ -666,6 +666,12 @@
 #    certfile: <path_to_certfile>
 #    ssl_version: PROTOCOL_TLSv1_2
 
+# Grains to be sent to the master on authentication to check if the minion's key
+# will be accepted automatically. Needs to be configured on the master.
+#autosign_grains:
+#  - uuid
+#  - server_id
+
 
 ######        Reactor Settings        #####
 ###########################################

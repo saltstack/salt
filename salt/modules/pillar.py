@@ -237,7 +237,7 @@ def items(*args, **kwargs):
     pillarenv = kwargs.get('pillarenv')
     if pillarenv is None:
         if __opts__.get('pillarenv_from_saltenv', False):
-            pillarenv = kwargs.get('saltenv') or __opts__['environment']
+            pillarenv = kwargs.get('saltenv') or __opts__['saltenv']
         else:
             pillarenv = __opts__['pillarenv']
 
@@ -468,7 +468,7 @@ def ext(external, pillar=None):
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
+        __opts__['saltenv'],
         ext=external,
         pillar_override=pillar)
 

@@ -10,6 +10,7 @@ import os
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.path
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -44,7 +45,7 @@ def list_env(saltenv='base'):
         return ret
     for f_root in __opts__['pillar_roots'][saltenv]:
         ret[f_root] = {}
-        for root, dirs, files in os.walk(f_root):
+        for root, dirs, files in salt.utils.path.os_walk(f_root):
             sub = ret[f_root]
             if root != f_root:
                 # grab subroot ref

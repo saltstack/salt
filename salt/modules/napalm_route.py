@@ -82,7 +82,7 @@ def show(destination, protocol=None, **kwargs):  # pylint: disable=unused-argume
 
     .. code-block:: bash
 
-        salt 'my_router' route.show
+        salt 'my_router' route.show 172.16.0.0/25
         salt 'my_router' route.show 172.16.0.0/25 bgp
 
     Output example:

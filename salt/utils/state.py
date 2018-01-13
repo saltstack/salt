@@ -203,8 +203,8 @@ def merge_subreturn(original_return, sub_return, subkey=None):
     else:
         if original_return['comment']:
             # Skip for empty original comments
-            original_return['comment'] += u'\n'
-        original_return['comment'] += u'\n'.join(sub_comment)
+            original_return['comment'] += '\n'
+        original_return['comment'] += '\n'.join(sub_comment)
 
     if sub_return['changes']:  # changes always exists
         original_return.setdefault('changes', {})

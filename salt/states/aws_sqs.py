@@ -64,7 +64,7 @@ def exists(
             ret['comment'] = created['stderr']
 
     else:
-        ret['comment'] = u'{0} exists in {1}'.format(name, region)
+        ret['comment'] = '{0} exists in {1}'.format(name, region)
 
     return ret
 
@@ -106,6 +106,6 @@ def absent(
             ret['result'] = False
             ret['comment'] = removed['stderr']
     else:
-        ret['comment'] = u'{0} does not exist in {1}'.format(name, region)
+        ret['comment'] = '{0} does not exist in {1}'.format(name, region)
 
     return ret

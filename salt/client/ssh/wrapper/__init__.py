@@ -42,8 +42,8 @@ class FunctionWrapper(object):
         self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
         self.opts = opts
         self.mods = mods if isinstance(mods, dict) else {}
-        self.kwargs = {u'id_': id_,
-                       u'host': host}
+        self.kwargs = {'id_': id_,
+                       'host': host}
         self.fsclient = fsclient
         self.kwargs.update(kwargs)
         self.aliases = aliases
@@ -67,14 +67,14 @@ class FunctionWrapper(object):
         '''
         Return the function call to simulate the salt local lookup system
         '''
-        if u'.' not in cmd and not self.cmd_prefix:
+        if '.' not in cmd and not self.cmd_prefix:
             # Form of salt.cmd.run in Jinja -- it's expecting a subdictionary
             # containing only 'cmd' module calls, in that case. Create a new
             # FunctionWrapper which contains the prefix 'cmd' (again, for the
             # salt.cmd.run example)
             kwargs = copy.deepcopy(self.kwargs)
-            id_ = kwargs.pop(u'id_')
-            host = kwargs.pop(u'host')
+            id_ = kwargs.pop('id_')
+            host = kwargs.pop('host')
             return FunctionWrapper(self.opts,
                                    id_,
                                    host,
@@ -90,7 +90,7 @@ class FunctionWrapper(object):
             # We're in an inner FunctionWrapper as created by the code block
             # above. Reconstruct the original cmd in the form 'cmd.run' and
             # then evaluate as normal
-            cmd = u'{0}.{1}'.format(self.cmd_prefix, cmd)
+            cmd = '{0}.{1}'.format(self.cmd_prefix, cmd)
 
         if cmd in self.wfuncs:
             return self.wfuncs[cmd]
@@ -104,7 +104,7 @@ class FunctionWrapper(object):
             '''
             argv = [cmd]
             argv.extend([json.dumps(arg) for arg in args])
-            argv.extend([u'{0}={1}'.format(key, json.dumps(val)) for key, val in six.iteritems(kwargs)])
+            argv.extend(['{0}={1}'.format(key, json.dumps(val)) for key, val in six.iteritems(kwargs)])
             single = salt.client.ssh.Single(
                     self.opts,
                     argv,
@@ -115,21 +115,21 @@ class FunctionWrapper(object):
                     **self.kwargs
             )
             stdout, stderr, retcode = single.cmd_block()
-            if stderr.count(u'Permission Denied'):
-                return {u'_error': u'Permission Denied',
-                        u'stdout': stdout,
-                        u'stderr': stderr,
-                        u'retcode': retcode}
+            if stderr.count('Permission Denied'):
+                return {'_error': 'Permission Denied',
+                        'stdout': stdout,
+                        'stderr': stderr,
+                        'retcode': retcode}
             try:
                 ret = json.loads(stdout, object_hook=salt.utils.data.decode_dict)
-                if len(ret) < 2 and u'local' in ret:
-                    ret = ret[u'local']
-                ret = ret.get(u'return', {})
+                if len(ret) < 2 and 'local' in ret:
+                    ret = ret['local']
+                ret = ret.get('return', {})
             except ValueError:
-                ret = {u'_error': u'Failed to return clean data',
-                       u'stderr': stderr,
-                       u'stdout': stdout,
-                       u'retcode': retcode}
+                ret = {'_error': 'Failed to return clean data',
+                       'stderr': stderr,
+                       'stdout': stdout,
+                       'retcode': retcode}
             return ret
         return caller
 
@@ -137,18 +137,18 @@ class FunctionWrapper(object):
         '''
         Set aliases for functions
         '''
-        if u'.' not in cmd and not self.cmd_prefix:
+        if '.' not in cmd and not self.cmd_prefix:
             # Form of salt.cmd.run in Jinja -- it's expecting a subdictionary
             # containing only 'cmd' module calls, in that case. We don't
             # support assigning directly to prefixes in this way
-            raise KeyError(u'Cannot assign to module key {0} in the '
-                           u'FunctionWrapper'.format(cmd))
+            raise KeyError('Cannot assign to module key {0} in the '
+                           'FunctionWrapper'.format(cmd))
 
         if self.cmd_prefix:
             # We're in an inner FunctionWrapper as created by the first code
             # block in __getitem__. Reconstruct the original cmd in the form
             # 'cmd.run' and then evaluate as normal
-            cmd = u'{0}.{1}'.format(self.cmd_prefix, cmd)
+            cmd = '{0}.{1}'.format(self.cmd_prefix, cmd)
 
         if cmd in self.wfuncs:
             self.wfuncs[cmd] = value

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 from jinja2 import Environment, DictLoader, exceptions
 import ast
 import copy
@@ -39,6 +39,8 @@ from salt.utils.templates import (
     JINJA,
     render_jinja_tmpl
 )
+# dateutils is needed so that the strftime jinja filter is loaded
+import salt.utils.dateutils  # pylint: disable=unused-import
 import salt.utils.files
 import salt.utils.stringutils
 
@@ -103,7 +105,7 @@ class TestSaltCacheLoader(TestCase):
         res = loader.get_source(None, 'hello_simple')
         assert len(res) == 3
         # res[0] on Windows is unicode and use os.linesep so it works cross OS
-        self.assertEqual(str(res[0]), 'world' + os.linesep)
+        self.assertEqual(six.text_type(res[0]), 'world' + os.linesep)
         tmpl_dir = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
         self.assertEqual(res[1], tmpl_dir)
         assert res[2](), 'Template up to date?'
@@ -181,7 +183,7 @@ class TestGetTemplate(TestCase):
         fn_ = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
         with salt.utils.files.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
-                fp_.read(),
+                salt.utils.stringutils.to_unicode(fp_.read()),
                 dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
             )
         self.assertEqual(out, 'world' + os.linesep)
@@ -194,7 +196,7 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         with salt.utils.files.fopen(filename) as fp_:
             out = render_jinja_tmpl(
-                fp_.read(),
+                salt.utils.stringutils.to_unicode(fp_.read()),
                 dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
             )
         self.assertEqual(out, 'Hey world !a b !' + os.linesep)
@@ -211,7 +213,7 @@ class TestGetTemplate(TestCase):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
             with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
@@ -240,7 +242,7 @@ class TestGetTemplate(TestCase):
                     SaltRenderError,
                     expected,
                     render_jinja_tmpl,
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_macro_additional_log_for_undefined(self):
@@ -264,7 +266,7 @@ class TestGetTemplate(TestCase):
                     SaltRenderError,
                     expected,
                     render_jinja_tmpl,
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_macro_additional_log_syntaxerror(self):
@@ -288,7 +290,7 @@ class TestGetTemplate(TestCase):
                     SaltRenderError,
                     expected,
                     render_jinja_tmpl,
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_non_ascii_encoding(self):
@@ -297,7 +299,7 @@ class TestGetTemplate(TestCase):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
             with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
@@ -308,7 +310,7 @@ class TestGetTemplate(TestCase):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
             with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
-                    fp_.read(),
+                    salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
@@ -374,9 +376,7 @@ class TestGetTemplate(TestCase):
             salt=self.local_salt
         )
         with salt.utils.files.fopen(out['data']) as fp:
-            result = fp.read()
-            if six.PY2:
-                result = salt.utils.stringutils.to_unicode(result)
+            result = salt.utils.stringutils.to_unicode(fp.read())
             self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
 
     def test_get_context_has_enough_context(self):
@@ -420,7 +420,7 @@ class TestGetTemplate(TestCase):
             dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
         )
 
-    @skipIf(six.PY3, 'Not applicable to Python 3: skipping.')
+    @skipIf(six.PY3, 'Not applicable to Python 3')
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_render_with_unicode_syntax_error(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
@@ -437,8 +437,10 @@ class TestGetTemplate(TestCase):
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_render_with_utf8_syntax_error(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
-            template = 'hello\n\n{{ bad\n\nfoo\xed\x95\x9c'
-            expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
+            template = 'hello\n\n{{ bad\n\nfoo한'
+            expected = salt.utils.stringutils.to_str(
+                r'.*---\nhello\n\n{{ bad\n\nfoo한    <======================\n---'
+            )
             self.assertRaisesRegex(
                 SaltRenderError,
                 expected,
@@ -809,7 +811,7 @@ class TestCustomExtensions(TestCase):
     def test_nested_structures(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ data }}').render(data="foo")
-        self.assertEqual(rendered, u"foo")
+        self.assertEqual(rendered, "foo")
 
         data = OrderedDict([
             ('foo', OrderedDict([
@@ -820,7 +822,7 @@ class TestCustomExtensions(TestCase):
         ])
 
         rendered = env.from_string('{{ data }}').render(data=data)
-        self.assertEqual(rendered, u"{'foo': {'bar': 'baz', 'qux': 42}}")
+        self.assertEqual(rendered, u"{u'foo': {u'bar': u'baz', u'qux': 42}}")
 
         rendered = env.from_string('{{ data }}').render(data=[
                                                             OrderedDict(
@@ -830,7 +832,7 @@ class TestCustomExtensions(TestCase):
                                                                 baz=42,
                                                             )
                                                         ])
-        self.assertEqual(rendered, u"[{'foo': 'bar'}, {'baz': 42}]")
+        self.assertEqual(rendered, u"[{'foo': u'bar'}, {'baz': 42}]")
 
     def test_sequence(self):
         env = Environment()

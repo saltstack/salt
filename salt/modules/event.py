@@ -225,7 +225,7 @@ def send(tag,
             data_dict['pillar'] = __pillar__
 
     if with_env_opts:
-        data_dict['saltenv'] = __opts__.get('environment', 'base')
+        data_dict['saltenv'] = __opts__.get('saltenv', 'base')
         data_dict['pillarenv'] = __opts__.get('pillarenv')
 
     if kwargs:

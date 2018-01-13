@@ -354,6 +354,7 @@ import threading
 import logging
 import errno
 import random
+import weakref
 import yaml
 
 # Import Salt libs
@@ -367,6 +368,7 @@ import salt.utils.minion
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.user
 import salt.loader
 import salt.minion
 import salt.payload
@@ -431,6 +433,7 @@ class Schedule(object):
         self.functions = functions
         self.standalone = standalone
         self.skip_function = None
+        self.skip_during_range = None
         if isinstance(intervals, dict):
             self.intervals = intervals
         else:
@@ -818,17 +821,26 @@ class Schedule(object):
 
     def get_next_fire_time(self, name):
         '''
-        Disable a job in the scheduler. Ignores jobs from pillar
+        Return the  next fire time for the specified job
         '''
 
         schedule = self._get_schedule()
+        _next_fire_time = None
         if schedule:
-            _next_fire_time = schedule[name]['_next_fire_time']
+            _next_fire_time = schedule.get(name, {}).get('_next_fire_time', None)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'next_fire_time': _next_fire_time},
                        tag='/salt/minion/minion_schedule_next_fire_time_complete')
+
+    def job_status(self, name):
+        '''
+        Return the specified schedule item
+        '''
+
+        schedule = self._get_schedule()
+        return schedule.get(name, {})
 
     def handle_func(self, multiprocessing_enabled, func, data):
         '''
@@ -940,6 +952,47 @@ class Schedule(object):
                     if key is not 'kwargs':
                         kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
+            # Only include these when running runner modules
+            if self.opts['__role'] == 'master':
+                jid = salt.utils.jid.gen_jid(self.opts)
+                tag = salt.utils.event.tagify(jid, prefix='salt/scheduler/')
+
+                event = salt.utils.event.get_event(
+                        self.opts['__role'],
+                        self.opts['sock_dir'],
+                        self.opts['transport'],
+                        opts=self.opts,
+                        listen=False)
+
+                namespaced_event = salt.utils.event.NamespacedEvent(
+                    event,
+                    tag,
+                    print_func=None
+                )
+
+                func_globals = {
+                    '__jid__': jid,
+                    '__user__': salt.utils.user.get_user(),
+                    '__tag__': tag,
+                    '__jid_event__': weakref.proxy(namespaced_event),
+                }
+                self_functions = copy.copy(self.functions)
+                salt.utils.lazy.verify_fun(self_functions, func)
+
+                # Inject some useful globals to *all* the function's global
+                # namespace only once per module-- not per func
+                completed_funcs = []
+
+                for mod_name in six.iterkeys(self_functions):
+                    if '.' not in mod_name:
+                        continue
+                    mod, _ = mod_name.split('.', 1)
+                    if mod in completed_funcs:
+                        continue
+                    completed_funcs.append(mod)
+                    for global_key, value in six.iteritems(func_globals):
+                        self.functions[mod_name].__globals__[global_key] = value
+
             ret['return'] = self.functions[func](*args, **kwargs)
 
             if not self.standalone:
@@ -1041,7 +1094,7 @@ class Schedule(object):
 
         '''
 
-        log.trace('==== evaluating schedule =====')
+        log.trace('==== evaluating schedule now {} ====='.format(now))
 
         def _splay(splaytime):
             '''
@@ -1066,11 +1119,18 @@ class Schedule(object):
             return
         if 'skip_function' in schedule:
             self.skip_function = schedule['skip_function']
+        if 'skip_during_range' in schedule:
+            self.skip_during_range = schedule['skip_during_range']
+
+        _hidden = ['enabled',
+                   'skip_function',
+                   'skip_during_range']
         for job, data in six.iteritems(schedule):
-            if job == 'enabled' or not data:
+            run = False
+
+            if job in _hidden and not data:
                 continue
-            if job == 'skip_function' or not data:
-                continue
+
             if not isinstance(data, dict):
                 log.error('Scheduled job "{0}" should have a dict value, not {1}'.format(job, type(data)))
                 continue
@@ -1163,17 +1223,17 @@ class Schedule(object):
             if 'run_explicit' in data:
                 _run_explicit = data['run_explicit']
 
-                if isinstance(_run_explicit, six.string_types):
+                if isinstance(_run_explicit, six.integer_types):
                     _run_explicit = [_run_explicit]
 
                 # Copy the list so we can loop through it
                 for i in copy.deepcopy(_run_explicit):
                     if len(_run_explicit) > 1:
-                        if i < now - self.opts['loop_interval']:
+                        if int(i) < now - self.opts['loop_interval']:
                             _run_explicit.remove(i)
 
                 if _run_explicit:
-                    if _run_explicit[0] <= now < (_run_explicit[0] + self.opts['loop_interval']):
+                    if int(_run_explicit[0]) <= now < int(_run_explicit[0] + self.opts['loop_interval']):
                         run = True
                         data['_next_fire_time'] = _run_explicit[0]
 
@@ -1284,6 +1344,7 @@ class Schedule(object):
                             data['_next_fire_time'] = when
 
                         if data['_next_fire_time'] < when and \
+                                not run and \
                                 not data['_run']:
                             data['_next_fire_time'] = when
                             data['_run'] = True
@@ -1326,6 +1387,7 @@ class Schedule(object):
 
                     if when < now and \
                             not data.get('_run', False) and \
+                            not run and \
                             not data['_splay']:
                         data['_next_fire_time'] = None
                         continue
@@ -1367,10 +1429,28 @@ class Schedule(object):
             else:
                 continue
 
-            run = False
             seconds = data['_next_fire_time'] - now
-            if data['_splay']:
-                seconds = data['_splay'] - now
+
+            if 'splay' in data:
+                # Got "splay" configured, make decision to run a job based on that
+                if not data['_splay']:
+                    # Try to add "splay" time only if next job fire time is
+                    # still in the future. We should trigger job run
+                    # immediately otherwise.
+                    splay = _splay(data['splay'])
+                    if now < data['_next_fire_time'] + splay:
+                        log.debug('schedule.handle_func: Adding splay of '
+                                  '{0} seconds to next run.'.format(splay))
+                        data['_splay'] = data['_next_fire_time'] + splay
+                        if 'when' in data:
+                            data['_run'] = True
+                    else:
+                        run = True
+
+                if data['_splay']:
+                    # The "splay" configuration has been already processed, just use it
+                    seconds = data['_splay'] - now
+
             if '_seconds' in data:
                 if seconds <= 0:
                     run = True
@@ -1391,16 +1471,6 @@ class Schedule(object):
                 run = True
                 data['_run_on_start'] = False
             elif run:
-                if 'splay' in data and not data['_splay']:
-                    splay = _splay(data['splay'])
-                    if now < data['_next_fire_time'] + splay:
-                        log.debug('schedule.handle_func: Adding splay of '
-                                  '{0} seconds to next run.'.format(splay))
-                        run = False
-                        data['_splay'] = data['_next_fire_time'] + splay
-                        if 'when' in data:
-                            data['_run'] = True
-
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
@@ -1441,7 +1511,12 @@ class Schedule(object):
                                      Ignoring job {0}.'.format(job))
                             continue
 
-                if 'skip_during_range' in data:
+                # If there is no job specific skip_during_range available,
+                # grab the global which defaults to None.
+                if 'skip_during_range' not in data:
+                    data['skip_during_range'] = self.skip_during_range
+
+                if 'skip_during_range' in data and data['skip_during_range']:
                     if not _RANGE_SUPPORTED:
                         log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
                         continue
@@ -1458,6 +1533,19 @@ class Schedule(object):
                                 log.error('Invalid date string for end in skip_during_range. Ignoring job {0}.'.format(job))
                                 log.error(data)
                                 continue
+
+                            # Check to see if we should run the job immediately
+                            # after the skip_during_range is over
+                            if 'run_after_skip_range' in data and \
+                               data['run_after_skip_range']:
+                                if 'run_explicit' not in data:
+                                    data['run_explicit'] = []
+                                # Add a run_explicit for immediately after the
+                                # skip_during_range ends
+                                _run_immediate = end + self.opts['loop_interval']
+                                if _run_immediate not in data['run_explicit']:
+                                    data['run_explicit'].append(_run_immediate)
+
                             if end > start:
                                 if start <= now <= end:
                                     if self.skip_function:

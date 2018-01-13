@@ -122,12 +122,7 @@ SALT_SYSPATHS_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
-if IS_PY3:
-    SALT_WINDOWS_REQS = os.path.join(
-        os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req_3.txt')
-else:
-    SALT_WINDOWS_REQS = os.path.join(
-        os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req_2.txt')
+SALT_WINDOWS_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req.txt')
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), '.salt-ssh-package')

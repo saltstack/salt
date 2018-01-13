@@ -24,6 +24,7 @@ import salt.key
 import salt.utils.compat
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.path
 import salt.utils.raetevent
 import salt.utils.versions
 import salt.client
@@ -139,7 +140,7 @@ def key_regen():
         print(client_error)
         return False
 
-    for root, _, files in os.walk(__opts__['pki_dir']):
+    for root, _, files in salt.utils.path.os_walk(__opts__['pki_dir']):
         for fn_ in files:
             path = os.path.join(root, fn_)
             try:

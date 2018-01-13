@@ -54,7 +54,6 @@ import re
 import pprint
 import logging
 import msgpack
-import traceback
 from ast import literal_eval
 from salt.utils.versions import LooseVersion as _LooseVersion
 

@@ -48,6 +48,7 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.lazy
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.pkg.rpm
 import salt.utils.systemd
@@ -279,11 +280,23 @@ def _get_extra_options(**kwargs):
     '''
     ret = []
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
+
+    # Remove already handled options from kwargs
+    fromrepo = kwargs.pop('fromrepo', '')
+    repo = kwargs.pop('repo', '')
+    disablerepo = kwargs.pop('disablerepo', '')
+    enablerepo = kwargs.pop('enablerepo', '')
+    disable_excludes = kwargs.pop('disableexcludes', '')
+    branch = kwargs.pop('branch', '')
+
     for key, value in six.iteritems(kwargs):
-        if isinstance(key, six.string_types):
+        if isinstance(value, six.string_types):
+            log.info('Adding extra option --%s=\'%s\'', key, value)
             ret.append('--{0}=\'{1}\''.format(key, value))
         elif value is True:
+            log.info('Adding extra option --%s', key)
             ret.append('--{0}'.format(key))
+    log.info('Adding extra options %s', ret)
     return ret
 
 
@@ -984,7 +997,7 @@ def list_downloaded():
     CACHE_DIR = os.path.join('/var/cache/', _yum())
 
     ret = {}
-    for root, dirnames, filenames in os.walk(CACHE_DIR):
+    for root, dirnames, filenames in salt.utils.path.os_walk(CACHE_DIR):
         for filename in fnmatch.filter(filenames, '*.rpm'):
             package_path = os.path.join(root, filename)
             pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)

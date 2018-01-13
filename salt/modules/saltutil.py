@@ -52,6 +52,7 @@ import salt.utils.extmods
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.minion
+import salt.utils.path
 import salt.utils.process
 import salt.utils.url
 import salt.utils.versions
@@ -474,7 +475,7 @@ def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None, extmod_bla
     '''
     .. versionadded:: 0.10.0
 
-    Sync beacons from ``salt://_returners`` to the minion
+    Sync returners from ``salt://_returners`` to the minion
 
     saltenv
         The fileserver environment from which to sync. To sync from more than
@@ -666,7 +667,7 @@ def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utility modules from ``salt://_cloud`` to the minion
+    Sync cloud modules from ``salt://_cloud`` to the minion
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -753,7 +754,7 @@ def list_extmods():
     mod_types = os.listdir(ext_dir)
     for mod_type in mod_types:
         ret[mod_type] = set()
-        for _, _, files in os.walk(os.path.join(ext_dir, mod_type)):
+        for _, _, files in salt.utils.path.os_walk(os.path.join(ext_dir, mod_type)):
             for fh_ in files:
                 ret[mod_type].add(fh_.split('.')[0])
         ret[mod_type] = list(ret[mod_type])

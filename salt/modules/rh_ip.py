@@ -1120,8 +1120,8 @@ def build_routes(iface, **settings):
     log.debug("IPv4 routes:\n{0}".format(opts4))
     log.debug("IPv6 routes:\n{0}".format(opts6))
 
-    routecfg = template.render(routes=opts4)
-    routecfg6 = template.render(routes=opts6)
+    routecfg = template.render(routes=opts4, iface=iface)
+    routecfg6 = template.render(routes=opts6, iface=iface)
 
     if settings['test']:
         routes = _read_temp(routecfg)

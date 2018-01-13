@@ -176,8 +176,9 @@ def _query(function,
     if result.get('status', None) == salt.ext.six.moves.http_client.OK:
         response = hipchat_functions.get(api_version).get(function).get('response')
         return result.get('dict', {}).get(response, None)
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
-        return False
+    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT and \
+        api_version == 'v2':
+        return True
     else:
         log.debug(url)
         log.debug(query_params)

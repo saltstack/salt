@@ -4,6 +4,109 @@
 Salt Release Notes - Codename Oxygen
 ====================================
 
+Lots of Docker Improvements
+---------------------------
+
+Much Improved Support for Docker Networking
+===========================================
+
+The :py:func:`docker_network.present <salt.states.docker_network.present>`
+state has undergone a full rewrite, which includes the following improvements:
+
+Full API Support for Network Management
+---------------------------------------
+
+The improvements made to input handling in the
+:py:func:`docker_container.running <salt.states.docker_container.running>`
+state for 2017.7.0 have now been expanded to :py:func:`docker_network.present
+<salt.states.docker_network.present>`. This brings with it full support for all
+tunable configuration arguments.
+
+Custom Subnets
+--------------
+
+Custom subnets can now be configured. Both IPv4 and mixed IPv4/IPv6 networks
+are supported. See :ref:`here <salt-states-docker-network-present-ipam>` for
+more information.
+
+Network Configuration in :py:func:`docker_container.running` States
+-------------------------------------------------------------------
+
+A long-requested feature has finally been added! It is now possible to
+configure static IPv4/IPv6 addresses, as well as links and labels. See
+:ref:`here <salt-states-docker-container-network-management>` for more
+information.
+
+.. note::
+    While the ``containers`` argument to :py:func:`docker_network.present`
+    will continue to be supported, it will no longer be the recommended way of
+    ensuring that a container is attached to a network.
+
+Improved Handling of Images from Custom Registries
+==================================================
+
+Rather than attempting to parse the tag from the passed image name, Salt will
+now resolve that tag down to an image ID and use that ID instead.
+
+.. important::
+    Due to this change, there are some backward-incompatible changes to image
+    management. See below for a full list of these changes.
+
+Backward-incompatible Changes to Docker Image Management
+********************************************************
+
+Passing image names to the following functions must now be done using separate
+``repository`` and ``tag`` arguments:
+
+- :py:func:`docker.build <salt.modules.dockermod.build>`
+- :py:func:`docker.commit <salt.modules.dockermod.commit>`
+- :py:func:`docker.import <salt.modules.dockermod.import_>`
+- :py:func:`docker.load <salt.modules.dockermod.load>`
+- :py:func:`docker.tag <salt.modules.dockermod.tag_>`
+- :py:func:`docker.sls_build <salt.modules.dockermod.sls_build>`
+
+Additionally, the ``tag`` argument must now be explicitly passed to the
+:py:func:`docker_image.present <salt.states.docker_image.present>` state,
+unless the image is being pulled from a docker registry.
+
+State and Execution Module Support for ``docker run`` Functionality
+===================================================================
+
+The :py:func:`docker_container.running <salt.states.docker_container.running>`
+state is good for containers which run services, but it is not as useful for
+cases in which the container only needs to run once. The ``start`` argument to
+:py:func:`docker_container.running <salt.states.docker_container.running>` can
+be set to ``False`` to prevent the container from being started again on a
+subsequent run, but for many use cases this is not sufficient. Therefore, the
+:py:func:`docker.run_container <salt.modules.dockermod.run_container>`
+remote-execution function was added. When used on the Salt CLI, it will return
+information about the container, such as its name, ID, exit code, and any
+output it produces.
+
+State support has also been added via the :py:func:`docker_container.run
+<salt.states.docker_container.run>` state. This state is modeled after the
+:py:func:`cmd.run <salt.states.cmd.run>` state, and includes arguments like
+``onlyif``, ``unless``, and ``creates`` to control whether or not the container
+is run.
+
+Full API Support for :py:func:`docker.logs <salt.modules.dockermod.logs>`
+=========================================================================
+
+This function now supports all of the functions that its Docker API counterpart
+does, allowing you to do things like include timestamps, and also suppress
+stdout/stderr, etc. in the return.
+
+`start` Argument Added to :py:func:`docker.create <salt.modules.dockermod.create>` Function
+===========================================================================================
+
+This removes the need to run :py:func:`docker.start
+<salt.modules.dockermod.start_>` separately when creating containers on the
+Salt CLI.
+
+.. code-block:: bash
+
+    salt myminion docker.create image=foo/bar:baz command=/path/to/command start=True
+
 Comparison Operators in Package Installation
 --------------------------------------------
 
@@ -24,6 +127,17 @@ by any master tops matches that are not matched via a top file.
 
 To make master tops matches execute first, followed by top file matches, set
 the new :conf_minion:`master_tops_first` minion config option to ``True``.
+
+Several Jinja Filters Renamed
+-----------------------------
+
+The following Jinja filters (originally added in 2017.7.0) have been renamed
+due to the fact that they were inaccurately named when initially added. The
+original names will be supported until the Neon release of Salt.
+
+- :jinja_ref:`rand_str` renamed to :jinja_ref:`random_hash`
+- :jinja_ref:`jinja_decode_dict` renamed to :jinja_ref:`jinja_encode_dict`
+- :jinja_ref:`jinja_decode_list` renamed to :jinja_ref:`jinja_encode_list`
 
 Return Codes for Runner/Wheel Functions
 ---------------------------------------
@@ -65,6 +179,49 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+
+New (Proxy) Minion Configuration Options
+----------------------------------------
+
+To be able to connect the Minion to the Master using a certain source IP address
+or port, the following options have been added:
+
+- :conf_minion:`source_interface_name`
+- :conf_minion:`source_address`
+- :conf_minion:`source_ret_port`
+- :conf_minion:`source_publish_port`
+
+:conf_minion:`environment` config option renamed to :conf_minion:`saltenv`
+--------------------------------------------------------------------------
+
+The :conf_minion:`environment` config option predates referring to a salt
+fileserver environment as a **saltenv**. To pin a minion to a single
+environment for running states, one would use :conf_minion:`environment`, but
+overriding that environment would be done with the ``saltenv`` argument. For
+consistency, :conf_minion:`environment` is now simply referred to as
+:conf_minion:`saltenv`. There are no plans to deprecate or remove
+:conf_minion:`environment`, if used it will log a warning and its value will be
+used as :conf_minion:`saltenv`.
+
+:conf_minion:`lock_saltenv` config option added
+-----------------------------------------------
+
+If set to ``True``, this option will prevent a minion from allowing the
+``saltenv`` argument to override the value set in :conf_minion:`saltenv` when
+running states.
+
+Failed Minions for State/Function Orchestration Jobs Added to Changes Dictionary
+--------------------------------------------------------------------------------
+
+For orchestration jobs which run states (or run remote execution functions and
+also use a :ref:`fail function <orchestrate-runner-fail-functions>` to indicate
+success or failure), minions which have ``False`` results were previously
+included as a formatted string in the comment field of the return for that
+orchestration job. This made the failed returns difficult to :ref:`parse
+programatically <orchestrate-runner-parsing-results-programatically>`. The
+failed returns in these cases are now included in the changes dictionary,
+making for much easier parsing.
+
 New Grains
 ----------
 
@@ -75,6 +232,63 @@ The new grains added are:
 * ``fc_wwn``: Show all fibre channel world wide port names for a host
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
 * ``swap_total``: Show the configured swap_total for Linux, *BSD, OS X and Solaris/SunOS
+
+Salt Minion Autodiscovery
+------------------------
+
+Salt Minion now no longer need to be configured against a specifig DNS name or IP address of a Master.
+
+For this feature Salt Master now requires port 4520 for UDP broadcast packets to be opened
+and the Salt Minion be able to send UDP packets to the same port.
+
+Connection to a type instead of DNS
+===================================
+
+By now each Minion was connecting to a Master by DNS or IP address. From now on it is possible
+also to connect to a _type_ of a Master. For example, in a network there are three different
+Masters, each corresponds for a particular niche or environment or specific role etc. The Minion
+is supposed to connect only to one of those Masters that is described approriately.
+
+To achieve such an effect, each `/etc/salt/master` configuration should have a `discovery` option,
+which should have a `mapping` element with arbitrary key/value pairs. The same configuration shoul
+be on the Minion, so then when mapping matches, Minion recognises Master as its connection target.
+
+Example for Master configuration (`/etc/salt/master`):
+
+.. code-block:: yaml
+
+       discovery:
+         mapping:
+           description: SES 5.0
+           node: 1
+
+The example above describes a system that is running a particular product, where `description` is
+an arbitrary key and `SES 5.0` is just a string. In order to match exactly this Master, the
+following configuration at Minion should be present:
+
+.. code-block:: yaml
+
+       discovery:
+         match: all  # Can be "all" or "any"
+         mapping:
+           description: SES 5.0
+           node: 1
+
+Notice `match` criteria is set to `all`. This would mean that from all found Masters select only
+that, which `description` is set to `SES 5.0` _and_ `node` is set to `1`. All other Masters will
+be ignored.
+
+
+Limitations
+===========
+
+This feature has a couple of _temporary_ limitations that are subject to change in the future:
+
+- Only one Master on the network is supported. Currently the Minion cannot select which Master
+  out of few the same to choose. This will change to choosing the Master that is least loaded.
+- Minions will accept _any_ master that matches connection criteria without any particular
+  security applied (priv/pub key check, signature, fingerprint etc). That implies that administrator
+  is expected to know his network and make sure it is clean.
 
 Grains Changes
 --------------
@@ -97,6 +311,12 @@ New support for Cisco UCS Chassis
 
 The salt proxy minion now allows for control of Cisco USC chassis. See
 the ``cimc`` modules for details.
+
+New support for Cassandra v3
+----------------------------
+
+The ``cassandra_cql`` module now supports Cassandra v3 which has changed
+its internal schema to define keyspaces and columns.
 
 New salt-ssh roster
 -------------------
@@ -130,7 +350,7 @@ environments (i.e. ``saltenvs``) have been added:
    available as saltenvs.
 
 Additional output modes
-------------------
+-----------------------
 
 The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``terse_id``.
 Just like ``mixed_id``, these use the state ID as name in the highstate output.

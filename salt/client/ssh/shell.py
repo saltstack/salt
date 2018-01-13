@@ -20,12 +20,12 @@ import salt.utils.vt
 
 log = logging.getLogger(__name__)
 
-SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)  # future lint: disable=non-unicode-string
-KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')  # future lint: disable=non-unicode-string
+SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
+KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
 
 # Keep these in sync with ./__init__.py
-RSTR = u'_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
-RSTR_RE = re.compile(r'(?:^|\r?\n)' + RSTR + r'(?:\r?\n|$)')  # future lint: disable=non-unicode-string
+RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
+RSTR_RE = re.compile(r'(?:^|\r?\n)' + RSTR + r'(?:\r?\n|$)')
 
 
 class NoPasswdError(Exception):
@@ -40,7 +40,7 @@ def gen_key(path):
     '''
     Generate a key for use with salt-ssh
     '''
-    cmd = u'ssh-keygen -P "" -f {0} -t rsa -q'.format(path)
+    cmd = 'ssh-keygen -P "" -f {0} -t rsa -q'.format(path)
     if not os.path.isdir(os.path.dirname(path)):
         os.makedirs(os.path.dirname(path))
     subprocess.call(cmd, shell=True)
@@ -50,12 +50,12 @@ def gen_shell(opts, **kwargs):
     '''
     Return the correct shell interface for the target system
     '''
-    if kwargs[u'winrm']:
+    if kwargs['winrm']:
         try:
             import saltwinshell
             shell = saltwinshell.Shell(opts, **kwargs)
         except ImportError:
-            log.error(u'The saltwinshell library is not available')
+            log.error('The saltwinshell library is not available')
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
     else:
         shell = Shell(opts, **kwargs)
@@ -85,7 +85,7 @@ class Shell(object):
             ssh_options=None):
         self.opts = opts
         # ssh <ipv6>, but scp [<ipv6]:/path
-        self.host = host.strip(u'[]')
+        self.host = host.strip('[]')
         self.user = user
         self.port = port
         self.passwd = str(passwd) if passwd else passwd
@@ -96,18 +96,18 @@ class Shell(object):
         self.mods = mods
         self.identities_only = identities_only
         self.remote_port_forwards = remote_port_forwards
-        self.ssh_options = u'' if ssh_options is None else ssh_options
+        self.ssh_options = '' if ssh_options is None else ssh_options
 
     def get_error(self, errstr):
         '''
         Parse out an error and return a targeted error string
         '''
-        for line in errstr.split(u'\n'):
-            if line.startswith(u'ssh:'):
+        for line in errstr.split('\n'):
+            if line.startswith('ssh:'):
                 return line
-            if line.startswith(u'Pseudo-terminal'):
+            if line.startswith('Pseudo-terminal'):
                 continue
-            if u'to the list of known hosts.' in line:
+            if 'to the list of known hosts.' in line:
                 continue
             return line
         return errstr
@@ -117,36 +117,36 @@ class Shell(object):
         Return options for the ssh command base for Salt to call
         '''
         options = [
-                   u'KbdInteractiveAuthentication=no',
+                   'KbdInteractiveAuthentication=no',
                    ]
         if self.passwd:
-            options.append(u'PasswordAuthentication=yes')
+            options.append('PasswordAuthentication=yes')
         else:
-            options.append(u'PasswordAuthentication=no')
-        if self.opts.get(u'_ssh_version', (0,)) > (4, 9):
-            options.append(u'GSSAPIAuthentication=no')
-        options.append(u'ConnectTimeout={0}'.format(self.timeout))
-        if self.opts.get(u'ignore_host_keys'):
-            options.append(u'StrictHostKeyChecking=no')
-        if self.opts.get(u'no_host_keys'):
-            options.extend([u'StrictHostKeyChecking=no',
-                            u'UserKnownHostsFile=/dev/null'])
-        known_hosts = self.opts.get(u'known_hosts_file')
+            options.append('PasswordAuthentication=no')
+        if self.opts.get('_ssh_version', (0,)) > (4, 9):
+            options.append('GSSAPIAuthentication=no')
+        options.append('ConnectTimeout={0}'.format(self.timeout))
+        if self.opts.get('ignore_host_keys'):
+            options.append('StrictHostKeyChecking=no')
+        if self.opts.get('no_host_keys'):
+            options.extend(['StrictHostKeyChecking=no',
+                            'UserKnownHostsFile=/dev/null'])
+        known_hosts = self.opts.get('known_hosts_file')
         if known_hosts and os.path.isfile(known_hosts):
-            options.append(u'UserKnownHostsFile={0}'.format(known_hosts))
+            options.append('UserKnownHostsFile={0}'.format(known_hosts))
         if self.port:
-            options.append(u'Port={0}'.format(self.port))
+            options.append('Port={0}'.format(self.port))
         if self.priv:
-            options.append(u'IdentityFile={0}'.format(self.priv))
+            options.append('IdentityFile={0}'.format(self.priv))
         if self.user:
-            options.append(u'User={0}'.format(self.user))
+            options.append('User={0}'.format(self.user))
         if self.identities_only:
-            options.append(u'IdentitiesOnly=yes')
+            options.append('IdentitiesOnly=yes')
 
         ret = []
         for option in options:
-            ret.append(u'-o {0} '.format(option))
-        return u''.join(ret)
+            ret.append('-o {0} '.format(option))
+        return ''.join(ret)
 
     def _passwd_opts(self):
         '''
@@ -155,41 +155,41 @@ class Shell(object):
         # TODO ControlMaster does not work without ControlPath
         # user could take advantage of it if they set ControlPath in their
         # ssh config.  Also, ControlPersist not widely available.
-        options = [u'ControlMaster=auto',
-                   u'StrictHostKeyChecking=no',
+        options = ['ControlMaster=auto',
+                   'StrictHostKeyChecking=no',
                    ]
-        if self.opts[u'_ssh_version'] > (4, 9):
-            options.append(u'GSSAPIAuthentication=no')
-        options.append(u'ConnectTimeout={0}'.format(self.timeout))
-        if self.opts.get(u'ignore_host_keys'):
-            options.append(u'StrictHostKeyChecking=no')
-        if self.opts.get(u'no_host_keys'):
-            options.extend([u'StrictHostKeyChecking=no',
-                            u'UserKnownHostsFile=/dev/null'])
+        if self.opts['_ssh_version'] > (4, 9):
+            options.append('GSSAPIAuthentication=no')
+        options.append('ConnectTimeout={0}'.format(self.timeout))
+        if self.opts.get('ignore_host_keys'):
+            options.append('StrictHostKeyChecking=no')
+        if self.opts.get('no_host_keys'):
+            options.extend(['StrictHostKeyChecking=no',
+                            'UserKnownHostsFile=/dev/null'])
 
         if self.passwd:
-            options.extend([u'PasswordAuthentication=yes',
-                            u'PubkeyAuthentication=yes'])
+            options.extend(['PasswordAuthentication=yes',
+                            'PubkeyAuthentication=yes'])
         else:
-            options.extend([u'PasswordAuthentication=no',
-                            u'PubkeyAuthentication=yes',
-                            u'KbdInteractiveAuthentication=no',
-                            u'ChallengeResponseAuthentication=no',
-                            u'BatchMode=yes'])
+            options.extend(['PasswordAuthentication=no',
+                            'PubkeyAuthentication=yes',
+                            'KbdInteractiveAuthentication=no',
+                            'ChallengeResponseAuthentication=no',
+                            'BatchMode=yes'])
         if self.port:
-            options.append(u'Port={0}'.format(self.port))
+            options.append('Port={0}'.format(self.port))
         if self.user:
-            options.append(u'User={0}'.format(self.user))
+            options.append('User={0}'.format(self.user))
         if self.identities_only:
-            options.append(u'IdentitiesOnly=yes')
+            options.append('IdentitiesOnly=yes')
 
         ret = []
         for option in options:
-            ret.append(u'-o {0} '.format(option))
-        return u''.join(ret)
+            ret.append('-o {0} '.format(option))
+        return ''.join(ret)
 
     def _ssh_opts(self):
-        return u' '.join([u'-o {0}'.format(opt)
+        return ' '.join(['-o {0}'.format(opt)
                           for opt in self.ssh_options])
 
     def _copy_id_str_old(self):
@@ -199,9 +199,9 @@ class Shell(object):
         if self.passwd:
             # Using single quotes prevents shell expansion and
             # passwords containing '$'
-            return u"{0} {1} '{2} -p {3} {4} {5}@{6}'".format(
-                    u'ssh-copy-id',
-                    u'-i {0}.pub'.format(self.priv),
+            return "{0} {1} '{2} -p {3} {4} {5}@{6}'".format(
+                    'ssh-copy-id',
+                    '-i {0}.pub'.format(self.priv),
                     self._passwd_opts(),
                     self.port,
                     self._ssh_opts(),
@@ -217,9 +217,9 @@ class Shell(object):
         if self.passwd:
             # Using single quotes prevents shell expansion and
             # passwords containing '$'
-            return u"{0} {1} {2} -p {3} {4} {5}@{6}".format(
-                    u'ssh-copy-id',
-                    u'-i {0}.pub'.format(self.priv),
+            return "{0} {1} {2} -p {3} {4} {5}@{6}".format(
+                    'ssh-copy-id',
+                    '-i {0}.pub'.format(self.priv),
                     self._passwd_opts(),
                     self.port,
                     self._ssh_opts(),
@@ -232,11 +232,11 @@ class Shell(object):
         Execute ssh-copy-id to plant the id file on the target
         '''
         stdout, stderr, retcode = self._run_cmd(self._copy_id_str_old())
-        if salt.defaults.exitcodes.EX_OK != retcode and u'Usage' in stderr:
+        if salt.defaults.exitcodes.EX_OK != retcode and 'Usage' in stderr:
             stdout, stderr, retcode = self._run_cmd(self._copy_id_str_new())
         return stdout, stderr, retcode
 
-    def _cmd_str(self, cmd, ssh=u'ssh'):
+    def _cmd_str(self, cmd, ssh='ssh'):
         '''
         Return the cmd string to execute
         '''
@@ -245,21 +245,21 @@ class Shell(object):
         # need to deliver the SHIM to the remote host and execute it there
 
         command = [ssh]
-        if ssh != u'scp':
+        if ssh != 'scp':
             command.append(self.host)
-        if self.tty and ssh == u'ssh':
-            command.append(u'-t -t')
+        if self.tty and ssh == 'ssh':
+            command.append('-t -t')
         if self.passwd or self.priv:
             command.append(self.priv and self._key_opts() or self._passwd_opts())
-        if ssh != u'scp' and self.remote_port_forwards:
-            command.append(u' '.join([u'-R {0}'.format(item)
-                                      for item in self.remote_port_forwards.split(u',')]))
+        if ssh != 'scp' and self.remote_port_forwards:
+            command.append(' '.join(['-R {0}'.format(item)
+                                      for item in self.remote_port_forwards.split(',')]))
         if self.ssh_options:
             command.append(self._ssh_opts())
 
         command.append(cmd)
 
-        return u' '.join(command)
+        return ' '.join(command)
 
     def _old_run_cmd(self, cmd):
         '''
@@ -276,7 +276,7 @@ class Shell(object):
             data = proc.communicate()
             return data[0], data[1], proc.returncode
         except Exception:
-            return (u'local', u'Unknown Error', None)
+            return ('local', 'Unknown Error', None)
 
     def _run_nb_cmd(self, cmd):
         '''
@@ -300,7 +300,7 @@ class Shell(object):
                     err = self.get_error(err)
                 yield out, err, rcode
         except Exception:
-            yield (u'', u'Unknown Error', None)
+            yield ('', 'Unknown Error', None)
 
     def exec_nb_cmd(self, cmd):
         '''
@@ -311,9 +311,9 @@ class Shell(object):
         rcode = None
         cmd = self._cmd_str(cmd)
 
-        logmsg = u'Executing non-blocking command: {0}'.format(cmd)
+        logmsg = 'Executing non-blocking command: {0}'.format(cmd)
         if self.passwd:
-            logmsg = logmsg.replace(self.passwd, (u'*' * 6))
+            logmsg = logmsg.replace(self.passwd, ('*' * 6))
         log.debug(logmsg)
 
         for out, err, rcode in self._run_nb_cmd(cmd):
@@ -322,7 +322,7 @@ class Shell(object):
             if err is not None:
                 r_err.append(err)
             yield None, None, None
-        yield u''.join(r_out), u''.join(r_err), rcode
+        yield ''.join(r_out), ''.join(r_err), rcode
 
     def exec_cmd(self, cmd):
         '''
@@ -330,11 +330,11 @@ class Shell(object):
         '''
         cmd = self._cmd_str(cmd)
 
-        logmsg = u'Executing command: {0}'.format(cmd)
+        logmsg = 'Executing command: {0}'.format(cmd)
         if self.passwd:
-            logmsg = logmsg.replace(self.passwd, (u'*' * 6))
-        if u'decode("base64")' in logmsg or u'base64.b64decode(' in logmsg:
-            log.debug(u'Executed SHIM command. Command logged to TRACE')
+            logmsg = logmsg.replace(self.passwd, ('*' * 6))
+        if 'decode("base64")' in logmsg or 'base64.b64decode(' in logmsg:
+            log.debug('Executed SHIM command. Command logged to TRACE')
             log.trace(logmsg)
         else:
             log.debug(logmsg)
@@ -347,19 +347,19 @@ class Shell(object):
         scp a file or files to a remote system
         '''
         if makedirs:
-            self.exec_cmd(u'mkdir -p {0}'.format(os.path.dirname(remote)))
+            self.exec_cmd('mkdir -p {0}'.format(os.path.dirname(remote)))
 
         # scp needs [<ipv6}
         host = self.host
-        if u':' in host:
-            host = u'[{0}]'.format(host)
+        if ':' in host:
+            host = '[{0}]'.format(host)
 
-        cmd = u'{0} {1}:{2}'.format(local, host, remote)
-        cmd = self._cmd_str(cmd, ssh=u'scp')
+        cmd = '{0} {1}:{2}'.format(local, host, remote)
+        cmd = self._cmd_str(cmd, ssh='scp')
 
-        logmsg = u'Executing command: {0}'.format(cmd)
+        logmsg = 'Executing command: {0}'.format(cmd)
         if self.passwd:
-            logmsg = logmsg.replace(self.passwd, (u'*' * 6))
+            logmsg = logmsg.replace(self.passwd, ('*' * 6))
         log.debug(logmsg)
 
         return self._run_cmd(cmd)
@@ -373,16 +373,16 @@ class Shell(object):
                 cmd,
                 shell=True,
                 log_stdout=True,
-                log_stdout_level=u'trace',
+                log_stdout_level='trace',
                 log_stderr=True,
-                log_stderr_level=u'trace',
+                log_stderr_level='trace',
                 stream_stdout=False,
                 stream_stderr=False)
         sent_passwd = 0
         send_password = True
-        ret_stdout = u''
-        ret_stderr = u''
-        old_stdout = u''
+        ret_stdout = ''
+        ret_stderr = ''
+        old_stdout = ''
 
         try:
             while term.has_unread_data:
@@ -399,26 +399,26 @@ class Shell(object):
                     send_password = False
                 if buff and SSH_PASSWORD_PROMPT_RE.search(buff) and send_password:
                     if not self.passwd:
-                        return u'', u'Permission denied, no authentication information', 254
+                        return '', 'Permission denied, no authentication information', 254
                     if sent_passwd < passwd_retries:
                         term.sendline(self.passwd)
                         sent_passwd += 1
                         continue
                     else:
                         # asking for a password, and we can't seem to send it
-                        return u'', u'Password authentication failed', 254
+                        return '', 'Password authentication failed', 254
                 elif buff and KEY_VALID_RE.search(buff):
                     if key_accept:
-                        term.sendline(u'yes')
+                        term.sendline('yes')
                         continue
                     else:
-                        term.sendline(u'no')
-                        ret_stdout = (u'The host key needs to be accepted, to '
-                                      u'auto accept run salt-ssh with the -i '
-                                      u'flag:\n{0}').format(stdout)
-                        return ret_stdout, u'', 254
-                elif buff and buff.endswith(u'_||ext_mods||_'):
-                    mods_raw = json.dumps(self.mods, separators=(u',', u':')) + u'|_E|0|'
+                        term.sendline('no')
+                        ret_stdout = ('The host key needs to be accepted, to '
+                                      'auto accept run salt-ssh with the -i '
+                                      'flag:\n{0}').format(stdout)
+                        return ret_stdout, '', 254
+                elif buff and buff.endswith('_||ext_mods||_'):
+                    mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
                     term.sendline(mods_raw)
                 if stdout:
                     old_stdout = stdout

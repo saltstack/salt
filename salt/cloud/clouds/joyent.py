@@ -821,7 +821,7 @@ def avail_images(call=None):
 
     .. code-block:: yaml
 
-        image_url: images.joyent.com/image
+        image_url: images.joyent.com/images
     '''
     if call == 'action':
         raise SaltCloudSystemExit(

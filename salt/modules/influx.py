@@ -39,6 +39,9 @@ import collections
 import json
 import logging
 
+# Import salt libs
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
+
 log = logging.getLogger(__name__)
 
 # name used to refer to this module in __salt__
@@ -64,10 +67,14 @@ def _client(user=None, password=None, host=None, port=None, **client_args):
         host = __salt__['config.option']('influxdb.host', 'localhost')
     if not port:
         port = __salt__['config.option']('influxdb.port', 8086)
+    for ignore in _STATE_INTERNAL_KEYWORDS:
+        if ignore in client_args:
+            del client_args[ignore]
     return influxdb.InfluxDBClient(host=host,
                                    port=port,
                                    username=user,
-                                   password=password)
+                                   password=password,
+                                   **client_args)
 
 
 def list_dbs(**client_args):

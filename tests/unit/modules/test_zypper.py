@@ -598,7 +598,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             self.assertEqual(len(list_patches), 3)
             self.assertDictEqual(list_patches, PATCHES_RET)
 
-    @patch('os.walk', MagicMock(return_value=[('test', 'test', 'test')]))
+    @patch('salt.utils.path.os_walk', MagicMock(return_value=[('test', 'test', 'test')]))
     @patch('os.path.getsize', MagicMock(return_value=123456))
     @patch('os.path.getctime', MagicMock(return_value=1234567890.123456))
     @patch('fnmatch.filter', MagicMock(return_value=['/var/cache/zypper/packages/foo/bar/test_package.rpm']))
@@ -669,8 +669,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     '--download-only',
                     'vim'
                 )
@@ -699,8 +699,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     '--download-only',
                     'vim'
                 )
@@ -724,8 +724,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     'patch:SUSE-PATCH-1234'
                 )
                 self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})

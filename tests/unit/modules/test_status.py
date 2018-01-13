@@ -155,3 +155,83 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
             with self.assertRaises(CommandExecutionError):
                 with patch.dict(status.__salt__, {'cmd.run': exc_mock}):
                     status.uptime()
+
+    def _set_up_test_cpustats_openbsd(self):
+        '''
+        Define mock data for status.cpustats on OpenBSD
+        '''
+        class MockData(object):
+            '''
+            Store mock data
+            '''
+
+        m = MockData()
+        m.ret = {
+           '0': {
+                'User': '0.0%',
+                'Nice': '0.0%',
+                'System': '4.5%',
+                'Interrupt': '0.5%',
+                'Idle': '95.0%',
+            }
+        }
+
+        return m
+
+    def test_cpustats_openbsd(self):
+        '''
+        Test modules.status.cpustats function for OpenBSD
+        '''
+        m = self._set_up_test_cpustats_openbsd()
+
+        systat = '\n' \
+                 '\n' \
+                 '   1 users Load 0.20 0.07 0.05                        salt.localdomain 09:42:42\n' \
+                 'CPU                User           Nice        System     Interrupt          Idle\n' \
+                 '0                  0.0%           0.0%          4.5%          0.5%         95.0%\n'
+
+        with patch.multiple(salt.utils.platform,
+                            is_linux=MagicMock(return_value=False),
+                            is_sunos=MagicMock(return_value=False),
+                            is_darwin=MagicMock(return_value=False),
+                            is_freebsd=MagicMock(return_value=False),
+                            is_openbsd=MagicMock(return_value=True),
+                            is_netbsd=MagicMock(return_value=False)), \
+                    patch('salt.utils.path.which', MagicMock(return_value=True)), \
+                    patch.dict(status.__grains__, {'kernel': 'OpenBSD'}), \
+                    patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=systat)}):
+            ret = status.cpustats()
+            self.assertDictEqual(ret, m.ret)
+
+    def _set_up_test_cpuinfo_bsd(self):
+        class MockData(object):
+            '''
+            Store mock data
+            '''
+
+        m = MockData()
+        m.ret = {
+          'hw.model': 'Intel(R) Core(TM) i5-7287U CPU @ 3.30GHz',
+          'hw.ncpu': '4',
+        }
+
+        return m
+
+    def test_cpuinfo_freebsd(self):
+        m = self._set_up_test_cpuinfo_bsd()
+        sysctl = 'hw.model:Intel(R) Core(TM) i5-7287U CPU @ 3.30GHz\nhw.ncpu:4'
+
+        with patch.dict(status.__grains__, {'kernel': 'FreeBSD'}):
+            with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=sysctl)}):
+                ret = status.cpuinfo()
+                self.assertDictEqual(ret, m.ret)
+
+    def test_cpuinfo_openbsd(self):
+        m = self._set_up_test_cpuinfo_bsd()
+        sysctl = 'hw.model=Intel(R) Core(TM) i5-7287U CPU @ 3.30GHz\nhw.ncpu=4'
+
+        for bsd in ['NetBSD', 'OpenBSD']:
+            with patch.dict(status.__grains__, {'kernel': bsd}):
+                with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=sysctl)}):
+                    ret = status.cpuinfo()
+                    self.assertDictEqual(ret, m.ret)

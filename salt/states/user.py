@@ -495,7 +495,7 @@ def present(name,
                     val = 'XXX-REDACTED-XXX'
                 elif key == 'group' and not remove_groups:
                     key = 'ensure groups'
-                ret['comment'] += u'{0}: {1}\n'.format(key, val)
+                ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
         if 'shadow.info' in __salt__:

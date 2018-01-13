@@ -21,6 +21,7 @@ except ImportError:
 from salt.exceptions import CommandExecutionError, SaltRenderError
 import salt.utils.files
 import salt.utils.gitfs
+import salt.utils.path
 import logging
 import salt.minion
 import salt.loader
@@ -65,7 +66,7 @@ def genrepo(opts=None, fire_event=True):
     if not os.path.exists(winrepo_dir):
         os.makedirs(winrepo_dir)
     renderers = salt.loader.render(opts, __salt__)
-    for root, _, files in os.walk(winrepo_dir):
+    for root, _, files in salt.utils.path.os_walk(winrepo_dir):
         for name in files:
             if name.endswith('.sls'):
                 try:

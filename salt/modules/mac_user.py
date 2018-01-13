@@ -19,12 +19,13 @@ import logging
 import time
 
 # Import 3rdp-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range, map  # pylint: disable=import-error,redefined-builtin
 from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils.args
 import salt.utils.decorators.path
+import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.user
 from salt.utils.locales import sdecode as _sdecode
@@ -522,16 +523,72 @@ def get_auto_login():
     return False if ret['retcode'] else ret['stdout']
 
 
-def enable_auto_login(name):
+def _kcpassword(password):
+    '''
+    Internal function for obfuscating the password used for AutoLogin
+    This is later written as the contents of the ``/etc/kcpassword`` file
+
+    .. versionadded:: 2017.7.3
+
+    Adapted from:
+    https://github.com/timsutton/osx-vm-templates/blob/master/scripts/support/set_kcpassword.py
+
+    Args:
+
+        password(str):
+            The password to obfuscate
+
+    Returns:
+        str: The obfuscated password
+    '''
+    # The magic 11 bytes - these are just repeated
+    # 0x7D 0x89 0x52 0x23 0xD2 0xBC 0xDD 0xEA 0xA3 0xB9 0x1F
+    key = [125, 137, 82, 35, 210, 188, 221, 234, 163, 185, 31]
+    key_len = len(key)
+
+    # Convert each character to a byte
+    password = list(map(ord, password))
+
+    # pad password length out to an even multiple of key length
+    remainder = len(password) % key_len
+    if remainder > 0:
+        password = password + [0] * (key_len - remainder)
+
+    # Break the password into chunks the size of len(key) (11)
+    for chunk_index in range(0, len(password), len(key)):
+        # Reset the key_index to 0 for each iteration
+        key_index = 0
+
+        # Do an XOR on each character of that chunk of the password with the
+        # corresponding item in the key
+        # The length of the password, or the length of the key, whichever is
+        # smaller
+        for password_index in range(chunk_index,
+                                    min(chunk_index + len(key), len(password))):
+            password[password_index] = password[password_index] ^ key[key_index]
+            key_index += 1
+
+    # Convert each byte back to a character
+    password = list(map(chr, password))
+    return ''.join(password)
+
+
+def enable_auto_login(name, password):
     '''
     .. versionadded:: 2016.3.0
 
     Configures the machine to auto login with the specified user
 
-    :param str name: The user account use for auto login
+    Args:
 
-    :return: True if successful, False if not
-    :rtype: bool
+        name (str): The user account use for auto login
+
+        password (str): The password to user for auto login
+
+            .. versionadded:: 2017.7.3
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -539,6 +596,7 @@ def enable_auto_login(name):
 
         salt '*' user.enable_auto_login stevej
     '''
+    # Make the entry into the defaults file
     cmd = ['defaults',
            'write',
            '/Library/Preferences/com.apple.loginwindow.plist',
@@ -546,6 +604,13 @@ def enable_auto_login(name):
            name]
     __salt__['cmd.run'](cmd)
     current = get_auto_login()
+
+    # Create/Update the kcpassword file with an obfuscated password
+    o_password = _kcpassword(password=password)
+    with salt.utils.files.set_umask(0o077):
+        with salt.utils.files.fopen('/etc/kcpassword', 'w') as fd:
+            fd.write(o_password)
+
     return current if isinstance(current, bool) else current.lower() == name.lower()
 
 
@@ -555,8 +620,8 @@ def disable_auto_login():
 
     Disables auto login on the machine
 
-    :return: True if successful, False if not
-    :rtype: bool
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -564,6 +629,11 @@ def disable_auto_login():
 
         salt '*' user.disable_auto_login
     '''
+    # Remove the kcpassword file
+    cmd = 'rm -f /etc/kcpassword'
+    __salt__['cmd.run'](cmd)
+
+    # Remove the entry from the defaults file
     cmd = ['defaults',
            'delete',
            '/Library/Preferences/com.apple.loginwindow.plist',

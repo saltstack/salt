@@ -241,7 +241,7 @@ def _iter_service_names():
     # is named rc-sysinit, while a configuration file /etc/init/net/apache.conf
     # is named net/apache'
     init_root = '/etc/init/'
-    for root, dirnames, filenames in os.walk(init_root):
+    for root, dirnames, filenames in salt.utils.path.os_walk(init_root):
         relpath = os.path.relpath(root, init_root)
         for filename in fnmatch.filter(filenames, '*.conf'):
             if relpath == '.':

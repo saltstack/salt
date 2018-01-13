@@ -72,7 +72,7 @@ def _available_services():
     '''
     available_services = dict()
     for launch_dir in _launchd_paths():
-        for root, dirs, files in os.walk(launch_dir):
+        for root, dirs, files in salt.utils.path.os_walk(launch_dir):
             for file_name in files:
 
                 # Must be a plist file

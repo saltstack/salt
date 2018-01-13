@@ -116,7 +116,7 @@ boto3_param_map = {
     'publicly_accessible': ('PubliclyAccessible', bool),
     'storage_encrypted': ('StorageEncrypted', bool),
     'storage_type': ('StorageType', str),
-    'taglist': ('Tags', list),
+    'tags': ('Tags', list),
     'tde_credential_arn': ('TdeCredentialArn', str),
     'tde_credential_password': ('TdeCredentialPassword', str),
     'vpc_security_group_ids': ('VpcSecurityGroupIds', list),
@@ -280,10 +280,11 @@ def create(name, allocated_storage, db_instance_class, engine,
         if not conn:
             return {'results': bool(conn)}
 
-        taglist = _tag_doc(tags)
         kwargs = {}
         boto_params = set(boto3_param_map.keys())
         keys = set(locals().keys())
+        tags = _tag_doc(tags)
+
         for param_key in keys.intersection(boto_params):
             val = locals()[param_key]
             if val is not None:

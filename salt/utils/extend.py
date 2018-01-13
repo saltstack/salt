@@ -176,16 +176,16 @@ def _prompt_choice(var_name, options):
     :returns: The selected user
     '''
     choice_map = OrderedDict(
-        (u'{0}'.format(i), value) for i, value in enumerate(options, 1) if value[0] != 'test'
+        ('{0}'.format(i), value) for i, value in enumerate(options, 1) if value[0] != 'test'
     )
     choices = choice_map.keys()
-    default = u'1'
+    default = '1'
 
-    choice_lines = [u'{0} - {1} - {2}'.format(c[0], c[1][0], c[1][1]) for c in choice_map.items()]
-    prompt = u'\n'.join((
-        u'Select {0}:'.format(var_name),
-        u'\n'.join(choice_lines),
-        u'Choose from {0}'.format(u', '.join(choices))
+    choice_lines = ['{0} - {1} - {2}'.format(c[0], c[1][0], c[1][1]) for c in choice_map.items()]
+    prompt = '\n'.join((
+        'Select {0}:'.format(var_name),
+        '\n'.join(choice_lines),
+        'Choose from {0}'.format(', '.join(choices))
     ))
 
     user_choice = click.prompt(

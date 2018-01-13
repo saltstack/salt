@@ -23,7 +23,7 @@ Example output::
                 - Hello
                 - World
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 # Import python libs
 from numbers import Number
 
@@ -32,7 +32,7 @@ import salt.output
 import salt.utils.color
 import salt.utils.locales
 import salt.utils.odict
-from salt.ext.six import string_types
+from salt.ext import six
 
 
 class NestDisplay(object):
@@ -59,7 +59,7 @@ class NestDisplay(object):
             endc = self.ENDC
 
         indent *= ' '
-        fmt = u'{0}{1}{2}{3}{4}{5}'
+        fmt = '{0}{1}{2}{3}{4}{5}'
 
         try:
             return fmt.format(indent, color, prefix, msg, endc, suffix)
@@ -70,6 +70,9 @@ class NestDisplay(object):
         '''
         Recursively iterate down through data structures to determine output
         '''
+        if isinstance(ret, bytes):
+            ret = salt.utils.stringutils.to_unicode(ret)
+
         if ret is None or ret is True or ret is False:
             out.append(
                 self.ustring(
@@ -90,7 +93,7 @@ class NestDisplay(object):
                     prefix=prefix
                 )
             )
-        elif isinstance(ret, string_types):
+        elif isinstance(ret, six.string_types):
             first_line = True
             for line in ret.splitlines():
                 if self.strip_colors:

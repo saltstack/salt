@@ -670,7 +670,7 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
                     )
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
-            rss, vms = psutil.Process(os.getpid()).memory_info()
+            rss, vms = psutil.Process(os.getpid()).memory_info()[:2]
             mem_limit = rss + vms + self.opts.value['modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         elif self.opts.value.get('modules_max_memory', -1) > 0:
@@ -737,7 +737,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                  'dst': (master.name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
-                'saltenv': self.opts.value['environment'],
+                'saltenv': self.opts.value['saltenv'],
                 'ver': '2',
                 'cmd': '_pillar'}
         self.road_stack.value.transmit({'route': route, 'load': load},

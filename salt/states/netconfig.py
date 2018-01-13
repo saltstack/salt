@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 
 # import NAPALM utils
 import salt.utils.napalm
+import salt.utils.versions
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
@@ -135,6 +136,10 @@ def managed(name,
     buffer is not cleared/merged in the running config.
 
     To replace the config, set ``replace`` to ``True``. This option is recommended to be used with caution!
+
+    .. warning::
+        The spport for NAPALM native templates will be dropped beginning with Salt Fluorine.
+        Implicitly, the ``template_path`` argument will be depreacted and removed.
 
     template_name
         Identifies path to the template source. The template can be either stored on the local machine,
@@ -328,7 +333,11 @@ def managed(name,
             }
         }
     '''
-
+    if template_path:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Use of `template_path` detected. This argument will be removed in Salt Fluorine.'
+        )
     ret = salt.utils.napalm.default_ret(name)
 
     # the user can override the flags the equivalent CLI args

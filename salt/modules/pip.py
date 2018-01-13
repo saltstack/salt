@@ -83,6 +83,7 @@ import shutil
 import logging
 import sys
 import tempfile
+import json
 
 # Import Salt libs
 import salt.utils.data
@@ -1132,6 +1133,13 @@ def list_upgrades(bin_env=None,
 
     cmd = [pip_bin, 'list', '--outdated']
 
+    # If pip >= 9.0 use --format=json
+    min_version = '9.0'
+    cur_version = version(pip_bin)
+    if salt.utils.versions.compare(ver1=cur_version, oper='>=',
+                                       ver2=min_version):
+        cmd.append('--format=json')
+
     cmd_kwargs = dict(cwd=cwd, runas=user)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
@@ -1142,14 +1150,20 @@ def list_upgrades(bin_env=None,
         raise CommandExecutionError(result['stderr'])
 
     packages = {}
-    for line in result['stdout'].splitlines():
-        match = re.search(r'(\S*)\s+\(.*Latest:\s+(.*)\)', line)
-        if match:
-            name, version_ = match.groups()
-        else:
-            logger.error('Can\'t parse line \'{0}\''.format(line))
-            continue
-        packages[name] = version_
+    try:
+        json_results = json.loads(result['stdout'])
+        for json_result in json_results:
+            packages[json_result['name']] = json_result['latest_version']
+    except ValueError:
+        for line in result['stdout'].splitlines():
+            match = re.search(r'(\S*)\s+.*Latest:\s+(.*)', line)
+            if match:
+                name, version_ = match.groups()
+            else:
+                logger.error('Can\'t parse line \'{0}\''.format(line))
+                continue
+            packages[name] = version_
+
     return packages
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 from textwrap import dedent
 
 # Import Salt Testing libs
@@ -337,7 +337,8 @@ class TestSerializers(TestCase):
     def test_serialize_python(self):
         data = {'foo': 'bar'}
         serialized = python.serialize(data)
-        assert serialized == '{\'foo\': \'bar\'}', serialized
+        expected = "{u'foo': u'bar'}" if six.PY2 else "{'foo': 'bar'}"
+        assert serialized == expected, serialized
 
     @skipIf(not configparser.available, SKIP_MESSAGE % 'configparser')
     def test_configparser(self):

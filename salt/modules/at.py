@@ -170,6 +170,9 @@ def atrm(*args):
     if not args:
         return {'jobs': {'removed': [], 'tag': None}}
 
+    # Convert all to strings
+    args = [str(arg) for arg in args]
+
     if args[0] == 'all':
         if len(args) > 1:
             opts = list(list(map(str, [j['job'] for j in atq(args[1])['jobs']])))
@@ -179,7 +182,7 @@ def atrm(*args):
             ret = {'jobs': {'removed': opts, 'tag': None}}
     else:
         opts = list(list(map(str, [i['job'] for i in atq()['jobs']
-            if i['job'] in args])))
+            if str(i['job']) in args])))
         ret = {'jobs': {'removed': opts, 'tag': None}}
 
     # Shim to produce output similar to what __virtual__() should do
