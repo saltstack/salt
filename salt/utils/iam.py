@@ -10,6 +10,7 @@ from __future__ import absolute_import, unicode_literals
 import logging
 import time
 import pprint
+import salt.utils.data
 from salt.ext.six.moves import range
 from salt.ext import six
 
@@ -56,8 +57,11 @@ def _convert_key_to_str(key):
     '''
     Stolen completely from boto.providers
     '''
-    if isinstance(key, six.text_type):
-        # the secret key must be bytes and not unicode to work
-        #  properly with hmac.new (see http://bugs.python.org/issue5285)
-        return six.text_type(key)
-    return key
+    # IMPORTANT: on PY2, the secret key must be str and not unicode to work
+    # properly with hmac.new (see http://bugs.python.org/issue5285)
+    #
+    # pylint: disable=incompatible-py3-code
+    return salt.utils.data.encode(key) \
+        if six.PY2 and isinstance(key, unicode) \
+        else key
+    # pylint: enable=incompatible-py3-code
