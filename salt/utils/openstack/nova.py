@@ -4,7 +4,7 @@ Nova class
 '''
 
 # Import Python libs
-from __future__ import absolute_import, with_statement, unicode_literals
+from __future__ import absolute_import, with_statement, unicode_literals, print_function
 import inspect
 import logging
 import time
@@ -775,7 +775,7 @@ class SaltNova(object):
         nt_ks = self.compute_conn
         if pubfile:
             with salt.utils.files.fopen(pubfile, 'r') as fp_:
-                pubkey = fp_.read()
+                pubkey = salt.utils.stringutils.to_unicode(fp_.read())
         if not pubkey:
             return False
         nt_ks.keypairs.create(name, public_key=pubkey)

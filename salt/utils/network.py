@@ -4,7 +4,7 @@ Define some generic socket functions for network modules
 '''
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, unicode_literals, print_function
 import itertools
 import os
 import re
@@ -1271,6 +1271,7 @@ def active_tcp():
         if os.path.isfile(statf):
             with salt.utils.files.fopen(statf, 'rb') as fp_:
                 for line in fp_:
+                    line = salt.utils.stringutils.to_unicode(line)
                     if line.strip().startswith('sl'):
                         continue
                     ret.update(_parse_tcp_line(line))
@@ -1306,6 +1307,7 @@ def _remotes_on(port, which_end):
             proc_available = True
             with salt.utils.files.fopen(statf, 'r') as fp_:
                 for line in fp_:
+                    line = salt.utils.stringutils.to_unicode(line)
                     if line.strip().startswith('sl'):
                         continue
                     iret = _parse_tcp_line(line)

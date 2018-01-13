@@ -16,7 +16,7 @@ Utils for the NAPALM modules and proxy.
 '''
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, unicode_literals, print_function
 import traceback
 import logging
 import importlib
