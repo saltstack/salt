@@ -7,7 +7,7 @@ Run-time utilities
 
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, unicode_literals, print_function
 import re
 import os
 import logging
@@ -43,6 +43,7 @@ def _get_mounts(fs_type=None):
     mounts = {}
     with salt.utils.files.fopen('/proc/mounts') as fhr:
         for line in fhr.readlines():
+            line = salt.utils.stringutils.to_unicode(line)
             device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
             if fs_type and fstype != fs_type:
                 continue

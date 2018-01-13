@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import sys
 import shutil
@@ -306,7 +306,7 @@ class TestGrepOption(TestCase):
     def test_grep_option_match_regular_file(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
         with salt.utils.files.fopen(hello_file, 'w') as fp_:
-            fp_.write('foo')
+            fp_.write(salt.utils.stringutils.to_str('foo'))
         option = salt.utils.find.GrepOption('grep', 'foo')
         self.assertEqual(
             option.match(self.tmpdir, 'hello.txt', os.stat(hello_file)),
@@ -365,7 +365,7 @@ class TestPrintOption(TestCase):
     def test_print_option_execute(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
         with salt.utils.files.fopen(hello_file, 'w') as fp_:
-            fp_.write('foo')
+            fp_.write(salt.utils.stringutils.to_str('foo'))
 
         option = salt.utils.find.PrintOption('print', '')
         self.assertEqual(option.execute('', [0] * 9), '')
@@ -554,7 +554,7 @@ class TestFinder(TestCase):
     def test_find(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
         with salt.utils.files.fopen(hello_file, 'w') as fp_:
-            fp_.write('foo')
+            fp_.write(salt.utils.stringutils.to_str('foo'))
 
         finder = salt.utils.find.Finder({})
         self.assertEqual(list(finder.find(self.tmpdir)), [self.tmpdir, hello_file])

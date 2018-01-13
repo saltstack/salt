@@ -138,10 +138,10 @@ def _mergetreejinja(src, dst, context):
                 d = Template(d).render(context)
                 log.info("Copying file %s to %s", s, d)
                 with salt.utils.files.fopen(s, 'r') as source_file:
-                    src_contents = source_file.read()
+                    src_contents = salt.utils.stringutils.to_unicode(source_file.read())
                     dest_contents = Template(src_contents).render(context)
                 with salt.utils.files.fopen(d, 'w') as dest_file:
-                    dest_file.write(dest_contents)
+                    dest_file.write(salt.utils.stringutils.to_str(dest_contents))
 
 
 def _prompt_user_variable(var_name, default_value):

@@ -2,7 +2,7 @@
 '''
 A collection of hashing and encoding utils.
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import base64

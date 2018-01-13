@@ -4,7 +4,7 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 '''
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, unicode_literals, print_function
 import copy
 import contextlib
 import distutils
@@ -751,7 +751,7 @@ class GitProvider(object):
             if exc.errno == errno.EEXIST:
                 with salt.utils.files.fopen(self._get_lock_file(lock_type), 'r') as fd_:
                     try:
-                        pid = int(fd_.readline().rstrip())
+                        pid = int(salt.utils.stringutils.to_unicode(fd_.readline()).rstrip())
                     except ValueError:
                         # Lock file is empty, set pid to 0 so it evaluates as
                         # False.

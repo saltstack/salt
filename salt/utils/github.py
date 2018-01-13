@@ -4,7 +4,7 @@ Connection library for GitHub
 '''
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt libs
