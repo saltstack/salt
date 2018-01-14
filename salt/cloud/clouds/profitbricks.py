@@ -94,7 +94,7 @@ Set ``deploy`` to False if Salt should not be installed on the node.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import pprint
@@ -104,6 +104,7 @@ from salt.utils.versions import LooseVersion
 # Import salt libs
 import salt.utils.cloud
 import salt.utils.files
+import salt.utils.stringutils
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -347,7 +348,7 @@ def get_size(vm_):
         return sizes['Small Instance']
 
     for size in sizes:
-        if vm_size and str(vm_size) in (str(sizes[size]['id']), str(size)):
+        if vm_size and six.text_type(vm_size) in (six.text_type(sizes[size]['id']), six.text_type(size)):
             return sizes[size]
     raise SaltCloudNotFound(
         'The specified size, \'{0}\', could not be found.'.format(vm_size)
@@ -567,8 +568,7 @@ def list_nodes(conn=None, call=None):
     try:
         nodes = conn.list_servers(datacenter_id=datacenter_id)
     except PBNotFoundError:
-        log.error('Failed to get nodes list from datacenter: {0}'.format(
-                  datacenter_id))
+        log.error('Failed to get nodes list from datacenter: %s', datacenter_id)
         raise
 
     for item in nodes['items']:
@@ -735,7 +735,7 @@ def get_public_keys(vm_):
         ssh_keys = []
         with salt.utils.files.fopen(key_filename) as rfh:
             for key in rfh.readlines():
-                ssh_keys.append(key)
+                ssh_keys.append(salt.utils.stringutils.to_unicode(key))
 
         return ssh_keys
 
@@ -821,19 +821,19 @@ def create(vm_):
 
     try:
         data = conn.create_server(datacenter_id=datacenter_id, server=server)
-        log.info('Create server request ID: {0}'.format(data['requestId']),
-                 exc_info_on_loglevel=logging.DEBUG)
+        log.info(
+            'Create server request ID: %s',
+            data['requestId'], exc_info_on_loglevel=logging.DEBUG
+        )
 
         _wait_for_completion(conn, data, get_wait_timeout(vm_),
                              'create_server')
     except PBError as exc:
         log.error(
-            'Error creating {0} on ProfitBricks\n\n'
+            'Error creating %s on ProfitBricks\n\n'
             'The following exception was thrown by the profitbricks library '
-            'when trying to run the initial deployment: \n{1}:\n{2}'.format(
-                vm_['name'], exc, exc.content
-            ),
-            exc_info_on_loglevel=logging.DEBUG
+            'when trying to run the initial deployment: \n%s',
+            vm_['name'], exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
     except Exception as exc:  # pylint: disable=W0703
@@ -858,17 +858,12 @@ def create(vm_):
             if not data:
                 return False
             log.debug(
-                'Loaded node data for {0}:\nname: {1}\nstate: {2}'.format(
-                    vm_['name'],
-                    pprint.pformat(data['name']),
-                    data['state']
-                )
+                'Loaded node data for %s:\nname: %s\nstate: %s',
+                vm_['name'], pprint.pformat(data['name']), data['state']
             )
         except Exception as err:
             log.error(
-                'Failed to get nodes list: {0}'.format(
-                    err
-                ),
+                'Failed to get nodes list: %s', err,
                 # Show the trackback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
@@ -904,15 +899,11 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc.message))
+            raise SaltCloudSystemExit(six.text_type(exc.message))
 
     log.debug('VM is now running')
-    log.info('Created Cloud VM {0}'.format(vm_))
-    log.debug(
-        '{0} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
-    )
+    log.info('Created Cloud VM %s', vm_)
+    log.debug('%s VM creation details:\n%s', vm_, pprint.pformat(data))
 
     signal_event(vm_, 'created', 'created instance')
 
@@ -1227,12 +1218,13 @@ def _wait_for_completion(conn, promise, wait_timeout, msg):
         elif operation_result['metadata']['status'] == "FAILED":
             raise Exception(
                 "Request: {0}, requestId: {1} failed to complete:\n{2}".format(
-                    msg, str(promise['requestId']),
+                    msg, six.text_type(promise['requestId']),
                     operation_result['metadata']['message']
                 )
             )
 
     raise Exception(
-        'Timed out waiting for async operation ' + msg + ' "' + str(
-            promise['requestId']
-        ) + '" to complete.')
+        'Timed out waiting for async operation {0} "{1}" to complete.'.format(
+            msg, six.text_type(promise['requestId'])
+        )
+    )
