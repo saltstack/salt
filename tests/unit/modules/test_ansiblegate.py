@@ -16,7 +16,7 @@
 # limitations under the License.
 
 # Import Salt Testing Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     import pytest
 except ImportError as import_error:

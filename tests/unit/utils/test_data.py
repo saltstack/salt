@@ -210,3 +210,10 @@ class DataTestCase(TestCase):
         # Make sure we handle non-yaml junk data
         ret = salt.utils.data.repack_dictlist(LOREM_IPSUM)
         self.assertDictEqual(ret, {})
+
+    def test_stringify(self):
+        self.assertRaises(TypeError, salt.utils.data.stringify, 9)
+        self.assertEqual(
+            salt.utils.data.stringify(['one', 'two', str('three'), 4, 5]),  # future lint: disable=blacklisted-function
+            ['one', 'two', 'three', '4', '5']
+        )
