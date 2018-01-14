@@ -203,7 +203,8 @@ class AESReqServerMixin(object):
                              'id': load['id'],
                              'pub': load['pub']}
 
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                    if self.opts.get('auth_events') is True:
+                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                     return {'enc': 'clear',
                             'load': {'ret': 'full'}}
 
@@ -234,7 +235,8 @@ class AESReqServerMixin(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+            if self.opts.get('auth_events') is True:
+                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
@@ -254,7 +256,8 @@ class AESReqServerMixin(object):
                              'id': load['id'],
                              'act': 'denied',
                              'pub': load['pub']}
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                    if self.opts.get('auth_events') is True:
+                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                     return {'enc': 'clear',
                             'load': {'ret': False}}
 
@@ -266,7 +269,8 @@ class AESReqServerMixin(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                if self.opts.get('auth_events') is True:
+                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': False}}
 
@@ -295,7 +299,8 @@ class AESReqServerMixin(object):
                          'act': key_act,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                if self.opts.get('auth_events') is True:
+                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                 return ret
 
         elif os.path.isfile(pubfn_pend):
@@ -316,7 +321,8 @@ class AESReqServerMixin(object):
                          'act': 'reject',
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                if self.opts.get('auth_events') is True:
+                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                 return ret
 
             elif not auto_sign:
@@ -338,7 +344,8 @@ class AESReqServerMixin(object):
                                  'id': load['id'],
                                  'act': 'denied',
                                  'pub': load['pub']}
-                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                        if self.opts.get('auth_events') is True:
+                            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                         return {'enc': 'clear',
                                 'load': {'ret': False}}
                     else:
@@ -351,7 +358,8 @@ class AESReqServerMixin(object):
                                  'act': 'pend',
                                  'id': load['id'],
                                  'pub': load['pub']}
-                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                        if self.opts.get('auth_events') is True:
+                            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                         return {'enc': 'clear',
                                 'load': {'ret': True}}
             else:
@@ -372,7 +380,8 @@ class AESReqServerMixin(object):
                         eload = {'result': False,
                                  'id': load['id'],
                                  'pub': load['pub']}
-                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                        if self.opts.get('auth_events') is True:
+                            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                         return {'enc': 'clear',
                                 'load': {'ret': False}}
                     else:
@@ -384,7 +393,8 @@ class AESReqServerMixin(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+            if self.opts.get('auth_events') is True:
+                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
@@ -478,5 +488,6 @@ class AESReqServerMixin(object):
                  'act': 'accept',
                  'id': load['id'],
                  'pub': load['pub']}
-        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+        if self.opts.get('auth_events') is True:
+            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
         return ret
