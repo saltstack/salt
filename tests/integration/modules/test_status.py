@@ -9,14 +9,14 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 # Import Salt libs
-import salt.utils
+import salt.utils.platform
 
 
 class StatusModuleTest(ModuleCase):
     '''
     Test the status module
     '''
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     def test_status_pid(self):
         '''
         status.pid
