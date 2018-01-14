@@ -27,6 +27,14 @@ As the creation of this metadata can take some time, the
 :conf_minion:`winrepo_cache_expire_min` minion config option can be used to
 suppress refreshes when the metadata is less than a given number of seconds
 old.
+
+.. note::
+    Version numbers can be `version number string`, `latest` and `Not Found`.
+    Where `Not Found` means this module was not able to determine the version of
+    the software installed, it can also be used as the version number in sls
+    definitions file in these cases. Versions numbers are sorted in order of
+    0,`Not Found`,`order version numbers`,...,`latest`.
+
 '''
 
 # Import python future libs
@@ -42,24 +50,28 @@ import time
 import sys
 from functools import cmp_to_key
 
-# Import third party libs
-from salt.ext import six
-# pylint: disable=import-error,no-name-in-module
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
-# Import salt libs
-from salt.exceptions import (CommandExecutionError,
-                             SaltInvocationError,
-                             SaltRenderError)
-import salt.utils  # Can be removed once is_true, get_hash, compare_dicts are moved
-import salt.utils.args
-import salt.utils.files
-import salt.utils.pkg
-import salt.utils.versions
-import salt.syspaths
-import salt.payload
-from salt.exceptions import MinionError
-from salt.utils.versions import LooseVersion
+try:
+    # Import third party libs
+    from salt.ext import six
+    # pylint: disable=import-error,no-name-in-module
+    from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+
+    # Import salt libs
+    from salt.exceptions import (CommandExecutionError,
+                                 SaltInvocationError,
+                                 SaltRenderError)
+    import salt.utils  # Can be removed once is_true, get_hash, compare_dicts are moved
+    import salt.utils.args
+    import salt.utils.files
+    import salt.utils.pkg
+    import salt.utils.versions
+    import salt.syspaths
+    import salt.payload
+    from salt.exceptions import MinionError
+    from salt.utils.versions import LooseVersion
+except ImportError:
+    raise ImportError('Salt not installed correctly, salt python modules missing')
 
 log = logging.getLogger(__name__)
 
@@ -385,40 +397,28 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     name_map = _get_name_map(saltenv)
-    for pkg_name, val in six.iteritems(_get_reg_software()):
+    for pkg_name, val_list in six.iteritems(_get_reg_software()):
         if pkg_name in name_map:
             key = name_map[pkg_name]
-            if val in ['(value not set)', 'Not Found', None, False]:
-                # Look up version from winrepo
-                pkg_info = _get_package_info(key, saltenv=saltenv)
-                if not pkg_info:
-                    continue
-                for pkg_ver in pkg_info:
-                    if pkg_info[pkg_ver]['full_name'] == pkg_name:
-                        val = pkg_ver
+            for val in val_list:
+                if val == 'Not Found':
+                    # Look up version from winrepo
+                    pkg_info = _get_package_info(key, saltenv=saltenv)
+                    if not pkg_info:
+                        continue
+                    for pkg_ver in pkg_info.keys():
+                        if pkg_info[pkg_ver]['full_name'] == pkg_name:
+                            val = pkg_ver
+                __salt__['pkg_resource.add_pkg'](ret, key, val)
         else:
             key = pkg_name
-        __salt__['pkg_resource.add_pkg'](ret, key, val)
+            for val in val_list:
+                __salt__['pkg_resource.add_pkg'](ret, key, val)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
-
-
-def _search_software(target):
-    '''
-    This searches the msi product databases for name matches of the list of
-    target products, it will return a dict with values added to the list passed
-    in
-    '''
-    search_results = {}
-    software = dict(_get_reg_software().items())
-    for key, value in six.iteritems(software):
-        if key is not None:
-            if target.lower() in key.lower():
-                search_results[key] = value
-    return search_results
 
 
 def _get_reg_software():
@@ -444,29 +444,62 @@ def _get_reg_software():
                    None]
 
     reg_software = {}
-
     hive = 'HKLM'
     key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
 
     def update(hive, key, reg_key, use_32bit):
-
+        # 2018 this code has been update to reflect some of utils/pkg/win.py logic
+        # i.e. check_reg, and checking of DisplayName and DisplayVersion.
         d_name = ''
         d_vers = ''
 
-        d_name = __salt__['reg.read_value'](hive,
-                                            '{0}\\{1}'.format(key, reg_key),
-                                            'DisplayName',
-                                            use_32bit)['vdata']
+        d_name_regdata = __salt__['reg.read_value'](hive,
+                                                    '{0}\\{1}'.format(key, reg_key),
+                                                    'DisplayName',
+                                                    use_32bit)
+        if (not d_name_regdata['success'] or
+            d_name_regdata['vtype'] not in ['REG_SZ', 'REG_EXPAND_SZ'] or
+                d_name_regdata['vdata'] in ['(value not set)', None, False]):
+            return
+        d_name = d_name_regdata['vdata']
 
-        d_vers = __salt__['reg.read_value'](hive,
-                                            '{0}\\{1}'.format(key, reg_key),
-                                            'DisplayVersion',
-                                            use_32bit)['vdata']
+        d_vers_regdata = __salt__['reg.read_value'](hive,
+                                                    '{0}\\{1}'.format(key, reg_key),
+                                                    'DisplayVersion',
+                                                    use_32bit)
+        if (not d_vers_regdata['success'] or
+            d_vers_regdata['vtype'] not in ['REG_SZ', 'REG_EXPAND_SZ', 'REG_DWORD'] or
+                d_vers_regdata['vdata'] in [None, False]):
+            return
+
+        if isinstance(d_vers_regdata['vdata'], int):
+            d_vers = six.text_type(d_vers_regdata['vdata'])
+        else:
+            d_vers = d_vers_regdata['vdata']
+
+        if not d_vers or d_vers == '(value not set)':
+            d_vers = 'Not Found'
+
+        check_ok = False
+        for check_reg in ['UninstallString', 'QuietUninstallString', 'ModifyPath']:
+            check_regdata = __salt__['reg.read_value'](hive,
+                                                       '{0}\\{1}'.format(key, reg_key),
+                                                       check_reg,
+                                                       use_32bit)
+            if (not check_regdata['success'] or
+                check_regdata['vtype'] not in ['REG_SZ', 'REG_EXPAND_SZ'] or
+                    check_regdata['vdata'] in ['(value not set)', None, False]):
+                continue
+            else:
+                check_ok = True
+
+        if not check_ok:
+            return
 
         if d_name not in ignore_list:
             # some MS Office updates don't register a product name which means
             # their information is useless
-            reg_software.update({d_name: six.text_type(d_vers)})
+            reg_software.setdefault(d_name, []).append(d_vers)
 
     for reg_key in __salt__['reg.list_keys'](hive, key):
         update(hive, key, reg_key, False)
@@ -856,7 +889,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
     if config:
         revmap = {}
         errors = []
-        for pkgname, versions in six.iteritems(config):
+        for pkgname, version_list in six.iteritems(config):
             if pkgname in ret['repo']:
                 log.error(
                     'package \'%s\' within \'%s\' already defined, skipping',
@@ -864,7 +897,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
                 )
                 errors.append('package \'{0}\' already defined'.format(pkgname))
                 break
-            for version_str, repodata in six.iteritems(versions):
+            for version_str, repodata in six.iteritems(version_list):
                 # Ensure version is a string/unicode
                 if not isinstance(version_str, six.string_types):
                     msg = (
@@ -1137,7 +1170,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         }
 
     # Get a list of currently installed software for comparison at the end
-    old = list_pkgs(saltenv=saltenv, refresh=refresh)
+    old = list_pkgs(saltenv=saltenv, refresh=refresh, versions_as_list=True)
 
     # Loop through each package
     changed = []
@@ -1154,16 +1187,20 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             continue
 
         # Get the version number passed or the latest available (must be a string)
-        version_num = ''
+        version_num = None
         if options:
-            version_num = options.get('version', '')
+            version_num = options.get('version', None)
             #  Using the salt cmdline with version=5.3 might be interpreted
             #  as a float it must be converted to a string in order for
             #  string matching to work.
-            if not isinstance(version_num, six.string_types) and version_num is not None:
+            if not isinstance(version_num, six.text_type) and version_num is not None:
                 version_num = six.text_type(version_num)
 
         if not version_num:
+            if pkg_name in old:
+                log.debug('A version ({0}) already installed for package '
+                          '{1}'.format(version_num, pkg_name))
+                continue
             # following can be version number or latest or Not Found
             version_num = _get_latest_pkg_version(pkginfo)
 
@@ -1171,8 +1208,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             version_num = _get_latest_pkg_version(pkginfo)
 
         # Check if the version is already installed
-        if version_num in old.get(pkg_name, '').split(',') \
-                or (old.get(pkg_name, '') == 'Not Found'):
+        if version_num in old.get(pkg_name, []):
             # Desired version number already installed
             ret[pkg_name] = {'current': version_num}
             continue
@@ -1344,9 +1380,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 else:
 
                     # Make sure the task is running, try for 5 secs
-                    from time import time
-                    t_end = time() + 5
-                    while time() < t_end:
+                    t_end = time.time() + 5
+                    while time.time() < t_end:
+                        time.sleep(0.25)
                         task_running = __salt__['task.status'](
                                 'update-salt-software') == 'Running'
                         if task_running:
@@ -1393,7 +1429,11 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 ret[pkg_name] = {'install status': 'failed'}
 
     # Get a new list of installed software
-    new = list_pkgs(saltenv=saltenv)
+    new = list_pkgs(saltenv=saltenv, refresh=False)
+
+    # Take the "old" package list and convert the values to strings in
+    # preparation for the comparison below.
+    __salt__['pkg_resource.stringify'](old)
 
     # For installers that have no specific version (ie: chrome)
     # The software definition file will have a version of 'latest'
@@ -1434,9 +1474,9 @@ def upgrade(**kwargs):
 
         salt '*' pkg.upgrade
     '''
-    log.warning('pkg.upgrade not implemented on Windows yet')
     refresh = salt.utils.is_true(kwargs.get('refresh', True))
     saltenv = kwargs.get('saltenv', 'base')
+    log.warning('pkg.upgrade not implemented on Windows yet refresh:%s saltenv:%s', refresh, saltenv)
     # Uncomment the below once pkg.upgrade has been implemented
 
     # if salt.utils.is_true(refresh):
@@ -1444,7 +1484,7 @@ def upgrade(**kwargs):
     return {}
 
 
-def remove(name=None, pkgs=None, version=None, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):
     '''
     Remove the passed package(s) from the system using winrepo
 
@@ -1455,6 +1495,12 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             The name(s) of the package(s) to be uninstalled. Can be a
             single package or a comma delimited list of packages, no spaces.
 
+        pkgs (list):
+            A list of packages to delete. Must be passed as a python list. The
+            ``name`` parameter will be ignored if this option is passed.
+
+    Kwargs:
+
         version (str):
             The version of the package to be uninstalled. If this option is
             used to to uninstall multiple packages, then this version will be
@@ -1462,11 +1508,6 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             uninstalling a single package. If this parameter is omitted, the
             latest version will be uninstalled.
 
-        pkgs (list):
-            A list of packages to delete. Must be passed as a python list. The
-            ``name`` parameter will be ignored if this option is passed.
-
-    Kwargs:
         saltenv (str): Salt environment. Default ``base``
         refresh (bool): Refresh package metadata. Default ``False``
 
@@ -1506,7 +1547,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
     old = list_pkgs(saltenv=saltenv, refresh=refresh, versions_as_list=True)
 
     # Loop through each package
-    changed = []
+    changed = []  # list of changed package names
     for pkgname, version_num in six.iteritems(pkg_params):
 
         # Load package information for the package
@@ -1519,44 +1560,57 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             ret[pkgname] = msg
             continue
 
+        # Check to see if package is installed on the system
+        if pkgname not in old:
+            log.debug('%s %s not installed', pkgname, version_num if version_num else '')
+            ret[pkgname] = {'current': 'not installed'}
+            continue
+
+        removal_targets = []
+        # Only support a single version number
         if version_num is not None:
             #  Using the salt cmdline with version=5.3 might be interpreted
             #  as a float it must be converted to a string in order for
             #  string matching to work.
-            if not isinstance(version_num, six.string_types) and version_num is not None:
-                version_num = six.text_type(version_num)
-            if version_num not in pkginfo and 'latest' in pkginfo:
-                version_num = 'latest'
-        elif 'latest' in pkginfo:
-            version_num = 'latest'
+            version_num = six.text_type(version_num)
 
-        # Check to see if package is installed on the system
-        removal_targets = []
-        if pkgname not in old:
-            log.error('%s %s not installed', pkgname, version)
-            ret[pkgname] = {'current': 'not installed'}
-            continue
+        # At least one version of the software is installed.
+        if version_num is None:
+            for ver_install in old[pkgname]:
+                if ver_install not in pkginfo and 'latest' in pkginfo:
+                    log.debug('%s %s using package latest entry to to remove', pkgname, version_num)
+                    removal_targets.append('latest')
+                else:
+                    removal_targets.append(ver_install)
         else:
-            if version_num is None:
-                removal_targets.extend(old[pkgname])
-            elif version_num not in old[pkgname] \
-                    and 'Not Found' not in old[pkgname] \
-                    and version_num != 'latest':
-                log.error('%s %s not installed', pkgname, version)
-                ret[pkgname] = {
-                    'current': '{0} not installed'.format(version_num)
+            if version_num in pkginfo:
+                # we known how to remove this version
+                if version_num in old[pkgname]:
+                    removal_targets.append(version_num)
+                else:
+                    log.debug('%s %s not installed', pkgname, version_num)
+                    ret[pkgname] = {'current': '{0} not installed'.format(version_num)}
+                    continue
+            elif 'latest' in pkginfo:
+                # we do not have version entry, assume software can self upgrade and use latest
+                log.debug('%s %s using package latest entry to to remove', pkgname, version_num)
+                removal_targets.append('latest')
+
+        if not removal_targets:
+            log.error('%s %s no definition to remove this version', pkgname, version_num)
+            ret[pkgname] = {
+                    'current': '{0} no definition, cannot removed'.format(version_num)
                 }
-                continue
-            else:
-                removal_targets.append(version_num)
+            continue
 
         for target in removal_targets:
             # Get the uninstaller
             uninstaller = pkginfo[target].get('uninstaller', '')
             cache_dir = pkginfo[target].get('cache_dir', False)
+            uninstall_flags = pkginfo[target].get('uninstall_flags', '')
 
-            # If no uninstaller found, use the installer
-            if not uninstaller:
+            # If no uninstaller found, use the installer with uninstall flags
+            if not uninstaller and uninstall_flags:
                 uninstaller = pkginfo[target].get('installer', '')
 
             # If still no uninstaller found, fail
@@ -1565,7 +1619,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                     'No installer or uninstaller configured for package %s',
                     pkgname,
                 )
-                ret[pkgname] = {'no uninstaller': target}
+                ret[pkgname] = {'no uninstaller defined': target}
                 continue
 
             # Where is the uninstaller
@@ -1624,9 +1678,6 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
             # os.path.expandvars is not required as we run everything through cmd.exe /s /c
 
-            # Get uninstall flags
-            uninstall_flags = pkginfo[target].get('uninstall_flags', '')
-
             if kwargs.get('extra_uninstall_flags'):
                 uninstall_flags = '{0} {1}'.format(
                     uninstall_flags, kwargs.get('extra_uninstall_flags', ''))
@@ -1648,6 +1699,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 arguments = '{0} {1}'.format(arguments, uninstall_flags)
 
             # Uninstall the software
+            changed.append(pkgname)
             # Check Use Scheduler Option
             if pkginfo[target].get('use_scheduler', False):
                 # Create Scheduled Task
@@ -1697,29 +1749,32 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                     ret[pkgname] = {'uninstall status': 'failed'}
 
     # Get a new list of installed software
-    new = list_pkgs(saltenv=saltenv)
+    new = list_pkgs(saltenv=saltenv, refresh=False)
 
     # Take the "old" package list and convert the values to strings in
     # preparation for the comparison below.
     __salt__['pkg_resource.stringify'](old)
 
+    # Check for changes in the registry
     difference = salt.utils.compare_dicts(old, new)
-    tries = 0
-    while not all(name in difference for name in changed) and tries <= 1000:
-        new = list_pkgs(saltenv=saltenv)
+    found_chgs = all(name in difference for name in changed)
+    end_t = time.time() + 3  # give it 3 seconds to catch up.
+    while not found_chgs and time.time() < end_t:
+        time.sleep(0.5)
+        new = list_pkgs(saltenv=saltenv, refresh=False)
         difference = salt.utils.compare_dicts(old, new)
-        tries += 1
-        if tries == 1000:
-            ret['_comment'] = 'Registry not updated.'
+        found_chgs = all(name in difference for name in changed)
+
+    if not found_chgs:
+        log.warning('Expected changes for package removal may not have occured')
 
     # Compare the software list before and after
     # Add the difference to ret
     ret.update(difference)
-
     return ret
 
 
-def purge(name=None, pkgs=None, version=None, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
     Package purges are not supported, this function is identical to
     ``remove()``.
@@ -1757,7 +1812,6 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
     '''
     return remove(name=name,
                   pkgs=pkgs,
-                  version=version,
                   **kwargs)
 
 
@@ -1841,6 +1895,11 @@ def _reverse_cmp_pkg_versions(pkg1, pkg2):
 
 
 def _get_latest_pkg_version(pkginfo):
+    '''
+    Returns the latest version of the package.
+    Will return 'latest' or version number string, and
+    'Not Found' if 'Not Found' is the only entry.
+    '''
     if len(pkginfo) == 1:
         return next(six.iterkeys(pkginfo))
     try:
