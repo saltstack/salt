@@ -177,15 +177,15 @@ class DataTestCase(TestCase):
         self.assertDictEqual(ret, expected_ret)
 
     def test_decode_list(self):
-        test_data = [u'unicode_str', [u'unicode_item_in_list', 'second_item_in_list'], {'dict_key': u'dict_val'}]
+        test_data = ['unicode_str', ['unicode_item_in_list', 'second_item_in_list'], {'dict_key': 'dict_val'}]
         expected_ret = ['unicode_str', ['unicode_item_in_list', 'second_item_in_list'], {'dict_key': 'dict_val'}]
         ret = salt.utils.data.decode_list(test_data)
         self.assertEqual(ret, expected_ret)
 
     def test_decode_dict(self):
-        test_data = {u'test_unicode_key': u'test_unicode_val',
-                     'test_list_key': ['list_1', u'unicode_list_two'],
-                     u'test_dict_key': {'test_sub_dict_key': 'test_sub_dict_val'}}
+        test_data = {'test_unicode_key': 'test_unicode_val',
+                     'test_list_key': ['list_1', 'unicode_list_two'],
+                     'test_dict_key': {'test_sub_dict_key': 'test_sub_dict_val'}}
         expected_ret = {'test_unicode_key': 'test_unicode_val',
                         'test_list_key': ['list_1', 'unicode_list_two'],
                         'test_dict_key': {'test_sub_dict_key': 'test_sub_dict_val'}}
@@ -210,3 +210,10 @@ class DataTestCase(TestCase):
         # Make sure we handle non-yaml junk data
         ret = salt.utils.data.repack_dictlist(LOREM_IPSUM)
         self.assertDictEqual(ret, {})
+
+    def test_stringify(self):
+        self.assertRaises(TypeError, salt.utils.data.stringify, 9)
+        self.assertEqual(
+            salt.utils.data.stringify(['one', 'two', str('three'), 4, 5]),  # future lint: disable=blacklisted-function
+            ['one', 'two', 'three', '4', '5']
+        )

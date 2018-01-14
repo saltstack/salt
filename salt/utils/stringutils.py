@@ -71,7 +71,7 @@ def to_str(s, encoding=None):
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
-            return str(s)
+            return str(s)  # future lint: disable=blacklisted-function
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             if encoding:
                 return s.encode(encoding)
@@ -131,7 +131,7 @@ def to_none(text):
     '''
     Convert a string to None if the string is empty or contains only spaces.
     '''
-    if str(text).strip():
+    if six.tex_type(text).strip():
         return text
     return None
 
