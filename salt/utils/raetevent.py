@@ -7,7 +7,7 @@ This module is used to manage events via RAET
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import time
@@ -68,7 +68,7 @@ class RAETEvent(object):
                 self.stack = transport.jobber_stack
             else:
                 self.stack = transport.jobber_stack = self._setup_stack(ryn=self.ryn)
-        log.debug("RAETEvent Using Jobber Stack at = {0}\n".format(self.stack.ha))
+        log.debug("RAETEvent Using Jobber Stack at = %s\n", self.stack.ha)
         if listen:
             self.subscribe()
 
@@ -220,7 +220,7 @@ class RAETEvent(object):
         identifier "tag"
         '''
         # Timeout is retained for compat with zeromq events
-        if not str(tag):  # no empty tags allowed
+        if not six.text_type(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
 
         if not isinstance(data, MutableMapping):  # data must be dict

@@ -1028,7 +1028,7 @@ class GitProvider(object):
                     except IndexError:
                         dirs = []
                     self._linkdir_walk.append((
-                        salt.utils.path_join(self.linkdir, *parts[:idx + 1]),
+                        salt.utils.path.join(self.linkdir, *parts[:idx + 1]),
                         dirs,
                         []
                     ))
@@ -2974,7 +2974,7 @@ class GitPillar(GitBase):
         Ensure that the mountpoint is present in the correct location and
         points at the correct path
         '''
-        lcachelink = salt.utils.path_join(repo.linkdir, repo._mountpoint)
+        lcachelink = salt.utils.path.join(repo.linkdir, repo._mountpoint)
         wipe_linkdir = False
         create_link = False
         try:
@@ -3019,7 +3019,7 @@ class GitPillar(GitBase):
                                 # is remove the symlink and let it be created
                                 # below.
                                 try:
-                                    if salt.utils.is_windows() \
+                                    if salt.utils.platform.is_windows() \
                                             and not ldest.startswith('\\\\') \
                                             and os.path.isdir(ldest):
                                         # On Windows, symlinks to directories

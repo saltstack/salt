@@ -3,7 +3,7 @@
 Helpers/utils for working with tornado async stuff
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import tornado.ioloop
 import tornado.concurrent
@@ -94,10 +94,8 @@ class SyncWrapper(object):
                 # their associated io_loop is closed to allow for proper
                 # cleanup.
                 self.async.close()
-            self.io_loop.close()
-            # Other things should be deallocated after the io_loop closes.
-            # See Issue #26889.
             del self.async
+            self.io_loop.close()
             del self.io_loop
         elif hasattr(self, 'io_loop'):
             self.io_loop.close()
