@@ -734,12 +734,12 @@ class MinionBase(object):
                     break
 
             if masters:
-                policy = self.opts.get(u'discovery', {}).get(u'match', DEFAULT_MINION_OPTS[u'discovery'][u'match'])
+                policy = self.opts.get('discovery', {}).get('match', DEFAULT_MINION_OPTS['discovery']['match'])
                 if policy not in ['any', 'all']:
                     log.error('SSDP configuration matcher failure: unknown value "{0}". '
                               'Should be "any" or "all"'.format(policy))
                 else:
-                    mapping = self.opts[u'discovery'].get(u'mapping', {})
+                    mapping = self.opts['discovery'].get('mapping', {})
                     for addr, mappings in masters.items():
                         for proto_data in mappings:
                             cnt = len([key for key, value in mapping.items()
