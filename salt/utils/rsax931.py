@@ -4,7 +4,7 @@ Create and verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import sys
 import os
