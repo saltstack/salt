@@ -16,7 +16,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)
