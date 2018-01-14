@@ -28,7 +28,7 @@ The timeout is how many seconds Salt should wait for
 any Ansible module to respond.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import logging
@@ -40,6 +40,7 @@ import salt.utils.json
 from salt.exceptions import LoaderError, CommandExecutionError
 import salt.utils.timed_subprocess
 import salt.utils.yaml
+from salt.ext import six
 
 try:
     import ansible
@@ -165,7 +166,7 @@ class AnsibleModuleCaller(object):
         try:
             out = salt.utils.json.loads(proc_exc.stdout)
         except ValueError as ex:
-            out = {'Error': (proc_exc.stderr and (proc_exc.stderr + '.') or str(ex))}
+            out = {'Error': (proc_exc.stderr and (proc_exc.stderr + '.') or six.text_type(ex))}
             if proc_exc.stdout:
                 out['Given JSON output'] = proc_exc.stdout
             return out
@@ -250,7 +251,7 @@ def help(module=None, *args):
             if docset:
                 doc.update(docset)
         except Exception as err:
-            log.error("Error parsing doc section: {0}".format(err))
+            log.error("Error parsing doc section: %s", err)
     if not args:
         if 'description' in doc:
             description = doc.get('description') or ''
