@@ -2,13 +2,13 @@
 '''
 Functions for creating and working with job IDs
 '''
-
 from __future__ import absolute_import, print_function, unicode_literals
 from calendar import month_abbr as months
 import datetime
 import hashlib
 import os
 
+import salt.utils.stringutils
 from salt.ext import six
 
 LAST_JID_DATETIME = None
@@ -115,9 +115,8 @@ def jid_dir(jid, job_dir=None, hash_type='sha256'):
     '''
     if not isinstance(jid, six.string_types):
         jid = six.text_type(jid)
-    if six.PY3:
-        jid = jid.encode('utf-8')
-    jhash = getattr(hashlib, hash_type)(jid).hexdigest()
+    jhash = getattr(hashlib, hash_type)(
+        salt.utils.stringutils.to_bytes(jid)).hexdigest()
 
     parts = []
     if job_dir is not None:

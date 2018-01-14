@@ -4,7 +4,7 @@ Functions used for CLI argument handling
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import fnmatch
 import inspect
@@ -69,9 +69,9 @@ def condition_input(args, kwargs):
     '''
     ret = []
     for arg in args:
-        if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(str(arg))) or \
+        if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(six.text_type(arg))) or \
         (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
-            ret.append(str(arg))
+            ret.append(six.text_type(arg))
         else:
             ret.append(arg)
     if isinstance(kwargs, dict) and kwargs:
@@ -342,7 +342,7 @@ def split_input(val):
     try:
         return [x.strip() for x in val.split(',')]
     except AttributeError:
-        return [x.strip() for x in str(val).split(',')]
+        return [x.strip() for x in six.text_type(val).split(',')]
 
 
 def test_mode(**kwargs):
