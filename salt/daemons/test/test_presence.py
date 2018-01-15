@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Raet Ioflo Behavior Unittests
-"""
-# pylint: skip-file
-# pylint: disable=C0103
-
+'''
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
+from salt.ext.six.moves import map
+# pylint: disable=blacklisted-import
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
     import unittest
+# pylint: enable=blacklisted-import
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
@@ -21,36 +22,30 @@ from raet.stacking import Stack
 
 from salt.utils.event import tagify
 
-# Import Ioflo Deeds
-from salt.daemons.flo import core
-from salt.daemons.test.plan import actors
-
 
 def setUpModule():
     console.reinit(verbosity=console.Wordage.concise)
+
 
 def tearDownModule():
     pass
 
 
 class PresenterTestCase(testing.FrameIofloTestCase):
-    """
+    '''
     Test case for Salt Raet Presenter deed
-    """
-
+    '''
     def setUp(self):
-        """
+        '''
         Call super if override so House Framer and Frame are setup correctly
-        """
+        '''
         super(PresenterTestCase, self).setUp()
 
-
     def tearDown(self):
-        """
+        '''
         Call super if override so House Framer and Frame are torn down correctly
-        """
+        '''
         super(PresenterTestCase, self).tearDown()
-
 
     def addPresenceInfo(self, stateGrp, name, ip, port):
         self.assertIn(stateGrp, ('alloweds', 'aliveds', 'reapeds'))
@@ -61,19 +56,17 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         remote.ha = (ip, port)
         group.value[name] = remote
 
-
     def addAvailable(self, name):
         availables = self.store.fetch('.salt.var.presence.availables')
         if availables.value is None:
             availables.value = set()
         availables.value.add(name)
 
-
     def testContextSetup(self):
-        """
+        '''
         Test the context setup procedure used in all the consequence tests works as expected
         This test intended to avoid some checks in other tests
-        """
+        '''
         console.terse("{0}\n".format(self.testContextSetup.__doc__))
 
         act = self.addEnterDeed("TestOptsSetupMaster")
@@ -118,11 +111,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceAvailable(self):
-        """
+        '''
         Test Presenter 'available' request (A1, B*)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceAvailable.__doc__))
 
         # Bootstrap
@@ -187,11 +179,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceJoined(self):
-        """
+        '''
         Test Presenter 'joined' request (A2)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceJoined.__doc__))
 
         # Bootstrap
@@ -238,11 +229,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceAllowed(self):
-        """
+        '''
         Test Presenter 'allowed' request (A3)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceAllowed.__doc__))
 
         # Bootstrap
@@ -288,11 +278,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceAlived(self):
-        """
+        '''
         Test Presenter 'alived' request (A4)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceAlived.__doc__))
 
         # Bootstrap
@@ -338,11 +327,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceReaped(self):
-        """
+        '''
         Test Presenter 'reaped' request (A5)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceReaped.__doc__))
 
         # Bootstrap
@@ -388,11 +376,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceNoRequest(self):
-        """
+        '''
         Test Presenter with no requests (C1)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceNoRequest.__doc__))
 
         # Bootstrap
@@ -418,11 +405,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceUnknownSrc(self):
-        """
+        '''
         Test Presenter handles request from unknown (disconnected) source (C2)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceUnknownSrc.__doc__))
 
         # Bootstrap
@@ -458,11 +444,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceAvailableNoMinions(self):
-        """
+        '''
         Test Presenter 'available' request with no minions in the state (D1)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceAvailableNoMinions.__doc__))
 
         # Bootstrap
@@ -503,11 +488,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceAvailableOneMinion(self):
-        """
+        '''
         Test Presenter 'available' request with one minion in the state (D2)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceAvailableOneMinion.__doc__))
 
         # Bootstrap
@@ -551,11 +535,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceAvailableSomeIpUnknown(self):
-        """
+        '''
         Test Presenter 'available' request with some minion addresses aren't known (D3)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceAvailableSomeIpUnknown.__doc__))
 
         # Bootstrap
@@ -604,11 +587,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceAllowedNoMinions(self):
-        """
+        '''
         Test Presenter 'allowed' request with no minions in the state (D4)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceAllowedNoMinions.__doc__))
 
         # Bootstrap
@@ -650,11 +632,10 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testPresenceAllowedOneMinion(self):
-        """
+        '''
         Test Presenter 'allowed' request with one minion in the state (D5)
-        """
+        '''
         console.terse("{0}\n".format(self.testPresenceAllowedOneMinion.__doc__))
 
         # Bootstrap
@@ -709,7 +690,9 @@ def runOne(test):
 
 
 def runSome():
-    """ Unittest runner """
+    '''
+    Unittest runner
+    '''
     tests = []
     names = [
         'testContextSetup',
@@ -725,14 +708,16 @@ def runSome():
         'testPresenceAvailableSomeIpUnknown',
         'testPresenceAllowedNoMinions',
         'testPresenceAllowedOneMinion',
-        ]
-    tests.extend(map(PresenterTestCase, names))
+    ]
+    tests.extend(list(map(PresenterTestCase, names)))
     suite = unittest.TestSuite(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
 
 def runAll():
-    """ Unittest runner """
+    '''
+    Unittest runner
+    '''
     suite = unittest.TestSuite()
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(PresenterTestCase))
     unittest.TextTestRunner(verbosity=2).run(suite)

@@ -4,13 +4,17 @@ Subversion Fileserver Backend
 
 After enabling this backend, branches and tags in a remote subversion
 repository are exposed to salt as different environments. To enable this
-backend, add ``svn`` to the :conf_master:`fileserver_backend` option in the
+backend, add ``svnfs`` to the :conf_master:`fileserver_backend` option in the
 Master config file.
 
 .. code-block:: yaml
 
     fileserver_backend:
-      - svn
+      - svnfs
+
+.. note::
+    ``svn`` also works here. Prior to the Oxygen release, *only* ``svn`` would
+    work.
 
 This backend assumes a standard svn layout with directories for ``branches``,
 ``tags``, and ``trunk``, at the repository root.
