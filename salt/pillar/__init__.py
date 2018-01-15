@@ -765,14 +765,14 @@ class Pillar(object):
                                 key = None
 
                             try:
-                                matched_pstates = fnmatch.filter(self.avail[saltenv], sub_sls)
+                                matched_pstates += fnmatch.filter(self.avail[saltenv], sub_sls)
                             except KeyError:
                                 errors.extend(
                                     ['No matching pillar environment for environment '
                                      '\'{0}\' found'.format(saltenv)]
                                 )
 
-                        for sub_sls in matched_pstates:
+                        for sub_sls in set(matched_pstates):
                             if sub_sls not in mods:
                                 nstate, mods, err = self.render_pstate(
                                         sub_sls,
