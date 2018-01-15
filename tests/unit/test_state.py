@@ -528,7 +528,7 @@ class StateReturnsTestCase(TestCase):
         '''
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'fantastic!'}
         expected = {'comment': 'data\nin\nthe\nlist', 'changes': {}, 'name': None, 'result': True}
-        assert statedecorators.state_output_unificator(lambda: data)() == expected
+        assert statedecorators.state_output_unifier(lambda: data)() == expected
 
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': None}
         expected = 'data\nin\nthe\nlist'
