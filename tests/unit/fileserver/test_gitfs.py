@@ -63,7 +63,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                     'cachedir': self.tmp_cachedir,
                     'sock_dir': TMP_SOCK_DIR,
                     'gitfs_root': 'salt',
-                    'fileserver_backend': ['git'],
+                    'fileserver_backend': ['gitfs'],
                     'gitfs_base': 'master',
                     'fileserver_events': True,
                     'transport': 'zeromq',
@@ -86,6 +86,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                     'gitfs_ssl_verify': True,
                     'gitfs_disable_saltenv_mapping': False,
                     'gitfs_ref_types': ['branch', 'tag', 'sha'],
+                    'gitfs_update_interval': 60,
                     '__role': 'master',
                 }
             }
@@ -195,7 +196,7 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
                     'sock_dir': TMP_SOCK_DIR,
                     'gitfs_remotes': ['file://' + TMP_REPO_DIR],
                     'gitfs_root': '',
-                    'fileserver_backend': ['git'],
+                    'fileserver_backend': ['gitfs'],
                     'gitfs_base': 'master',
                     'fileserver_events': True,
                     'transport': 'zeromq',
@@ -218,6 +219,7 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
                     'gitfs_ssl_verify': True,
                     'gitfs_disable_saltenv_mapping': False,
                     'gitfs_ref_types': ['branch', 'tag', 'sha'],
+                    'gitfs_update_interval': 60,
                     '__role': 'master',
                 }
             }
