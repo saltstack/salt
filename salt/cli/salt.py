@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 sys.modules['pkg_resources'] = None
 import os
@@ -211,7 +211,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 sys.exit(11)
 
         except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
-            ret = str(exc)
+            ret = six.text_type(exc)
             self._output_ret(ret, '', retcode=1)
 
     def _preview_target(self):
