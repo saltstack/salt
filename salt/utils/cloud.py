@@ -2508,7 +2508,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
 
     if os.path.exists(index_file):
         with salt.utils.fopen(index_file, 'r') as fh_:
-            index = msgpack.load(fh_)
+            index = msgpack.load(fh_, encoding='utf-8')
     else:
         index = {}
 
@@ -2540,7 +2540,7 @@ def cachedir_index_del(minion_id, base=None):
 
     if os.path.exists(index_file):
         with salt.utils.fopen(index_file, 'r') as fh_:
-            index = msgpack.load(fh_)
+            index = msgpack.load(fh_, encoding='utf-8')
     else:
         return
 
@@ -2637,7 +2637,7 @@ def change_minion_cachedir(
     path = os.path.join(base, cachedir, fname)
 
     with salt.utils.fopen(path, 'r') as fh_:
-        cache_data = msgpack.load(fh_)
+        cache_data = msgpack.load(fh_, encoding='utf-8')
 
     cache_data.update(data)
 
@@ -2713,7 +2713,7 @@ def list_cache_nodes_full(opts, provider=None, base=None):
                 fname = '{0}.p'.format(minion_id)
                 fpath = os.path.join(min_dir, fname)
                 with salt.utils.fopen(fpath, 'r') as fh_:
-                    minions[driver][prov][minion_id] = msgpack.load(fh_)
+                    minions[driver][prov][minion_id] = msgpack.load(fh_, encoding='utf-8')
 
     return minions
 
@@ -2992,7 +2992,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     with salt.utils.fopen(path, 'r') as fh_:
         try:
-            cache_data = msgpack.load(fh_)
+            cache_data = msgpack.load(fh_, encoding='utf-8')
         except ValueError:
             log.warning('Cache for {0} was corrupt: Deleting'.format(node))
             cache_data = {}
