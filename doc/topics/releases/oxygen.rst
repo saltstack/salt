@@ -276,7 +276,8 @@ The new grains added are:
 Salt Minion Auto-discovery
 ------------------------
 
-Salt Minion now no longer need to be configured against a specific DNS name or IP address of a Master.
+Using auto-discovery, the Salt Minion now no longer needs to be configured
+against a specific DNS name or IP address of a Master.
 
 For this feature Salt Master now requires port 4520 for UDP broadcast packets to be opened
 and the Salt Minion be able to send UDP packets to the same port.
@@ -290,19 +291,20 @@ By default, automatic discovery is disabled.
    Due to the current limitations that will be changing in a future, before you turn on auto-discovery,
    make sure your network is secured and trusted.
 
-Auto-discovery is configured on Master and Minion. Both of them are configured via ``discovery`` option
+Auto-discovery is configured on Master and Minion. Both of them are configured via the ``discovery`` option
 as follows:
 
 **Master configuration**
 
-To simply enable it by default, accepting all kinds of minions, it is enough to set it to True:
+To use the default configuration, which accepts any minion, simply set ``discovery`` to True:
 
 .. code-block:: yaml
 
        discovery: true
 
-Sub-option `mapping` allows auto-discovery to help Minions to find a proper Master for them. The mapping contains
-just an arbitrary set of key/value strings that would match either any of them or all of them. Default is empty.
+A sub-option called `mapping` allows auto-discovery to help find the proper
+Master. The mapping contains an arbitrary set of key/value pairs, which the
+Minion configuration can target. By default, no mappings are set.
 
 Example:
 
@@ -330,13 +332,17 @@ setting a ``port`` option under the Master's ``discovery`` configuration:
 
 In addition to the ``mapping`` and ``port`` options, the following additional options are available to Minions:
 
-- ``attempts`` will set how many "ping" broadcast requests should be sent to the network, waiting for any Master
-   response. Each attempt takes a couple of seconds, so raising it to the higher value will
-   result to a slower startup of the Minion. Generally, on a properly configured network, the autodiscovery is
-   supposed to be all set right after the first attempt. Default is set to 3 attempts.
-- ``match`` can have values ``all`` or ``any``. Match is always coming together with ``mapping``, and essentially means
-  "match any/all of mapping values to the target". Default is set to ``any``.
-- ``pause`` is an interval in seconds between attempts. Default is set to five (5) seconds.
+- ``attempts`` - This option specifies how many broadcast requests should be
+  sent to the network, waiting for any Master response. Each attempt takes a
+  couple of seconds, so raising this value may result in a slower Minion
+  startup. Note that, on a properly-configured network, autodiscovery should
+  succeed on the first attempt. By default, this value is set to ``3``.
+- ``match`` - This option can be set to either ``all`` or ``any``, and it
+  determines how the values configured in ``mapping`` are matched. If set to
+  ``all``, then all of the key/value pairs in the Minion's ``mapping`` must
+  match a given Master. If set to ``any`` (the default), then any match to a
+  key/value mapping will constitute a match.
+- ``pause`` - The interval in seconds between attempts (default: 5).
 
 Connection to a type instead of DNS
 ===================================
