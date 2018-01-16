@@ -9,6 +9,7 @@ Type=notify
 NotifyAccess=all
 ExecStart=/usr/bin/salt-master
 Restart=on-failure
+RestartSec=1m
 
 [Install]
 WantedBy=multi-user.target
