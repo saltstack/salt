@@ -1735,7 +1735,7 @@ def mac_str_to_bytes(mac_str):
     if six.PY3:
         mac_bytes = bytes(int(mac_str[s:s+2], 16) for s in range(0, 12, 2))
     else:
-        mac_bytes = ''.join(chr(int(mac_str[s:s+2], 16)) for s in range(0, 12, 2))
+        mac_bytes = salt.utils.stringutils.to_bytes(''.join(chr(int(mac_str[s:s+2], 16)) for s in range(0, 12, 2)))
     return mac_bytes
 
 
