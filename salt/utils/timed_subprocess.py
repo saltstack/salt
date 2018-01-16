@@ -8,6 +8,7 @@ import shlex
 import subprocess
 import threading
 import salt.exceptions
+import salt.utils.data
 from salt.ext import six
 
 
@@ -66,6 +67,10 @@ class TimedProc(object):
                     kwargs['env'][key] = str(val)
                 if not isinstance(key, six.string_types):
                     kwargs['env'][str(key)] = kwargs['env'].pop(key)
+            if six.PY2 and 'env' in kwargs:
+                # Ensure no unicode in custom env dict, as it can cause
+                # problems with subprocess.
+                kwargs['env'] = salt.utils.data.encode_dict(kwargs['env'])
             self.process = subprocess.Popen(args, **kwargs)
         self.command = args
 
