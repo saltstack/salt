@@ -1874,7 +1874,7 @@ class State(object):
                     else:
                         self.format_slots(cdata)
                         ret = self.states[cdata['full']](*cdata['args'],
-                                                          **cdata['kwargs'])
+                                                         **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
