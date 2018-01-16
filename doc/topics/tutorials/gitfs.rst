@@ -209,13 +209,17 @@ Simple Configuration
 To use the gitfs backend, only two configuration changes are required on the
 master:
 
-1. Include ``git`` in the :conf_master:`fileserver_backend` list in the master
-   config file:
+1. Include ``gitfs`` in the :conf_master:`fileserver_backend` list in the
+   master config file:
 
    .. code-block:: yaml
 
        fileserver_backend:
-         - git
+         - gitfs
+
+   .. note::
+       ``git`` also works here. Prior to the Oxygen release, *only* ``git``
+       would work.
 
 2. Specify one or more ``git://``, ``https://``, ``file://``, or ``ssh://``
    URLs in :conf_master:`gitfs_remotes` to configure which repositories to
@@ -334,6 +338,7 @@ configured gitfs remotes):
 * :conf_master:`gitfs_refspecs` (new in 2017.7.0)
 * :conf_master:`gitfs_disable_saltenv_mapping` (new in Oxygen)
 * :conf_master:`gitfs_ref_types` (new in Oxygen)
+* :conf_master:`gitfs_update_interval` (new in Oxygen)
 
 .. note::
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
@@ -354,6 +359,7 @@ tremendous amount of customization. Here's some example usage:
         - mountpoint: salt://bar
         - base: salt-base
         - ssl_verify: False
+        - update_interval: 120
       - https://foo.com/bar.git:
         - name: second_bar_repo
         - root: other/salt
@@ -426,6 +432,8 @@ In the example configuration above, the following is true:
        *only* because authentication is not being used. Otherwise, the
        ``insecure_auth`` parameter must be used (as in the fourth remote) to
        force Salt to authenticate to an ``http://`` remote.
+
+9. The first remote will wait 120 seconds between updates instead of 60.
 
 .. _gitfs-per-saltenv-config:
 
@@ -561,6 +569,32 @@ single branch.
     gitfs_remotes:
       - http://foo.com/quux.git:
         - all_saltenvs: anything
+
+.. _gitfs-update-intervals:
+
+Update Intervals
+================
+
+Prior to the Oxygen release, GitFS would update its fileserver backends as part
+of a dedicated "maintenance" process, in which various routine maintenance
+tasks were performed. This tied the update interval to the
+:conf_master:`loop_interval` config option, and also forced all fileservers to
+update at the same interval.
+
+Now it is possible to make GitFS update at its own interval, using
+:conf_master:`gitfs_update_interval`:
+
+.. code-block:: yaml
+
+    gitfs_update_interval: 180
+
+    gitfs_remotes:
+      - https://foo.com/foo.git
+      - https://foo.com/bar.git:
+        - update_interval: 120
+
+Using the above configuration, the first remote would update every three
+minutes, while the second remote would update every two minutes.
 
 Configuration Order of Precedence
 =================================

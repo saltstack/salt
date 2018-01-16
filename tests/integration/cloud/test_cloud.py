@@ -4,7 +4,7 @@ Integration tests for functions located in the salt.cloud.__init__.py file.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import random
 import string

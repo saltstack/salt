@@ -801,9 +801,6 @@ class Schedule(object):
             if not isinstance(data, dict):
                 log.error('Scheduled job "{0}" should have a dict value, not {1}'.format(job, type(data)))
                 continue
-            # Job is disabled, continue
-            if 'enabled' in data and not data['enabled']:
-                continue
             if 'function' in data:
                 func = data['function']
             elif 'func' in data:
@@ -1166,6 +1163,7 @@ class Schedule(object):
                                     if now <= start or now >= end:
                                         run = True
                                     else:
+                                        data['_skip_reason'] = 'in_skip_range'
                                         run = False
                                 else:
                                     if start <= now <= end:
@@ -1175,6 +1173,7 @@ class Schedule(object):
                                             run = True
                                             func = self.skip_function
                                         else:
+                                            data['_skip_reason'] = 'not_in_range'
                                             run = False
                             else:
                                 log.error('schedule.handle_func: Invalid range, end must be larger than start. \
@@ -1226,6 +1225,7 @@ class Schedule(object):
                                         run = True
                                         func = self.skip_function
                                     else:
+                                        data['_skip_reason'] = 'in_skip_range'
                                         run = False
                                 else:
                                     run = True
@@ -1256,6 +1256,7 @@ class Schedule(object):
                                 func = self.skip_function
                             else:
                                 run = False
+                                data['_skip_reason'] = 'skip_explicit'
                         else:
                             run = True
 
@@ -1292,22 +1293,28 @@ class Schedule(object):
                 returners = self.returners
                 self.returners = {}
             try:
-                if multiprocessing_enabled:
-                    thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                # Job is disabled, continue
+                if 'enabled' in data and not data['enabled']:
+                    log.debug('Job: %s is disabled', job)
+                    data['_skip_reason'] = 'disabled'
+                    continue
                 else:
-                    thread_cls = threading.Thread
-                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                    if multiprocessing_enabled:
+                        thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                    else:
+                        thread_cls = threading.Thread
+                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
 
-                if multiprocessing_enabled:
-                    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                        # Reset current signals before starting the process in
-                        # order not to inherit the current signal handlers
+                    if multiprocessing_enabled:
+                        with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                            # Reset current signals before starting the process in
+                            # order not to inherit the current signal handlers
+                            proc.start()
+                    else:
                         proc.start()
-                else:
-                    proc.start()
 
-                if multiprocessing_enabled:
-                    proc.join()
+                    if multiprocessing_enabled:
+                        proc.join()
             finally:
                 if '_seconds' in data:
                     data['_next_fire_time'] = now + data['_seconds']
