@@ -15,7 +15,7 @@ without the need for a swarm of real minions.
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -39,7 +39,7 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
     def action(self):
         while self.publish.value:
             pub = self.publish.value.popleft()
-            log.debug('Dummy publisher publishing: {0}'.format(pub))
+            log.debug('Dummy publisher publishing: %s', pub)
             msg = self._fill_tmpl(pub)
             self.lane_stack.value.transmit(msg, self.lane_stack.value.fetchUidByName(next(self.workers.value)))
 
@@ -64,5 +64,5 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
                 }
                }
 
-        log.debug('Dummy publisher faking return with: {0}'.format(msg))
+        log.debug('Dummy publisher faking return with: %s', msg)
         return msg

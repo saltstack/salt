@@ -353,8 +353,9 @@ def save():
     beacons = list_(return_yaml=False, include_pillar=False)
 
     # move this file into an configurable opt
-    sfn = '{0}/{1}/beacons.conf'.format(__opts__['config_dir'],
-                                        os.path.dirname(__opts__['default_include']))
+    sfn = os.path.join(__opts__['config_dir'],
+                       os.path.dirname(__opts__['default_include']),
+                       'beacons.conf')
     if beacons:
         tmp = {'beacons': beacons}
         yaml_out = salt.utils.yaml.safe_dump(tmp, default_flow_style=False)

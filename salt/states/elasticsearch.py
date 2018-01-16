@@ -348,7 +348,7 @@ def pipeline_present(name, definition):
     .. code-block:: yaml
 
         test_pipeline:
-          elasticsearch_pipeline.present:
+          elasticsearch.pipeline_present:
             - definition:
                 description: example pipeline
                 processors:

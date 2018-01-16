@@ -335,8 +335,39 @@ they failed. Here's some example pseudocode:
             __context__['retcode'] = 1
         return result
 
+Variable Update Intervals for Fileserver Backends
+-------------------------------------------------
+
+Prior to this release, fileservers would be updated as part of a dedicated
+"maintenance" process, in which various routine maintenance tasks were
+performed. This tied the update interval to the :conf_master:`loop_interval`
+config option, and also forced all fileservers to update at the same interval.
+
+Oxygen adds the following configuration options for the various fileserver
+backends:
+
+- :conf_master:`roots_update_interval`
+- :conf_master:`azurefs_update_interval`
+- :conf_master:`gitfs_update_interval`
+- :conf_master:`hgfs_update_interval`
+- :conf_master:`minionfs_update_interval`
+- :conf_master:`s3fs_update_interval`
+- :conf_master:`svnfs_update_interval`
+
+These allow for update intervals to be set for each individual backend. The
+default value for each of these is 60 seconds.
+
+In addition, for :ref:`GitFS <tutorial-gitfs>` it is also possible to apply
+intervals to individual remotes. See :ref:`here <gitfs-update-intervals>` for
+examples.
+
+.. note::
+    git_pillar does not yet support variable update intervals, this is targeted
+    for the next feature release (Fluorine).
+
 LDAP via External Authentication Changes
 ----------------------------------------
+
 In this release of Salt, if LDAP Bind Credentials are supplied, then
 these credentials will be used for all LDAP access except the first
 authentication when a job is submitted.  The first authentication will
