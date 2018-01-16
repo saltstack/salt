@@ -9,10 +9,14 @@ Windows
 =======
 Execution module pkg
 --------------------
-Significate changes (PR #43708, damon-atkins) have been made to the pkg execution module. Users should test this release against their existing package sls definition files.
+Significate changes (PR #43708 & #45390, damon-atkins) have been made to the pkg execution module. Users should test this release against their existing package sls definition files.
 
 - ``pkg.list_available`` no longer defaults to refreshing the winrepo meta database.
 - ``pkg.install`` without a ``version`` parameter no longer upgrades software if the software is already installed. Use ``pkg.install version=latest`` or in a state use ``pkg.latest`` to get the old behavior. 
+- ``pkg.list_pkgs`` now returns multiple versions if software installed more than once.
+- ``pkg.list_pkgs`` now returns 'Not Found' when the version is not found instead of '(value not set)' which matches the contents of the sls definitions.
+- ``pkg.remove()`` will wait upto 3 seconds (normally about a second) to detect changes in the registry after removing software, improving reporting of version changes.
+- ``pkg.remove()`` can remove ``latest`` software, if ``latest`` is defined in sls definition.
 - Documentation was update for the execution module to match the style in new versions, some corrections as well.
 - All install/remove commands are prefix with cmd.exe shell and cmdmod is called with a command line string instead of a list. Some sls files in saltstack/salt-winrepo-ng expected the commands to be prefixed with cmd.exe (i.e. the use of ``&``).
 - Some execution module functions results, now behavour more like their Unix/Linux versions.
