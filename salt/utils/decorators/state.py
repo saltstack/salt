@@ -9,21 +9,41 @@ from __future__ import absolute_import, unicode_literals
 from salt.exceptions import SaltException
 
 
-def state_output_check(func):
-    '''
-    Checks for specific types in the state output.
-    Raises an Exception in case particular rule is broken.
+class OutputUnifier(object):
+    def __init__(self, *policies):
+        self.policies = []
+        for pls in policies:
+            if not hasattr(self, pls):
+                raise SaltException('Unknown policy: {0}'.format(pls))
+            else:
+                self.policies.append(getattr(self, pls))
 
-    :param func:
-    :return:
-    '''
-    def _func(*args, **kwargs):
+    def __call__(self, func):
+        def _func(*args, **kwargs):
+            result = func(*args, **kwargs)
+            for pls in self.policies:
+                try:
+                    result = pls(result)
+                except Exception as ex:
+                    result = {
+                        'result': False,
+                        'name': 'later',
+                        'changes': {},
+                        'comment': 'An exception occurred in this state: {0}'.format(ex)
+                    }
+            return result
+        return _func
+
+    def content_check(self, result):
         '''
-        Ruleset.
+        Checks for specific types in the state output.
+        Raises an Exception in case particular rule is broken.
+
+        :param result:
+        :return:
         '''
-        result = func(*args, **kwargs)
         if not isinstance(result, dict):
-            err_msg = 'Malformed state return, return must be a dict.'
+            err_msg = 'Malformed state return. Data must be a dictionary type.'
         elif not isinstance(result.get('changes'), dict):
             err_msg = "'Changes' should be a dictionary."
         else:
@@ -38,31 +58,25 @@ def state_output_check(func):
 
         if err_msg:
             raise SaltException(err_msg)
+
         return result
 
-    return _func
+    def unify(self, result):
+        '''
+        While comments as a list are allowed,
+        comments needs to be strings for backward compatibility.
+        See such claim here: https://github.com/saltstack/salt/pull/43070
 
+        Rules applied:
+          - 'comment' is joined into a multi-line string, in case the value is a list.
+          - 'result' should be always either True, False or None.
 
-def state_output_unifier(func):
-    '''
-    While comments as a list are allowed,
-    comments needs to be strings for backward compatibility.
-    See such claim here: https://github.com/saltstack/salt/pull/43070
-
-    Rules applied:
-      - 'comment' is joined into a multi-line string, in case the value is a list.
-      - 'result' should be always either True, False or None.
-
-    :param func: module function
-    :return: Joins 'comment' list into a multi-line string
-    '''
-    def _func(*args, **kwargs):
-        result = func(*args, **kwargs)
+        :param result:
+        :return:
+        '''
         if isinstance(result.get('comment'), list):
             result['comment'] = '\n'.join([str(elm) for elm in result['comment']])
         if result.get('result') is not None:
             result['result'] = bool(result['result'])
 
         return result
-
-    return _func
