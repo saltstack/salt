@@ -1462,16 +1462,24 @@ def os_data():
                         try:
                             with salt.utils.files.fopen(init_bin, 'rb') as fp_:
                                 buf = True
-                                edge = six.b('')
+                                if six.PY3:
+                                    edge = six.b('')
+                                else:
+                                    edge = str('')
                                 buf = fp_.read(buf_size).lower()
                                 while buf:
                                     buf = edge + buf
                                     for item in supported_inits:
+                                        if six.PY2:
+                                            item = str(item)
                                         if item in buf:
                                             if six.PY3:
                                                 item = item.decode('utf-8')
                                             grains['init'] = item
-                                            buf = six.b('')
+                                            if six.PY3:
+                                                buf = six.b('')
+                                            else:
+                                                buf = str('')
                                             break
                                     edge = buf[-edge_len:]
                                     buf = fp_.read(buf_size).lower()
