@@ -2,9 +2,9 @@
 '''
 A collection of hashing and encoding functions
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import hashlib
 import hmac

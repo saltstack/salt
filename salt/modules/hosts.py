@@ -3,13 +3,14 @@
 Manage the information in the hosts file
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.odict as odict
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -49,7 +50,7 @@ def _list_hosts():
         return ret
     with salt.utils.files.fopen(hfn) as ifile:
         for line in ifile:
-            line = line.strip()
+            line = salt.utils.stringutils.to_unicode(line).strip()
             if not line:
                 continue
             if line.startswith('#'):
@@ -162,7 +163,7 @@ def set_host(ip, alias):
         line_to_add = ''
 
     with salt.utils.files.fopen(hfn) as fp_:
-        lines = fp_.readlines()
+        lines = salt.utils.stringutils.to_unicode(fp_.readlines())
     for ind, line in enumerate(lines):
         tmpline = line.strip()
         if not tmpline:
@@ -183,7 +184,7 @@ def set_host(ip, alias):
         line = line_to_add
         lines.append(line)
     with salt.utils.files.fopen(hfn, 'w+') as ofile:
-        ofile.writelines(lines)
+        ofile.writelines(salt.utils.stringutils.to_unicode(lines))
     return True
 
 
@@ -201,7 +202,7 @@ def rm_host(ip, alias):
         return True
     hfn = _get_or_create_hostfile()
     with salt.utils.files.fopen(hfn) as fp_:
-        lines = fp_.readlines()
+        lines = salt.utils.stringutils.to_unicode(fp_.readlines())
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
         if not tmpline:
@@ -222,7 +223,7 @@ def rm_host(ip, alias):
                 # Only an alias was removed
                 lines[ind] = newline + os.linesep
     with salt.utils.files.fopen(hfn, 'w+') as ofile:
-        ofile.writelines(lines)
+        ofile.writelines(salt.utils.stringutils.to_unicode(lines))
     return True
 
 
@@ -273,7 +274,7 @@ def _write_hosts(hosts):
     hfn = _get_or_create_hostfile()
     with salt.utils.files.fopen(hfn, 'w+') as ofile:
         for line in lines:
-            if line.strip():
+            if salt.utils.stringutils.to_unicode(line).strip():
                 # /etc/hosts needs to end with EOL so that some utils that read
                 # it do not break
-                ofile.write(line.strip() + os.linesep)
+                ofile.write(salt.utils.stringutils.to_unicode(line).strip() + os.linesep)

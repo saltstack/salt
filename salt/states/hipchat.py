@@ -30,6 +30,9 @@ The api key can be specified in the master or minion configuration like below:
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def __virtual__():
     '''
@@ -106,20 +109,20 @@ def send_message(name,
            'comment': ''}
 
     if __opts__['test']:
-        ret['comment'] = 'The following message is to be sent to Hipchat: {0}'.format(message)
+        ret['comment'] = 'The following message is to be sent to Hipchat: %s', message
         ret['result'] = None
         return ret
 
     if not room_id:
-        ret['comment'] = 'Hipchat room id is missing: {0}'.format(name)
+        ret['comment'] = 'Hipchat room id is missing: %s', name
         return ret
 
     if not from_name:
-        ret['comment'] = 'Hipchat from name is missing: {0}'.format(name)
+        ret['comment'] = 'Hipchat from name is missing: %s', name
         return ret
 
     if not message:
-        ret['comment'] = 'Hipchat message is missing: {0}'.format(name)
+        ret['comment'] = 'Hipchat message is missing: %s', name
         return ret
 
     ret['result'] = __salt__['hipchat.send_message'](
@@ -134,8 +137,8 @@ def send_message(name,
     )
 
     if ret and ret['result']:
-        ret['comment'] = 'Sent message: {0}'.format(name)
+        ret['comment'] = 'Sent message: %s', name
     else:
-        ret['comment'] = 'Failed to send message: {0}'.format(name)
+        ret['comment'] = 'Failed to send message: %s', name
 
     return ret

@@ -8,9 +8,9 @@ Perform an HTTP query and statefully return the result
 '''
 
 # Import python libs
-from __future__ import absolute_import
-import re
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import re
 import time
 
 __monitor__ = [
@@ -95,32 +95,32 @@ def query(name, match=None, match_type='string', status=None, wait_for=None, **k
         if match_type == 'string':
             if match in data.get('text', ''):
                 ret['result'] = True
-                ret['comment'] += ' Match text "{0}" was found.'.format(match)
+                ret['comment'] += ' Match text "%s" was found.', match
             else:
                 ret['result'] = False
-                ret['comment'] += ' Match text "{0}" was not found.'.format(match)
+                ret['comment'] += ' Match text "%s" was not found.', match
         elif match_type == 'pcre':
             if re.search(match, data.get('text', '')):
                 ret['result'] = True
-                ret['comment'] += ' Match pattern "{0}" was found.'.format(match)
+                ret['comment'] += ' Match pattern "%s" was found.', match
             else:
                 ret['result'] = False
-                ret['comment'] += ' Match pattern "{0}" was not found.'.format(match)
+                ret['comment'] += ' Match pattern "%s" was not found.', match
 
     if status is not None:
         if data.get('status', '') == status:
-            ret['comment'] += 'Status {0} was found, as specified.'.format(status)
+            ret['comment'] += 'Status %s was found, as specified.', status
             if ret['result'] is None:
                 ret['result'] = True
         else:
-            ret['comment'] += 'Status {0} was not found, as specified.'.format(status)
+            ret['comment'] += 'Status %s was not found, as specified.', status
             ret['result'] = False
 
     if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] += ' (TEST MODE'
         if 'test_url' in kwargs:
-            ret['comment'] += ', TEST URL WAS: {0}'.format(kwargs['test_url'])
+            ret['comment'] += ', TEST URL WAS: %s', kwargs['test_url']
         ret['comment'] += ')'
 
     ret['data'] = data
@@ -165,5 +165,5 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
         else:
             # Space requests out by delaying for an interval
             if 'request_interval' in kwargs:
-                log.debug("delaying query for {0} seconds.".format(kwargs['request_interval']))
+                log.debug('delaying query for %s seconds.', kwargs['request_interval'])
                 time.sleep(kwargs['request_interval'])
