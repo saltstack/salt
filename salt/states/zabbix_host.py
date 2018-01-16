@@ -32,6 +32,7 @@ def present(host, groups, interfaces, **kwargs):
     :param groups: groupids of host groups to add the host to
     :param interfaces: interfaces to be created for the host
     :param proxy_host: Optional proxy name or proxyid to monitor host
+    :param inventory: Optional list of inventory names and values
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
@@ -61,6 +62,9 @@ def present(host, groups, interfaces, **kwargs):
                     - testovaci1_ipmi:
                         - ip: '192.168.100.111'
                         - type: 'ipmi'
+                - inventory:
+                    - alias: some alias
+                    - asset_tag: jlm3937
 
 
     '''
@@ -151,8 +155,9 @@ def present(host, groups, interfaces, **kwargs):
     groups = groupids
 
     # Get and validate proxyid
-    proxy_hostid = None
+    proxy_hostid = "0"
     if 'proxy_host' in kwargs:
+        # Test if proxy_host given as name
         if isinstance(kwargs['proxy_host'], six.string_types):
             try:
                 proxy_hostid = __salt__['zabbix.run_query']('proxy.get', {"output": "proxyid",
@@ -162,6 +167,7 @@ def present(host, groups, interfaces, **kwargs):
             except TypeError:
                 ret['comment'] = 'Invalid proxy_host {0}'.format(kwargs['proxy_host'])
                 return ret
+        # Otherwise lookup proxy_host as proxyid
         else:
             try:
                 proxy_hostid = __salt__['zabbix.run_query']('proxy.get', {"proxyids":
@@ -172,6 +178,18 @@ def present(host, groups, interfaces, **kwargs):
                 ret['comment'] = 'Invalid proxy_host {0}'.format(kwargs['proxy_host'])
                 return ret
 
+    if 'inventory' not in kwargs:
+        inventory = {}
+    else:
+        inventory = kwargs['inventory']
+    if inventory is None:
+        inventory = {}
+    # Create dict of requested inventory items
+    new_inventory = {}
+    for inv_item in inventory:
+        for k, v in inv_item.items():
+            new_inventory[k] = str(v)
+
     host_exists = __salt__['zabbix.host_exists'](host, **connection_args)
 
     if host_exists:
@@ -181,6 +199,7 @@ def present(host, groups, interfaces, **kwargs):
         update_proxy = False
         update_hostgroups = False
         update_interfaces = False
+        update_inventory = False
 
         cur_proxy_hostid = host['proxy_hostid']
         if proxy_hostid != cur_proxy_hostid:
@@ -212,10 +231,20 @@ def present(host, groups, interfaces, **kwargs):
         elif not hostinterfaces and interfaces:
             update_interfaces = True
 
+        cur_inventory = __salt__['zabbix.hostinventory_get'](hostids=hostid, **connection_args)
+        # Remove blank inventory items
+        cur_inventory = {k: v for k, v in cur_inventory.items() if v}
+        # Remove persistent inventory keys for comparison
+        cur_inventory.pop('hostid', None)
+        cur_inventory.pop('inventory_mode', None)
+
+        if set(cur_inventory) != set(new_inventory):
+            update_inventory = True
+
     # Dry run, test=true mode
     if __opts__['test']:
         if host_exists:
-            if update_hostgroups or update_interfaces or update_proxy:
+            if update_hostgroups or update_interfaces or update_proxy or update_inventory:
                 ret['result'] = None
                 ret['comment'] = comment_host_updated
             else:
@@ -231,8 +260,19 @@ def present(host, groups, interfaces, **kwargs):
 
     if host_exists:
         ret['result'] = True
-        if update_hostgroups or update_interfaces or update_proxy:
+        if update_hostgroups or update_interfaces or update_proxy or update_inventory:
 
+            if update_inventory:
+                # combine connection_args, inventory, and clear_old
+                sum_kwargs = dict(new_inventory)
+                for elem in connection_args:
+                    sum_kwargs = new_inventory.get(elem, 0) + connection_args[elem]
+                sum_kwargs['clear_old'] = True
+
+                hostupdate = __salt__['zabbix.hostinventory_set'](hostid, **sum_kwargs)
+                ret['changes']['inventory'] = str(new_inventory)
+                if 'error' in hostupdate:
+                    error.append(hostupdate['error']) 
             if update_proxy:
                 hostupdate = __salt__['zabbix.host_update'](hostid, proxy_hostid=proxy_hostid, **connection_args)
                 ret['changes']['proxy_hostid'] = str(proxy_hostid)
@@ -275,6 +315,7 @@ def present(host, groups, interfaces, **kwargs):
                                                      groups,
                                                      interfaces_formated,
                                                      proxy_hostid=proxy_hostid,
+                                                     inventory=new_inventory,
                                                      **connection_args)
 
         if 'error' not in host_create:
@@ -471,3 +512,4 @@ def assign_templates(host, templates, **kwargs):
         ret['comment'] = comment_host_templates_in_sync
 
     return ret
+
