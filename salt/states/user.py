@@ -88,10 +88,6 @@ def _changes(name,
     attributes supported as integers only.
     '''
 
-    # Set gid to None in cases an empty string is passed
-    if gid == '':
-        gid = None
-
     if 'shadow.info' in __salt__:
         lshad = __salt__['shadow.info'](name)
 
@@ -460,9 +456,8 @@ def present(name,
 
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
-        if not gid:
-            ret['comment'] = 'Default group with name "{0}" ' \
-                             'is not present'.format(name)
+        if gid == '':
+            ret['comment'] = 'Default group with name "{0}" is not present'.format(name)
             ret['result'] = False
             return ret
 
