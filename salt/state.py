@@ -1746,6 +1746,7 @@ class State(object):
                 'proc': proc}
         return ret
 
+    @salt.utils.decorators.state.OutputUnifier('content_check', 'unify')
     def call(self, low, chunks=None, running=None, retries=1):
         '''
         Call a state directly with the low data structure, verify data
