@@ -451,7 +451,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         Test running git.latest state using the "depth" argument to limit the
         history. See #45394.
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         try:
             ret = self.run_state(
                 'git.latest',
