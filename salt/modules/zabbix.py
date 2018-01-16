@@ -846,7 +846,7 @@ def host_create(host, groups, interfaces, **connection_args):
 
         salt '*' zabbix.host_create technicalname 4
         interfaces='{type: 1, main: 1, useip: 1, ip: "192.168.3.1", dns: "", port: 10050}'
-        visible_name='Host Visible Name'
+        visible_name='Host Visible Name' inventory_mode=0 inventory='{"alias": "something"}'
     '''
     conn_args = _login(**connection_args)
     ret = False
@@ -1052,6 +1052,97 @@ def host_update(hostid, **connection_args):
             params = _params_extend(params, _ignore_name=True, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             return ret['result']['hostids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def hostinventory_get(hostids, **connection_args):
+    '''
+    Retrieve host inventory according to the given parameters.
+    See: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host_inventory
+
+    .. versionadded:: Oxygen
+
+    :param hostids: Return only host interfaces used by the given hosts.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Array with host interfaces details, False if no convenient host interfaces found or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.hostinventory_get 101054
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'host.get'
+            params = {"selectInventory": "extend"}
+            if hostids:
+                params.setdefault('hostids', hostids)
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'][0]['inventory'] if len(ret['result'][0]['inventory']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def hostinventory_set(hostid, **connection_args):
+    '''
+    Update host inventory items
+    NOTE: This function accepts all standard host: keyword argument names for inventory
+    see: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host_inventory
+
+    .. versionadded:: Oxygen
+
+    :param hostid: ID of the host to update
+    :param clear_old: Set to True in order to remove all existing inventory items before setting the specified items
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: ID of the updated host, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.hostinventory_set 101054 asset_tag=jml3322 type=vm clear_old=True
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            params={}
+            clear_old = False
+            method = 'host.update'
+
+            if connection_args.get('clear_old'):
+                clear_old = True
+
+            connection_args.pop('clear_old', None)
+            inventory_params = dict(_params_extend(params, **connection_args))
+            for key in inventory_params:
+                params.pop(key, None)
+
+            if hostid:
+                params.setdefault('hostid', hostid)
+            if clear_old:
+                # Set inventory to disabled in order to clear existing data
+                params["inventory_mode"] = "-1"
+                ret = _query(method, params, conn_args['url'], conn_args['auth'])
+
+            # Set inventory mode to manual in order to submit inventory data
+            params['inventory_mode'] = "0"
+            params['inventory'] = inventory_params
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']
         else:
             raise KeyError
     except KeyError:
