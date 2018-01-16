@@ -501,7 +501,7 @@ class LogSettingsParserTests(TestCase):
         opts = self.default_config.copy()
         opts.update({'log_file': log_file})
         if log_file_name != 'log_file':
-            opts.update({log_file_name: log_file})
+            opts.update({log_file_name: getattr(self, log_file_name)})
 
         if log_file_name == 'key_logfile':
             self.skipTest('salt-key creates log file outside of parse_args.')
@@ -513,7 +513,7 @@ class LogSettingsParserTests(TestCase):
         if log_file_name == 'log_file':
             self.assertEqual(os.path.getsize(log_file), 0)
         else:
-            self.assertEqual(os.path.getsize(getattr(self, 'log_file')), 0)
+            self.assertEqual(os.path.getsize(getattr(self, log_file_name)), 0)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
