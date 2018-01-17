@@ -83,7 +83,6 @@ description:
                 Module().__name__))) == ['one', 'two']
             assert ret.get('Description') == 'describe the second part'
 
-
     def test_module_resolver_modlist(self):
         '''
         Test Ansible resolver modules list.
@@ -117,8 +116,7 @@ description:
         :return:
         '''
         with patch('salt.modules.ansiblegate.importlib', MagicMock()),\
-                patch('salt.modules.ansiblegate.importlib.import_module',
-                      lambda x: x):
+            patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
             assert self.resolver.load_module('four.five.six') == 'ansible.modules.four.five.six'
 
     def test_resolver_module_loader_import_failure(self):
@@ -127,8 +125,7 @@ description:
         :return:
         '''
         with patch('salt.modules.ansiblegate.importlib', MagicMock()),\
-                patch('salt.modules.ansiblegate.importlib.import_module',
-                      lambda x: x):
+            patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
             with pytest.raises(LoaderError) as loader_error:
                 self.resolver.load_module('something.strange')
 
