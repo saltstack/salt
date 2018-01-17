@@ -110,12 +110,14 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         verify that scheduled job is not not and returns the right error string
         '''
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 2:30pm').timetuple()))
+
         job1 = {
           'schedule': {
             'job1': {
               'function': 'test.ping',
               'hours': '1',
-              '_next_fire_time': 1511994600,
+              '_next_fire_time': run_time,
               'skip_during_range': {
                   'start': '25pm',
                   'end': '3pm'
@@ -129,7 +131,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
             'job2': {
               'function': 'test.ping',
               'hours': '1',
-              '_next_fire_time': 1511994600,
+              '_next_fire_time': run_time,
               'skip_during_range': {
                   'start': '2pm',
                   'end': '25pm'
@@ -137,8 +139,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
             }
           }
         }
-
-        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 2:30pm').timetuple()))
 
         # Add job1 to schedule
         self.schedule.opts.update(job1)
@@ -151,6 +151,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         _expected = ('Invalid date string for start in ',
                      'skip_during_range. Ignoring ',
                      'job %s.', 'job1')
+        log.debug('=== ret %s ===', ret)
         self.assertEqual(ret['_error'], _expected)
 
         # Clear out schedule

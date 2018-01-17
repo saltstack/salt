@@ -326,15 +326,16 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         verify that scheduled job does not run
         and returns the right error
         '''
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+
         job = {
           'schedule': {
             'job1': {
               'function': 'test.ping',
-              'when': '11/29/2017 13:00pm',
+              'when': '13/29/2017 1:00pm',
             }
           }
         }
-        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)

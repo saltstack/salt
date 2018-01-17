@@ -953,7 +953,7 @@ class Schedule(object):
 
                 if when < now - self.opts['loop_interval'] and \
                         not data.get('_run', False) and \
-                        not run and \
+                        not data.get('run', False) and \
                         not data['_splay']:
                     data['_next_fire_time'] = None
                     data['_continue'] = True
@@ -1183,9 +1183,15 @@ class Schedule(object):
                    'skip_function',
                    'skip_during_range']
         for job, data in six.iteritems(schedule):
+            # Clear these out between runs
+            for item in ['_continue',
+                         '_error',
+                         '_skip_reason']:
+                if item in data:
+                    del data[item]
             run = False
 
-            if job in _hidden and not data:
+            if job in _hidden:
                 continue
 
             if not isinstance(data, dict):
@@ -1298,6 +1304,7 @@ class Schedule(object):
 
             # An error occurred so we bail out
             if '_error' in data and data['_error']:
+                log.debug('Sommething went wrong')
                 continue
 
             seconds = data['_next_fire_time'] - now
@@ -1403,22 +1410,6 @@ class Schedule(object):
                 miss_msg = ' (runtime missed ' \
                            'by {0} seconds)'.format(abs(seconds))
 
-            if 'jid_include' not in data or data['jid_include']:
-                data['jid_include'] = True
-                log.debug('schedule: This job was scheduled with jid_include, '
-                          'adding to cache (jid_include defaults to True)')
-                if 'maxrunning' in data:
-                    log.debug(
-                        'schedule: This job was scheduled with a max number '
-                        'of %s', data['maxrunning']
-                    )
-                else:
-                    log.info(
-                        'schedule: maxrunning parameter was not specified '
-                        'for job %s, defaulting to 1.', job
-                    )
-                    data['maxrunning'] = 1
-
             multiprocessing_enabled = self.opts.get('multiprocessing', True)
 
             if salt.utils.platform.is_windows():
@@ -1430,10 +1421,20 @@ class Schedule(object):
                 returners = self.returners
                 self.returners = {}
             try:
-                if not run:
-                    log.info('Not running scheduled job: {0}'.format(job))
-                else:
-                    log.info('Running scheduled job: {0}{1}'.format(job, miss_msg))
+                if run:
+                    if 'jid_include' not in data or data['jid_include']:
+                        data['jid_include'] = True
+                        log.debug('schedule: This job was scheduled with jid_include, '
+                                  'adding to cache (jid_include defaults to True)')
+                        if 'maxrunning' in data:
+                            log.debug('schedule: This job was scheduled with a max '
+                                      'number of %s', data['maxrunning'])
+                        else:
+                            log.info('schedule: maxrunning parameter was not specified for '
+                                     'job %s, defaulting to 1.', job)
+                            data['maxrunning'] = 1
+
+                    log.info('Running scheduled job: %s%s', job, miss_msg)
 
                     if multiprocessing_enabled:
                         thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
@@ -1452,12 +1453,13 @@ class Schedule(object):
                     if multiprocessing_enabled:
                         proc.join()
             finally:
-                if '_seconds' in data:
-                    data['_next_fire_time'] = now + data['_seconds']
                 # Only set _last_run if the job ran
                 if run:
                     data['_last_run'] = now
-                data['_splay'] = None
+                    if '_seconds' in data:
+                        data['_next_fire_time'] = now + data['_seconds']
+                    data['_splay'] = None
+
             if salt.utils.platform.is_windows():
                 # Restore our function references.
                 self.functions = functions
