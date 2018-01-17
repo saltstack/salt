@@ -988,6 +988,8 @@ def _ps(osdata):
         )
     elif osdata['os_family'] == 'AIX':
         grains['ps'] = '/usr/bin/ps auxww'
+    elif osdata['os_family'] == 'NILinuxRT':
+        grains['ps'] = 'ps -o user,pid,ppid,tty,time,comm'
     else:
         grains['ps'] = 'ps -efHww'
     return grains
