@@ -6,7 +6,7 @@ Jobber Behaviors
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import, print_function
 import os
 import sys
 import types
@@ -307,13 +307,14 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                         'non-empty list expected'.format(executors)
                     )
                 if self.opts.get('sudo_user', '') and executors[-1] != 'sudo':
-                    executors[-1] = 'sudo.get'  # replace
+                    executors[-1] = 'sudo'  # replace
                 log.trace("Executors list %s", executors)
 
                 for name in executors:
-                    if name not in self.module_executors.value:
+                    fname = '{0}.execute'.format(name)
+                    if fname not in self.module_executors.value:
                         raise SaltInvocationError("Executor '{0}' is not available".format(name))
-                    return_data = self.module_executors.value[name].execute(self.opts, data, func, args, kwargs)
+                    return_data = self.module_executors.value[fname](self.opts, data, func, args, kwargs)
                     if return_data is not None:
                         break
 

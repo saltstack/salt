@@ -6,7 +6,7 @@ The core behaviors used by minion and master
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import, print_function
 import os
 import time
 import random
