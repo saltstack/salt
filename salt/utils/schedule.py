@@ -772,6 +772,219 @@ class Schedule(object):
                 splay_ = random.randint(1, splaytime)
             return splay_
 
+        def _handle_time_elements(data):
+            '''
+            Handle schedule item with time elements
+            seconds, minutes, hours, days
+            '''
+            if '_seconds' not in data:
+                interval = int(data.get('seconds', 0))
+                interval += int(data.get('minutes', 0)) * 60
+                interval += int(data.get('hours', 0)) * 3600
+                interval += int(data.get('days', 0)) * 86400
+
+                data['_seconds'] = interval
+
+                if not data['_next_fire_time']:
+                    data['_next_fire_time'] = now + data['_seconds']
+
+                if interval < self.loop_interval:
+                    self.loop_interval = interval
+
+            return data
+
+        def _handle_once(data):
+            '''
+            Handle schedule item with once
+            '''
+            if data['_next_fire_time'] and \
+                    data['_next_fire_time'] < now - self.opts['loop_interval'] and \
+                    data['_next_fire_time'] > now and \
+                    not data['_splay']:
+                data['_continue'] = True
+
+            if not data['_next_fire_time'] and \
+                    not data['_splay']:
+                once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
+                try:
+                    once = datetime.datetime.strptime(data['once'],
+                                                      once_fmt)
+                    data['_next_fire_time'] = int(
+                        time.mktime(once.timetuple()))
+                except (TypeError, ValueError):
+                    log.error('Date string could not be parsed: %s, %s',
+                              data['once'], once_fmt)
+                    data['_continue'] = True
+                # If _next_fire_time is less than now or greater
+                # than now, continue.
+                if data['_next_fire_time'] < now - self.opts['loop_interval'] and \
+                        data['_next_fire_time'] > now:
+                    data['_continue'] = True
+
+            return data
+
+        def _handle_when(data):
+            '''
+            Handle schedule item with when
+            '''
+            if not _WHEN_SUPPORTED:
+                log.error('Missing python-dateutil. '
+                          'Ignoring job {0}.'.format(job))
+                data['_continue'] = True
+
+            if isinstance(data['when'], list):
+                _when = []
+                for i in data['when']:
+                    if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
+                            i in self.opts['pillar']['whens']):
+                        if not isinstance(self.opts['pillar']['whens'],
+                                          dict):
+                            log.error('Pillar item "whens" must be dict. '
+                                      'Ignoring')
+                            data['_continue'] = True
+                        __when = self.opts['pillar']['whens'][i]
+                        try:
+                            when__ = dateutil_parser.parse(__when)
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            data['_continue'] = True
+                    elif ('whens' in self.opts['grains'] and
+                          i in self.opts['grains']['whens']):
+                        if not isinstance(self.opts['grains']['whens'],
+                                          dict):
+                            log.error('Grain "whens" must be dict.'
+                                      'Ignoring')
+                            data['_continue'] = True
+                        __when = self.opts['grains']['whens'][i]
+                        try:
+                            when__ = dateutil_parser.parse(__when)
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            data['_continue'] = True
+                    else:
+                        try:
+                            when__ = dateutil_parser.parse(i)
+                        except ValueError:
+                            log.error('Invalid date string {0}. '
+                                      'Ignoring job {1}.'.format(i, job))
+                            data['_continue'] = True
+                    _when.append(int(time.mktime(when__.timetuple())))
+
+                if data['_splay']:
+                    _when.append(data['_splay'])
+
+                # Sort the list of "whens" from earlier to later schedules
+                _when.sort()
+
+                # Copy the list so we can loop through it
+                for i in copy.deepcopy(_when):
+                    if len(_when) > 1:
+                        if i < now - self.opts['loop_interval']:
+                            # Remove all missed schedules except the latest one.
+                            # We need it to detect if it was triggered previously.
+                            _when.remove(i)
+
+                if _when:
+                    # Grab the first element, which is the next run time or
+                    # last scheduled time in the past.
+                    when = _when[0]
+
+                    if '_run' not in data:
+                        # Prevent run of jobs from the past
+                        data['_run'] = bool(when >= now - self.opts['loop_interval'])
+
+                    if not data['_next_fire_time']:
+                        data['_next_fire_time'] = when
+
+                    if data['_next_fire_time'] < when and \
+                            not run and \
+                            not data['_run']:
+                        data['_next_fire_time'] = when
+                        data['_run'] = True
+
+                elif not data.get('_run', False):
+                    data['_next_fire_time'] = None
+                    data['_continue'] = True
+
+            else:
+                if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
+                        data['when'] in self.opts['pillar']['whens']):
+                    if not isinstance(self.opts['pillar']['whens'], dict):
+                        log.error('Pillar item "whens" must be dict.'
+                                  'Ignoring')
+                        data['_continue'] = True
+                    _when = self.opts['pillar']['whens'][data['when']]
+                    try:
+                        when__ = dateutil_parser.parse(_when)
+                    except ValueError:
+                        log.error('Invalid date string. Ignoring')
+                        data['_continue'] = True
+                elif ('whens' in self.opts['grains'] and
+                      data['when'] in self.opts['grains']['whens']):
+                    if not isinstance(self.opts['grains']['whens'], dict):
+                        log.error('Grain "whens" must be dict. Ignoring')
+                        data['_continue'] = True
+                    _when = self.opts['grains']['whens'][data['when']]
+                    try:
+                        when__ = dateutil_parser.parse(_when)
+                    except ValueError:
+                        log.error('Invalid date string. Ignoring')
+                        data['_continue'] = True
+                else:
+                    try:
+                        when__ = dateutil_parser.parse(data['when'])
+                    except ValueError:
+                        log.error('Invalid date string. Ignoring')
+                        data['_continue'] = True
+                when = int(time.mktime(when__.timetuple()))
+
+                if when < now - self.opts['loop_interval'] and \
+                        not data.get('_run', False) and \
+                        not run and \
+                        not data['_splay']:
+                    data['_next_fire_time'] = None
+                    data['_continue'] = True
+
+                if '_run' not in data:
+                    data['_run'] = True
+
+                if not data['_next_fire_time']:
+                    data['_next_fire_time'] = when
+
+                if data['_next_fire_time'] < when and \
+                        not data['_run']:
+                    data['_next_fire_time'] = when
+                    data['_run'] = True
+
+            return data
+
+        def _handle_cron(data):
+            '''
+            Handle schedule item with cron
+            '''
+            if not _CRON_SUPPORTED:
+                log.error('Missing python-croniter. Ignoring job {0}'.format(job))
+                data['_continue'] = True
+
+            if data['_next_fire_time'] is None:
+                # Get next time frame for a "cron" job if it has been never
+                # executed before or already executed in the past.
+                try:
+                    data['_next_fire_time'] = int(
+                        croniter.croniter(data['cron'], now).get_next())
+                except (ValueError, KeyError):
+                    log.error('Invalid cron string. Ignoring')
+                    data['_continue'] = True
+
+                # If next job run is scheduled more than 1 minute ahead and
+                # configured loop interval is longer than that, we should
+                # shorten it to get our job executed closer to the beginning
+                # of desired time.
+                interval = now - data['_next_fire_time']
+                if interval >= 60 and interval < self.loop_interval:
+                    self.loop_interval = interval
+            return data
+
         schedule = self._get_schedule()
         if not isinstance(schedule, dict):
             raise ValueError('Schedule must be of type dict.')
@@ -905,200 +1118,17 @@ class Schedule(object):
                         data['_next_fire_time'] = _run_explicit[0]
 
             if True in [True for item in time_elements if item in data]:
-                if '_seconds' not in data:
-                    interval = int(data.get('seconds', 0))
-                    interval += int(data.get('minutes', 0)) * 60
-                    interval += int(data.get('hours', 0)) * 3600
-                    interval += int(data.get('days', 0)) * 86400
-
-                    data['_seconds'] = interval
-
-                    if not data['_next_fire_time']:
-                        data['_next_fire_time'] = now + data['_seconds']
-
-                    if interval < self.loop_interval:
-                        self.loop_interval = interval
-
+                data = _handle_time_elements(data)
             elif 'once' in data:
-                if data['_next_fire_time'] and \
-                        data['_next_fire_time'] < now - self.opts['loop_interval'] and \
-                        data['_next_fire_time'] > now and \
-                        not data['_splay']:
-                    continue
-
-                if not data['_next_fire_time'] and \
-                        not data['_splay']:
-                    once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
-                    try:
-                        once = datetime.datetime.strptime(data['once'],
-                                                          once_fmt)
-                        data['_next_fire_time'] = int(
-                            time.mktime(once.timetuple()))
-                    except (TypeError, ValueError):
-                        log.error('Date string could not be parsed: %s, %s',
-                                  data['once'], once_fmt)
-                        continue
-                    # If _next_fire_time is less than now or greater
-                    # than now, continue.
-                    if data['_next_fire_time'] < now - self.opts['loop_interval'] and \
-                            data['_next_fire_time'] > now:
-                        continue
-
+                data = _handle_once(data)
             elif 'when' in data:
-                if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil. Ignoring job %s.', job)
-                    continue
-
-                if isinstance(data['when'], list):
-                    _when = []
-                    for i in data['when']:
-                        if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
-                                i in self.opts['pillar']['whens']):
-                            if not isinstance(self.opts['pillar']['whens'],
-                                              dict):
-                                log.error('Pillar item "whens" must be dict. '
-                                          'Ignoring')
-                                continue
-                            __when = self.opts['pillar']['whens'][i]
-                            try:
-                                when__ = dateutil_parser.parse(__when)
-                            except ValueError:
-                                log.error('Invalid date string. Ignoring')
-                                continue
-                        elif ('whens' in self.opts['grains'] and
-                              i in self.opts['grains']['whens']):
-                            if not isinstance(self.opts['grains']['whens'],
-                                              dict):
-                                log.error('Grain "whens" must be dict.'
-                                          'Ignoring')
-                                continue
-                            __when = self.opts['grains']['whens'][i]
-                            try:
-                                when__ = dateutil_parser.parse(__when)
-                            except ValueError:
-                                log.error('Invalid date string. Ignoring')
-                                continue
-                        else:
-                            try:
-                                when__ = dateutil_parser.parse(i)
-                            except ValueError:
-                                log.error(
-                                    'Invalid date string %s. Ignoring job %s.',
-                                    i, job
-                                )
-                                continue
-                        _when.append(int(time.mktime(when__.timetuple())))
-
-                    if data['_splay']:
-                        _when.append(data['_splay'])
-
-                    # Sort the list of "whens" from earlier to later schedules
-                    _when.sort()
-
-                    # Copy the list so we can loop through it
-                    for i in copy.deepcopy(_when):
-                        if len(_when) > 1:
-                            if i < now - self.opts['loop_interval']:
-                                # Remove all missed schedules except the latest one.
-                                # We need it to detect if it was triggered previously.
-                                _when.remove(i)
-
-                    if _when:
-                        # Grab the first element, which is the next run time or
-                        # last scheduled time in the past.
-                        when = _when[0]
-
-                        if '_run' not in data:
-                            # Prevent run of jobs from the past
-                            data['_run'] = bool(when >= now - self.opts['loop_interval'])
-
-                        if not data['_next_fire_time']:
-                            data['_next_fire_time'] = when
-
-                        if data['_next_fire_time'] < when and \
-                                not run and \
-                                not data['_run']:
-                            data['_next_fire_time'] = when
-                            data['_run'] = True
-
-                    elif not data.get('_run', False):
-                        data['_next_fire_time'] = None
-                        continue
-
-                else:
-                    if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
-                            data['when'] in self.opts['pillar']['whens']):
-                        if not isinstance(self.opts['pillar']['whens'], dict):
-                            log.error('Pillar item "whens" must be dict.'
-                                      'Ignoring')
-                            continue
-                        _when = self.opts['pillar']['whens'][data['when']]
-                        try:
-                            when__ = dateutil_parser.parse(_when)
-                        except ValueError:
-                            log.error('Invalid date string. Ignoring')
-                            continue
-                    elif ('whens' in self.opts['grains'] and
-                          data['when'] in self.opts['grains']['whens']):
-                        if not isinstance(self.opts['grains']['whens'], dict):
-                            log.error('Grain "whens" must be dict. Ignoring')
-                            continue
-                        _when = self.opts['grains']['whens'][data['when']]
-                        try:
-                            when__ = dateutil_parser.parse(_when)
-                        except ValueError:
-                            log.error('Invalid date string. Ignoring')
-                            continue
-                    else:
-                        try:
-                            when__ = dateutil_parser.parse(data['when'])
-                        except ValueError:
-                            log.error('Invalid date string. Ignoring')
-                            continue
-                    when = int(time.mktime(when__.timetuple()))
-
-                    if when < now - self.opts['loop_interval'] and \
-                            not data.get('_run', False) and \
-                            not run and \
-                            not data['_splay']:
-                        data['_next_fire_time'] = None
-                        continue
-
-                    if '_run' not in data:
-                        data['_run'] = True
-
-                    if not data['_next_fire_time']:
-                        data['_next_fire_time'] = when
-
-                    if data['_next_fire_time'] < when and \
-                            not data['_run']:
-                        data['_next_fire_time'] = when
-                        data['_run'] = True
-
+                data = _handle_when(data)
             elif 'cron' in data:
-                if not _CRON_SUPPORTED:
-                    log.error('Missing python-croniter. Ignoring job %s', job)
-                    continue
-
-                if data['_next_fire_time'] is None:
-                    # Get next time frame for a "cron" job if it has been never
-                    # executed before or already executed in the past.
-                    try:
-                        data['_next_fire_time'] = int(
-                            croniter.croniter(data['cron'], now).get_next())
-                    except (ValueError, KeyError):
-                        log.error('Invalid cron string. Ignoring')
-                        continue
-
-                    # If next job run is scheduled more than 1 minute ahead and
-                    # configured loop interval is longer than that, we should
-                    # shorten it to get our job executed closer to the beginning
-                    # of desired time.
-                    interval = now - data['_next_fire_time']
-                    if interval >= 60 and interval < self.loop_interval:
-                        self.loop_interval = interval
-
+                data = _handle_cron(data)
             else:
+                continue
+
+            if '_continue' in data and data['continue']:
                 continue
 
             seconds = data['_next_fire_time'] - now
