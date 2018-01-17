@@ -569,7 +569,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # File ending with a newline
         with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tfile:
-            tfile.write(salt.utils.stringutils.to_str('foo' + os.linesep))
+            tfile.write(salt.utils.stringutils.to_bytes('foo' + os.linesep))
             tfile.flush()
         filemod.append(tfile.name, 'bar')
         expected = os.linesep.join(['foo', 'bar', ''])
@@ -579,7 +579,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         # File not ending with a newline
         with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tfile:
-            tfile.write(salt.utils.stringutils.to_str('foo'))
+            tfile.write(salt.utils.stringutils.to_bytes('foo'))
             tfile.flush()
         filemod.append(tfile.name, 'bar')
         with salt.utils.files.fopen(tfile.name) as tfile2:
