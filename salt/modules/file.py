@@ -1693,6 +1693,13 @@ def line(path, content=None, match=None, mode=None, location=None,
 
             salt '*' file.line /path/to/file content="CREATEMAIL_SPOOL=no" match="CREATE_MAIL_SPOOL=yes" mode="replace"
     '''
+    def _split(content):
+        split_content = []
+        for linesep_line in content.split(os.linesep):
+            for content_line in linesep_line.split('\n'):
+                split_content.append(content_line)
+        return split_content
+
     path = os.path.realpath(os.path.expanduser(path))
     if not os.path.isfile(path):
         if not quiet:
@@ -1728,11 +1735,11 @@ def line(path, content=None, match=None, mode=None, location=None,
         log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
         body = ''
     elif mode == 'delete':
-        body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
+        body = os.linesep.join([line for line in _split(body) if line.find(match) < 0])
     elif mode == 'replace':
         body = os.linesep.join([(_get_line_indent(file_line, content, indent)
                                 if (file_line.find(match) > -1 and not file_line == content) else file_line)
-                                for file_line in body.split(os.linesep)])
+                                for file_line in _split(body)])
     elif mode == 'insert':
         if not location and not before and not after:
             raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
@@ -1742,7 +1749,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                 _assert_occurrence(body, before, 'before')
                 _assert_occurrence(body, after, 'after')
                 out = []
-                lines = body.split(os.linesep)
+                lines = _split(body)
                 for idx in range(len(lines)):
                     _line = lines[idx]
                     if _line.find(before) > -1 and idx <= len(lines) and lines[idx - 1].find(after) > -1:
@@ -1755,7 +1762,7 @@ def line(path, content=None, match=None, mode=None, location=None,
             if before and not after:
                 _assert_occurrence(body, before, 'before')
                 out = []
-                lines = body.split(os.linesep)
+                lines = _split(body)
                 for idx in range(len(lines)):
                     _line = lines[idx]
                     if _line.find(before) > -1:
@@ -1768,7 +1775,7 @@ def line(path, content=None, match=None, mode=None, location=None,
             elif after and not before:
                 _assert_occurrence(body, after, 'after')
                 out = []
-                lines = body.split(os.linesep)
+                lines = _split(body)
                 for idx in range(len(lines)):
                     _line = lines[idx]
                     out.append(_line)
@@ -1795,7 +1802,7 @@ def line(path, content=None, match=None, mode=None, location=None,
 
             a_idx = b_idx = -1
             idx = 0
-            body = body.split(os.linesep)
+            body = _split(body)
             for _line in body:
                 idx += 1
                 if _line.find(before) > -1 and b_idx < 0:
@@ -1815,7 +1822,7 @@ def line(path, content=None, match=None, mode=None, location=None,
 
         elif before and not after:
             _assert_occurrence(body, before, 'before')
-            body = body.split(os.linesep)
+            body = _split(body)
             out = []
             for idx in range(len(body)):
                 if body[idx].find(before) > -1:
@@ -1828,7 +1835,7 @@ def line(path, content=None, match=None, mode=None, location=None,
 
         elif not before and after:
             _assert_occurrence(body, after, 'after')
-            body = body.split(os.linesep)
+            body = _split(body)
             skip = None
             out = []
             for idx in range(len(body)):
