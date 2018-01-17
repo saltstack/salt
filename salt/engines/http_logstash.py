@@ -29,7 +29,7 @@ them onto a logstash endpoint via HTTP requests.
                   - bgp.config
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python lib
 import fnmatch
