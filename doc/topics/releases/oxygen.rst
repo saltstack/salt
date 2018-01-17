@@ -199,7 +199,7 @@ The functions have been moved as follows:
   instead.
 - ``salt.utils.compare_dicts``: use ``salt.utils.data.compare_dicts`` instead.
 - ``salt.utils.compare_lists``: use ``salt.utils.data.compare_lists`` instead.
-- ``salt.utils.decode_dict``: use ``salt.utils.data.decode_dict`` instead.
+- ``salt.utils.decode_dict``: use ``salt.utils.data.encode_dict`` instead.
 - ``salt.utils.decode_list``: use ``salt.utils.data.encode_list`` instead.
 - ``salt.utils.exactly_n``: use ``salt.utils.data.exactly_n`` instead.
 - ``salt.utils.exactly_one``: use ``salt.utils.data.exactly_one`` instead.
