@@ -58,8 +58,6 @@ import logging
 import salt.ext.six as six
 from salt.utils.odict import OrderedDict
 
-import yaml
-
 # Import third party libs
 try:
     # pylint: disable=unused-import
@@ -273,8 +271,8 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
         # as opposed to being called from execution or state modules
         raise err
 
-    dumper = __utils__['yamldumper.get_dumper']('IndentedSafeOrderedDumper')
-    return yaml.dump(
+    dumper = __utils__['yaml.get_dumper']('IndentedSafeOrderedDumper')
+    return __utils__['yaml.dump'](
         results,
         default_flow_style=False,
         Dumper=dumper,

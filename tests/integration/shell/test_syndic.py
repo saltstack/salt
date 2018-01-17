@@ -14,9 +14,6 @@ import signal
 import shutil
 import logging
 
-# Import 3rd-party libs
-import yaml
-
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.paths import TMP
@@ -25,7 +22,7 @@ from tests.integration.utils import testprogram
 
 # Import salt libs
 import salt.utils.files
-
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +45,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         for fname in ('master', 'minion'):
             pid_path = os.path.join(config_dir, '{0}.pid'.format(fname))
             with salt.utils.files.fopen(self.get_config_file_path(fname), 'r') as fhr:
-                config = yaml.load(fhr.read())
+                config = salt.utils.yaml.safe_load(fhr)
                 config['log_file'] = config['syndic_log_file'] = 'file:///tmp/log/LOG_LOCAL3'
                 config['root_dir'] = config_dir
                 if 'ret_port' in config:
@@ -56,9 +53,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
                     config['publish_port'] = int(config['publish_port']) + 10
 
                 with salt.utils.files.fopen(os.path.join(config_dir, fname), 'w') as fhw:
-                    fhw.write(
-                        yaml.dump(config, default_flow_style=False)
-                    )
+                    salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
 
         ret = self.run_script(
             self._call_binary_,

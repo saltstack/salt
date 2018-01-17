@@ -20,12 +20,12 @@ from tests.support.unit import skipIf
 from tests.support.helpers import requires_system_grains
 
 # Import 3rd-party libs
-import yaml
 from salt.ext import six
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.yaml
 import salt.pillar as pillar
 
 log = logging.getLogger(__name__)
@@ -272,7 +272,7 @@ class DecryptGPGPillarTest(ModuleCase):
         Test recursive decryption of secrets:vault as well as the fallback to
         default decryption renderer.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar:
               - 'secrets:vault'
             '''))
@@ -287,7 +287,7 @@ class DecryptGPGPillarTest(ModuleCase):
         Test recursive decryption of secrets:vault using a pipe instead of a
         colon as the nesting delimiter.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar_delimiter: '|'
             decrypt_pillar:
               - 'secrets|vault'
@@ -303,7 +303,7 @@ class DecryptGPGPillarTest(ModuleCase):
         Test recursive decryption, only with a more deeply-nested target. This
         should leave the other keys in secrets:vault encrypted.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar:
               - 'secrets:vault:qux'
             '''))
@@ -322,7 +322,7 @@ class DecryptGPGPillarTest(ModuleCase):
         explicitly defined, overriding the default. Setting the default to a
         nonexistant renderer so we can be sure that the override happened.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar_default: asdf
             decrypt_pillar_renderers:
               - asdf
@@ -341,7 +341,7 @@ class DecryptGPGPillarTest(ModuleCase):
         Test decryption using a missing renderer. It should fail, leaving the
         encrypted keys intact, and add an error to the pillar dictionary.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar_default: asdf
             decrypt_pillar_renderers:
               - asdf
@@ -365,7 +365,7 @@ class DecryptGPGPillarTest(ModuleCase):
         fail, leaving the encrypted keys intact, and add an error to the pillar
         dictionary.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar_default: foo
             decrypt_pillar_renderers:
               - foo

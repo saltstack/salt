@@ -52,10 +52,10 @@ import logging
 import os
 import time
 from json import loads, dumps
-import yaml
 try:
     import salt.utils.files
     import salt.utils.path
+    import salt.utils.yaml
     import salt.client
     import salt.exceptions
 except ImportError:
@@ -557,7 +557,7 @@ class StateTestLoader(object):
             with __utils__['files.fopen'](filepath, 'r') as myfile:
                 # with salt.utils.files.fopen(filepath, 'r') as myfile:
                 # with open(filepath, 'r') as myfile:
-                contents_yaml = yaml.load(myfile)
+                contents_yaml = salt.utils.yaml.safe_load(myfile)
                 for key, value in contents_yaml.items():
                     self.test_dict[key] = value
         except:

@@ -9,7 +9,7 @@ import warnings
 
 # Import third party libs
 import re
-import yaml
+import yaml  # pylint: disable=blacklisted-import
 from yaml.nodes import MappingNode, SequenceNode
 from yaml.constructor import ConstructorError
 try:
@@ -18,11 +18,7 @@ try:
 except Exception:
     pass
 
-# This function is safe and needs to stay as yaml.load. The load function
-# accepts a custom loader, and every time this function is used in Salt
-# the custom loader defined below is used. This should be altered though to
-# not require the custom loader to be explicitly added.
-load = yaml.load  # pylint: disable=C0103
+__all__ = ['SaltYamlSafeLoader', 'load', 'safe_load']
 
 
 class DuplicateKeyWarning(RuntimeWarning):
@@ -53,6 +49,9 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
         self.add_constructor(
             'tag:yaml.org,2002:python/unicode',
             type(self).construct_unicode)
+        self.add_constructor(
+            'tag:yaml.org,2002:timestamp',
+            type(self).construct_scalar)
         self.dictclass = dictclass
 
     def construct_yaml_map(self, node):
@@ -153,3 +152,16 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
             mergeable_items = [x for x in merge if x[0].value not in existing_nodes]
 
             node.value = mergeable_items + node.value
+
+
+def load(stream, Loader=SaltYamlSafeLoader):
+    return yaml.load(stream, Loader=Loader)
+
+
+def safe_load(stream, Loader=SaltYamlSafeLoader):
+    '''
+    .. versionadded:: Oxygen
+
+    Helper function which automagically uses our custom loader.
+    '''
+    return yaml.load(stream, Loader=Loader)

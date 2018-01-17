@@ -23,6 +23,7 @@ requisite to a pkg.installed state for the package which provides pip
 from __future__ import absolute_import
 import re
 import logging
+from pkg_resources import parse_version
 
 # Import salt libs
 import salt.utils.versions
@@ -94,7 +95,7 @@ def _fulfills_version_spec(version, version_spec):
     for oper, spec in version_spec:
         if oper is None:
             continue
-        if not salt.utils.versions.compare(ver1=version, oper=oper, ver2=spec):
+        if not salt.utils.versions.compare(ver1=version, oper=oper, ver2=spec, cmp_func=_pep440_version_cmp):
             return False
     return True
 
@@ -212,8 +213,68 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
                 ret['comment'] = ('Python package {0} was already '
                                   'installed'.format(state_pkg_name))
                 return ret
+        if force_reinstall is False and upgrade:
+            # Check desired version (if any) against currently-installed
+            include_alpha = False
+            include_beta = False
+            include_rc = False
+            if any(version_spec):
+                for spec in version_spec:
+                    if 'a' in spec[1]:
+                        include_alpha = True
+                    if 'b' in spec[1]:
+                        include_beta = True
+                    if 'rc' in spec[1]:
+                        include_rc = True
+            available_versions = __salt__['pip.list_all_versions'](
+                prefix_realname, bin_env=bin_env, include_alpha=include_alpha,
+                include_beta=include_beta, include_rc=include_rc, user=user,
+                cwd=cwd)
+            desired_version = ''
+            if any(version_spec):
+                for version in reversed(available_versions):
+                    if _fulfills_version_spec(version, version_spec):
+                        desired_version = version
+                        break
+            else:
+                desired_version = available_versions[-1]
+            if not desired_version:
+                ret['result'] = True
+                ret['comment'] = ('Python package {0} was already '
+                                  'installed and\nthe available upgrade '
+                                  'doesn\'t fulfills the version '
+                                  'requirements'.format(prefix_realname))
+                return ret
+            if _pep440_version_cmp(pip_list[prefix_realname], desired_version) == 0:
+                ret['result'] = True
+                ret['comment'] = ('Python package {0} was already '
+                                  'installed'.format(state_pkg_name))
+                return ret
 
     return ret
+
+
+def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
+    '''
+    Compares two version strings using pkg_resources.parse_version.
+    Return -1 if version1 < version2, 0 if version1 ==version2,
+    and 1 if version1 > version2. Return None if there was a problem
+    making the comparison.
+    '''
+    normalize = lambda x: str(x).split('!', 1)[-1] if ignore_epoch else str(x)
+    pkg1 = normalize(pkg1)
+    pkg2 = normalize(pkg2)
+
+    try:
+        if parse_version(pkg1) < parse_version(pkg2):
+            return -1
+        if parse_version(pkg1) == parse_version(pkg2):
+            return 0
+        if parse_version(pkg1) > parse_version(pkg2):
+            return 1
+    except Exception as exc:
+        logger.exception(exc)
+    return None
 
 
 def installed(name,

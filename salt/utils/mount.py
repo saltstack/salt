@@ -7,14 +7,12 @@ Common functions for managing mounts
 from __future__ import absolute_import
 import logging
 import os
-import yaml
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.utils.versions
-
-from salt.utils.yamldumper import SafeOrderedDumper
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ def _read_file(path):
     '''
     try:
         with salt.utils.files.fopen(path, 'rb') as contents:
-            return yaml.safe_load(contents.read())
+            return salt.utils.yaml.safe_load(contents)
     except (OSError, IOError):
         return {}
 
@@ -53,11 +51,8 @@ def write_cache(cache, opts):
 
     try:
         _cache = salt.utils.stringutils.to_bytes(
-                    yaml.dump(
-                        cache,
-                        Dumper=SafeOrderedDumper
-                    )
-                )
+            salt.utils.yaml.safe_dump(cache)
+        )
         with salt.utils.files.fopen(cache_file, 'wb+') as fp_:
             fp_.write(_cache)
         return True

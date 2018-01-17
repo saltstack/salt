@@ -52,12 +52,11 @@ import hashlib
 import logging
 import os
 import re
-import yaml
 
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.json
-from salt.utils.yamlloader import SaltYamlSafeLoader
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -718,10 +717,7 @@ class _Swagger(object):
                                                        error_response_template,
                                                        response_template)
                 with salt.utils.files.fopen(self._swagger_file, 'rb') as sf:
-                    self._cfg = yaml.load(
-                        sf,
-                        Loader=SaltYamlSafeLoader
-                    )
+                    self._cfg = salt.utils.yaml.safe_load(sf)
                 self._swagger_version = ''
             else:
                 raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
