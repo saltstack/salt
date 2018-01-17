@@ -867,9 +867,9 @@ def genrepo(**kwargs):
 def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
     renderers = salt.loader.render(__opts__, __salt__)
 
-    def _failed_compile(msg):
-        log.error(msg)
-        ret.setdefault('errors', {})[short_path_name] = [msg]
+    def _failed_compile(prefix_msg, error_msg):
+        log.error('{} \`{}\`: {} '.format(prefix_msg, short_path_name, error_msg))
+        ret.setdefault('errors', {})[short_path_name] = ['{}, {} '.format(prefix_msg, error_msg)]
         return False
 
     try:
@@ -880,13 +880,11 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
             __opts__.get('renderer_blacklist', ''),
             __opts__.get('renderer_whitelist', ''))
     except SaltRenderError as exc:
-        msg = 'Failed to compile \'{0}\': {1}'.format(short_path_name, exc)
-        return _failed_compile(msg)
+        return _failed_compile('Failed to compile', exc)
     except Exception as exc:
-        msg = 'Failed to read \'{0}\': {1}'.format(short_path_name, exc)
-        return _failed_compile(msg)
+        return _failed_compile('Failed to read', exc)
 
-    if config:
+    if config and isinstance(config,dict):
         revmap = {}
         errors = []
         for pkgname, version_list in six.iteritems(config):
@@ -928,6 +926,8 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
             ret.setdefault('repo', {}).update(config)
             ret.setdefault('name_map', {}).update(revmap)
             successful_verbose[short_path_name] = config.keys()
+    elif config:
+        return _failed_compile('Compiled contents', 'not a dictionary/hash')
     else:
         log.debug('No data within \'%s\' after processing', short_path_name)
         # no pkgname found after render
