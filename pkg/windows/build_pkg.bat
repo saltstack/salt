@@ -302,8 +302,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\modules\solaris*"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\solaris*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\solr.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\solr.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\modules\ssh*"^
-    del /Q "%BinDir%\Lib\site-packages\salt\modules\ssh*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\supervisord.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\supervisord.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\sysbench.py"^
@@ -438,8 +436,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\smartos.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\smartos.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\snapper.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\snapper.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\states\ssh*"^
-    del /Q "%BinDir%\Lib\site-packages\salt\states\ssh*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\supervisord.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\supervisord.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\sysrc.py"^
