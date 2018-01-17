@@ -3,7 +3,7 @@
 Unit tests for the boto_cloudfront state module.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import textwrap
 
@@ -164,8 +164,8 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
         }})
 
         diff = textwrap.dedent('''\
-            --- 
-            +++ 
+            ---
+            +++
             @@ -1,5 +1,5 @@
              config:
             -  Comment: to be removed

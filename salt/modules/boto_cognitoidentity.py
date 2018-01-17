@@ -77,7 +77,7 @@ Connection module for Amazon CognitoIdentity
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs

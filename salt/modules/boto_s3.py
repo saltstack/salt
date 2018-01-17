@@ -51,7 +51,7 @@ Connection module for Amazon S3 using boto3
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -172,5 +172,5 @@ def upload_file(
     except boto3.exceptions.S3UploadFailedError as e:
         return {'error': __utils__['boto3.get_error'](e)}
 
-    log.info('S3 object uploaded to {0}'.format(name))
+    log.info('S3 object uploaded to %s', name)
     return {'result': True}
