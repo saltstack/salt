@@ -4,7 +4,7 @@ mac_utils tests
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf

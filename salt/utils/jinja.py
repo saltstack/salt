@@ -4,7 +4,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import collections
 import logging
 import os.path
@@ -98,8 +98,8 @@ class SaltCacheLoader(BaseLoader):
         # checks for relative '..' paths
         if '..' in template:
             log.warning(
-                'Discarded template path \'{0}\', relative paths are '
-                'prohibited'.format(template)
+                'Discarded template path \'%s\', relative paths are '
+                'prohibited', template
             )
             raise TemplateNotFound(template)
 
@@ -393,7 +393,12 @@ def uuid_(val):
 
         f4efeff8-c219-578a-bad7-3dc280612ec8
     '''
-    return str(uuid.uuid5(GLOBAL_UUID, str(val)))
+    return six.text_type(
+        uuid.uuid5(
+            GLOBAL_UUID,
+            salt.utils.data.encode(val)
+        )
+    )
 
 
 ### List-related filters
@@ -822,10 +827,10 @@ class SerializerExtension(Extension, object):
                 else:
                     sub = Element(tag)
                 if isinstance(attrs, (str, int, bool, float)):
-                    sub.text = str(attrs)
+                    sub.text = six.text_type(attrs)
                     continue
                 if isinstance(attrs, dict):
-                    sub.attrib = {attr: str(val) for attr, val in attrs.items()
+                    sub.attrib = {attr: six.text_type(val) for attr, val in attrs.items()
                                   if not isinstance(val, (dict, list))}
                 for tag, val in [item for item in normalize_iter(attrs) if
                                  isinstance(item[1], (dict, list))]:
@@ -841,16 +846,16 @@ class SerializerExtension(Extension, object):
 
     def load_yaml(self, value):
         if isinstance(value, TemplateModule):
-            value = str(value)
+            value = six.text_type(value)
         try:
-            return salt.utils.yaml.safe_load(value)
+            return salt.utils.data.decode(salt.utils.yaml.safe_load(value))
         except AttributeError:
             raise TemplateRuntimeError(
                 'Unable to load yaml from {0}'.format(value))
 
     def load_json(self, value):
         if isinstance(value, TemplateModule):
-            value = str(value)
+            value = six.text_type(value)
         try:
             return salt.utils.json.loads(value)
         except (ValueError, TypeError, AttributeError):
@@ -859,7 +864,7 @@ class SerializerExtension(Extension, object):
 
     def load_text(self, value):
         if isinstance(value, TemplateModule):
-            value = str(value)
+            value = six.text_type(value)
 
         return value
 

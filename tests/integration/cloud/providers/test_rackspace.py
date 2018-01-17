@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -25,7 +25,7 @@ except ImportError:
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
-PROVIDER_NAME = 'rackspace'
+PROVIDER_NAME = 'openstack'
 DRIVER_NAME = 'openstack'
 
 
@@ -43,7 +43,7 @@ class RackspaceTest(ShellCase):
         super(RackspaceTest, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
-        profile_str = 'rackspace-config'
+        profile_str = 'openstack-config'
         providers = self.run_cloud('--list-providers')
         if profile_str + ':' not in providers:
             self.skipTest(
@@ -65,7 +65,7 @@ class RackspaceTest(ShellCase):
         region_name = config[profile_str][DRIVER_NAME].get('region_name')
         auth = config[profile_str][DRIVER_NAME].get('auth')
         cloud = config[profile_str][DRIVER_NAME].get('cloud')
-        if region_name and (auth or cloud):
+        if not region_name or not (auth or cloud):
             self.skipTest(
                 'A region_name and (auth or cloud) must be provided to run these '
                 'tests. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'

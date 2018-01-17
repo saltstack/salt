@@ -12,7 +12,11 @@ import tempfile
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
+    MagicMock,
+    patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
@@ -498,3 +502,126 @@ class StateReturnsTestCase(TestCase):
         salt.state.State.munge_ret_for_export(ret)
         self.assertIsInstance(ret['comment'], six.string_types)
         salt.state.State.verify_ret_for_export(ret)
+
+
+class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    '''
+    TestCase for code handling slots
+    '''
+    def setUp(self):
+        with patch('salt.state.State._gather_pillar'):
+            minion_opts = self.get_temp_config('minion')
+            self.state_obj = salt.state.State(minion_opts)
+
+    def test_format_slots_no_slots(self):
+        '''
+        Test the format slots keeps data without slots untouched.
+        '''
+        cdata = {
+                'args': [
+                    'arg',
+                ],
+                'kwargs': {
+                    'key': 'val',
+                }
+        }
+        self.state_obj.format_slots(cdata)
+        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'val'}})
+
+    def test_format_slots_arg(self):
+        '''
+        Test the format slots is calling a slot specified in args with corresponding arguments.
+        '''
+        cdata = {
+                'args': [
+                    '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val)',
+                ],
+                'kwargs': {
+                    'key': 'val',
+                }
+        }
+        mock = MagicMock(return_value='fun_return')
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': ['fun_return'], 'kwargs': {'key': 'val'}})
+
+    def test_format_slots_kwarg(self):
+        '''
+        Test the format slots is calling a slot specified in kwargs with corresponding arguments.
+        '''
+        cdata = {
+            'args': [
+                'arg',
+            ],
+            'kwargs': {
+                'key': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val)',
+            }
+        }
+        mock = MagicMock(return_value='fun_return')
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'fun_return'}})
+
+    def test_format_slots_multi(self):
+        '''
+        Test the format slots is calling all slots with corresponding arguments when multiple slots
+        specified.
+        '''
+        cdata = {
+            'args': [
+                '__slot__:salt:test_mod.fun_a(a_arg, a_key=a_kwarg)',
+                '__slot__:salt:test_mod.fun_b(b_arg, b_key=b_kwarg)',
+            ],
+            'kwargs': {
+                'kw_key_1': '__slot__:salt:test_mod.fun_c(c_arg, c_key=c_kwarg)',
+                'kw_key_2': '__slot__:salt:test_mod.fun_d(d_arg, d_key=d_kwarg)',
+            }
+        }
+        mock_a = MagicMock(return_value='fun_a_return')
+        mock_b = MagicMock(return_value='fun_b_return')
+        mock_c = MagicMock(return_value='fun_c_return')
+        mock_d = MagicMock(return_value='fun_d_return')
+        with patch.dict(self.state_obj.functions, {'test_mod.fun_a': mock_a,
+                                                   'test_mod.fun_b': mock_b,
+                                                   'test_mod.fun_c': mock_c,
+                                                   'test_mod.fun_d': mock_d}):
+            self.state_obj.format_slots(cdata)
+        mock_a.assert_called_once_with('a_arg', a_key='a_kwarg')
+        mock_b.assert_called_once_with('b_arg', b_key='b_kwarg')
+        mock_c.assert_called_once_with('c_arg', c_key='c_kwarg')
+        mock_d.assert_called_once_with('d_arg', d_key='d_kwarg')
+        self.assertEqual(cdata, {'args': ['fun_a_return',
+                                          'fun_b_return'],
+                                 'kwargs': {'kw_key_1': 'fun_c_return',
+                                            'kw_key_2': 'fun_d_return'}})
+
+    def test_format_slots_malformed(self):
+        '''
+        Test the format slots keeps malformed slots untouched.
+        '''
+        sls_data = {
+            'args': [
+                '__slot__:NOT_SUPPORTED:not.called()',
+                '__slot__:salt:not.called(',
+                '__slot__:salt:',
+                '__slot__:salt',
+                '__slot__:',
+                '__slot__',
+            ],
+            'kwargs': {
+                'key3': '__slot__:NOT_SUPPORTED:not.called()',
+                'key4': '__slot__:salt:not.called(',
+                'key5': '__slot__:salt:',
+                'key6': '__slot__:salt',
+                'key7': '__slot__:',
+                'key8': '__slot__',
+            }
+        }
+        cdata = sls_data.copy()
+        mock = MagicMock(return_value='return')
+        with patch.dict(self.state_obj.functions, {'not.called': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_not_called()
+        self.assertEqual(cdata, sls_data)
