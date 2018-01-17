@@ -215,8 +215,8 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                                           'ssh.exe')]
                 for globmask in globmasks:
                     ssh_exe = glob.glob(globmask)
-                    if os.path.isfile(ssh_exe):
-                        env['GIT_SSH_EXE'] = ssh_exe
+                    if ssh_exe and os.path.isfile(ssh_exe[0]):
+                        env['GIT_SSH_EXE'] = ssh_exe[0]
                         break
                 else:
                     raise CommandExecutionError(
