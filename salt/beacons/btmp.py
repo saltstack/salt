@@ -16,6 +16,7 @@ import struct
 import time
 
 # Import Salt Libs
+import salt.utils
 import salt.utils.files
 
 # Import 3rd-party libs
@@ -193,10 +194,8 @@ def beacon(config):
                 event[field] = pack[ind]
                 if isinstance(event[field], salt.ext.six.string_types):
                     if isinstance(event[field], bytes):
-                        event[field] = event[field].decode()
-                        event[field] = event[field].strip('b\x00')
-                    else:
-                        event[field] = event[field].strip('\x00')
+                        event[field] = salt.utils.stringutils.to_unicode(event[field])
+                    event[field] = event[field].strip('\x00')
 
             if users:
                 if event['user'] in users:

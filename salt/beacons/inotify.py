@@ -246,12 +246,13 @@ def beacon(config):
                     if isinstance(exclude, dict):
                         if exclude.values()[0].get('regex', False):
                             try:
-                                if re.search(exclude.keys()[0], event.pathname):
+                                if re.search(list(exclude)[0], event.pathname):
                                     _append = False
                             except Exception:
-                                log.warning('Failed to compile regex: %s', exclude.keys()[0])
+                                log.warning('Failed to compile regex: %s',
+                                            list(exclude)[0])
                         else:
-                            exclude = exclude.keys()[0]
+                            exclude = list(exclude)[0]
                     elif '*' in exclude:
                         if fnmatch.fnmatch(event.pathname, exclude):
                             _append = False
