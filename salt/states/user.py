@@ -240,7 +240,8 @@ def present(name,
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
-        the same name as the user, Default is ``False``.
+        the same name as the user. If the group does not exist the state will
+        fail. Default is ``False``.
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -455,6 +456,10 @@ def present(name,
 
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
+        if gid == '':
+            ret['comment'] = 'Default group with name "{0}" is not present'.format(name)
+            ret['result'] = False
+            return ret
 
     changes = _changes(name,
                        uid,
