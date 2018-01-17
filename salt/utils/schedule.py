@@ -882,6 +882,13 @@ class Schedule(object):
                             return data
 
                     if 'timezone' in data:
+                        if not _PYTZ_SUPPORTED:
+                            data['_error'] = ('PyTZ is unavailable, '
+                                              'Ignoring job %s.',
+                                              job)
+                            log.error(data['_error'])
+                            return data
+
                         try:
                             TZ = pytz.timezone(data['timezone'])
                         except pytz.UnknownTimeZoneError:
@@ -892,8 +899,8 @@ class Schedule(object):
                             log.error(data['_error'])
                             return data
 
-                            _UTC_EPOCH = datetime.datetime(1970, 1, 1,
-                                                           tzinfo=pytz.utc)
+                        _UTC_EPOCH = datetime.datetime(1970, 1, 1,
+                                                       tzinfo=pytz.utc)
                         _when.append(int((TZ.localize(when__) - _UTC_EPOCH).total_seconds()))
                     else:
                         _when.append(int(time.mktime(when__.timetuple())))
@@ -971,7 +978,30 @@ class Schedule(object):
                         log.error(data['_error'])
                         return data
 
-                when = int(time.mktime(when__.timetuple()))
+                if 'timezone' in data:
+                    if not _PYTZ_SUPPORTED:
+                        data['_error'] = ('PyTZ is unavailable, '
+                                          'Ignoring job %s.',
+                                          job)
+                        log.error(data['_error'])
+                        return data
+
+                    try:
+                        TZ = pytz.timezone(data['timezone'])
+                    except pytz.UnknownTimeZoneError:
+                        data['_error'] = ('Invalid timezone %s. '
+                                          'Ignoring job %s.',
+                                          data['timezone'],
+                                          job)
+                        log.error(data['_error'])
+                        return data
+
+                    _UTC_EPOCH = datetime.datetime(1970, 1, 1,
+                                                   tzinfo=pytz.utc)
+                    when = int((TZ.localize(when__) - _UTC_EPOCH).total_seconds())
+
+                else:
+                    when = int(time.mktime(when__.timetuple()))
 
                 if when < now - self.opts['loop_interval'] and \
                         not data.get('_run', False) and \
