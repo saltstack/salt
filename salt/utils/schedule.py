@@ -548,10 +548,8 @@ class Schedule(object):
                 jobcount = 0
                 for job in salt.utils.minion.running(self.opts):
                     if 'schedule' in job:
-                        log.debug(
-                            'schedule.handle_func: Checking job against fun '
-                            '%s: %s', ret['fun'], job
-                        )
+                        log.debug('schedule.handle_func: Checking job against '
+                                  'fun %s: %s', ret['fun'], job)
                         if ret['schedule'] == job['schedule'] \
                                 and salt.utils.process.os_is_running(job['pid']):
                             jobcount += 1
@@ -812,9 +810,11 @@ class Schedule(object):
                     data['_next_fire_time'] = int(
                         time.mktime(once.timetuple()))
                 except (TypeError, ValueError):
-                    log.error('Date string could not be parsed: %s, %s',
-                              data['once'], once_fmt)
-                    data['_continue'] = True
+                    data['_error'] = ('Date string could not ',
+                                      'be parsed: %s, %s',
+                                      data['once'], once_fmt)
+                    log.error(data['_error'])
+                    return data
                 # If _next_fire_time is less than now or greater
                 # than now, continue.
                 if data['_next_fire_time'] < now - self.opts['loop_interval'] and \
@@ -828,9 +828,10 @@ class Schedule(object):
             Handle schedule item with when
             '''
             if not _WHEN_SUPPORTED:
-                log.error('Missing python-dateutil. '
-                          'Ignoring job {0}.'.format(job))
-                data['_continue'] = True
+                data['_error'] = ('Missing python-dateutil. '
+                                  'Ignoring job %s.', job)
+                log.error(data['_error'])
+                return data
 
             if isinstance(data['when'], list):
                 _when = []
@@ -839,35 +840,40 @@ class Schedule(object):
                             i in self.opts['pillar']['whens']):
                         if not isinstance(self.opts['pillar']['whens'],
                                           dict):
-                            log.error('Pillar item "whens" must be dict. '
-                                      'Ignoring')
-                            data['_continue'] = True
+                            data['_error'] = ('Pillar item "whens" '
+                                              'must be a dict. Ignoring.')
+                            log.error(data['_error'])
                         __when = self.opts['pillar']['whens'][i]
                         try:
                             when__ = dateutil_parser.parse(__when)
                         except ValueError:
-                            log.error('Invalid date string. Ignoring')
-                            data['_continue'] = True
+                            data['_error'] = 'Invalid date string. Ignoring.'
+                            log.error(data['_error'])
+                            return data
                     elif ('whens' in self.opts['grains'] and
                           i in self.opts['grains']['whens']):
                         if not isinstance(self.opts['grains']['whens'],
                                           dict):
-                            log.error('Grain "whens" must be dict.'
-                                      'Ignoring')
-                            data['_continue'] = True
+                            data['_error'] = ('Grain "whens" must be dict.'
+                                              'Ignoring.')
+                            log.error(data['_error'])
+                            return data
                         __when = self.opts['grains']['whens'][i]
                         try:
                             when__ = dateutil_parser.parse(__when)
                         except ValueError:
-                            log.error('Invalid date string. Ignoring')
-                            data['_continue'] = True
+                            data['_error'] = ('Invalid date string. Ignoring.')
+                            log.error(data['_error'])
+                            return data
                     else:
                         try:
                             when__ = dateutil_parser.parse(i)
                         except ValueError:
-                            log.error('Invalid date string {0}. '
-                                      'Ignoring job {1}.'.format(i, job))
-                            data['_continue'] = True
+                            data['_error'] = ('Invalid date string %s. '
+                                              'Ignoring job %s.', i, job)
+                            log.error(data['_error'])
+                            return data
+
                     _when.append(int(time.mktime(when__.timetuple())))
 
                 if data['_splay']:
@@ -910,32 +916,39 @@ class Schedule(object):
                 if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
                         data['when'] in self.opts['pillar']['whens']):
                     if not isinstance(self.opts['pillar']['whens'], dict):
-                        log.error('Pillar item "whens" must be dict.'
-                                  'Ignoring')
-                        data['_continue'] = True
+                        data['_error'] = ('Pillar item "whens" must be dict.'
+                                          'Ignoring.')
+                        log.error(data['_error'])
+                        return data
                     _when = self.opts['pillar']['whens'][data['when']]
                     try:
                         when__ = dateutil_parser.parse(_when)
                     except ValueError:
-                        log.error('Invalid date string. Ignoring')
-                        data['_continue'] = True
+                        data['_error'] = ('Invalid date string. Ignoring.')
+                        log.error(data['_error'])
+                        return data
                 elif ('whens' in self.opts['grains'] and
                       data['when'] in self.opts['grains']['whens']):
                     if not isinstance(self.opts['grains']['whens'], dict):
-                        log.error('Grain "whens" must be dict. Ignoring')
-                        data['_continue'] = True
+                        data['_error'] = ('Grain "whens" must be dict.',
+                                          ' Ignoring.')
+                        log.error(data['_error'])
+                        return data
                     _when = self.opts['grains']['whens'][data['when']]
                     try:
                         when__ = dateutil_parser.parse(_when)
                     except ValueError:
-                        log.error('Invalid date string. Ignoring')
-                        data['_continue'] = True
+                        data['_error'] = ('Invalid date string. Ignoring.')
+                        log.error(data['_error'])
+                        return data
                 else:
                     try:
                         when__ = dateutil_parser.parse(data['when'])
                     except ValueError:
-                        log.error('Invalid date string. Ignoring')
-                        data['_continue'] = True
+                        data['_error'] = ('Invalid date string. Ignoring.')
+                        log.error(data['_error'])
+                        return data
+
                 when = int(time.mktime(when__.timetuple()))
 
                 if when < now - self.opts['loop_interval'] and \
@@ -963,8 +976,10 @@ class Schedule(object):
             Handle schedule item with cron
             '''
             if not _CRON_SUPPORTED:
-                log.error('Missing python-croniter. Ignoring job {0}'.format(job))
-                data['_continue'] = True
+                data['_error'] = ('Missing python-croniter. ',
+                                  'Ignoring job %s.', job)
+                log.error(data['_error'])
+                return data
 
             if data['_next_fire_time'] is None:
                 # Get next time frame for a "cron" job if it has been never
@@ -973,8 +988,9 @@ class Schedule(object):
                     data['_next_fire_time'] = int(
                         croniter.croniter(data['cron'], now).get_next())
                 except (ValueError, KeyError):
-                    log.error('Invalid cron string. Ignoring')
-                    data['_continue'] = True
+                    data['_error'] = 'Invalid cron string. Ignoring.'
+                    log.error(data['_error'])
+                    return data
 
                 # If next job run is scheduled more than 1 minute ahead and
                 # configured loop interval is longer than that, we should
@@ -1039,21 +1055,28 @@ class Schedule(object):
             Handle schedule item with skip_explicit
             '''
             if not _RANGE_SUPPORTED:
-                log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
-                data['_continue'] = True
+                data['_error'] = ('Missing python-dateutil. ',
+                                  'Ignoring job %s.', job)
+                log.error(data['_error'])
+                return data
             else:
                 if isinstance(data['skip_during_range'], dict):
                     try:
                         start = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['start']).timetuple()))
                     except ValueError:
-                        log.error('Invalid date string for start in skip_during_range. Ignoring job {0}.'.format(job))
-                        data['_continue'] = True
+                        data['_error'] = ('Invalid date string for start in ',
+                                          'skip_during_range. Ignoring ',
+                                          'job %s.', job)
+                        log.error(data['_error'])
+                        return data
                     try:
                         end = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['end']).timetuple()))
                     except ValueError:
-                        log.error('Invalid date string for end in skip_during_range. Ignoring job {0}.'.format(job))
-                        log.error(data)
-                        data['_continue'] = True
+                        data['_error'] = ('Invalid date string for end in ',
+                                          'skip_during_range. Ignoring ',
+                                          'job %s.', job)
+                        log.error(data['_error'])
+                        return data
 
                     # Check to see if we should run the job immediately
                     # after the skip_during_range is over
@@ -1078,14 +1101,73 @@ class Schedule(object):
                         else:
                             data['run'] = True
                     else:
-                        log.error('schedule.handle_func: Invalid range, end must be larger than start. \
-                                 Ignoring job {0}.'.format(job))
-                        data['_continue'] = True
+                        data['_error'] = ('schedule.handle_func: Invalid ',
+                                          'range, end must be larger than ',
+                                          'start. Ignoring job %s.', job)
+                        log.error(data['_error'])
+                        return data
                 else:
-                    log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
-                             Ignoring job {0}.'.format(job))
-                    data['_continue'] = True
+                    data['_error'] = ('schedule.handle_func: Invalid, range ',
+                                      'must be specified as a dictionary ',
+                                      'Ignoring job %s.', job)
+                    log.error(data['_error'])
+                    return data
             return data
+
+        def _handle_range(data):
+            '''
+            Handle schedule item with skip_explicit
+            '''
+            if not _RANGE_SUPPORTED:
+                data['_error'] = ('Missing python-dateutil. ',
+                                  'Ignoring job %s', job)
+                log.error(data['_error'])
+                return data
+            else:
+                if isinstance(data['range'], dict):
+                    try:
+                        start = int(time.mktime(dateutil_parser.parse(data['range']['start']).timetuple()))
+                    except ValueError:
+                        data['_error'] = ('Invalid date string for start. ',
+                                          'Ignoring job {0}.', job)
+                        log.error(data['_error'])
+                        return data
+                    try:
+                        end = int(time.mktime(dateutil_parser.parse(data['range']['end']).timetuple()))
+                    except ValueError:
+                        data['_error'] = ('Invalid date string for end.',
+                                          ' Ignoring job %s.', job)
+                        log.error(data['_error'])
+                        return data
+                    if end > start:
+                        if 'invert' in data['range'] and data['range']['invert']:
+                            if now <= start or now >= end:
+                                data['run'] = True
+                            else:
+                                data['_skip_reason'] = 'in_skip_range'
+                                data['run'] = False
+                        else:
+                            if start <= now <= end:
+                                data['run'] = True
+                            else:
+                                if self.skip_function:
+                                    data['run'] = True
+                                    data['func'] = self.skip_function
+                                else:
+                                    data['_skip_reason'] = 'not_in_range'
+                                    data['run'] = False
+                    else:
+                        data['_error'] = ('schedule.handle_func: Invalid ',
+                                          'range, end must be larger ',
+                                          'than start. Ignoring job %s.', job)
+                        log.error(data['_error'])
+                        return data
+                else:
+                    data['_error'] = ('schedule.handle_func: Invalid, range ',
+                                      'must be specified as a dictionary.',
+                                      'Ignoring job %s.', job)
+                    log.error(data['_error'])
+                    return data
 
         schedule = self._get_schedule()
         if not isinstance(schedule, dict):
@@ -1151,10 +1233,8 @@ class Schedule(object):
                     until = int(time.mktime(until__.timetuple()))
 
                     if until <= now:
-                        log.debug(
-                            'Until time has passed skipping job: %s.',
-                            data['name']
-                        )
+                        log.debug('Until time has passed '
+                                  'skipping job: %s.', data['name'])
                         continue
 
             if 'after' in data:
@@ -1166,13 +1246,12 @@ class Schedule(object):
                     after = int(time.mktime(after__.timetuple()))
 
                     if after >= now:
-                        log.debug(
-                            'After time has not passed skipping job: %s.',
-                            data['name']
-                        )
+                        log.debug('After time has not passed '
+                                  'skipping job: %s.', data['name'])
                         continue
 
-            # Used for quick lookups when detecting invalid option combinations.
+            # Used for quick lookups when detecting invalid option
+            # combinations.
             schedule_keys = set(data.keys())
 
             time_elements = ('seconds', 'minutes', 'hours', 'days')
@@ -1217,7 +1296,10 @@ class Schedule(object):
             else:
                 continue
 
-            log.debug('=== data {} ==='.format(data))
+            # An error occurred so we bail out
+            if '_error' in data and data['_error']:
+                continue
+
             seconds = data['_next_fire_time'] - now
 
             if 'splay' in data:
@@ -1228,10 +1310,8 @@ class Schedule(object):
                     # immediately otherwise.
                     splay = _splay(data['splay'])
                     if now < data['_next_fire_time'] + splay:
-                        log.debug(
-                            'schedule.handle_func: Adding splay of %s seconds '
-                            'to next run.', splay
-                        )
+                        log.debug('schedule.handle_func: Adding splay of '
+                                  '%s seconds to next run.', splay)
                         data['_splay'] = data['_next_fire_time'] + splay
                         if 'when' in data:
                             data['_run'] = True
@@ -1266,52 +1346,16 @@ class Schedule(object):
                 data['_run_on_start'] = False
             elif run:
                 if 'range' in data:
-                    if not _RANGE_SUPPORTED:
-                        log.error('Missing python-dateutil. Ignoring job %s', job)
+                    data = _handle_range(data)
+
+                    # An error occurred so we bail out
+                    if '_error' in data and data['_error']:
                         continue
-                    else:
-                        if isinstance(data['range'], dict):
-                            try:
-                                start = int(time.mktime(dateutil_parser.parse(data['range']['start']).timetuple()))
-                            except ValueError:
-                                log.error('Invalid date string for start. Ignoring job %s.', job)
-                                continue
-                            try:
-                                end = int(time.mktime(dateutil_parser.parse(data['range']['end']).timetuple()))
-                            except ValueError:
-                                log.error('Invalid date string for end. Ignoring job %s.', job)
-                                continue
-                            if end > start:
-                                if 'invert' in data['range'] and data['range']['invert']:
-                                    if now <= start or now >= end:
-                                        run = True
-                                    else:
-                                        data['_skip_reason'] = 'in_skip_range'
-                                        run = False
-                                else:
-                                    if start <= now <= end:
-                                        run = True
-                                    else:
-                                        if self.skip_function:
-                                            run = True
-                                            func = self.skip_function
-                                        else:
-                                            data['_skip_reason'] = 'not_in_range'
-                                            run = False
-                            else:
-                                log.error(
-                                    'schedule.handle_func: Invalid range, end '
-                                    'must be larger than start. Ignoring job %s.',
-                                    job
-                                )
-                                continue
-                        else:
-                            log.error(
-                                'schedule.handle_func: Invalid, range must be '
-                                'specified as a dictionary. Ignoring job %s.',
-                                job
-                            )
-                            continue
+
+                    run = data['run']
+                    # Override the functiton if passed back
+                    if 'func' in data:
+                        func = data['func']
 
                 # If there is no job specific skip_during_range available,
                 # grab the global which defaults to None.
@@ -1320,32 +1364,44 @@ class Schedule(object):
 
                 if 'skip_during_range' in data and data['skip_during_range']:
                     data = _handle_skip_during_range(data)
+
+                    # An error occurred so we bail out
+                    if '_error' in data and data['_error']:
+                        continue
+
                     run = data['run']
                     # Override the functiton if passed back
                     if 'func' in data:
                         func = data['func']
 
                 if 'skip_explicit' in data:
-                    log.debug('=== before data {} ==='.format(data))
                     data = _handle_skip_explicit(data)
+
+                    # An error occurred so we bail out
+                    if '_error' in data and data['_error']:
+                        continue
+
                     run = data['run']
                     # Override the functiton if passed back
                     if 'func' in data:
                         func = data['func']
 
-            # If the job item has continue, then we continue
+            # If the job item has continue, then we set run to False
+            # so the job does not run but we still get the important
+            # information calculated, eg. _next_fire_time
             if '_continue' in data and data['_continue']:
-                continue
+                run = False
 
-            if not run:
-                continue
+            # Job is disabled, set run to False
+            if 'enabled' in data and not data['enabled']:
+                log.debug('Job: %s is disabled', job)
+                data['_skip_reason'] = 'disabled'
+                run = False
 
             miss_msg = ''
             if seconds < 0:
                 miss_msg = ' (runtime missed ' \
                            'by {0} seconds)'.format(abs(seconds))
-
-            log.info('Running scheduled job: %s%s', job, miss_msg)
 
             if 'jid_include' not in data or data['jid_include']:
                 data['jid_include'] = True
@@ -1374,12 +1430,11 @@ class Schedule(object):
                 returners = self.returners
                 self.returners = {}
             try:
-                # Job is disabled, continue
-                if 'enabled' in data and not data['enabled']:
-                    log.debug('Job: %s is disabled', job)
-                    data['_skip_reason'] = 'disabled'
-                    continue
+                if not run:
+                    log.info('Not running scheduled job: {0}'.format(job))
                 else:
+                    log.info('Running scheduled job: {0}{1}'.format(job, miss_msg))
+
                     if multiprocessing_enabled:
                         thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
                     else:
@@ -1399,7 +1454,9 @@ class Schedule(object):
             finally:
                 if '_seconds' in data:
                     data['_next_fire_time'] = now + data['_seconds']
-                data['_last_run'] = now
+                # Only set _last_run if the job ran
+                if run:
+                    data['_last_run'] = now
                 data['_splay'] = None
             if salt.utils.platform.is_windows():
                 # Restore our function references.

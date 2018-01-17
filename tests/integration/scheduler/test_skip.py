@@ -66,14 +66,12 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         # Run 11/29/2017 at 4pm
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        log.debug('=== ret {} ==='.format(ret))
         self.assertNotIn('_last_run', ret)
 
         # Run 11/29/2017 at 5pm
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 5:00pm').timetuple()))
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        log.debug('=== ret {} ==='.format(ret))
         self.assertEqual(ret['_last_run'], run_time)
 
     def test_skip_during_range(self):
@@ -107,6 +105,69 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
+
+    def test_skip_during_range_invalid_datestring(self):
+        '''
+        verify that scheduled job is not not and returns the right error string
+        '''
+        job1 = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'hours': '1',
+              '_next_fire_time': 1511994600,
+              'skip_during_range': {
+                  'start': '25pm',
+                  'end': '3pm'
+              }
+            }
+          }
+        }
+
+        job2 = {
+          'schedule': {
+            'job2': {
+              'function': 'test.ping',
+              'hours': '1',
+              '_next_fire_time': 1511994600,
+              'skip_during_range': {
+                  'start': '2pm',
+                  'end': '25pm'
+              }
+            }
+          }
+        }
+
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 2:30pm').timetuple()))
+
+        # Add job1 to schedule
+        self.schedule.opts.update(job1)
+
+        # Eval
+        self.schedule.eval(now=run_time)
+
+        # Check the first job
+        ret = self.schedule.job_status('job1')
+        _expected = ('Invalid date string for start in ',
+                     'skip_during_range. Ignoring ',
+                     'job %s.', 'job1')
+        self.assertEqual(ret['_error'], _expected)
+
+        # Clear out schedule
+        self.schedule.opts['schedule'] = {}
+
+        # Add job2 to schedule
+        self.schedule.opts.update(job2)
+
+        # Eval
+        self.schedule.eval(now=run_time)
+
+        # Check the second job
+        ret = self.schedule.job_status('job2')
+        _expected = ('Invalid date string for end in ',
+                     'skip_during_range. Ignoring ',
+                     'job %s.', 'job2')
+        self.assertEqual(ret['_error'], _expected)
 
     def test_skip_during_range_global(self):
         '''
