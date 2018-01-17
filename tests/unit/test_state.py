@@ -497,9 +497,9 @@ class StateReturnsTestCase(TestCase):
         :return:
         '''
         data = {'changes': []}
-        with pytest.raises(salt.exceptions.SaltException) as err:
-            statedecorators.state_output_check(lambda: data)()
-        assert "'Changes' should be a dictionary" in str(err)
+        out = statedecorators.OutputUnifier('content_check')(lambda: data)()
+        assert "'Changes' should be a dictionary" in out['comment']
+        assert not out['result']
 
     def test_state_output_check_return_is_dict(self):
         '''
@@ -507,9 +507,9 @@ class StateReturnsTestCase(TestCase):
         :return:
         '''
         data = ['whatever']
-        with pytest.raises(salt.exceptions.SaltException) as err:
-            statedecorators.state_output_check(lambda: data)()
-        assert 'Malformed state return, return must be a dict' in str(err)
+        out = statedecorators.OutputUnifier('content_check')(lambda: data)()
+        assert 'Malformed state return. Data must be a dictionary type' in out['comment']
+        assert not out['result']
 
     def test_state_output_check_return_has_nrc(self):
         '''
@@ -517,9 +517,9 @@ class StateReturnsTestCase(TestCase):
         :return:
         '''
         data = {'arbitrary': 'data', 'changes': {}}
-        with pytest.raises(salt.exceptions.SaltException) as err:
-            statedecorators.state_output_check(lambda: data)()
-        assert ' The following keys were not present in the state return: name, result, comment' in str(err)
+        out = statedecorators.OutputUnifier('content_check')(lambda: data)()
+        assert ' The following keys were not present in the state return: name, result, comment' in out['comment']
+        assert not out['result']
 
     def test_state_output_unifier_comment_is_not_list(self):
         '''
@@ -528,11 +528,11 @@ class StateReturnsTestCase(TestCase):
         '''
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'fantastic!'}
         expected = {'comment': 'data\nin\nthe\nlist', 'changes': {}, 'name': None, 'result': True}
-        assert statedecorators.state_output_unifier(lambda: data)() == expected
+        assert statedecorators.OutputUnifier('unify')(lambda: data)() == expected
 
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': None}
         expected = 'data\nin\nthe\nlist'
-        assert statedecorators.state_output_unifier(lambda: data)()['comment'] == expected
+        assert statedecorators.OutputUnifier('unify')(lambda: data)()['comment'] == expected
 
     def test_state_output_unifier_result_converted_to_true(self):
         '''
@@ -540,7 +540,7 @@ class StateReturnsTestCase(TestCase):
         :return:
         '''
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'Fantastic'}
-        assert statedecorators.state_output_unifier(lambda: data)()['result'] is True
+        assert statedecorators.OutputUnifier('unify')(lambda: data)()['result'] is True
 
     def test_state_output_unifier_result_converted_to_false(self):
         '''
@@ -548,7 +548,7 @@ class StateReturnsTestCase(TestCase):
         :return:
         '''
         data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': ''}
-        assert statedecorators.state_output_unifier(lambda: data)()['result'] is False
+        assert statedecorators.OutputUnifier('unify')(lambda: data)()['result'] is False
 
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
