@@ -53,6 +53,14 @@ def explode_opts(opts):
     return preloads
 
 
+def warn_deprecated():
+    salt.utils.versions.warn_until(
+        'Neon',
+        'The \'raet\' transport has been deprecated and will be removed in '
+        'Salt {version}. Please use \'zeromq\' or \'tcp\' transport instead.'
+    )
+
+
 class IofloMaster(object):
     '''
     IofloMaster Class
@@ -61,6 +69,7 @@ class IofloMaster(object):
         '''
         Assign self.opts
         '''
+        warn_deprecated()
         self.opts = opts
         self.preloads = explode_opts(self.opts)
         self.access_keys = salt.daemons.masterapi.access_keys(self.opts)
@@ -109,6 +118,7 @@ class IofloMinion(object):
         '''
         Assign self.opts
         '''
+        warn_deprecated()
         self.opts = opts
 
     def tune_in(self, behaviors=None):
