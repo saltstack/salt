@@ -14,6 +14,7 @@ from tests.support.mock import (
 # Import Salt libs
 import salt.exceptions
 import salt.state
+from salt.utils import ssdp
 
 try:
     import pytest
@@ -28,9 +29,14 @@ class SSDPTestCase(TestCase):
     TestCase for SSDP-related parts.
     '''
 
-    def test_ssdp_base(self):
+    @patch('salt.utils.ssdp._json', None)
+    @patch('salt.utils.ssdp.asyncio', None)
+    def test_base_n_avail(self):
         '''
-        Test SSDP base class main methods.
-
+        Test SSDP base class availability method.
         :return:
         '''
+        base = ssdp.SSDPBase()
+        print('*' * 80)
+        print(base._is_available())
+        print('*' * 80)
