@@ -66,6 +66,13 @@ except ImportError:
     _CRON_SUPPORTED = False
 # pylint: enable=import-error
 
+try:
+    import pytz
+    _PYTZ_SUPPORTED = True
+except ImportError:
+    _PYTZ_SUPPORTED = False
+# pylint: enable=import-error
+
 log = logging.getLogger(__name__)
 
 
@@ -874,7 +881,22 @@ class Schedule(object):
                             log.error(data['_error'])
                             return data
 
-                    _when.append(int(time.mktime(when__.timetuple())))
+                    if 'timezone' in data:
+                        try:
+                            TZ = pytz.timezone(data['timezone'])
+                        except pytz.UnknownTimeZoneError:
+                            data['_error'] = ('Invalid timezone %s. '
+                                              'Ignoring job %s.',
+                                              data['timezone'],
+                                              job)
+                            log.error(data['_error'])
+                            return data
+
+                            _UTC_EPOCH = datetime.datetime(1970, 1, 1,
+                                                           tzinfo=pytz.utc)
+                        _when.append(int((TZ.localize(when__) - _UTC_EPOCH).total_seconds()))
+                    else:
+                        _when.append(int(time.mktime(when__.timetuple())))
 
                 if data['_splay']:
                     _when.append(data['_splay'])
