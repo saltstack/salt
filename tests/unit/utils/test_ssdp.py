@@ -64,3 +64,33 @@ class SSDPTestCase(TestCase):
 
         for key, value in zip(v_keys, v_vals):
             assert base.DEFAULTS[key] == value
+
+    def test_base_self_ip(self):
+        '''
+        Test getting self IP method.
+
+        :return:
+        '''
+        def boom():
+            '''
+            Side effect
+            :return:
+            '''
+            raise Exception('some network error')
+
+        base = ssdp.SSDPBase()
+        expected_ip = '192.168.1.10'
+        expected_host = 'oxygen'
+        sck = MagicMock()
+        sck.getsockname = MagicMock(return_value=(expected_ip, 123456))
+
+        sock_mock = MagicMock()
+        sock_mock.socket = MagicMock(return_value=sck)
+        sock_mock.gethostbyname = MagicMock(return_value=expected_host)
+
+        with patch('salt.utils.ssdp.socket', sock_mock):
+            assert base.get_self_ip() == expected_ip
+
+        sck.getsockname.side_effect = boom
+        with patch('salt.utils.ssdp.socket', sock_mock):
+            assert base.get_self_ip() == expected_host
