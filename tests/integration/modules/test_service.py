@@ -25,6 +25,8 @@ class ServiceModuleTest(ModuleCase):
         elif os_family == 'Arch':
             self.service_name = 'systemd-journald'
             cmd_name = 'systemctl'
+        elif os_family == 'MacOS':
+            self.service_name = 'org.ntp.ntpd'
 
         if salt.utils.path.which(cmd_name) is None:
             self.skipTest('{0} is not installed'.format(cmd_name))

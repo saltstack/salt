@@ -75,7 +75,7 @@
     .. _`Raven`: https://raven.readthedocs.io
     .. _`Raven client documentation`: https://raven.readthedocs.io/en/latest/config/index.html#client-arguments
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -125,8 +125,7 @@ def setup_handlers():
                 raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
         except ValueError as exc:
             log.info(
-                'Raven failed to parse the configuration provided '
-                'DSN: {0}'.format(exc)
+                'Raven failed to parse the configuration provided DSN: %s', exc
             )
 
     if not dsn:
@@ -135,8 +134,8 @@ def setup_handlers():
             if config_value is None and key not in options:
                 log.debug(
                     'The required \'sentry_handler\' configuration key, '
-                    '\'{0}\', is not properly configured. Not configuring '
-                    'the sentry logging handler.'.format(key)
+                    '\'%s\', is not properly configured. Not configuring '
+                    'the sentry logging handler.', key
                 )
                 return
             elif config_value is None:
@@ -202,10 +201,7 @@ def setup_handlers():
         handler.setLevel(LOG_LEVELS[get_config_value('log_level', 'error')])
         return handler
     except ValueError as exc:
-        log.debug(
-            'Failed to setup the sentry logging handler: {0}'.format(exc),
-            exc_info=exc
-        )
+        log.debug('Failed to setup the sentry logging handler', exc_info=True)
 
 
 def get_config_value(name, default=None):

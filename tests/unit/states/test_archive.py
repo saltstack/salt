@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
@@ -35,12 +35,14 @@ def _isfile_side_effect(path):
     return {
         '/tmp/foo.tar.gz': True,
         'c:\\tmp\\foo.tar.gz': True,
+        '/private/tmp/foo.tar.gz': True,
         '/tmp/out': False,
         '\\tmp\\out': False,
         '/usr/bin/tar': True,
         '/bin/tar': True,
         '/tmp/test_extracted_tar': False,
         'c:\\tmp\\test_extracted_tar': False,
+        '/private/tmp/test_extracted_tar': False,
     }[path]
 
 
@@ -66,6 +68,9 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         if salt.utils.platform.is_windows():
             source = 'c:\\tmp\\foo.tar.gz'
             tmp_dir = 'c:\\tmp\\test_extracted_tar'
+        elif salt.utils.platform.is_darwin():
+            source = '/private/tmp/foo.tar.gz'
+            tmp_dir = '/private/tmp/test_extracted_tar'
         else:
             source = '/tmp/foo.tar.gz'
             tmp_dir = '/tmp/test_extracted_tar'

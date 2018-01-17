@@ -70,6 +70,15 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     return returned, not_returned
 
 
+def _warn_expr_form():
+    salt.utils.versions.warn_until(
+        'Fluorine',
+        'the target type should be passed using the \'tgt_type\' '
+        'argument instead of \'expr_form\'. Support for using '
+        '\'expr_form\' will be removed in Salt Fluorine.'
+    )
+
+
 def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):
     '''
     .. versionchanged:: 2017.7.0
@@ -89,12 +98,7 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
+        _warn_expr_form()
         tgt_type = expr_form
 
     ret = {}
@@ -178,6 +182,12 @@ def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
         salt-run manage.down tgt="webservers" tgt_type="nodegroup"
 
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        _warn_expr_form()
+        tgt_type = expr_form
+
     ret = status(output=False, tgt=tgt, tgt_type=tgt_type).get('down', [])
     for minion in ret:
         if removekeys:
@@ -202,6 +212,12 @@ def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeou
         salt-run manage.up tgt="webservers" tgt_type="nodegroup"
         salt-run manage.up timeout=5 gather_job_timeout=10
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        _warn_expr_form()
+        tgt_type = expr_form
+
     ret = status(
         output=False,
         tgt=tgt,
@@ -596,6 +612,12 @@ def safe_accept(target, tgt_type='glob', expr_form=None):
         salt-run manage.safe_accept my_minion
         salt-run manage.safe_accept minion1,minion2 tgt_type=list
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        _warn_expr_form()
+        tgt_type = expr_form
+
     salt_key = salt.key.Key(__opts__)
     ssh_client = salt.client.ssh.client.SSHClient()
 

@@ -26,7 +26,7 @@ events based on the channels they are subscribed to.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -90,7 +90,7 @@ class Listener(object):
     def run(self):
         log.debug('Start Listener')
         for item in self.pubsub.listen():
-            log.debug('Item: \n{0}'.format(item))
+            log.debug('Item: %s', item)
             self.work(item)
 
 

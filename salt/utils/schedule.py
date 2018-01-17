@@ -11,7 +11,7 @@ Detailed tutorial about scheduling jobs can be found :ref:`here
 '''
 
 # Import python libs
-from __future__ import absolute_import, with_statement
+from __future__ import absolute_import, with_statement, print_function, unicode_literals
 import os
 import sys
 import time
@@ -192,8 +192,7 @@ class Schedule(object):
         if name in self.opts['schedule']:
             del self.opts['schedule'][name]
         elif name in self._get_schedule(include_opts=False):
-            log.warning('Cannot delete job {0}, '
-                        'it`s in the pillar!'.format(name))
+            log.warning("Cannot delete job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -217,8 +216,7 @@ class Schedule(object):
                 del self.opts['schedule'][job]
         for job in self._get_schedule(include_opts=False):
             if job.startswith(name):
-                log.warning('Cannot delete job {0}, '
-                            'it`s in the pillar!'.format(job))
+                log.warning("Cannot delete job %s, it's in the pillar!", job)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -256,16 +254,14 @@ class Schedule(object):
         new_job = next(six.iterkeys(data))
 
         if new_job in self._get_schedule(include_opts=False):
-            log.warning('Cannot update job {0}, '
-                        'it`s in the pillar!'.format(new_job))
+            log.warning("Cannot update job %s, it's in the pillar!", new_job)
 
         elif new_job in self.opts['schedule']:
-            log.info('Updating job settings for scheduled '
-                     'job: {0}'.format(new_job))
+            log.info('Updating job settings for scheduled job: %s', new_job)
             self.opts['schedule'].update(data)
 
         else:
-            log.info('Added new job {0} to scheduler'.format(new_job))
+            log.info('Added new job %s to scheduler', new_job)
             self.opts['schedule'].update(data)
 
         # Fire the complete event back along with updated list of schedule
@@ -283,10 +279,9 @@ class Schedule(object):
         # ensure job exists, then enable it
         if name in self.opts['schedule']:
             self.opts['schedule'][name]['enabled'] = True
-            log.info('Enabling job {0} in scheduler'.format(name))
+            log.info('Enabling job %s in scheduler', name)
         elif name in self._get_schedule(include_opts=False):
-            log.warning('Cannot modify job {0}, '
-                        'it`s in the pillar!'.format(name))
+            log.warning("Cannot modify job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -303,10 +298,9 @@ class Schedule(object):
         # ensure job exists, then disable it
         if name in self.opts['schedule']:
             self.opts['schedule'][name]['enabled'] = False
-            log.info('Disabling job {0} in scheduler'.format(name))
+            log.info('Disabling job %s in scheduler', name)
         elif name in self._get_schedule(include_opts=False):
-            log.warning('Cannot modify job {0}, '
-                        'it`s in the pillar!'.format(name))
+            log.warning("Cannot modify job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -324,8 +318,7 @@ class Schedule(object):
         if name in self.opts['schedule']:
             self.delete_job(name, persist)
         elif name in self._get_schedule(include_opts=False):
-            log.warning('Cannot modify job {0}, '
-                        'it`s in the pillar!'.format(name))
+            log.warning("Cannot modify job %s, it's in the pillar!", name)
             return
 
         self.opts['schedule'][name] = schedule
@@ -349,16 +342,13 @@ class Schedule(object):
             func = None
         if func not in self.functions:
             log.info(
-                'Invalid function: {0} in scheduled job {1}.'.format(
-                    func, name
-                )
+                'Invalid function: %s in scheduled job %s.',
+                func, name
             )
 
         if 'name' not in data:
             data['name'] = name
-        log.info(
-            'Running Job: {0}.'.format(name)
-        )
+        log.info('Running Job: %s', name)
 
         multiprocessing_enabled = self.opts.get('multiprocessing', True)
         if multiprocessing_enabled:
@@ -456,8 +446,7 @@ class Schedule(object):
             self.opts['schedule'][name]['run_explicit'].append(new_time)
 
         elif name in self._get_schedule(include_opts=False):
-            log.warning('Cannot modify job {0}, '
-                        'it`s in the pillar!'.format(name))
+            log.warning("Cannot modify job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -478,8 +467,7 @@ class Schedule(object):
             self.opts['schedule'][name]['skip_explicit'].append(time)
 
         elif name in self._get_schedule(include_opts=False):
-            log.warning('Cannot modify job {0}, '
-                        'it`s in the pillar!'.format(name))
+            log.warning("Cannot modify job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -560,20 +548,24 @@ class Schedule(object):
                 jobcount = 0
                 for job in salt.utils.minion.running(self.opts):
                     if 'schedule' in job:
-                        log.debug('schedule.handle_func: Checking job against '
-                                  'fun {0}: {1}'.format(ret['fun'], job))
+                        log.debug(
+                            'schedule.handle_func: Checking job against fun '
+                            '%s: %s', ret['fun'], job
+                        )
                         if ret['schedule'] == job['schedule'] \
                                 and salt.utils.process.os_is_running(job['pid']):
                             jobcount += 1
                             log.debug(
-                                'schedule.handle_func: Incrementing jobcount, now '
-                                '{0}, maxrunning is {1}'.format(
-                                    jobcount, data['maxrunning']))
+                                'schedule.handle_func: Incrementing jobcount, '
+                                'now %s, maxrunning is %s',
+                                jobcount, data['maxrunning']
+                            )
                             if jobcount >= data['maxrunning']:
                                 log.debug(
-                                    'schedule.handle_func: The scheduled job {0} '
-                                    'was not started, {1} already running'.format(
-                                        ret['schedule'], data['maxrunning']))
+                                    'schedule.handle_func: The scheduled job '
+                                    '%s was not started, %s already running',
+                                    ret['schedule'], data['maxrunning']
+                                )
                                 return False
 
         if multiprocessing_enabled and not salt.utils.platform.is_windows():
@@ -589,8 +581,10 @@ class Schedule(object):
 
             if not self.standalone:
                 if 'jid_include' not in data or data['jid_include']:
-                    log.debug('schedule.handle_func: adding this job to the jobcache '
-                              'with data {0}'.format(ret))
+                    log.debug(
+                        'schedule.handle_func: adding this job to the '
+                        'jobcache with data %s', ret
+                    )
                     # write this to /var/cache/salt/minion/proc
                     with salt.utils.files.fopen(proc_fn, 'w+b') as fp_:
                         fp_.write(salt.payload.Serial(self.opts).dumps(ret))
@@ -688,13 +682,12 @@ class Schedule(object):
                             self.returners[ret_str](ret)
                         else:
                             log.info(
-                                'Job {0} using invalid returner: {1}. Ignoring.'.format(
-                                    func, returner
-                                )
+                                'Job %s using invalid returner: %s. Ignoring.',
+                                func, returner
                             )
 
         except Exception:
-            log.exception("Unhandled exception running {0}".format(ret['fun']))
+            log.exception('Unhandled exception running %s', ret['fun'])
             # Although catch-all exception handlers are bad, the exception here
             # is to let the exception bubble up to the top of the thread context,
             # where the thread will die silently, which is worse.
@@ -731,10 +724,10 @@ class Schedule(object):
                     try:
                         event.fire_event(load, '__schedule_return')
                     except Exception as exc:
-                        log.exception("Unhandled exception firing event: {0}".format(exc))
+                        log.exception('Unhandled exception firing __schedule_return event')
 
             if not self.standalone:
-                log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
+                log.debug('schedule.handle_func: Removing %s', proc_fn)
 
                 try:
                     os.unlink(proc_fn)
@@ -744,7 +737,7 @@ class Schedule(object):
                         # we wanted
                         pass
                     else:
-                        log.error("Failed to delete '{0}': {1}".format(proc_fn, exc.errno))
+                        log.error("Failed to delete '%s': %s", proc_fn, exc.errno)
                         # Otherwise, failing to delete this file is not something
                         # we can cleanly handle.
                         raise
@@ -761,7 +754,7 @@ class Schedule(object):
 
         '''
 
-        log.trace('==== evaluating schedule now {} ====='.format(now))
+        log.trace('==== evaluating schedule now %s =====', now)
 
         def _splay(splaytime):
             '''
@@ -799,10 +792,10 @@ class Schedule(object):
                 continue
 
             if not isinstance(data, dict):
-                log.error('Scheduled job "{0}" should have a dict value, not {1}'.format(job, type(data)))
-                continue
-            # Job is disabled, continue
-            if 'enabled' in data and not data['enabled']:
+                log.error(
+                    'Scheduled job "%s" should have a dict value, not %s',
+                    job, type(data)
+                )
                 continue
             if 'function' in data:
                 func = data['function']
@@ -814,9 +807,8 @@ class Schedule(object):
                 func = None
             if func not in self.functions:
                 log.info(
-                    'Invalid function: {0} in scheduled job {1}.'.format(
-                        func, job
-                    )
+                    'Invalid function: %s in scheduled job %s.',
+                    func, job
                 )
             if 'name' not in data:
                 data['name'] = job
@@ -844,8 +836,10 @@ class Schedule(object):
                     until = int(time.mktime(until__.timetuple()))
 
                     if until <= now:
-                        log.debug('Until time has passed '
-                                  'skipping job: {0}.'.format(data['name']))
+                        log.debug(
+                            'Until time has passed skipping job: %s.',
+                            data['name']
+                        )
                         continue
 
             if 'after' in data:
@@ -857,8 +851,10 @@ class Schedule(object):
                     after = int(time.mktime(after__.timetuple()))
 
                     if after >= now:
-                        log.debug('After time has not passed '
-                                  'skipping job: {0}.'.format(data['name']))
+                        log.debug(
+                            'After time has not passed skipping job: %s.',
+                            data['name']
+                        )
                         continue
 
             # Used for quick lookups when detecting invalid option combinations.
@@ -871,8 +867,10 @@ class Schedule(object):
                     for i in itertools.combinations(scheduling_elements, 2)]
 
             if any(i <= schedule_keys for i in invalid_sched_combos):
-                log.error('Unable to use "{0}" options together. Ignoring.'
-                          .format('", "'.join(scheduling_elements)))
+                log.error(
+                    'Unable to use "%s" options together. Ignoring.',
+                    '", "'.join(scheduling_elements)
+                )
                 continue
 
             invalid_time_combos = []
@@ -882,9 +880,11 @@ class Schedule(object):
                     set(itertools.combinations(all_items, 2)))
 
             if any(set(x) <= schedule_keys for x in invalid_time_combos):
-                log.error('Unable to use "{0}" with "{1}" options. Ignoring'
-                          .format('", "'.join(time_elements),
-                                  '", "'.join(scheduling_elements)))
+                log.error(
+                    'Unable to use "%s" with "%s" options. Ignoring',
+                    '", "'.join(time_elements),
+                    '", "'.join(scheduling_elements)
+                )
                 continue
 
             if 'run_explicit' in data:
@@ -946,8 +946,7 @@ class Schedule(object):
 
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil. '
-                              'Ignoring job {0}.'.format(job))
+                    log.error('Missing python-dateutil. Ignoring job %s.', job)
                     continue
 
                 if isinstance(data['when'], list):
@@ -983,8 +982,10 @@ class Schedule(object):
                             try:
                                 when__ = dateutil_parser.parse(i)
                             except ValueError:
-                                log.error('Invalid date string {0}. '
-                                          'Ignoring job {1}.'.format(i, job))
+                                log.error(
+                                    'Invalid date string %s. Ignoring job %s.',
+                                    i, job
+                                )
                                 continue
                         _when.append(int(time.mktime(when__.timetuple())))
 
@@ -1076,7 +1077,7 @@ class Schedule(object):
 
             elif 'cron' in data:
                 if not _CRON_SUPPORTED:
-                    log.error('Missing python-croniter. Ignoring job {0}'.format(job))
+                    log.error('Missing python-croniter. Ignoring job %s', job)
                     continue
 
                 if data['_next_fire_time'] is None:
@@ -1110,8 +1111,10 @@ class Schedule(object):
                     # immediately otherwise.
                     splay = _splay(data['splay'])
                     if now < data['_next_fire_time'] + splay:
-                        log.debug('schedule.handle_func: Adding splay of '
-                                  '{0} seconds to next run.'.format(splay))
+                        log.debug(
+                            'schedule.handle_func: Adding splay of %s seconds '
+                            'to next run.', splay
+                        )
                         data['_splay'] = data['_next_fire_time'] + splay
                         if 'when' in data:
                             data['_run'] = True
@@ -1147,25 +1150,26 @@ class Schedule(object):
             elif run:
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
-                        log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
+                        log.error('Missing python-dateutil. Ignoring job %s', job)
                         continue
                     else:
                         if isinstance(data['range'], dict):
                             try:
                                 start = int(time.mktime(dateutil_parser.parse(data['range']['start']).timetuple()))
                             except ValueError:
-                                log.error('Invalid date string for start. Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for start. Ignoring job %s.', job)
                                 continue
                             try:
                                 end = int(time.mktime(dateutil_parser.parse(data['range']['end']).timetuple()))
                             except ValueError:
-                                log.error('Invalid date string for end. Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for end. Ignoring job %s.', job)
                                 continue
                             if end > start:
                                 if 'invert' in data['range'] and data['range']['invert']:
                                     if now <= start or now >= end:
                                         run = True
                                     else:
+                                        data['_skip_reason'] = 'in_skip_range'
                                         run = False
                                 else:
                                     if start <= now <= end:
@@ -1175,14 +1179,21 @@ class Schedule(object):
                                             run = True
                                             func = self.skip_function
                                         else:
+                                            data['_skip_reason'] = 'not_in_range'
                                             run = False
                             else:
-                                log.error('schedule.handle_func: Invalid range, end must be larger than start. \
-                                         Ignoring job {0}.'.format(job))
+                                log.error(
+                                    'schedule.handle_func: Invalid range, end '
+                                    'must be larger than start. Ignoring job %s.',
+                                    job
+                                )
                                 continue
                         else:
-                            log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
-                                     Ignoring job {0}.'.format(job))
+                            log.error(
+                                'schedule.handle_func: Invalid, range must be '
+                                'specified as a dictionary. Ignoring job %s.',
+                                job
+                            )
                             continue
 
                 # If there is no job specific skip_during_range available,
@@ -1192,19 +1203,27 @@ class Schedule(object):
 
                 if 'skip_during_range' in data and data['skip_during_range']:
                     if not _RANGE_SUPPORTED:
-                        log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
+                        log.error('Missing python-dateutil. Ignoring job %s', job)
                         continue
                     else:
                         if isinstance(data['skip_during_range'], dict):
                             try:
                                 start = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['start']).timetuple()))
                             except ValueError:
-                                log.error('Invalid date string for start in skip_during_range. Ignoring job {0}.'.format(job))
+                                log.error(
+                                    'Invalid date string for start in '
+                                    'skip_during_range. Ignoring job %s.',
+                                    job
+                                )
                                 continue
                             try:
                                 end = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['end']).timetuple()))
                             except ValueError:
-                                log.error('Invalid date string for end in skip_during_range. Ignoring job {0}.'.format(job))
+                                log.error(
+                                    'Invalid date string for end in '
+                                    'skip_during_range. Ignoring job %s.',
+                                    job
+                                )
                                 log.error(data)
                                 continue
 
@@ -1226,16 +1245,23 @@ class Schedule(object):
                                         run = True
                                         func = self.skip_function
                                     else:
+                                        data['_skip_reason'] = 'in_skip_range'
                                         run = False
                                 else:
                                     run = True
                             else:
-                                log.error('schedule.handle_func: Invalid range, end must be larger than start. \
-                                         Ignoring job {0}.'.format(job))
+                                log.error(
+                                    'schedule.handle_func: Invalid range, end '
+                                    'must be larger than start. Ignoring job %s.',
+                                    job
+                                )
                                 continue
                         else:
-                            log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
-                                     Ignoring job {0}.'.format(job))
+                            log.error(
+                                'schedule.handle_func: Invalid, range must be '
+                                'specified as a dictionary. Ignoring job %s.',
+                                job
+                            )
                             continue
 
                 if 'skip_explicit' in data:
@@ -1256,6 +1282,7 @@ class Schedule(object):
                                 func = self.skip_function
                             else:
                                 run = False
+                                data['_skip_reason'] = 'skip_explicit'
                         else:
                             run = True
 
@@ -1267,18 +1294,22 @@ class Schedule(object):
                 miss_msg = ' (runtime missed ' \
                            'by {0} seconds)'.format(abs(seconds))
 
-            log.info('Running scheduled job: {0}{1}'.format(job, miss_msg))
+            log.info('Running scheduled job: %s%s', job, miss_msg)
 
             if 'jid_include' not in data or data['jid_include']:
                 data['jid_include'] = True
                 log.debug('schedule: This job was scheduled with jid_include, '
                           'adding to cache (jid_include defaults to True)')
                 if 'maxrunning' in data:
-                    log.debug('schedule: This job was scheduled with a max '
-                              'number of {0}'.format(data['maxrunning']))
+                    log.debug(
+                        'schedule: This job was scheduled with a max number '
+                        'of %s', data['maxrunning']
+                    )
                 else:
-                    log.info('schedule: maxrunning parameter was not specified for '
-                             'job {0}, defaulting to 1.'.format(job))
+                    log.info(
+                        'schedule: maxrunning parameter was not specified '
+                        'for job %s, defaulting to 1.', job
+                    )
                     data['maxrunning'] = 1
 
             multiprocessing_enabled = self.opts.get('multiprocessing', True)
@@ -1292,22 +1323,28 @@ class Schedule(object):
                 returners = self.returners
                 self.returners = {}
             try:
-                if multiprocessing_enabled:
-                    thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                # Job is disabled, continue
+                if 'enabled' in data and not data['enabled']:
+                    log.debug('Job: %s is disabled', job)
+                    data['_skip_reason'] = 'disabled'
+                    continue
                 else:
-                    thread_cls = threading.Thread
-                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                    if multiprocessing_enabled:
+                        thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                    else:
+                        thread_cls = threading.Thread
+                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
 
-                if multiprocessing_enabled:
-                    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                        # Reset current signals before starting the process in
-                        # order not to inherit the current signal handlers
+                    if multiprocessing_enabled:
+                        with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                            # Reset current signals before starting the process in
+                            # order not to inherit the current signal handlers
+                            proc.start()
+                    else:
                         proc.start()
-                else:
-                    proc.start()
 
-                if multiprocessing_enabled:
-                    proc.join()
+                    if multiprocessing_enabled:
+                        proc.join()
             finally:
                 if '_seconds' in data:
                     data['_next_fire_time'] = now + data['_seconds']
@@ -1341,12 +1378,16 @@ def clean_proc_dir(opts):
                     continue
                 except OSError:
                     continue
-            log.debug('schedule.clean_proc_dir: checking job {0} for process '
-                      'existence'.format(job))
+            log.debug(
+                'schedule.clean_proc_dir: checking job %s for process '
+                'existence', job
+            )
             if job is not None and 'pid' in job:
                 if salt.utils.process.os_is_running(job['pid']):
-                    log.debug('schedule.clean_proc_dir: Cleaning proc dir, '
-                              'pid {0} still exists.'.format(job['pid']))
+                    log.debug(
+                        'schedule.clean_proc_dir: Cleaning proc dir, pid %s '
+                        'still exists.', job['pid']
+                    )
                 else:
                     # Windows cannot delete an open file
                     if salt.utils.platform.is_windows():

@@ -45,7 +45,8 @@ def __virtual__():
 
 
 def __init__(self):
-    __context__['client'] = docker.from_env()
+    if HAS_DOCKER:
+        __context__['client'] = docker.from_env()
     __context__['server_name'] = __grains__['id']
 
 
