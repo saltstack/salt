@@ -985,6 +985,107 @@ class Schedule(object):
                     self.loop_interval = interval
             return data
 
+        def _handle_run_explicit(data):
+            '''
+            Handle schedule item with run_explicit
+            '''
+            _run_explicit = data['run_explicit']
+            data['run'] = False
+
+            if isinstance(_run_explicit, six.integer_types):
+                _run_explicit = [_run_explicit]
+
+            # Copy the list so we can loop through it
+            for i in copy.deepcopy(_run_explicit):
+                if len(_run_explicit) > 1:
+                    if int(i) < now - self.opts['loop_interval']:
+                        _run_explicit.remove(i)
+
+            if _run_explicit:
+                if int(_run_explicit[0]) <= now < int(_run_explicit[0] + self.opts['loop_interval']):
+                    data['run'] = True
+                    data['_next_fire_time'] = _run_explicit[0]
+            return data
+
+        def _handle_skip_explicit(data):
+            '''
+            Handle schedule item with skip_explicit
+            '''
+            _skip_explicit = data['skip_explicit']
+            data['run'] = False
+
+            if isinstance(_skip_explicit, six.string_types):
+                _skip_explicit = [_skip_explicit]
+
+            # Copy the list so we can loop through it
+            for i in copy.deepcopy(_skip_explicit):
+                if i < now - self.opts['loop_interval']:
+                    _skip_explicit.remove(i)
+
+            if _skip_explicit:
+                if _skip_explicit[0] <= now <= (_skip_explicit[0] + self.opts['loop_interval']):
+                    if self.skip_function:
+                        data['run'] = True
+                        data['func'] = self.skip_function
+                    else:
+                        data['_skip_reason'] = 'skip_explicit'
+                        data['run'] = False
+                else:
+                    data['run'] = True
+
+        def _handle_skip_during_range(data):
+            '''
+            Handle schedule item with skip_explicit
+            '''
+            if not _RANGE_SUPPORTED:
+                log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
+                data['_continue'] = True
+            else:
+                if isinstance(data['skip_during_range'], dict):
+                    try:
+                        start = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['start']).timetuple()))
+                    except ValueError:
+                        log.error('Invalid date string for start in skip_during_range. Ignoring job {0}.'.format(job))
+                        data['_continue'] = True
+                    try:
+                        end = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['end']).timetuple()))
+                    except ValueError:
+                        log.error('Invalid date string for end in skip_during_range. Ignoring job {0}.'.format(job))
+                        log.error(data)
+                        data['_continue'] = True
+
+                    # Check to see if we should run the job immediately
+                    # after the skip_during_range is over
+                    if 'run_after_skip_range' in data and \
+                       data['run_after_skip_range']:
+                        if 'run_explicit' not in data:
+                            data['run_explicit'] = []
+                        # Add a run_explicit for immediately after the
+                        # skip_during_range ends
+                        _run_immediate = end + self.opts['loop_interval']
+                        if _run_immediate not in data['run_explicit']:
+                            data['run_explicit'].append(_run_immediate)
+
+                    if end > start:
+                        if start <= now <= end:
+                            if self.skip_function:
+                                data['run'] = True
+                                data['func'] = self.skip_function
+                            else:
+                                data['_skip_reason'] = 'in_skip_range'
+                                data['run'] = False
+                        else:
+                            data['run'] = True
+                    else:
+                        log.error('schedule.handle_func: Invalid range, end must be larger than start. \
+                                 Ignoring job {0}.'.format(job))
+                        data['_continue'] = True
+                else:
+                    log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
+                             Ignoring job {0}.'.format(job))
+                    data['_continue'] = True
+            return data
+
         schedule = self._get_schedule()
         if not isinstance(schedule, dict):
             raise ValueError('Schedule must be of type dict.')
@@ -1101,21 +1202,8 @@ class Schedule(object):
                 continue
 
             if 'run_explicit' in data:
-                _run_explicit = data['run_explicit']
-
-                if isinstance(_run_explicit, six.integer_types):
-                    _run_explicit = [_run_explicit]
-
-                # Copy the list so we can loop through it
-                for i in copy.deepcopy(_run_explicit):
-                    if len(_run_explicit) > 1:
-                        if int(i) < now - self.opts['loop_interval']:
-                            _run_explicit.remove(i)
-
-                if _run_explicit:
-                    if int(_run_explicit[0]) <= now < int(_run_explicit[0] + self.opts['loop_interval']):
-                        run = True
-                        data['_next_fire_time'] = _run_explicit[0]
+                data = _handle_run_explicit(data)
+                run = data['run']
 
             if True in [True for item in time_elements if item in data]:
                 data = _handle_time_elements(data)
@@ -1126,9 +1214,6 @@ class Schedule(object):
             elif 'cron' in data:
                 data = _handle_cron(data)
             else:
-                continue
-
-            if '_continue' in data and data['continue']:
                 continue
 
             seconds = data['_next_fire_time'] - now
@@ -1232,89 +1317,18 @@ class Schedule(object):
                     data['skip_during_range'] = self.skip_during_range
 
                 if 'skip_during_range' in data and data['skip_during_range']:
-                    if not _RANGE_SUPPORTED:
-                        log.error('Missing python-dateutil. Ignoring job %s', job)
-                        continue
-                    else:
-                        if isinstance(data['skip_during_range'], dict):
-                            try:
-                                start = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['start']).timetuple()))
-                            except ValueError:
-                                log.error(
-                                    'Invalid date string for start in '
-                                    'skip_during_range. Ignoring job %s.',
-                                    job
-                                )
-                                continue
-                            try:
-                                end = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['end']).timetuple()))
-                            except ValueError:
-                                log.error(
-                                    'Invalid date string for end in '
-                                    'skip_during_range. Ignoring job %s.',
-                                    job
-                                )
-                                log.error(data)
-                                continue
-
-                            # Check to see if we should run the job immediately
-                            # after the skip_during_range is over
-                            if 'run_after_skip_range' in data and \
-                               data['run_after_skip_range']:
-                                if 'run_explicit' not in data:
-                                    data['run_explicit'] = []
-                                # Add a run_explicit for immediately after the
-                                # skip_during_range ends
-                                _run_immediate = end + self.opts['loop_interval']
-                                if _run_immediate not in data['run_explicit']:
-                                    data['run_explicit'].append(_run_immediate)
-
-                            if end > start:
-                                if start <= now <= end:
-                                    if self.skip_function:
-                                        run = True
-                                        func = self.skip_function
-                                    else:
-                                        data['_skip_reason'] = 'in_skip_range'
-                                        run = False
-                                else:
-                                    run = True
-                            else:
-                                log.error(
-                                    'schedule.handle_func: Invalid range, end '
-                                    'must be larger than start. Ignoring job %s.',
-                                    job
-                                )
-                                continue
-                        else:
-                            log.error(
-                                'schedule.handle_func: Invalid, range must be '
-                                'specified as a dictionary. Ignoring job %s.',
-                                job
-                            )
-                            continue
+                    data = _handle_skip_during_range(data)
+                    run = data['run']
+                    func = data['func']
 
                 if 'skip_explicit' in data:
-                    _skip_explicit = data['skip_explicit']
+                    data = _handle_skip_explicit(data)
+                    run = data['run']
+                    func = data['func']
 
-                    if isinstance(_skip_explicit, six.string_types):
-                        _skip_explicit = [_skip_explicit]
-
-                    # Copy the list so we can loop through it
-                    for i in copy.deepcopy(_skip_explicit):
-                        if i < now - self.opts['loop_interval']:
-                            _skip_explicit.remove(i)
-
-                    if _skip_explicit:
-                        if _skip_explicit[0] <= now <= (_skip_explicit[0] + self.opts['loop_interval']):
-                            if self.skip_function:
-                                run = True
-                                func = self.skip_function
-                            else:
-                                run = False
-                                data['_skip_reason'] = 'skip_explicit'
-                        else:
-                            run = True
+            # If the job item has continue, then we continue
+            if '_continue' in data and data['continue']:
+                continue
 
             if not run:
                 continue
