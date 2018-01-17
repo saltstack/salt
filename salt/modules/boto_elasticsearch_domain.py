@@ -75,7 +75,7 @@ Connection module for Amazon Elasticsearch Service
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -263,7 +263,7 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
         if 'AccessPolicies' in kwargs:
             kwargs['AccessPolicies'] = salt.utils.json.dumps(kwargs['AccessPolicies'])
         if 'ElasticsearchVersion' in kwargs:
-            kwargs['ElasticsearchVersion'] = str(kwargs['ElasticsearchVersion'])
+            kwargs['ElasticsearchVersion'] = six.text_type(kwargs['ElasticsearchVersion'])
         domain = conn.create_elasticsearch_domain(DomainName=DomainName, **kwargs)
         if domain and 'DomainStatus' in domain:
             return {'created': True}
@@ -367,9 +367,9 @@ def add_tags(DomainName=None, ARN=None,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         if ARN is None:
             if DomainName is None:
                 raise SaltInvocationError('One (but not both) of ARN or '
