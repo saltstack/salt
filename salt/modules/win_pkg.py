@@ -868,7 +868,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
     renderers = salt.loader.render(__opts__, __salt__)
 
     def _failed_compile(prefix_msg, error_msg):
-        log.error('{} \`{}\`: {} '.format(prefix_msg, short_path_name, error_msg))
+        log.error('{} \'{}\': {} '.format(prefix_msg, short_path_name, error_msg))
         ret.setdefault('errors', {})[short_path_name] = ['{}, {} '.format(prefix_msg, error_msg)]
         return False
 
