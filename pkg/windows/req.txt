@@ -25,6 +25,7 @@ PyMySQL==0.7.11
 pyOpenSSL==17.5.0
 python-dateutil==2.6.1
 python-gnupg==0.4.1
+pythonnet==2.3.0
 pyyaml==3.12
 pyzmq==16.0.3
 requests==2.18.4

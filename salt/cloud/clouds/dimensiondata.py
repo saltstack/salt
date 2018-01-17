@@ -23,7 +23,7 @@ using the existing Libcloud driver for Dimension Data.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import socket
 import pprint
@@ -297,7 +297,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     log.debug('VM is now running')
     if ssh_interface(vm_) == 'private_ips':
@@ -329,11 +329,10 @@ def create(vm_):
     if 'password' in data.extra:
         del data.extra['password']
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data.__dict__)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data.__dict__)
     )
 
     __utils__['cloud.fire_event'](

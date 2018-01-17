@@ -6,7 +6,7 @@ The core behaviors used by minion and master
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import random
@@ -399,8 +399,8 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                      ha=mha,
                                                      kind=kinds.applKinds.master))
                     except gaierror as ex:
-                        log.warning("Unable to connect to master {0}: {1}".format(mha, ex))
-                        if self.opts.value.get(u'master_type') not in (u'failover', u'distributed'):
+                        log.warning("Unable to connect to master %s: %s", mha, ex)
+                        if self.opts.value.get('master_type') not in ('failover', 'distributed'):
                             raise ex
                 if not stack.remotes:
                     raise ex
@@ -664,10 +664,8 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
         # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
         modules_max_memory = False
         if self.opts.value.get('modules_max_memory', -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
-            log.debug(
-                    'modules_max_memory set, enforcing a maximum of {0}'.format(
-                        self.opts.value['modules_max_memory'])
-                    )
+            log.debug('modules_max_memory set, enforcing a maximum of %s',
+                      self.opts.value['modules_max_memory'])
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
             rss, vms = psutil.Process(os.getpid()).memory_info()[:2]
@@ -1106,22 +1104,22 @@ class SaltRaetRouterMaster(SaltRaetRouter):
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
-            log.error('Received invalid message: {0}'.format(msg))
+            log.error('Received invalid message: %s', msg)
             return
 
         if s_estate is None:  # drop
             return
 
-        log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n"
-                  "   msg= {3}\n".format(
-                      self.opts.value['id'],
-                      self.road_stack.value.local.name,
-                      self.lane_stack.value.local.name,
-                      msg))
+        log.debug(
+            '**** Road Router rxMsg **** id=%s estate=%s yard=%s\nmsg=%s',
+            self.opts.value['id'],
+            self.road_stack.value.local.name,
+            self.lane_stack.value.local.name,
+            msg
+        )
 
         if d_estate is not None and d_estate != self.road_stack.value.local.name:
-            log.error(
-                'Road Router Received message for wrong estate: {0}'.format(d_estate))
+            log.error('Road Router Received message for wrong estate: %s', d_estate)
             return
 
         if d_yard is not None:
@@ -1132,15 +1130,15 @@ class SaltRaetRouterMaster(SaltRaetRouter):
             return
         if d_share is None:
             # No queue destination!
-            log.error('Received message without share: {0}'.format(msg))
+            log.error('Received message without share: %s', msg)
             return
         elif d_share == 'event_fire':  # rebroadcast events from other masters
             self.event.value.append(msg)
-            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+            #log.debug("\n**** Event Fire \n %s\n", msg)
             return
         elif d_share == 'local_cmd':
             # Refuse local commands over the wire
-            log.error('Received local command remotely! Ignoring: {0}'.format(msg))
+            log.error('Received local command remotely! Ignoring: %s', msg)
             return
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
@@ -1162,7 +1160,7 @@ class SaltRaetRouterMaster(SaltRaetRouter):
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
-            log.error('Lane Router Received invalid message: {0}'.format(msg))
+            log.error('Lane Router Received invalid message: %s', msg)
             return
 
         if s_yard is None:
@@ -1172,12 +1170,13 @@ class SaltRaetRouterMaster(SaltRaetRouter):
             s_estate = self.road_stack.value.local.name
             msg['route']['src'] = (s_estate, s_yard, s_share)
 
-        log.debug("**** Lane Router rxMsg **** id={0} estate={1} yard={2}\n"
-                  "   msg={3}\n".format(
-                      self.opts.value['id'],
-                      self.road_stack.value.local.name,
-                      self.lane_stack.value.local.name,
-                      msg))
+        log.debug(
+            '**** Lane Router rxMsg **** id=%s estate=%s yard=%s\nmsg=%s',
+            self.opts.value['id'],
+            self.road_stack.value.local.name,
+            self.lane_stack.value.local.name,
+            msg
+        )
 
         if d_estate is None:
             pass
@@ -1204,23 +1203,23 @@ class SaltRaetRouterMaster(SaltRaetRouter):
             return
         if d_share is None:
             # No queue destination!
-            log.error('Lane Router Received message without share: {0}'.format(msg))
+            log.error('Lane Router Received message without share: %s', msg)
             return
         elif d_share == 'local_cmd':
             self.lane_stack.value.transmit(msg,
                                            self.lane_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
-            #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
+            #log.debug("\n**** Event Subscribe \n %s\n", msg)
         elif d_share == 'event_fire':
             self.event.value.append(msg)
-            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+            #log.debug("\n**** Event Fire \n %s\n", msg)
         elif d_share == 'presence_req':
             self.presence_req.value.append(msg)
-            #log.debug("\n**** Presence Request \n {0}\n".format(msg))
+            #log.debug("\n**** Presence Request \n %s\n", msg)
         elif d_share == 'stats_req':
             self.stats_req.value.append(msg)
-            #log.debug("\n**** Stats Request \n {0}\n".format(msg))
+            #log.debug("\n**** Stats Request \n %s\n", msg)
 
 
 class SaltRaetRouterMinion(SaltRaetRouter):
@@ -1241,22 +1240,22 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
-            log.error('Received invalid message: {0}'.format(msg))
+            log.error('Received invalid message: %s', msg)
             return
 
         if s_estate is None:  # drop
             return
 
-        log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n"
-                  "   msg= {3}\n".format(
-                      self.opts.value['id'],
-                      self.road_stack.value.local.name,
-                      self.lane_stack.value.local.name,
-                      msg))
+        log.debug(
+            '**** Road Router rxMsg **** id=%s estate=%s yard=%s\nmsg=%s',
+            self.opts.value['id'],
+            self.road_stack.value.local.name,
+            self.lane_stack.value.local.name,
+            msg
+        )
 
         if d_estate is not None and d_estate != self.road_stack.value.local.name:
-            log.error(
-                'Road Router Received message for wrong estate: {0}'.format(d_estate))
+            log.error('Road Router Received message for wrong estate: %s', d_estate)
             return
 
         if d_yard is not None:
@@ -1268,7 +1267,7 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             return
         if d_share is None:
             # No queue destination!
-            log.error('Received message without share: {0}'.format(msg))
+            log.error('Received message without share: %s', msg)
             return
 
         elif d_share == 'fun':
@@ -1276,7 +1275,7 @@ class SaltRaetRouterMinion(SaltRaetRouter):
                 self.fun.value.append(msg)
         elif d_share == 'stats_req':
             self.stats_req.value.append(msg)
-            #log.debug("\n**** Stats Request \n {0}\n".format(msg))
+            #log.debug("\n**** Stats Request \n %s\n", msg)
 
     def _process_lane_rxmsg(self, msg, sender):
         '''
@@ -1290,7 +1289,7 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
-            log.error('Lane Router Received invalid message: {0}'.format(msg))
+            log.error('Lane Router Received invalid message: %s', msg)
             return
 
         if s_yard is None:
@@ -1300,12 +1299,13 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             s_estate = self.road_stack.value.local.name
             msg['route']['src'] = (s_estate, s_yard, s_share)
 
-        log.debug("**** Lane Router rxMsg **** id={0} estate={1} yard={2}\n"
-                  "   msg={3}\n".format(
-                      self.opts.value['id'],
-                      self.road_stack.value.local.name,
-                      self.lane_stack.value.local.name,
-                      msg))
+        log.debug(
+            '**** Lane Router rxMsg **** id=%s estate=%s yard=%s\nmsg=%s',
+            self.opts.value['id'],
+            self.road_stack.value.local.name,
+            self.lane_stack.value.local.name,
+            msg
+        )
 
         if d_estate is None:
             pass
@@ -1327,31 +1327,31 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             return
         if d_share is None:
             # No queue destination!
-            log.error('Lane Router Received message without share: {0}'.format(msg))
+            log.error('Lane Router Received message without share: %s', msg)
             return
 
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
-            #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
+            #log.debug("\n**** Event Subscribe \n %s\n", msg)
         elif d_share == 'event_fire':
             self.event.value.append(msg)
-            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+            #log.debug("\n**** Event Fire \n %s\n", msg)
 
         elif d_share == 'remote_cmd':  # assume  minion to master or salt-call
             if not self.road_stack.value.remotes:
                 log.error("**** Lane Router: Missing joined master. Unable to route "
-                          "remote_cmd. Requeuing".format())
+                          "remote_cmd. Requeuing")
                 self.laters.value.append((msg, sender))
                 return
             d_estate = self._get_master_estate_name(clustered=self.opts.get('cluster_mode', False))
             if not d_estate:
                 log.error("**** Lane Router: No available destination estate for 'remote_cmd'."
-                          "Unable to route. Requeuing".format())
+                          "Unable to route. Requeuing")
                 self.laters.value.append((msg, sender))
                 return
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.debug("**** Lane Router: Missing destination estate for 'remote_cmd'. "
-                      "Using default route={0}.".format(msg['route']['dst']))
+                      "Using default route=%s.", msg['route']['dst'])
             self.road_stack.value.message(msg,
                                           self.road_stack.value.nameRemotes[d_estate].uid)
 
@@ -1527,7 +1527,7 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
                     minions = states[state].value
                 except KeyError:
                     # error: wrong/unknown state requested
-                    log.error('Lane Router Received invalid message: {0}'.format(msg))
+                    log.error('Lane Router Received invalid message: %s', msg)
                     return
 
                 result = odict()
@@ -1581,7 +1581,7 @@ class SaltRaetStatsEventer(ioflo.base.deeding.Deed):
         elif tag == tagify('lane', 'stats'):
             return self.lane_stack.value.stats
         else:
-            log.error('Missing or invalid tag: {0}'.format(tag))
+            log.error('Missing or invalid tag: %s', tag)
             return None
 
     def action(self):

@@ -9,12 +9,12 @@ Please read :ref:`core config documentation <config_lxc>`.
 '''
 
 # Import python libs
-from __future__ import absolute_import
-import os
-import logging
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
+import logging
+import os
+import pprint
 import time
-from pprint import pformat
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -185,7 +185,7 @@ def _salt(fun, *args, **kw):
             except Exception:
                 ping = False
                 ping_retries += 1
-                log.error('{0} unreachable, retrying'.format(target))
+                log.error('%s unreachable, retrying', target)
         if not ping:
             raise SaltCloudSystemExit('Target {0} unreachable'.format(target))
         jid = conn.cmd_async(tgt=target,
@@ -213,7 +213,7 @@ def _salt(fun, *args, **kw):
                 break
             if running and (time.time() > endto):
                 raise Exception('Timeout {0}s for {1} is elapsed'.format(
-                    timeout, pformat(rkwargs)))
+                    timeout, pprint.pformat(rkwargs)))
             time.sleep(poll)
         # timeout for the master to return data about a specific job
         wait_for_res = float({
@@ -448,7 +448,7 @@ def create(vm_, call=None):
 
     ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
     if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-        log.debug('Generating minion keys for {0}'.format(vm_['name']))
+        log.debug('Generating minion keys for %s', vm_['name'])
         vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
             salt.config.get_cloud_config_value(
                 'keysize', vm_, __opts__))
@@ -564,6 +564,7 @@ def get_configured_provider(vm_=None):
             return data
         else:
             log.error(
-                'Configured provider {0} minion: {1} is unreachable'.format(
-                    __active_provider_name__, data['target']))
+                'Configured provider %s minion: %s is unreachable',
+                __active_provider_name__, data['target']
+            )
     return False

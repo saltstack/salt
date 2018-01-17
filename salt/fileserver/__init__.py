@@ -323,7 +323,7 @@ class Fileserver(object):
         self.opts = opts
         self.servers = salt.loader.fileserver(opts, opts['fileserver_backend'])
 
-    def _gen_back(self, back):
+    def backends(self, back=None):
         '''
         Return the backend list
         '''
@@ -389,7 +389,7 @@ class Fileserver(object):
         Clear the cache of all of the fileserver backends that support the
         clear_cache function or the named backend(s) only.
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         cleared = []
         errors = []
         for fsb in back:
@@ -412,7 +412,7 @@ class Fileserver(object):
         information, or a pattern. If the latter, then remotes for which the URL
         matches the pattern will be locked.
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         locked = []
         errors = []
         for fsb in back:
@@ -446,7 +446,7 @@ class Fileserver(object):
             If specified, then any remotes which contain the passed string will
             have their lock cleared.
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         cleared = []
         errors = []
         for fsb in back:
@@ -464,18 +464,31 @@ class Fileserver(object):
         Update all of the enabled fileserver backends which support the update
         function, or
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         for fsb in back:
             fstr = '{0}.update'.format(fsb)
             if fstr in self.servers:
                 log.debug('Updating {0} fileserver cache'.format(fsb))
                 self.servers[fstr]()
 
+    def update_intervals(self, back=None):
+        '''
+        Return the update intervals for all of the enabled fileserver backends
+        which support variable update intervals.
+        '''
+        back = self.backends(back)
+        ret = {}
+        for fsb in back:
+            fstr = '{0}.update_intervals'.format(fsb)
+            if fstr in self.servers:
+                ret[fsb] = self.servers[fstr]()
+        return ret
+
     def envs(self, back=None, sources=False):
         '''
         Return the environments for the named backend or all backends
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         ret = set()
         if sources:
             ret = {}
@@ -497,7 +510,7 @@ class Fileserver(object):
         '''
         Initialize the backend, only do so if the fs supports an init function
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         for fsb in back:
             fstr = '{0}.init'.format(fsb)
             if fstr in self.servers:
@@ -530,7 +543,7 @@ class Fileserver(object):
         Find the path and return the fnd structure, this structure is passed
         to other backend interfaces.
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         kwargs = {}
         fnd = {'path': '',
                'rel': ''}
@@ -657,7 +670,7 @@ class Fileserver(object):
                     saltenv[idx] = six.text_type(val)
 
         ret = {}
-        fsb = self._gen_back(load.pop('fsbackend', None))
+        fsb = self.backends(load.pop('fsbackend', None))
         list_cachedir = os.path.join(self.opts['cachedir'], 'file_lists')
         try:
             file_list_backends = os.listdir(list_cachedir)
@@ -727,7 +740,7 @@ class Fileserver(object):
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
-        for fsb in self._gen_back(load.pop('fsbackend', None)):
+        for fsb in self.backends(load.pop('fsbackend', None)):
             fstr = '{0}.file_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -753,7 +766,7 @@ class Fileserver(object):
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
-        for fsb in self._gen_back(None):
+        for fsb in self.backends(None):
             fstr = '{0}.file_list_emptydirs'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -779,7 +792,7 @@ class Fileserver(object):
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
-        for fsb in self._gen_back(load.pop('fsbackend', None)):
+        for fsb in self.backends(load.pop('fsbackend', None)):
             fstr = '{0}.dir_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -805,7 +818,7 @@ class Fileserver(object):
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
-        for fsb in self._gen_back(load.pop('fsbackend', None)):
+        for fsb in self.backends(load.pop('fsbackend', None)):
             symlstr = '{0}.symlink_list'.format(fsb)
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)

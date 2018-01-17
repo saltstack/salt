@@ -4,7 +4,7 @@ Run processes as a different user in Windows
 
 Based on a solution from http://stackoverflow.com/questions/29566330
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python Libraries
 import os

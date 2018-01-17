@@ -39,7 +39,7 @@ Example ``/etc/salt/cloud.providers`` or
 # pylint: disable=E0102
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import pprint
@@ -432,7 +432,7 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
     conn = get_conn()
 
     label = vm_.get('label', vm_['name'])
@@ -528,7 +528,7 @@ def create(vm_):
         if 'subnet_name' in vm_:
             network_config.subnet_names.append(vm_['subnet_name'])
 
-    log.debug('vm_kwargs: {0}'.format(vm_kwargs))
+    log.debug('vm_kwargs: %s', vm_kwargs)
 
     event_kwargs = {'service_kwargs': service_kwargs.copy(),
                     'vm_kwargs': vm_kwargs.copy()}
@@ -543,7 +543,7 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-    log.debug('vm_kwargs: {0}'.format(vm_kwargs))
+    log.debug('vm_kwargs: %s', vm_kwargs)
 
     # Azure lets you open winrm on a new VM
     # Can open up specific ports in Azure; but not on Windows
@@ -553,31 +553,29 @@ def create(vm_):
         log.debug('Cloud service already exists')
     except Exception as exc:
         error = 'The hosted service name is invalid.'
-        if error in str(exc):
+        if error in six.text_type(exc):
             log.error(
-                'Error creating {0} on Azure.\n\n'
+                'Error creating %s on Azure.\n\n'
                 'The hosted service name is invalid. The name can contain '
                 'only letters, numbers, and hyphens. The name must start with '
-                'a letter and must end with a letter or a number.'.format(
-                    vm_['name']
-                ),
+                'a letter and must end with a letter or a number.',
+                vm_['name'],
                 # Show the traceback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
         else:
             log.error(
-                'Error creating {0} on Azure\n\n'
+                'Error creating %s on Azure\n\n'
                 'The following exception was thrown when trying to '
-                'run the initial deployment: \n{1}'.format(
-                    vm_['name'], str(exc)
-                ),
+                'run the initial deployment: \n%s',
+                vm_['name'], exc,
                 # Show the traceback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
         return False
     try:
         result = conn.create_virtual_machine_deployment(**vm_kwargs)
-        log.debug('Request ID for machine: {0}'.format(result.request_id))
+        log.debug('Request ID for machine: %s', result.request_id)
         _wait_for_async(conn, result.request_id)
     except AzureConflictHttpError:
         log.debug('Conflict error. The deployment may already exist, trying add_role')
@@ -589,28 +587,26 @@ def create(vm_):
         _wait_for_async(conn, result.request_id)
     except Exception as exc:
         error = 'The hosted service name is invalid.'
-        if error in str(exc):
+        if error in six.text_type(exc):
             log.error(
-                'Error creating {0} on Azure.\n\n'
+                'Error creating %s on Azure.\n\n'
                 'The VM name is invalid. The name can contain '
                 'only letters, numbers, and hyphens. The name must start with '
-                'a letter and must end with a letter or a number.'.format(
-                    vm_['name']
-                ),
+                'a letter and must end with a letter or a number.',
+                vm_['name'],
                 # Show the traceback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
         else:
             log.error(
-                'Error creating {0} on Azure.\n\n'
+                'Error creating %s on Azure.\n\n'
                 'The Virtual Machine could not be created. If you '
                 'are using an already existing Cloud Service, '
                 'make sure you set up the `port` variable corresponding '
                 'to the SSH port exists and that the port number is not '
                 'already in use.\nThe following exception was thrown when trying to '
-                'run the initial deployment: \n{1}'.format(
-                    vm_['name'], str(exc)
-                ),
+                'run the initial deployment: \n%s',
+                vm_['name'], exc,
                 # Show the traceback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
@@ -623,7 +619,7 @@ def create(vm_):
         try:
             conn.get_role(service_name, service_name, vm_['name'])
             data = show_instance(vm_['name'], call='action')
-            if 'url' in data and data['url'] != str(''):
+            if 'url' in data and data['url'] != six.text_type(''):
                 return data['url']
         except AzureMissingResourceHttpError:
             pass
@@ -660,7 +656,7 @@ def create(vm_):
             transport=__opts__['transport']
         )
 
-        log.info('Create and attach volumes to node {0}'.format(vm_['name']))
+        log.info('Create and attach volumes to node %s', vm_['name'])
         created = create_attach_volumes(
             vm_['name'],
             {
@@ -676,12 +672,8 @@ def create(vm_):
         ret['Attached Volumes'] = created
 
     data = show_instance(vm_['name'], call='action')
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
-    log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
-    )
+    log.info('Created Cloud VM \'%s\'', vm_)
+    log.debug('\'%s\' VM creation details:\n%s', vm_['name'], pprint.pformat(data))
 
     ret.update(data)
 
@@ -787,7 +779,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             log.info(msg)
             ret.append(msg)
         else:
-            log.error('Error attaching {0} on Azure'.format(volume_dict))
+            log.error('Error attaching %s on Azure', volume_dict)
     return ret
 
 
@@ -961,7 +953,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
             'cleanup_vhds',
             get_configured_provider(), __opts__, search_global=False, default=False,
         ))
-        log.debug('Deleting disk {0}'.format(disk_name))
+        log.debug('Deleting disk %s', disk_name)
         if cleanup_vhds:
             log.debug('Deleting vhd')
 
@@ -994,7 +986,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
             get_configured_provider(), __opts__, search_global=False, default=False
         )
         if cleanup_services:
-            log.debug('Deleting service {0}'.format(service_name))
+            log.debug('Deleting service %s', service_name)
 
             def wait_for_disk_delete():
                 '''
@@ -1591,7 +1583,10 @@ def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
                 'name': disks[disk]['name'],
                 'delete_vhd': kwargs.get('delete_vhd', False)
             }
-            log.info('Deleting disk {name}, deleting VHD: {delete_vhd}'.format(**del_kwargs))
+            log.info(
+                'Deleting disk %s, deleting VHD: %s',
+                del_kwargs['name'], del_kwargs['delete_vhd']
+            )
             data = delete_disk(kwargs=del_kwargs, call='function')
     return True
 
@@ -2138,7 +2133,7 @@ def update_input_endpoint(kwargs=None, conn=None, call=None, activity='update'):
 
         if 'enable_direct_server_return' not in kwargs:
             kwargs['enable_direct_server_return'] = False
-        kwargs['enable_direct_server_return'] = str(kwargs['enable_direct_server_return']).lower()
+        kwargs['enable_direct_server_return'] = six.text_type(kwargs['enable_direct_server_return']).lower()
 
         if 'timeout_for_tcp_idle_connection' not in kwargs:
             kwargs['timeout_for_tcp_idle_connection'] = 4
