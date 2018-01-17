@@ -96,6 +96,7 @@ log = logging.getLogger(__name__)
 
 try:
     # Attempt to import msgpack
+    import msgpack
     import salt.utils.msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it

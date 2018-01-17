@@ -1036,8 +1036,7 @@ class RaetKey(Key):
                     if ext == '.json':
                         data = salt.utils.json.load(fp_)
                     elif ext == '.msgpack':
-                        data = salt.utils.msgpack.load(fp_,
-                                                       _msgpack_module=msgpack)
+                        data = salt.utils.msgpack.load(fp_)
                     role = salt.utils.stringutils.to_unicode(data['role'])
                     if role not in minions:
                         os.remove(path)

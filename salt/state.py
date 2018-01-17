@@ -2221,7 +2221,7 @@ class State(object):
                     with salt.utils.files.fopen(pause_path, 'rb') as fp_:
                         try:
                             pdat = salt.utils.msgpack.loads(
-                                fp_.read(),_msgpack_module=msgpack)
+                                fp_.read(), _msgpack_module=msgpack)
                         except msgpack.UnpackValueError:
                             # Reading race condition
                             if tries > 10:
