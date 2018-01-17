@@ -884,7 +884,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
     except Exception as exc:
         return _failed_compile('Failed to read', exc)
 
-    if config and isinstance(config,dict):
+    if config and isinstance(config, dict):
         revmap = {}
         errors = []
         for pkgname, version_list in six.iteritems(config):
