@@ -31,12 +31,19 @@ class SSDPTestCase(TestCase):
 
     @patch('salt.utils.ssdp._json', None)
     @patch('salt.utils.ssdp.asyncio', None)
-    def test_base_n_avail(self):
+    def test_base_avail(self):
         '''
         Test SSDP base class availability method.
         :return:
         '''
         base = ssdp.SSDPBase()
-        print('*' * 80)
-        print(base._is_available())
-        print('*' * 80)
+        assert not base._is_available()
+
+        with patch('salt.utils.ssdp._json', True):
+            assert not base._is_available()
+
+        with patch('salt.utils.ssdp.asyncio', True):
+            assert not base._is_available()
+
+        with patch('salt.utils.ssdp._json', True), patch('salt.utils.ssdp.asyncio', True):
+            assert base._is_available()
