@@ -76,8 +76,7 @@ description:
         """
 
         with patch.object(ansible, '_resolver', self.resolver), \
-                patch.object(ansible._resolver, 'load_module',
-                             MagicMock(return_value=Module())):
+            patch.object(ansible._resolver, 'load_module', MagicMock(return_value=Module())):
             ret = ansible.help('dummy')
             assert sorted(ret.get('Available sections on module "{0}"'.format(
                 Module().__name__))) == ['one', 'two']
