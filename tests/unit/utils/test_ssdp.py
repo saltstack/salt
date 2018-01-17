@@ -47,3 +47,20 @@ class SSDPTestCase(TestCase):
 
         with patch('salt.utils.ssdp._json', True), patch('salt.utils.ssdp.asyncio', True):
             assert base._is_available()
+
+    def test_base_protocol_settings(self):
+        '''
+        Tests default constants data.
+        :return:
+        '''
+        base = ssdp.SSDPBase()
+        v_keys = ['signature', 'answer', 'port', 'listen_ip', 'timeout']
+        v_vals = ['__salt_master_service', {}, 4520, '0.0.0.0', 3]
+        for key in v_keys:
+            assert key in base.DEFAULTS
+
+        for key in base.DEFAULTS.keys():
+            assert key in v_keys
+
+        for key, value in zip(v_keys, v_vals):
+            assert base.DEFAULTS[key] == value
