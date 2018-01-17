@@ -207,8 +207,7 @@ def wrap_tmpl_func(render_str):
                 output = output.encode(SLS_ENCODING)
             if salt.utils.platform.is_windows():
                 newline = False
-                # Use repr as we don't care about the contents, only the ending
-                if repr(output).endswith(('\n', os.linesep)):
+                if salt.utils.stringutils.to_unicode(output).endswith(('\n', os.linesep)):
                     newline = True
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
