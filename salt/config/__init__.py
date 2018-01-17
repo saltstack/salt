@@ -3786,7 +3786,7 @@ def apply_minion_config(overrides=None,
     return opts
 
 
-def _update_discovery_config(opts, minion=True):
+def _update_discovery_config(opts):
     '''
     Update discovery config for all instances.
 
@@ -3797,10 +3797,10 @@ def _update_discovery_config(opts, minion=True):
         if opts['discovery'] is True:
             opts['discovery'] = {}
         discovery_config = {'attempts': 3, 'pause': 5, 'port': 4520, 'match': 'any', 'mapping': {}}
-        for key in opts['discovery'].keys():
+        for key in opts['discovery']:
             if key not in discovery_config:
                 raise salt.exceptions.SaltConfigurationError('Unknown discovery option: {0}'.format(key))
-        if not minion:
+        if opts.get('__role') != 'minion':
             for key in ['attempts', 'pause', 'match']:
                 del discovery_config[key]
         opts['discovery'] = salt.utils.dictupdate.update(discovery_config, opts['discovery'], True, True)
@@ -3999,7 +3999,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     # Check and update TLS/SSL configuration
     _update_ssl_config(opts)
-    _update_discovery_config(opts, minion=False)
+    _update_discovery_config(opts)
 
     return opts
 
