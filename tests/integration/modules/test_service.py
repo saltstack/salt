@@ -25,6 +25,9 @@ class ServiceModuleTest(ModuleCase):
         elif os_family == 'Arch':
             self.service_name = 'systemd-journald'
             cmd_name = 'systemctl'
+        elif os_family == 'NILinuxRT':
+            self.service_name = 'syslog'
+            cmd_name = 'syslog-ng'
         elif os_family == 'MacOS':
             self.service_name = 'org.ntp.ntpd'
 
