@@ -106,10 +106,11 @@ list of hosts associated with that vCenter Server:
 
 However, some functions should be used against ESXi hosts, not vCenter Servers.
 Functionality such as getting a host's coredump network configuration should be
-performed against a host and not a vCenter server. If the authentication information
-you're using is against a vCenter server and not an ESXi host, you can provide the
-host name that is associated with the vCenter server in the command, as a list, using
-the ``host_names`` or ``esxi_host`` kwarg. For example:
+performed against a host and not a vCenter server. If the authentication
+information you're using is against a vCenter server and not an ESXi host, you
+can provide the host name that is associated with the vCenter server in the
+command, as a list, using the ``host_names`` or ``esxi_host`` kwarg. For
+example:
 
 .. code-block:: bash
 
