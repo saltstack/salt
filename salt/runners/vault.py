@@ -75,6 +75,9 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
                     'metadata': audit_data
                   }
 
+        if payload['policies'] == []:
+            return {'error': 'No policies matched minion'}
+
         log.trace('Sending token creation request to Vault')
         response = requests.post(url, headers=headers, json=payload, verify=verify)
 

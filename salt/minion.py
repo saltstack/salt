@@ -786,6 +786,7 @@ class SMinion(MinionBase):
     '''
     def __init__(self, opts):
         # Late setup of the opts grains, so we can log from the grains module
+        import salt.loader
         opts['grains'] = salt.loader.grains(opts)
         super(SMinion, self).__init__(opts)
 
@@ -803,8 +804,7 @@ class SMinion(MinionBase):
 
         # If configured, cache pillar data on the minion
         if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
-            import yaml
-            from salt.utils.yamldumper import SafeOrderedDumper
+            import salt.utils.yaml
             pdir = os.path.join(self.opts['cachedir'], 'pillar')
             if not os.path.isdir(pdir):
                 os.makedirs(pdir, 0o700)
@@ -815,21 +815,11 @@ class SMinion(MinionBase):
                 penv = 'base'
             cache_top = {penv: {self.opts['id']: ['cache']}}
             with salt.utils.files.fopen(ptop, 'wb') as fp_:
-                fp_.write(
-                    yaml.dump(
-                        cache_top,
-                        Dumper=SafeOrderedDumper
-                    )
-                )
+                salt.utils.yaml.safe_dump(cache_top, fp_)
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
             with salt.utils.files.fopen(cache_sls, 'wb') as fp_:
-                fp_.write(
-                    yaml.dump(
-                        self.opts['pillar'],
-                        Dumper=SafeOrderedDumper
-                    )
-                )
+                salt.utils.yaml.safe_dump(self.opts['pillar'], fp_)
                 os.chmod(cache_sls, 0o600)
 
     def gen_modules(self, initial_load=False):
@@ -2010,7 +2000,7 @@ class Minion(MinionBase):
                 salt.utils.minion.cache_jobs(self.opts, load['jid'], ret)
 
         load = {'cmd': ret_cmd,
-                'load': jids.values()}
+                'load': list(six.itervalues(jids))}
 
         def timeout_handler(*_):
             log.warning(
@@ -3182,7 +3172,7 @@ class SyndicManager(MinionBase):
             if res:
                 self.delayed = []
         for master in list(six.iterkeys(self.job_rets)):
-            values = self.job_rets[master].values()
+            values = list(six.itervalues(self.job_rets[master]))
             res = self._return_pub_syndic(values, master_id=master)
             if res:
                 del self.job_rets[master]

@@ -11,7 +11,6 @@ import shutil
 import signal
 import tempfile
 import textwrap
-import yaml
 import threading
 from salt.ext.six.moves import queue
 
@@ -26,6 +25,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -275,7 +275,7 @@ class OrchEventTest(ShellCase):
         '''
         Dump the config dict to the conf file
         '''
-        self.conf.write(yaml.dump(data, default_flow_style=False))
+        self.conf.write(salt.utils.yaml.safe_dump(data, default_flow_style=False))
         self.conf.flush()
 
     def test_jid_in_ret_event(self):

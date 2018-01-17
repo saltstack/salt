@@ -12,12 +12,12 @@ import copy as pycopy
 import difflib
 import logging
 import os
-import yaml
 
 # Import salt libs
 import salt.utils.event
 import salt.utils.files
 import salt.utils.odict
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -140,8 +140,7 @@ def list_(show_all=False,
     if schedule:
         if return_yaml:
             tmp = {'schedule': schedule}
-            yaml_out = yaml.safe_dump(tmp, default_flow_style=False)
-            return yaml_out
+            return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
         else:
             return schedule
     else:
@@ -808,8 +807,8 @@ def reload_():
     if os.path.isfile(sfn):
         with salt.utils.files.fopen(sfn, 'rb') as fp_:
             try:
-                schedule = yaml.safe_load(fp_.read())
-            except yaml.YAMLError as exc:
+                schedule = salt.utils.yaml.safe_load(fp_)
+            except salt.utils.yaml.YAMLError as exc:
                 ret['comment'].append('Unable to read existing schedule file: {0}'.format(exc))
 
         if schedule:

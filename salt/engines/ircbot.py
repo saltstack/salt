@@ -54,7 +54,7 @@ Example of usage
     [DEBUG   ] Sending event: tag = salt/engines/ircbot/test/tag/ircbot; data = {'_stamp': '2016-11-28T14:34:16.633623', 'data': [u'irc', u'is', u'usefull']}
 
 '''
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libraries
 import base64

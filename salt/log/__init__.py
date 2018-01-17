@@ -9,7 +9,7 @@
     This is where Salt's logging gets set up. Currently, the required imports
     are made to assure backwards compatibility.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import severals classes/functions from salt.log.setup for backwards
 # compatibility

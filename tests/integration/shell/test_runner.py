@@ -16,12 +16,10 @@ from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import skip_if_not_root
 
-# Import 3rd-party libs
-import yaml
-
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.yaml
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -102,12 +100,10 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
 
         config_file_name = 'master'
         with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = yaml.load(fhr.read())
+            config = salt.utils.yaml.safe_load(fhr)
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
             with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                fhw.write(
-                    yaml.dump(config, default_flow_style=False)
-                )
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
         ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} -d'.format(

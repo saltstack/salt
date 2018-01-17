@@ -11,12 +11,12 @@ from __future__ import absolute_import
 import difflib
 import logging
 import os
-import yaml
 
 # Import Salt libs
 import salt.ext.six as six
 import salt.utils.event
 import salt.utils.files
+import salt.utils.yaml
 from salt.ext.six.moves import map
 
 # Get logging started
@@ -75,8 +75,7 @@ def list_(return_yaml=True,
     if beacons:
         if return_yaml:
             tmp = {'beacons': beacons}
-            yaml_out = yaml.safe_dump(tmp, default_flow_style=False)
-            return yaml_out
+            return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
         else:
             return beacons
     else:
@@ -116,8 +115,7 @@ def list_available(return_yaml=True):
     if beacons:
         if return_yaml:
             tmp = {'beacons': beacons}
-            yaml_out = yaml.safe_dump(tmp, default_flow_style=False)
-            return yaml_out
+            return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
         else:
             return beacons
     else:
@@ -355,11 +353,12 @@ def save():
     beacons = list_(return_yaml=False, include_pillar=False)
 
     # move this file into an configurable opt
-    sfn = '{0}/{1}/beacons.conf'.format(__opts__['config_dir'],
-                                        os.path.dirname(__opts__['default_include']))
+    sfn = os.path.join(__opts__['config_dir'],
+                       os.path.dirname(__opts__['default_include']),
+                       'beacons.conf')
     if beacons:
         tmp = {'beacons': beacons}
-        yaml_out = yaml.safe_dump(tmp, default_flow_style=False)
+        yaml_out = salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
     else:
         yaml_out = ''
 

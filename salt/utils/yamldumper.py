@@ -15,7 +15,7 @@ except ImportError:
     from yaml import Dumper
     from yaml import SafeDumper
 
-import yaml
+import yaml  # pylint: disable=blacklisted-import
 import collections
 
 from salt.utils.odict import OrderedDict
@@ -26,6 +26,9 @@ try:
 except ImportError:
     odict = None
     HAS_IOFLO = False
+
+__all__ = ['OrderedDumper', 'SafeOrderedDumper', 'IndentedSafeOrderedDumper',
+           'get_dumper', 'dump', 'safe_dump']
 
 
 class IndentMixin(Dumper):
@@ -75,6 +78,13 @@ SafeOrderedDumper.add_representer(
     yaml.representer.SafeRepresenter.represent_dict
 )
 
+OrderedDumper.add_representer(
+    'tag:yaml.org,2002:timestamp',
+    OrderedDumper.represent_scalar)
+SafeOrderedDumper.add_representer(
+    'tag:yaml.org,2002:timestamp',
+    SafeOrderedDumper.represent_scalar)
+
 if HAS_IOFLO:
     OrderedDumper.add_representer(odict, represent_ordereddict)
     SafeOrderedDumper.add_representer(odict, represent_ordereddict)
@@ -88,9 +98,24 @@ def get_dumper(dumper_name):
     }.get(dumper_name)
 
 
+def dump(data, stream=None, **kwargs):
+    '''
+    .. versionadded:: Oxygen
+
+    Helper that wraps yaml.dump and ensures that we encode unicode strings
+    unless explicitly told not to.
+    '''
+    if 'allow_unicode' not in kwargs:
+        kwargs['allow_unicode'] = True
+    return yaml.dump(data, stream, **kwargs)
+
+
 def safe_dump(data, stream=None, **kwargs):
     '''
     Use a custom dumper to ensure that defaultdict and OrderedDict are
-    represented properly
+    represented properly. Ensure that unicode strings are encoded unless
+    explicitly told not to.
     '''
+    if 'allow_unicode' not in kwargs:
+        kwargs['allow_unicode'] = True
     return yaml.dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)
