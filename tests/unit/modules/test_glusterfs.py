@@ -432,6 +432,7 @@ xml_set_op_version_success = """
 </cliOutput>
 """
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
