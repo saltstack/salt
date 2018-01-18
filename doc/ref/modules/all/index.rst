@@ -309,6 +309,7 @@ execution modules
     pagerduty
     pagerduty_util
     pam
+    panos
     parallels
     parted
     pcs
