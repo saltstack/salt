@@ -10,6 +10,7 @@ from tests.support.mock import patch, call, mock_open, NO_MOCK, NO_MOCK_REASON, 
 
 # salt libs
 import salt.utils.files
+import salt.utils.platform
 from salt import crypt
 
 # third-party libs
@@ -104,19 +105,20 @@ class CryptTestCase(TestCase):
 
     @patch('os.umask', MagicMock())
     @patch('os.chmod', MagicMock())
-    @patch('os.chown', MagicMock())
+    @patch('os.chown', MagicMock(), create=True)
     @patch('os.access', MagicMock(return_value=True))
     def test_gen_keys_with_passphrase(self):
+        key_path = os.path.join(os.sep, 'keydir')
         with patch('salt.utils.files.fopen', mock_open()):
-            open_priv_wb = call('/keydir/keyname.pem', 'wb+')
-            open_pub_wb = call('/keydir/keyname.pub', 'wb+')
+            open_priv_wb = call(os.path.join(key_path, 'keyname.pem'), 'wb+')
+            open_pub_wb = call(os.path.join(key_path, 'keyname.pub'), 'wb+')
             with patch('os.path.isfile', return_value=True):
-                self.assertEqual(crypt.gen_keys('/keydir', 'keyname', 2048, passphrase='password'), '/keydir/keyname.pem')
+                self.assertEqual(crypt.gen_keys(key_path, 'keyname', 2048, passphrase='password'), os.path.join(key_path, 'keyname.pem'))
                 self.assertNotIn(open_priv_wb, salt.utils.files.fopen.mock_calls)
                 self.assertNotIn(open_pub_wb, salt.utils.files.fopen.mock_calls)
             with patch('os.path.isfile', return_value=False):
                 with patch('salt.utils.files.fopen', mock_open()):
-                    crypt.gen_keys('/keydir', 'keyname', 2048)
+                    crypt.gen_keys(key_path, 'keyname', 2048)
                     salt.utils.files.fopen.assert_has_calls([open_priv_wb, open_pub_wb], any_order=True)
 
     def test_sign_message(self):
