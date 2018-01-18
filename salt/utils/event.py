@@ -91,8 +91,8 @@ SUB_EVENT = set([
     'state.sls',
 ])
 
-TAGEND = '\n\n'  # long tag delimiter
-TAGPARTER = '/'  # name spaced tag delimiter
+TAGEND = str('\n\n')  # long tag delimiter
+TAGPARTER = str('/')  # name spaced tag delimiter
 SALT = 'salt'  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
 TAGS = {
@@ -725,15 +725,12 @@ class SaltEvent(object):
             is_msgpacked=True,
             use_bin_type=six.PY3
         )
-        log.debug('Sending event: tag = {0}; data = {1}'.format(tag, data))
-        if six.PY2:
-            event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
-        else:
-            event = b''.join([
-                salt.utils.to_bytes(tag),
-                salt.utils.to_bytes(tagend),
-                serialized_data])
-        msg = salt.utils.to_bytes(event, 'utf-8')
+        log.debug('Sending event: tag = %s; data = %s', tag, data)
+        event = b''.join([
+            salt.utils.stringutils.to_bytes(tag),
+            salt.utils.stringutils.to_bytes(tagend),
+            serialized_data])
+        msg = salt.utils.stringutils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
             with salt.utils.async.current_ioloop(self.io_loop):
                 try:
