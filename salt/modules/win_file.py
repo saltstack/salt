@@ -42,6 +42,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
 # Import salt libs
+import salt.utils.args
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
@@ -788,6 +789,52 @@ def chgrp(path, group):
     log.debug('win_file.py {0} Doing nothing for {1}'.format(func_name, path))
 
     return None
+
+
+def grep(path, pattern, *opts):
+    '''
+    Searches a text file for a pattern using regular expression and returns
+    the lines of text that match the pattern.
+    Args:
+        path (str): The path to the text file
+        pattern (str): A regular expression used to match a pattern within the
+            file
+        opts: Additional command-line flags to pass. For example:
+            ``/b``, or ``/e /l``
+
+    Returns:
+        str: Rows within the text file that match the pattern.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.grep c:\\temp\\test.txt foobar
+        salt '*' file.grep c:\\temp\\test.txt foobar /b
+        salt '*' file.grep c:\\temp\\test.txt foobar /e /l
+    '''
+    split_opts = []
+    for opt in opts:
+        try:
+            split = salt.utils.args.shlex_split(opt)
+        except AttributeError:
+            split = salt.utils.args.shlex_split(str(opt))
+        if len(split) > 1:
+            raise SaltInvocationError(
+                'Passing multiple command line arguments in a single string '
+                'is not supported, please pass the following arguments '
+                'separately: {0}'.format(opt)
+            )
+        split_opts.extend(split)
+
+    cmd = ['findstr'] + split_opts + [pattern, path]
+
+    try:
+        ret = __salt__['cmd.run'](cmd)
+    except (IOError, OSError) as exc:
+        raise CommandExecutionError(exc.strerror)
+
+    return ret
 
 
 def stats(path, hash_type='sha256', follow_symlinks=True):
