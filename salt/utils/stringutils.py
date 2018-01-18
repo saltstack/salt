@@ -35,7 +35,14 @@ def to_bytes(s, encoding=None):
         if isinstance(s, bytearray):
             return bytes(s)
         if isinstance(s, six.string_types):
-            return s.encode(encoding or __salt_system_encoding__)
+            if encoding:
+                return s.encode(encoding)
+            else:
+                try:
+                    return s.encode(__salt_system_encoding__)
+                except UnicodeEncodeError:
+                    # Fall back to UTF-8
+                    return s.encode('utf-8')
         raise TypeError('expected bytes, bytearray, or str')
     else:
         return to_str(s, encoding)
@@ -53,13 +60,27 @@ def to_str(s, encoding=None):
         if isinstance(s, (bytes, bytearray)):
             # https://docs.python.org/3/howto/unicode.html#the-unicode-type
             # replace error with U+FFFD, REPLACEMENT CHARACTER
-            return s.decode(encoding or __salt_system_encoding__, "replace")
+            if encoding:
+                return s.decode(encoding, 'replace')
+            else:
+                try:
+                    return s.decode(__salt_system_encoding__, 'replace')
+                except UnicodeDecodeError:
+                    # Fall back to UTF-8
+                    return s.decode('utf-8', 'replace')
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
-            return str(s)
+            return str(s)  # future lint: disable=blacklisted-function
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
-            return s.encode(encoding or __salt_system_encoding__)
+            if encoding:
+                return s.encode(encoding)
+            else:
+                try:
+                    return s.encode(__salt_system_encoding__)
+                except UnicodeEncodeError:
+                    # Fall back to UTF-8
+                    return s.encode('utf-8')
         raise TypeError('expected str, bytearray, or unicode')
 
 
@@ -77,7 +98,14 @@ def to_unicode(s, encoding=None):
         # already a unicode type, it does not need to be decoded (and doing so
         # will raise an exception).
         if isinstance(s, str):
-            return s.decode(encoding or __salt_system_encoding__)
+            if encoding:
+                return s.decode(encoding)
+            else:
+                try:
+                    return s.decode(__salt_system_encoding__)
+                except UnicodeDecodeError:
+                    # Fall back to UTF-8
+                    return s.decode('utf-8')
     return s
 
 
@@ -103,7 +131,7 @@ def to_none(text):
     '''
     Convert a string to None if the string is empty or contains only spaces.
     '''
-    if str(text).strip():
+    if six.tex_type(text).strip():
         return text
     return None
 

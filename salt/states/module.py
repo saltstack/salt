@@ -24,7 +24,7 @@ for this the :mod:`module.wait <salt.states.module.wait>` state can be used:
 
     fetch_out_of_band:
       module.run:
-        git.fetch:
+        - git.fetch:
           - cwd: /path/to/my/repo
           - user: myuser
           - opts: '--all'
@@ -35,7 +35,7 @@ Another example:
 
     mine.send:
       module.run:
-        network.ip_addrs:
+        - network.ip_addrs:
           - interface: eth0
 
 And more complex example:
@@ -44,7 +44,7 @@ And more complex example:
 
     eventsviewer:
       module.run:
-        task.create_task:
+        - task.create_task:
           - name: events-viewer
           - user_name: System
           - action_type: Execute
@@ -158,7 +158,7 @@ functions at once the following way:
 
     call_something:
       module.run:
-        git.fetch:
+        - git.fetch:
           - cwd: /path/to/my/repo
           - user: myuser
           - opts: '--all'

@@ -1714,7 +1714,7 @@ def _regex_to_static(src, regex):
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
-    return src and src.group() or regex
+    return src and src.group().rstrip('\r') or regex
 
 
 def _assert_occurrence(src, probe, target, amount=1):
