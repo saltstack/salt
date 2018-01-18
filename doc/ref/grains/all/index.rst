@@ -10,6 +10,7 @@ grains modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cimc
     chronos
     core
     disks
