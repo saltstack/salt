@@ -22,9 +22,25 @@ except ImportError as err:
     pytest = None
 
 
+class Mocks(object):
+    def get_socket_mock(self, expected_ip, expected_hostname):
+        '''
+        Get a mock of a socket
+        :return:
+        '''
+        sck = MagicMock()
+        sck.getsockname = MagicMock(return_value=(expected_ip, 123456))
+
+        sock_mock = MagicMock()
+        sock_mock.socket = MagicMock(return_value=sck)
+        sock_mock.gethostbyname = MagicMock(return_value=expected_hostname)
+
+        return sock_mock
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
-class SSDPTestCase(TestCase):
+class SSDPBaseTestCase(TestCase, Mocks):
     '''
     TestCase for SSDP-related parts.
     '''
@@ -81,16 +97,11 @@ class SSDPTestCase(TestCase):
         base = ssdp.SSDPBase()
         expected_ip = '192.168.1.10'
         expected_host = 'oxygen'
-        sck = MagicMock()
-        sck.getsockname = MagicMock(return_value=(expected_ip, 123456))
-
-        sock_mock = MagicMock()
-        sock_mock.socket = MagicMock(return_value=sck)
-        sock_mock.gethostbyname = MagicMock(return_value=expected_host)
+        sock_mock = self.get_socket_mock(expected_ip, expected_host)
 
         with patch('salt.utils.ssdp.socket', sock_mock):
             assert base.get_self_ip() == expected_ip
 
-        sck.getsockname.side_effect = boom
+        sock_mock.socket().getsockname.side_effect = boom
         with patch('salt.utils.ssdp.socket', sock_mock):
             assert base.get_self_ip() == expected_host
