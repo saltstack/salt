@@ -22,5 +22,6 @@ grains modules
     metadata
     napalm
     opts
+    panos
     philips_hue
     rest_sample
