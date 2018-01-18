@@ -10,7 +10,6 @@ from tests.support.mock import patch, call, mock_open, NO_MOCK, NO_MOCK_REASON, 
 
 # salt libs
 import salt.utils.files
-import salt.utils.platform
 from salt import crypt
 
 # third-party libs
