@@ -4,6 +4,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
+import time
 
 # Import Salt Testing Libs
 from tests.support.case import SSHCase
@@ -67,7 +68,7 @@ class SSHStateTest(SSHCase):
         test state.show_top with salt-ssh
         '''
         ret = self.run_function('state.show_top')
-        self.assertEqual(ret, {u'base': [u'core', u'master_tops_test']})
+        self.assertEqual(ret, {'base': ['core', 'master_tops_test']})
 
     def test_state_single(self):
         '''
@@ -158,6 +159,25 @@ class SSHStateTest(SSHCase):
 
         check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
+
+    def test_state_running(self):
+        '''
+        test state.running with salt-ssh
+        '''
+        start_sls = self.run_function('state.sls', ['running', '&'],
+                                      wipe=False)
+        time.sleep(8)
+        get_sls = self.run_function('state.running', wipe=False)
+        ret = 'The function "state.pkg" is running as'
+        self.assertIn(ret, ' '.join(get_sls))
+
+        # make sure we wait until the earlier state is complete
+        future = time.time() + 120
+        while True:
+            if time.time() > future:
+                break
+            if ret not in ' '.join(self.run_function('state.running', wipe=False)):
+                break
 
     def tearDown(self):
         '''
