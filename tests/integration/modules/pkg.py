@@ -240,10 +240,10 @@ class PkgModuleTest(integration.ModuleCase,
             self.assertIn('bash-completion', keys)
             self.assertIn('dpkg', keys)
         elif os_family == 'RedHat':
-            ret = self.run_function(func, ['rpm', 'yum'])
+            ret = self.run_function(func, ['rpm', 'bash'])
             keys = ret.keys()
             self.assertIn('rpm', keys)
-            self.assertIn('yum', keys)
+            self.assertIn('bash', keys)
         elif os_family == 'SUSE':
             ret = self.run_function(func, ['less', 'zypper'])
             keys = ret.keys()
