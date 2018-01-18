@@ -18,6 +18,9 @@ import tempfile
 import time
 import urllib
 
+if six.PY2:
+    from io import *
+
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
@@ -346,8 +349,9 @@ def fopen(*args, **kwargs):
         else:
             # the default is to read
             kwargs['mode'] = 'rb'
-    elif six.PY3 and 'encoding' not in kwargs:
-        # In Python 3, if text mode is used and the encoding
+
+    if 'encoding' not in kwargs:
+        # Using io.open for py2 and py3 if text mode is used and the encoding
         # is not specified, set the encoding to 'utf-8'.
         binary = False
         if len(args) > 1:
@@ -360,8 +364,11 @@ def fopen(*args, **kwargs):
         if not binary:
             kwargs['encoding'] = __salt_system_encoding__
 
-    if six.PY3 and not binary and not kwargs.get('newline', None):
+    if not binary and not kwargs.get('newline', None):
         kwargs['newline'] = ''
+
+    if not kwargs.get('buffering', None):
+        kwargs['buffering'] = 1048576  # 1 megabyte
 
     f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
