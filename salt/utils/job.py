@@ -4,7 +4,7 @@ Functions for interacting with the job cache
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Import Salt libs
@@ -65,7 +65,7 @@ def store_job(opts, load, event=None, mminion=None):
 
     if event:
         # If the return data is invalid, just ignore it
-        log.info('Got return from {id} for job {jid}'.format(**load))
+        log.info('Got return from %s for job %s', load['id'], load['jid'])
         event.fire_event(load,
                          salt.utils.event.tagify([load['jid'], 'ret', load['id']], 'job'))
         event.fire_ret_load(load)
@@ -77,7 +77,8 @@ def store_job(opts, load, event=None, mminion=None):
 
     # do not cache job results if explicitly requested
     if load.get('jid') == 'nocache':
-        log.debug('Ignoring job return with jid for caching {jid} from {id}'.format(**load))
+        log.debug('Ignoring job return with jid for caching %s from %s',
+                  load['jid'], load['id'])
         return
 
     # otherwise, write to the master cache

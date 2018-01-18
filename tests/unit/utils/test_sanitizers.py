@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from salt.ext.six import text_type as text
 
 # Import Salt Libs
@@ -21,7 +21,7 @@ class SanitizersTestCase(TestCase):
         '''
         Test sanitized input for trimming
         '''
-        value = u' sample '
+        value = ' sample '
         response = clean.trim(value)
         assert response == 'sample'
         assert type(response) == text

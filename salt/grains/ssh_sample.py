@@ -2,7 +2,7 @@
 '''
 Generate baseline proxy minion grains
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import salt.utils.platform
 
 __proxyenabled__ = ['ssh_sample']

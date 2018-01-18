@@ -3598,9 +3598,9 @@ def _checkAllAdmxPolicies(policy_class,
     full_names = {}
     if policy_filedata:
         log.debug('POLICY CLASS {0} has file data'.format(policy_class))
-        policy_filedata_split = re.sub(salt.utils.to_bytes(r'\]{0}$'.format(chr(0))),
+        policy_filedata_split = re.sub(salt.utils.stringutils.to_bytes(r'\]{0}$'.format(chr(0))),
                                        b'',
-                                       re.sub(salt.utils.to_bytes(r'^\[{0}'.format(chr(0))),
+                                       re.sub(salt.utils.stringutils.to_bytes(r'^\[{0}'.format(chr(0))),
                                               b'',
                                               re.sub(re.escape(module_policy_data.reg_pol_header.encode('utf-16-le')), b'', policy_filedata))
                                        ).split(']['.encode('utf-16-le'))
@@ -3916,7 +3916,7 @@ def _checkAllAdmxPolicies(policy_class,
                                                                                       admx_policy,
                                                                                       elements_item,
                                                                                       check_deleted=False)
-                                                                    ) + salt.utils.to_bytes(r'(?!\*\*delvals\.)'),
+                                                                    ) + salt.utils.stringutils.to_bytes(r'(?!\*\*delvals\.)'),
                                                           policy_filedata):
                                     configured_value = _getDataFromRegPolData(_processValueItem(child_item,
                                                                                                 child_key,
@@ -4118,8 +4118,8 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
     for a policy_regpath and policy_regkey combo
     '''
     if policy_data:
-        specialValueRegex = salt.utils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
-        _thisSearch = b''.join([salt.utils.to_bytes(r'\['),
+        specialValueRegex = salt.utils.stringutils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
+        _thisSearch = b''.join([salt.utils.stringutils.to_bytes(r'\['),
                                re.escape(policy_regpath),
                                b'\00;',
                                specialValueRegex,
@@ -4235,7 +4235,7 @@ def _policyFileReplaceOrAppendList(string_list, policy_data):
     if not policy_data:
         policy_data = b''
     # we are going to clean off the special pre-fixes, so we get only the valuename
-    specialValueRegex = salt.utils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
+    specialValueRegex = salt.utils.stringutils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
     for this_string in string_list:
         list_item_key = this_string.split(b'\00;')[0].lstrip(b'[')
         list_item_value_name = re.sub(specialValueRegex,
@@ -4263,7 +4263,7 @@ def _policyFileReplaceOrAppend(this_string, policy_data, append_only=False):
     # we are going to clean off the special pre-fixes, so we get only the valuename
     if not policy_data:
         policy_data = b''
-    specialValueRegex = salt.utils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
+    specialValueRegex = salt.utils.stringutils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
     item_key = None
     item_value_name = None
     data_to_replace = None

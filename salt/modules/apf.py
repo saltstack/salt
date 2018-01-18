@@ -9,7 +9,7 @@ Support for Advanced Policy Firewall (APF)
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     import iptc
     IPTC_IMPORTED = True

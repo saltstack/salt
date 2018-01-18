@@ -4,7 +4,7 @@ Utility functions for minions
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import os
 import logging
 import threading
@@ -112,7 +112,7 @@ def _read_proc_file(path, opts):
         pid = data.get('pid')
         if pid:
             log.warning(
-                'PID {0} exists but does not appear to be a salt process.'.format(pid)
+                'PID %s exists but does not appear to be a salt process.', pid
             )
         try:
             os.remove(path)

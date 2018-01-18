@@ -1525,7 +1525,7 @@ def comment_line(path,
                                 # Write the existing line (no change)
                                 wline = line
                             wline = salt.utils.stringutils.to_bytes(wline) \
-                                if salt.utils.platform.is_windows() \
+                                if six.PY2 and salt.utils.platform.is_windows() \
                                 else salt.utils.stringutils.to_str(wline)
                             w_file.write(wline)
                         except (OSError, IOError) as exc:
@@ -1714,7 +1714,7 @@ def _regex_to_static(src, regex):
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
-    return src and src.group() or regex
+    return src and src.group().rstrip('\r') or regex
 
 
 def _assert_occurrence(src, probe, target, amount=1):

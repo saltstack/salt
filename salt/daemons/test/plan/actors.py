@@ -2,9 +2,7 @@
 '''
 Test behaviors used by test plans
 '''
-# pylint: skip-file
-# pylint: disable=C0103
-
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import stat
 import time
@@ -28,7 +26,7 @@ from salt.daemons import salting
 from salt.utils.event import tagify
 
 
-class DeedTestWrapper():
+class DeedTestWrapper(object):
     def assertTrue(self, condition):
         if not condition:
             self.failure.value = 'Fail'
@@ -94,7 +92,7 @@ class TestOptsSetup(ioflo.base.deeding.Deed):
             raet_port=self.raet_port,
             transport='raet',
             client_acl=dict(),
-            publisher_acl = dict(),
+            publisher_acl=dict(),
             pki_dir=pkiDirpath,
             sock_dir=sockDirpath,
             cachedir=cacheDirpath,
@@ -243,9 +241,9 @@ class TestPresenceAvailable(ioflo.base.deeding.Deed):
                               'ival': set()}}
 
     def action(self):
-        """
+        '''
         Test Presenter 'available' request (A1, B*)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -306,9 +304,9 @@ class TestPresenceJoined(ioflo.base.deeding.Deed):
                             'ival': odict()}}
 
     def action(self):
-        """
+        '''
         Test Presenter 'joined' request (A2)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -350,9 +348,9 @@ class TestPresenceAllowed(ioflo.base.deeding.Deed):
                             'ival': odict()}}
 
     def action(self):
-        """
+        '''
         Test Presenter 'allowed' request (A3)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -394,9 +392,9 @@ class TestPresenceAlived(ioflo.base.deeding.Deed):
                             'ival': odict()}}
 
     def action(self):
-        """
+        '''
         Test Presenter 'alived' request (A4)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -438,9 +436,9 @@ class TestPresenceReaped(ioflo.base.deeding.Deed):
                            'ival': odict()}}
 
     def action(self):
-        """
+        '''
         Test Presenter 'reaped' request (A5)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -479,13 +477,10 @@ class TestPresenceNoRequest(ioflo.base.deeding.Deed):
     Ioinits = {}
 
     def action(self):
-        """
+        '''
         Test Presenter with no requests (C1)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
-
-        # Prepare
-        pass # do nothing
 
 
 class TestPresenceNoRequestCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
@@ -505,9 +500,9 @@ class TestPresenceUnknownSrc(ioflo.base.deeding.Deed, DeedTestWrapper):
                'failure': '.meta.failure'}
 
     def action(self):
-        """
+        '''
         Test Presenter handles request from unknown (disconnected) source (C2)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -537,9 +532,9 @@ class TestPresenceAvailableNoMinions(ioflo.base.deeding.Deed):
                'event_stack': '.salt.test.lane.stack'}
 
     def action(self):
-        """
+        '''
         Test Presenter 'available' request with no minions in the state (D1)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -580,9 +575,9 @@ class TestPresenceAvailableOneMinion(ioflo.base.deeding.Deed):
                               'ival': set()}}
 
     def action(self):
-        """
+        '''
         Test Presenter 'available' request with one minions in the state (D2)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -626,9 +621,9 @@ class TestPresenceAvailableUnknownIp(ioflo.base.deeding.Deed):
                               'ival': set()}}
 
     def action(self):
-        """
+        '''
         Test Presenter 'available' request with one minions in the state (D3)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -673,9 +668,9 @@ class TestPresenceAllowedNoMinions(ioflo.base.deeding.Deed):
                'event_stack': '.salt.test.lane.stack'}
 
     def action(self):
-        """
+        '''
         Test Presenter 'allowed' request with no minions in the state (D4)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -713,9 +708,9 @@ class TestPresenceAllowedOneMinion(ioflo.base.deeding.Deed):
                             'ival': odict()}}
 
     def action(self):
-        """
+        '''
         Test Presenter 'allowed' request with one minion in the state (D5)
-        """
+        '''
         console.terse("{0}\n".format(self.action.__doc__))
 
         # Prepare
@@ -745,7 +740,7 @@ class TestPresenceAllowedOneMinionCheck(ioflo.base.deeding.Deed, DeedTestWrapper
         self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
                                           'dst': [None, None, 'event_fire']},
                                 'tag': tag,
-                                'data': {'allowed': {'alpha':'1.1.1.1'}}})
+                                'data': {'allowed': {'alpha': '1.1.1.1'}}})
 
 
 class StatsMasterTestSetup(ioflo.base.deeding.Deed):

@@ -335,8 +335,39 @@ they failed. Here's some example pseudocode:
             __context__['retcode'] = 1
         return result
 
+Variable Update Intervals for Fileserver Backends
+-------------------------------------------------
+
+Prior to this release, fileservers would be updated as part of a dedicated
+"maintenance" process, in which various routine maintenance tasks were
+performed. This tied the update interval to the :conf_master:`loop_interval`
+config option, and also forced all fileservers to update at the same interval.
+
+Oxygen adds the following configuration options for the various fileserver
+backends:
+
+- :conf_master:`roots_update_interval`
+- :conf_master:`azurefs_update_interval`
+- :conf_master:`gitfs_update_interval`
+- :conf_master:`hgfs_update_interval`
+- :conf_master:`minionfs_update_interval`
+- :conf_master:`s3fs_update_interval`
+- :conf_master:`svnfs_update_interval`
+
+These allow for update intervals to be set for each individual backend. The
+default value for each of these is 60 seconds.
+
+In addition, for :ref:`GitFS <tutorial-gitfs>` it is also possible to apply
+intervals to individual remotes. See :ref:`here <gitfs-update-intervals>` for
+examples.
+
+.. note::
+    git_pillar does not yet support variable update intervals, this is targeted
+    for the next feature release (Fluorine).
+
 LDAP via External Authentication Changes
 ----------------------------------------
+
 In this release of Salt, if LDAP Bind Credentials are supplied, then
 these credentials will be used for all LDAP access except the first
 authentication when a job is submitted.  The first authentication will
@@ -408,7 +439,7 @@ The new grains added are:
 
 * ``fc_wwn``: Show all fibre channel world wide port names for a host
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
-* ``swap_total``: Show the configured swap_total for Linux, *BSD, OS X and Solaris/SunOS
+* ``swap_total``: Show the configured swap_total for Linux, \*BSD, OS X and Solaris/SunOS
 
 Salt Minion Autodiscovery
 ------------------------
@@ -1425,6 +1456,24 @@ executing a second attempt to set up a service or begin to execute a separate
 thread of states because of a failure.
 
 The ``onfail_any`` requisite is applied in the same way as ``require_any`` and ``watch_any``:
+
+Basic Slots support in states compiler
+--------------------------------------
+
+Slots extend the state syntax and allows you to do things right before the
+state function is executed. So you can make a decision in the last moment right
+before a state is executed.
+
+Slot syntax looks close to the simple python function call. Here is a simple example:
+
+.. code-block:: yaml
+
+    copy-some-file:
+      file.copy:
+        - name: __slot__:salt:test.echo(text=/tmp/some_file)
+        - source: __slot__:salt:test.echo(/etc/hosts)
+
+Read more :ref:`here <slots-subsystem>`.
 
 Deprecations
 ------------

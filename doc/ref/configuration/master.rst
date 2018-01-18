@@ -1011,6 +1011,38 @@ The TCP port for ``mworkers`` to connect to on the master.
 
     tcp_master_workers: 4515
 
+.. conf_master:: auth_events
+
+``auth_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire authentication events.
+:ref:`Authentication events <event-master_auth>` are fired when
+a minion performs an authentication check with the master.
+
+.. code-block:: yaml
+
+    auth_events: True
+
+.. conf_master:: minion_data_cache_events
+
+``minion_data_cache_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire minion data cache events.  Minion data
+cache events are fired when a minion requests a minion data cache refresh.
+
+.. code-block:: yaml
+
+    minion_data_cache_events: True
 
 .. _salt-ssh-configuration:
 
@@ -2088,8 +2120,8 @@ The default options are:
       variable_end_string: '}}'
       comment_start_string: '{#'
       comment_end_string: '#}'
-      line_statement_prefix: 
-      line_comment_prefix: 
+      line_statement_prefix:
+      line_comment_prefix:
       trim_blocks: False
       lstrip_blocks: False
       newline_sequence: '\n'
@@ -2119,8 +2151,8 @@ The default options are:
       variable_end_string: '}}'
       comment_start_string: '{#'
       comment_end_string: '#}'
-      line_statement_prefix: 
-      line_comment_prefix: 
+      line_statement_prefix:
+      line_comment_prefix:
       trim_blocks: False
       lstrip_blocks: False
       newline_sequence: '\n'
@@ -2355,7 +2387,7 @@ Example:
 
     fileserver_backend:
       - roots
-      - git
+      - gitfs
 
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
@@ -2538,6 +2570,19 @@ nothing is ignored.
     fileserver, it is good practice to include ``'\*.swp'`` in the
     :conf_master:`file_ignore_glob`.
 
+.. conf_master:: master_roots
+
+``master_roots``
+----------------
+
+Default: ``/srv/salt-master``
+
+A master-only copy of the :conf_master:`file_roots` dictionary, used by the
+state compiler.
+
+.. code-block:: yaml
+
+    master_roots: /srv/salt-master
 
 roots: Master's Local File Server
 ---------------------------------
@@ -2581,21 +2626,28 @@ Example:
     For masterless Salt, this parameter must be specified in the minion config
     file.
 
-.. conf_master:: master_roots
+.. conf_master:: roots_update_interval
 
-``master_roots``
-----------------
+``roots_update_interval``
+*************************
 
-Default: ``/srv/salt-master``
+.. versionadded:: Oxygen
 
-A master-only copy of the file_roots dictionary, used by the state compiler.
+Default: ``60``
+
+This option defines the update interval (in seconds) for
+:conf_master:`file_roots`.
+
+.. note::
+    Since ``file_roots`` consists of files local to the minion, the update
+    process for this fileserver backend just reaps the cache for this backend.
 
 .. code-block:: yaml
 
-    master_roots: /srv/salt-master
+    roots_update_interval: 120
 
-git: Git Remote File Server Backend
------------------------------------
+gitfs: Git Remote File Server Backend
+-------------------------------------
 
 .. conf_master:: gitfs_remotes
 
@@ -2891,6 +2943,22 @@ they were created by a different master.
 
 .. __: http://www.gluster.org/
 
+.. conf_master:: gitfs_update_interval
+
+``gitfs_update_interval``
+*************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the default update interval (in seconds) for gitfs remotes.
+The update interval can also be set for a single repository via a
+:ref:`per-remote config option <gitfs-per-remote-config>`
+
+.. code-block:: yaml
+
+    gitfs_update_interval: 120
 
 GitFS Authentication Options
 ****************************
@@ -3049,8 +3117,8 @@ can be found in the :ref:`GitFS Walkthrough <gitfs-custom-refspecs>`.
       - '+refs/pull/*/head:refs/remotes/origin/pr/*'
       - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
 
-hg: Mercurial Remote File Server Backend
-----------------------------------------
+hgfs: Mercurial Remote File Server Backend
+------------------------------------------
 
 .. conf_master:: hgfs_remotes
 
@@ -3249,8 +3317,24 @@ blacklist will be exposed as fileserver environments.
       - v1.*
       - 'mybranch\d+'
 
-svn: Subversion Remote File Server Backend
-------------------------------------------
+.. conf_master:: hgfs_update_interval
+
+``hgfs_update_interval``
+************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for
+:conf_master:`hgfs_remotes`.
+
+.. code-block:: yaml
+
+    hgfs_update_interval: 120
+
+svnfs: Subversion Remote File Server Backend
+--------------------------------------------
 
 .. conf_master:: svnfs_remotes
 
@@ -3460,8 +3544,24 @@ will be exposed as fileserver environments.
       - v1.*
       - 'mybranch\d+'
 
-minion: MinionFS Remote File Server Backend
--------------------------------------------
+.. conf_master:: svnfs_update_interval
+
+``svnfs_update_interval``
+*************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for
+:conf_master:`svnfs_remotes`.
+
+.. code-block:: yaml
+
+    svnfs_update_interval: 120
+
+minionfs: MinionFS Remote File Server Backend
+---------------------------------------------
 
 .. conf_master:: minionfs_env
 
@@ -3549,6 +3649,72 @@ exposed.
       - server01
       - dev*
       - 'mail\d+.mydomain.tld'
+
+.. conf_master:: minionfs_update_interval
+
+``minionfs_update_interval``
+****************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for :ref:`MinionFS
+<tutorial-minionfs>`.
+
+.. note::
+    Since :ref:`MinionFS <tutorial-minionfs>` consists of files local to the
+    master, the update process for this fileserver backend just reaps the cache
+    for this backend.
+
+.. code-block:: yaml
+
+    minionfs_update_interval: 120
+
+azurefs: Azure File Server Backend
+----------------------------------
+
+.. versionadded:: 2015.8.0
+
+See the :mod:`azurefs documentation <salt.fileserver.azurefs>` for usage
+examples.
+
+.. conf_master:: azurefs_update_interval
+
+``azurefs_update_interval``
+***************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for azurefs.
+
+.. code-block:: yaml
+
+    azurefs_update_interval: 120
+
+s3fs: S3 File Server Backend
+----------------------------
+
+.. versionadded:: 0.16.0
+
+See the :mod:`s3fs documentation <salt.fileserver.s3fs>` for usage examples.
+
+.. conf_master:: s3fs_update_interval
+
+``s3fs_update_interval``
+************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for s3fs.
+
+.. code-block:: yaml
+
+    s3fs_update_interval: 120
 
 
 .. _pillar-configuration-master:

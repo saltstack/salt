@@ -185,7 +185,7 @@ a return like::
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
 '''
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import time
@@ -222,7 +222,7 @@ import salt.auth
 from salt.exceptions import EauthAuthenticationError
 
 json = salt.utils.json.import_json()
-logger = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 def _json_dumps(obj, **kwargs):
@@ -418,7 +418,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         Initialize the handler before requests are called
         '''
         if not hasattr(self.application, 'event_listener'):
-            logger.critical('init a listener')
+            log.debug('init a listener')
             self.application.event_listener = EventListener(
                 self.application.mod_opts,
                 self.application.opts,
@@ -734,9 +734,11 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             return
 
         except (AttributeError, IndexError):
-            logging.debug("Configuration for external_auth malformed for "
-                          "eauth '{0}', and user '{1}'."
-                          .format(token.get('eauth'), token.get('name')), exc_info=True)
+            log.debug(
+                "Configuration for external_auth malformed for eauth '%s', "
+                "and user '%s'.", token.get('eauth'), token.get('name'),
+                exc_info=True
+            )
             # TODO better error -- 'Configuration for external_auth could not be read.'
             self.send_error(500)
             return
@@ -902,7 +904,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                 break
             except Exception as ex:
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
-                logger.error('Unexpected exception while handling request:', exc_info=True)
+                log.error('Unexpected exception while handling request:', exc_info=True)
 
         self.write(self.serialize({'return': ret}))
         self.finish()
@@ -1486,7 +1488,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.set_header('Cache-Control', 'no-cache')
         self.set_header('Connection', 'keep-alive')
 
-        self.write(u'retry: {0}\n'.format(400))
+        self.write('retry: {0}\n'.format(400))
         self.flush()
 
         while True:

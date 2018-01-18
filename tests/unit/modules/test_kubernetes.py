@@ -173,14 +173,14 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             mock_node.return_value = {
                 'metadata': {
                     'labels': {
-                        u'kubernetes.io/hostname': 'minikube',
-                        u'kubernetes.io/os': 'linux',
+                        'kubernetes.io/hostname': 'minikube',
+                        'kubernetes.io/os': 'linux',
                     }
                 }
             }
             self.assertEqual(
                 kubernetes.node_labels('minikube'),
-                {u'kubernetes.io/hostname': 'minikube', u'kubernetes.io/os': 'linux'},
+                {'kubernetes.io/hostname': 'minikube', 'kubernetes.io/os': 'linux'},
             )
 
     def test_adding_change_cause_annotation(self):
@@ -212,7 +212,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     def test_enforce_only_strings_dict(self):
         func = getattr(kubernetes, '__enforce_only_strings_dict')
         data = {
-            u'unicode': 1,
+            'unicode': 1,
             2: 2,
         }
         self.assertEqual(
