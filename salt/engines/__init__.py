@@ -127,4 +127,7 @@ class Engine(SignalHandlingMultiprocessingProcess):
         try:
             self.engine[self.fun](**kwargs)
         except Exception as exc:
-            log.critical('Engine %s could not be started! Error: %s', self.engine, exc)
+            log.critical(
+                'Engine \'%s\' could not be started!',
+                self.fun.split('.')[0], exc_info=True
+            )
