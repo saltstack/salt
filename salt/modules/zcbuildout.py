@@ -61,8 +61,8 @@ BASE_STATUS = {
     'outlog_by_level': None,
 }
 _URL_VERSIONS = {
-    1: u'http://downloads.buildout.org/1/bootstrap.py',
-    2: u'http://downloads.buildout.org/2/bootstrap.py',
+    1: 'http://downloads.buildout.org/1/bootstrap.py',
+    2: 'http://downloads.buildout.org/2/bootstrap.py',
 }
 DEFAULT_VER = 2
 _logger = logging.getLogger(__name__)
@@ -296,7 +296,7 @@ def _Popen(command,
     directory = os.path.abspath(directory)
     if isinstance(command, list):
         command = ' '.join(command)
-    LOG.debug(u'Running {0}'.format(command))
+    LOG.debug('Running {0}'.format(command))  # future lint: disable=str-format-in-logging
     if not loglevel:
         loglevel = 'debug'
     ret = __salt__['cmd.run_all'](
@@ -501,7 +501,7 @@ def upgrade_bootstrap(directory='.',
     else:
         buildout_ver = _get_buildout_ver(directory)
         booturl = _get_bootstrap_url(directory)
-    LOG.debug('Using {0}'.format(booturl))
+    LOG.debug('Using {0}'.format(booturl))  # future lint: disable=str-format-in-logging
     # try to download an up-to-date bootstrap
     # set defaulttimeout
     # and add possible content
@@ -823,24 +823,24 @@ def run_buildout(directory='.',
     installed_cfg = os.path.join(directory, '.installed.cfg')
     argv = []
     if verbose:
-        LOG.debug(u'Buildout is running in verbose mode!')
+        LOG.debug('Buildout is running in verbose mode!')
         argv.append('-vvvvvvv')
     if not newest and os.path.exists(installed_cfg):
-        LOG.debug(u'Buildout is running in non newest mode!')
+        LOG.debug('Buildout is running in non newest mode!')
         argv.append('-N')
     if newest:
-        LOG.debug(u'Buildout is running in newest mode!')
+        LOG.debug('Buildout is running in newest mode!')
         argv.append('-n')
     if offline:
-        LOG.debug(u'Buildout is running in offline mode!')
+        LOG.debug('Buildout is running in offline mode!')
         argv.append('-o')
     if debug:
-        LOG.debug(u'Buildout is running in debug mode!')
+        LOG.debug('Buildout is running in debug mode!')
         argv.append('-D')
     cmds, outputs = [], []
     if parts:
         for part in parts:
-            LOG.info(u'Installing single part: {0}'.format(part))
+            LOG.info('Installing single part: {0}'.format(part))  # future lint: disable=str-format-in-logging
             cmd = '{0} -c {1} {2} install {3}'.format(
                 bcmd, config, ' '.join(argv), part)
             cmds.append(cmd)
@@ -854,7 +854,7 @@ def run_buildout(directory='.',
                     use_vt=use_vt)
             )
     else:
-        LOG.info(u'Installing all buildout parts')
+        LOG.info('Installing all buildout parts')
         cmd = '{0} -c {1} {2}'.format(
             bcmd, config, ' '.join(argv))
         cmds.append(cmd)

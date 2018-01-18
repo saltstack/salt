@@ -3,7 +3,7 @@
 Define the behaviors used in the maintenance process
 '''
 # pylint: disable=3rd-party-module-not-gated
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import multiprocessing
 import os

@@ -35,7 +35,7 @@ Example Usage:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 import logging
 import sys
@@ -120,7 +120,7 @@ def _get_profile(service, region, key, keyid, profile):
 
     if not region:
         region = 'us-east-1'
-        log.info('Assuming default region {0}'.format(region))
+        log.info('Assuming default region %s', region)
 
     if not key and _option(service + '.key'):
         key = _option(service + '.key')
@@ -260,8 +260,8 @@ def get_error(e):
             aws['status'] = e.status
         if hasattr(e, 'reason'):
             aws['reason'] = e.reason
-        if str(e) != '':
-            aws['message'] = str(e)
+        if six.text_type(e) != '':
+            aws['message'] = six.text_type(e)
         if hasattr(e, 'error_code') and e.error_code is not None:
             aws['code'] = e.error_code
 

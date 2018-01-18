@@ -4,7 +4,7 @@
 # pylint: disable=abstract-method
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 
 # Import Salt Testing Libs
@@ -14,6 +14,7 @@ from tests.support.unit import TestCase, skipIf
 import salt.utils.json
 import salt.utils.yaml
 import salt.utils.schema as schema
+from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
@@ -2262,8 +2263,9 @@ class ComplexSchemaTestCase(TestCase):
                 as excinfo:
             jsonschema.validate({'complex_item': {'thirsty': 'Foo'}},
                                 serialized)
-        self.assertIn('\'Foo\' is not of type \'boolean\'',
-                      excinfo.exception.message)
+        expected = "u'Foo' is not of type u'boolean'" if six.PY2 \
+            else "'Foo' is not of type 'boolean'"
+        self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_hungry_valid(self):
@@ -2293,8 +2295,9 @@ class ComplexSchemaTestCase(TestCase):
                 as excinfo:
             jsonschema.validate({'complex_complex_item': {'hungry': 'Foo'}},
                                 serialized)
-        self.assertIn('\'Foo\' is not of type \'boolean\'',
-                      excinfo.exception.message)
+        expected = "u'Foo' is not of type u'boolean'" if six.PY2 \
+            else "'Foo' is not of type 'boolean'"
+        self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_inner_thirsty_invalid(self):
@@ -2306,8 +2309,9 @@ class ComplexSchemaTestCase(TestCase):
                 {'complex_complex_item': {'hungry': True,
                                           'complex_item': {'thirsty': 'Bar'}}},
                 serialized)
-        self.assertIn('\'Bar\' is not of type \'boolean\'',
-                      excinfo.exception.message)
+        expected = "u'Bar' is not of type u'boolean'" if six.PY2 \
+            else "'Bar' is not of type 'boolean'"
+        self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_missing_required_hungry(self):
