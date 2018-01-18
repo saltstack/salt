@@ -368,7 +368,7 @@ def fopen(*args, **kwargs):
         kwargs['newline'] = ''
 
     if not kwargs.get('buffering', None):
-	kwargs['buffering'] = 1048576  # 1 megabyte
+        kwargs['buffering'] = 1048576  # 1 megabyte
 
     f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
