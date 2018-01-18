@@ -43,7 +43,7 @@ class TimedProc(object):
 
         try:
             self.process = subprocess.Popen(args, **kwargs)
-        except TypeError:
+        except (AttributeError, TypeError):
             if not kwargs.get('shell', False):
                 if not isinstance(args, (list, tuple)):
                     try:
