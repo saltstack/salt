@@ -3,7 +3,7 @@
     :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import textwrap
 
 # Import Salt Testing Libs
@@ -82,8 +82,8 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 })
                 self.assertDictEqual(boto_sqs.present(name), ret)
                 diff = textwrap.dedent('''\
-                    --- 
-                    +++ 
+                    ---
+                    +++
                     @@ -1 +1 @@
                     -{}
                     +DelaySeconds: 20
