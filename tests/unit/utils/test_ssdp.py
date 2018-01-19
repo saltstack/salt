@@ -105,3 +105,28 @@ class SSDPBaseTestCase(TestCase, Mocks):
         sock_mock.socket().getsockname.side_effect = boom
         with patch('salt.utils.ssdp.socket', sock_mock):
             assert base.get_self_ip() == expected_host
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(pytest is None, 'PyTest is missing')
+class SSDPFactoryTestCase(TestCase):
+    '''
+    Test socket protocol
+    '''
+    @patch('salt.utils.ssdp.socket.gethostbyname', MagicMock(return_value='10.10.10.10'))
+    def test_attr_check(self):
+        '''
+        Tests attributes are set to the base class
+
+        :return:
+        '''
+        config = {
+            ssdp.SSDPBase.SIGNATURE: '-signature-',
+            ssdp.SSDPBase.ANSWER: {'this-is': 'the-answer'}
+        }
+        factory = ssdp.SSDPFactory(**config)
+        for attr in [ssdp.SSDPBase.SIGNATURE, ssdp.SSDPBase.ANSWER]:
+            assert hasattr(factory, attr)
+            assert getattr(factory, attr) == config[attr]
+        assert not factory.disable_hidden
+        assert factory.my_ip == '10.10.10.10'
