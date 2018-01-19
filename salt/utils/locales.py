@@ -4,7 +4,7 @@ the locale utils used by salt
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import sys
 
 # Import Salt libs

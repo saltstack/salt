@@ -37,7 +37,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
     argument should not be used on maps referencing GoGrid instances.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import pprint
@@ -49,6 +49,7 @@ import salt.config as config
 import salt.utils.cloud
 import salt.utils.hashutils
 from salt.exceptions import SaltCloudSystemExit, SaltCloudException
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -104,7 +105,7 @@ def create(vm_):
     if len(vm_['name']) > 20:
         raise SaltCloudException('VM names must not be longer than 20 characters')
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
     image_id = avail_images()[vm_['image']]['id']
     if 'assign_public_ip' in vm_:
         host_ip = vm_['assign_public_ip']
@@ -136,11 +137,9 @@ def create(vm_):
         data = _query('grid', 'server/add', args=create_kwargs)
     except Exception:
         log.error(
-            'Error creating {0} on GOGRID\n\n'
+            'Error creating %s on GOGRID\n\n'
             'The following exception was thrown when trying to '
-            'run the initial deployment:\n'.format(
-                vm_['name']
-            ),
+            'run the initial deployment:\n', vm_['name'],
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -172,11 +171,10 @@ def create(vm_):
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     ret.update(data)
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data)
     )
 
     __utils__['cloud.fire_event'](
@@ -527,12 +525,12 @@ def _query(action=None,
     if command:
         path += '/{0}'.format(command)
 
-    log.debug('GoGrid URL: {0}'.format(path))
+    log.debug('GoGrid URL: %s', path)
 
     if not isinstance(args, dict):
         args = {}
 
-    epoch = str(int(time.time()))
+    epoch = six.text_type(int(time.time()))
     hashtext = ''.join((apikey, sharedsecret, epoch))
     args['sig'] = salt.utils.hashutils.md5_digest(hashtext)
     args['format'] = 'json'
@@ -562,10 +560,6 @@ def _query(action=None,
         status=True,
         opts=__opts__,
     )
-    log.debug(
-        'GoGrid Response Status Code: {0}'.format(
-            result['status']
-        )
-    )
+    log.debug('GoGrid Response Status Code: %s', result['status'])
 
     return result['dict']

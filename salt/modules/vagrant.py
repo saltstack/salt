@@ -527,7 +527,7 @@ def destroy(name):
                                   output_loglevel='info')
     if ret['retcode'] == 0:
         _erase_vm_info(name)
-        return u'Destroyed VM {0}'.format(name)
+        return 'Destroyed VM {0}'.format(name)
     return False
 
 

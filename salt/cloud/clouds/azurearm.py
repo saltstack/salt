@@ -80,7 +80,8 @@ Example ``/etc/salt/cloud.providers`` or
 '''
 
 
-from __future__ import absolute_import
+# pylint: disable=wrong-import-position,wrong-import-order
+from __future__ import absolute_import, print_function, unicode_literals
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 import importlib
@@ -90,7 +91,6 @@ import os.path
 import pprint
 import string
 import time
-import yaml
 
 # Salt libs
 import salt.cache
@@ -98,6 +98,7 @@ import salt.config as config
 import salt.loader
 import salt.utils
 import salt.utils.cloud
+import salt.utils.yaml
 import salt.ext.six as six
 import salt.version
 from salt.exceptions import (
@@ -176,7 +177,7 @@ def get_api_versions(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
 
         for resource in provider_query.resource_types:
-            if str(resource.resource_type) == kwargs['resource_type']:
+            if six.text_type(resource.resource_type) == kwargs['resource_type']:
                 resource_dict = resource.as_dict()
                 api_versions = resource_dict['api_versions']
     except CloudError as exc:
@@ -356,7 +357,7 @@ def avail_locations(call=None):
         )
         locations = []
         for resource in provider_query.resource_types:
-            if str(resource.resource_type) == 'virtualMachines':
+            if six.text_type(resource.resource_type) == 'virtualMachines':
                 resource_dict = resource.as_dict()
                 locations = resource_dict['locations']
         for location in locations:
@@ -616,7 +617,7 @@ def show_instance(name, call=None):
     try:
         node = list_nodes_full('function')[name]
     except KeyError:
-        log.debug('Failed to get data for node \'{0}\''.format(name))
+        log.debug('Failed to get data for node \'%s\'', name)
         node = {}
 
     __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
@@ -807,7 +808,7 @@ def create_network_interface(call=None, kwargs=None):
                 )
                 if pub_ip_data.ip_address:  # pylint: disable=no-member
                     ip_kwargs['public_ip_address'] = PublicIPAddress(
-                        str(pub_ip_data.id),  # pylint: disable=no-member
+                        six.text_type(pub_ip_data.id),  # pylint: disable=no-member
                     )
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
@@ -853,7 +854,7 @@ def create_network_interface(call=None, kwargs=None):
         poller.wait()
     except Exception as exc:
         log.warn('Network interface creation could not be polled. '
-                 'It is likely that we are reusing an existing interface. ({0})'.format(exc))
+                 'It is likely that we are reusing an existing interface. (%s)', exc)
 
     count = 0
     while True:
@@ -1051,7 +1052,7 @@ def request_instance(vm_):
     storage_endpoint_suffix = cloud_env.suffixes.storage_endpoint
 
     if isinstance(vm_.get('volumes'), six.string_types):
-        volumes = yaml.safe_load(vm_['volumes'])
+        volumes = salt.utils.yaml.safe_load(vm_['volumes'])
     else:
         volumes = vm_.get('volumes')
 
@@ -1073,7 +1074,7 @@ def request_instance(vm_):
                 'name',
                 volume.get(
                     'name',
-                    '{0}-datadisk{1}'.format(vm_['name'], str(lun))
+                    '{0}-datadisk{1}'.format(vm_['name'], six.text_type(lun))
                 )
             )
         )
@@ -1309,7 +1310,7 @@ def create(vm_):
     location = get_location(vm_)
     vm_['location'] = location
 
-    log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
+    log.info('Creating Cloud VM %s in %s', vm_['name'], location)
 
     request_instance(vm_=vm_)
 
@@ -1348,7 +1349,7 @@ def create(vm_):
         try:
             log.warning(exc)
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     vm_['ssh_host'] = data
     if not vm_.get('ssh_username'):
@@ -1361,10 +1362,10 @@ def create(vm_):
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     data = show_instance(vm_['name'], call='action')
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
+        '\'%s\' VM creation details:\n%s',
+            vm_['name'], pprint.pformat(data)
         )
     )
 
@@ -1657,7 +1658,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
                                'server_encrypted': blob.properties.server_encrypted,
                              }
     except Exception as exc:
-        log.warn(str(exc))
+        log.warn(six.text_type(exc))
 
     return ret
 
@@ -1695,7 +1696,7 @@ def delete_managed_disk(call=None, kwargs=None):  # pylint: disable=unused-argum
     try:
         compconn.disks.delete(kwargs['resource_group'], kwargs['blob'])
     except Exception as exc:
-        log.error("Error deleting managed disk {0} - {1}".format(kwargs.get('blob'), str(exc)))
+        log.error("Error deleting managed disk %s - %s', kwargs.get('blob'), six.text_type(exc))
         return False
 
     return True
@@ -1864,7 +1865,7 @@ def create_or_update_vmextension(call=None, kwargs=None):  # pylint: disable=unu
             'VM extension settings are not valid. Either commandToExecute or script must be specified.'
         )
 
-    log.info("Creating VM extension {0}".format(kwargs['extension_name']))
+    log.info('Creating VM extension %s', kwargs['extension_name'])
 
     ret = {}
     try:

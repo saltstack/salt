@@ -6,7 +6,7 @@ Extract an archive
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
@@ -821,7 +821,7 @@ def extracted(name,
         return ret
 
     if options is not None and not isinstance(options, six.string_types):
-        options = str(options)
+        options = six.text_type(options)
 
     strip_components = None
     if options and archive_format == 'tar':
@@ -962,7 +962,7 @@ def extracted(name,
             ret['comment'] = msg
             return ret
         else:
-            log.debug('file.cached: {0}'.format(result))
+            log.debug('file.cached: %s', result)
 
         if result['result']:
             # Get the path of the file in the minion cache
@@ -1233,7 +1233,7 @@ def extracted(name,
             __states__['file.directory'](name, user=user, makedirs=True)
             created_destdir = True
 
-        log.debug('Extracting {0} to {1}'.format(cached, name))
+        log.debug('Extracting %s to %s', cached, name)
         try:
             if archive_format == 'zip':
                 if use_cmd_unzip:

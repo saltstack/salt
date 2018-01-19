@@ -16,7 +16,7 @@ TODO: Add a 'ca_dir' option to configure a directory of CA files, a la Apache.
 :depends:    - pyOpenSSL module
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import third party libs
@@ -78,8 +78,8 @@ def auth(username, password, **kwargs):
         cacert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
 
     log.debug('Attempting to authenticate via pki.')
-    log.debug('Using CA file: {0}'.format(cacert_file))
-    log.debug('Certificate contents: {0}'.format(pem))
+    log.debug('Using CA file: %s', cacert_file)
+    log.debug('Certificate contents: %s', pem)
 
     # Get the signing algorithm
     algo = cert.get_signature_algorithm()
@@ -122,8 +122,8 @@ def auth(username, password, **kwargs):
     try:
         c.verify(cacert, sig, der_cert, algo)
         assert dict(cert.get_subject().get_components())['CN'] == username, "Certificate's CN should match the username"
-        log.info('Successfully authenticated certificate: {0}'.format(pem))
+        log.info('Successfully authenticated certificate: %s', pem)
         return True
     except (OpenSSL.crypto.Error, AssertionError):
-        log.info('Failed to authenticate certificate: {0}'.format(pem))
+        log.info('Failed to authenticate certificate: %s', pem)
     return False
