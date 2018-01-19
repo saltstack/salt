@@ -786,6 +786,13 @@ def latest(name,
             )
             remote_loc = None
 
+    if depth is not None and remote_rev_type != 'branch':
+        return _fail(
+            ret,
+            'When \'depth\' is used, \'rev\' must be set to the name of a '
+            'branch on the remote repository'
+        )
+
     if remote_rev is None and not bare:
         if rev != 'HEAD':
             # A specific rev is desired, but that rev doesn't exist on the
@@ -1663,7 +1670,7 @@ def latest(name,
             if remote != 'origin':
                 clone_opts.extend(['--origin', remote])
             if depth is not None:
-                clone_opts.extend(['--depth', str(depth)])
+                clone_opts.extend(['--depth', str(depth), '--branch', rev])
 
             # We're cloning a fresh repo, there is no local branch or revision
             local_branch = local_rev = None

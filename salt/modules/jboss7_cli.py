@@ -61,7 +61,7 @@ def run_command(jboss_config, command, fail_on_error=True):
     command
            Command to execute against jboss instance
     fail_on_error (default=True)
-           Is true, raise CommandExecutionException exception if execution fails.
+           Is true, raise CommandExecutionError exception if execution fails.
            If false, 'success' property of the returned dictionary is set to False
 
     CLI Example:
@@ -93,7 +93,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
            An operation to execute against jboss instance
 
     fail_on_error (default=True)
-           Is true, raise CommandExecutionException exception if execution fails.
+           Is true, raise CommandExecutionError exception if execution fails.
            If false, 'success' property of the returned dictionary is set to False
     retries:
            Number of retries in case of "JBAS012144: Could not connect to remote" error.
