@@ -158,3 +158,24 @@ class SSDPFactoryTestCase(TestCase):
             assert factory.transport.sendto.mock_calls[0][2]['addr'] == '10.10.10.10'
             assert factory.log.debug.called
             assert factory.log.debug.mock_calls[0][1][0] == 'Sent successfully'
+
+    @patch('salt.utils.ssdp.time.sleep', MagicMock())
+    def test_transport_sendto_retry(self):
+        '''
+        Test transport send_to.
+
+        :return:
+        '''
+        transport = MagicMock()
+        transport.sendto = MagicMock(side_effect=SSDPBaseTestCase.exception_attr_error)
+        log = MagicMock()
+        factory = ssdp.SSDPFactory()
+        with patch.object(factory, 'transport', transport), patch.object(factory, 'log', log):
+            data = {'some': 'data'}
+            addr = '10.10.10.10'
+            factory._sendto(data=data, addr=addr)
+            assert factory.transport.sendto.called
+            assert ssdp.time.sleep.called
+            assert ssdp.time.sleep.call_args[0][0] > 0 and ssdp.time.sleep.call_args[0][0] < 0.5
+            assert factory.log.debug.called
+            assert 'Permission error' in factory.log.debug.mock_calls[0][1][0]
