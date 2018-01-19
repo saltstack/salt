@@ -130,3 +130,22 @@ class SSDPFactoryTestCase(TestCase):
             assert getattr(factory, attr) == config[attr]
         assert not factory.disable_hidden
         assert factory.my_ip == '10.10.10.10'
+
+    def test_transport_sendto_success(self):
+        '''
+        Test transport send_to.
+
+        :return:
+        '''
+        transport = MagicMock()
+        log = MagicMock()
+        factory = ssdp.SSDPFactory()
+        with patch.object(factory, 'transport', transport), patch.object(factory, 'log', log):
+            data = {'some': 'data'}
+            addr = '10.10.10.10'
+            factory._sendto(data=data, addr=addr)
+            assert factory.transport.sendto.called
+            assert factory.transport.sendto.mock_calls[0][1][0]['some'] == 'data'
+            assert factory.transport.sendto.mock_calls[0][2]['addr'] == '10.10.10.10'
+            assert factory.log.debug.called
+            assert factory.log.debug.mock_calls[0][1][0] == 'Sent successfully'
