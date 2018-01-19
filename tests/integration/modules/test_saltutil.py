@@ -4,7 +4,7 @@ Integration tests for the saltutil module.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import textwrap
@@ -180,7 +180,9 @@ class SaltUtilSyncPillarTest(ModuleCase):
         self.assertNotIn(pillar_key, pre_pillar.get(pillar_key, 'didnotwork'))
 
         with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
-            fp.write('{0}: itworked'.format(pillar_key))
+            fp.write(salt.utils.stringutils.to_str(
+                '{0}: itworked'.format(pillar_key)
+            ))
 
         with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
             fp.write(textwrap.dedent('''\

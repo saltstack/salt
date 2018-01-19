@@ -24,7 +24,7 @@ as either absent or present
       user.absent
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 
@@ -442,8 +442,10 @@ def present(name,
                              if __salt__['group.info'](x)]
         for missing_optgroup in [x for x in optional_groups
                                  if x not in present_optgroups]:
-            log.debug('Optional group "{0}" for user "{1}" is not '
-                      'present'.format(missing_optgroup, name))
+            log.debug(
+                'Optional group "%s" for user "%s" is not present',
+                missing_optgroup, name
+            )
     else:
         present_optgroups = None
 
@@ -451,8 +453,10 @@ def present(name,
     # "optional_groups" lists.
     if groups and optional_groups:
         for isected in set(groups).intersection(optional_groups):
-            log.warning('Group "{0}" specified in both groups and '
-                        'optional_groups for user {1}'.format(isected, name))
+            log.warning(
+                'Group "%s" specified in both groups and optional_groups '
+                'for user %s', isected, name
+            )
 
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)

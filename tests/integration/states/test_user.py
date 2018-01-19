@@ -8,7 +8,7 @@ user present with custom homedir
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 from random import randint
@@ -172,20 +172,20 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'user.present',
             name=self.user_name,
-            fullname=u'Sålt Test',
-            roomnumber=u'①②③',
-            workphone=u'١٢٣٤',
-            homephone=u'६७८'
+            fullname='Sålt Test',
+            roomnumber='①②③',
+            workphone='١٢٣٤',
+            homephone='६७८'
         )
         self.assertSaltTrueReturn(ret)
         # Ensure updating a user also works
         ret = self.run_state(
             'user.present',
             name=self.user_name,
-            fullname=u'Sølt Test',
-            roomnumber=u'①③②',
-            workphone=u'٣٤١٢',
-            homephone=u'६८७'
+            fullname='Sølt Test',
+            roomnumber='①③②',
+            workphone='٣٤١٢',
+            homephone='६८७'
         )
         self.assertSaltTrueReturn(ret)
 
