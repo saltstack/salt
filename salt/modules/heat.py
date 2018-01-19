@@ -513,8 +513,6 @@ def create_stack(name=None, template_file=None, enviroment=None,
                 tpl = salt.utils.stringutils.to_unicode(tfp_.read())
                 salt.utils.files.safe_rm(template_tmp_file)
                 try:
-                    if isinstance(tpl, six.binary_type):
-                        tpl = tpl.decode('utf-8')
                     template = _parse_template(tpl)
                 except ValueError as ex:
                     ret['result'] = False
@@ -702,8 +700,6 @@ def update_stack(name=None, template_file=None, enviroment=None,
                 tpl = salt.utils.stringutils.to_unicode(tfp_.read())
                 salt.utils.files.safe_rm(template_tmp_file)
                 try:
-                    if isinstance(tpl, six.binary_type):
-                        tpl = tpl.decode('utf-8')
                     template = _parse_template(tpl)
                 except ValueError as ex:
                     ret['result'] = False

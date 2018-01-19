@@ -100,7 +100,7 @@ def _query(function,
             return False
 
     if room_id:
-        room_id = 'room/%s/notification', six.text_type(room_id)
+        room_id = 'room/{0}/notification'.format(room_id)
     else:
         room_id = 'room/0/notification'
 
@@ -154,7 +154,7 @@ def _query(function,
                 data['notify'] = 1
             data = _urlencode(data)
     elif api_version == 'v2':
-        headers['Authorization'] = 'Bearer %s', api_key
+        headers['Authorization'] = 'Bearer {0}'.format(api_key)
         if data:
             data = salt.utils.json.dumps(data)
 

@@ -109,20 +109,20 @@ def send_message(name,
            'comment': ''}
 
     if __opts__['test']:
-        ret['comment'] = 'The following message is to be sent to Hipchat: %s', message
+        ret['comment'] = 'The following message is to be sent to Hipchat: {0}'.format(message)
         ret['result'] = None
         return ret
 
     if not room_id:
-        ret['comment'] = 'Hipchat room id is missing: %s', name
+        ret['comment'] = 'Hipchat room id is missing: {0}'.format(name)
         return ret
 
     if not from_name:
-        ret['comment'] = 'Hipchat from name is missing: %s', name
+        ret['comment'] = 'Hipchat from name is missing: {0}'.format(name)
         return ret
 
     if not message:
-        ret['comment'] = 'Hipchat message is missing: %s', name
+        ret['comment'] = 'Hipchat message is missing: {0}'.format(name)
         return ret
 
     ret['result'] = __salt__['hipchat.send_message'](
@@ -137,8 +137,8 @@ def send_message(name,
     )
 
     if ret and ret['result']:
-        ret['comment'] = 'Sent message: %s', name
+        ret['comment'] = 'Sent message: {0}'.format(name)
     else:
-        ret['comment'] = 'Failed to send message: %s', name
+        ret['comment'] = 'Failed to send message: {0}'.format(name)
 
     return ret

@@ -208,7 +208,7 @@ def _clone_repo(ret, target, name, user, identity, rev, opts):
             return ret
 
     new_rev = __salt__['hg.revision'](cwd=target, user=user)
-    message = 'Repository %s cloned to %s', name, target
+    message = 'Repository {0} cloned to {1}'.format(name, target)
     log.info(message)
     ret['comment'] = message
 

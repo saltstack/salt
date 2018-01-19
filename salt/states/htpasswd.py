@@ -79,7 +79,7 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
     if not exists or password_changed or force:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'User \'%s\' is set to be added to htpasswd file', name
+            ret['comment'] = 'User \'{0}\' is set to be added to htpasswd file'.format(name)
             ret['changes'] = {name: True}
             return ret
 
@@ -135,7 +135,7 @@ def user_absent(name, htpasswd_file=None, runas=None):
     else:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'User \'%s\' is set to be removed from htpasswd file', name
+            ret['comment'] = 'User \'{0}\' is set to be removed from htpasswd file'.format(name)
             ret['changes'] = {name: True}
         else:
             userdel_ret = __salt__['webutil.userdel'](
