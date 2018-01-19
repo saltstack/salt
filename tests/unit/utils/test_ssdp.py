@@ -45,6 +45,22 @@ class SSDPBaseTestCase(TestCase, Mocks):
     TestCase for SSDP-related parts.
     '''
 
+    @staticmethod
+    def exception_generic(*args, **kwargs):
+        '''
+        Side effect
+        :return:
+        '''
+        raise Exception('some network error')
+
+    @staticmethod
+    def exception_attr_error(*args, **kwargs):
+        '''
+        Side effect
+        :return:
+        '''
+        raise AttributeError('attribute error: {0}. {1}'.format(args, kwargs))
+
     @patch('salt.utils.ssdp._json', None)
     @patch('salt.utils.ssdp.asyncio', None)
     def test_base_avail(self):
@@ -87,13 +103,6 @@ class SSDPBaseTestCase(TestCase, Mocks):
 
         :return:
         '''
-        def boom():
-            '''
-            Side effect
-            :return:
-            '''
-            raise Exception('some network error')
-
         base = ssdp.SSDPBase()
         expected_ip = '192.168.1.10'
         expected_host = 'oxygen'
@@ -102,7 +111,7 @@ class SSDPBaseTestCase(TestCase, Mocks):
         with patch('salt.utils.ssdp.socket', sock_mock):
             assert base.get_self_ip() == expected_ip
 
-        sock_mock.socket().getsockname.side_effect = boom
+        sock_mock.socket().getsockname.side_effect = SSDPBaseTestCase.exception_generic
         with patch('salt.utils.ssdp.socket', sock_mock):
             assert base.get_self_ip() == expected_host
 
