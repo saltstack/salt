@@ -10,7 +10,7 @@ import logging
 import select
 import time
 
-import salt.utils
+import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import map
 

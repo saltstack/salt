@@ -16,7 +16,7 @@ import struct
 import time
 
 # Import salt libs
-import salt.utils
+import salt.utils.stringutils
 import salt.utils.files
 
 # Import 3rd-party libs
