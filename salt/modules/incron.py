@@ -11,6 +11,7 @@ import os
 # Import salt libs
 from salt.ext import six
 from salt.ext.six.moves import range
+import salt.utils.data
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.stringutils
@@ -104,8 +105,8 @@ def _write_incron_lines(user, lines):
         return ret
     else:
         path = salt.utils.files.mkstemp()
-        with salt.utils.files.fopen(path, 'w+') as fp_:
-            fp_.writelines(salt.utils.stringutils.to_str(lines))
+        with salt.utils.files.fopen(path, 'wb') as fp_:
+            fp_.writelines(salt.utils.data.encode(lines))
         if __grains__['os_family'] == 'Solaris' and user != "root":
             __salt__['cmd.run']('chown {0} {1}'.format(user, path), python_shell=False)
         ret = __salt__['cmd.run_all'](_get_incron_cmdstr(path), runas=user, python_shell=False)
@@ -119,7 +120,7 @@ def _write_file(folder, filename, data):
     '''
     path = os.path.join(folder, filename)
     if not os.path.exists(folder):
-        msg = '%s cannot be written. %s does not exist', filename, folder
+        msg = '{0} cannot be written. {1} does not exist'.format(filename, folder)
         log.error(msg)
         raise AttributeError(six.text_type(msg))
     with salt.utils.files.fopen(path, 'w') as fp_:
@@ -135,7 +136,7 @@ def _read_file(folder, filename):
     path = os.path.join(folder, filename)
     try:
         with salt.utils.files.fopen(path, 'rb') as contents:
-            return salt.utils.stringutils.to_unicode(contents.readlines())
+            return salt.utils.data.decode(contents.readlines())
     except (OSError, IOError):
         return ''
 
