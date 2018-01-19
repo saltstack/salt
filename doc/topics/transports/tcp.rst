@@ -15,7 +15,7 @@ to ``tcp`` on each Salt minion and Salt master.
 
 .. warning::
 
-    We currently recommend that when using Syndics that all masters and minions
+    We currently recommend that when using Syndics that all Masters and Minions
     use the same transport. We're investigating a report of an error when using
     mixed transport types at very heavy loads.
 
