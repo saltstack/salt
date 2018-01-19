@@ -179,3 +179,20 @@ class SSDPFactoryTestCase(TestCase):
             assert ssdp.time.sleep.call_args[0][0] > 0 and ssdp.time.sleep.call_args[0][0] < 0.5
             assert factory.log.debug.called
             assert 'Permission error' in factory.log.debug.mock_calls[0][1][0]
+
+    def test_datagram_received_bad_signature(self):
+        '''
+        Test datagram_received on bad signature
+
+        :return:
+        '''
+        factory = ssdp.SSDPFactory()
+        data = 'nonsense'
+        addr = '10.10.10.10', 'foo.suse.de'
+
+        with patch.object(factory, 'log', MagicMock()):
+            factory.datagram_received(data=data, addr=addr)
+            assert factory.log.debug.called
+            assert 'Received bad signature from' in factory.log.debug.call_args[0][0]
+            assert factory.log.debug.call_args[0][1] == addr[0]
+            assert factory.log.debug.call_args[0][2] == addr[1]
