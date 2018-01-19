@@ -184,8 +184,6 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
                     tpl = salt.utils.stringutils.to_unicode(tfp_.read())
                     salt.utils.files.safe_rm(template_tmp_file)
                     try:
-                        if isinstance(tpl, six.binary_type):
-                            tpl = tpl.decode('utf-8')
                         template_parse = _parse_template(tpl)
                         if 'heat_template_version' in template_parse:
                             template_new = salt.utils.yaml.safe_dump(template_parse)
