@@ -2,7 +2,7 @@
 '''
 Use composer to install PHP dependencies for a directory
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
