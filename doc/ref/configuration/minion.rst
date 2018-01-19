@@ -2750,6 +2750,27 @@ the metadata will be refreshed.
 
 .. _winrepo-minion-config-opts:
 
+Minion Windows Software Repo Settings
+=====================================
+
+.. important::
+    To use these config options, the minion can be running in master-minion or
+    masterless mode.
+
+
+.. conf_minion:: winrepo_source_dir
+
+``winrepo_source_dir``
+----------------------
+
+Default: ``salt://win/repo-ng/``
+
+The source location for the winrepo sls files.
+
+.. code-block:: yaml
+
+    winrepo_source_dir: salt://win/repo-ng/
+
 Standalone Minion Windows Software Repo Settings
 ================================================
 
@@ -2792,19 +2813,6 @@ out for 2015.8.0 and later minions.
 .. code-block:: yaml
 
     winrepo_dir_ng: /srv/salt/win/repo-ng
-
-.. conf_minion:: winrepo_source_dir
-
-``winrepo_source_dir``
-----------------------
-
-Default: ``salt://win/repo-ng/``
-
-The source location for the winrepo sls files.
-
-.. code-block:: yaml
-
-    winrepo_source_dir: salt://win/repo-ng/
 
 .. conf_minion:: winrepo_cachefile
 .. conf_minion:: win_repo_cachefile
