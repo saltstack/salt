@@ -1365,8 +1365,8 @@ def create(vm_):
     log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
         '\'%s\' VM creation details:\n%s',
-            vm_['name'], pprint.pformat(data)
-        )
+        vm_['name'],
+        pprint.pformat(data)
     )
 
     ret.update(data)
@@ -1696,7 +1696,7 @@ def delete_managed_disk(call=None, kwargs=None):  # pylint: disable=unused-argum
     try:
         compconn.disks.delete(kwargs['resource_group'], kwargs['blob'])
     except Exception as exc:
-        log.error("Error deleting managed disk %s - %s', kwargs.get('blob'), six.text_type(exc))
+        log.error('Error deleting managed disk %s - %s', kwargs.get('blob'), six.text_type(exc))
         return False
 
     return True

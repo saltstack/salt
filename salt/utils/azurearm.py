@@ -13,7 +13,7 @@ Azure (ARM) Utilities
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import importlib
 import logging
 import sys
@@ -159,8 +159,9 @@ def log_cloud_error(client, message):
     Log an azurearm cloud error exception
     '''
     log.error(
-         'An AzureARM {0} CloudError has occurred: '
-         '{1}'.format(client.capitalize(), message)
+         'An AzureARM %s CloudError has occurred: %s',
+         client.capitalize(),
+         message
     )
 
     return
