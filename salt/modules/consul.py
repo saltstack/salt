@@ -7,7 +7,7 @@ https://www.consul.io
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import logging
 
@@ -1254,7 +1254,7 @@ def session_create(consul_url=None, token=None, **kwargs):
 
     if 'ttl' in kwargs:
         _ttl = kwargs['ttl']
-        if str(_ttl).endswith('s'):
+        if six.text_type(_ttl).endswith('s'):
             _ttl = _ttl[:-1]
 
         if int(_ttl) < 0 or int(_ttl) > 3600:
