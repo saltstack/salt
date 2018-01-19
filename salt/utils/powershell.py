@@ -9,7 +9,7 @@ Common functions for working with powershell
     pointing to all locations of your Powershell modules.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 

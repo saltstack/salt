@@ -46,7 +46,7 @@ Connection module for Amazon Autoscale Groups
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import time
 import logging
@@ -288,7 +288,7 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
             # create notifications
             if notification_arn and notification_types:
                 conn.put_notification_configuration(_asg, notification_arn, notification_types)
-            log.info('Created ASG {0}'.format(name))
+            log.info('Created ASG %s', name)
             return True
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
@@ -297,7 +297,7 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
                 retries -= 1
                 continue
             log.error(e)
-            msg = 'Failed to create ASG {0}'.format(name)
+            msg = 'Failed to create ASG %s', name
             log.error(msg)
             return False
 
@@ -393,10 +393,10 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             # Seems the update call doesn't handle tags, so we'll need to update
             # that separately.
             if add_tags:
-                log.debug('Adding/updating tags from ASG: {}'.format(add_tags))
+                log.debug('Adding/updating tags from ASG: %s', add_tags)
                 conn.create_or_update_tags([autoscale.Tag(**t) for t in add_tags])
             if delete_tags:
-                log.debug('Deleting tags from ASG: {}'.format(delete_tags))
+                log.debug('Deleting tags from ASG: %s', delete_tags)
                 conn.delete_tags([autoscale.Tag(**t) for t in delete_tags])
             # update doesn't handle suspended_processes either
             # Resume all processes
@@ -405,7 +405,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             # list suspends all; don't do that.
             if suspended_processes is not None and len(suspended_processes) > 0:
                 _asg.suspend_processes(suspended_processes)
-            log.info('Updated ASG {0}'.format(name))
+            log.info('Updated ASG %s', name)
             # ### scaling policies
             # delete all policies, then recreate them
             for policy in conn.get_all_policies(as_group=name):
@@ -428,7 +428,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             log.error(e)
             msg = 'Failed to update ASG {0}'.format(name)
             log.error(msg)
-            return False, str(e)
+            return False, six.text_type(e)
 
 
 def _create_scaling_policies(conn, as_name, scaling_policies):
@@ -687,7 +687,7 @@ def create_launch_configuration(name, image_id, key_name=None,
     while True:
         try:
             conn.create_launch_configuration(lc)
-            log.info('Created LC {0}'.format(name))
+            log.info('Created LC %s', name)
             return True
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
@@ -715,7 +715,7 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None,
     while True:
         try:
             conn.delete_launch_configuration(name)
-            log.info('Deleted LC {0}'.format(name))
+            log.info('Deleted LC %s', name)
             return True
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
@@ -749,7 +749,7 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
             for policy in policies:
                 if policy.name == scaling_policy_name:
                     return policy.policy_arn
-            log.error('Could not convert: {0}'.format(as_group))
+            log.error('Could not convert: %s', as_group)
             return None
         except boto.exception.BotoServerError as e:
             if e.error_code != 'Throttling':
@@ -839,7 +839,7 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
             log.error(e)
             return False
     if len(asgs) != 1:
-        log.debug("name '{0}' returns multiple ASGs: {1}".format(name, [asg.name for asg in asgs]))
+        log.debug("name '%s' returns multiple ASGs: %s", name, [asg.name for asg in asgs])
         return False
     asg = asgs[0]
     instance_ids = []

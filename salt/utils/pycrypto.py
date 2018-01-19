@@ -4,7 +4,7 @@ Use pycrypto to generate random passwords on the fly.
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import string
 import random

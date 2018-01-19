@@ -86,7 +86,6 @@ import salt.utils.verify
 import salt.utils.zeromq
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.config import DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError
 from salt.transport import iter_transport_opts
 from salt.utils.debug import (
@@ -751,7 +750,7 @@ class Master(SMaster):
             if self.opts['discovery']:
                 if salt.utils.ssdp.SSDPDiscoveryServer.is_available():
                     self.process_manager.add_process(salt.utils.ssdp.SSDPDiscoveryServer(
-                        port=self.opts['discovery'].get('port', DEFAULT_MASTER_OPTS['discovery']['port']),
+                        port=self.opts['discovery']['port'],
                         listen_ip=self.opts['interface'],
                         answer={'mapping': self.opts['discovery'].get('mapping', {})}).run)
                 else:
