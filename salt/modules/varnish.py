@@ -9,13 +9,14 @@ Support for Varnish
     These functions are designed to work with all implementations of Varnish
     from 3.x onwards
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 import re
 
 # Import salt libs
+from salt.ext import six
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ def _run_varnishadm(cmd, params=(), **kwargs):
     '''
     cmd = ['varnishadm', cmd]
     cmd.extend([param for param in params if param is not None])
-    log.debug('Executing: {0}'.format(' '.join(cmd)))
+    log.debug('Executing: %s', ' '.join(cmd))
     return __salt__['cmd.run_all'](cmd, python_shell=False, **kwargs)
 
 
@@ -122,7 +123,7 @@ def param_set(param, value):
 
         salt '*' varnish.param_set param value
     '''
-    return _run_varnishadm('param.set', [param, str(value)])['retcode'] == 0
+    return _run_varnishadm('param.set', [param, six.text_type(value)])['retcode'] == 0
 
 
 def param_show(param=None):
