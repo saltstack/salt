@@ -85,12 +85,12 @@ LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
 
 _MODIFY_OK = frozenset(['uri', 'comps', 'architectures', 'disabled',
                         'file', 'dist'])
-DPKG_ENV_VARS = {
+DPKG_ENV_VARS = salt.utils.data.encode({
     'APT_LISTBUGS_FRONTEND': 'none',
     'APT_LISTCHANGES_FRONTEND': 'none',
     'DEBIAN_FRONTEND': 'noninteractive',
     'UCF_FORCE_CONFFOLD': '1',
-}
+})
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
