@@ -12,7 +12,6 @@ Module for running ZFS command
 from __future__ import absolute_import
 
 # Import Python libs
-import re
 import logging
 
 # Import Salt libs
@@ -23,9 +22,6 @@ from salt.utils.odict import OrderedDict
 
 __virtualname__ = 'zfs'
 log = logging.getLogger(__name__)
-
-# Precompiled regex
-re_zfs_size = re.compile(r'^(\d+|\d+(?=\d*)\.\d+)([KkMmGgTtPpEeZz][Bb]?)$')
 
 # Function alias to set mapping.
 __func_alias__ = {
@@ -43,11 +39,8 @@ def __virtual__():
         return (False, "The zfs module cannot be loaded: zfs not supported")
 
 
-# TODO: update below this
 def exists(name, **kwargs):
     '''
-    .. versionadded:: 2015.5.0
-
     Check if a ZFS filesystem or volume or snapshot exists.
 
     name : string
@@ -56,6 +49,9 @@ def exists(name, **kwargs):
         also check if dataset is of a certain type, valid choices are:
         filesystem, snapshot, volume, bookmark, or all.
 
+    .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -63,15 +59,29 @@ def exists(name, **kwargs):
         salt '*' zfs.exists myzpool/mydataset
         salt '*' zfs.exists myzpool/myvolume type=volume
     '''
-    zfs = salt.utils.path.which('zfs')
-    ltype = kwargs.get('type', None)
+    ## Configure command
+    # NOTE: initialize the defaults
+    opts = {}
 
-    cmd = '{0} list {1}{2}'.format(zfs, '-t {0} '.format(ltype) if ltype else '', __utils__['zfs.to_str'](name))
-    res = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
+    # NOTE: set extra config
+    if kwargs.get('type', False):
+        opts['-t'] = kwargs.get('type')
+
+    ## Check if 'name' of 'type' exists
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='list',
+            opts=opts,
+            target=name,
+        ),
+        python_shell=False,
+        ignore_retcode=True,
+    )
 
     return res['retcode'] == 0
 
 
+# TODO: cleanup code below this point
 def create(name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
