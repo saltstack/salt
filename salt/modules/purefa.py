@@ -52,12 +52,13 @@ Installation Prerequisites
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import platform
 from datetime import datetime
 
 # Import Salt libs
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party modules
@@ -227,7 +228,7 @@ def snap_create(name, suffix=None):
     '''
     array = _get_system()
     if suffix is None:
-        suffix = 'snap-' + str((datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds())
+        suffix = 'snap-' + six.text_type((datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds())
         suffix = suffix.replace('.', '')
     if _get_volume(name, array) is not None:
         try:

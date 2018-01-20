@@ -34,6 +34,12 @@ Example:
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
+
 
 def __virtual__():
     '''
@@ -62,7 +68,7 @@ def present(profile='pagerduty', subdomain=None, api_key=None, **kwargs):
                                                         subdomain=subdomain,
                                                         api_key=api_key)
             if u is None:
-                raise Exception('unknown user: {0}'.format(str(user)))
+                raise Exception('unknown user: {0}'.format(six.text_type(user)))
             user['user']['id'] = u['id']
     r = __salt__['pagerduty_util.resource_present']('schedules',
                                                     ['name', 'id'],
