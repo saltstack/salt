@@ -232,13 +232,16 @@ def present(host, groups, interfaces, **kwargs):
             update_interfaces = True
 
         cur_inventory = __salt__['zabbix.hostinventory_get'](hostids=hostid, **connection_args)
-        # Remove blank inventory items
-        cur_inventory = {k: v for k, v in cur_inventory.items() if v}
-        # Remove persistent inventory keys for comparison
-        cur_inventory.pop('hostid', None)
-        cur_inventory.pop('inventory_mode', None)
+        if cur_inventory:
+            # Remove blank inventory items
+            cur_inventory = {k: v for k, v in cur_inventory.items() if v}
+            # Remove persistent inventory keys for comparison
+            cur_inventory.pop('hostid', None)
+            cur_inventory.pop('inventory_mode', None)
 
-        if set(cur_inventory) != set(new_inventory):
+        if new_inventory and not cur_inventory:
+            update_inventory = True
+        elif set(cur_inventory) != set(new_inventory):
             update_inventory = True
 
     # Dry run, test=true mode
