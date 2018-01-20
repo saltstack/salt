@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
 '''
-Salt interface to ZFS commands
+Module for running ZFS command
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor:    Nitin Madhok <nmadhok@clemson.edu>, Jorge Schrauwen <sjorge@blackdot.be>
+:maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:depends:       salt.utils.zfs
+:platform:      illumos,freebsd,linux
 
 '''
 from __future__ import absolute_import
 
 # Import Python libs
 import re
-import math
 import logging
 
 # Import Salt libs
 import salt.utils.args
 import salt.utils.path
 import salt.modules.cmdmod
-import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
-from salt.utils.stringutils import to_num as str_to_num
-from salt.ext import six
 
 __virtualname__ = 'zfs'
 log = logging.getLogger(__name__)
@@ -43,76 +43,7 @@ def __virtual__():
         return (False, "The zfs module cannot be loaded: zfs not supported")
 
 
-@decorators.memoize
-def _check_zfs():
-    '''
-    Looks to see if zfs is present on the system.
-    '''
-    # Get the path to the zfs binary.
-    return salt.utils.path.which('zfs')
-
-
-@decorators.memoize
-def _check_features():
-    '''
-    Looks to see if zpool-features is available
-    '''
-    # get man location
-    man = salt.utils.path.which('man')
-    if not man:
-        return False
-
-    cmd = '{man} zpool-features'.format(
-        man=man
-    )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    return res['retcode'] == 0
-
-
-def _conform_value(value, convert_size=False):
-    '''
-    Ensure value always conform to what zfs expects
-    '''
-    # NOTE: salt breaks the on/off/yes/no properties
-    if isinstance(value, bool):
-        return 'on' if value else 'off'
-
-    if isinstance(value, six.text_type) or isinstance(value, str):
-        # NOTE: handle whitespaces
-        if ' ' in value:
-            # NOTE: quoting the string may be better
-            #       but it is hard to know if we already quoted it before
-            #       this can be improved in the future
-            return "'{0}'".format(value.strip("'"))
-
-        # NOTE: handle ZFS size conversion
-        match_size = re_zfs_size.match(value)
-        if convert_size and match_size:
-            v_size = float(match_size.group(1))
-            v_unit = match_size.group(2).upper()[0]
-            v_power = math.pow(1024, ['K', 'M', 'G', 'T', 'P', 'E', 'Z'].index(v_unit) + 1)
-            value = v_size * v_power
-            return int(value) if int(value) == value else value
-
-        # NOTE: convert to numeric if needed
-        return str_to_num(value)
-
-    # NOTE: passthrough
-    return value
-
-
-def _zfs_quote_escape_path(name):
-    '''
-    Quotes zfs path with single quotes and escapes single quotes in path if present
-    '''
-    if name:
-        if six.PY3:
-            name = '\'' + name.replace('\'', '\\\'') + '\''
-        else:
-            name = '\'' + name.encode('string_escape').replace('\'', '\\\'') + '\''
-    return name
-
-
+# TODO: update below this
 def exists(name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
@@ -132,10 +63,10 @@ def exists(name, **kwargs):
         salt '*' zfs.exists myzpool/mydataset
         salt '*' zfs.exists myzpool/myvolume type=volume
     '''
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     ltype = kwargs.get('type', None)
 
-    cmd = '{0} list {1}{2}'.format(zfs, '-t {0} '.format(ltype) if ltype else '', _zfs_quote_escape_path(name))
+    cmd = '{0} list {1}{2}'.format(zfs, '-t {0} '.format(ltype) if ltype else '', __utils__['zfs.to_str'](name))
     res = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
 
     return res['retcode'] == 0
@@ -180,10 +111,10 @@ def create(name, **kwargs):
     '''
     ret = {}
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     properties = kwargs.get('properties', None)
     if properties and 'mountpoint' in properties:
-        properties['mountpoint'] = _zfs_quote_escape_path(properties['mountpoint'])
+        properties['mountpoint'] = __utils__['zfs.to_str'](properties['mountpoint'])
     create_parent = kwargs.get('create_parent', False)
     volume_size = kwargs.get('volume_size', None)
     sparse = kwargs.get('sparse', False)
@@ -200,14 +131,14 @@ def create(name, **kwargs):
     if properties:
         proplist = []
         for prop in properties:
-            proplist.append('-o {0}={1}'.format(prop, _conform_value(properties[prop])))
+            proplist.append('-o {0}={1}'.format(prop, __utils__['zfs.to_auto'](properties[prop])))
         cmd = '{0} {1}'.format(cmd, ' '.join(proplist))
 
     if volume_size:
         cmd = '{0} -V {1}'.format(cmd, volume_size)
 
     # append name
-    cmd = '{0} {1}'.format(cmd, _zfs_quote_escape_path(name))
+    cmd = '{0} {1}'.format(cmd, __utils__['zfs.to_str'](name))
 
     # Create filesystem
     res = __salt__['cmd.run_all'](cmd)
@@ -247,7 +178,7 @@ def destroy(name, **kwargs):
         salt '*' zfs.destroy myzpool/mydataset [force=True|False]
     '''
     ret = {}
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     force = kwargs.get('force', False)
     recursive = kwargs.get('recursive', False)
     recursive_all = kwargs.get('recursive_all', False)
@@ -262,7 +193,7 @@ def destroy(name, **kwargs):
     if recursive:
         cmd = '{0} -r'.format(cmd)
 
-    cmd = '{0} {1}'.format(cmd, _zfs_quote_escape_path(name))
+    cmd = '{0} {1}'.format(cmd, __utils__['zfs.to_str'](name))
     res = __salt__['cmd.run_all'](cmd)
 
     if res['retcode'] != 0:
@@ -306,7 +237,7 @@ def rename(name, new_name, **kwargs):
         salt '*' zfs.rename myzpool/mydataset myzpool/renameddataset
     '''
     ret = {}
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     create_parent = kwargs.get('create_parent', False)
     force = kwargs.get('force', False)
     recursive = kwargs.get('recursive', False)
@@ -326,8 +257,8 @@ def rename(name, new_name, **kwargs):
         force='-f ' if force else '',
         create_parent='-p ' if create_parent else '',
         recursive='-r ' if recursive else '',
-        name=_zfs_quote_escape_path(name),
-        new_name=_zfs_quote_escape_path(new_name)
+        name=__utils__['zfs.to_str'](name),
+        new_name=__utils__['zfs.to_str'](new_name)
     ))
 
     if res['retcode'] != 0:
@@ -374,7 +305,7 @@ def list_(name=None, **kwargs):
         salt '*' zfs.list myzpool/mydataset properties="sharenfs,mountpoint"
     '''
     ret = OrderedDict()
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     recursive = kwargs.get('recursive', False)
     depth = kwargs.get('depth', 0)
     properties = kwargs.get('properties', 'used,avail,refer,mountpoint')
@@ -414,7 +345,7 @@ def list_(name=None, **kwargs):
 
     # add name if set
     if name:
-        cmd = '{0} {1}'.format(cmd, _zfs_quote_escape_path(name))
+        cmd = '{0} {1}'.format(cmd, __utils__['zfs.to_str'](name))
 
     # parse output
     res = __salt__['cmd.run_all'](cmd)
@@ -424,7 +355,7 @@ def list_(name=None, **kwargs):
             ds_data = {}
 
             for prop in properties:
-                ds_data[prop] = _conform_value(ds[properties.index(prop)])
+                ds_data[prop] = __utils__['zfs.to_auto'](ds[properties.index(prop)])
 
             ret[ds_data['name']] = ds_data
             del ret[ds_data['name']]['name']
@@ -456,7 +387,7 @@ def mount(name='-a', **kwargs):
         salt '*' zfs.mount myzpool/mydataset
         salt '*' zfs.mount myzpool/mydataset options=ro
     '''
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     overlay = kwargs.get('overlay', False)
     options = kwargs.get('options', None)
 
@@ -464,7 +395,7 @@ def mount(name='-a', **kwargs):
         zfs=zfs,
         overlay='-O ' if overlay else '',
         options='-o {0} '.format(options) if options else '',
-        filesystem=_zfs_quote_escape_path(name)
+        filesystem=__utils__['zfs.to_str'](name)
     ))
 
     ret = {}
@@ -499,13 +430,13 @@ def unmount(name, **kwargs):
 
         salt '*' zfs.unmount myzpool/mydataset [force=True|False]
     '''
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     force = kwargs.get('force', False)
 
     res = __salt__['cmd.run_all']('{zfs} unmount {force}{filesystem}'.format(
         zfs=zfs,
         force='-f ' if force else '',
-        filesystem=_zfs_quote_escape_path(name)
+        filesystem=__utils__['zfs.to_str'](name)
     ))
 
     ret = {}
@@ -541,7 +472,7 @@ def inherit(prop, name, **kwargs):
 
         salt '*' zfs.inherit canmount myzpool/mydataset [recursive=True|False]
     '''
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     recursive = kwargs.get('recursive', False)
     revert = kwargs.get('revert', False)
 
@@ -550,7 +481,7 @@ def inherit(prop, name, **kwargs):
         recursive='-r ' if recursive else '',
         revert='-S ' if revert else '',
         prop=prop,
-        name=_zfs_quote_escape_path(name)
+        name=__utils__['zfs.to_str'](name)
     ))
 
     ret = {}
@@ -592,7 +523,7 @@ def diff(name_a, name_b, **kwargs):
     '''
     ret = {}
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     show_changetime = kwargs.get('show_changetime', False)
     show_indication = kwargs.get('show_indication', True)
 
@@ -604,8 +535,8 @@ def diff(name_a, name_b, **kwargs):
         zfs=zfs,
         changetime='-t ' if show_changetime else '',
         indication='-F ' if show_indication else '',
-        name_a=_zfs_quote_escape_path(name_a),
-        name_b=_zfs_quote_escape_path(name_b)
+        name_a=__utils__['zfs.to_str'](name_a),
+        name_b=__utils__['zfs.to_str'](name_b)
     ))
 
     if res['retcode'] != 0:
@@ -653,7 +584,7 @@ def rollback(name, **kwargs):
     '''
     ret = {}
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     force = kwargs.get('force', False)
     recursive = kwargs.get('recursive', False)
     recursive_all = kwargs.get('recursive_all', False)
@@ -672,7 +603,7 @@ def rollback(name, **kwargs):
         force='-f ' if force else '',
         recursive='-r ' if recursive else '',
         recursive_all='-R ' if recursive_all else '',
-        snapshot=_zfs_quote_escape_path(name)
+        snapshot=__utils__['zfs.to_str'](name)
     ))
 
     if res['retcode'] != 0:
@@ -714,7 +645,7 @@ def clone(name_a, name_b, **kwargs):
     '''
     ret = {}
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     create_parent = kwargs.get('create_parent', False)
     properties = kwargs.get('properties', None)
 
@@ -734,8 +665,8 @@ def clone(name_a, name_b, **kwargs):
         zfs=zfs,
         create_parent='-p ' if create_parent else '',
         properties='{0} '.format(properties) if properties else '',
-        name_a=_zfs_quote_escape_path(name_a),
-        name_b=_zfs_quote_escape_path(name_b)
+        name_a=__utils__['zfs.to_str'](name_a),
+        name_b=__utils__['zfs.to_str'](name_b)
     ))
 
     if res['retcode'] != 0:
@@ -778,11 +709,11 @@ def promote(name):
     '''
     ret = {}
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
 
     res = __salt__['cmd.run_all']('{zfs} promote {name}'.format(
         zfs=zfs,
-        name=_zfs_quote_escape_path(name)
+        name=__utils__['zfs.to_str'](name)
     ))
 
     if res['retcode'] != 0:
@@ -820,11 +751,11 @@ def bookmark(snapshot, bookmark):
     ret = {}
 
     # abort if we do not have feature flags
-    if not _check_features():
+    if not __utils__['zfs.has_feature_flags']():
         ret['error'] = 'bookmarks are not supported'
         return ret
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
 
     if '@' not in snapshot:
         ret[snapshot] = 'MUST be a snapshot'
@@ -837,8 +768,8 @@ def bookmark(snapshot, bookmark):
 
     res = __salt__['cmd.run_all']('{zfs} bookmark {snapshot} {bookmark}'.format(
         zfs=zfs,
-        snapshot=_zfs_quote_escape_path(snapshot),
-        bookmark=_zfs_quote_escape_path(bookmark)
+        snapshot=__utils__['zfs.to_str'](snapshot),
+        bookmark=__utils__['zfs.to_str'](bookmark)
     ))
 
     if res['retcode'] != 0:
@@ -871,13 +802,13 @@ def holds(snapshot, **kwargs):
         ret[snapshot] = 'MUST be a snapshot'
         return ret
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     recursive = kwargs.get('recursive', False)
 
     res = __salt__['cmd.run_all']('{zfs} holds -H {recursive}{snapshot}'.format(
         zfs=zfs,
         recursive='-r ' if recursive else '',
-        snapshot=_zfs_quote_escape_path(snapshot)
+        snapshot=__utils__['zfs.to_str'](snapshot)
     ))
 
     if res['retcode'] == 0:
@@ -936,7 +867,7 @@ def hold(tag, *snapshot, **kwargs):
     '''
     ret = {}
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     recursive = kwargs.get('recursive', False)
 
     # verify snapshots
@@ -955,8 +886,8 @@ def hold(tag, *snapshot, **kwargs):
             res = __salt__['cmd.run_all']('{zfs} hold {recursive}{tag} {snapshot}'.format(
                 zfs=zfs,
                 recursive='-r ' if recursive else '',
-                tag=_zfs_quote_escape_path(ctag),
-                snapshot=_zfs_quote_escape_path(csnap)
+                tag=__utils__['zfs.to_str'](ctag),
+                snapshot=__utils__['zfs.to_str'](csnap)
             ))
 
             if csnap not in ret:
@@ -1013,7 +944,7 @@ def release(tag, *snapshot, **kwargs):
     '''
     ret = {}
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     recursive = kwargs.get('recursive', False)
 
     # verify snapshots
@@ -1032,8 +963,8 @@ def release(tag, *snapshot, **kwargs):
             res = __salt__['cmd.run_all']('{zfs} release {recursive}{tag} {snapshot}'.format(
                 zfs=zfs,
                 recursive='-r ' if recursive else '',
-                tag=_zfs_quote_escape_path(ctag),
-                snapshot=_zfs_quote_escape_path(csnap)
+                tag=__utils__['zfs.to_str'](ctag),
+                snapshot=__utils__['zfs.to_str'](csnap)
             ))
 
             if csnap not in ret:
@@ -1086,7 +1017,7 @@ def snapshot(*snapshot, **kwargs):
     '''
     ret = {}
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     recursive = kwargs.get('recursive', False)
     properties = kwargs.get('properties', None)
 
@@ -1103,7 +1034,7 @@ def snapshot(*snapshot, **kwargs):
     if properties:
         proplist = []
         for prop in properties:
-            proplist.append('-o {0}={1}'.format(prop, _conform_value((properties[prop]))))
+            proplist.append('-o {0}={1}'.format(prop, __utils__['zfs.to_auto']((properties[prop]))))
         properties = ' '.join(proplist)
 
     for csnap in snapshot:
@@ -1114,7 +1045,7 @@ def snapshot(*snapshot, **kwargs):
             zfs=zfs,
             recursive='-r ' if recursive else '',
             properties='{0} '.format(properties) if properties else '',
-            snapshot=_zfs_quote_escape_path(csnap)
+            snapshot=__utils__['zfs.to_str'](csnap)
         ))
 
         if res['retcode'] != 0:
@@ -1172,7 +1103,7 @@ def set(*dataset, **kwargs):
     '''
     ret = {}
 
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
 
     # verify snapshots
     if not dataset:
@@ -1194,8 +1125,8 @@ def set(*dataset, **kwargs):
             res = __salt__['cmd.run_all']('{zfs} set {prop}={value} {dataset}'.format(
                 zfs=zfs,
                 prop=prop,
-                value=_conform_value(properties[prop]),
-                dataset=_zfs_quote_escape_path(ds)
+                value=__utils__['zfs.to_auto'](properties[prop]),
+                dataset=__utils__['zfs.to_str'](ds)
             ))
             if ds not in ret:
                 ret[ds] = {}
@@ -1252,7 +1183,7 @@ def get(*dataset, **kwargs):
         salt '*' zfs.get myzpool/mydataset myzpool/myotherdataset properties=available fields=value depth=1
     '''
     ret = OrderedDict()
-    zfs = _check_zfs()
+    zfs = salt.utils.path.which('zfs')
     properties = kwargs.get('properties', 'all')
     recursive = kwargs.get('recursive', False)
     depth = kwargs.get('depth', 0)
@@ -1295,7 +1226,7 @@ def get(*dataset, **kwargs):
 
     # datasets
     if dataset:
-        dataset = [_zfs_quote_escape_path(x) for x in dataset]
+        dataset = [__utils__['zfs.to_str'](x) for x in dataset]
     cmd = '{0} {1}'.format(cmd, ' '.join(dataset))
 
     # parse output
@@ -1306,7 +1237,7 @@ def get(*dataset, **kwargs):
             ds_data = {}
 
             for field in fields:
-                ds_data[field] = _conform_value(ds[fields.index(field)])
+                ds_data[field] = __utils__['zfs.to_auto'](ds[fields.index(field)])
 
             ds_name = ds_data['name']
             ds_prop = ds_data['property']
