@@ -1,31 +1,27 @@
 # -*- coding: utf-8 -*-
 '''
-Salt interface to ZFS commands
+Module for running ZFS command
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor:    Nitin Madhok <nmadhok@clemson.edu>, Jorge Schrauwen <sjorge@blackdot.be>
+:maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:depends:       salt.utils.zfs
+:platform:      illumos,freebsd,linux
 
 '''
 from __future__ import absolute_import
 
 # Import Python libs
-import re
-import math
 import logging
 
 # Import Salt libs
 import salt.utils.args
 import salt.utils.path
 import salt.modules.cmdmod
-import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
-from salt.utils.stringutils import to_num as str_to_num
-from salt.ext import six
 
 __virtualname__ = 'zfs'
 log = logging.getLogger(__name__)
-
-# Precompiled regex
-re_zfs_size = re.compile(r'^(\d+|\d+(?=\d*)\.\d+)([KkMmGgTtPpEeZz][Bb]?)$')
 
 # Function alias to set mapping.
 __func_alias__ = {
@@ -43,80 +39,8 @@ def __virtual__():
         return (False, "The zfs module cannot be loaded: zfs not supported")
 
 
-@decorators.memoize
-def _check_zfs():
-    '''
-    Looks to see if zfs is present on the system.
-    '''
-    # Get the path to the zfs binary.
-    return salt.utils.path.which('zfs')
-
-
-@decorators.memoize
-def _check_features():
-    '''
-    Looks to see if zpool-features is available
-    '''
-    # get man location
-    man = salt.utils.path.which('man')
-    if not man:
-        return False
-
-    cmd = '{man} zpool-features'.format(
-        man=man
-    )
-    res = __salt__['cmd.run_all'](cmd, python_shell=False)
-    return res['retcode'] == 0
-
-
-def _conform_value(value, convert_size=False):
-    '''
-    Ensure value always conform to what zfs expects
-    '''
-    # NOTE: salt breaks the on/off/yes/no properties
-    if isinstance(value, bool):
-        return 'on' if value else 'off'
-
-    if isinstance(value, six.text_type) or isinstance(value, str):
-        # NOTE: handle whitespaces
-        if ' ' in value:
-            # NOTE: quoting the string may be better
-            #       but it is hard to know if we already quoted it before
-            #       this can be improved in the future
-            return "'{0}'".format(value.strip("'"))
-
-        # NOTE: handle ZFS size conversion
-        match_size = re_zfs_size.match(value)
-        if convert_size and match_size:
-            v_size = float(match_size.group(1))
-            v_unit = match_size.group(2).upper()[0]
-            v_power = math.pow(1024, ['K', 'M', 'G', 'T', 'P', 'E', 'Z'].index(v_unit) + 1)
-            value = v_size * v_power
-            return int(value) if int(value) == value else value
-
-        # NOTE: convert to numeric if needed
-        return str_to_num(value)
-
-    # NOTE: passthrough
-    return value
-
-
-def _zfs_quote_escape_path(name):
-    '''
-    Quotes zfs path with single quotes and escapes single quotes in path if present
-    '''
-    if name:
-        if six.PY3:
-            name = '\'' + name.replace('\'', '\\\'') + '\''
-        else:
-            name = '\'' + name.encode('string_escape').replace('\'', '\\\'') + '\''
-    return name
-
-
 def exists(name, **kwargs):
     '''
-    .. versionadded:: 2015.5.0
-
     Check if a ZFS filesystem or volume or snapshot exists.
 
     name : string
@@ -125,6 +49,9 @@ def exists(name, **kwargs):
         also check if dataset is of a certain type, valid choices are:
         filesystem, snapshot, volume, bookmark, or all.
 
+    .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -132,20 +59,31 @@ def exists(name, **kwargs):
         salt '*' zfs.exists myzpool/mydataset
         salt '*' zfs.exists myzpool/myvolume type=volume
     '''
-    zfs = _check_zfs()
-    ltype = kwargs.get('type', None)
+    ## Configure command
+    # NOTE: initialize the defaults
+    opts = {}
 
-    cmd = '{0} list {1}{2}'.format(zfs, '-t {0} '.format(ltype) if ltype else '', _zfs_quote_escape_path(name))
-    res = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
+    # NOTE: set extra config from kwargs
+    if kwargs.get('type', False):
+        opts['-t'] = kwargs.get('type')
+
+    ## Check if 'name' of 'type' exists
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='list',
+            opts=opts,
+            target=name,
+        ),
+        python_shell=False,
+        ignore_retcode=True,
+    )
 
     return res['retcode'] == 0
 
 
+# TODO: cleanup code below this point
 def create(name, **kwargs):
     '''
-    .. versionadded:: 2015.5.0
-    .. versionchanged:: 2016.3.0
-
     Create a ZFS File System.
 
     name : string
@@ -168,6 +106,9 @@ def create(name, **kwargs):
 
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
+    .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -178,39 +119,35 @@ def create(name, **kwargs):
         salt '*' zfs.create myzpool/volume volume_size=1G properties="{'volblocksize': '512'}" [sparse=True|False]
 
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = _check_zfs()
-    properties = kwargs.get('properties', None)
-    if properties and 'mountpoint' in properties:
-        properties['mountpoint'] = _zfs_quote_escape_path(properties['mountpoint'])
-    create_parent = kwargs.get('create_parent', False)
-    volume_size = kwargs.get('volume_size', None)
-    sparse = kwargs.get('sparse', False)
-    cmd = '{0} create'.format(zfs)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
+    opts = {}
 
-    if create_parent:
-        cmd = '{0} -p'.format(cmd)
+    # NOTE: push filesystem properties
+    filesystem_properties = kwargs.get('properties', {})
 
-    if volume_size and sparse:
-        cmd = '{0} -s'.format(cmd)
+    # NOTE: set extra config from kwargs
+    if kwargs.get('create_parent', False):
+        flags.append('-p')
+    if kwargs.get('sparse', False) and kwargs.get('volume_size', None):
+        flags.append('-s')
+    if kwargs.get('volume_size', None):
+        opts['-V'] = __utils__['zfs.to_size'](kwargs.get('volume_size'), convert_to_human=False)
 
-    # if zpool properties specified, then
-    # create "-o property=value" pairs
-    if properties:
-        proplist = []
-        for prop in properties:
-            proplist.append('-o {0}={1}'.format(prop, _conform_value(properties[prop])))
-        cmd = '{0} {1}'.format(cmd, ' '.join(proplist))
-
-    if volume_size:
-        cmd = '{0} -V {1}'.format(cmd, volume_size)
-
-    # append name
-    cmd = '{0} {1}'.format(cmd, _zfs_quote_escape_path(name))
-
-    # Create filesystem
-    res = __salt__['cmd.run_all'](cmd)
+    ## Create filesystem/volume
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='create',
+            flags=flags,
+            opts=opts,
+            filesystem_properties=filesystem_properties,
+            target=name,
+        ),
+        python_shell=False,
+    )
 
     # Check and see if the dataset is available
     if res['retcode'] != 0:
@@ -223,8 +160,6 @@ def create(name, **kwargs):
 
 def destroy(name, **kwargs):
     '''
-    .. versionadded:: 2015.5.0
-
     Destroy a ZFS File System.
 
     name : string
@@ -240,30 +175,38 @@ def destroy(name, **kwargs):
     .. warning::
         watch out when using recursive and recursive_all
 
+    .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.destroy myzpool/mydataset [force=True|False]
     '''
-    ret = {}
-    zfs = _check_zfs()
-    force = kwargs.get('force', False)
-    recursive = kwargs.get('recursive', False)
-    recursive_all = kwargs.get('recursive_all', False)
-    cmd = '{0} destroy'.format(zfs)
+    ret = OrderedDict()
 
-    if recursive_all:
-        cmd = '{0} -R'.format(cmd)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
 
-    if force:
-        cmd = '{0} -f'.format(cmd)
+    # NOTE: set extra config from kwargs
+    if kwargs.get('force', False):
+        flags.append('-f')
+    if kwargs.get('recursive_all', False):
+        flags.append('-R')
+    if kwargs.get('recursive', False):
+        flags.append('-r')
 
-    if recursive:
-        cmd = '{0} -r'.format(cmd)
-
-    cmd = '{0} {1}'.format(cmd, _zfs_quote_escape_path(name))
-    res = __salt__['cmd.run_all'](cmd)
+    ## Destroy filesystem/volume/snapshot/...
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='destroy',
+            flags=flags,
+            target=name,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         if "operation does not apply to pools" in res['stderr']:
@@ -280,9 +223,6 @@ def destroy(name, **kwargs):
 
 def rename(name, new_name, **kwargs):
     '''
-    .. versionadded:: 2015.5.0
-    .. versionchanged:: 2016.3.0
-
     Rename or Relocate a ZFS File System.
 
     name : string
@@ -299,36 +239,51 @@ def rename(name, new_name, **kwargs):
         recursively rename the snapshots of all descendent datasets.
         snapshots are the only dataset that can be renamed recursively.
 
+    .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.rename myzpool/mydataset myzpool/renameddataset
     '''
-    ret = {}
-    zfs = _check_zfs()
-    create_parent = kwargs.get('create_parent', False)
-    force = kwargs.get('force', False)
-    recursive = kwargs.get('recursive', False)
+    ret = OrderedDict()
 
-    # fix up conflicting parameters
-    if recursive:
-        if '@' in name:  # -p and -f don't work with -r
-            create_parent = False
-            force = False
-        else:  # -r only works with snapshots
-            recursive = False
-    if create_parent and '@' in name:  # doesn't work with snapshots
-        create_parent = False
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
+    target = []
 
-    res = __salt__['cmd.run_all']('{zfs} rename {force}{create_parent}{recursive}{name} {new_name}'.format(
-        zfs=zfs,
-        force='-f ' if force else '',
-        create_parent='-p ' if create_parent else '',
-        recursive='-r ' if recursive else '',
-        name=_zfs_quote_escape_path(name),
-        new_name=_zfs_quote_escape_path(new_name)
-    ))
+    # NOTE: set extra config from kwargs
+    if __utils__['zfs.is_snapshot'](name):
+        if kwargs.get('create_parent', False):
+            log.warning('zfs.rename - create_parent=True cannot be used with snapshots.')
+        if kwargs.get('force', False):
+            log.warning('zfs.rename - force=True cannot be used with snapshots.')
+        if kwargs.get('recursive', False):
+            flags.append('-r')
+    else:
+        if kwargs.get('create_parent', False):
+            flags.append('-p')
+        if kwargs.get('force', False):
+            flags.append('-f')
+        if kwargs.get('recursive', False):
+            log.warning('zfs.rename - recursive=True can only be used with snapshots.')
+
+    # NOTE: update target
+    target.append(name)
+    target.append(new_name)
+
+    ## Rename filesystem/volume/snapshot/...
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='rename',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -340,9 +295,6 @@ def rename(name, new_name, **kwargs):
 
 def list_(name=None, **kwargs):
     '''
-    .. versionadded:: 2015.5.0
-    .. versionchanged:: Oxygen
-
     Return a list of all datasets or a specified dataset on the system and the
     values of their used, available, referenced, and mountpoint properties.
 
@@ -365,6 +317,9 @@ def list_(name=None, **kwargs):
         display numbers in parsable (exact) values
         .. versionadded:: Oxygen
 
+    .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -374,57 +329,63 @@ def list_(name=None, **kwargs):
         salt '*' zfs.list myzpool/mydataset properties="sharenfs,mountpoint"
     '''
     ret = OrderedDict()
-    zfs = _check_zfs()
-    recursive = kwargs.get('recursive', False)
-    depth = kwargs.get('depth', 0)
+
+    ## update properties
+    # NOTE: properties should be a list
     properties = kwargs.get('properties', 'used,avail,refer,mountpoint')
-    sort = kwargs.get('sort', None)
-    ltype = kwargs.get('type', None)
-    order = kwargs.get('order', 'ascending')
-    parsable = kwargs.get('parsable', False)
-    cmd = '{0} list -H'.format(zfs)
+    if not isinstance(properties, list):
+        properties = properties.split(',')
 
-    # parsable output
-    if parsable:
-        cmd = '{0} -p'.format(cmd)
-
-    # filter on type
-    if ltype:
-        cmd = '{0} -t {1}'.format(cmd, ltype)
-
-    # recursively list
-    if recursive:
-        cmd = '{0} -r'.format(cmd)
-        if depth:
-            cmd = '{0} -d {1}'.format(cmd, depth)
-
-    # add properties
-    properties = properties.split(',')
-    if 'name' in properties:  # ensure name is first property
+    # NOTE: name should be first property
+    while 'name' in properties:
         properties.remove('name')
     properties.insert(0, 'name')
-    cmd = '{0} -o {1}'.format(cmd, ','.join(properties))
 
-    # sorting
-    if sort and sort in properties:
-        if order.startswith('a'):
-            cmd = '{0} -s {1}'.format(cmd, sort)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = ['-H', '-p']
+    opts = {}
+
+    # NOTE: set extra config from kwargs
+    if kwargs.get('recursive', False):
+        flags.append('-r')
+    if kwargs.get('recursive', False) and kwargs.get('depth', False):
+        opts['-d'] = kwargs.get('depth')
+    if kwargs.get('type', False):
+        opts['-t'] = kwargs.get('type')
+    if kwargs.get('sort', False) and kwargs.get('sort') in properties:
+        if kwargs.get('order', 'ascending').startswith('a'):
+            opts['-s'] = kwargs.get('sort')
         else:
-            cmd = '{0} -S {1}'.format(cmd, sort)
+            opts['-S'] = kwargs.get('sort')
+    if isinstance(properties, list):
+        # NOTE: There can be only one -o and it takes a comma-seperated list
+        opts['-o'] = ','.join(properties)
+    else:
+        opts['-o'] = properties
 
-    # add name if set
-    if name:
-        cmd = '{0} {1}'.format(cmd, _zfs_quote_escape_path(name))
-
-    # parse output
-    res = __salt__['cmd.run_all'](cmd)
+    ## parse zfs list
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='list',
+            flags=flags,
+            opts=opts,
+            target=name,
+        ),
+        python_shell=False,
+    )
     if res['retcode'] == 0:
         for ds in [l for l in res['stdout'].splitlines()]:
             ds = ds.split("\t")
-            ds_data = {}
+            # NOTE: OrderedDict because we sort!
+            ds_data = OrderedDict()
 
             for prop in properties:
-                ds_data[prop] = _conform_value(ds[properties.index(prop)])
+                ds_data[prop] = __utils__['zfs.to_auto'](
+                    prop,
+                    ds[properties.index(prop)],
+                    convert_to_human=not kwargs.get('parsable', True),
+                )
 
             ret[ds_data['name']] = ds_data
             del ret[ds_data['name']]['name']
@@ -434,19 +395,25 @@ def list_(name=None, **kwargs):
     return ret
 
 
-def mount(name='-a', **kwargs):
+## FIXME: also list mounted filesystems? (how to handle '-a' ?)
+def mount(name=None, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Mounts ZFS file systems
 
     name : string
-        name of the filesystem, you can use '-a' to mount all unmounted filesystems. (this is the default)
+        name of the filesystem, having this set to None will mount all filesystems. (this is the default)
     overlay : boolean
         perform an overlay mount.
     options : string
         optional comma-separated list of mount options to use temporarily for
         the duration of the mount.
+
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
+    .. warning::
+
+            Passing '-a' as name is deprecated and will be removed 2 verions after Flourine.
 
     CLI Example:
 
@@ -456,36 +423,50 @@ def mount(name='-a', **kwargs):
         salt '*' zfs.mount myzpool/mydataset
         salt '*' zfs.mount myzpool/mydataset options=ro
     '''
-    zfs = _check_zfs()
-    overlay = kwargs.get('overlay', False)
-    options = kwargs.get('options', None)
+    ret = OrderedDict()
 
-    res = __salt__['cmd.run_all']('{zfs} mount {overlay}{options}{filesystem}'.format(
-        zfs=zfs,
-        overlay='-O ' if overlay else '',
-        options='-o {0} '.format(options) if options else '',
-        filesystem=_zfs_quote_escape_path(name)
-    ))
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
+    opts = {}
 
-    ret = {}
-    if name == '-a':
-        ret = res['retcode'] == 0
+    # NOTE: set extra config from kwargs
+    if kwargs.get('overlay', False):
+        flags.append('-O')
+    if kwargs.get('options', False):
+        opts['-o'] = kwargs.get('options')
+    if name in [None, '-a']:
+        # NOTE: still accept '-a' as name for backwards compatibility
+        #       two versions after Flourine this should just simplify
+        #       this to just set '-a' if name is not set.
+        flags.append('-a')
+        name = None
+
+    ## Mount filesystem
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='mount',
+            flags=flags,
+            opts=opts,
+            target=name,
+        ),
+        python_shell=False,
+    )
+
+    if res['retcode'] != 0:
+        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        if res['retcode'] != 0:
-            ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
-        else:
-            ret[name] = 'mounted'
+        ret[name] = 'mounted'
+
     return ret
 
 
 def unmount(name, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Unmounts ZFS file systems
 
     name : string
-        name of the filesystem, you can use '-a' to unmount all mounted filesystems.
+        name of the filesystem, you can use None to unmount all mounted filesystems.
     force : boolean
         forcefully unmount the file system, even if it is currently in use.
 
@@ -493,36 +474,55 @@ def unmount(name, **kwargs):
 
         Using ``-a`` for the name parameter will probably break your system, unless your rootfs is not on zfs.
 
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
+    .. warning::
+
+            Passing '-a' as name is deprecated and will be removed 2 verions after Flourine.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.unmount myzpool/mydataset [force=True|False]
     '''
-    zfs = _check_zfs()
-    force = kwargs.get('force', False)
+    ret = OrderedDict()
 
-    res = __salt__['cmd.run_all']('{zfs} unmount {force}{filesystem}'.format(
-        zfs=zfs,
-        force='-f ' if force else '',
-        filesystem=_zfs_quote_escape_path(name)
-    ))
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
 
-    ret = {}
-    if name == '-a':
-        ret = res['retcode'] == 0
+    # NOTE: set extra config from kwargs
+    if kwargs.get('force', False):
+        flags.append('-f')
+    if name in [None, '-a']:
+        # NOTE: still accept '-a' as name for backwards compatibility
+        #       two versions after Flourine this should just simplify
+        #       this to just set '-a' if name is not set.
+        flags.append('-a')
+        name = None
+
+    ## Unmount filesystem
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='unmount',
+            flags=flags,
+            target=name,
+        ),
+        python_shell=False,
+    )
+
+    if res['retcode'] != 0:
+        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        if res['retcode'] != 0:
-            ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
-        else:
-            ret[name] = 'unmounted'
+        ret[name] = 'unmounted'
+
     return ret
 
 
 def inherit(prop, name, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Clears the specified property
 
     prop : string
@@ -535,25 +535,38 @@ def inherit(prop, name, **kwargs):
         revert the property to the received value if one exists; otherwise
         operate as if the -S option was not specified.
 
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.inherit canmount myzpool/mydataset [recursive=True|False]
     '''
-    zfs = _check_zfs()
-    recursive = kwargs.get('recursive', False)
-    revert = kwargs.get('revert', False)
+    ret = OrderedDict()
 
-    res = __salt__['cmd.run_all']('{zfs} inherit {recursive}{revert}{prop} {name}'.format(
-        zfs=zfs,
-        recursive='-r ' if recursive else '',
-        revert='-S ' if revert else '',
-        prop=prop,
-        name=_zfs_quote_escape_path(name)
-    ))
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
 
-    ret = {}
+    # NOTE: set extra config from kwargs
+    if kwargs.get('recursive', False):
+        flags.append('-r')
+    if kwargs.get('revert', False):
+        flags.append('-S')
+
+    ## Inherit property
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='inherit',
+            flags=flags,
+            property_name=prop,
+            target=name,
+        ),
+        python_shell=False,
+    )
+
     ret[name] = {}
     if res['retcode'] != 0:
         ret[name][prop] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -569,8 +582,6 @@ def inherit(prop, name, **kwargs):
 
 def diff(name_a, name_b, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Display the difference between a snapshot of a given filesystem and
     another snapshot of that filesystem from a later time or the current
     contents of the filesystem.
@@ -584,33 +595,46 @@ def diff(name_a, name_b, **kwargs):
     show_indication : boolean
         display an indication of the type of file. (default = True)
 
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.diff myzpool/mydataset@yesterday myzpool/mydataset
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = _check_zfs()
-    show_changetime = kwargs.get('show_changetime', False)
-    show_indication = kwargs.get('show_indication', True)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = ['-H']
+    target = []
 
-    if '@' not in name_a:
-        ret[name_a] = 'MUST be a snapshot'
-        return ret
+    # NOTE: set extra config from kwargs
+    if kwargs.get('show_changetime', False):
+        flags.append('-t')
+    if kwargs.get('show_indication', False):
+        flags.append('-F')
 
-    res = __salt__['cmd.run_all']('{zfs} diff -H {changetime}{indication}{name_a} {name_b}'.format(
-        zfs=zfs,
-        changetime='-t ' if show_changetime else '',
-        indication='-F ' if show_indication else '',
-        name_a=_zfs_quote_escape_path(name_a),
-        name_b=_zfs_quote_escape_path(name_b)
-    ))
+    # NOTE: update target
+    target.append(name_a)
+    target.append(name_b)
+
+    ## Diff filesystem/snapshot
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='diff',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
+        # FIXME: parse timestamp if '-t'
         ret = []
         for line in res['stdout'].splitlines():
             ret.append(line)
@@ -619,19 +643,7 @@ def diff(name_a, name_b, **kwargs):
 
 def rollback(name, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Roll back the given dataset to a previous snapshot.
-
-    .. warning::
-
-        When a dataset is rolled back, all data that has changed since
-        the snapshot is discarded, and the dataset reverts to the state
-        at the time of the snapshot. By default, the command refuses to
-        roll back to a snapshot other than the most recent one.
-
-        In order to do so, all intermediate snapshots and bookmarks
-        must be destroyed by specifying the -r option.
 
     name : string
         name of snapshot
@@ -645,35 +657,51 @@ def rollback(name, **kwargs):
         used with the -R option to force an unmount of any clone file
         systems that are to be destroyed.
 
+    .. warning::
+
+        When a dataset is rolled back, all data that has changed since
+        the snapshot is discarded, and the dataset reverts to the state
+        at the time of the snapshot. By default, the command refuses to
+        roll back to a snapshot other than the most recent one.
+
+        In order to do so, all intermediate snapshots and bookmarks
+        must be destroyed by specifying the -r option.
+
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.rollback myzpool/mydataset@yesterday
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = _check_zfs()
-    force = kwargs.get('force', False)
-    recursive = kwargs.get('recursive', False)
-    recursive_all = kwargs.get('recursive_all', False)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
 
-    if '@' not in name:
-        ret[name] = 'MUST be a snapshot'
-        return ret
+    # NOTE: set extra config from kwargs
+    if kwargs.get('recursive_all', False):
+        flags.append('-R')
+    if kwargs.get('recursive', False):
+        flags.append('-r')
+    if kwargs.get('force', False):
+        if kwargs.get('recursive_all', False) or kwargs.get('recursive', False):
+            flags.append('-f')
+        else:
+            log.warning('zfs.rollback - force=True can only be used with recursive_all=True or recursive=True')
 
-    if force:
-        if not recursive and not recursive_all:  # -f only works with -R
-            log.warning('zfs.rollback - force=True can only be used when recursive_all=True or recursive=True')
-            force = False
-
-    res = __salt__['cmd.run_all']('{zfs} rollback {force}{recursive}{recursive_all}{snapshot}'.format(
-        zfs=zfs,
-        force='-f ' if force else '',
-        recursive='-r ' if recursive else '',
-        recursive_all='-R ' if recursive_all else '',
-        snapshot=_zfs_quote_escape_path(name)
-    ))
+    ## Diff filesystem/snapshot
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='rollback',
+            flags=flags,
+            target=name,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         ret[name[:name.index('@')]] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -684,8 +712,6 @@ def rollback(name, **kwargs):
 
 def clone(name_a, name_b, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Creates a clone of the given snapshot.
 
     name_a : string
@@ -706,37 +732,43 @@ def clone(name_a, name_b, **kwargs):
 
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.clone myzpool/mydataset@yesterday myzpool/mydataset_yesterday
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = _check_zfs()
-    create_parent = kwargs.get('create_parent', False)
-    properties = kwargs.get('properties', None)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
+    target = []
 
-    if '@' not in name_a:
-        ret[name_b] = 'failed to clone from {0} because it is not a snapshot'.format(name_a)
-        return ret
+    # NOTE: push filesystem properties
+    filesystem_properties = kwargs.get('properties', {})
 
-    # if zpool properties specified, then
-    # create "-o property=value" pairs
-    if properties:
-        proplist = []
-        for prop in properties:
-            proplist.append('-o {0}={1}'.format(prop, properties[prop]))
-        properties = ' '.join(proplist)
+    # NOTE: set extra config from kwargs
+    if kwargs.get('create_parent', False):
+        flags.append('-p')
 
-    res = __salt__['cmd.run_all']('{zfs} clone {create_parent}{properties}{name_a} {name_b}'.format(
-        zfs=zfs,
-        create_parent='-p ' if create_parent else '',
-        properties='{0} '.format(properties) if properties else '',
-        name_a=_zfs_quote_escape_path(name_a),
-        name_b=_zfs_quote_escape_path(name_b)
-    ))
+    # NOTE: update target
+    target.append(name_a)
+    target.append(name_b)
+
+    ## Clone filesystem/volume
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='clone',
+            flags=flags,
+            filesystem_properties=filesystem_properties,
+            target=target,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         ret[name_b] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -747,8 +779,6 @@ def clone(name_a, name_b, **kwargs):
 
 def promote(name):
     '''
-    .. versionadded:: 2016.3.0
-
     Promotes a clone file system to no longer be dependent on its "origin"
     snapshot.
 
@@ -770,20 +800,24 @@ def promote(name):
     name : string
         name of clone-filesystem
 
+    .. versionadded:: 2016.3.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.promote myzpool/myclone
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = _check_zfs()
-
-    res = __salt__['cmd.run_all']('{zfs} promote {name}'.format(
-        zfs=zfs,
-        name=_zfs_quote_escape_path(name)
-    ))
+    ## Promote clone
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='promote',
+            target=name,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -794,8 +828,6 @@ def promote(name):
 
 def bookmark(snapshot, bookmark):
     '''
-    .. versionadded:: 2016.3.0
-
     Creates a bookmark of the given snapshot
 
     .. note::
@@ -811,35 +843,37 @@ def bookmark(snapshot, bookmark):
     bookmark : string
         name of bookmark
 
+    .. versionadded:: 2016.3.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.bookmark myzpool/mydataset@yesterday myzpool/mydataset#complete
     '''
-    ret = {}
+    ret = OrderedDict()
 
     # abort if we do not have feature flags
-    if not _check_features():
+    if not __utils__['zfs.has_feature_flags']():
         ret['error'] = 'bookmarks are not supported'
         return ret
 
-    zfs = _check_zfs()
+    ## Configure command
+    # NOTE: initialize the defaults
+    target = []
 
-    if '@' not in snapshot:
-        ret[snapshot] = 'MUST be a snapshot'
+    # NOTE: update target
+    target.append(snapshot)
+    target.append(bookmark)
 
-    if '#' not in bookmark:
-        ret[bookmark] = 'MUST be a bookmark'
-
-    if len(ret) > 0:
-        return ret
-
-    res = __salt__['cmd.run_all']('{zfs} bookmark {snapshot} {bookmark}'.format(
-        zfs=zfs,
-        snapshot=_zfs_quote_escape_path(snapshot),
-        bookmark=_zfs_quote_escape_path(bookmark)
-    ))
+    ## Bookmark snapshot
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='bookmark',
+            target=target,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         ret[snapshot] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -850,8 +884,6 @@ def bookmark(snapshot, bookmark):
 
 def holds(snapshot, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Lists all existing user references for the given snapshot or snapshots.
 
     snapshot : string
@@ -859,26 +891,37 @@ def holds(snapshot, **kwargs):
     recursive : boolean
         lists the holds that are set on the named descendent snapshots also.
 
+    .. versionadded:: 2016.3.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.holds myzpool/mydataset@baseline
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    if '@' not in snapshot:
-        ret[snapshot] = 'MUST be a snapshot'
-        return ret
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = ['-H']
+    target = []
 
-    zfs = _check_zfs()
-    recursive = kwargs.get('recursive', False)
+    # NOTE: set extra config from kwargs
+    if kwargs.get('recursive', False):
+        flags.append('-r')
 
-    res = __salt__['cmd.run_all']('{zfs} holds -H {recursive}{snapshot}'.format(
-        zfs=zfs,
-        recursive='-r ' if recursive else '',
-        snapshot=_zfs_quote_escape_path(snapshot)
-    ))
+    # NOTE: update target
+    target.append(snapshot)
+
+    ## Lookup holds
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='holds',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] == 0:
         if res['stdout'] != '':
@@ -900,10 +943,9 @@ def holds(snapshot, **kwargs):
     return ret
 
 
+## FIXME: merge hold and release into one private function
 def hold(tag, *snapshot, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Adds a single reference, named with the tag argument, to the specified
     snapshot or snapshots.
 
@@ -922,67 +964,73 @@ def hold(tag, *snapshot, **kwargs):
         specifies that a hold with the given tag is applied recursively to
         the snapshots of all descendent file systems.
 
-    .. note::
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Flourine
 
-        A comma-separated list can be provided for the tag parameter to hold multiple tags.
+    .. warning::
+
+        As of Flourine the tag parameter no longer accepts a comma-seprated value.
+        It's is now possible to create a tag that contains a comma, this was impossible before.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot [recursive=True]
-        salt '*' zfs.hold mytag,myothertag myzpool/mydataset@mysnapshot
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = _check_zfs()
-    recursive = kwargs.get('recursive', False)
+    ## warn about tag change
+    ## NOTE: remove me 2 versions after Flourine
+    if ',' in tag:
+        log.warning('zfs.hold - on Flourine and later a comma in a tag will no longer create multiple tags!')
 
-    # verify snapshots
-    if not snapshot:
-        ret['error'] = 'one or more snapshots must be specified'
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
+    target = []
 
-    for snap in snapshot:
-        if '@' not in snap:
-            ret[snap] = 'not a snapshot'
+    # NOTE: set extra config from kwargs
+    if kwargs.get('recursive', False):
+        flags.append('-r')
 
-    if len(ret) > 0:
-        return ret
+    # NOTE: update target
+    target.append(tag)
+    target.extend(snapshot)
 
-    for csnap in snapshot:
-        for ctag in tag.split(','):
-            res = __salt__['cmd.run_all']('{zfs} hold {recursive}{tag} {snapshot}'.format(
-                zfs=zfs,
-                recursive='-r ' if recursive else '',
-                tag=_zfs_quote_escape_path(ctag),
-                snapshot=_zfs_quote_escape_path(csnap)
-            ))
+    ## hold snapshot
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='hold',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
+    )
 
-            if csnap not in ret:
-                ret[csnap] = {}
+    if tag not in ret:
+        ret[tag] = OrderedDict()
 
-            if res['retcode'] != 0:
-                for err in res['stderr'].splitlines():
-                    if err.startswith('cannot hold snapshot'):
-                        ret[csnap][ctag] = err[err.index(':')+2:]
-                    elif err.startswith('cannot open'):
-                        ret[csnap][ctag] = err[err.index(':')+2:]
-                    else:
-                        # fallback in case we hit a weird error
-                        if err == 'usage:':
-                            break
-                        ret[csnap][ctag] = res['stderr']
+    if res['retcode'] != 0:
+        for err in res['stderr'].splitlines():
+            if err.startswith('cannot hold snapshot'):
+                ret[tag] = err[err.index(':')+2:]
+            elif err.startswith('cannot open'):
+                ret[tag] = err[err.index(':')+2:]
             else:
-                ret[csnap][ctag] = 'held'
+                # fallback in case we hit a weird error
+                if err == 'usage:':
+                    break
+                ret[tag] = res['stderr']
+    else:
+        ret[tag] = 'held'
 
     return ret
 
 
 def release(tag, *snapshot, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Removes a single reference, named with the tag argument, from the
     specified snapshot or snapshots.
 
@@ -1000,9 +1048,13 @@ def release(tag, *snapshot, **kwargs):
         recursively releases a hold with the given tag on the snapshots of
         all descendent file systems.
 
-    .. note::
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Flourine
 
-        A comma-separated list can be provided for the tag parameter to release multiple tags.
+    .. warning::
+
+        As of Flourine the tag parameter no longer accepts a comma-seprated value.
+        It's is now possible to create a tag that contains a comma, this was impossible before.
 
     CLI Example:
 
@@ -1011,55 +1063,58 @@ def release(tag, *snapshot, **kwargs):
         salt '*' zfs.release mytag myzpool/mydataset@mysnapshot [recursive=True]
         salt '*' zfs.release mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = _check_zfs()
-    recursive = kwargs.get('recursive', False)
+    ## warn about tag change
+    ## NOTE: remove me 2 versions after Flourine
+    if ',' in tag:
+        log.warning('zfs.release - on Flourine and later a comma in a tag will no longer create multiple tags!')
 
-    # verify snapshots
-    if not snapshot:
-        ret['error'] = 'one or more snapshots must be specified'
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
+    target = []
 
-    for snap in snapshot:
-        if '@' not in snap:
-            ret[snap] = 'not a snapshot'
+    # NOTE: set extra config from kwargs
+    if kwargs.get('recursive', False):
+        flags.append('-r')
 
-    if len(ret) > 0:
-        return ret
+    # NOTE: update target
+    target.append(tag)
+    target.extend(snapshot)
 
-    for csnap in snapshot:
-        for ctag in tag.split(','):
-            res = __salt__['cmd.run_all']('{zfs} release {recursive}{tag} {snapshot}'.format(
-                zfs=zfs,
-                recursive='-r ' if recursive else '',
-                tag=_zfs_quote_escape_path(ctag),
-                snapshot=_zfs_quote_escape_path(csnap)
-            ))
+    ## hold snapshot
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='release',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
+    )
 
-            if csnap not in ret:
-                ret[csnap] = {}
+    if tag not in ret:
+        ret[tag] = OrderedDict()
 
-            if res['retcode'] != 0:
-                for err in res['stderr'].splitlines():
-                    if err.startswith('cannot release hold from snapshot'):
-                        ret[csnap][ctag] = err[err.index(':')+2:]
-                    elif err.startswith('cannot open'):
-                        ret[csnap][ctag] = err[err.index(':')+2:]
-                    else:
-                        # fallback in case we hit a weird error
-                        if err == 'usage:':
-                            break
-                        ret[csnap][ctag] = res['stderr']
+    if res['retcode'] != 0:
+        for err in res['stderr'].splitlines():
+            if err.startswith('cannot hold snapshot'):
+                ret[tag] = err[err.index(':')+2:]
+            elif err.startswith('cannot open'):
+                ret[tag] = err[err.index(':')+2:]
             else:
-                ret[csnap][ctag] = 'released'
+                # fallback in case we hit a weird error
+                if err == 'usage:':
+                    break
+                ret[tag] = res['stderr']
+    else:
+        ret[tag] = 'released'
 
     return ret
 
 
 def snapshot(*snapshot, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Creates snapshots with the given names.
 
     *snapshot : string
@@ -1077,6 +1132,9 @@ def snapshot(*snapshot, **kwargs):
 
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Flourine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1084,59 +1142,45 @@ def snapshot(*snapshot, **kwargs):
         salt '*' zfs.snapshot myzpool/mydataset@yesterday [recursive=True]
         salt '*' zfs.snapshot myzpool/mydataset@yesterday myzpool/myotherdataset@yesterday [recursive=True]
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = _check_zfs()
-    recursive = kwargs.get('recursive', False)
-    properties = kwargs.get('properties', None)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
 
-    # verify snapshots
-    if not snapshot:
-        ret['error'] = 'one or more snapshots must be specified'
+    # NOTE: push filesystem properties
+    filesystem_properties = kwargs.get('properties', {})
 
-    for snap in snapshot:
-        if '@' not in snap:
-            ret[snap] = 'not a snapshot'
+    # NOTE: set extra config from kwargs
+    if kwargs.get('recursive', False):
+        flags.append('-r')
 
-    # if zpool properties specified, then
-    # create "-o property=value" pairs
-    if properties:
-        proplist = []
-        for prop in properties:
-            proplist.append('-o {0}={1}'.format(prop, _conform_value((properties[prop]))))
-        properties = ' '.join(proplist)
+    ## Create snapshot
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='snapshot',
+            flags=flags,
+            filesystem_properties=filesystem_properties,
+            target=list(snapshot),
+        ),
+        python_shell=False,
+    )
 
-    for csnap in snapshot:
-        if '@' not in csnap:
-            continue
-
-        res = __salt__['cmd.run_all']('{zfs} snapshot {recursive}{properties}{snapshot}'.format(
-            zfs=zfs,
-            recursive='-r ' if recursive else '',
-            properties='{0} '.format(properties) if properties else '',
-            snapshot=_zfs_quote_escape_path(csnap)
-        ))
-
-        if res['retcode'] != 0:
-            for err in res['stderr'].splitlines():
-                if err.startswith('cannot create snapshot'):
-                    ret[csnap] = err[err.index(':')+2:]
-                elif err.startswith('cannot open'):
-                    ret[csnap] = err[err.index(':')+2:]
-                else:
-                    # fallback in case we hit a weird error
-                    if err == 'usage:':
-                        break
-                    ret[csnap] = res['stderr']
-        else:
-            ret[csnap] = 'snapshotted'
+    if res['retcode'] != 0:
+        ## FIXME: abstract me to salt.utils.zfs ?
+        ret['error'] = []
+        for err in res['stderr'].splitlines():
+            if err == 'usage:':
+                break
+            ret['error'].append(err)
+        ret['error'] = "\n".join(ret['error'])
+    else:
+        ret = 'snapshotted'
     return ret
 
 
 def set(*dataset, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Sets the property or list of properties to the given value(s) for each dataset.
 
     *dataset : string
@@ -1158,9 +1202,11 @@ def set(*dataset, **kwargs):
         can be set and acceptable values.
 
         Numeric values can be specified as exact values, or in a human-readable
-        form with a suffix of B, K, M, G, T, P, E, Z (for bytes, kilobytes,
-        megabytes, gigabytes, terabytes, petabytes, exabytes, or zettabytes,
-        respectively).
+        form with a suffix of B, K, M, G, T, P, E (for bytes, kilobytes,
+        megabytes, gigabytes, terabytes, petabytes, or exabytes respectively).
+
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Flourine
 
     CLI Example:
 
@@ -1170,51 +1216,33 @@ def set(*dataset, **kwargs):
         salt '*' zfs.set myzpool/mydataset myzpool/myotherdataset compression=off
         salt '*' zfs.set myzpool/mydataset myzpool/myotherdataset compression=lz4 canmount=off
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = _check_zfs()
+    ## Configure command
+    # NOTE: push filesystem properties
+    filesystem_properties = salt.utils.args.clean_kwargs(**kwargs)
 
-    # verify snapshots
-    if not dataset:
-        ret['error'] = 'one or more snapshots must be specified'
+    ## Set property
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='set',
+            property_name=filesystem_properties.keys(),
+            property_value=filesystem_properties.values(),
+            target=list(dataset),
+        ),
+        python_shell=False,
+    )
 
-    # clean kwargs
-    properties = salt.utils.args.clean_kwargs(**kwargs)
-    if len(properties) < 1:
-        ret['error'] = '{0}one or more properties must be specified'.format(
-            '{0},\n'.format(ret['error']) if 'error' in ret else ''
-        )
-
-    if len(ret) > 0:
-        return ret
-
-    # for better error handling we don't do one big set command
-    for ds in dataset:
-        for prop in properties:
-            res = __salt__['cmd.run_all']('{zfs} set {prop}={value} {dataset}'.format(
-                zfs=zfs,
-                prop=prop,
-                value=_conform_value(properties[prop]),
-                dataset=_zfs_quote_escape_path(ds)
-            ))
-            if ds not in ret:
-                ret[ds] = {}
-
-            if res['retcode'] != 0:
-                ret[ds][prop] = res['stderr'] if 'stderr' in res else res['stdout']
-                if ':' in ret[ds][prop]:
-                    ret[ds][prop] = ret[ds][prop][ret[ds][prop].index(':')+2:]
-            else:
-                ret[ds][prop] = 'set'
+    if res['retcode'] != 0:
+        ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
+    else:
+        ret = 'set'
 
     return ret
 
 
 def get(*dataset, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-    .. versionchanged:: Oxygen
-
     Displays properties for the given datasets.
 
     *dataset : string
@@ -1234,13 +1262,16 @@ def get(*dataset, **kwargs):
         comma-separated list of sources to display. Must be one of the following:
         local, default, inherited, temporary, and none. The default value is all sources.
     parsable : boolean
-        display numbers in parsable (exact) values
+        display numbers in parsable (exact) values (default = True)
         .. versionadded:: Oxygen
 
     .. note::
 
         If no datasets are specified, then the command displays properties
         for all datasets on the system.
+
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Flourine
 
     CLI Example:
 
@@ -1252,70 +1283,73 @@ def get(*dataset, **kwargs):
         salt '*' zfs.get myzpool/mydataset myzpool/myotherdataset properties=available fields=value depth=1
     '''
     ret = OrderedDict()
-    zfs = _check_zfs()
-    properties = kwargs.get('properties', 'all')
-    recursive = kwargs.get('recursive', False)
-    depth = kwargs.get('depth', 0)
-    fields = kwargs.get('fields', 'value,source')
-    ltype = kwargs.get('type', None)
-    source = kwargs.get('source', None)
-    parsable = kwargs.get('parsable', False)
-    cmd = '{0} get -H'.format(zfs)
 
-    # parsable output
-    if parsable:
-        cmd = '{0} -p'.format(cmd)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = ['-H', '-p']
+    opts = {}
 
-    # recursively get
-    if depth:
-        cmd = '{0} -d {1}'.format(cmd, depth)
-    elif recursive:
-        cmd = '{0} -r'.format(cmd)
-
-    # fields
-    fields = fields.split(',')
-    if 'name' in fields:  # ensure name is first
+    # NOTE: set extra config from kwargs
+    if kwargs.get('depth', False):
+        opts['-d'] = kwargs.get('depth')
+    elif kwargs.get('recursive', False):
+        flags.append('-r')
+    fields = kwargs.get('fields', 'value,source').split(',')
+    if 'name' in fields:      # ensure name is first
         fields.remove('name')
     if 'property' in fields:  # ensure property is second
         fields.remove('property')
     fields.insert(0, 'name')
     fields.insert(1, 'property')
-    cmd = '{0} -o {1}'.format(cmd, ','.join(fields))
+    opts['-o'] = ",".join(fields)
+    if kwargs.get('type', False):
+        opts['-t'] = kwargs.get('type')
+    if kwargs.get('source', False):
+        opts['-s'] = kwargs.get('source')
 
-    # filter on type
-    if source:
-        cmd = '{0} -s {1}'.format(cmd, source)
+    # NOTE: set property_name
+    property_name = kwargs.get('properties', 'all')
 
-    # filter on type
-    if ltype:
-        cmd = '{0} -t {1}'.format(cmd, ltype)
+    ## Get properties
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='get',
+            flags=flags,
+            opts=opts,
+            property_name=property_name,
+            target=list(dataset),
+        ),
+        python_shell=False,
+    )
 
-    # properties
-    cmd = '{0} {1}'.format(cmd, properties)
-
-    # datasets
-    if dataset:
-        dataset = [_zfs_quote_escape_path(x) for x in dataset]
-    cmd = '{0} {1}'.format(cmd, ' '.join(dataset))
-
-    # parse output
-    res = __salt__['cmd.run_all'](cmd)
     if res['retcode'] == 0:
         for ds in [l for l in res['stdout'].splitlines()]:
             ds = ds.split("\t")
             ds_data = {}
 
             for field in fields:
-                ds_data[field] = _conform_value(ds[fields.index(field)])
+                ds_data[field] = ds[fields.index(field)]
 
             ds_name = ds_data['name']
             ds_prop = ds_data['property']
             del ds_data['name']
             del ds_data['property']
 
+            if 'value' in ds_data:
+                if kwargs.get('parsable', True):
+                    ds_data['value'] = __utils__['zfs.from_auto'](
+                        ds_prop,
+                        ds_data['value'],
+                    )
+                else:
+                    ds_data['value'] = __utils__['zfs.to_auto'](
+                        ds_prop,
+                        ds_data['value'],
+                        convert_to_human=True,
+                    )
+
             if ds_name not in ret:
                 ret[ds_name] = {}
-
             ret[ds_name][ds_prop] = ds_data
     else:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
