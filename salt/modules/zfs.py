@@ -63,7 +63,7 @@ def exists(name, **kwargs):
     # NOTE: initialize the defaults
     opts = {}
 
-    # NOTE: set extra config
+    # NOTE: set extra config from kwargs
     if kwargs.get('type', False):
         opts['-t'] = kwargs.get('type')
 
@@ -84,9 +84,6 @@ def exists(name, **kwargs):
 # TODO: cleanup code below this point
 def create(name, **kwargs):
     '''
-    .. versionadded:: 2015.5.0
-    .. versionchanged:: 2016.3.0
-
     Create a ZFS File System.
 
     name : string
@@ -109,6 +106,9 @@ def create(name, **kwargs):
 
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
+    .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -119,39 +119,36 @@ def create(name, **kwargs):
         salt '*' zfs.create myzpool/volume volume_size=1G properties="{'volblocksize': '512'}" [sparse=True|False]
 
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = salt.utils.path.which('zfs')
-    properties = kwargs.get('properties', None)
-    if properties and 'mountpoint' in properties:
-        properties['mountpoint'] = __utils__['zfs.to_str'](properties['mountpoint'])
-    create_parent = kwargs.get('create_parent', False)
-    volume_size = kwargs.get('volume_size', None)
-    sparse = kwargs.get('sparse', False)
-    cmd = '{0} create'.format(zfs)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
+    opts = {}
 
-    if create_parent:
-        cmd = '{0} -p'.format(cmd)
+    # NOTE: push filesystem properties
+    filesystem_properties = kwargs.get('properties', {})
 
-    if volume_size and sparse:
-        cmd = '{0} -s'.format(cmd)
+    # NOTE: set extra config from kwargs
+    if kwargs.get('create_parent', False):
+        flags.append('-p')
+    if kwargs.get('sparse', False) and kwargs.get('volume_size', None):
+        flags.append('-s')
+    if kwargs.get('volume_size', None):
+        opts['-V'] = __utils__['zfs.to_size'](kwargs.get('volume_size'), convert_to_human=False)
 
-    # if zpool properties specified, then
-    # create "-o property=value" pairs
-    if properties:
-        proplist = []
-        for prop in properties:
-            proplist.append('-o {0}={1}'.format(prop, __utils__['zfs.to_auto'](properties[prop])))
-        cmd = '{0} {1}'.format(cmd, ' '.join(proplist))
-
-    if volume_size:
-        cmd = '{0} -V {1}'.format(cmd, volume_size)
-
-    # append name
-    cmd = '{0} {1}'.format(cmd, __utils__['zfs.to_str'](name))
-
-    # Create filesystem
-    res = __salt__['cmd.run_all'](cmd)
+    ## Create filesystem
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='create',
+            flags=flags,
+            opts=opts,
+            filesystem_properties=filesystem_properties,
+            target=name,
+        ),
+        python_shell=False,
+        ignore_retcode=True,
+    )
 
     # Check and see if the dataset is available
     if res['retcode'] != 0:
@@ -162,6 +159,7 @@ def create(name, **kwargs):
     return ret
 
 
+# TODO: switch to zfs_command below this point
 def destroy(name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
