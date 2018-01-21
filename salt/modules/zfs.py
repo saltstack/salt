@@ -286,12 +286,8 @@ def rename(name, new_name, **kwargs):
     return ret
 
 
-# TODO: switch to zfs_command below this point
 def list_(name=None, **kwargs):
     '''
-    .. versionadded:: 2015.5.0
-    .. versionchanged:: Oxygen
-
     Return a list of all datasets or a specified dataset on the system and the
     values of their used, available, referenced, and mountpoint properties.
 
@@ -314,6 +310,9 @@ def list_(name=None, **kwargs):
         display numbers in parsable (exact) values
         .. versionadded:: Oxygen
 
+    .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -323,57 +322,63 @@ def list_(name=None, **kwargs):
         salt '*' zfs.list myzpool/mydataset properties="sharenfs,mountpoint"
     '''
     ret = OrderedDict()
-    zfs = salt.utils.path.which('zfs')
-    recursive = kwargs.get('recursive', False)
-    depth = kwargs.get('depth', 0)
+
+    ## update properties
+    # NOTE: properties should be a list
     properties = kwargs.get('properties', 'used,avail,refer,mountpoint')
-    sort = kwargs.get('sort', None)
-    ltype = kwargs.get('type', None)
-    order = kwargs.get('order', 'ascending')
-    parsable = kwargs.get('parsable', False)
-    cmd = '{0} list -H'.format(zfs)
+    if not isinstance(properties, list):
+        properties = properties.split(',')
 
-    # parsable output
-    if parsable:
-        cmd = '{0} -p'.format(cmd)
-
-    # filter on type
-    if ltype:
-        cmd = '{0} -t {1}'.format(cmd, ltype)
-
-    # recursively list
-    if recursive:
-        cmd = '{0} -r'.format(cmd)
-        if depth:
-            cmd = '{0} -d {1}'.format(cmd, depth)
-
-    # add properties
-    properties = properties.split(',')
-    if 'name' in properties:  # ensure name is first property
+    # NOTE: name should be first property
+    while 'name' in properties:
         properties.remove('name')
     properties.insert(0, 'name')
-    cmd = '{0} -o {1}'.format(cmd, ','.join(properties))
 
-    # sorting
-    if sort and sort in properties:
-        if order.startswith('a'):
-            cmd = '{0} -s {1}'.format(cmd, sort)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = ['-H', '-p']
+    opts = {}
+
+    # NOTE: set extra config from kwargs
+    if kwargs.get('recursive', False):
+        flags.append('-r')
+    if kwargs.get('recursive', False) and kwargs.get('depth', False):
+        opts['-d'] = kwargs.get('depth')
+    if kwargs.get('type', False):
+        opts['-t'] = kwargs.get('type')
+    if kwargs.get('sort', False) and kwargs.get('sort') in properties:
+        if kwargs.get('order', 'ascending').startswith('a'):
+            opts['-s'] = kwargs.get('sort')
         else:
-            cmd = '{0} -S {1}'.format(cmd, sort)
+            opts['-S'] = kwargs.get('sort')
+    if isinstance(properties, list):
+        # NOTE: There can be only one -o and it takes a comma-seperated list
+        opts['-o'] = ','.join(properties)
+    else:
+        opts['-o'] = properties
 
-    # add name if set
-    if name:
-        cmd = '{0} {1}'.format(cmd, __utils__['zfs.to_str'](name))
-
-    # parse output
-    res = __salt__['cmd.run_all'](cmd)
+    ## parse zfs list
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='list',
+            flags=flags,
+            opts=opts,
+            target=name,
+        ),
+        python_shell=False,
+    )
     if res['retcode'] == 0:
         for ds in [l for l in res['stdout'].splitlines()]:
             ds = ds.split("\t")
-            ds_data = {}
+            # NOTE: OrderedDict because we sort!
+            ds_data = OrderedDict()
 
             for prop in properties:
-                ds_data[prop] = __utils__['zfs.to_auto'](ds[properties.index(prop)])
+                ds_data[prop] = __utils__['zfs.to_auto'](
+                    prop,
+                    ds[properties.index(prop)],
+                    convert_to_human=not kwargs.get('parsable', True),
+                )
 
             ret[ds_data['name']] = ds_data
             del ret[ds_data['name']]['name']
@@ -383,6 +388,7 @@ def list_(name=None, **kwargs):
     return ret
 
 
+# TODO: switch to zfs_command below this point
 def mount(name='-a', **kwargs):
     '''
     .. versionadded:: 2016.3.0
