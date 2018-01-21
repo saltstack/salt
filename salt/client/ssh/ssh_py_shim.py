@@ -157,7 +157,10 @@ def unpack_thin(thin_path):
     tfile.extractall(path=OPTIONS.saltdir)
     tfile.close()
     os.umask(old_umask)
-    os.unlink(thin_path)
+    try:
+        os.unlink(thin_path)
+    except OSError:
+        pass
 
 
 def need_ext():
