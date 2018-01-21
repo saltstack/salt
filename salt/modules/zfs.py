@@ -256,13 +256,20 @@ def rename(name, new_name, **kwargs):
     target = []
 
     # NOTE: set extra config from kwargs
-    if __utils__['zfs.is_snapshot'](name) and kwargs.get('recursive', False):
-        flags.append('-r')
+    if __utils__['zfs.is_snapshot'](name):
+        if kwargs.get('create_parent', False):
+            log.warning('zfs.rename - create_parent=True cannot be used with snapshots.')
+        if kwargs.get('force', False):
+            log.warning('zfs.rename - force=True cannot be used with snapshots.')
+        if kwargs.get('recursive', False):
+            flags.append('-r')
     else:
         if kwargs.get('create_parent', False):
             flags.append('-p')
         if kwargs.get('force', False):
             flags.append('-f')
+        if kwargs.get('recursive', False):
+            log.warning('zfs.rename - recursive=True can only be used with snapshots.')
 
     # NOTE: update target
     target.append(name)
@@ -614,7 +621,7 @@ def diff(name_a, name_b, **kwargs):
     target.append(name_a)
     target.append(name_b)
 
-    ## Inherit property
+    ## Diff filesystem/snapshot
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zfs_command'](
             command='diff',
@@ -634,22 +641,9 @@ def diff(name_a, name_b, **kwargs):
     return ret
 
 
-# TODO: switch to zfs_command below this point
 def rollback(name, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Roll back the given dataset to a previous snapshot.
-
-    .. warning::
-
-        When a dataset is rolled back, all data that has changed since
-        the snapshot is discarded, and the dataset reverts to the state
-        at the time of the snapshot. By default, the command refuses to
-        roll back to a snapshot other than the most recent one.
-
-        In order to do so, all intermediate snapshots and bookmarks
-        must be destroyed by specifying the -r option.
 
     name : string
         name of snapshot
@@ -663,35 +657,51 @@ def rollback(name, **kwargs):
         used with the -R option to force an unmount of any clone file
         systems that are to be destroyed.
 
+    .. warning::
+
+        When a dataset is rolled back, all data that has changed since
+        the snapshot is discarded, and the dataset reverts to the state
+        at the time of the snapshot. By default, the command refuses to
+        roll back to a snapshot other than the most recent one.
+
+        In order to do so, all intermediate snapshots and bookmarks
+        must be destroyed by specifying the -r option.
+
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.rollback myzpool/mydataset@yesterday
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = salt.utils.path.which('zfs')
-    force = kwargs.get('force', False)
-    recursive = kwargs.get('recursive', False)
-    recursive_all = kwargs.get('recursive_all', False)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
 
-    if '@' not in name:
-        ret[name] = 'MUST be a snapshot'
-        return ret
+    # NOTE: set extra config from kwargs
+    if kwargs.get('recursive_all', False):
+        flags.append('-R')
+    if kwargs.get('recursive', False):
+        flags.append('-r')
+    if kwargs.get('force', False):
+        if kwargs.get('recursive_all', False) or kwargs.get('recursive', False):
+            flags.append('-f')
+        else:
+            log.warning('zfs.rollback - force=True can only be used with recursive_all=True or recursive=True')
 
-    if force:
-        if not recursive and not recursive_all:  # -f only works with -R
-            log.warning('zfs.rollback - force=True can only be used when recursive_all=True or recursive=True')
-            force = False
-
-    res = __salt__['cmd.run_all']('{zfs} rollback {force}{recursive}{recursive_all}{snapshot}'.format(
-        zfs=zfs,
-        force='-f ' if force else '',
-        recursive='-r ' if recursive else '',
-        recursive_all='-R ' if recursive_all else '',
-        snapshot=__utils__['zfs.to_str'](name)
-    ))
+    ## Diff filesystem/snapshot
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='rollback',
+            flags=flags,
+            target=name,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         ret[name[:name.index('@')]] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -700,6 +710,7 @@ def rollback(name, **kwargs):
     return ret
 
 
+# TODO: switch to zfs_command below this point
 def clone(name_a, name_b, **kwargs):
     '''
     .. versionadded:: 2016.3.0
