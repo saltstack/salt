@@ -710,11 +710,8 @@ def rollback(name, **kwargs):
     return ret
 
 
-# TODO: switch to zfs_command below this point
 def clone(name_a, name_b, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Creates a clone of the given snapshot.
 
     name_a : string
@@ -735,37 +732,43 @@ def clone(name_a, name_b, **kwargs):
 
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.clone myzpool/mydataset@yesterday myzpool/mydataset_yesterday
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = salt.utils.path.which('zfs')
-    create_parent = kwargs.get('create_parent', False)
-    properties = kwargs.get('properties', None)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
+    target = []
 
-    if '@' not in name_a:
-        ret[name_b] = 'failed to clone from {0} because it is not a snapshot'.format(name_a)
-        return ret
+    # NOTE: push filesystem properties
+    filesystem_properties = kwargs.get('properties', {})
 
-    # if zpool properties specified, then
-    # create "-o property=value" pairs
-    if properties:
-        proplist = []
-        for prop in properties:
-            proplist.append('-o {0}={1}'.format(prop, properties[prop]))
-        properties = ' '.join(proplist)
+    # NOTE: set extra config from kwargs
+    if kwargs.get('create_parent', False):
+        flags.append('-p')
 
-    res = __salt__['cmd.run_all']('{zfs} clone {create_parent}{properties}{name_a} {name_b}'.format(
-        zfs=zfs,
-        create_parent='-p ' if create_parent else '',
-        properties='{0} '.format(properties) if properties else '',
-        name_a=__utils__['zfs.to_str'](name_a),
-        name_b=__utils__['zfs.to_str'](name_b)
-    ))
+    # NOTE: update target
+    target.append(name_a)
+    target.append(name_b)
+
+    ## Clone filesystem/volume
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='clone',
+            flags=flags,
+            filesystem_properties=filesystem_properties,
+            target=target,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         ret[name_b] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -774,6 +777,7 @@ def clone(name_a, name_b, **kwargs):
     return ret
 
 
+# TODO: switch to zfs_command below this point
 def promote(name):
     '''
     .. versionadded:: 2016.3.0
