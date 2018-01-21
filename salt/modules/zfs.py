@@ -388,20 +388,25 @@ def list_(name=None, **kwargs):
     return ret
 
 
-# TODO: switch to zfs_command below this point
-def mount(name='-a', **kwargs):
+## FIXME: also list mounted filesystems? (how to handle '-a' ?)
+def mount(name=None, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Mounts ZFS file systems
 
     name : string
-        name of the filesystem, you can use '-a' to mount all unmounted filesystems. (this is the default)
+        name of the filesystem, having this set to None will mount all filesystems. (this is the default)
     overlay : boolean
         perform an overlay mount.
     options : string
         optional comma-separated list of mount options to use temporarily for
         the duration of the mount.
+
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
+    .. warning::
+
+            Passing '-a' as name is deprecated and will be removed 2 verions after Flourine.
 
     CLI Example:
 
@@ -411,36 +416,50 @@ def mount(name='-a', **kwargs):
         salt '*' zfs.mount myzpool/mydataset
         salt '*' zfs.mount myzpool/mydataset options=ro
     '''
-    zfs = salt.utils.path.which('zfs')
-    overlay = kwargs.get('overlay', False)
-    options = kwargs.get('options', None)
+    ret = OrderedDict()
 
-    res = __salt__['cmd.run_all']('{zfs} mount {overlay}{options}{filesystem}'.format(
-        zfs=zfs,
-        overlay='-O ' if overlay else '',
-        options='-o {0} '.format(options) if options else '',
-        filesystem=__utils__['zfs.to_str'](name)
-    ))
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
+    opts = {}
 
-    ret = {}
-    if name == '-a':
-        ret = res['retcode'] == 0
+    # NOTE: set extra config from kwargs
+    if kwargs.get('overlay', False):
+        flags.append('-O')
+    if kwargs.get('options', False):
+        opts['-o'] = kwargs.get('options')
+    if name in [None, '-a']:
+        # NOTE: still accept '-a' as name for backwards compatibility
+        #       two versions after Flourine this should just simplify
+        #       this to just set '-a' if name is not set.
+        flags.append('-a')
+        name = None
+
+    ## Mount filesystem
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='mount',
+            flags=flags,
+            opts=opts,
+            target=name,
+        ),
+        python_shell=False,
+    )
+
+    if res['retcode'] != 0:
+        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        if res['retcode'] != 0:
-            ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
-        else:
-            ret[name] = 'mounted'
+        ret[name] = 'mounted'
+
     return ret
 
 
 def unmount(name, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Unmounts ZFS file systems
 
     name : string
-        name of the filesystem, you can use '-a' to unmount all mounted filesystems.
+        name of the filesystem, you can use None to unmount all mounted filesystems.
     force : boolean
         forcefully unmount the file system, even if it is currently in use.
 
@@ -448,32 +467,54 @@ def unmount(name, **kwargs):
 
         Using ``-a`` for the name parameter will probably break your system, unless your rootfs is not on zfs.
 
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
+    .. warning::
+
+            Passing '-a' as name is deprecated and will be removed 2 verions after Flourine.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.unmount myzpool/mydataset [force=True|False]
     '''
-    zfs = salt.utils.path.which('zfs')
-    force = kwargs.get('force', False)
+    ret = OrderedDict()
 
-    res = __salt__['cmd.run_all']('{zfs} unmount {force}{filesystem}'.format(
-        zfs=zfs,
-        force='-f ' if force else '',
-        filesystem=__utils__['zfs.to_str'](name)
-    ))
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
 
-    ret = {}
-    if name == '-a':
-        ret = res['retcode'] == 0
+    # NOTE: set extra config from kwargs
+    if kwargs.get('force', False):
+        flags.append('-f')
+    if name in [None, '-a']:
+        # NOTE: still accept '-a' as name for backwards compatibility
+        #       two versions after Flourine this should just simplify
+        #       this to just set '-a' if name is not set.
+        flags.append('-a')
+        name = None
+
+    ## Unmount filesystem
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='unmount',
+            flags=flags,
+            target=name,
+        ),
+        python_shell=False,
+    )
+
+    if res['retcode'] != 0:
+        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        if res['retcode'] != 0:
-            ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
-        else:
-            ret[name] = 'unmounted'
+        ret[name] = 'unmounted'
+
     return ret
 
 
+# TODO: switch to zfs_command below this point
 def inherit(prop, name, **kwargs):
     '''
     .. versionadded:: 2016.3.0
