@@ -137,7 +137,7 @@ def create(name, **kwargs):
     if kwargs.get('volume_size', None):
         opts['-V'] = __utils__['zfs.to_size'](kwargs.get('volume_size'), convert_to_human=False)
 
-    ## Create filesystem
+    ## Create filesystem/volume
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zfs_command'](
             command='create',
@@ -147,7 +147,6 @@ def create(name, **kwargs):
             target=name,
         ),
         python_shell=False,
-        ignore_retcode=True,
     )
 
     # Check and see if the dataset is available
@@ -159,11 +158,8 @@ def create(name, **kwargs):
     return ret
 
 
-# TODO: switch to zfs_command below this point
 def destroy(name, **kwargs):
     '''
-    .. versionadded:: 2015.5.0
-
     Destroy a ZFS File System.
 
     name : string
@@ -179,30 +175,38 @@ def destroy(name, **kwargs):
     .. warning::
         watch out when using recursive and recursive_all
 
+    .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.destroy myzpool/mydataset [force=True|False]
     '''
-    ret = {}
-    zfs = salt.utils.path.which('zfs')
-    force = kwargs.get('force', False)
-    recursive = kwargs.get('recursive', False)
-    recursive_all = kwargs.get('recursive_all', False)
-    cmd = '{0} destroy'.format(zfs)
+    ret = OrderedDict()
 
-    if recursive_all:
-        cmd = '{0} -R'.format(cmd)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
 
-    if force:
-        cmd = '{0} -f'.format(cmd)
+    # NOTE: set extra config from kwargs
+    if kwargs.get('force', False):
+        flags.append('-f')
+    if kwargs.get('recursive_all', False):
+        flags.append('-R')
+    if kwargs.get('recursive', False):
+        flags.append('-r')
 
-    if recursive:
-        cmd = '{0} -r'.format(cmd)
-
-    cmd = '{0} {1}'.format(cmd, __utils__['zfs.to_str'](name))
-    res = __salt__['cmd.run_all'](cmd)
+    ## Destroy filesystem/volume/snapshot/...
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='destroy',
+            flags=flags,
+            target=name,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         if "operation does not apply to pools" in res['stderr']:
@@ -217,6 +221,7 @@ def destroy(name, **kwargs):
     return ret
 
 
+# TODO: switch to zfs_command below this point
 def rename(name, new_name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
