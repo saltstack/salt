@@ -353,7 +353,7 @@ def subdict_match(data,
             try:
                 return re.match(pattern.lower(), six.text_type(target).lower())
             except Exception:
-                log.error('Invalid regex \'{0}\' in match'.format(pattern))
+                log.error('Invalid regex \'%s\' in match', pattern)
                 return False
         elif exact_match:
             return six.text_type(target).lower() == pattern.lower()
@@ -402,8 +402,8 @@ def subdict_match(data,
         splits = expr.split(delimiter)
         key = delimiter.join(splits[:idx])
         matchstr = delimiter.join(splits[idx:])
-        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
-                  '\'{2}\''.format(matchstr, key, delimiter))
+        log.debug("Attempting to match '%s' in '%s' using delimiter '%s'",
+                  matchstr, key, delimiter)
         match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
@@ -671,3 +671,18 @@ def simple_types_filter(data):
         return simpledict
 
     return data
+
+
+def stringify(data):
+    '''
+    Given an iterable, returns its items as a list, with any non-string items
+    converted to unicode strings.
+    '''
+    ret = []
+    for item in data:
+        if six.PY2 and isinstance(item, str):
+            item = salt.utils.stringutils.to_unicode(item)
+        elif not isinstance(item, six.string_types):
+            item = six.text_type(item)
+        ret.append(item)
+    return ret

@@ -642,6 +642,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs attr=version,arch
         salt '*' pkg.list_pkgs attr='["version", "arch"]'
     '''
     versions_as_list = salt.utils.data.is_true(versions_as_list)
@@ -650,42 +651,52 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
-    attr = kwargs.get("attr")
-    if 'pkg.list_pkgs' in __context__:
-        cached = __context__['pkg.list_pkgs']
-        return __salt__['pkg_resource.format_pkg_list'](cached, versions_as_list, attr)
+    attr = kwargs.get('attr')
+    if attr is not None:
+        attr = salt.utils.args.split_input(attr)
 
-    ret = {}
-    cmd = ['rpm', '-qa', '--queryformat',
-           salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', '(none)') + '\n']
-    output = __salt__['cmd.run'](cmd,
-                                 python_shell=False,
-                                 output_loglevel='trace')
-    for line in output.splitlines():
-        pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
-            line,
-            osarch=__grains__['osarch']
-        )
-        if pkginfo is not None:
-            # see rpm version string rules available at https://goo.gl/UGKPNd
-            pkgver = pkginfo.version
-            epoch = ''
-            release = ''
-            if ':' in pkgver:
-                epoch, pkgver = pkgver.split(":", 1)
-            if '-' in pkgver:
-                pkgver, release = pkgver.split("-", 1)
-            all_attr = {'epoch': epoch, 'version': pkgver, 'release': release,
-                        'arch': pkginfo.arch, 'install_date': pkginfo.install_date,
-                        'install_date_time_t': pkginfo.install_date_time_t}
-            __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, all_attr)
+    contextkey = 'pkg.list_pkgs'
 
-    for pkgname in ret:
-        ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+    if contextkey not in __context__:
+        ret = {}
+        cmd = ['rpm', '-qa', '--queryformat',
+               salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', '(none)') + '\n']
+        output = __salt__['cmd.run'](cmd,
+                                     python_shell=False,
+                                     output_loglevel='trace')
+        for line in output.splitlines():
+            pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
+                line,
+                osarch=__grains__['osarch']
+            )
+            if pkginfo is not None:
+                # see rpm version string rules available at https://goo.gl/UGKPNd
+                pkgver = pkginfo.version
+                epoch = ''
+                release = ''
+                if ':' in pkgver:
+                    epoch, pkgver = pkgver.split(":", 1)
+                if '-' in pkgver:
+                    pkgver, release = pkgver.split("-", 1)
+                all_attr = {
+                    'epoch': epoch,
+                    'version': pkgver,
+                    'release': release,
+                    'arch': pkginfo.arch,
+                    'install_date': pkginfo.install_date,
+                    'install_date_time_t': pkginfo.install_date_time_t
+                }
+                __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, all_attr)
 
-    __context__['pkg.list_pkgs'] = ret
+        for pkgname in ret:
+            ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
 
-    return __salt__['pkg_resource.format_pkg_list'](ret, versions_as_list, attr)
+        __context__[contextkey] = ret
+
+    return __salt__['pkg_resource.format_pkg_list'](
+        __context__[contextkey],
+        versions_as_list,
+        attr)
 
 
 def list_repo_pkgs(*args, **kwargs):
@@ -1352,11 +1363,11 @@ def install(name=None,
 
     version_num = kwargs.get('version')
 
-    diff_attr = kwargs.get("diff_attr")
+    diff_attr = kwargs.get('diff_attr')
     old = list_pkgs(versions_as_list=False, attr=diff_attr) if not downloadonly else list_downloaded()
     # Use of __context__ means no duplicate work here, just accessing
     # information already in __context__ from the previous call to list_pkgs()
-    old_as_list = list_pkgs(versions_as_list=True, attr=diff_attr) if not downloadonly else list_downloaded()
+    old_as_list = list_pkgs(versions_as_list=True) if not downloadonly else list_downloaded()
 
     to_install = []
     to_downgrade = []

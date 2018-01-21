@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import socket
@@ -501,6 +501,7 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.1991-05.com.microsoft:simon-x1'])
 
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_aix_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
             return_value='initiator_name iqn.localhost.hostid.7f000001'
@@ -516,6 +517,8 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.localhost.hostid.7f000001'])
 
+    @skipIf(salt.utils.platform.is_darwin(), 'MacOSX iscsi grains not supported')
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_linux_iscsi_iqn_grains(self):
         _iscsi_file = '## DO NOT EDIT OR REMOVE THIS FILE!\n' \
                       '## If you remove this file, the iSCSI daemon will not start.\n' \
@@ -619,6 +622,7 @@ SwapTotal:       4789244 kB'''
         self.assertEqual(os_grains.get('mem_total'), 15895)
         self.assertEqual(os_grains.get('swap_total'), 4676)
 
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_bsd_memdata(self):
         '''
         Test to memdata on *BSD systems
@@ -688,6 +692,7 @@ SwapTotal:       4789244 kB'''
         self.assertEqual(os_grains.get('mem_total'), 2023)
         self.assertEqual(os_grains.get('swap_total'), 400)
 
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_docker_virtual(self):
         '''
         Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
@@ -811,11 +816,11 @@ SwapTotal:       4789244 kB'''
         https://github.com/saltstack/salt/issues/41230
         '''
         resolv_mock = {'domain': '', 'sortlist': [], 'nameservers':
-                   [IPv4Address(IP4_ADD1),
-                    IPv6Address(IP6_ADD1)], 'ip4_nameservers':
-                   [IPv4Address(IP4_ADD1)],
+                   [ipaddress.IPv4Address(IP4_ADD1),
+                    ipaddress.IPv6Address(IP6_ADD1)], 'ip4_nameservers':
+                   [ipaddress.IPv4Address(IP4_ADD1)],
                    'search': ['test.saltstack.com'], 'ip6_nameservers':
-                   [IPv6Address(IP6_ADD1)], 'options': []}
+                   [ipaddress.IPv6Address(IP6_ADD1)], 'options': []}
         ret = {'dns': {'domain': '', 'sortlist': [], 'nameservers':
                        [IP4_ADD1, IP6_ADD1], 'ip4_nameservers':
                        [IP4_ADD1], 'search': ['test.saltstack.com'],

@@ -10,7 +10,7 @@ ZFS grain provider
 .. versionadded:: Oxygen
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -19,7 +19,13 @@ import logging
 import salt.utils.dictupdate
 import salt.utils.path
 import salt.utils.platform
-from salt.modules.zfs import _conform_value
+try:
+    # The zfs_support grain will only be set to True if this module is supported
+    # This allows the grain to be set to False on systems that don't support zfs
+    # _conform_value is only called if zfs_support is set to True
+    from salt.modules.zfs import _conform_value
+except ImportError:
+    pass
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -38,7 +44,7 @@ def __virtual__():
     Load zfs grains
     '''
     # NOTE: we always load this grain so we can properly export
-    #       atleast the zfs_support grain
+    #       at least the zfs_support grain
     return __virtualname__
 
 

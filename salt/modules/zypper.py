@@ -693,6 +693,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs attr=version,arch
         salt '*' pkg.list_pkgs attr='["version", "arch"]'
     '''
     versions_as_list = salt.utils.data.is_true(versions_as_list)
@@ -701,30 +702,36 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
-    attr = kwargs.get("attr")
-    if 'pkg.list_pkgs' in __context__:
-        cached = __context__['pkg.list_pkgs']
-        return __salt__['pkg_resource.format_pkg_list'](cached, versions_as_list, attr)
+    attr = kwargs.get('attr')
+    if attr is not None:
+        attr = salt.utils.args.split_input(attr)
 
-    cmd = ['rpm', '-qa', '--queryformat', (
-        "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
-        "%|EPOCH?{%{EPOCH}}:{}|_|-%{INSTALLTIME}\\n")]
-    ret = {}
-    for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
-        name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
-        install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
-        install_date_time_t = int(install_time)
+    contextkey = 'pkg.list_pkgs'
 
-        all_attr = {'epoch': epoch, 'version': pkgver, 'release': rel, 'arch': arch,
-                    'install_date': install_date, 'install_date_time_t': install_date_time_t}
-        __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
+    if contextkey not in __context__:
 
-    for pkgname in ret:
-        ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+        cmd = ['rpm', '-qa', '--queryformat', (
+            "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
+            "%|EPOCH?{%{EPOCH}}:{}|_|-%{INSTALLTIME}\\n")]
+        ret = {}
+        for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
+            name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
+            install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
+            install_date_time_t = int(install_time)
 
-    __context__['pkg.list_pkgs'] = ret
+            all_attr = {'epoch': epoch, 'version': pkgver, 'release': rel, 'arch': arch,
+                        'install_date': install_date, 'install_date_time_t': install_date_time_t}
+            __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
 
-    return __salt__['pkg_resource.format_pkg_list'](ret, versions_as_list, attr)
+        for pkgname in ret:
+            ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+
+        __context__[contextkey] = ret
+
+    return __salt__['pkg_resource.format_pkg_list'](
+        __context__[contextkey],
+        versions_as_list,
+        attr)
 
 
 def _get_configured_repos():

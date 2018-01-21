@@ -176,12 +176,12 @@ def stats(peer=None, **kwargs):  # pylint: disable=unused-argument
 
         [
             {
-                'remote'        : u'188.114.101.4',
-                'referenceid'   : u'188.114.100.1',
+                'remote'        : '188.114.101.4',
+                'referenceid'   : '188.114.100.1',
                 'synchronized'  : True,
                 'stratum'       : 4,
-                'type'          : u'-',
-                'when'          : u'107',
+                'type'          : '-',
+                'when'          : '107',
                 'hostpoll'      : 256,
                 'reachability'  : 377,
                 'delay'         : 164.228,

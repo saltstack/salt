@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import logging
@@ -11,7 +11,7 @@ import salt.utils.path
 import salt.utils.yaml
 
 # Import 3rd-party libs
-from salt.ext.six import iteritems
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ def get_class(_class, salt_data):
     if sub_init in l_files:
         return render_yaml(sub_init, salt_data)
 
-    log.warning('{0}: Class definition not found'.format(_class))
+    log.warning('%s: Class definition not found', _class)
     return {}
 
 
@@ -86,7 +86,7 @@ def dict_merge(a, b, path=None):
                 else:
                     a[key].extend(b[key])
             elif isinstance(a[key], dict) and isinstance(b[key], dict):
-                dict_merge(a[key], b[key], path + [str(key)])
+                dict_merge(a[key], b[key], path + [six.text_type(key)])
             elif a[key] == b[key]:
                 pass
             else:
@@ -98,7 +98,7 @@ def dict_merge(a, b, path=None):
 
 # Recursive search and replace in a dict
 def dict_search_and_replace(d, old, new, expanded):
-    for (k, v) in iteritems(d):
+    for (k, v) in six.iteritems(d):
         if isinstance(v, dict):
             dict_search_and_replace(d[k], old, new, expanded)
         if v == old:
@@ -125,9 +125,9 @@ def expand_variables(a, b, expanded, path=None):
         b = a.copy()
         path = []
 
-    for (k, v) in iteritems(a):
+    for (k, v) in six.iteritems(a):
         if isinstance(v, dict):
-            expand_variables(v, b, expanded, path + [str(k)])
+            expand_variables(v, b, expanded, path + [six.text_type(k)])
         else:
             if isinstance(v, str):
                 vre = re.search(r'(^|.)\$\{.*?\}', v)
@@ -230,7 +230,7 @@ def expanded_dict_from_minion(minion_id, salt_data):
     if _file:
         node_dict[minion_id] = render_yaml(_file, salt_data)
     else:
-        log.warning('{0}: Node definition not found'.format(minion_id))
+        log.warning('%s: Node definition not found', minion_id)
         node_dict[minion_id] = {}
 
     # Get 2 ordered lists:

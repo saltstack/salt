@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.paths import TESTS_DIR
 
 # Import Salt libs
 import salt.utils.boto
 import salt.utils.boto3
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion
 
@@ -18,6 +21,7 @@ from salt.utils.versions import LooseVersion
 # pylint: disable=import-error
 try:
     import boto
+    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
     import boto.exception
     from boto.exception import BotoServerError
 
@@ -111,7 +115,7 @@ def _has_required_boto3():
         else:
             return True
     except AttributeError as exc:
-        if "has no attribute '__version__'" not in str(exc):
+        if "has no attribute '__version__'" not in six.text_type(exc):
             raise
         return False
 
