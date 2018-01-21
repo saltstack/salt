@@ -2,7 +2,7 @@
 '''
 Module for managing NFS version 3.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -10,6 +10,7 @@ import logging
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ def list_exports(exports='/etc/exports'):
     '''
     ret = {}
     with salt.utils.files.fopen(exports, 'r') as efl:
-        for line in efl.read().splitlines():
+        for line in salt.utils.stringutils.to_unicode(efl.read()).splitlines():
             if not line:
                 continue
             if line.startswith('#'):
@@ -120,7 +121,7 @@ def _write_exports(exports, edict):
     '''
     with salt.utils.files.fopen(exports, 'w') as efh:
         for export in edict:
-            line = export
+            line = salt.utils.stringutils.to_str(export)
             for perms in edict[export]:
                 hosts = perms['hosts']
                 options = ','.join(perms['options'])
