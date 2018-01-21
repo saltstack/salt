@@ -603,7 +603,7 @@ def enable(name, start=False, **kwargs):
     if not start:
         # create a temp 'down' file BEFORE enabling service.
         # will prevent sv from starting this service automatically.
-        log.trace('need a temporary file %s', (down_file)
+        log.trace('need a temporary file %s', down_file)
         if not os.path.exists(down_file):
             try:
                 salt.utils.files.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
