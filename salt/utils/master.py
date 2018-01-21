@@ -300,7 +300,7 @@ class MasterPillarUtil(object):
         cached minion data on the master, or by fetching the grains
         directly on the minion.
 
-        By default, this function tries hard to get the pillar data:
+        By default, this function tries hard to get the grains data:
             - Try to get the cached minion grains if the master
                 has minion_data_cache: True
             - If the grains data for the minion is cached, use it.
