@@ -727,10 +727,10 @@ class SaltEvent(object):
         )
         log.debug('Sending event: tag = %s; data = %s', tag, data)
         event = b''.join([
-            salt.utils.stringutils.to_bytes(tag),
-            salt.utils.stringutils.to_bytes(tagend),
+            salt.utils.to_bytes(tag),
+            salt.utils.to_bytes(tagend),
             serialized_data])
-        msg = salt.utils.stringutils.to_bytes(event, 'utf-8')
+        msg = salt.utils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
             with salt.utils.async.current_ioloop(self.io_loop):
                 try:
