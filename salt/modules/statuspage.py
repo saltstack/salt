@@ -447,7 +447,7 @@ def update(endpoint='incidents',
     '''
     endpoint_sg = endpoint[:-1]  # singular
     if not id:
-        log.error('Invalid %s ID', endpoint_sg))
+        log.error('Invalid %s ID', endpoint_sg)
         return {
             'result': False,
             'comment': 'Please specify a valid {endpoint} ID'.format(endpoint=endpoint_sg)

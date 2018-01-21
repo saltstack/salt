@@ -257,7 +257,7 @@ def _copy_function(module_name, name=None):
             log.exception('Module failed to instantiate')
             raise
         valid_methods = {}
-        log.debug('Called methods are: %s', (methods)
+        log.debug('Called methods are: %s', methods)
         for meth_name in methods:
             if not meth_name.startswith('_'):
                 valid_methods[meth_name] = methods[meth_name]

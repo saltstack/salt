@@ -318,7 +318,7 @@ def delete_user(email, profile="splunk"):
         try:
             client.users.delete(user.name)
         except (AuthenticationError, HTTPError) as e:
-            log.info('Exception: %s', (six.text_type(e))
+            log.info('Exception: %s', six.text_type(e))
             return False
     else:
         return False
