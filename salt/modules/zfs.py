@@ -514,11 +514,8 @@ def unmount(name, **kwargs):
     return ret
 
 
-# TODO: switch to zfs_command below this point
 def inherit(prop, name, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Clears the specified property
 
     prop : string
@@ -531,25 +528,38 @@ def inherit(prop, name, **kwargs):
         revert the property to the received value if one exists; otherwise
         operate as if the -S option was not specified.
 
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.inherit canmount myzpool/mydataset [recursive=True|False]
     '''
-    zfs = salt.utils.path.which('zfs')
-    recursive = kwargs.get('recursive', False)
-    revert = kwargs.get('revert', False)
+    ret = OrderedDict()
 
-    res = __salt__['cmd.run_all']('{zfs} inherit {recursive}{revert}{prop} {name}'.format(
-        zfs=zfs,
-        recursive='-r ' if recursive else '',
-        revert='-S ' if revert else '',
-        prop=prop,
-        name=__utils__['zfs.to_str'](name)
-    ))
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
 
-    ret = {}
+    # NOTE: set extra config from kwargs
+    if kwargs.get('recursive', False):
+        flags.append('-r')
+    if kwargs.get('revert', False):
+        flags.append('-S')
+
+    ## Inherit property
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='inherit',
+            flags=flags,
+            property_name=prop,
+            target=name,
+        ),
+        python_shell=False,
+    )
+
     ret[name] = {}
     if res['retcode'] != 0:
         ret[name][prop] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -563,6 +573,7 @@ def inherit(prop, name, **kwargs):
     return ret
 
 
+# TODO: switch to zfs_command below this point
 def diff(name_a, name_b, **kwargs):
     '''
     .. versionadded:: 2016.3.0
