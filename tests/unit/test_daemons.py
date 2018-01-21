@@ -36,23 +36,25 @@ class LoggerMock(object):
         '''
         self.messages = list()
 
-    def info(self, data):
+    def info(self, message, *args, **kwargs):
         '''
         Collects the data from the logger of info type.
 
         :param data:
         :return:
         '''
-        self.messages.append({'message': data, 'type': 'info'})
+        self.messages.append({'message': message, 'args': args,
+                              'kwargs': kwargs, 'type': 'info'})
 
-    def warning(self, data):
+    def warning(self, message, *args, **kwargs):
         '''
         Collects the data from the logger of warning type.
 
         :param data:
         :return:
         '''
-        self.messages.append({'message': data, 'type': 'warning'})
+        self.messages.append({'message': message, 'args': args,
+                              'kwargs': kwargs, 'type': 'warning'})
 
     def has_message(self, msg, log_type=None):
         '''
@@ -62,7 +64,8 @@ class LoggerMock(object):
         :return:
         '''
         for data in self.messages:
-            if (data['type'] == log_type or not log_type) and data['message'].find(msg) > -1:
+            log_str = data['message'] % data['args']  # pylint: disable=incompatible-py3-code
+            if (data['type'] == log_type or not log_type) and log_str.find(msg) > -1:
                 return True
 
         return False
