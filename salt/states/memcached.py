@@ -5,7 +5,7 @@ States for Management of Memcached Keys
 
 .. versionadded:: 2014.1.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from salt.modules.memcached import (
     DEFAULT_HOST,
     DEFAULT_PORT,
@@ -62,7 +62,7 @@ def managed(name,
     try:
         cur = __salt__['memcached.get'](name, host, port)
     except CommandExecutionError as exc:
-        ret['comment'] = str(exc)
+        ret['comment'] = six.text_type(exc)
         return ret
 
     if cur == value:
@@ -83,7 +83,7 @@ def managed(name,
             name, value, host, port, time, min_compress_len
         )
     except (CommandExecutionError, SaltInvocationError) as exc:
-        ret['comment'] = str(exc)
+        ret['comment'] = six.text_type(exc)
     else:
         if ret['result']:
             ret['comment'] = 'Successfully set key \'{0}\''.format(name)
@@ -135,7 +135,7 @@ def absent(name,
     try:
         cur = __salt__['memcached.get'](name, host, port)
     except CommandExecutionError as exc:
-        ret['comment'] = str(exc)
+        ret['comment'] = six.text_type(exc)
         return ret
 
     if value is not None:
@@ -159,7 +159,7 @@ def absent(name,
     try:
         ret['result'] = __salt__['memcached.delete'](name, host, port, time)
     except (CommandExecutionError, SaltInvocationError) as exc:
-        ret['comment'] = str(exc)
+        ret['comment'] = six.text_type(exc)
     else:
         if ret['result']:
             ret['comment'] = 'Successfully deleted key \'{0}\''.format(name)
