@@ -221,12 +221,8 @@ def destroy(name, **kwargs):
     return ret
 
 
-# TODO: switch to zfs_command below this point
 def rename(name, new_name, **kwargs):
     '''
-    .. versionadded:: 2015.5.0
-    .. versionchanged:: 2016.3.0
-
     Rename or Relocate a ZFS File System.
 
     name : string
@@ -243,36 +239,44 @@ def rename(name, new_name, **kwargs):
         recursively rename the snapshots of all descendent datasets.
         snapshots are the only dataset that can be renamed recursively.
 
+    .. versionadded:: 2015.5.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.rename myzpool/mydataset myzpool/renameddataset
     '''
-    ret = {}
-    zfs = salt.utils.path.which('zfs')
-    create_parent = kwargs.get('create_parent', False)
-    force = kwargs.get('force', False)
-    recursive = kwargs.get('recursive', False)
+    ret = OrderedDict()
 
-    # fix up conflicting parameters
-    if recursive:
-        if '@' in name:  # -p and -f don't work with -r
-            create_parent = False
-            force = False
-        else:  # -r only works with snapshots
-            recursive = False
-    if create_parent and '@' in name:  # doesn't work with snapshots
-        create_parent = False
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = []
+    target = []
 
-    res = __salt__['cmd.run_all']('{zfs} rename {force}{create_parent}{recursive}{name} {new_name}'.format(
-        zfs=zfs,
-        force='-f ' if force else '',
-        create_parent='-p ' if create_parent else '',
-        recursive='-r ' if recursive else '',
-        name=__utils__['zfs.to_str'](name),
-        new_name=__utils__['zfs.to_str'](new_name)
-    ))
+    # NOTE: set extra config from kwargs
+    if __utils__['zfs.is_snapshot'](name) and kwargs.get('recursive', False):
+        flags.append('-r')
+    else:
+        if kwargs.get('create_parent', False):
+            flags.append('-p')
+        if kwargs.get('force', False):
+            flags.append('-f')
+
+    # NOTE: update target
+    target.append(name)
+    target.append(new_name)
+
+    ## Rename filesystem/volume/snapshot/...
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='rename',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
@@ -282,6 +286,7 @@ def rename(name, new_name, **kwargs):
     return ret
 
 
+# TODO: switch to zfs_command below this point
 def list_(name=None, **kwargs):
     '''
     .. versionadded:: 2015.5.0
