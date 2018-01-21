@@ -573,11 +573,8 @@ def inherit(prop, name, **kwargs):
     return ret
 
 
-# TODO: switch to zfs_command below this point
 def diff(name_a, name_b, **kwargs):
     '''
-    .. versionadded:: 2016.3.0
-
     Display the difference between a snapshot of a given filesystem and
     another snapshot of that filesystem from a later time or the current
     contents of the filesystem.
@@ -591,39 +588,53 @@ def diff(name_a, name_b, **kwargs):
     show_indication : boolean
         display an indication of the type of file. (default = True)
 
+    .. versionadded:: 2016.3.0
+    .. versionchanged:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.diff myzpool/mydataset@yesterday myzpool/mydataset
     '''
-    ret = {}
+    ret = OrderedDict()
 
-    zfs = salt.utils.path.which('zfs')
-    show_changetime = kwargs.get('show_changetime', False)
-    show_indication = kwargs.get('show_indication', True)
+    ## Configure command
+    # NOTE: initialize the defaults
+    flags = ['-H']
+    target = []
 
-    if '@' not in name_a:
-        ret[name_a] = 'MUST be a snapshot'
-        return ret
+    # NOTE: set extra config from kwargs
+    if kwargs.get('show_changetime', False):
+        flags.append('-t')
+    if kwargs.get('show_indication', False):
+        flags.append('-F')
 
-    res = __salt__['cmd.run_all']('{zfs} diff -H {changetime}{indication}{name_a} {name_b}'.format(
-        zfs=zfs,
-        changetime='-t ' if show_changetime else '',
-        indication='-F ' if show_indication else '',
-        name_a=__utils__['zfs.to_str'](name_a),
-        name_b=__utils__['zfs.to_str'](name_b)
-    ))
+    # NOTE: update target
+    target.append(name_a)
+    target.append(name_b)
+
+    ## Inherit property
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='diff',
+            flags=flags,
+            target=target,
+        ),
+        python_shell=False,
+    )
 
     if res['retcode'] != 0:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
+        # FIXME: parse timestamp if '-t'
         ret = []
         for line in res['stdout'].splitlines():
             ret.append(line)
     return ret
 
 
+# TODO: switch to zfs_command below this point
 def rollback(name, **kwargs):
     '''
     .. versionadded:: 2016.3.0
