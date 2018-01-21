@@ -24,7 +24,7 @@ You have those following methods:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re
@@ -43,6 +43,7 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 
@@ -395,7 +396,9 @@ def _get_bootstrap_content(directory='.'):
         with salt.utils.files.fopen(os.path.join(
                                 os.path.abspath(directory),
                                 'bootstrap.py')) as fic:
-            oldcontent = fic.read()
+            oldcontent = salt.utils.stringutils.to_unicode(
+                fic.read()
+            )
     except (OSError, IOError):
         oldcontent = ''
     return oldcontent
@@ -419,7 +422,7 @@ def _get_buildout_ver(directory='.'):
         for f in files:
             with salt.utils.files.fopen(f) as fic:
                 buildout1re = re.compile(r'^zc\.buildout\s*=\s*1', RE_F)
-                dfic = fic.read()
+                dfic = salt.utils.stringutils.to_unicode(fic.read())
                 if (
                         ('buildout.dumppick' in dfic)
                         or
@@ -536,7 +539,7 @@ def upgrade_bootstrap(directory='.',
         if updated:
             comment = 'Bootstrap updated'
             with salt.utils.files.fopen(b_py, 'w') as fic:
-                fic.write(data)
+                fic.write(salt.utils.stringutils.to_str(data))
         if dled:
             with salt.utils.files.fopen(os.path.join(dbuild,
                                                '{0}.updated_bootstrap'.format(
@@ -545,7 +548,7 @@ def upgrade_bootstrap(directory='.',
     except (OSError, IOError):
         if oldcontent:
             with salt.utils.files.fopen(b_py, 'w') as fic:
-                fic.write(oldcontent)
+                fic.write(salt.utils.stringutils.to_str(oldcontent))
 
     return {'comment': comment}
 
@@ -736,7 +739,7 @@ def bootstrap(directory='.',
     # be sure which buildout bootstrap we have
     b_py = os.path.join(directory, 'bootstrap.py')
     with salt.utils.files.fopen(b_py) as fic:
-        content = fic.read()
+        content = salt.utils.stringutils.to_unicode(fic.read())
     if (
         (test_release is not False)
         and ' --accept-buildout-test-releases' in content
@@ -994,7 +997,7 @@ def buildout(directory='.',
 
         salt '*' buildout.buildout /srv/mybuildout
     '''
-    LOG.info('Running buildout in {0} ({1})'.format(directory, config))
+    LOG.info('Running buildout in %s (%s)', directory, config)
     boot_ret = bootstrap(directory,
                          config=config,
                          buildout_ver=buildout_ver,

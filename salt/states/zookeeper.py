@@ -25,6 +25,10 @@ The following options can be included in the acl dictionary:
     :param all: All permissions.
     :type all: bool
 '''
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 __virtualname__ = 'zookeeper'
 
 
