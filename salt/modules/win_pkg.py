@@ -30,8 +30,7 @@ old.
 '''
 
 # Import python future libs
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import datetime
 import errno
@@ -120,7 +119,7 @@ def latest_version(*names, **kwargs):
     # no need to call _refresh_db_conditional as list_pkgs will do it
     installed_pkgs = list_pkgs(
         versions_as_list=True, saltenv=saltenv, refresh=refresh)
-    log.trace('List of installed packages: {0}'.format(installed_pkgs))
+    log.trace('List of installed packages: %s', installed_pkgs)
 
     # iterate over all requested package names
     for name in names:
@@ -147,27 +146,31 @@ def latest_version(*names, **kwargs):
 
         # get latest available (from winrepo_dir) version of package
         pkg_info = _get_package_info(name, saltenv=saltenv)
-        log.trace('Raw winrepo pkg_info for {0} is {1}'.format(name, pkg_info))
+        log.trace('Raw winrepo pkg_info for %s is %s', name, pkg_info)
 
         # latest_available can be version number or 'latest' or even 'Not Found'
         latest_available = _get_latest_pkg_version(pkg_info)
         if latest_available:
-            log.debug('Latest available version '
-                      'of package {0} is {1}'.format(name, latest_available))
+            log.debug(
+                'Latest available version of package %s is %s',
+                name, latest_available
+            )
 
             # check, whether latest available version
             # is newer than latest installed version
             if compare_versions(ver1=six.text_type(latest_available),
                                 oper='>',
                                 ver2=six.text_type(latest_installed)):
-                log.debug('Upgrade of {0} from {1} to {2} '
-                          'is available'.format(name,
-                                                latest_installed,
-                                                latest_available))
+                log.debug(
+                    'Upgrade of %s from %s to %s is available',
+                    name, latest_installed, latest_available
+                )
                 ret[name] = latest_available
             else:
-                log.debug('No newer version than {0} of {1} '
-                          'is available'.format(latest_installed, name))
+                log.debug(
+                    'No newer version than %s of %s is available',
+                    latest_installed, name
+                )
     if len(names) == 1:
         return ret[names[0]]
     return ret
@@ -836,26 +839,28 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
             for version_str, repodata in six.iteritems(versions):
                 # Ensure version is a string/unicode
                 if not isinstance(version_str, six.string_types):
-                    msg = (
-                        'package \'{0}\'{{0}}, version number {1} '
+                    log.error(
+                        "package '%s' within '%s', version number %s' "
+                        "is not a string",
+                        pkgname, short_path_name, version_str
+                    )
+                    errors.append(
+                        'package \'{0}\', version number {1} '
                         'is not a string'.format(pkgname, version_str)
                     )
-                    log.error(
-                        msg.format(' within \'{0}\''.format(short_path_name))
-                    )
-                    errors.append(msg.format(''))
                     continue
                 # Ensure version contains a dict
                 if not isinstance(repodata, dict):
-                    msg = (
-                        'package \'{0}\'{{0}}, repo data for '
-                        'version number {1} is not defined as a dictionary '
+                    log.error(
+                        "package '%s' within '%s', repo data for "
+                        'version number %s is not defined as a dictionary',
+                        pkgname, short_path_name, version_str
+                    )
+                    errors.append(
+                        'package \'{0}\', repo data for '
+                        'version number {1} is not defined as a dictionary'
                         .format(pkgname, version_str)
                     )
-                    log.error(
-                        msg.format(' within \'{0}\''.format(short_path_name))
-                    )
-                    errors.append(msg.format(''))
                     continue
                 revmap[repodata['full_name']] = pkgname
         if errors:
@@ -917,8 +922,10 @@ def _get_msiexec(use_msiexec):
         if os.path.isfile(use_msiexec):
             return True, use_msiexec
         else:
-            log.warning(("msiexec path '{0}' not found. Using system registered"
-                         " msiexec instead").format(use_msiexec))
+            log.warning(
+                "msiexec path '%s' not found. Using system registered "
+                "msiexec instead", use_msiexec
+            )
             use_msiexec = True
     if use_msiexec is True:
         return True, 'msiexec'
@@ -1119,7 +1126,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         # Make sure pkginfo was found
         if not pkginfo:
-            log.error('Unable to locate package {0}'.format(pkg_name))
+            log.error('Unable to locate package %s', pkg_name)
             ret[pkg_name] = 'Unable to locate package {0}'.format(pkg_name)
             continue
 
@@ -1145,8 +1152,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             continue
         # If version number not installed, is the version available?
         elif version_num != 'latest' and version_num not in pkginfo:
-            log.error('Version {0} not found for package '
-                      '{1}'.format(version_num, pkg_name))
+            log.error('Version %s not found for package %s',
+                      version_num, pkg_name)
             ret[pkg_name] = {'not found': version_num}
             continue
 
@@ -1160,8 +1167,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         # Is there an installer configured?
         if not installer:
-            log.error('No installer configured for version {0} of package '
-                      '{1}'.format(version_num, pkg_name))
+            log.error('No installer configured for version %s of package %s',
+                      version_num, pkg_name)
             ret[pkg_name] = {'no installer': version_num}
             continue
 
@@ -1195,7 +1202,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
                     # Check if the cache_file was cached successfully
                     if not cached_file:
-                        log.error('Unable to cache {0}'.format(cache_file))
+                        log.error('Unable to cache %s', cache_file)
                         ret[pkg_name] = {
                             'failed to cache cache_file': cache_file
                         }
@@ -1209,8 +1216,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
                 # Check if the installer was cached successfully
                 if not cached_pkg:
-                    log.error('Unable to cache file {0} '
-                              'from saltenv: {1}'.format(installer, saltenv))
+                    log.error(
+                        'Unable to cache file %s from saltenv: %s',
+                        installer, saltenv
+                    )
                     ret[pkg_name] = {'unable to cache': installer}
                     continue
 
@@ -1226,7 +1235,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
                     # Check if the installer was cached successfully
                     if not cached_pkg:
-                        log.error('Unable to cache {0}'.format(installer))
+                        log.error('Unable to cache %s', installer)
                         ret[pkg_name] = {'unable to cache': installer}
                         continue
         else:
@@ -1241,13 +1250,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         source_hash = pkginfo[version_num].get('source_hash', False)
         if source_hash:
             source_sum = _get_source_sum(source_hash, cached_pkg, saltenv)
-            log.debug('Source {0} hash: {1}'.format(source_sum['hash_type'],
-                                                    source_sum['hsum']))
+            log.debug('Source %s hash: %s',
+                      source_sum['hash_type'], source_sum['hsum'])
 
             cached_pkg_sum = salt.utils.hashutils.get_hash(cached_pkg,
                                                            source_sum['hash_type'])
-            log.debug('Package {0} hash: {1}'.format(source_sum['hash_type'],
-                                                     cached_pkg_sum))
+            log.debug('Package %s hash: %s',
+                      source_sum['hash_type'], cached_pkg_sum)
 
             if source_sum['hsum'] != cached_pkg_sum:
                 raise SaltInvocationError(
@@ -1305,7 +1314,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                          flags=re.IGNORECASE + re.UNICODE) is not None:
                 ret[pkg_name] = {'install status': 'task started'}
                 if not __salt__['task.run'](name='update-salt-software'):
-                    log.error('Failed to install {0}'.format(pkg_name))
+                    log.error('Failed to install %s', pkg_name)
                     log.error('Scheduled Task failed to run')
                     ret[pkg_name] = {'install status': 'failed'}
                 else:
@@ -1320,15 +1329,14 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                             break
 
                     if not task_running:
-                        log.error(
-                            'Failed to install {0}'.format(pkg_name))
+                        log.error('Failed to install %s', pkg_name)
                         log.error('Scheduled Task failed to run')
                         ret[pkg_name] = {'install status': 'failed'}
 
             # All other packages run with task scheduler
             else:
                 if not __salt__['task.run_wait'](name='update-salt-software'):
-                    log.error('Failed to install {0}'.format(pkg_name))
+                    log.error('Failed to install %s', pkg_name)
                     log.error('Scheduled Task failed to run')
                     ret[pkg_name] = {'install status': 'failed'}
         else:
@@ -1354,9 +1362,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 ret[pkg_name] = {'install status': 'success, reboot initiated'}
                 changed.append(pkg_name)
             else:
-                log.error('Failed to install {0}'.format(pkg_name))
-                log.error('retcode {0}'.format(result['retcode']))
-                log.error('installer output: {0}'.format(result['stdout']))
+                log.error('Failed to install %s', pkg_name)
+                log.error('retcode %s', result['retcode'])
+                log.error('installer output: %s', result['stdout'])
                 ret[pkg_name] = {'install status': 'failed'}
 
     # Get a new list of installed software
@@ -1577,7 +1585,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
                         # Check if the installer was cached successfully
                         if not cached_pkg:
-                            log.error('Unable to cache {0}'.format(uninstaller))
+                            log.error('Unable to cache %s', uninstaller)
                             ret[pkgname] = {'unable to cache': uninstaller}
                             continue
             else:
@@ -1765,7 +1773,7 @@ def get_repo_data(saltenv='base'):
         serial = salt.payload.Serial(__opts__)
         with salt.utils.files.fopen(repo_details.winrepo_file, 'rb') as repofile:
             try:
-                repodata = serial.loads(repofile.read()) or {}
+                repodata = salt.utils.data.decode(serial.loads(repofile.read()) or {})
                 __context__['winrepo.data'] = repodata
                 return repodata
             except Exception as exc:
