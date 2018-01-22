@@ -456,10 +456,7 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.INFO
             else:
                 logging_level = logging.ERROR
-            if salt.utils.is_windows():
-                os.environ['TESTS_LOG_LEVEL'] = six.binary_type(self.options.verbosity)
-            else:
-                os.environ['TESTS_LOG_LEVEL'] = six.text_type(self.options.verbosity)
+            os.environ['TESTS_LOG_LEVEL'] = str(self.options.verbosity)  # future lint: disable=blacklisted-function
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
             log.info('Runtests logging has been setup')
