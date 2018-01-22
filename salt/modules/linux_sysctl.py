@@ -233,8 +233,8 @@ def persist(name, value, config=None):
     if not edited:
         nlines.append('{0} = {1}\n'.format(name, value))
     try:
-        with salt.utils.files.fopen(config, 'w+') as _fh:
-            _fh.writelines(salt.utils.stringutils.to_str(nlines))
+        with salt.utils.files.fopen(config, 'wb') as _fh:
+            _fh.writelines(salt.utils.data.encode(nlines))
     except (IOError, OSError):
         msg = 'Could not write to file: {0}'
         raise CommandExecutionError(msg.format(config))
