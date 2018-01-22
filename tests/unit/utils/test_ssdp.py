@@ -255,8 +255,6 @@ class SSDPFactoryTestCase(TestCase):
             assert not factory._sendto.called
             assert 'Received outdated package' in factory.log.debug.call_args[0][0]
 
-
-
     def test_datagram_signature_outdated_timestamp_reply(self):
         '''
         Test if datagram processing reacts on outdated message (more than 20 seconds). Reply mode.
@@ -281,4 +279,3 @@ class SSDPFactoryTestCase(TestCase):
             assert factory.disable_hidden
             assert factory._sendto.called
             assert 'Received outdated package' in factory.log.debug.call_args[0][0]
-
