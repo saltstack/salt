@@ -199,7 +199,7 @@ class SSDPFactoryTestCase(TestCase):
 
     def test_datagram_signature_wrong_timestamp_quiet(self):
         '''
-        Test datagram receives a wrong timestamp.
+        Test datagram receives a wrong timestamp (no reply).
 
         :return:
         '''
