@@ -246,8 +246,8 @@ def disable(message=None):
         with salt.utils.files.fopen(puppet.disabled_lockfile, 'w') as lockfile:
             try:
                 # Puppet chokes when no valid json is found
-                str = '{{"disabled_message":"{0}"}}'.format(message) if message is not None else '{}'
-                lockfile.write(salt.utils.stringutils.to_str(str))
+                msg = '{{"disabled_message":"{0}"}}'.format(message) if message is not None else '{}'
+                lockfile.write(salt.utils.stringutils.to_str(msg))
                 lockfile.close()
                 return True
             except (IOError, OSError) as exc:
@@ -313,9 +313,7 @@ def summary():
 
     try:
         with salt.utils.files.fopen(puppet.lastrunfile, 'r') as fp_:
-            report = salt.utils.yaml.safe_load(
-                salt.utils.stringutils.to_unicode(fp_)
-            )
+            report = salt.utils.yaml.safe_load(fp_)
         result = {}
 
         if 'time' in report:
