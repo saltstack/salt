@@ -278,4 +278,5 @@ class SSDPFactoryTestCase(TestCase):
             assert factory.log.debug.called
             assert factory.disable_hidden
             assert factory._sendto.called
+            assert factory._sendto.call_args[0][0] == '{}:E:Timestamp is too old'.format(signature)
             assert 'Received outdated package' in factory.log.debug.call_args[0][0]
