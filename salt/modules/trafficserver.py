@@ -35,11 +35,11 @@ _TRAFFICCTL = salt.utils.path.which('traffic_ctl')
 
 
 def _traffic_ctl(*args):
-    return ' '.join([_TRAFFICCTL] + args)
+    return [_TRAFFICCTL] + list(args)
 
 
 def _traffic_line(*args):
-    return ' '.join([_TRAFFICLINE] + args)
+    return [_TRAFFICLINE] + list(args)
 
 
 def _statuscmd():
@@ -48,7 +48,6 @@ def _statuscmd():
     else:
         cmd = _traffic_line('--status')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -57,8 +56,9 @@ def _subprocess(cmd):
     Function to standardize the subprocess call
     '''
 
+    log.debug('Running: "%s"', ' '.join(cmd))
     try:
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         ret = salt.utils.stringutils.to_unicode(proc.communicate()[0]).strip()
         retcode = proc.wait()
 
@@ -87,7 +87,7 @@ def bounce_cluster():
         cmd = _traffic_ctl('cluster', 'restart')
     else:
         cmd = _traffic_line('-B')
-    log.debug('Running: %s', cmd)
+
     return _subprocess(cmd)
 
 
@@ -114,9 +114,8 @@ def bounce_local(drain=False):
         cmd = _traffic_line('-b')
 
     if drain:
-        cmd = '{0} {1}'.format(cmd, '--drain')
+        cmd = cmd + ['--drain']
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -134,7 +133,6 @@ def clear_cluster():
     else:
         cmd = _traffic_line('-C')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -152,7 +150,6 @@ def clear_node():
     else:
         cmd = _traffic_line('-c')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -171,7 +168,6 @@ def restart_cluster():
     else:
         cmd = _traffic_line('-M')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -197,9 +193,8 @@ def restart_local(drain=False):
         cmd = _traffic_line('-L')
 
     if drain:
-        cmd = '{0} {1}'.format(cmd, '--drain')
+        cmd = cmd + ['--drain']
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -221,7 +216,7 @@ def match_var(regex):
         '{version}. Please use \'match_metric\' or \'match_config\' instead.'
     )
     cmd = _traffic_line('-m', regex)
-    log.debug('Running: %s', cmd)
+
     return _subprocess(cmd)
 
 
@@ -241,7 +236,6 @@ def match_metric(regex):
     else:
         cmd = _traffic_ctl('-m', regex)
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -261,7 +255,6 @@ def match_config(regex):
     else:
         cmd = _traffic_line('-m', regex)
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -285,7 +278,7 @@ def read_config(*args):
     try:
         for arg in args:
             log.debug('Querying: %s', arg)
-            ret[arg] = _subprocess('{0} {1}'.format(cmd, arg))
+            ret[arg] = _subprocess(cmd + [arg])
     except KeyError:
         pass
 
@@ -312,7 +305,7 @@ def read_metric(*args):
     try:
         for arg in args:
             log.debug('Querying: %s', arg)
-            ret[arg] = _subprocess('{0} {1}'.format(cmd, arg))
+            ret[arg] = _subprocess(cmd + [arg])
     except KeyError:
         pass
 
@@ -368,7 +361,7 @@ def read_var(*args):
     try:
         for arg in args:
             log.debug('Querying: %s', arg)
-            cmd = '{0} {1} {2}'.format(_TRAFFICLINE, '-r', arg)
+            cmd = _traffic_line('-r', arg)
             ret[arg] = _subprocess(cmd)
     except KeyError:
         pass
@@ -410,7 +403,6 @@ def shutdown():
     else:
         cmd = _traffic_ctl('server', 'stop')
 
-    log.debug('Running: %s', cmd)
     _subprocess(cmd)
     return _statuscmd()
 
@@ -431,7 +423,6 @@ def startup():
     else:
         cmd = _traffic_ctl('server', 'start')
 
-    log.debug('Running: %s', cmd)
     _subprocess(cmd)
     return _statuscmd()
 
@@ -454,7 +445,6 @@ def refresh():
     else:
         cmd = _traffic_line('-x')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -471,7 +461,6 @@ def zero_cluster():
     else:
         cmd = _traffic_line('-Z')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -488,7 +477,6 @@ def zero_node():
     else:
         cmd = _traffic_line('-z')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -511,7 +499,6 @@ def offline(path):
     else:
         cmd = _traffic_line('--offline', path)
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -529,7 +516,6 @@ def alarms():
     else:
         cmd = _traffic_line('--alarms')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -549,7 +535,6 @@ def clear_alarms(alarm):
     else:
         cmd = _traffic_line('--clear_alarms', alarm)
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
