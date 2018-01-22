@@ -86,7 +86,7 @@ these states. Here is some example SLS:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 
 # Import salt libs
@@ -97,6 +97,9 @@ import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
 import salt.utils.versions
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -358,7 +361,7 @@ def managed(name, ppa=None, **kwargs):
             try:
                 repo = ':'.join(('ppa', ppa))
             except TypeError:
-                repo = ':'.join(('ppa', str(ppa)))
+                repo = ':'.join(('ppa', six.text_type(ppa)))
 
         kwargs['disabled'] = not salt.utils.data.is_true(enabled) \
             if enabled is not None \
@@ -455,7 +458,7 @@ def managed(name, ppa=None, **kwargs):
                             salt.utils.data.is_true(pre[kwarg]):
                         break
                 else:
-                    if str(sanitizedkwargs[kwarg]) != str(pre[kwarg]):
+                    if six.text_type(sanitizedkwargs[kwarg]) != six.text_type(pre[kwarg]):
                         break
         else:
             ret['result'] = True
