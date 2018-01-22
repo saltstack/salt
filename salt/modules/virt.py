@@ -417,7 +417,7 @@ def _qemu_image_create(vm_name,
                 log.debug('Resize qcow2 image to %sM', disk_size)
                 __salt__['cmd.run'](
                     'qemu-img resize {0} {1}M'
-                    .format(img_dest, six.text_type(disk_size))
+                    .format(img_dest, disk_size)
                 )
 
             log.debug('Apply umask and remove exec bit')
@@ -440,7 +440,7 @@ def _qemu_image_create(vm_name,
                 log.debug('Create empty image with size %sM', disk_size)
                 __salt__['cmd.run'](
                     'qemu-img create -f {0} {1} {2}M'
-                    .format(disk_type, img_dest, six.text_type(disk_size))
+                    .format(disk_type, img_dest, disk_size)
                 )
             else:
                 raise CommandExecutionError(
@@ -719,7 +719,7 @@ def init(name,
         # for the first disk instead of the image from the disk profile
         disk_name = next(six.iterkeys(diskp[0]))
         log.debug('%s image from module arguments will be used for disk "%s"'
-                  ' instead of %s', image, disk_name, diskp[0][disk_name].get('image', None))
+                  ' instead of %s', image, disk_name, diskp[0][disk_name].get('image'))
         diskp[0][disk_name]['image'] = image
 
     # Create multiple disks, empty or from specified images.

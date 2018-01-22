@@ -18,12 +18,9 @@ Kapacitor state module.
 
 from __future__ import absolute_import, print_function, unicode_literals
 import difflib
-import logging
 
 import salt.utils.files
 import salt.utils.stringutils
-
-log = logging.getLogger(__name__)
 
 
 def __virtual__():

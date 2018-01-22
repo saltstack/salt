@@ -16,7 +16,6 @@ Kapacitor execution module.
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
 
 # Import Salt lobs
 from salt.ext import six
@@ -24,8 +23,6 @@ import salt.utils.http
 import salt.utils.json
 import salt.utils.path
 from salt.utils.decorators import memoize
-
-log = logging.getLogger(__name__)
 
 
 def __virtual__():
