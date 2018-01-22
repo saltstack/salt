@@ -892,7 +892,7 @@ class TestCustomExtensions(TestCase):
     def test_http_query(self):
         '''Test the `http_query` Jinja filter.'''
         for backend in ('requests', 'tornado', 'urllib2'):
-            rendered = render_jinja_tmpl("{{ 'http://www.google.com' | http_query(backend='" + backend + "') }}",
+            rendered = render_jinja_tmpl("{{ 'http://icanhazip.com' | http_query(backend='" + backend + "') }}",
                                          dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
             self.assertIsInstance(rendered, six.text_type, 'Failed with backend: {}'.format(backend))
             dict_reply = ast.literal_eval(rendered)
