@@ -87,7 +87,16 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                     @@ -1 +1 @@
                     -{}
                     +DelaySeconds: 20
-                ''')
+
+                ''').splitlines()
+                # Difflib adds a trailing space after the +++/--- lines,
+                # programatically add them back here. Having them in the test
+                # file itself is not feasible since a few popular plugins for
+                # vim will remove trailing whitespace.
+                for idx in (0, 1):
+                    diff[idx] += ' '
+                diff = '\n'.join(diff)
+
                 comt = [
                     'SQS queue mysqs present.',
                     'Attribute(s) DelaySeconds set to be updated:\n{0}'.format(
