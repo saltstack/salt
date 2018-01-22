@@ -11,7 +11,6 @@ import os
 import salt.utils.files
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'grub'
@@ -104,7 +103,7 @@ def conf():
                 stanzas.append(stanza)
     except (IOError, OSError) as exc:
         msg = "Could not read grub config: {0}"
-        raise CommandExecutionError(msg.format(six.text_type(exc)))
+        raise CommandExecutionError(msg.format(exc))
 
     ret['stanzas'] = []
     for stanza in stanzas:
