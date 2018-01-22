@@ -180,7 +180,7 @@ class SSDPFactoryTestCase(TestCase):
             assert factory.log.debug.called
             assert 'Permission error' in factory.log.debug.mock_calls[0][1][0]
 
-    def test_datagram_received_bad_signature(self):
+    def test_datagram_signature_bad(self):
         '''
         Test datagram_received on bad signature
 
