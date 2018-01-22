@@ -4,7 +4,7 @@ GNOME implementations
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
 try:
@@ -12,6 +12,9 @@ try:
     HAS_PWD = True
 except ImportError:
     HAS_PWD = False
+
+# Import Salt libs
+from salt.ext import six
 
 # Import 3rd-party libs
 try:
@@ -90,7 +93,8 @@ class _GSettings(object):
             result['stdout'] = 'User {0} does not exist'.format(user)
             return result
 
-        cmd = 'dbus-launch --exit-with-session gsettings set {0} {1} "{2}"'.format(self.SCHEMA, self.KEY, str(value))
+        cmd = 'dbus-launch --exit-with-session gsettings set {0} {1} "{2}"'.format(
+                self.SCHEMA, self.KEY, six.text_type(value))
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
         result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)

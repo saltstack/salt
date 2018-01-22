@@ -36,7 +36,7 @@ Module for handling openstack glance calls.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import salt libs
@@ -309,10 +309,10 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
             'comment': 'No image with ID {0}'.format(id)
             }
     except exc.HTTPForbidden as forbidden:
-        log.error(str(forbidden))
+        log.error(six.text_type(forbidden))
         return {
             'result': False,
-            'comment': str(forbidden)
+            'comment': six.text_type(forbidden)
             }
     return {
         'result': True,
