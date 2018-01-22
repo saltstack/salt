@@ -736,7 +736,7 @@ class Client(object):
             if no_cache:
                 if write_body[2]:
                     return ''.join(result)
-                return six.b('').join(result)
+                return b''.join(result)
             else:
                 destfp.close()
                 destfp = None

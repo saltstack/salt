@@ -339,7 +339,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             zmq.eventloop.ioloop.install()
             self.io_loop = tornado.ioloop.IOLoop.current()
 
-        self.hexid = hashlib.sha1(six.b(self.opts['id'])).hexdigest()
+        self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()
 
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
 

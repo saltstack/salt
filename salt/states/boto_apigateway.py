@@ -440,7 +440,10 @@ def _gen_md5_filehash(fname, *args):
             _hash.update(chunk)
 
     for extra_arg in args:
-        _hash.update(six.b(str(extra_arg)))  # future lint: disable=blacklisted-function
+        try:
+            _hash.update(salt.utils.stringutils.to_bytes(extra_arg))
+        except TypeError:
+            _hash.update(salt.utils.stringutils.to_bytes(six.text_type(extra_arg)))
     return _hash.hexdigest()
 
 

@@ -746,7 +746,7 @@ class GitProvider(object):
                           os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fh_, 'wb'):
                 # Write the lock file and close the filehandle
-                os.write(fh_, six.b(six.text_type(os.getpid())))
+                os.write(fh_, salt.utils.stringutils.to_bytes(six.text_type(os.getpid())))
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
                 with salt.utils.files.fopen(self._get_lock_file(lock_type), 'r') as fd_:

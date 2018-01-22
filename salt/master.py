@@ -80,6 +80,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
 import salt.utils.ssdp
+import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
@@ -301,7 +302,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
             for secret_key, secret_map in six.iteritems(SMaster.secrets):
                 # should be unnecessary-- since no one else should be modifying
                 with secret_map['secret'].get_lock():
-                    secret_map['secret'].value = six.b(secret_map['reload']())
+                    secret_map['secret'].value = salt.utils.stringutils.to_bytes(secret_map['reload']())
                 self.event.fire_event({'rotate_{0}_key'.format(secret_key): True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
@@ -664,7 +665,9 @@ class Master(SMaster):
             SMaster.secrets['aes'] = {
                 'secret': multiprocessing.Array(
                     ctypes.c_char,
-                    six.b(salt.crypt.Crypticle.generate_key_string())
+                    salt.utils.stringutils.to_bytes(
+                        salt.crypt.Crypticle.generate_key_string()
+                    )
                 ),
                 'reload': salt.crypt.Crypticle.generate_key_string
             }

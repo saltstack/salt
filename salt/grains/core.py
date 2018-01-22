@@ -1452,7 +1452,7 @@ def os_data():
                             "Unable to fetch data from /proc/1/cmdline"
                         )
                     if init_bin is not None and init_bin.endswith('bin/init'):
-                        supported_inits = (six.b(str('upstart')), six.b(str('sysvinit')), six.b(str('systemd')))  # future lint: disable=blacklisted-function
+                        supported_inits = (b'upstart', b'sysvinit', b'systemd')
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
@@ -1462,7 +1462,7 @@ def os_data():
                         try:
                             with salt.utils.files.fopen(init_bin, 'rb') as fp_:
                                 buf = True
-                                edge = six.b(str())  # future lint: disable=blacklisted-function
+                                edge = b''
                                 buf = fp_.read(buf_size).lower()
                                 while buf:
                                     buf = edge + buf
@@ -1471,7 +1471,7 @@ def os_data():
                                             if six.PY3:
                                                 item = item.decode('utf-8')
                                             grains['init'] = item
-                                            buf = six.b(str())  # future lint: disable=blacklisted-function
+                                            buf = b''
                                             break
                                     edge = buf[-edge_len:]
                                     buf = fp_.read(buf_size).lower()
