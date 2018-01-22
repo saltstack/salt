@@ -231,7 +231,7 @@ def present(host, groups, interfaces, **kwargs):
         elif not hostinterfaces and interfaces:
             update_interfaces = True
 
-        cur_inventory = __salt__['zabbix.hostinventory_get'](hostids=hostid, **connection_args)
+        cur_inventory = __salt__['zabbix.host_inventory_get'](hostids=hostid, **connection_args)
         if cur_inventory:
             # Remove blank inventory items
             cur_inventory = {k: v for k, v in cur_inventory.items() if v}
@@ -272,10 +272,10 @@ def present(host, groups, interfaces, **kwargs):
                     sum_kwargs = new_inventory.get(elem, 0) + connection_args[elem]
                 sum_kwargs['clear_old'] = True
 
-                hostupdate = __salt__['zabbix.hostinventory_set'](hostid, **sum_kwargs)
+                hostupdate = __salt__['zabbix.host_inventory_set'](hostid, **sum_kwargs)
                 ret['changes']['inventory'] = str(new_inventory)
                 if 'error' in hostupdate:
-                    error.append(hostupdate['error']) 
+                    error.append(hostupdate['error'])
             if update_proxy:
                 hostupdate = __salt__['zabbix.host_update'](hostid, proxy_hostid=proxy_hostid, **connection_args)
                 ret['changes']['proxy_hostid'] = str(proxy_hostid)
@@ -515,4 +515,3 @@ def assign_templates(host, templates, **kwargs):
         ret['comment'] = comment_host_templates_in_sync
 
     return ret
-

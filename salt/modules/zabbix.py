@@ -1058,12 +1058,12 @@ def host_update(hostid, **connection_args):
         return ret
 
 
-def hostinventory_get(hostids, **connection_args):
+def host_inventory_get(hostids, **connection_args):
     '''
     Retrieve host inventory according to the given parameters.
     See: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host_inventory
 
-    .. versionadded:: Oxygen
+    .. versionadded:: Fluorine
 
     :param hostids: Return only host interfaces used by the given hosts.
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
@@ -1075,7 +1075,7 @@ def hostinventory_get(hostids, **connection_args):
     CLI Example:
     .. code-block:: bash
 
-        salt '*' zabbix.hostinventory_get 101054
+        salt '*' zabbix.host_inventory_get 101054
     '''
     conn_args = _login(**connection_args)
     ret = False
@@ -1094,13 +1094,13 @@ def hostinventory_get(hostids, **connection_args):
         return ret
 
 
-def hostinventory_set(hostid, **connection_args):
+def host_inventory_set(hostid, **connection_args):
     '''
     Update host inventory items
     NOTE: This function accepts all standard host: keyword argument names for inventory
     see: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host_inventory
 
-    .. versionadded:: Oxygen
+    .. versionadded:: Fluorine
 
     :param hostid: ID of the host to update
     :param clear_old: Set to True in order to remove all existing inventory items before setting the specified items
@@ -1113,13 +1113,13 @@ def hostinventory_set(hostid, **connection_args):
     CLI Example:
     .. code-block:: bash
 
-        salt '*' zabbix.hostinventory_set 101054 asset_tag=jml3322 type=vm clear_old=True
+        salt '*' zabbix.host_inventory_set 101054 asset_tag=jml3322 type=vm clear_old=True
     '''
     conn_args = _login(**connection_args)
     ret = False
     try:
         if conn_args:
-            params={}
+            params = {}
             clear_old = False
             method = 'host.update'
 
@@ -1878,9 +1878,8 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
                 _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
                 _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
 
-                all optional mediatype.get parameters: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.2/manual/api/reference/mediatype/get
+                all optional mediatype.get parameters: keyword argument names differ depending on your zabbix
+                version,nsee: https://www.zabbix.com/documentation/2.2/manual/api/reference/mediatype/get
 
     Returns:
         Array with mediatype details, False if no mediatype found or on failure.
@@ -2039,9 +2038,8 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
                 _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
                 _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
 
-                all optional template.get parameters: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/template/get
+                all optional template.get parameters: keyword argument names differ depending on your zabbix
+                version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/template/get
 
     Returns:
         Array with convenient template details, False if no template found or on failure.
@@ -2086,9 +2084,8 @@ def run_query(method, params, **connection_args):
                 _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
                 _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
 
-                all optional template.get parameters: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/
+                all optional template.get parameters: keyword argument names differ depending on your zabbix
+                version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/
 
     Returns:
         Response from Zabbix API
