@@ -19,7 +19,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import io
 
 # Import Salt Testing Libs
