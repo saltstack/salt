@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 
-# Import salt testing libs
+# Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
-# Import salt libs
+# Import Salt libs
 from salt.ext import six
 import salt.modules.jboss7_cli as jboss7_cli
 from salt.exceptions import CommandExecutionError
@@ -264,7 +264,7 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(result['outcome'], 'success')
         self.assertEqual(result['result']['binding-type'], 'simple')
-        self.assertEqual(result['result']['value'], r'DOMAIN\user')
+        self.assertEqual(result['result']['value'], r'DOMAIN\\user')
 
     def test_numbers_without_quotes(self):
         text = r'''{
