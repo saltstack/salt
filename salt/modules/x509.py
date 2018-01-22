@@ -17,7 +17,6 @@ import glob
 import random
 import ctypes
 import tempfile
-import yaml
 import re
 import datetime
 import ast
@@ -177,7 +176,7 @@ def _parse_openssl_req(csr_filename):
     output = re.sub(r': rsaEncryption', ':', output)
     output = re.sub(r'[0-9a-f]{2}:', '', output)
 
-    return yaml.safe_load(output)
+    return salt.utils.yaml.safe_load(output)
 
 
 def _get_csr_extensions(csr):
@@ -266,7 +265,7 @@ def _parse_openssl_crl(crl_filename):
 
         rev_sn = revoked.split('\n')[0].strip()
         revoked = rev_sn + ':\n' + '\n'.join(revoked.split('\n')[1:])
-        rev_yaml = yaml.safe_load(revoked)
+        rev_yaml = salt.utils.yaml.safe_load(revoked)
         # pylint: disable=unused-variable
         for rev_item, rev_values in six.iteritems(rev_yaml):
             # pylint: enable=unused-variable
@@ -509,7 +508,7 @@ def get_pem_entries(glob_path):
 
     .. code-block:: bash
 
-        salt '*' x509.read_pem_entries "/etc/pki/*.crt"
+        salt '*' x509.get_pem_entries "/etc/pki/*.crt"
     '''
     ret = {}
 
@@ -1052,7 +1051,10 @@ def sign_remote_certificate(argdic, **kwargs):
     if 'minions' in signing_policy:
         if '__pub_id' not in kwargs:
             return 'minion sending this request could not be identified'
-        if not __salt__['match.glob'](
+        matcher = 'match.glob'
+        if '@' in signing_policy['minions']:
+            matcher = 'match.compound'
+        if not __salt__[matcher](
                 signing_policy['minions'], kwargs['__pub_id']):
             return '{0} not permitted to use signing policy {1}'.format(
                 kwargs['__pub_id'], argdic['signing_policy'])
@@ -1312,8 +1314,8 @@ def create_certificate(
         a minion pillar. It should be a yaml formatted list of arguments
         which will override any arguments passed to this function. If the
         ``minions`` key is included in the signing policy, only minions
-        matching that pattern will be permitted to remotely request
-        certificates from that policy.
+        matching that pattern (see match.glob and match.compound) will be
+        permitted to remotely request certificates from that policy.
 
         Example:
 

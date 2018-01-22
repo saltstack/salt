@@ -14,7 +14,6 @@ states themselves.
 # Import python libs
 from __future__ import absolute_import, print_function
 import fnmatch
-import json
 import logging
 import os
 import shutil
@@ -34,12 +33,15 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.jid
+import salt.utils.json
 import salt.utils.platform
 import salt.utils.state
+import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.runners.state import orchestrate as _orchestrate
+from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -1525,6 +1527,54 @@ def show_state_usage(queue=False, **kwargs):
     return ret
 
 
+def show_states(queue=False, **kwargs):
+    '''
+    Returns the list of states that will be applied on highstate.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.show_states
+
+    .. versionadded:: Oxygen
+
+    '''
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        assert False
+        return conflict
+
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    try:
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   initial_pillar=_get_initial_pillar(opts))
+
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
+        __context__['retcode'] = 5
+        raise CommandExecutionError('Pillar failed to render', info=errors)
+
+    st_.push_active()
+    states = OrderedDict()
+    try:
+        result = st_.compile_low_chunks()
+
+        if not isinstance(result, list):
+            raise Exception(result)
+
+        for s in result:
+            states[s['__sls__']] = True
+    finally:
+        st_.pop_active()
+
+    return list(states.keys())
+
+
 def sls_id(id_, mods, test=None, queue=False, **kwargs):
     '''
     Call a single ID from the named module(s) and handle all requisites
@@ -1996,7 +2046,7 @@ def pkg(pkg_path,
     s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.files.fopen(lowstate_json, 'r') as fp_:
-        lowstate = json.load(fp_, object_hook=salt.utils.data.encode_dict)
+        lowstate = salt.utils.json.load(fp_)
     # Check for errors in the lowstate
     for chunk in lowstate:
         if not isinstance(chunk, dict):
@@ -2004,14 +2054,14 @@ def pkg(pkg_path,
     pillar_json = os.path.join(root, 'pillar.json')
     if os.path.isfile(pillar_json):
         with salt.utils.files.fopen(pillar_json, 'r') as fp_:
-            pillar_override = json.load(fp_)
+            pillar_override = salt.utils.json.load(fp_)
     else:
         pillar_override = None
 
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = json.load(fp_, object_hook=salt.utils.data.encode_dict)
+            roster_grains = salt.utils.json.load(fp_, object_hook=salt.utils.data.encode_dict)
 
     if os.path.isfile(roster_grains_json):
         popts['grains'] = roster_grains
@@ -2237,12 +2287,15 @@ def event(tagmatch='*',
 
         if fnmatch.fnmatch(ret['tag'], tagmatch):
             if not quiet:
-                print('{0}\t{1}'.format(
-                    ret['tag'],
-                    json.dumps(
-                        ret['data'],
-                        sort_keys=pretty,
-                        indent=None if not pretty else 4)))
+                salt.utils.stringutils.print_cli(
+                    str('{0}\t{1}').format(  # future lint: blacklisted-function
+                        salt.utils.stringutils.to_str(ret['tag']),
+                        salt.utils.json.dumps(
+                            ret['data'],
+                            sort_keys=pretty,
+                            indent=None if not pretty else 4)
+                    )
+                )
                 sys.stdout.flush()
 
             count -= 1

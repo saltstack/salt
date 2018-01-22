@@ -19,7 +19,7 @@
 Salt Service Discovery Protocol.
 JSON-based service discovery protocol, used by minions to find running Master.
 '''
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import time
 import logging
@@ -27,10 +27,11 @@ import random
 import socket
 from collections import OrderedDict
 
-from salt.utils import json
-json = json.import_json()
-if not hasattr(json, 'dumps'):
-    json = None
+import salt.utils.json
+
+_json = salt.utils.json.import_json()
+if not hasattr(_json, 'dumps'):
+    _json = None
 
 try:
     import asyncio
@@ -80,7 +81,7 @@ class SSDPBase(object):
         Return True if the USSDP dependencies are satisfied.
         :return:
         '''
-        return bool(asyncio and json)
+        return bool(asyncio and _json)
 
     @staticmethod
     def get_self_ip():
@@ -156,7 +157,7 @@ class SSDPFactory(SSDPBase):
                 self.log.debug('Sent successfully')
                 return
             except AttributeError as ex:
-                self.log.debug('Permission error: {0}'.format(ex))
+                self.log.debug('Permission error: %s', ex)
                 time.sleep(slp)
                 tries += 1
                 slp += slp_time()
@@ -174,7 +175,10 @@ class SSDPFactory(SSDPBase):
             try:
                 timestamp = float(message[len(self.signature):])
             except TypeError:
-                self.log.debug('Received invalid timestamp in package from {}'.format("{}:{}".format(*addr)))
+                self.log.debug(
+                    'Received invalid timestamp in package from %s:%s',
+                    *addr
+                )
                 if self.disable_hidden:
                     self._sendto('{0}:E:{1}'.format(self.signature, 'Invalid timestamp'), addr)
                 return
@@ -182,15 +186,21 @@ class SSDPFactory(SSDPBase):
             if datetime.datetime.fromtimestamp(timestamp) < (datetime.datetime.now() - datetime.timedelta(seconds=20)):
                 if self.disable_hidden:
                     self._sendto('{0}:E:{1}'.format(self.signature, 'Timestamp is too old'), addr)
-                self.log.debug('Received outdated package from {}'.format("{}:{}".format(*addr)))
+                self.log.debug('Received outdated package from %s:%s', *addr)
                 return
 
-            self.log.debug('Received "{}" from {}'.format(message, "{}:{}".format(*addr)))
-            self._sendto('{0}:@:{1}'.format(self.signature, json.dumps(self.answer)), addr)
+            self.log.debug('Received "%s" from %s:%s', message, *addr)
+            self._sendto(
+                str('{0}:@:{1}').format(  # future lint: disable=blacklisted-function
+                    self.signature,
+                    salt.utils.json.dumps(self.answer, _json_module=_json)
+                ),
+                addr
+            )
         else:
             if self.disable_hidden:
                 self._sendto('{0}:E:{1}'.format(self.signature, 'Invalid packet signature').encode(), addr)
-            self.log.debug('Received bad signature from {}:{}'.format(*addr))
+            self.log.debug('Received bad signature from %s:%s', *addr)
 
 
 class SSDPDiscoveryServer(SSDPBase):
@@ -294,7 +304,7 @@ class SSDPDiscoveryServer(SSDPBase):
         '''
         listen_ip = self._config.get(self.LISTEN_IP, self.DEFAULTS[self.LISTEN_IP])
         port = self._config.get(self.PORT, self.DEFAULTS[self.PORT])
-        self.log.info('Starting service discovery listener on udp://{0}:{1}'.format(listen_ip, port))
+        self.log.info('Starting service discovery listener on udp://%s:%s', listen_ip, port)
         loop = asyncio.get_event_loop()
         protocol = SSDPFactory(answer=self._config[self.ANSWER])
         if asyncio.ported:
@@ -362,7 +372,10 @@ class SSDPDiscoveryClient(SSDPBase):
             except socket.timeout:
                 break
             except socket.error as err:
-                self.log.error('Error ocurred while discovering masters from the network: {0}'.format(err))
+                self.log.error(
+                    'Error ocurred while discovering masters from the network: %s',
+                    err
+                )
 
     def discover(self):
         '''
@@ -384,14 +397,22 @@ class SSDPDiscoveryClient(SSDPBase):
                 msg = data.decode()
                 if msg.startswith(self.signature):
                     msg = msg.split(self.signature)[-1]
-                    self.log.debug("Service announcement at '{0}'. Response: '{1}'".format("{}:{}".format(*addr), msg))
+                    self.log.debug(
+                        "Service announcement at '%s:%s'. Response: '%s'",
+                        addr[0], addr[1], msg
+                    )
                     if ':E:' in msg:
                         err = msg.split(':E:')[-1]
-                        self.log.error('Error response from the service publisher at {0}: {1}'.format(addr, err))
+                        self.log.error(
+                            'Error response from the service publisher at %s: %s',
+                            addr, err
+                        )
                         if "timestamp" in err:
-                            self.log.error('Publisher sent shifted timestamp from {0}'.format(addr))
+                            self.log.error('Publisher sent shifted timestamp from %s', addr)
                     else:
                         if addr not in masters:
                             masters[addr] = []
-                        masters[addr].append(json.loads(msg.split(':@:')[-1]))
+                        masters[addr].append(
+                            salt.utils.json.loads(msg.split(':@:')[-1], _json_module=_json)
+                        )
         return masters

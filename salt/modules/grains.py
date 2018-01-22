@@ -17,9 +17,7 @@ import random
 import logging
 import operator
 import collections
-import json
 import math
-import yaml
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import Salt libs
@@ -27,8 +25,9 @@ from salt.ext import six
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.platform
-import salt.utils.yamldumper
+import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.ext.six.moves import range
@@ -116,7 +115,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     if ordered is True:
         grains = __grains__
     else:
-        grains = json.loads(json.dumps(__grains__))
+        grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__))
     return salt.utils.data.traverse_dict_and_list(
         grains,
         key,
@@ -273,8 +272,8 @@ def setvals(grains, destructive=False):
     if os.path.isfile(gfn):
         with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
-                grains = yaml.safe_load(fp_.read())
-            except yaml.YAMLError as exc:
+                grains = salt.utils.yaml.safe_load(fp_)
+            except salt.utils.yaml.YAMLError as exc:
                 return 'Unable to read existing grains file: {0}'.format(exc)
         if not isinstance(grains, dict):
             grains = {}
@@ -287,17 +286,16 @@ def setvals(grains, destructive=False):
         else:
             grains[key] = val
             __grains__[key] = val
-    cstr = salt.utils.yamldumper.safe_dump(grains, default_flow_style=False)
     try:
         with salt.utils.files.fopen(gfn, 'w+') as fp_:
-            fp_.write(cstr)
+            salt.utils.yaml.safe_dump(grains, fp_, default_flow_style=False)
     except (IOError, OSError):
         msg = 'Unable to write to grains file at {0}. Check permissions.'
         log.error(msg.format(gfn))
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
-        with salt.utils.files.flopen(fn_, 'w+') as fp_:
-            fp_.write('')
+        with salt.utils.files.flopen(fn_, 'w+'):
+            pass
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))

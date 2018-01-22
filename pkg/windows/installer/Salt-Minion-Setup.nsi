@@ -109,13 +109,19 @@ Var ConfigMinionName
 Var MinionName
 Var MinionName_State
 Var ExistingConfigFound
-Var UseExistingConfig
-Var UseExistingConfig_State
+Var ConfigType
+Var ConfigType_State
+Var CustomConfig
+Var CustomConfig_btn
+Var CustomConfig_State
+Var WarningCustomConfig
 Var WarningExistingConfig
 Var WarningDefaultConfig
 Var StartMinion
 Var StartMinionDelayed
 Var DeleteInstallDir
+Var ConfigWriteMinion
+Var ConfigWriteMaster
 
 
 ###############################################################################
@@ -146,10 +152,12 @@ Function pageMinionConfig
     ${NSD_CreateText} 0 43u 100% 12u $MinionName_State
     Pop $MinionName
 
-    # Use Existing Config Checkbox
-    ${NSD_CreateCheckBox} 0 65u 100% 12u "&Use Existing Config"
-    Pop $UseExistingConfig
-    ${NSD_OnClick} $UseExistingConfig pageMinionConfig_OnClick
+    # Config Drop List
+    ${NSD_CreateDropList} 0 65u 25% 36u ""
+    Pop $ConfigType
+    ${NSD_CB_AddString} $ConfigType "Default Config"
+    ${NSD_CB_AddString} $ConfigType "Custom Config"
+    ${NSD_OnChange} $ConfigType pageMinionConfig_OnChange
 
     # Add Existing Config Warning Label
     ${NSD_CreateLabel} 0 80u 100% 60u "The values above are taken from an \
@@ -164,73 +172,174 @@ Function pageMinionConfig
     SetCtlColors $WarningExistingConfig 0xBB0000 transparent
 
     # Add Default Config Warning Label
-    ${NSD_CreateLabel} 0 80u 100% 60u "Clicking `Install` will remove the \
-        the existing minion config file and remove the minion.d directories. \
-        The values above will be used in the new default config."
+    ${NSD_CreateLabel} 0 80u 100% 60u "Clicking `Install` will backup the \
+        the existing minion config file and minion.d directories. The values \
+        above will be used in the new default config.$\r$\n\
+            $\r$\n\
+            NOTE: If Master IP is set to `salt` and Minion Name is set to \
+            `hostname` no changes will be made."
     Pop $WarningDefaultConfig
     CreateFont $0 "Arial" 10 500 /ITALIC
     SendMessage $WarningDefaultConfig ${WM_SETFONT} $0 1
     SetCtlColors $WarningDefaultConfig 0xBB0000 transparent
 
-    # If no existing config found, disable the checkbox and stuff
-    # Set UseExistingConfig_State to 0
+    # Add Custom Config File Selector and Warning Label
+    ${NSD_CreateText} 26% 65u 64% 12u $CustomConfig_State
+    Pop $CustomConfig
+    ${NSD_CreateButton} 91% 65u 9% 12u "..."
+    Pop $CustomConfig_btn
+    ${NSD_OnClick} $CustomConfig_btn pageCustomConfigBtn_OnClick
+
     ${If} $ExistingConfigFound == 0
-        StrCpy $UseExistingConfig_State 0
-        ShowWindow $UseExistingConfig ${SW_HIDE}
-        ShowWindow $WarningExistingConfig ${SW_HIDE}
+        ${NSD_CreateLabel} 0 80u 100% 60u "Values entered above will be used \
+            in the custom config.$\r$\n\
+            $\r$\n\
+            NOTE: If Master IP is set to `salt` and Minion Name is set to \
+            `hostname` no changes will be made."
+    ${Else}
+        ${NSD_CreateLabel} 0 80u 100% 60u "Clicking `Install` will backup the \
+            the existing minion config file and minion.d directories. The \
+            values above will be used in the custom config.$\r$\n\
+            $\r$\n\
+            NOTE: If Master IP is set to `salt` and Minion Name is set to \
+            `hostname` no changes will be made."
+    ${Endif}
+    Pop $WarningCustomConfig
+    CreateFont $0 "Arial" 10 500 /ITALIC
+    SendMessage $WarningCustomConfig ${WM_SETFONT} $0 1
+    SetCtlColors $WarningCustomConfig 0xBB0000 transparent
+
+    # If existing config found, add the Existing Config option to the Drop List
+    # If not, hide the Default Warning
+    ${If} $ExistingConfigFound == 1
+        ${NSD_CB_AddString} $ConfigType "Existing Config"
+    ${Else}
         ShowWindow $WarningDefaultConfig ${SW_HIDE}
     ${Endif}
 
-    ${NSD_SetState} $UseExistingConfig $UseExistingConfig_State
+    ${NSD_CB_SelectString} $ConfigType $ConfigType_State
+    ${NSD_SetText} $CustomConfig $CustomConfig_State
 
-    Call pageMinionConfig_OnClick
+    Call pageMinionConfig_OnChange
 
     nsDialogs::Show
 
 FunctionEnd
 
 
-Function pageMinionConfig_OnClick
+Function pageMinionConfig_OnChange
 
     # You have to pop the top handle to keep the stack clean
     Pop $R0
 
     # Assign the current checkbox state to the variable
-    ${NSD_GetState} $UseExistingConfig $UseExistingConfig_State
+    ${NSD_GetText} $ConfigType $ConfigType_State
 
-    # Validate the checkboxes
-    ${If} $UseExistingConfig_State == ${BST_CHECKED}
-        # Use Existing Config is checked, show warning
-        ShowWindow $WarningExistingConfig ${SW_SHOW}
-        EnableWindow $MasterHost 0
-        EnableWindow $MinionName 0
-        ${NSD_SetText} $MasterHost $ConfigMasterHost
-        ${NSD_SetText} $MinionName $ConfigMinionName
-        ${If} $ExistingConfigFound == 1
+    # Update Dialog
+    ${Switch} $ConfigType_State
+        ${Case} "Existing Config"
+            # Enable Master/Minion and set values
+            EnableWindow $MasterHost 0
+            EnableWindow $MinionName 0
+            ${NSD_SetText} $MasterHost $ConfigMasterHost
+            ${NSD_SetText} $MinionName $ConfigMinionName
+            # Hide Custom File Picker
+            ShowWindow $CustomConfig ${SW_HIDE}
+            ShowWindow $CustomConfig_btn ${SW_HIDE}
+            # Hide Warnings
             ShowWindow $WarningDefaultConfig ${SW_HIDE}
-        ${Endif}
-    ${Else}
-        # Use Existing Config is not checked, hide the warning
-        ShowWindow $WarningExistingConfig ${SW_HIDE}
-        EnableWindow $MasterHost 1
-        EnableWindow $MinionName 1
-        ${NSD_SetText} $MasterHost $MasterHost_State
-        ${NSD_SetText} $MinionName $MinionName_State
-        ${If} $ExistingConfigFound == 1
-            ShowWindow $WarningDefaultConfig ${SW_SHOW}
-        ${Endif}
+            ShowWindow $WarningCustomConfig ${SW_HIDE}
+            # Show Existing Warning
+            ShowWindow $WarningExistingConfig ${SW_SHOW}
+            ${Break}
+        ${Case} "Custom Config"
+            # Enable Master/Minion and set values
+            EnableWindow $MasterHost 1
+            EnableWindow $MinionName 1
+            ${NSD_SetText} $MasterHost $MasterHost_State
+            ${NSD_SetText} $MinionName $MinionName_State
+            # Show Custom File Picker
+            ShowWindow $CustomConfig ${SW_SHOW}
+            ShowWindow $CustomConfig_btn ${SW_SHOW}
+            # Hide Warnings
+            ShowWindow $WarningDefaultConfig ${SW_HIDE}
+            ShowWindow $WarningExistingConfig ${SW_HIDE}
+            # Show Custom Warning
+            ShowWindow $WarningCustomConfig ${SW_SHOW}
+            ${Break}
+        ${Case} "Default Config"
+            # Enable Master/Minion and set values
+            EnableWindow $MasterHost 1
+            EnableWindow $MinionName 1
+            ${NSD_SetText} $MasterHost $MasterHost_State
+            ${NSD_SetText} $MinionName $MinionName_State
+            # Hide Custom File Picker
+            ShowWindow $CustomConfig ${SW_HIDE}
+            ShowWindow $CustomConfig_btn ${SW_HIDE}
+            # Hide Warnings
+            ShowWindow $WarningExistingConfig ${SW_HIDE}
+            ShowWindow $WarningCustomConfig ${SW_HIDE}
+            # Show Default Warning, if there is an existing config
+            ${If} $ExistingConfigFound == 1
+                ShowWindow $WarningDefaultConfig ${SW_SHOW}
+            ${Endif}
+            ${Break}
+    ${EndSwitch}
+
+FunctionEnd
+
+# File Picker Definitions
+!define OFN_FILEMUSTEXIST 0x00001000
+!define OFN_DONTADDTOREC 0x02000000
+!define OPENFILENAME_SIZE_VERSION_400 76
+!define OPENFILENAME 'i,i,i,i,i,i,i,i,i,i,i,i,i,i,&i2,&i2,i,i,i,i'
+Function pageCustomConfigBtn_OnClick
+
+    Pop $0
+    System::Call '*(&t${NSIS_MAX_STRLEN})i.s'  # Allocate OPENFILENAME.lpstrFile buffer
+    System::Call '*(${OPENFILENAME})i.r0'      # Allocate OPENFILENAME struct
+    System::Call '*$0(${OPENFILENAME})(${OPENFILENAME_SIZE_VERSION_400}, \
+                      $hwndparent, , , , , , sr1, ${NSIS_MAX_STRLEN} , , , , \
+                      t"Select Custom Config File", \
+                      ${OFN_FILEMUSTEXIST} | ${OFN_DONTADDTOREC})'
+
+    # Populate file name field
+    ${NSD_GetText} $CustomConfig $2
+    System::Call "*$1(&t${NSIS_MAX_STRLEN}r2)" ; Set lpstrFile to the old path (if any)
+
+    # Open the dialog
+    System::Call 'COMDLG32::GetOpenFileName(ir0)i.r2'
+
+    # Get file name field
+    ${If} $2 <> 0
+        System::Call "*$1(&t${NSIS_MAX_STRLEN}.r2)"
+        ${NSD_SetText} $CustomConfig $2
     ${EndIf}
+
+    # Free resources
+    System::Free $1
+    System::Free $0
 
 FunctionEnd
 
 
 Function pageMinionConfig_Leave
 
+    # Save the State
     ${NSD_GetText} $MasterHost $MasterHost_State
     ${NSD_GetText} $MinionName $MinionName_State
-    ${NSD_GetState} $UseExistingConfig $UseExistingConfig_State
+    ${NSD_GetText} $ConfigType $ConfigType_State
+    ${NSD_GetText} $CustomConfig $CustomConfig_State
 
-    Call RemoveExistingConfig
+    # Abort if config file not found
+    ${If} $ConfigType_State == "Custom Config"
+        IfFileExists "$CustomConfig_State" continue 0
+            MessageBox MB_OK "File not found: $CustomConfig_State" /SD IDOK
+            Abort
+    ${EndIf}
+
+    continue:
+    Call BackupExistingConfig
 
 FunctionEnd
 
@@ -408,6 +517,14 @@ Function .onInit
 
     Call parseCommandLineSwitches
 
+    # If custom config passed, verify its existence before continuing so we
+    # don't uninstall an existing installation and then fail
+    ${If} $ConfigType_State == "Custom Config"
+        IfFileExists "$CustomConfig_State" customConfigExists 0
+        Abort
+    ${EndIf}
+
+    customConfigExists:
     # Check for existing installation
     ReadRegStr $R0 HKLM \
         "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
@@ -457,21 +574,52 @@ Function .onInit
 
     skipUninstall:
 
-    Call getMinionConfig
+    Call getExistingMinionConfig
+
+    ${If} $ExistingConfigFound == 0
+    ${AndIf} $ConfigType_State == "Existing Config"
+        StrCpy $ConfigType_State "Default Config"
+    ${EndIf}
 
     IfSilent 0 +2
-        Call RemoveExistingConfig
+        Call BackupExistingConfig
 
 FunctionEnd
 
 
-Function RemoveExistingConfig
+# Time Stamp Definition
+!define /date TIME_STAMP "%Y-%m-%d-%H-%M-%S"
+Function BackupExistingConfig
 
-    ${If} $ExistingConfigFound == 1
-    ${AndIf} $UseExistingConfig_State == 0
-        # Wipe out the Existing Config
-        Delete "$INSTDIR\conf\minion"
-        RMDir /r "$INSTDIR\conf\minion.d"
+    ${If} $ExistingConfigFound == 1                     # If existing config found
+    ${AndIfNot} $ConfigType_State == "Existing Config"  # If not using Existing Config
+
+        # Backup the minion config
+        Rename "$INSTDIR\conf\minion" "$INSTDIR\conf\minion-${TIME_STAMP}.bak"
+        IfFileExists "$INSTDIR\conf\minion.d" 0 +2
+            Rename "$INSTDIR\conf\minion.d" "$INSTDIR\conf\minion.d-${TIME_STAMP}.bak"
+
+    ${EndIf}
+
+    # By this point there should be no existing config
+    # It was either backed up or wasn't there to begin with
+    ${If} $ConfigType_State == "Custom Config"  # If we're using Custom Config
+    ${AndIfNot} $CustomConfig_State == ""       # If a custom config is passed
+
+        # Check for a file name
+        # Named file should be in the same directory as the installer
+        CreateDirectory "$INSTDIR\conf"
+        IfFileExists "$EXEDIR\$CustomConfig_State" 0 checkFullPath
+            CopyFiles /SILENT /FILESONLY "$EXEDIR\$CustomConfig_State" "$INSTDIR\conf\minion"
+            goto finished
+
+        # Maybe it was a full path to a file
+        checkFullPath:
+        IfFileExists "$CustomConfig_State" 0 finished
+            CopyFiles /SILENT /FILESONLY "$CustomConfig_State" "$INSTDIR\conf\minion"
+
+        finished:
+
     ${EndIf}
 
 FunctionEnd
@@ -517,7 +665,7 @@ Section -Post
     nsExec::Exec "nssm.exe set salt-minion AppStopMethodConsole 24000"
     nsExec::Exec "nssm.exe set salt-minion AppStopMethodWindow 2000"
 
-    ${If} $UseExistingConfig_State == 0
+    ${IfNot} $ConfigType_State == "Existing Config"  # If not using Existing Config
         Call updateMinionConfig
     ${EndIf}
 
@@ -803,7 +951,7 @@ FunctionEnd
 #   Push "this is some string"
 #   Push "some"
 #   Call StrStr
-#   Pop $0 ; "some string"
+#   Pop $0 # "some string"
 #------------------------------------------------------------------------------
 !macro StrStr un
 Function ${un}StrStr
@@ -1029,7 +1177,7 @@ FunctionEnd
 ###############################################################################
 # Specialty Functions
 ###############################################################################
-Function getMinionConfig
+Function getExistingMinionConfig
 
     # Set Config Found Default Value
     StrCpy $ExistingConfigFound 0
@@ -1050,30 +1198,30 @@ Function getMinionConfig
     FileOpen $0 "$INSTDIR\conf\minion" r
 
     confLoop:
-        ClearErrors                                             # Clear Errors
-        FileRead $0 $1                                          # Read the next line
-        IfErrors EndOfFile                                      # Error is probably EOF
-        ${StrLoc} $2 $1 "master:" ">"                           # Find `master:` starting at the beginning
-        ${If} $2 == 0                                           # If it found it in the first position, then it is defined
-            ${StrStrAdv} $2 $1 "master: " ">" ">" "0" "0" "0"   # Read everything after `master: `
-            ${Trim} $2 $2                                       # Trim white space
-            ${If} $2 == ""                                      # If it's empty, it's probably a list
+        ClearErrors                                             # clear Errors
+        FileRead $0 $1                                          # read the next line
+        IfErrors EndOfFile                                      # error is probably EOF
+        ${StrLoc} $2 $1 "master:" ">"                           # find `master:` starting at the beginning
+        ${If} $2 == 0                                           # if it found it in the first position, then it is defined
+            ${StrStrAdv} $2 $1 "master: " ">" ">" "0" "0" "0"   # read everything after `master: `
+            ${Trim} $2 $2                                       # trim white space
+            ${If} $2 == ""                                      # if it's empty, it's probably a list of masters
                 masterLoop:
-                ClearErrors                                     # Clear Errors
-                FileRead $0 $1                                  # Read the next line
-                IfErrors EndOfFile                              # Error is probably EOF
-                ${StrStrAdv} $2 $1 "- " ">" ">" "0" "0" "0"     # Read everything after `- `
-                ${Trim} $2 $2                                   # Trim white space
-                ${IfNot} $2 == ""                               # If it's not empty, we found something
-                    ${If} $ConfigMasterHost == ""               # Is the default `salt` there
-                        StrCpy $ConfigMasterHost $2             # If so, make the first item the new entry
+                ClearErrors                                     # clear Errors
+                FileRead $0 $1                                  # read the next line
+                IfErrors EndOfFile                              # error is probably EOF
+                ${StrStrAdv} $2 $1 "- " ">" ">" "0" "0" "0"     # read everything after `- `
+                ${Trim} $2 $2                                   # trim white space
+                ${IfNot} $2 == ""                               # if the line is not empty, we found something
+                    ${If} $ConfigMasterHost == ""               # if the config setting is empty
+                        StrCpy $ConfigMasterHost $2             # make the first item the new entry
                     ${Else}
                         StrCpy $ConfigMasterHost "$ConfigMasterHost,$2"  # Append the new master, comma separated
                     ${EndIf}
-                    Goto masterLoop                             # Check the next one
+                    Goto masterLoop                             # check the next one
                 ${EndIf}
             ${Else}
-                StrCpy $ConfigMasterHost $2                     # A single master entry
+                StrCpy $ConfigMasterHost $2                     # a single master entry
             ${EndIf}
         ${EndIf}
 
@@ -1102,59 +1250,126 @@ Function getMinionConfig
 FunctionEnd
 
 
+Var cfg_line
+Var chk_line
+Var lst_check
 Function updateMinionConfig
 
     ClearErrors
-    FileOpen $0 "$INSTDIR\conf\minion" "r"               # open target file for reading
-    GetTempFileName $R0                                  # get new temp file name
-    FileOpen $1 $R0 "w"                                  # open temp file for writing
+    FileOpen $0 "$INSTDIR\conf\minion" "r"              # open target file for reading
+    GetTempFileName $R0                                 # get new temp file name
+    FileOpen $1 $R0 "w"                                 # open temp file for writing
 
-    loop:                                                # loop through each line
-    FileRead $0 $2                                       # read line from target file
-    IfErrors done                                        # end if errors are encountered (end of line)
+    StrCpy $ConfigWriteMaster 1                         # write the master config value
+    StrCpy $ConfigWriteMinion 1                         # write the minion config value
 
-    ${If} $MasterHost_State != ""                        # if master is empty
-    ${AndIf} $MasterHost_State != "salt"                 # and if master is not 'salt'
-        ${StrLoc} $3 $2 "master:" ">"                    # where is 'master:' in this line
-        ${If} $3 == 0                                    # is it in the first...
-        ${OrIf} $3 == 1                                  # or second position (account for comments)
+    loop:                                               # loop through each line
+        FileRead $0 $cfg_line                           # read line from target file
+        IfErrors done                                   # end if errors are encountered (end of line)
 
-            ${Explode} $9 "," $MasterHost_state          # Split the hostname on commas, $9 is the number of items found
-            ${If} $9 == 1                                # 1 means only a single master was passed
-                StrCpy $2 "master: $MasterHost_State$\r$\n"  # write the master
-            ${Else}                                      # Make a multi-master entry
-                StrCpy $2 "master:"                      # Make the first line "master:"
+        loop_after_read:
+        StrCpy $lst_check 0                             # list check not performed
 
-                loop_explode:                            # Start a loop to go through the list in the config
-                pop $8                                   # Pop the next item off the stack
-                ${Trim} $8 $8                            # Trim any whitespace
-                StrCpy $2 "$2$\r$\n  - $8"               # Add it to the master variable ($2)
-                IntOp $9 $9 - 1                          # Decrement the list count
-                ${If} $9 >= 1                            # If it's not 0
-                    Goto loop_explode                    # Do it again
-                ${EndIf}                                 # close if statement
-            ${EndIf}                                     # close if statement
-        ${EndIf}                                         # close if statement
-    ${EndIf}                                             # close if statement
+        ${If} $MasterHost_State == ""                   # if master is empty
+        ${OrIf} $MasterHost_State == "salt"             # or if master is 'salt'
+            StrCpy $ConfigWriteMaster 0                 # no need to write master config
+        ${EndIf}                                        # close if statement
+        ${If} $MinionName_State == ""                   # if minion is empty
+        ${OrIf} $MinionName_State == "hostname"         # and if minion is not 'hostname'
+            StrCpy $ConfigWriteMinion 0                 # no need to write minion config
+        ${EndIf}                                        # close if statement
 
-    ${If} $MinionName_State != ""                        # if minion is empty
-    ${AndIf} $MinionName_State != "hostname"             # and if minion is not 'hostname'
-        ${StrLoc} $3 $2 "id:" ">"                        # where is 'id:' in this line
-        ${If} $3 == 0                                    # is it in the first...
-        ${OrIf} $3 == 1                                  # or the second position (account for comments)
-            StrCpy $2 "id: $MinionName_State$\r$\n"      # change line
-        ${EndIf}                                         # close if statement
-    ${EndIf}                                             # close if statement
+        ${If} $ConfigWriteMaster == 1                   # if we need to write master config
 
-    FileWrite $1 $2                                      # write changed or unchanged line to temp file
-    Goto loop
+            ${StrLoc} $3 $cfg_line "master:" ">"        # where is 'master:' in this line
+            ${If} $3 == 0                               # is it in the first...
+            ${OrIf} $3 == 1                             # or second position (account for comments)
+
+                ${Explode} $9 "," $MasterHost_state     # Split the hostname on commas, $9 is the number of items found
+                ${If} $9 == 1                           # 1 means only a single master was passed
+                    StrCpy $cfg_line "master: $MasterHost_State$\r$\n"  # write the master
+                ${Else}                                 # make a multi-master entry
+                    StrCpy $cfg_line "master:"          # make the first line "master:"
+
+                    loop_explode:                       # start a loop to go through the list in the config
+                    pop $8                              # pop the next item off the stack
+                    ${Trim} $8 $8                       # trim any whitespace
+                    StrCpy $cfg_line "$cfg_line$\r$\n  - $8"  # add it to the master variable ($2)
+                    IntOp $9 $9 - 1                     # decrement the list count
+                    ${If} $9 >= 1                       # if it's not 0
+                        Goto loop_explode               # do it again
+                    ${EndIf}                            # close if statement
+                    StrCpy $cfg_line "$cfg_line$\r$\n"  # Make sure there's a new line at the end
+
+                    # Remove remaining items in list
+                    ${While} $lst_check == 0            # while list item found
+                        FileRead $0 $chk_line           # read line from target file
+                        IfErrors done                   # end if errors are encountered (end of line)
+                        ${StrLoc} $3 $chk_line "  - " ">"  # where is 'master:' in this line
+                        ${If} $3 == ""                  # is it in the first...
+                            StrCpy $lst_check 1         # list check performed and finished
+                        ${EndIf}
+                    ${EndWhile}
+
+                ${EndIf}                                # close if statement
+
+                StrCpy $ConfigWriteMaster 0             # master value written to config
+
+            ${EndIf}                                    # close if statement
+        ${EndIf}                                        # close if statement
+
+        ${If} $ConfigWriteMinion == 1                   # if we need to write minion config
+            ${StrLoc} $3 $cfg_line "id:" ">"            # where is 'id:' in this line
+            ${If} $3 == 0                               # is it in the first...
+            ${OrIf} $3 == 1                             # or the second position (account for comments)
+                StrCpy $cfg_line "id: $MinionName_State$\r$\n"  # write the minion config setting
+                StrCpy $ConfigWriteMinion 0             # minion value written to config
+            ${EndIf}                                    # close if statement
+        ${EndIf}                                        # close if statement
+
+        FileWrite $1 $cfg_line                          # write changed or unchanged line to temp file
+
+    ${If} $lst_check == 1                               # master not written to the config
+        StrCpy $cfg_line $chk_line
+        Goto loop_after_read                            # A loop was performed, skip the next read
+    ${EndIf}                                            # close if statement
+
+    Goto loop                                           # check the next line in the config file
 
     done:
-    FileClose $0                                         # close target file
-    FileClose $1                                         # close temp file
-    Delete "$INSTDIR\conf\minion"                        # delete target file
-    CopyFiles /SILENT $R0 "$INSTDIR\conf\minion"         # copy temp file to target file
-    Delete $R0                                           # delete temp file
+    ClearErrors
+    # Does master config still need to be written
+    ${If} $ConfigWriteMaster == 1                       # master not written to the config
+
+        ${Explode} $9 "," $MasterHost_state             # split the hostname on commas, $9 is the number of items found
+        ${If} $9 == 1                                   # 1 means only a single master was passed
+            StrCpy $cfg_line "master: $MasterHost_State"  # write the master
+        ${Else}                                         # make a multi-master entry
+            StrCpy $cfg_line "master:"                  # make the first line "master:"
+
+            loop_explode_2:                             # start a loop to go through the list in the config
+            pop $8                                      # pop the next item off the stack
+            ${Trim} $8 $8                               # trim any whitespace
+            StrCpy $cfg_line "$cfg_line$\r$\n  - $8"    # add it to the master variable ($2)
+            IntOp $9 $9 - 1                             # decrement the list count
+            ${If} $9 >= 1                               # if it's not 0
+                Goto loop_explode_2                     # do it again
+            ${EndIf}                                    # close if statement
+        ${EndIf}                                        # close if statement
+        FileWrite $1 $cfg_line                          # write changed or unchanged line to temp file
+
+    ${EndIf}                                            # close if statement
+
+    ${If} $ConfigWriteMinion == 1                       # minion ID not written to the config
+        StrCpy $cfg_line "$\r$\nid: $MinionName_State"  # write the minion config setting
+        FileWrite $1 $cfg_line                          # write changed or unchanged line to temp file
+    ${EndIf}                                            # close if statement
+
+    FileClose $0                                        # close target file
+    FileClose $1                                        # close temp file
+    Delete "$INSTDIR\conf\minion"                       # delete target file
+    CopyFiles /SILENT $R0 "$INSTDIR\conf\minion"        # copy temp file to target file
+    Delete $R0                                          # delete temp file
 
 FunctionEnd
 
@@ -1181,26 +1396,40 @@ Function parseCommandLineSwitches
         FileWrite $0 "Help for Salt Minion installation$\n"
         FileWrite $0 "===============================================================================$\n"
         FileWrite $0 "$\n"
-        FileWrite $0 "/minion-name=$\t$\tA string value to set the minion name. Default is$\n"
-        FileWrite $0 "$\t$\t$\t'hostname'. Setting the minion name will replace$\n"
-        FileWrite $0 "$\t$\t$\texisting config with a default config. Cannot be$\n"
-        FileWrite $0 "$\t$\t$\tused in conjunction with /use-existing-config=1$\n"
+        FileWrite $0 "/minion-name=$\t$\tA string value to set the minion name. Default value is$\n"
+        FileWrite $0 "$\t$\t$\t'hostname'. Setting the minion name causes the installer$\n"
+        FileWrite $0 "$\t$\t$\tto use the default config or a custom config if defined$\n"
         FileWrite $0 "$\n"
-        FileWrite $0 "/master=$\t$\tA string value to set the IP address or hostname of$\n"
-        FileWrite $0 "$\t$\t$\tthe master. Default value is 'salt'. You may pass a$\n"
-        FileWrite $0 "$\t$\t$\tsingle master, or a comma separated list of masters.$\n"
-        FileWrite $0 "$\t$\t$\tSetting the master will replace existing config with$\n"
-        FileWrite $0 "$\t$\t$\ta default config. Cannot be used in conjunction with$\n"
-        FileWrite $0 "$\t$\t$\t/use-existing-config=1$\n"
+        FileWrite $0 "/master=$\t$\tA string value to set the IP address or hostname of the$\n"
+        FileWrite $0 "$\t$\t$\tmaster. Default value is 'salt'. You may pass a single$\n"
+        FileWrite $0 "$\t$\t$\tmaster or a comma-separated list of masters. Setting$\n"
+        FileWrite $0 "$\t$\t$\tthe master will cause the installer to use the default$\n"
+        FileWrite $0 "$\t$\t$\tconfig or a custom config if defined$\n"
         FileWrite $0 "$\n"
-        FileWrite $0 "/start-minion=$\t$\t1 will start the service, 0 will not. Default is 1$\n"
+        FileWrite $0 "/start-minion=$\t$\t1 will start the minion service, 0 will not.$\n"
+        FileWrite $0 "$\t$\t$\tDefault is 1$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "/start-minion-delayed$\tSet the minion start type to 'Automatic (Delayed Start)'$\n"
         FileWrite $0 "$\n"
-        FileWrite $0 "/use-existing-config=$\t1 will use the existing config if present, 0 will$\n"
-        FileWrite $0 "$\t$\t$\treplace existing config with a default config. Default$\n"
-        FileWrite $0 "$\t$\t$\tis 1. If this is set to 1, values passed in$\n"
-        FileWrite $0 "$\t$\t$\t/minion-name and /master will be ignored$\n"
+        FileWrite $0 "/default-config$\t$\tOverwrite the existing config if present with the$\n"
+        FileWrite $0 "$\t$\t$\tdefault config for salt. Default is to use the existing$\n"
+        FileWrite $0 "$\t$\t$\tconfig if present. If /master and/or /minion-name is$\n"
+        FileWrite $0 "$\t$\t$\tpassed, those values will be used to update the new$\n"
+        FileWrite $0 "$\t$\t$\tdefault config$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "$\t$\t$\tAny existing config will be backed up by appending$\n"
+        FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes\n"
+        FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "/custom-config=$\t$\tA string value specifying the name of a custom config$\n"
+        FileWrite $0 "$\t$\t$\tfile in the same path as the installer or the full path$\n"
+        FileWrite $0 "$\t$\t$\tto a custom config file. If /master and/or /minion-name$\n"
+        FileWrite $0 "$\t$\t$\tis passed, those values will be used to update the new$\n"
+        FileWrite $0 "$\t$\t$\tcustom config$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "$\t$\t$\tAny existing config will be backed up by appending$\n"
+        FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes\n"
+        FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "/S$\t$\t$\tInstall Salt silently$\n"
         FileWrite $0 "$\n"
@@ -1215,15 +1444,23 @@ Function parseCommandLineSwitches
         FileWrite $0 "${OutFile} /S /minion-name=myminion /master=master.mydomain.com /start-minion-delayed$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "===============================================================================$\n"
-        FileWrite $0 "Press Enter to continue..."
+        FileWrite $0 "$\n"
         System::Free $0
         System::Free $1
         System::Call 'kernel32::FreeConsole()'
+
+        # Give the user back the prompt
+        !define VK_RETURN 0x0D ; Enter Key
+        !define KEYEVENTF_EXTENDEDKEY 0x0001
+        !define KEYEVENTF_KEYUP 0x0002
+        System::Call "user32::keybd_event(i${VK_RETURN}, i0x45, i${KEYEVENTF_EXTENDEDKEY}|0, i0)"
+        System::Call "user32::keybd_event(i${VK_RETURN}, i0x45, i${KEYEVENTF_EXTENDEDKEY}|${KEYEVENTF_KEYUP}, i0)"
         Abort
+
     display_help_not_found:
 
     # Set default value for Use Existing Config
-    StrCpy $UseExistingConfig_State 1
+    StrCpy $ConfigType_State "Existing Config"
 
     # Check for start-minion switches
     # /start-service is to be deprecated, so we must check for both
@@ -1254,7 +1491,7 @@ Function parseCommandLineSwitches
     ${GetOptions} $R0 "/master=" $R1
     ${IfNot} $R1 == ""
         StrCpy $MasterHost_State $R1
-        StrCpy $UseExistingConfig_State 0
+        StrCpy $ConfigType_State "Default Config"
     ${ElseIf} $MasterHost_State == ""
         StrCpy $MasterHost_State "salt"
     ${EndIf}
@@ -1264,17 +1501,26 @@ Function parseCommandLineSwitches
     ${GetOptions} $R0 "/minion-name=" $R1
     ${IfNot} $R1 == ""
         StrCpy $MinionName_State $R1
-        StrCpy $UseExistingConfig_State 0
+        StrCpy $ConfigType_State "Default Config"
     ${ElseIf} $MinionName_State == ""
         StrCpy $MinionName_State "hostname"
     ${EndIf}
 
-    # Use Existing Config
-    # Overrides above settings with user passed settings
-    ${GetOptions} $R0 "/use-existing-config=" $R1
+    # Use Default Config
+    ${GetOptions} $R0 "/default-config" $R1
+    IfErrors default_config_not_found
+        StrCpy $ConfigType_State "Default Config"
+    default_config_not_found:
+
+    # Use Custom Config
+    # Set default value for Use Custom Config
+    StrCpy $CustomConfig_State ""
+    # Existing config will get a `.bak` extension
+    ${GetOptions} $R0 "/custom-config=" $R1
     ${IfNot} $R1 == ""
-        # Use Existing Config was passed something, set it
-        StrCpy $UseExistingConfig_State $R1
+        # Custom Config was passed something, set it
+        StrCpy $CustomConfig_State $R1
+        StrCpy $ConfigType_State "Custom Config"
     ${EndIf}
 
 FunctionEnd

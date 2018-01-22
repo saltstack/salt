@@ -11,7 +11,7 @@ as those returned here
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import socket
 import sys
@@ -210,7 +210,7 @@ def _linux_gpu_data():
                 cur_dev[key.strip()] = val.strip()
             else:
                 error = True
-                log.debug('Unexpected lspci output: \'{0}\''.format(line))
+                log.debug('Unexpected lspci output: \'%s\'', line)
 
         if error:
             log.warning(
@@ -811,11 +811,13 @@ def _virtual(osdata):
         if os.path.isfile('/proc/1/cgroup'):
             try:
                 with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
-                    if ':/lxc/' in fhr.read():
-                        grains['virtual_subtype'] = 'LXC'
-                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
                     fhr_contents = fhr.read()
-                    if ':/docker/' in fhr_contents or ':/system.slice/docker' in fhr_contents:
+                if ':/lxc/' in fhr_contents:
+                    grains['virtual_subtype'] = 'LXC'
+                else:
+                    if any(x in fhr_contents
+                           for x in (':/system.slice/docker', ':/docker/',
+                                     ':/docker-ce/')):
                         grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
@@ -968,9 +970,9 @@ def _virtual(osdata):
 
     for command in failed_commands:
         log.info(
-            "Although '{0}' was found in path, the current user "
+            "Although '%s' was found in path, the current user "
             'cannot execute it. Grains output might not be '
-            'accurate.'.format(command)
+            'accurate.', command
         )
     return grains
 
@@ -995,6 +997,8 @@ def _ps(osdata):
         )
     elif osdata['os_family'] == 'AIX':
         grains['ps'] = '/usr/bin/ps auxww'
+    elif osdata['os_family'] == 'NILinuxRT':
+        grains['ps'] = 'ps -o user,pid,ppid,tty,time,comm'
     else:
         grains['ps'] = 'ps -efHww'
     return grains
@@ -1021,7 +1025,7 @@ def _clean_value(key, val):
                 return val
             except ValueError:
                 continue
-        log.trace('HW {0} value {1} is an invalid UUID'.format(key, val.replace('\n', ' ')))
+        log.trace('HW %s value %s is an invalid UUID', key, val.replace('\n', ' '))
         return None
     elif re.search('serial|part|version', key):
         # 'To be filled by O.E.M.
@@ -1112,7 +1116,7 @@ def _windows_platform_data():
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
-            service_pack = ''.join(['SP', str(info['ServicePackMajor'])])
+            service_pack = ''.join(['SP', six.text_type(info['ServicePackMajor'])])
 
         grains = {
             'kernelrelease': _clean_value('kernelrelease', osinfo.Version),
@@ -1450,7 +1454,7 @@ def os_data():
                             "Unable to fetch data from /proc/1/cmdline"
                         )
                     if init_bin is not None and init_bin.endswith('bin/init'):
-                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
+                        supported_inits = (six.b(str('upstart')), six.b(str('sysvinit')), six.b(str('systemd')))  # future lint: disable=blacklisted-function
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
@@ -1460,7 +1464,7 @@ def os_data():
                         try:
                             with salt.utils.files.fopen(init_bin, 'rb') as fp_:
                                 buf = True
-                                edge = six.b('')
+                                edge = six.b(str())  # future lint: disable=blacklisted-function
                                 buf = fp_.read(buf_size).lower()
                                 while buf:
                                     buf = edge + buf
@@ -1469,14 +1473,14 @@ def os_data():
                                             if six.PY3:
                                                 item = item.decode('utf-8')
                                             grains['init'] = item
-                                            buf = six.b('')
+                                            buf = six.b(str())  # future lint: disable=blacklisted-function
                                             break
                                     edge = buf[-edge_len:]
                                     buf = fp_.read(buf_size).lower()
                         except (IOError, OSError) as exc:
                             log.error(
-                                'Unable to read from init_bin ({0}): {1}'
-                                .format(init_bin, exc)
+                                'Unable to read from init_bin (%s): %s',
+                                init_bin, exc
                             )
                     elif salt.utils.path.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
@@ -1487,8 +1491,8 @@ def os_data():
                         grains['init'] = 'runit'
                     else:
                         log.info(
-                            'Could not determine init system from command line: ({0})'
-                            .format(' '.join(init_cmdline))
+                            'Could not determine init system from command line: (%s)',
+                            ' '.join(init_cmdline)
                         )
 
         # Add lsb grains on any distro with lsb-release. Note that this import
@@ -1939,8 +1943,12 @@ def ip_fqdn():
             except socket.error:
                 timediff = datetime.datetime.utcnow() - start_time
                 if timediff.seconds > 5 and __opts__['__role'] == 'master':
-                    log.warning('Unable to find IPv{0} record for "{1}" causing a {2} second timeout when rendering grains. '
-                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn, timediff))
+                    log.warning(
+                        'Unable to find IPv%s record for "%s" causing a %s '
+                        'second timeout when rendering grains. Set the dns or '
+                        '/etc/hosts for IPv%s to clear this.',
+                        ipv_num, _fqdn, timediff, ipv_num
+                    )
                 ret[key] = []
 
     return ret
@@ -2054,7 +2062,7 @@ def dns():
     for key in ('nameservers', 'ip4_nameservers', 'ip6_nameservers',
                 'sortlist'):
         if key in resolv:
-            resolv[key] = [str(i) for i in resolv[key]]
+            resolv[key] = [six.text_type(i) for i in resolv[key]]
 
     return {'dns': resolv} if resolv else {}
 
@@ -2577,7 +2585,7 @@ def _windows_wwns():
     '''
     Return Fibre Channel port WWNs from a Windows host.
     '''
-    ps_cmd = r'Get-WmiObject -class MSFC_FibrePortHBAAttributes -namespace "root\WMI" | Select -Expandproperty Attributes | %{($_.PortWWN | % {"{0:x2}" -f $_}) -join ""}'
+    ps_cmd = r'Get-WmiObject -ErrorAction Stop -class MSFC_FibrePortHBAAttributes -namespace "root\WMI" | Select -Expandproperty Attributes | %{($_.PortWWN | % {"{0:x2}" -f $_}) -join ""}'
 
     ret = []
 

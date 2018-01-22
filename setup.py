@@ -145,12 +145,15 @@ def _parse_requirements_file(requirements_file):
             if IS_WINDOWS_PLATFORM:
                 if 'libcloud' in line:
                     continue
-                if 'pycrypto' in line.lower() and not IS_PY3:
-                    # On Python 2 in Windows we install PyCrypto using python wheels
-                    continue
                 if 'm2crypto' in line.lower() and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
                     # In Windows, we're installing M2CryptoWin{32,64} which comes
                     # compiled
+                    continue
+                if 'pywin32' in line.lower():
+                    # In Windows, we're installing PyWin32 from a whl file
+                    continue
+                if 'pypiwin32' in line.lower():
+                    # In Windows, we're installing PyWin32 from a whl file
                     continue
             if IS_PY3 and 'futures' in line.lower():
                 # Python 3 already has futures, installing it will only break
@@ -321,17 +324,10 @@ if WITH_SETUPTOOLS:
                     self.run_command('install-m2crypto-windows')
                     self.distribution.salt_installing_m2crypto_windows = None
 
-                if not IS_PY3:
-
-                    # Install PyCrypto
-                    self.distribution.salt_installing_pycrypto_windows = True
-                    self.run_command('install-pycrypto-windows')
-                    self.distribution.salt_installing_pycrypto_windows = None
-
-                    # Install PyYAML
-                    self.distribution.salt_installing_pyyaml_windows = True
-                    self.run_command('install-pyyaml-windows')
-                    self.distribution.salt_installing_pyyaml_windows = None
+                # Install PyWin32
+                self.distribution.salt_installing_pywin32_windows = True
+                self.run_command('install-pywin32-windows')
+                self.distribution.salt_installing_pywin32_windows = None
 
                 # Download the required DLLs
                 self.distribution.salt_download_windows_dlls = True
@@ -349,6 +345,56 @@ if WITH_SETUPTOOLS:
 
             # Resume normal execution
             develop.run(self)
+
+
+class InstallPyWin32Wheel(Command):
+
+    description = 'Install PyWin32 on Windows'
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        if getattr(self.distribution, 'salt_installing_pywin32_windows', None) is None:
+            print('This command is not meant to be called on it\'s own')
+            exit(1)
+        import platform
+        # Detect if already installed, any version will work
+        from pip.utils import get_installed_version
+        if get_installed_version('pywin32') is not None:
+            print('PyWin32 already installed')
+            return
+        if get_installed_version('pypiwin32') is not None:
+            print('PyWin32 already installed')
+            return
+        # Install PyWin32 from Salt repo
+        from pip.utils import call_subprocess
+        from pip.utils.logging import indent_log
+        platform_bits, _ = platform.architecture()
+        call_arguments = ['pip', 'install', 'wheel']
+        if platform_bits == '64bit':
+            if IS_PY3:
+                call_arguments.append(
+                    'https://repo.saltstack.com/windows/dependencies/64/pywin32-221-cp35-cp35m-win_amd64.whl'
+                )
+            else:
+                call_arguments.append(
+                    'https://repo.saltstack.com/windows/dependencies/64/pywin32-221-cp27-cp27m-win_amd64.whl'
+                )
+        else:
+            if IS_PY3:
+                call_arguments.append(
+                    'https://repo.saltstack.com/windows/dependencies/32/pywin32-221-cp35-cp35m-win32.whl'
+                )
+            else:
+                call_arguments.append(
+                    'https://repo.saltstack.com/windows/dependencies/32/pywin32-221-cp27-cp27m-win32.whl'
+                )
+        with indent_log():
+            call_subprocess(call_arguments)
 
 
 class InstallM2CryptoWindows(Command):
@@ -375,37 +421,6 @@ class InstallM2CryptoWindows(Command):
             )
 
 
-class InstallPyCryptoWindowsWheel(Command):
-
-    description = 'Install PyCrypto on Windows'
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        if getattr(self.distribution, 'salt_installing_pycrypto_windows', None) is None:
-            print('This command is not meant to be called on it\'s own')
-            exit(1)
-        import platform
-        from pip.utils import call_subprocess
-        from pip.utils.logging import indent_log
-        platform_bits, _ = platform.architecture()
-        call_arguments = ['pip', 'install', 'wheel']
-        if platform_bits == '64bit':
-            call_arguments.append(
-                'https://repo.saltstack.com/windows/dependencies/64/pycrypto-2.6.1-cp27-none-win_amd64.whl'
-            )
-        else:
-            call_arguments.append(
-                'https://repo.saltstack.com/windows/dependencies/32/pycrypto-2.6.1-cp27-none-win32.whl'
-            )
-        with indent_log():
-            call_subprocess(call_arguments)
-
-
 def uri_to_resource(resource_file):
     # ## Returns the URI for a resource
     # The basic case is that the resource is on saltstack.com
@@ -426,37 +441,6 @@ def uri_to_resource(resource_file):
         # if file has zero size, return the basic case
         return salt_uri
     return cached_resource
-
-
-class InstallCompiledPyYaml(Command):
-
-    description = 'Install PyYAML on Windows'
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        if getattr(self.distribution, 'salt_installing_pyyaml_windows', None) is None:
-            print('This command is not meant to be called on it\'s own')
-            exit(1)
-        import platform
-        from pip.utils import call_subprocess
-        from pip.utils.logging import indent_log
-        platform_bits, _ = platform.architecture()
-        call_arguments = ['easy_install', '-Z']
-        if platform_bits == '64bit':
-            call_arguments.append(
-                uri_to_resource('64/PyYAML-3.11.win-amd64-py2.7.exe')
-            )
-        else:
-            call_arguments.append(
-                uri_to_resource('32/PyYAML-3.11.win32-py2.7.exe')
-            )
-        with indent_log():
-            call_subprocess(call_arguments)
 
 
 class DownloadWindowsDlls(Command):
@@ -776,16 +760,10 @@ class Install(install):
                 self.run_command('install-m2crypto-windows')
                 self.distribution.salt_installing_m2crypto_windows = None
 
-            if not IS_PY3:
-                # Install PyCrypto
-                self.distribution.salt_installing_pycrypto_windows = True
-                self.run_command('install-pycrypto-windows')
-                self.distribution.salt_installing_pycrypto_windows = None
-
-                # Install PyYAML
-                self.distribution.salt_installing_pyyaml_windows = True
-                self.run_command('install-pyyaml-windows')
-                self.distribution.salt_installing_pyyaml_windows = None
+            # Install PyWin32
+            self.distribution.salt_installing_pywin32_windows = True
+            self.run_command('install-pywin32-windows')
+            self.distribution.salt_installing_pywin32_windows = None
 
             # Download the required DLLs
             self.distribution.salt_download_windows_dlls = True
@@ -928,12 +906,8 @@ class SaltDistribution(distutils.dist.Distribution):
             self.cmdclass.update({'sdist': CloudSdist,
                                   'install_lib': InstallLib})
         if IS_WINDOWS_PLATFORM:
-            if IS_PY3:
-                self.cmdclass.update({'download-windows-dlls': DownloadWindowsDlls})
-            else:
-                self.cmdclass.update({'install-pycrypto-windows': InstallPyCryptoWindowsWheel,
-                                      'install-pyyaml-windows': InstallCompiledPyYaml,
-                                      'download-windows-dlls': DownloadWindowsDlls})
+            self.cmdclass.update({'download-windows-dlls': DownloadWindowsDlls})
+            self.cmdclass.update({'install-pywin32-windows': InstallPyWin32Wheel})
             if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
                 self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
 
@@ -1060,7 +1034,7 @@ class SaltDistribution(distutils.dist.Distribution):
         install_requires = _parse_requirements_file(SALT_REQS)
 
         if IS_WINDOWS_PLATFORM:
-            install_requires += _parse_requirements_file(SALT_WINDOWS_REQS)
+            return _parse_requirements_file(SALT_WINDOWS_REQS)
 
         if self.salt_transport == 'zeromq':
             install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)

@@ -106,3 +106,6 @@ cmd_blacklist_glob:
 
 autosign_grains:
   - test_grain
+
+# disable discovery for test suite saltstack/salt-jenkins#683
+discovery: false

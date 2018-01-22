@@ -19,7 +19,6 @@ except ImportError:
     pass
 
 # Import 3rd-party libs
-import yaml
 try:
     import git  # pylint: disable=unused-import
     HAS_GITPYTHON = True
@@ -39,6 +38,7 @@ import salt.fileserver.gitfs as gitfs
 import salt.utils.gitfs
 import salt.utils.platform
 import salt.utils.win_functions
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                     'cachedir': self.tmp_cachedir,
                     'sock_dir': TMP_SOCK_DIR,
                     'gitfs_root': 'salt',
-                    'fileserver_backend': ['git'],
+                    'fileserver_backend': ['gitfs'],
                     'gitfs_base': 'master',
                     'fileserver_events': True,
                     'transport': 'zeromq',
@@ -86,6 +86,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                     'gitfs_ssl_verify': True,
                     'gitfs_disable_saltenv_mapping': False,
                     'gitfs_ref_types': ['branch', 'tag', 'sha'],
+                    'gitfs_update_interval': 60,
                     '__role': 'master',
                 }
             }
@@ -126,7 +127,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                   - baz:
                     - mountpoint: abc
         ''')
-        with patch.dict(gitfs.__opts__, yaml.safe_load(opts_override)):
+        with patch.dict(gitfs.__opts__, salt.utils.yaml.safe_load(opts_override)):
             git_fs = salt.utils.gitfs.GitFS(
                 gitfs.__opts__,
                 gitfs.__opts__['gitfs_remotes'],
@@ -195,7 +196,7 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
                     'sock_dir': TMP_SOCK_DIR,
                     'gitfs_remotes': ['file://' + TMP_REPO_DIR],
                     'gitfs_root': '',
-                    'fileserver_backend': ['git'],
+                    'fileserver_backend': ['gitfs'],
                     'gitfs_base': 'master',
                     'fileserver_events': True,
                     'transport': 'zeromq',
@@ -218,6 +219,7 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
                     'gitfs_ssl_verify': True,
                     'gitfs_disable_saltenv_mapping': False,
                     'gitfs_ref_types': ['branch', 'tag', 'sha'],
+                    'gitfs_update_interval': 60,
                     '__role': 'master',
                 }
             }

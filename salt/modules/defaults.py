@@ -6,20 +6,18 @@ Module to work with salt formula defaults files
 
 from __future__ import absolute_import
 import copy
-import json
 import logging
 import os
-import yaml
 
 import salt.fileclient
 import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
+import salt.utils.json
 import salt.utils.url
-
+import salt.utils.yaml
 
 __virtualname__ = 'defaults'
-
 
 log = logging.getLogger(__name__)
 
@@ -57,9 +55,9 @@ def _load(formula):
 
         suffix = file_.rsplit('.', 1)[-1]
         if suffix == 'yaml':
-            loader = yaml
+            loader = salt.utils.yaml.safe_load
         elif suffix == 'json':
-            loader = json
+            loader = salt.utils.json.load
         else:
             log.debug("Failed to determine loader for %r", file_)
             continue
@@ -67,7 +65,7 @@ def _load(formula):
         if os.path.exists(file_):
             log.debug("Reading defaults from %r", file_)
             with salt.utils.files.fopen(file_) as fhr:
-                defaults = loader.load(fhr)
+                defaults = loader(fhr)
                 log.debug("Read defaults %r", defaults)
 
             return defaults or {}

@@ -29,7 +29,7 @@
 # https://bitbucket.org/Lawouach/cherrypy-recipes/src/50aff88dc4e24206518ec32e1c32af043f2729da/testing/unit/serverless/cptestcase.py
 
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import TestCase

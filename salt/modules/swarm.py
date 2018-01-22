@@ -24,7 +24,7 @@ More information: https://docker-py.readthedocs.io/en/stable/
 """
 # Import python libraries
 from __future__ import absolute_import
-import json
+import salt.utils.json
 
 try:
     import docker
@@ -45,7 +45,8 @@ def __virtual__():
 
 
 def __init__(self):
-    __context__['client'] = docker.from_env()
+    if HAS_DOCKER:
+        __context__['client'] = docker.from_env()
     __context__['server_name'] = __grains__['id']
 
 
@@ -238,8 +239,8 @@ def swarm_service_info(service_name=str):
         salt_return = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.inspect_service(service=service_name)
-        getdata = json.dumps(service)
-        dump = json.loads(getdata)
+        getdata = salt.utils.json.dumps(service)
+        dump = salt.utils.json.loads(getdata)
         version = dump['Version']['Index']
         name = dump['Spec']['Name']
         network_mode = dump['Spec']['EndpointSpec']['Mode']
@@ -316,8 +317,8 @@ def node_ls(server=str):
         salt_return = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.nodes(filters=({'name': server}))
-        getdata = json.dumps(service)
-        dump = json.loads(getdata)
+        getdata = salt.utils.json.dumps(service)
+        dump = salt.utils.json.loads(getdata)
         for items in dump:
             docker_version = items['Description']['Engine']['EngineVersion']
             platform = items['Description']['Platform']

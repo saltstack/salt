@@ -18,14 +18,13 @@ Module for Firing Events via PagerDuty
 '''
 from __future__ import absolute_import
 
-# Import python libs
-import yaml
-import json
-
-# Import salt libs
+# Import Salt libs
 import salt.utils.functools
+import salt.utils.json
 import salt.utils.pagerduty
-from salt.ext.six import string_types
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -176,12 +175,12 @@ def create_event(service_key=None, description=None, details=None,
     '''
     trigger_url = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
 
-    if isinstance(details, string_types):
-        details = yaml.safe_load(details)
-        if isinstance(details, string_types):
+    if isinstance(details, six.string_types):
+        details = salt.utils.yaml.safe_load(details)
+        if isinstance(details, six.string_types):
             details = {'details': details}
 
-    ret = json.loads(salt.utils.pagerduty.query(
+    ret = salt.utils.json.loads(salt.utils.pagerduty.query(
         method='POST',
         profile_dict=__salt__['config.option'](profile),
         api_key=service_key,

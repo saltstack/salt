@@ -6,7 +6,7 @@ Jobber Behaviors
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import types
@@ -14,7 +14,6 @@ import logging
 import traceback
 import multiprocessing
 import subprocess
-import json
 
 # Import salt libs
 from salt.ext import six
@@ -22,6 +21,7 @@ import salt.daemons.masterapi
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.kinds as kinds
 import salt.utils.process
 import salt.utils.stringutils
@@ -62,7 +62,7 @@ def jobber_check(self):
             rms.append(jid)
             data = self.shells.value[jid]
             stdout, stderr = data['proc'].communicate()
-            ret = json.loads(salt.utils.stringutils.to_str(stdout), object_hook=salt.utils.data.encode_dict)['local']
+            ret = salt.utils.json.loads(stdout, object_hook=salt.utils.data.encode_dict)['local']
             route = {'src': (self.stack.value.local.name, 'manor', 'jid_ret'),
                      'dst': (data['msg']['route']['src'][0], None, 'remote_cmd')}
             ret['cmd'] = '_return'
@@ -238,13 +238,15 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 continue
             if 'user' in data:
                 log.info(
-                        'User {0[user]} Executing command {0[fun]} with jid '
-                        '{0[jid]}'.format(data))
+                    'User %s Executing command %s with jid %s',
+                    data['user'], data['fun'], data['jid']
+                )
             else:
                 log.info(
-                        'Executing command {0[fun]} with jid {0[jid]}'.format(data)
-                        )
-            log.debug('Command details {0}'.format(data))
+                    'Executing command %s with jid %s',
+                    data['fun'], data['jid']
+                )
+            log.debug('Command details %s', data)
 
             if is_windows():
                 # SaltRaetNixJobber is not picklable. Pickling is necessary
@@ -255,9 +257,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 try:
                     self.proc_run(msg)
                 except Exception as exc:
-                    log.error(
-                            'Exception caught by jobber: {0}'.format(exc),
-                            exc_info=True)
+                    log.error('Exception caught by jobber: %s', exc, exc_info=True)
             else:
                 process = multiprocessing.Process(
                         target=self.proc_run,
@@ -302,11 +302,13 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 if isinstance(executors, six.string_types):
                     executors = [executors]
                 elif not isinstance(executors, list) or not executors:
-                    raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
-                                              format(executors))
+                    raise SaltInvocationError(
+                        'Wrong executors specification: {0}. String or '
+                        'non-empty list expected'.format(executors)
+                    )
                 if self.opts.get('sudo_user', '') and executors[-1] != 'sudo':
                     executors[-1] = 'sudo.get'  # replace
-                log.trace("Executors list {0}".format(executors))
+                log.trace("Executors list %s", executors)
 
                 for name in executors:
                     if name not in self.module_executors.value:
@@ -326,7 +328,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                                 iret = []
                             iret.append(single)
                         tag = tagify(
-                                [data['jid'], 'prog', self.opts['id'], str(ind)],
+                                [data['jid'], 'prog', self.opts['id'], six.text_type(ind)],
                                 'job')
                         event_data = {'return': single}
                         self._fire_master(event_data, tag)  # Need to look into this
@@ -347,19 +349,15 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 ret['return'] = '{0}: {1}'.format(msg, exc)
             except CommandExecutionError as exc:
                 log.error(
-                    'A command in \'{0}\' had a problem: {1}'.format(
-                        function_name,
-                        exc
-                    ),
+                    'A command in \'%s\' had a problem: %s',
+                    function_name, exc,
                     exc_info_on_loglevel=logging.DEBUG
                 )
                 ret['return'] = 'ERROR: {0}'.format(exc)
             except SaltInvocationError as exc:
                 log.error(
-                    'Problem executing \'{0}\': {1}'.format(
-                        function_name,
-                        exc
-                    ),
+                    'Problem executing \'%s\': %s',
+                    function_name, exc,
                     exc_info_on_loglevel=logging.DEBUG
                 )
                 ret['return'] = 'ERROR executing \'{0}\': {1}'.format(
@@ -389,12 +387,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                         returner
                     )](ret)
                 except Exception as exc:
-                    log.error(
-                        'The return failed for job {0} {1}'.format(
-                        data['jid'],
-                        exc
-                        )
-                    )
+                    log.error('The return failed for job %s %s', data['jid'], exc)
         console.concise("Closing Jobber Stack {0}\n".format(stack.name))
         stack.server.close()
         salt.transport.jobber_stack = None

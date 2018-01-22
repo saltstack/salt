@@ -52,20 +52,20 @@ Example ``/etc/salt/cloud.providers`` or
 # pylint: disable=E0102
 
 # pylint: disable=wrong-import-position,wrong-import-order
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import os.path
 import time
 import logging
 import pprint
 import base64
-import yaml
 import collections
 import salt.cache
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.data
 import salt.utils.files
+import salt.utils.yaml
 from salt.utils.versions import LooseVersion
 from salt.ext import six
 import salt.version
@@ -264,7 +264,7 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
     if hasattr(regions, 'value'):
         regions = regions.value
     for location in regions:  # pylint: disable=no-member
-        lowername = str(location.name).lower().replace(' ', '')
+        lowername = six.text_type(location.name).lower().replace(' ', '')
         ret[lowername] = object_to_dict(location)
     return ret
 
@@ -768,8 +768,7 @@ def show_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                 )
                 data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
             except Exception as exc:
-                log.warning('There was a cloud error: {0}'.format(exc))
-                log.warning('{0}'.format(type(exc)))
+                log.warning('There was a %s cloud error: %s', type(exc), exc)
                 continue
 
     return data
@@ -924,7 +923,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                 )
                 if pub_ip_data.ip_address:  # pylint: disable=no-member
                     ip_kwargs['public_ip_address'] = PublicIPAddress(
-                        str(pub_ip_data.id),  # pylint: disable=no-member
+                        six.text_type(pub_ip_data.id),  # pylint: disable=no-member
                     )
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
@@ -936,7 +935,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                     ]
                     break
             except CloudError as exc:
-                log.error('There was a cloud error: {0}'.format(exc))
+                log.error('There was a cloud error: %s', exc)
             count += 1
             if count > 120:
                 raise ValueError('Timed out waiting for public IP Address.')
@@ -1070,7 +1069,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     )
 
     if isinstance(kwargs.get('volumes'), six.string_types):
-        volumes = yaml.safe_load(kwargs['volumes'])
+        volumes = salt.utils.yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs.get('volumes')
 
@@ -1092,7 +1091,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             'name', volume.get(
                 'name', volume.get('name', '{0}-datadisk{1}'.format(
                     vm_['name'],
-                    str(lun),
+                    six.text_type(lun),
                     ),
                 )
             )
@@ -1214,7 +1213,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     try:
         poller.wait()
     except CloudError as exc:
-        log.warning('There was a cloud error: {0}'.format(exc))
+        log.warning('There was a cloud error: %s', exc)
         log.warning('This may or may not indicate an actual problem')
 
     try:
@@ -1245,7 +1244,7 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
 
     global compconn  # pylint: disable=global-statement,invalid-name
     if not compconn:
@@ -1283,7 +1282,7 @@ def create(vm_):
         try:
             log.warning(exc)
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     # calling _query_ip_address() causes Salt to attempt to build the VM again.
     #hostname = _query_ip_address()
@@ -1304,11 +1303,10 @@ def create(vm_):
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     data = show_instance(vm_['name'], call='action')
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data)
     )
 
     ret.update(data)
@@ -1834,3 +1832,63 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     storageservice.delete_blob(kwargs['container'], kwargs['blob'])
     return True
+
+
+def stop(name, resource_group=None, call=None):
+    '''
+    .. versionadded:: Fluorine
+    Stop a VM
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+         salt-cloud -a stop myminion
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+    if not compconn:
+        compconn = get_conn()
+    if resource_group is None:
+        for group in list_resource_groups():
+            try:
+                instance_stop = compconn.virtual_machines.deallocate(group, name)
+                instance_stop.wait()
+            except CloudError:
+                continue
+    else:
+        instance_stop = compconn.virtual_machines.stop(resource_group, name)
+        instance_stop.wait()
+    return instance_stop
+
+
+def start(name, resource_group=None, call=None):
+    '''
+    .. versionadded:: Fluorine
+    Start a VM
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+         salt-cloud -a start myminion
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+    if not compconn:
+        compconn = get_conn()
+    if resource_group is None:
+        for group in list_resource_groups():
+            try:
+                instance_start = compconn.virtual_machines.start(group, name)
+                instance_start.wait()
+            except CloudError:
+                continue
+    else:
+        instance_start = compconn.virtual_machines.start(resource_group, name)
+        instance_start.wait()
+    return instance_start

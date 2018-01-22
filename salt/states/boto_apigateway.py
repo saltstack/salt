@@ -48,17 +48,18 @@ config:
 
 # Import Python Libs
 from __future__ import absolute_import
+import hashlib
 import logging
 import os
-import os.path
-import hashlib
 import re
-import json
-import yaml
+
 # Import Salt Libs
-from salt.ext import six
 import salt.utils.files
-from salt.utils.yamlloader import SaltYamlSafeLoader
+import salt.utils.json
+import salt.utils.yaml
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -447,7 +448,7 @@ def _dict_to_json_pretty(d, sort_keys=True):
     '''
     helper function to generate pretty printed json output
     '''
-    return json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
+    return salt.utils.json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
 
 
 # Heuristic on whether or not the property name loosely matches given set of 'interesting' factors
@@ -716,10 +717,7 @@ class _Swagger(object):
                                                        error_response_template,
                                                        response_template)
                 with salt.utils.files.fopen(self._swagger_file, 'rb') as sf:
-                    self._cfg = yaml.load(
-                        sf,
-                        Loader=SaltYamlSafeLoader
-                    )
+                    self._cfg = salt.utils.yaml.safe_load(sf)
                 self._swagger_version = ''
             else:
                 raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
