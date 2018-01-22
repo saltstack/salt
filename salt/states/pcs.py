@@ -346,15 +346,11 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
     log.trace('Output of pcs.item_create: %s', item_create)
 
     if item_create['retcode'] in [0]:
-        ret['comment'] += 'Created {0} {1} ({2})\n'.format(
-            six.text_type(item), six.text_type(item_id), six.text_type(item_type)
-        )
+        ret['comment'] += 'Created {0} {1} ({2})\n'.format(item, item_id, item_type)
         ret['changes'].update({item_id: {'old': '', 'new': six.text_type(item_id)}})
     else:
         ret['result'] = False
-        ret['comment'] += 'Failed to create {0} {1} ({2})\n'.format(
-            six.text_type(item), six.text_type(item_id), six.text_type(item_type)
-        )
+        ret['comment'] += 'Failed to create {0} {1} ({2})\n'.format(item, item_id, item_type)
 
     log.trace('ret: %s', ret)
 
@@ -490,11 +486,11 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
             value = line.split(':')[1].strip()
             if key in ['Cluster Name']:
                 if value in [pcsclustername]:
-                    ret['comment'] += 'Cluster {0} is already set up\n'.format(six.text_type(pcsclustername))
+                    ret['comment'] += 'Cluster {0} is already set up\n'.format(pcsclustername)
                 else:
                     setup_required = True
                     if __opts__['test']:
-                        ret['comment'] += 'Cluster {0} is set to set up\n'.format(six.text_type(pcsclustername))
+                        ret['comment'] += 'Cluster {0} is set to set up\n'.format(pcsclustername)
 
     if not setup_required:
         return ret
