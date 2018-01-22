@@ -23,7 +23,7 @@ requisite to a pkg.installed state for the package which provides pip
 from __future__ import absolute_import
 import re
 import logging
-from pkg_resources import parse_version
+import pkg_resources
 
 # Import salt libs
 import salt.utils
@@ -266,11 +266,11 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     pkg2 = normalize(pkg2)
 
     try:
-        if parse_version(pkg1) < parse_version(pkg2):
+        if pkg_resources.parse_version(pkg1) < pkg_resources.parse_version(pkg2):
             return -1
-        if parse_version(pkg1) == parse_version(pkg2):
+        if pkg_resources.parse_version(pkg1) == pkg_resources.parse_version(pkg2):
             return 0
-        if parse_version(pkg1) > parse_version(pkg2):
+        if pkg_resources.parse_version(pkg1) > pkg_resources.parse_version(pkg2):
             return 1
     except Exception as exc:
         logger.exception(exc)

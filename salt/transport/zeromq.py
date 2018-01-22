@@ -16,6 +16,8 @@ import weakref
 from random import randint
 
 # Import Salt Libs
+from salt.ext import six
+from salt.ext.six.moves import map
 import salt.auth
 import salt.crypt
 import salt.utils
@@ -40,13 +42,15 @@ try:
 except ImportError:
     HAS_ZMQ_MONITOR = False
 
+LIBZMQ_VERSION = tuple(map(int, zmq.zmq_version().split('.')))
+PYZMQ_VERSION = tuple(map(int, zmq.pyzmq_version().split('.')))
+
 # Import Tornado Libs
 import tornado
 import tornado.gen
 import tornado.concurrent
 
 # Import third party libs
-import salt.ext.six as six
 try:
     from Cryptodome.Cipher import PKCS1_OAEP
 except ImportError:
@@ -359,7 +363,12 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._monitor.stop()
             self._monitor = None
         if hasattr(self, '_stream'):
-            self._stream.close(0)
+            if PYZMQ_VERSION < (14, 3, 0):
+                # stream.close() doesn't work properly on pyzmq < 14.3.0
+                self._stream.io_loop.remove_handler(self._stream.socket)
+                self._stream.socket.close(0)
+            else:
+                self._stream.close(0)
         elif hasattr(self, '_socket'):
             self._socket.close(0)
         if hasattr(self, 'context') and self.context.closed is False:
@@ -911,8 +920,17 @@ class AsyncReqMessageClient(object):
     # TODO: timeout all in-flight sessions, or error
     def destroy(self):
         if hasattr(self, 'stream') and self.stream is not None:
-            self.stream.close()
-            self.socket = None
+            if PYZMQ_VERSION < (14, 3, 0):
+                # stream.close() doesn't work properly on pyzmq < 14.3.0
+                if self.stream.socket:
+                    self.stream.socket.close()
+                self.stream.io_loop.remove_handler(self.stream.socket)
+                # set this to None, more hacks for messed up pyzmq
+                self.stream.socket = None
+                self.socket.close()
+            else:
+                self.stream.close()
+                self.socket = None
             self.stream = None
         if self.context.closed is False:
             self.context.term()
