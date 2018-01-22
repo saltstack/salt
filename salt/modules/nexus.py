@@ -467,7 +467,7 @@ def __save_artifact(artifact_url, target_file, headers):
             result['comment'] = checksum_comment
             return result
 
-    log.debug('Downloading: %s -> %s', url=artifact_url, target_file=target_file)
+    log.debug('Downloading: %s -> %s', artifact_url, target_file)
 
     try:
         request = urllib.request.Request(artifact_url, None, headers)

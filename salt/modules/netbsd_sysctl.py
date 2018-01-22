@@ -152,9 +152,9 @@ def persist(name, value, config='/etc/sysctl.conf'):
         newline = '{0}={1}'.format(name, value)
         nlines.append("{0}\n".format(newline))
 
-    with salt.utils.files.fopen(config, 'w+') as ofile:
+    with salt.utils.files.fopen(config, 'wb') as ofile:
         ofile.writelines(
-            salt.utils.data.decode(nlines)
+            salt.utils.data.encode(nlines)
         )
 
     assign(name, value)
