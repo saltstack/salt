@@ -196,3 +196,18 @@ class SSDPFactoryTestCase(TestCase):
             assert 'Received bad signature from' in factory.log.debug.call_args[0][0]
             assert factory.log.debug.call_args[0][1] == addr[0]
             assert factory.log.debug.call_args[0][2] == addr[1]
+
+    def test_datagram_signature_wrong_timestamp_quiet(self):
+        '''
+        Test datagram receives a wrong timestamp.
+
+        :return:
+        '''
+        factory = ssdp.SSDPFactory()
+        data = '{}nonsense'.format(ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE])
+        addr = '10.10.10.10', 'foo.suse.de'
+        with patch.object(factory, 'log', MagicMock()), patch.object(factory, '_sendto', MagicMock()):
+            factory.datagram_received(data=data, addr=addr)
+            assert factory.log.debug.called
+            assert 'Received invalid timestamp in package' in factory.log.debug.call_args[0][0]
+            assert not factory._sendto.called
