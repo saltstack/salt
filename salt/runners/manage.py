@@ -71,7 +71,7 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
 
 
 def _warn_expr_form():
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'the target type should be passed using the \'tgt_type\' '
         'argument instead of \'expr_form\'. Support for using '

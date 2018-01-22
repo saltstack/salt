@@ -328,8 +328,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     self.assertNotEqual(ret['changes'], {})
 
     @destructiveTest
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
-    @skipIf(salt.utils.is_darwin(), 'minion is mac')
+    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+    @skipIf(salt.utils.platform.is_darwin(), 'minion is mac')
     def test_pkg_latest_version(self):
         '''
         check that pkg.latest_version returns the latest version of the uninstalled package (it does not install the package, just checking the version)
