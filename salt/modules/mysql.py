@@ -1935,7 +1935,7 @@ def grant_revoke(grant,
         return True
 
     log.info(
-        'Grant \'%\' on \'%s\' for user \'%s\' has NOT been '
+        'Grant \'%s\' on \'%s\' for user \'%s\' has NOT been '
         'revoked', grant, database, user)
     return False
 
