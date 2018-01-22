@@ -257,7 +257,9 @@ class _fstab_entry(object):
     '''
 
     class ParseError(ValueError):
-        '''Error raised when a line isn't parsible as an fstab entry'''
+        '''
+        Error raised when a line isn't parsible as an fstab entry
+        '''
 
     fstab_keys = ('device', 'name', 'fstype', 'opts', 'dump', 'pass_num')
 
@@ -288,31 +290,43 @@ class _fstab_entry(object):
         return cls.fstab_format.format(**entry)
 
     def __str__(self):
-        '''string value, only works for full repr'''
+        '''
+        String value, only works for full repr
+        '''
         return self.dict_to_line(self.criteria)
 
     def __repr__(self):
-        '''always works'''
-        return six.text_type(self.criteria)
+        '''
+        Always works
+        '''
+        return repr(self.criteria)
 
     def pick(self, keys):
-        '''returns an instance with just those keys'''
+        '''
+        Returns an instance with just those keys
+        '''
         subset = dict([(key, self.criteria[key]) for key in keys])
         return self.__class__(**subset)
 
     def __init__(self, **criteria):
-        '''Store non-empty, non-null values to use as filter'''
+        '''
+        Store non-empty, non-null values to use as filter
+        '''
         items = [key_value for key_value in six.iteritems(criteria) if key_value[1] is not None]
         items = [(key_value1[0], six.text_type(key_value1[1])) for key_value1 in items]
         self.criteria = dict(items)
 
     @staticmethod
     def norm_path(path):
-        '''Resolve equivalent paths equivalently'''
+        '''
+        Resolve equivalent paths equivalently
+        '''
         return os.path.normcase(os.path.normpath(path))
 
     def match(self, line):
-        '''compare potentially partial criteria against line'''
+        '''
+        Compare potentially partial criteria against line
+        '''
         entry = self.dict_from_line(line)
         for key, value in six.iteritems(self.criteria):
             if entry[key] != value:
@@ -339,7 +353,7 @@ class _vfstab_entry(object):
         '''Error raised when a line isn't parsible as an fstab entry'''
 
     vfstab_keys = ('device', 'device_fsck', 'name', 'fstype', 'pass_fsck', 'mount_at_boot', 'opts')
-    ## NOTE: weird formatting to match default spacing on Solaris
+    # NOTE: weird formatting to match default spacing on Solaris
     vfstab_format = '{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_fsck:<3} {mount_at_boot:<6} {opts}\n'
 
     @classmethod
@@ -362,31 +376,43 @@ class _vfstab_entry(object):
         return cls.vfstab_format.format(**entry)
 
     def __str__(self):
-        '''string value, only works for full repr'''
+        '''
+        String value, only works for full repr
+        '''
         return self.dict_to_line(self.criteria)
 
     def __repr__(self):
-        '''always works'''
-        return six.text_type(self.criteria)
+        '''
+        Always works
+        '''
+        return repr(self.criteria)
 
     def pick(self, keys):
-        '''returns an instance with just those keys'''
+        '''
+        Returns an instance with just those keys
+        '''
         subset = dict([(key, self.criteria[key]) for key in keys])
         return self.__class__(**subset)
 
     def __init__(self, **criteria):
-        '''Store non-empty, non-null values to use as filter'''
+        '''
+        Store non-empty, non-null values to use as filter
+        '''
         items = [key_value for key_value in six.iteritems(criteria) if key_value[1] is not None]
         items = [(key_value1[0], six.text_type(key_value1[1])) for key_value1 in items]
         self.criteria = dict(items)
 
     @staticmethod
     def norm_path(path):
-        '''Resolve equivalent paths equivalently'''
+        '''
+        Resolve equivalent paths equivalently
+        '''
         return os.path.normcase(os.path.normpath(path))
 
     def match(self, line):
-        '''compare potentially partial criteria against line'''
+        '''
+        Compare potentially partial criteria against line
+        '''
         entry = self.dict_from_line(line)
         for key, value in six.iteritems(self.criteria):
             if entry[key] != value:
@@ -447,7 +473,7 @@ def vfstab(config='/etc/vfstab'):
 
         salt '*' mount.vfstab
     '''
-    ## NOTE: vfstab is a wrapper for fstab
+    # NOTE: vfstab is a wrapper for fstab
     return fstab(config)
 
 
@@ -487,15 +513,15 @@ def rm_fstab(name, device, config='/etc/fstab'):
 
     except (IOError, OSError) as exc:
         msg = "Couldn't read from {0}: {1}"
-        raise CommandExecutionError(msg.format(config, six.text_type(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     if modified:
         try:
-            with salt.utils.files.fopen(config, 'w+') as ofile:
-                ofile.writelines(salt.utils.data.decode(lines))
+            with salt.utils.files.fopen(config, 'wb') as ofile:
+                ofile.writelines(salt.utils.data.encode(lines))
         except (IOError, OSError) as exc:
             msg = "Couldn't write to {0}: {1}"
-            raise CommandExecutionError(msg.format(config, six.text_type(exc)))
+            raise CommandExecutionError(msg.format(config, exc))
 
     # Note: not clear why we always return 'True'
     # --just copying previous behavior at this point...
@@ -622,7 +648,7 @@ def set_fstab(
 
     except (IOError, OSError) as exc:
         msg = 'Couldn\'t read from {0}: {1}'
-        raise CommandExecutionError(msg.format(config, six.text_type(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     # add line if not present or changed
     if ret is None:
@@ -632,9 +658,9 @@ def set_fstab(
     if ret != 'present':  # ret in ['new', 'change']:
         if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
-                with salt.utils.files.fopen(config, 'w+') as ofile:
+                with salt.utils.files.fopen(config, 'wb') as ofile:
                     # The line was changed, commit it!
-                    ofile.writelines(salt.utils.data.decode(lines))
+                    ofile.writelines(salt.utils.data.encode(lines))
             except (IOError, OSError):
                 msg = 'File not writable {0}'
                 raise CommandExecutionError(msg.format(config))
@@ -751,7 +777,7 @@ def set_vfstab(
 
     except (IOError, OSError) as exc:
         msg = 'Couldn\'t read from {0}: {1}'
-        raise CommandExecutionError(msg.format(config, six.text_type(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     # add line if not present or changed
     if ret is None:
@@ -761,9 +787,9 @@ def set_vfstab(
     if ret != 'present':  # ret in ['new', 'change']:
         if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
-                with salt.utils.files.fopen(config, 'w+') as ofile:
+                with salt.utils.files.fopen(config, 'wb') as ofile:
                     # The line was changed, commit it!
-                    ofile.writelines(salt.utils.data.decode(lines))
+                    ofile.writelines(salt.utils.data.encode(lines))
             except (IOError, OSError):
                 msg = 'File not writable {0}'
                 raise CommandExecutionError(msg.format(config))
@@ -818,14 +844,14 @@ def rm_automaster(name, device, config='/etc/auto_salt'):
                 lines.append(line)
     except (IOError, OSError) as exc:
         msg = "Couldn't read from {0}: {1}"
-        raise CommandExecutionError(msg.format(config, six.text_type(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     try:
-        with salt.utils.files.fopen(config, 'w+') as ofile:
-            ofile.writelines(salt.utils.data.decode(lines))
+        with salt.utils.files.fopen(config, 'wb') as ofile:
+            ofile.writelines(salt.utils.data.encode(lines))
     except (IOError, OSError) as exc:
         msg = "Couldn't write to {0}: {1}"
-        raise CommandExecutionError(msg.format(config, six.text_type(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     # Update automount
     __salt__['cmd.run']('automount -cv')
@@ -913,14 +939,14 @@ def set_automaster(
                     lines.append(line)
     except (IOError, OSError) as exc:
         msg = 'Couldn\'t read from {0}: {1}'
-        raise CommandExecutionError(msg.format(config, six.text_type(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     if change:
         if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
-                with salt.utils.files.fopen(config, 'w+') as ofile:
+                with salt.utils.files.fopen(config, 'wb') as ofile:
                     # The line was changed, commit it!
-                    ofile.writelines(salt.utils.data.decode(lines))
+                    ofile.writelines(salt.utils.data.encode(lines))
             except (IOError, OSError):
                 msg = 'File not writable {0}'
                 raise CommandExecutionError(msg.format(config))
@@ -940,9 +966,9 @@ def set_automaster(
                )
                 lines.append(newline)
                 try:
-                    with salt.utils.files.fopen(config, 'w+') as ofile:
+                    with salt.utils.files.fopen(config, 'wb') as ofile:
                         # The line was changed, commit it!
-                        ofile.writelines(salt.utils.data.decode(lines))
+                        ofile.writelines(salt.utils.data.encode(lines))
                 except (IOError, OSError):
                     raise CommandExecutionError(
                         'File not writable {0}'.format(

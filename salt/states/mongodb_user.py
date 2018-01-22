@@ -117,7 +117,7 @@ def present(name,
         #    users= (False, 'not authorized on admin to execute command { usersInfo: "root" }')
         if not users[0]:
             ret['result'] = False
-            ret['comment'] = "Mongo Err: {0}".format(six.text_type(users[1]))
+            ret['comment'] = "Mongo Err: {0}".format(users[1])
             return ret
 
         # check each user occurrence
