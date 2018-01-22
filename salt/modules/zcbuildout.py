@@ -313,7 +313,9 @@ def _Popen(command,
 
 
 class _BuildoutError(CommandExecutionError):
-    '''General Buildout Error.'''
+    '''
+    General Buildout Error.
+    '''
 
 
 def _has_old_distribute(python=sys.executable, runas=None, env=()):
@@ -324,7 +326,6 @@ def _has_old_distribute(python=sys.executable, runas=None, env=()):
                '\'import pkg_resources;'
                'print pkg_resources.'
                'get_distribution(\"distribute\").location\'']
-        #LOG.debug('Run %s' % ' '.join(cmd))
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'distribute-0.6' in ret:
             old_distribute = True
@@ -341,7 +342,6 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
                '\'import pkg_resources;'
                'print not pkg_resources.'
                'get_distribution("setuptools").version.startswith("0.6")\'']
-        #LOG.debug('Run %s' % ' '.join(cmd))
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'true' in ret.lower():
             new_st = True
@@ -997,7 +997,7 @@ def buildout(directory='.',
 
         salt '*' buildout.buildout /srv/mybuildout
     '''
-    LOG.info('Running buildout in %s (%s)', directory, config)
+    LOG.info('Running buildout in {0} ({1})'.format(directory, config))  # future lint: disable=str-format-in-logging
     boot_ret = bootstrap(directory,
                          config=config,
                          buildout_ver=buildout_ver,
