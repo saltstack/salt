@@ -203,9 +203,8 @@ def _dump_cfg(cfg_file):
     if __salt__['file.file_exists'](cfg_file):
         with salt.utils.files.fopen(cfg_file, 'r') as fp_:
             log.debug(
-                "zonecfg - configuration file:\n{0}".format(
+                "zonecfg - configuration file:\n%s",
                     "".join(salt.utils.data.decode(fp_.readlines()))
-                )
             )
 
 
