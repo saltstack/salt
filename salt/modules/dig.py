@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import salt libs
 import salt.utils.network
 import salt.utils.path
+from salt.ext import six
 
 # Import python libs
 import logging

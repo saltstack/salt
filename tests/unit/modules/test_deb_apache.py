@@ -18,6 +18,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.deb_apache as deb_apache
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

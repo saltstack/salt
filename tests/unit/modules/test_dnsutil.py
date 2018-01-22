@@ -20,33 +20,34 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.dnsutil as dnsutil
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
 mock_hosts_file = salt.utils.stringutils.to_str(
-                  '##\n' \
-                  '# Host Database\n' \
-                  '#\n' \
-                  '# localhost is used to configure the loopback interface\n' \
-                  '# when the system is booting.  Do not change this entry.\n' \
-                  '##\n' \
-                  '127.0.0.1	localhost\n' \
-                  '255.255.255.255	broadcasthost\n' \
-                  '::1             localhost\n' \
+                  '##\n'
+                  '# Host Database\n'
+                  '#\n'
+                  '# localhost is used to configure the loopback interface\n'
+                  '# when the system is booting.  Do not change this entry.\n'
+                  '##\n'
+                  '127.0.0.1	localhost\n'
+                  '255.255.255.255	broadcasthost\n'
+                  '::1             localhost\n'
                   'fe80::1%lo0	localhost')
 
 mock_hosts_file_rtn = {'::1': ['localhost'], '255.255.255.255': ['broadcasthost'],
                        '127.0.0.1': ['localhost'], 'fe80::1%lo0': ['localhost']}
 
 mock_soa_zone = salt.utils.stringutils.to_str(
-                '$TTL 3D\n' \
-                '@               IN      SOA     land-5.com. root.land-5.com. (\n' \
-                '199609203       ; Serial\n' \
-                '28800   ; Refresh\n' \
-                '7200    ; Retry\n' \
-                '604800  ; Expire\n' \
-                '86400)  ; Minimum TTL\n' \
-                'NS      land-5.com.\n\n' \
+                '$TTL 3D\n'
+                '@               IN      SOA     land-5.com. root.land-5.com. (\n'
+                '199609203       ; Serial\n'
+                '28800   ; Refresh\n'
+                '7200    ; Retry\n'
+                '604800  ; Expire\n'
+                '86400)  ; Minimum TTL\n'
+                'NS      land-5.com.\n\n'
                 '1                       PTR     localhost.')
 
 if NO_MOCK is False:
@@ -55,9 +56,9 @@ if NO_MOCK is False:
             call.write(salt.utils.stringutils.to_str('##\n')),
             call.write(salt.utils.stringutils.to_str('# Host Database\n')),
             call.write(salt.utils.stringutils.to_str('#\n')),
-            call.write(salt.utils.stringutils.to_str('# localhost is used to configure the ' \
+            call.write(salt.utils.stringutils.to_str('# localhost is used to configure the '
                                                      'loopback interface\n')),
-            call.write(salt.utils.stringutils.to_str('# when the system is booting.  Do not ' \
+            call.write(salt.utils.stringutils.to_str('# when the system is booting.  Do not '
                                                      'change this entry.\n')),
             call.write(salt.utils.stringutils.to_str('##\n')),
             call.write(salt.utils.stringutils.to_str('127.0.0.1 localhost')),
