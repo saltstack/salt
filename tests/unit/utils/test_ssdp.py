@@ -15,6 +15,7 @@ from tests.support.mock import (
 import salt.exceptions
 import salt.state
 from salt.utils import ssdp
+import datetime
 
 try:
     import pytest
@@ -229,3 +230,27 @@ class SSDPFactoryTestCase(TestCase):
             assert 'Received invalid timestamp in package' in factory.log.debug.call_args[0][0]
             assert factory._sendto.called
             assert '{}:E:Invalid timestamp'.format(signature) == factory._sendto.call_args[0][0]
+
+    def test_datagram_signature_outdated_timestamp_quiet(self):
+        '''
+        Test if datagram processing reacts on outdated message (more than 20 seconds). Quiet mode.
+        :return:
+        '''
+        factory = ssdp.SSDPFactory()
+        signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
+        data = '{}{}'.format(signature, '1516623820')
+        addr = '10.10.10.10', 'foo.suse.de'
+
+        ahead_dt = datetime.datetime.fromtimestamp(1516623841)
+        curnt_dt = datetime.datetime.fromtimestamp(1516623820)
+        delta = datetime.timedelta(0, 20)
+        with patch.object(factory, 'log', MagicMock()), patch.object(factory, '_sendto'), \
+             patch('salt.utils.ssdp.datetime.datetime', MagicMock()), \
+             patch('salt.utils.ssdp.datetime.datetime.now', MagicMock(return_value=ahead_dt)), \
+             patch('salt.utils.ssdp.datetime.datetime.fromtimestamp', MagicMock(return_value=curnt_dt)), \
+             patch('salt.utils.ssdp.datetime.timedelta', MagicMock(return_value=delta)):
+            factory.datagram_received(data=data, addr=addr)
+            assert factory.log.debug.called
+            assert not factory.disable_hidden
+            assert not factory._sendto.called
+            assert 'Received outdated package' in factory.log.debug.call_args[0][0]
