@@ -11,6 +11,7 @@ import os
 import salt.utils.files
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'grub'

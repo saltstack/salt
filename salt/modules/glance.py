@@ -48,6 +48,9 @@ from salt.version import (
     __version__,
     SaltStackVersion
     )
+
+from salt.ext import six
+
 # is there not SaltStackVersion.current() to get
 # the version of the salt running this code??
 _version_ary = __version__.split('.')
