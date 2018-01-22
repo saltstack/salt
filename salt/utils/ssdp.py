@@ -174,7 +174,7 @@ class SSDPFactory(SSDPBase):
         if message.startswith(self.signature):
             try:
                 timestamp = float(message[len(self.signature):])
-            except TypeError:
+            except (TypeError, ValueError):
                 self.log.debug(
                     'Received invalid timestamp in package from %s:%s',
                     *addr
