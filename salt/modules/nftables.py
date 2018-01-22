@@ -330,9 +330,9 @@ def save(filename=None, family='ipv4'):
     rules = rules + '\n'
 
     try:
-        with salt.utils.files.fopen(filename, 'w+') as _fh:
+        with salt.utils.files.fopen(filename, 'wb') as _fh:
             # Write out any changes
-            _fh.writelines(salt.utils.data.decode(rules))
+            _fh.writelines(salt.utils.data.encode(rules))
     except (IOError, OSError) as exc:
         raise CommandExecutionError(
             'Problem writing to configuration file: {0}'.format(exc)

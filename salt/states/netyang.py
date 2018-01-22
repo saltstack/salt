@@ -160,7 +160,7 @@ def managed(name,
     with salt.utils.files.fopen(temp_file, 'w') as file_handle:
         salt.utils.yaml.safe_dump(
             salt.utils.json.loads(salt.utils.json.dumps(data)),
-            salt.utils.stringutils.to_str(file_handle),
+            file_handle,
             encoding='utf-8'
         )
     device_config = __salt__['napalm_yang.parse'](*models,
