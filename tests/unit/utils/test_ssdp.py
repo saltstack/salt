@@ -211,3 +211,21 @@ class SSDPFactoryTestCase(TestCase):
             assert factory.log.debug.called
             assert 'Received invalid timestamp in package' in factory.log.debug.call_args[0][0]
             assert not factory._sendto.called
+
+    def test_datagram_signature_wrong_timestamp_reply(self):
+        '''
+        Test datagram receives a wrong timestamp.
+
+        :return:
+        '''
+        factory = ssdp.SSDPFactory()
+        factory.disable_hidden = True
+        signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
+        data = '{}nonsense'.format(signature)
+        addr = '10.10.10.10', 'foo.suse.de'
+        with patch.object(factory, 'log', MagicMock()), patch.object(factory, '_sendto', MagicMock()):
+            factory.datagram_received(data=data, addr=addr)
+            assert factory.log.debug.called
+            assert 'Received invalid timestamp in package' in factory.log.debug.call_args[0][0]
+            assert factory._sendto.called
+            assert '{}:E:Invalid timestamp'.format(signature) == factory._sendto.call_args[0][0]
