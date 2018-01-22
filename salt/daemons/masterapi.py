@@ -370,7 +370,7 @@ class AutoKey(object):
 
                     with salt.utils.files.fopen(grain_file, 'r') as f:
                         for line in f:
-                            line = line.strip()
+                            line = salt.utils.stringutils.to_unicode(line).strip()
                             if line.startswith('#'):
                                 continue
                             if autosign_grains[grain] == line:
@@ -692,7 +692,7 @@ class RemoteFuncs(object):
         with salt.utils.files.fopen(cpath, mode) as fp_:
             if load['loc']:
                 fp_.seek(load['loc'])
-            fp_.write(load['data'])
+            fp_.write(salt.utils.stringutils.to_str(load['data']))
         return True
 
     def _pillar(self, load):
@@ -851,7 +851,7 @@ class RemoteFuncs(object):
                 os.makedirs(auth_cache)
             jid_fn = os.path.join(auth_cache, load['jid'])
             with salt.utils.files.fopen(jid_fn, 'r') as fp_:
-                if not load['id'] == fp_.read():
+                if not load['id'] == salt.utils.stringutils.to_unicode(fp_.read()):
                     return {}
 
             return self.local.get_cache_returns(load['jid'])
@@ -909,7 +909,7 @@ class RemoteFuncs(object):
             os.makedirs(auth_cache)
         jid_fn = os.path.join(auth_cache, six.text_type(ret['jid']))
         with salt.utils.files.fopen(jid_fn, 'w+') as fp_:
-            fp_.write(load['id'])
+            fp_.write(salt.utils.stringutils.to_str(load['id']))
         return ret
 
     def minion_publish(self, load):

@@ -6,7 +6,7 @@ Jobber Behaviors
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import types
@@ -45,13 +45,13 @@ log = logging.getLogger(__name__)
 
 
 @ioflo.base.deeding.deedify(
-        'SaltRaetShellJobberCheck',
-        ioinits={'opts': '.salt.opts',
-                 'grains': '.salt.grains',
-                 'fun': '.salt.var.fun',
-                 'matcher': '.salt.matcher',
-                 'shells': '.salt.var.shells',
-                 'stack': '.salt.road.manor.stack'})
+        salt.utils.stringutils.to_str('SaltRaetShellJobberCheck'),
+        ioinits={'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'grains': salt.utils.stringutils.to_str('.salt.grains'),
+                 'fun': salt.utils.stringutils.to_str('.salt.var.fun'),
+                 'matcher': salt.utils.stringutils.to_str('.salt.matcher'),
+                 'shells': salt.utils.stringutils.to_str('.salt.var.shells'),
+                 'stack': salt.utils.stringutils.to_str('.salt.road.manor.stack')})
 def jobber_check(self):
     '''
     Iterate over the shell jobbers and return the ones that have finished
@@ -78,13 +78,14 @@ def jobber_check(self):
 
 
 @ioflo.base.deeding.deedify(
-        'SaltRaetShellJobber',
-        ioinits={'opts': '.salt.opts',
-                 'grains': '.salt.grains',
-                 'fun': '.salt.var.fun',
-                 'matcher': '.salt.matcher',
-                 'modules': '.salt.loader.modules',
-                 'shells': {'ipath': '.salt.var.shells', 'ival': {}}})
+        salt.utils.stringutils.to_str('SaltRaetShellJobber'),
+        ioinits={'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'grains': salt.utils.stringutils.to_str('.salt.grains'),
+                 'fun': salt.utils.stringutils.to_str('.salt.var.fun'),
+                 'matcher': salt.utils.stringutils.to_str('.salt.matcher'),
+                 'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+                 'shells': {'ipath': salt.utils.stringutils.to_str('.salt.var.shells'),
+                            'ival': {}}})
 def shell_jobber(self):
     '''
     Shell jobber start!
@@ -141,15 +142,15 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
     do salt raet nix jobber
 
     '''
-    Ioinits = {'opts_store': '.salt.opts',
-               'grains': '.salt.grains',
-               'modules': '.salt.loader.modules',
-               'returners': '.salt.loader.returners',
-               'module_executors': '.salt.loader.executors',
-               'fun': '.salt.var.fun',
-               'matcher': '.salt.matcher',
-               'executors': '.salt.track.executors',
-               'road_stack': '.salt.road.manor.stack', }
+    Ioinits = {'opts_store': salt.utils.stringutils.to_str('.salt.opts'),
+               'grains': salt.utils.stringutils.to_str('.salt.grains'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'returners': salt.utils.stringutils.to_str('.salt.loader.returners'),
+               'module_executors': salt.utils.stringutils.to_str('.salt.loader.executors'),
+               'fun': salt.utils.stringutils.to_str('.salt.var.fun'),
+               'matcher': salt.utils.stringutils.to_str('.salt.matcher'),
+               'executors': salt.utils.stringutils.to_str('.salt.track.executors'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'), }
 
     def _prepare(self):
         '''
