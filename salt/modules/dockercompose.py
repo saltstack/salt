@@ -111,7 +111,6 @@ import inspect
 import logging
 import os
 import re
-import yaml
 
 import salt.utils.files
 import salt.utils.stringutils
@@ -121,6 +120,7 @@ from salt.ext import six
 from operator import attrgetter
 
 from salt.serializers import json
+from salt.utils import yaml
 
 try:
     import compose

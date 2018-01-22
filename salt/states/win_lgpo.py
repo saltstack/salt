@@ -106,10 +106,10 @@ Multiple policy configuration
 # Import python libs
 from __future__ import absolute_import
 import logging
-import json
 
 # Import salt libs
 import salt.utils.dictdiffer
+import salt.utils.json
 
 # Import 3rd party libs
 from salt.ext import six
@@ -265,8 +265,9 @@ def set_(name,
                     # compare
                     log.debug('need to compare {0} from current/requested policy'.format(policy_name))
                     changes = False
-                    if json.dumps(policy_data['requested_policy'][policy_name], sort_keys=True).lower() != \
-                            json.dumps(current_policy[policy_data['output_section']][pol_id], sort_keys=True).lower():
+                    requested_policy_json = salt.utils.json.dumps(policy_data['requested_policy'][policy_name], sort_keys=True).lower()
+                    current_policy_json = salt.utils.json.dumps(current_policy[policy_data['output_section']][pol_id], sort_keys=True).lower()
+                    if requested_policy_json != current_policy_json:
                         if policy_data['policy_lookup'][policy_name]['rights_assignment'] and cumulative_rights_assignments:
                             for user in policy_data['requested_policy'][policy_name]:
                                 if user not in current_policy[policy_data['output_section']][pol_id]:
@@ -275,14 +276,14 @@ def set_(name,
                             changes = True
                         if changes:
                             log.debug('{0} current policy != requested policy'.format(policy_name))
-                            log.debug('we compared {0} to {1}'.format(
-                                    json.dumps(policy_data['requested_policy'][policy_name], sort_keys=True).lower(),
-                                    json.dumps(current_policy[policy_data['output_section']][pol_id], sort_keys=True).lower()))
+                            log.debug(
+                                'we compared %s to %s',
+                                requested_policy_json, current_policy_json
+                            )
                             policy_changes.append(policy_name)
                     else:
                         log.debug('{0} current setting matches the requested setting'.format(policy_name))
-                        ret['comment'] = '  '.join(['"{0}" is already set.'.format(policy_name),
-                                                    ret['comment']])
+                        ret['comment'] = '"{0}" is already set.'.format(policy_name) + ret['comment']
                 else:
                     policy_changes.append(policy_name)
                     log.debug('policy {0} is not set, we will configure it'.format(policy_name))

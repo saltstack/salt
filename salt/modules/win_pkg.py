@@ -157,9 +157,9 @@ def latest_version(*names, **kwargs):
 
             # check, whether latest available version
             # is newer than latest installed version
-            if compare_versions(ver1=str(latest_available),
+            if compare_versions(ver1=six.text_type(latest_available),
                                 oper='>',
-                                ver2=str(latest_installed)):
+                                ver2=six.text_type(latest_installed)):
                 log.debug('Upgrade of {0} from {1} to {2} '
                           'is available'.format(name,
                                                 latest_installed,
@@ -469,7 +469,7 @@ def _get_reg_software():
         if d_name not in ignore_list:
             # some MS Office updates don't register a product name which means
             # their information is useless
-            reg_software.update({d_name: str(d_vers)})
+            reg_software.update({d_name: six.text_type(d_vers)})
 
     for reg_key in __salt__['reg.list_keys'](hive, key):
         update(hive, key, reg_key, False)
@@ -878,7 +878,7 @@ def _get_source_sum(source_hash, file_path, saltenv):
     schemes = ('salt', 'http', 'https', 'ftp', 'swift', 's3', 'file')
     invalid_hash_msg = ("Source hash '{0}' format is invalid. It must be in "
                         "the format <hash type>=<hash>").format(source_hash)
-    source_hash = str(source_hash)
+    source_hash = six.text_type(source_hash)
     source_hash_scheme = _urlparse(source_hash).scheme
 
     if source_hash_scheme in schemes:
@@ -1128,10 +1128,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         #  as a float it must be converted to a string in order for
         #  string matching to work.
         if not isinstance(version_num, six.string_types) and version_num is not None:
-            version_num = str(version_num)
+            version_num = six.text_type(version_num)
 
         if not version_num:
-            # following can be version number or latest
+            # following can be version number or latest or Not Found
+            version_num = _get_latest_pkg_version(pkginfo)
+
+        if version_num == 'latest' and 'latest' not in pkginfo:
             version_num = _get_latest_pkg_version(pkginfo)
 
         # Check if the version is already installed
@@ -1140,9 +1143,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             # Desired version number already installed
             ret[pkg_name] = {'current': version_num}
             continue
-
         # If version number not installed, is the version available?
-        elif version_num not in pkginfo:
+        elif version_num != 'latest' and version_num not in pkginfo:
             log.error('Version {0} not found for package '
                       '{1}'.format(version_num, pkg_name))
             ret[pkg_name] = {'not found': version_num}
@@ -1347,6 +1349,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     __salt__['system.set_reboot_required_witnessed']()
                 ret[pkg_name] = {'install status': 'success, reboot required'}
                 changed.append(pkg_name)
+            elif result['retcode'] == 1641:
+                # 1641 is ERROR_SUCCESS_REBOOT_INITIATED
+                ret[pkg_name] = {'install status': 'success, reboot initiated'}
+                changed.append(pkg_name)
             else:
                 log.error('Failed to install {0}'.format(pkg_name))
                 log.error('retcode {0}'.format(result['retcode']))
@@ -1485,7 +1491,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             #  as a float it must be converted to a string in order for
             #  string matching to work.
             if not isinstance(version_num, six.string_types) and version_num is not None:
-                version_num = str(version_num)
+                version_num = six.text_type(version_num)
             if version_num not in pkginfo and 'latest' in pkginfo:
                 version_num = 'latest'
         elif 'latest' in pkginfo:
@@ -1638,6 +1644,18 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                         redirect_stderr=True)
                 if not result['retcode']:
                     ret[pkgname] = {'uninstall status': 'success'}
+                    changed.append(pkgname)
+                elif result['retcode'] == 3010:
+                    # 3010 is ERROR_SUCCESS_REBOOT_REQUIRED
+                    report_reboot_exit_codes = kwargs.pop(
+                        'report_reboot_exit_codes', True)
+                    if report_reboot_exit_codes:
+                        __salt__['system.set_reboot_required_witnessed']()
+                    ret[pkgname] = {'uninstall status': 'success, reboot required'}
+                    changed.append(pkgname)
+                elif result['retcode'] == 1641:
+                    # 1641 is ERROR_SUCCESS_REBOOT_INITIATED
+                    ret[pkgname] = {'uninstall status': 'success, reboot initiated'}
                     changed.append(pkgname)
                 else:
                     log.error('Failed to remove %s', pkgname)
@@ -1826,9 +1844,9 @@ def compare_versions(ver1='', oper='==', ver2=''):
 
     # Support version being the special meaning of 'latest'
     if ver1 == 'latest':
-        ver1 = str(sys.maxsize)
+        ver1 = six.text_type(sys.maxsize)
     if ver2 == 'latest':
-        ver2 = str(sys.maxsize)
+        ver2 = six.text_type(sys.maxsize)
     # Support version being the special meaning of 'Not Found'
     if ver1 == 'Not Found':
         ver1 = '0.0.0.0.0'

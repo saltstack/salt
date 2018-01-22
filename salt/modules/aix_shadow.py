@@ -7,7 +7,7 @@ Manage account locks on AIX systems
 :depends: none
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python librarie
 import logging
