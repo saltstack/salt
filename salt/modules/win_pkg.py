@@ -581,8 +581,21 @@ def _refresh_db_conditional(saltenv, **kwargs):
 
 def refresh_db(**kwargs):
     '''
-    Fetches metadata files and calls :py:func:`pkg.genrepo
+    Fetches metadata files from the winrepo_dir and calls :py:func:`pkg.genrepo
     <salt.modules.win_pkg.genrepo>` to compile updated repository metadata.
+
+    The default winrepo directory on the master is `/srv/salt/win/repo-ng`. All
+    files that end with `.sls` in this and all subdirectories will be used to
+    generate the repository metadata (`winrepo.p`).
+
+    .. note::
+        Hidden directories (directories beginning with `.`, such as `.git`) will
+        be ignored.
+
+    .. note::
+        Directories under `/srv/salt/win/repo-ng` will be processed in
+        alphabetical order. If two software definition files contain the same
+        name, the last one processed wins.
 
     Kwargs:
 
