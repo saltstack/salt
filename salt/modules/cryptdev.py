@@ -194,7 +194,7 @@ def rm_crypttab(name, config='/etc/crypttab'):
 
     except (IOError, OSError) as exc:
         msg = 'Could not read from {0}: {1}'
-        raise CommandExecutionError(msg.format(config, six.text_type(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     if modified:
         try:
@@ -202,7 +202,7 @@ def rm_crypttab(name, config='/etc/crypttab'):
                 ofile.writelines((salt.utils.stringutils.to_str(line) for line in lines))
         except (IOError, OSError) as exc:
             msg = 'Could not write to {0}: {1}'
-            raise CommandExecutionError(msg.format(config, six.text_type(exc)))
+            raise CommandExecutionError(msg.format(config, exc))
 
     # If we reach this point, the changes were successful
     return 'change' if modified else 'absent'
@@ -296,7 +296,7 @@ def set_crypttab(
 
     except (IOError, OSError) as exc:
         msg = 'Couldn\'t read from {0}: {1}'
-        raise CommandExecutionError(msg.format(config, six.text_type(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     # add line if not present or changed
     if ret is None:
