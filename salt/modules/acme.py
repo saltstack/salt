@@ -25,7 +25,7 @@ Most parameters will fall back to cli.ini defaults if None is given.
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import datetime
 import os

@@ -273,7 +273,7 @@ def facts(**kwargs):  # pylint: disable=unused-argument
     .. code-block:: python
 
         {
-            'os_version': u'13.3R6.5',
+            'os_version': '13.3R6.5',
             'uptime': 10117140,
             'interface_list': [
                 'lc-0/0/0',
@@ -286,11 +286,11 @@ def facts(**kwargs):  # pylint: disable=unused-argument
                 'gr-0/0/10',
                 'ip-0/0/10'
             ],
-            'vendor': u'Juniper',
-            'serial_number': u'JN131356FBFA',
-            'model': u'MX480',
-            'hostname': u're0.edge05.syd01',
-            'fqdn': u're0.edge05.syd01'
+            'vendor': 'Juniper',
+            'serial_number': 'JN131356FBFA',
+            'model': 'MX480',
+            'hostname': 're0.edge05.syd01',
+            'fqdn': 're0.edge05.syd01'
         }
     '''
 
@@ -510,14 +510,14 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     .. code-block:: python
 
         {
-            u'show version and haiku':  u'Hostname: re0.edge01.arn01
+            'show version and haiku':  'Hostname: re0.edge01.arn01
                                           Model: mx480
                                           Junos: 13.3R6.5
                                             Help me, Obi-Wan
                                             I just saw Episode Two
                                             You're my only hope
                                          ',
-            u'show chassis fan' :   u'Item                      Status   RPM     Measurement
+            'show chassis fan' :   'Item                      Status   RPM     Measurement
                                       Top Rear Fan              OK       3840    Spinning at intermediate-speed
                                       Bottom Rear Fan           OK       3840    Spinning at intermediate-speed
                                       Top Middle Fan            OK       3900    Spinning at intermediate-speed
@@ -850,28 +850,28 @@ def ipaddrs(**kwargs):  # pylint: disable=unused-argument
     .. code-block:: python
 
         {
-            u'FastEthernet8': {
-                u'ipv4': {
-                    u'10.66.43.169': {
+            'FastEthernet8': {
+                'ipv4': {
+                    '10.66.43.169': {
                         'prefix_length': 22
                     }
                 }
             },
-            u'Loopback555': {
-                u'ipv4': {
-                    u'192.168.1.1': {
+            'Loopback555': {
+                'ipv4': {
+                    '192.168.1.1': {
                         'prefix_length': 24
                     }
                 },
-                u'ipv6': {
-                    u'1::1': {
+                'ipv6': {
+                    '1::1': {
                         'prefix_length': 64
                     },
-                    u'2001:DB8:1::1': {
+                    '2001:DB8:1::1': {
                         'prefix_length': 64
                     },
-                    u'FE80::3': {
-                        'prefix_length': u'N/A'
+                    'FE80::3': {
+                        'prefix_length': 'N/A'
                     }
                 }
             }
@@ -906,21 +906,21 @@ def interfaces(**kwargs):  # pylint: disable=unused-argument
     .. code-block:: python
 
         {
-            u'Management1': {
+            'Management1': {
                 'is_up': False,
                 'is_enabled': False,
-                'description': u'',
+                'description': '',
                 'last_flapped': -1,
                 'speed': 1000,
-                'mac_address': u'dead:beef:dead',
+                'mac_address': 'dead:beef:dead',
             },
-            u'Ethernet1':{
+            'Ethernet1':{
                 'is_up': True,
                 'is_enabled': True,
-                'description': u'foo',
+                'description': 'foo',
                 'last_flapped': 1429978575.1554043,
                 'speed': 1000,
-                'mac_address': u'beef:dead:beef',
+                'mac_address': 'beef:dead:beef',
             }
         }
     '''
@@ -957,17 +957,17 @@ def lldp(interface='', **kwargs):  # pylint: disable=unused-argument
         {
             'TenGigE0/0/0/8': [
                 {
-                    'parent_interface': u'Bundle-Ether8',
-                    'interface_description': u'TenGigE0/0/0/8',
-                    'remote_chassis_id': u'8c60.4f69.e96c',
-                    'remote_system_name': u'switch',
-                    'remote_port': u'Eth2/2/1',
-                    'remote_port_description': u'Ethernet2/2/1',
-                    'remote_system_description': u'Cisco Nexus Operating System (NX-OS) Software 7.1(0)N1(1a)
+                    'parent_interface': 'Bundle-Ether8',
+                    'interface_description': 'TenGigE0/0/0/8',
+                    'remote_chassis_id': '8c60.4f69.e96c',
+                    'remote_system_name': 'switch',
+                    'remote_port': 'Eth2/2/1',
+                    'remote_port_description': 'Ethernet2/2/1',
+                    'remote_system_description': 'Cisco Nexus Operating System (NX-OS) Software 7.1(0)N1(1a)
                           TAC support: http://www.cisco.com/tac
                           Copyright (c) 2002-2015, Cisco Systems, Inc. All rights reserved.',
-                    'remote_system_capab': u'B, R',
-                    'remote_system_enable_capab': u'B'
+                    'remote_system_capab': 'B, R',
+                    'remote_system_enable_capab': 'B'
                 }
             ]
         }

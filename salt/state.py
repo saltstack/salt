@@ -1959,6 +1959,7 @@ class State(object):
                         # run the state call in parallel, but only if not in a prereq
                         ret = self.call_parallel(cdata, low)
                     else:
+                        self.format_slots(cdata)
                         ret = self.states[cdata['full']](*cdata['args'],
                                                           **cdata['kwargs'])
                 self.states.inject_globals = {}
@@ -2067,6 +2068,42 @@ class State(object):
                                                 low['retry']['until'],
                                                 low['retry']['splay'])])
         return ret
+
+    def __eval_slot(self, slot):
+        log.debug('Evaluating slot: %s', slot)
+        fmt = slot.split(':', 2)
+        if len(fmt) != 3:
+            log.warning('Malformed slot: %s', slot)
+            return slot
+        if fmt[1] != 'salt':
+            log.warning('Malformed slot: %s', slot)
+            log.warning('Only execution modules are currently supported in slots. This means slot '
+                        'should start with "__slot__:salt:"')
+            return slot
+        fun, args, kwargs = salt.utils.args.parse_function(fmt[2])
+        if not fun or fun not in self.functions:
+            log.warning('Malformed slot: %s', slot)
+            log.warning('Execution module should be specified in a function call format: '
+                        'test.arg(\'arg\', kw=\'kwarg\')')
+            return slot
+        log.debug('Calling slot: %s(%s, %s)', fun, args, kwargs)
+        return self.functions[fun](*args, **kwargs)
+
+    def format_slots(self, cdata):
+        '''
+        Read in the arguments from the low level slot syntax to make a last
+        minute runtime call to gather relevant data for the specific routine
+        '''
+        # __slot__:salt.cmd.run(foo, bar, baz=qux)
+        ctx = (('args', enumerate(cdata['args'])),
+               ('kwargs', cdata['kwargs'].items()))
+        for atype, avalues in ctx:
+            for ind, arg in avalues:
+                arg = sdecode(arg)
+                if not isinstance(arg, six.string_types) or not arg.startswith('__slot__:'):
+                    # Not a slot, skip it
+                    continue
+                cdata[atype][ind] = self.__eval_slot(arg)
 
     def verify_retry_data(self, retry_data):
         '''

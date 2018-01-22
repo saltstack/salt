@@ -2,13 +2,17 @@
 '''
 Mercurial Fileserver Backend
 
-To enable, add ``hg`` to the :conf_master:`fileserver_backend` option in the
+To enable, add ``hgfs`` to the :conf_master:`fileserver_backend` option in the
 Master config file.
 
 .. code-block:: yaml
 
     fileserver_backend:
-      - hg
+      - hgfs
+
+.. note::
+    ``hg`` also works here. Prior to the Oxygen release, *only* ``hg`` would
+    work.
 
 After enabling this backend, branches, bookmarks, and tags in a remote
 mercurial repository are exposed to salt as different environments. This
