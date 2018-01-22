@@ -25,7 +25,7 @@ except ImportError:
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
-PROVIDER_NAME = 'rackspace'
+PROVIDER_NAME = 'openstack'
 DRIVER_NAME = 'openstack'
 
 
@@ -43,7 +43,7 @@ class RackspaceTest(ShellCase):
         super(RackspaceTest, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
-        profile_str = 'rackspace-config'
+        profile_str = 'openstack-config'
         providers = self.run_cloud('--list-providers')
         if profile_str + ':' not in providers:
             self.skipTest(

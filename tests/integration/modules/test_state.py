@@ -53,6 +53,18 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(isinstance(low, list))
         self.assertTrue(isinstance(low[0], dict))
 
+    def test_show_states(self):
+        '''
+        state.show_states
+        '''
+        states = self.run_function('state.show_states')
+        self.assertTrue(isinstance(states, list))
+        self.assertTrue(isinstance(states[0], six.string_types))
+
+        states = self.run_function('state.show_states', sorted=False)
+        self.assertTrue(isinstance(states, list))
+        self.assertTrue(isinstance(states[0], six.string_types))
+
     def test_catch_recurse(self):
         '''
         state.show_sls used to catch a recursive ref
@@ -1795,7 +1807,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(sls[id]['comment'], _expected[id]['comment'])
 
     def tearDown(self):
-        nonbase_file = '/tmp/nonbase_env'
+        nonbase_file = os.path.join(TMP, 'nonbase_env')
         if os.path.isfile(nonbase_file):
             os.remove(nonbase_file)
 

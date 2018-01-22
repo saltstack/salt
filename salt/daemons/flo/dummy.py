@@ -55,12 +55,12 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
                     'retcode': 0,
                     'success': True,
                     'cmd': '_return',
-                    'fun': u'test.ping',
+                    'fun': 'test.ping',
                     'id': 'silver'
                },
                'route': {
-                    'src': (u'silver_minion', u'jobber50e73ccefd052167c7', 'jid_ret'),
-                    'dst': (u'silver_master_master', None, 'remote_cmd')
+                    'src': ('silver_minion', 'jobber50e73ccefd052167c7', 'jid_ret'),
+                    'dst': ('silver_master_master', None, 'remote_cmd')
                 }
                }
 

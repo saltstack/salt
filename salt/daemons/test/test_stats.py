@@ -450,10 +450,10 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         self.assertEqual(len(testStack.rxMsgs), 1)
 
         msg, sender = testStack.rxMsgs.popleft()
-        self.assertDictEqual(msg, {u'route': {u'src': [ns2u(minionName), u'manor', None],
-                                              u'dst': [ns2u(masterName), None, u'event_fire']},
-                                   u'tag': ns2u(tag),
-                                   u'data': {u'test_stats_event': 111}})
+        self.assertDictEqual(msg, {'route': {'src': [ns2u(minionName), 'manor', None],
+                                             'dst': [ns2u(masterName), None, 'event_fire']},
+                                   'tag': ns2u(tag),
+                                   'data': {'test_stats_event': 111}})
 
         # Close active stacks servers
         act.actor.lane_stack.value.server.close()
@@ -507,10 +507,10 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         self.assertEqual(len(testStack.rxMsgs), 1)
 
         msg, sender = testStack.rxMsgs.popleft()
-        self.assertDictEqual(msg, {u'route': {u'src': [ns2u(minionName), u'manor', None],
-                                              u'dst': [ns2u(masterName), None, u'event_fire']},
-                                   u'tag': ns2u(tag),
-                                   u'data': {u'test_stats_event': 111}})
+        self.assertDictEqual(msg, {'route': {'src': [ns2u(minionName), 'manor', None],
+                                             'dst': [ns2u(masterName), None, 'event_fire']},
+                                   'tag': ns2u(tag),
+                                   'data': {'test_stats_event': 111}})
 
         # Close active stacks servers
         act.actor.lane_stack.value.server.close()

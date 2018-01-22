@@ -15,12 +15,12 @@
 # limitations under the License.
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import os.path
 
 # Import Salt libs
-from salt.ext.six import text_type as text
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 
@@ -36,7 +36,7 @@ class InputSanitizer(object):
         if not value:
             raise CommandExecutionError("Empty value during sanitation")
 
-        return text(value)
+        return six.text_type(value)
 
     @staticmethod
     def filename(value):
