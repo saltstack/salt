@@ -20,7 +20,6 @@ import collections
 import multiprocessing
 import threading
 import salt.serializers.msgpack
-import threading
 
 # Import third party libs
 try:
