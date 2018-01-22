@@ -8,9 +8,6 @@ Wrapper around uptime API
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-# Import Salt libs
-from salt.ext import six
-
 try:
     import requests
     ENABLED = True
