@@ -280,3 +280,28 @@ class SSDPFactoryTestCase(TestCase):
             assert factory._sendto.called
             assert factory._sendto.call_args[0][0] == '{}:E:Timestamp is too old'.format(signature)
             assert 'Received outdated package' in factory.log.debug.call_args[0][0]
+
+    def test_datagram_signature_correct_timestamp_reply(self):
+        '''
+        Test if datagram processing sends out correct reply within 20 seconds.
+        :return:
+        '''
+        factory = ssdp.SSDPFactory()
+        factory.disable_hidden = True
+        signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
+        data = '{}{}'.format(signature, '1516623820')
+        addr = '10.10.10.10', 'foo.suse.de'
+
+        ahead_dt = datetime.datetime.fromtimestamp(1516623840)
+        curnt_dt = datetime.datetime.fromtimestamp(1516623820)
+        delta = datetime.timedelta(0, 20)
+        with patch.object(factory, 'log', MagicMock()), patch.object(factory, '_sendto'), \
+             patch('salt.utils.ssdp.datetime.datetime', MagicMock()), \
+             patch('salt.utils.ssdp.datetime.datetime.now', MagicMock(return_value=ahead_dt)), \
+             patch('salt.utils.ssdp.datetime.datetime.fromtimestamp', MagicMock(return_value=curnt_dt)), \
+             patch('salt.utils.ssdp.datetime.timedelta', MagicMock(return_value=delta)):
+            factory.datagram_received(data=data, addr=addr)
+            assert factory.log.debug.called
+            assert factory.disable_hidden
+            assert factory._sendto.called
+            assert factory._sendto.call_args[0][0] == "{}:@:{{}}".format(signature)
