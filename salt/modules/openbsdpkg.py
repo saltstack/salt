@@ -22,7 +22,7 @@ Package support for OpenBSD
       - ruby%2.3
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
