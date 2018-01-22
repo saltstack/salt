@@ -5,7 +5,11 @@ States for Management of Memcached Keys
 
 .. versionadded:: 2014.1.0
 '''
+
+# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
 from salt.modules.memcached import (
     DEFAULT_HOST,
     DEFAULT_PORT,
@@ -13,6 +17,7 @@ from salt.modules.memcached import (
     DEFAULT_MIN_COMPRESS_LEN
 )
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext import six
 
 __virtualname__ = 'memcached'
 
