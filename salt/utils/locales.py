@@ -50,7 +50,7 @@ def sdecode(string_):
                 # Make sure unicode string ops work
                 u' ' + decoded  # pylint: disable=W0104
             return decoded
-        except UnicodeDecodeError:
+        except (TypeError, UnicodeDecodeError):
             continue
     return string_
 
