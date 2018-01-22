@@ -13,9 +13,6 @@ try:
 except ImportError:
     HAS_PWD = False
 
-# Import Salt libs
-from salt.ext import six
-
 # Import 3rd-party libs
 try:
     from gi.repository import Gio, GLib  # pylint: disable=W0611
@@ -94,7 +91,7 @@ class _GSettings(object):
             return result
 
         cmd = 'dbus-launch --exit-with-session gsettings set {0} {1} "{2}"'.format(
-                self.SCHEMA, self.KEY, six.text_type(value))
+                self.SCHEMA, self.KEY, value)
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
         result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)
