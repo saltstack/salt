@@ -89,6 +89,7 @@ on the IAM role to be persistent. This functionality was added in 2015.8.0.
 from __future__ import absolute_import
 import logging
 import salt.utils.dictupdate as dictupdate
+import salt.utils.dictdiffer
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -269,11 +270,13 @@ def _role_present(
         if not policy_document:
             policy = __salt__['boto_iam.build_policy'](region, key, keyid,
                                                        profile)
-            if _sort_policy(role['assume_role_policy_document']) != _sort_policy(policy):
+            if salt.utils.dictdiffer.deep_diff(role['assume_role_policy_document'],
+                                               policy):
                 update_needed = True
                 _policy_document = policy
         else:
-            if _sort_policy(role['assume_role_policy_document']) != _sort_policy(policy_document):
+            if salt.utils.dictdiffer.deep_diff(role['assume_role_policy_document'],
+                                               policy_document):
                 update_needed = True
                 _policy_document = policy_document
         if update_needed:
@@ -355,19 +358,6 @@ def _instance_profile_associated(
             msg = 'Failed to associate {0} instance profile with {0} role.'
             ret['comment'] = msg.format(name)
     return ret
-
-
-def _sort_policy(doc):
-    # List-type sub-items in policies don't happen to be order-sensitive, but
-    # compare operations will render them unequal, leading to non-idempotent
-    # state runs.  We'll sort any list-type subitems before comparison to reduce
-    # the likelihood of false negatives.
-    if isinstance(doc, list):
-        return sorted([_sort_policy(i) for i in doc])
-    elif isinstance(doc, dict):
-        return dict([(k, _sort_policy(v)) for k, v in doc.items()])
-    else:
-        return doc
 
 
 def _policies_present(
