@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
+from salt.ext import six
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
@@ -55,7 +56,7 @@ def list_exports(exports='/etc/exports'):
                 permcomps = perm.split('(')
                 permcomps[1] = permcomps[1].replace(')', '')
                 hosts = permcomps[0]
-                if type(hosts) is not str:
+                if not isinstance(hosts, six.string_types):
                     # Lists, etc would silently mangle /etc/exports
                     raise TypeError('hosts argument must be a string')
                 options = permcomps[1].split(',')
@@ -93,7 +94,7 @@ def add_export(exports='/etc/exports', path=None, hosts=None, options=None):
     '''
     if options is None:
         options = []
-    if type(hosts) is not str:
+    if not isinstance(hosts, six.string_types):
         # Lists, etc would silently mangle /etc/exports
         raise TypeError('hosts argument must be a string')
     edict = list_exports(exports)
