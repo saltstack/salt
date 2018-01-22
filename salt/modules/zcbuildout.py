@@ -297,7 +297,7 @@ def _Popen(command,
     directory = os.path.abspath(directory)
     if isinstance(command, list):
         command = ' '.join(command)
-    LOG.debug('Running {0}'.format(command))  # lint: disable=str-format-in-logging
+    LOG.debug('Running {0}'.format(command))  # pylint: disable=str-format-in-logging
     if not loglevel:
         loglevel = 'debug'
     ret = __salt__['cmd.run_all'](
@@ -504,7 +504,7 @@ def upgrade_bootstrap(directory='.',
     else:
         buildout_ver = _get_buildout_ver(directory)
         booturl = _get_bootstrap_url(directory)
-    LOG.debug('Using {0}'.format(booturl))  # lint: disable=str-format-in-logging
+    LOG.debug('Using {0}'.format(booturl))  # pylint: disable=str-format-in-logging
     # try to download an up-to-date bootstrap
     # set defaulttimeout
     # and add possible content
@@ -843,7 +843,7 @@ def run_buildout(directory='.',
     cmds, outputs = [], []
     if parts:
         for part in parts:
-            LOG.info('Installing single part: {0}'.format(part))  # lint: disable=str-format-in-logging
+            LOG.info('Installing single part: {0}'.format(part))  # pylint: disable=str-format-in-logging
             cmd = '{0} -c {1} {2} install {3}'.format(
                 bcmd, config, ' '.join(argv), part)
             cmds.append(cmd)
@@ -997,7 +997,7 @@ def buildout(directory='.',
 
         salt '*' buildout.buildout /srv/mybuildout
     '''
-    LOG.info('Running buildout in {0} ({1})'.format(directory, config))  # lint: disable=str-format-in-logging
+    LOG.info('Running buildout in {0} ({1})'.format(directory, config))  # pylint: disable=str-format-in-logging
     boot_ret = bootstrap(directory,
                          config=config,
                          buildout_ver=buildout_ver,
