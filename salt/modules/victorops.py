@@ -61,7 +61,7 @@ def _query(action=None,
     if routing_key:
         path += routing_key
 
-    log.debug('VictorOps URL: %s' , path)
+    log.debug('VictorOps URL: %s', path)
 
     if not isinstance(args, dict):
         args = {}
