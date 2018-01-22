@@ -129,8 +129,8 @@ def persist(name, value, config='/etc/sysctl.conf'):
                 edited = True
     if not edited:
         nlines.append('{0}={1}\n'.format(name, value))
-    with salt.utils.files.fopen(config, 'w+') as ofile:
-        ofile.writelines(salt.utils.data.decode(nlines))
+    with salt.utils.files.fopen(config, 'wb') as ofile:
+        ofile.writelines(salt.utils.data.encode(nlines))
 
     assign(name, value)
     return 'Updated'

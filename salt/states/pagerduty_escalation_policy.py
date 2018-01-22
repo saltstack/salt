@@ -97,7 +97,7 @@ def present(profile='pagerduty', subdomain=None, api_key=None, **kwargs):
                 if schedule:
                     target_id = schedule['schedule']['id']
             if target_id is None:
-                raise Exception('unidentified target: {0}'.format(six.text_type(target)))
+                raise Exception('unidentified target: {0}'.format(target))
             target['id'] = target_id
 
     r = __salt__['pagerduty_util.resource_present']('escalation_policies',
