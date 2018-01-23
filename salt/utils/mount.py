@@ -4,7 +4,7 @@ Common functions for managing mounts
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import os
 

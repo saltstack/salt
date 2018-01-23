@@ -5,7 +5,7 @@ The core behaviors used by minion and master
 # pylint: disable=W0232
 # pylint: disable=3rd-party-module-not-gated
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import time
@@ -210,10 +210,10 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
                 s_estate, s_yard, s_share = msg['route']['src']
                 d_estate, d_yard, d_share = msg['route']['dst']
             except (ValueError, IndexError):
-                log.error('Received invalid message: {0}'.format(msg))
+                log.error('Received invalid message: %s', msg)
                 return
 
-            log.debug("**** Worker Router rxMsg\n   msg= {0}\n".format(msg))
+            log.debug("**** Worker Router rxMsg\nmsg=%s", msg)
 
             if 'load' in msg:
                 cmd = msg['load'].get('cmd')

@@ -10,7 +10,7 @@ SmartOS Metadata grain provider
 .. versionadded:: nitrogen
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -69,7 +69,7 @@ def _user_mdata(mdata_list=None, mdata_get=None):
             if 'mdata' not in grains:
                 grains['mdata'] = {}
 
-            log.debug('found mdata entry {name} with value {value}'.format(name=mdata_grain, value=mdata_value))
+            log.debug('found mdata entry %s with value %s', mdata_grain, mdata_value)
             mdata_grain = mdata_grain.replace('-', '_')
             mdata_grain = mdata_grain.replace(':', '_')
             grains['mdata'][mdata_grain] = mdata_value
@@ -114,7 +114,7 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
             if 'sdc' not in grains['mdata']:
                 grains['mdata']['sdc'] = {}
 
-            log.debug('found mdata entry sdc:{name} with value {value}'.format(name=mdata_grain, value=mdata_value))
+            log.debug('found mdata entry sdc:%s with value %s', mdata_grain, mdata_value)
             mdata_grain = mdata_grain.replace('-', '_')
             mdata_grain = mdata_grain.replace(':', '_')
             if mdata_grain in sdc_json_keys:

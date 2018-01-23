@@ -138,6 +138,7 @@ def enforce_types(key, val):
         'saltenv_blacklist': 'stringlist',
         'refspecs': 'stringlist',
         'ref_types': 'stringlist',
+        'update_interval': int,
     }
 
     def _find_global(key):
@@ -160,14 +161,21 @@ def enforce_types(key, val):
             return six.text_type(val)
 
     expected = non_string_params[key]
-    if expected is bool:
-        return val
-    elif expected == 'stringlist':
+    if expected == 'stringlist':
         if not isinstance(val, (six.string_types, list)):
             val = six.text_type(val)
         if isinstance(val, six.string_types):
             return [x.strip() for x in val.split(',')]
         return [six.text_type(x) for x in val]
+    else:
+        try:
+            return expected(val)
+        except Exception as exc:
+            log.error(
+                'Failed to enforce type for key=%s with val=%s, falling back '
+                'to a string', key, val
+            )
+            return six.text_type(val)
 
 
 def failhard(role):
@@ -398,7 +406,8 @@ class GitProvider(object):
 
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
         if six.PY3:
-            # We loaded this data from yaml configuration files, so, its safe to use UTF-8
+            # We loaded this data from yaml configuration files, so, its safe
+            # to use UTF-8
             self.hash = hash_type(self.id.encode('utf-8')).hexdigest()
         else:
             self.hash = hash_type(self.id).hexdigest()
@@ -1019,7 +1028,7 @@ class GitProvider(object):
                     except IndexError:
                         dirs = []
                     self._linkdir_walk.append((
-                        salt.utils.path_join(self.linkdir, *parts[:idx + 1]),
+                        salt.utils.path.join(self.linkdir, *parts[:idx + 1]),
                         dirs,
                         []
                     ))
@@ -2166,16 +2175,15 @@ class GitBase(object):
         cachedir_map = {}
         for repo in self.remotes:
             cachedir_map.setdefault(repo.cachedir, []).append(repo.id)
+
         collisions = [x for x in cachedir_map if len(cachedir_map[x]) > 1]
         if collisions:
             for dirname in collisions:
                 log.critical(
-                    'The following {0} remotes have conflicting cachedirs: '
-                    '{1}. Resolve this using a per-remote parameter called '
-                    '\'name\'.'.format(
-                        self.role,
-                        ', '.join(cachedir_map[dirname])
-                    )
+                    'The following %s remotes have conflicting cachedirs: '
+                    '%s. Resolve this using a per-remote parameter called '
+                    '\'name\'.',
+                    self.role, ', '.join(cachedir_map[dirname])
                 )
                 failhard(self.role)
 
@@ -2262,27 +2270,39 @@ class GitBase(object):
             errors.extend(failed)
         return cleared, errors
 
-    def fetch_remotes(self):
+    def fetch_remotes(self, remotes=None):
         '''
         Fetch all remotes and return a boolean to let the calling function know
         whether or not any remotes were updated in the process of fetching
         '''
+        if remotes is None:
+            remotes = []
+        elif not isinstance(remotes, list):
+            log.error(
+                'Invalid \'remotes\' argument (%s) for fetch_remotes. '
+                'Must be a list of strings', remotes
+            )
+            remotes = []
+
         changed = False
         for repo in self.remotes:
-            try:
-                if repo.fetch():
-                    # We can't just use the return value from repo.fetch()
-                    # because the data could still have changed if old remotes
-                    # were cleared above. Additionally, we're running this in a
-                    # loop and later remotes without changes would override
-                    # this value and make it incorrect.
-                    changed = True
-            except Exception as exc:
-                log.error(
-                    'Exception caught while fetching %s remote \'%s\': %s',
-                    self.role, repo.id, exc,
-                    exc_info=True
-                )
+            name = getattr(repo, 'name', None)
+            if not remotes or (repo.id, name) in remotes:
+                try:
+                    if repo.fetch():
+                        # We can't just use the return value from repo.fetch()
+                        # because the data could still have changed if old
+                        # remotes were cleared above. Additionally, we're
+                        # running this in a loop and later remotes without
+                        # changes would override this value and make it
+                        # incorrect.
+                        changed = True
+                except Exception as exc:
+                    log.error(
+                        'Exception caught while fetching %s remote \'%s\': %s',
+                        self.role, repo.id, exc,
+                        exc_info=True
+                    )
         return changed
 
     def lock(self, remote=None):
@@ -2307,8 +2327,13 @@ class GitBase(object):
             errors.extend(failed)
         return locked, errors
 
-    def update(self):
+    def update(self, remotes=None):
         '''
+        .. versionchanged:: Oxygen
+            The remotes argument was added. This being a list of remote URLs,
+            it will only update matching remotes. This actually matches on
+            repo.id
+
         Execute a git fetch on all of the repos and perform maintenance on the
         fileserver cache.
         '''
@@ -2317,7 +2342,7 @@ class GitBase(object):
                 'backend': 'gitfs'}
 
         data['changed'] = self.clear_old_remotes()
-        if self.fetch_remotes():
+        if self.fetch_remotes(remotes=remotes):
             data['changed'] = True
 
         # A masterless minion will need a new env cache file even if no changes
@@ -2357,6 +2382,18 @@ class GitBase(object):
         except (OSError, IOError):
             # Hash file won't exist if no files have yet been served up
             pass
+
+    def update_intervals(self):
+        '''
+        Returns a dictionary mapping remote IDs to their intervals, designed to
+        be used for variable update intervals in salt.master.FileserverUpdate.
+
+        A remote's ID is defined here as a tuple of the GitPython/Pygit2
+        object's "id" and "name" attributes, with None being assumed as the
+        "name" value if the attribute is not present.
+        '''
+        return {(repo.id, getattr(repo, 'name', None)): repo.update_interval
+                for repo in self.remotes}
 
     def verify_provider(self):
         '''
@@ -2937,7 +2974,7 @@ class GitPillar(GitBase):
         Ensure that the mountpoint is present in the correct location and
         points at the correct path
         '''
-        lcachelink = salt.utils.path_join(repo.linkdir, repo._mountpoint)
+        lcachelink = salt.utils.path.join(repo.linkdir, repo._mountpoint)
         wipe_linkdir = False
         create_link = False
         try:
@@ -2982,7 +3019,7 @@ class GitPillar(GitBase):
                                 # is remove the symlink and let it be created
                                 # below.
                                 try:
-                                    if salt.utils.is_windows() \
+                                    if salt.utils.platform.is_windows() \
                                             and not ldest.startswith('\\\\') \
                                             and os.path.isdir(ldest):
                                         # On Windows, symlinks to directories

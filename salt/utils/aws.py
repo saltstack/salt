@@ -8,7 +8,7 @@ This is a base library used by a number of AWS services.
 
 :depends: requests
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import sys
@@ -37,7 +37,7 @@ from salt.ext.six.moves import map, range, zip
 from salt.ext.six.moves.urllib.parse import urlencode, urlparse
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
-LOG = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 DEFAULT_LOCATION = 'us-east-1'
 DEFAULT_AWS_API_VERSION = '2014-10-01'
 AWS_RETRY_CODES = [
@@ -195,7 +195,7 @@ def assumed_creds(prov_dict, role_arn, location=None):
                               verify=True)
 
     if result.status_code >= 400:
-        LOG.info('AssumeRole response: {0}'.format(result.content))
+        log.info('AssumeRole response: %s', result.content)
     result.raise_for_status()
     resp = result.json()
 
@@ -410,12 +410,12 @@ def query(params=None, setname=None, requesturl=None, location=None,
                                 'like https://some.aws.endpoint/?args').format(
                                     requesturl
                                 )
-                LOG.error(endpoint_err)
+                log.error(endpoint_err)
                 if return_url is True:
                     return {'error': endpoint_err}, requesturl
                 return {'error': endpoint_err}
 
-    LOG.debug('Using AWS endpoint: {0}'.format(endpoint))
+    log.debug('Using AWS endpoint: %s', endpoint)
     method = 'GET'
 
     aws_api_version = prov_dict.get(
@@ -443,21 +443,14 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
     attempts = 5
     while attempts > 0:
-        LOG.debug('AWS Request: {0}'.format(requesturl))
-        LOG.trace('AWS Request Parameters: {0}'.format(params_with_headers))
+        log.debug('AWS Request: %s', requesturl)
+        log.trace('AWS Request Parameters: %s', params_with_headers)
         try:
             result = requests.get(requesturl, headers=headers, params=params_with_headers)
-            LOG.debug(
-                'AWS Response Status Code: {0}'.format(
-                    result.status_code
-                )
-            )
-            LOG.trace(
-                'AWS Response Text: {0}'.format(
-                    result.text.encode(
-                        result.encoding if result.encoding else 'utf-8'
-                    )
-                )
+            log.debug('AWS Response Status Code: %s', result.status_code)
+            log.trace(
+                'AWS Response Text: %s',
+                result.text.encode(result.encoding if result.encoding else 'utf-8')
             )
             result.raise_for_status()
             break
@@ -469,29 +462,26 @@ def query(params=None, setname=None, requesturl=None, location=None,
             err_code = data.get('Errors', {}).get('Error', {}).get('Code', '')
             if attempts > 0 and err_code and err_code in AWS_RETRY_CODES:
                 attempts -= 1
-                LOG.error(
-                    'AWS Response Status Code and Error: [{0} {1}] {2}; '
-                    'Attempts remaining: {3}'.format(
-                        exc.response.status_code, exc, data, attempts
-                    )
+                log.error(
+                    'AWS Response Status Code and Error: [%s %s] %s; '
+                    'Attempts remaining: %s',
+                    exc.response.status_code, exc, data, attempts
                 )
                 # Wait a bit before continuing to prevent throttling
                 time.sleep(2)
                 continue
 
-            LOG.error(
-                'AWS Response Status Code and Error: [{0} {1}] {2}'.format(
-                    exc.response.status_code, exc, data
-                )
+            log.error(
+                'AWS Response Status Code and Error: [%s %s] %s',
+                exc.response.status_code, exc, data
             )
             if return_url is True:
                 return {'error': data}, requesturl
             return {'error': data}
     else:
-        LOG.error(
-            'AWS Response Status Code and Error: [{0} {1}] {2}'.format(
-                exc.response.status_code, exc, data
-            )
+        log.error(
+            'AWS Response Status Code and Error: [%s %s] %s',
+            exc.response.status_code, exc, data
         )
         if return_url is True:
             return {'error': data}, requesturl
@@ -536,7 +526,7 @@ def get_region_from_metadata():
     global __Location__
 
     if __Location__ == 'do-not-get-from-metadata':
-        LOG.debug('Previously failed to get AWS region from metadata. Not trying again.')
+        log.debug('Previously failed to get AWS region from metadata. Not trying again.')
         return None
 
     # Cached region
@@ -550,7 +540,7 @@ def get_region_from_metadata():
             proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
         )
     except requests.exceptions.RequestException:
-        LOG.warning('Failed to get AWS region from instance metadata.', exc_info=True)
+        log.warning('Failed to get AWS region from instance metadata.', exc_info=True)
         # Do not try again
         __Location__ = 'do-not-get-from-metadata'
         return None
@@ -560,7 +550,7 @@ def get_region_from_metadata():
         __Location__ = region
         return __Location__
     except (ValueError, KeyError):
-        LOG.warning('Failed to decode JSON from instance metadata.')
+        log.warning('Failed to decode JSON from instance metadata.')
         return None
 
     return None

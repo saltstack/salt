@@ -42,9 +42,8 @@ except ImportError:
 
 try:
     import backports_abc
-    HAS_BACKPORTS_ABC = True
 except ImportError:
-    HAS_BACKPORTS_ABC = False
+    import salt.ext.backports_abc as backports_abc
 
 try:
     import markupsafe
@@ -111,6 +110,7 @@ def get_tops(extra_mods='', so_mods=''):
             ]
 
     tops.append(_six.__file__.replace('.pyc', '.py'))
+    tops.append(backports_abc.__file__.replace('.pyc', '.py'))
 
     if HAS_CERTIFI:
         tops.append(os.path.dirname(certifi.__file__))
@@ -120,9 +120,6 @@ def get_tops(extra_mods='', so_mods=''):
 
     if HAS_SINGLEDISPATCH_HELPERS:
         tops.append(singledispatch_helpers.__file__.replace('.pyc', '.py'))
-
-    if HAS_BACKPORTS_ABC:
-        tops.append(backports_abc.__file__.replace('.pyc', '.py'))
 
     if HAS_SSL_MATCH_HOSTNAME:
         tops.append(os.path.dirname(os.path.dirname(ssl_match_hostname.__file__)))

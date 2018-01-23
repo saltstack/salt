@@ -6,7 +6,7 @@ IoFlo behaviors for running a ZeroMQ based master
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import hashlib
@@ -86,7 +86,7 @@ class ZmqRet(multiprocessing.Process):
         '''
         self.context = zmq.Context(self.opts['worker_threads'])
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
-        log.info('ZMQ Ret port binding to {0}'.format(self.uri))
+        log.info('ZMQ Ret port binding to %s', self.uri)
         self.clients = self.context.socket(zmq.ROUTER)
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
@@ -186,7 +186,7 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
                 self.pub_sock.setsockopt(zmq.IPV4ONLY, 0)
             self.pub_sock.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
             self.pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts.value)
-            log.info('Starting the Salt ZeroMQ Publisher on {0}'.format(self.pub_uri))
+            log.info('Starting the Salt ZeroMQ Publisher on %s', self.pub_uri)
             self.pub_sock.bind(self.pub_uri)
             self.created = True
         # Don't pop the publish messages! The raet behavior still needs them
