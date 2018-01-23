@@ -398,3 +398,21 @@ class SSDPClientTestCase(TestCase):
         assert 'foo' in clnt._config
         assert 'foo' not in config
 
+    def test_query(self):
+        '''
+        Test if client queries the broadcast
+        :return:
+        '''
+        config = {ssdp.SSDPBase.SIGNATURE: 'SUSE Enterprise Server',
+                  ssdp.SSDPBase.PORT: 4000}
+        f_time = 1111
+        _socket = MagicMock()
+        with patch('salt.utils.ssdp.socket', _socket),\
+             patch('salt.utils.ssdp.time.time', MagicMock(return_value=f_time)):
+            clnt = ssdp.SSDPDiscoveryClient(**config)
+            clnt._query()
+            assert clnt._socket.sendto.called
+            message, target = clnt._socket.sendto.call_args[0]
+            assert message == '{}{}'.format(config[ssdp.SSDPBase.SIGNATURE], f_time)
+            assert target[0] == '<broadcast>'
+            assert target[1] == config[ssdp.SSDPBase.PORT]
