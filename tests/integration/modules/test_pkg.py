@@ -27,6 +27,15 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         if salt.utils.is_windows():
             self.run_function('pkg.refresh_db')
 
+        os_release = self.run_function('grains.get', ['osrelease'])
+        os_grain = self.run_function('grains.item', ['os'])['os']
+        self.pkg = 'htop'
+
+        if int(os_release.split('.')[1]) >= 13 and salt.utils.is_darwin():
+            self.pkg = 'wget'
+        elif salt.utils.is_windows:
+            self.pkg = 'putty'
+
     def test_list(self):
         '''
         verify that packages are installed
@@ -133,27 +142,15 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         successfully install and uninstall a package
         '''
-        os_grain = self.run_function('grains.item', ['os'])['os']
-        os_release = self.run_function('grains.item', ['osrelease'])['osrelease']
-
-        pkg = 'htop'
-        if os_grain == 'Windows':
-            pkg = 'putty'
-
-        version = self.run_function('pkg.version', [pkg])
-
-        if os_grain == 'Ubuntu':
-            if os_release.startswith('12.'):
-                self.skipTest('pkg.install and pkg.remove do not work on ubuntu '
-                              '12 when run from the test suite')
+        version = self.run_function('pkg.version', [self.pkg])
 
         def test_install():
-            install_ret = self.run_function('pkg.install', [pkg])
-            self.assertIn(pkg, install_ret)
+            install_ret = self.run_function('pkg.install', [self.pkg])
+            self.assertIn(self.pkg, install_ret)
 
         def test_remove():
-            remove_ret = self.run_function('pkg.remove', [pkg])
-            self.assertIn(pkg, remove_ret)
+            remove_ret = self.run_function('pkg.remove', [self.pkg])
+            self.assertIn(self.pkg, remove_ret)
 
         if version and isinstance(version, dict):
             version = version[pkg]
@@ -172,14 +169,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test holding and unholding a package
         '''
-        pkg = 'htop'
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
         os_major_release = self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease']
         available = self.run_function('sys.doc', ['pkg.hold'])
-
-        if os_family == 'RedHat':
-            if os_major_release == '5':
-                self.skipTest('`yum versionlock` does not seem to work on RHEL/CentOS 5')
 
         if available:
             if os_family == 'RedHat':
@@ -188,13 +180,13 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 if not versionlock:
                     self.run_function('pkg.install', [lock_pkg])
 
-            hold_ret = self.run_function('pkg.hold', [pkg])
-            self.assertIn(pkg, hold_ret)
-            self.assertTrue(hold_ret[pkg]['result'])
+            hold_ret = self.run_function('pkg.hold', [self.pkg])
+            self.assertIn(self.pkg, hold_ret)
+            self.assertTrue(hold_ret[self.pkg]['result'])
 
-            unhold_ret = self.run_function('pkg.unhold', [pkg])
-            self.assertIn(pkg, unhold_ret)
-            self.assertTrue(hold_ret[pkg]['result'])
+            unhold_ret = self.run_function('pkg.unhold', [self.pkg])
+            self.assertIn(self.pkg, unhold_ret)
+            self.assertTrue(hold_ret[self.pkg]['result'])
 
             if os_family == 'RedHat':
                 if not versionlock:
