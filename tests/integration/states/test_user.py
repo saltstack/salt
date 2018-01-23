@@ -142,7 +142,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             ret_user_info = self.run_function('user.info', [self.user_name])
             self.assertReturnNonEmptySaltType(ret_user_info)
             group_name = grp.getgrgid(ret_user_info['gid']).gr_name
-            if not salt.utils.is_darwin():
+            if not salt.utils.platform.is_darwin():
                 self.assertTrue(os.path.isdir(self.user_home))
             if grains['os_family'] in ('Suse',):
                 self.assertEqual(group_name, 'users')
