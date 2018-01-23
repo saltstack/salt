@@ -25,6 +25,7 @@ import time
 import logging
 import random
 import socket
+import copy
 from collections import OrderedDict
 
 import salt.utils.json
@@ -222,7 +223,7 @@ class SSDPDiscoveryServer(SSDPBase):
 
         :param config:
         '''
-        self._config = config.copy()
+        self._config = copy.deepcopy(config)
         if self.ANSWER not in self._config:
             self._config[self.ANSWER] = {}
         self._config[self.ANSWER].update({'master': self.get_self_ip()})
