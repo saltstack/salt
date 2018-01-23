@@ -162,7 +162,7 @@ def collection(name, options=None, **kwargs):
             ret['comment'] = 'The collection "{0}" will be created.'.format(name)
             ret['pchanges'] = {
                 'old': None,
-                'new': six.text_type('options=') + new_changes  # future lint: disable=blacklisted-function
+                'new': str('options=') + new_changes  # future lint: disable=blacklisted-function
             }
             ret['result'] = None
         else:
@@ -170,7 +170,7 @@ def collection(name, options=None, **kwargs):
             ret['comment'] = 'The collection "{0}" has been created.'.format(name)
             ret['changes'] = {
                 'old': None,
-                'new': six.text_type('options=') + new_changes  # future lint: disable=blacklisted-function
+                'new': str('options=') + new_changes  # future lint: disable=blacklisted-function
             }
 
             ret['result'] = True

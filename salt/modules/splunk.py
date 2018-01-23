@@ -93,7 +93,7 @@ def _send_email(name, email):
         try:
             mail_process = subprocess.Popen(['mail', '-s', subject, '-c', cc, email], stdin=subprocess.PIPE)
         except Exception as e:
-            log.error("unable to send email to %s: %s", email, six.text_type(e))
+            log.error("unable to send email to %s: %s", email, e)
 
         mail_process.communicate(message)
 
@@ -242,7 +242,7 @@ def create_user(email, profile="splunk", **kwargs):
             response[field] = newuser[field]
 
     except Exception as e:
-        log.error("Caught exception %s", six.text_type(e))
+        log.error("Caught exception %s", e)
         return False
 
 
@@ -318,7 +318,7 @@ def delete_user(email, profile="splunk"):
         try:
             client.users.delete(user.name)
         except (AuthenticationError, HTTPError) as e:
-            log.info('Exception: %s', six.text_type(e))
+            log.info('Exception: %s', e)
             return False
     else:
         return False

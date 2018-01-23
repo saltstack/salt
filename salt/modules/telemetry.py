@@ -29,6 +29,7 @@ import logging
 
 # Import Salt libs
 import salt.utils.json
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -277,10 +278,9 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         _update_cache(deployment_id, metric_name, response.json())
     else:
         log.error(
-            six.text_type('Failed to create alarm on metric: %s in deployment %s: payload: %s'),  # future lint: disable=blacklisted-function
-            salt.utils.stringutils.to_unicode(metric_name),
-            salt.utils.stringutils.to_unicode(deployment_id),
-            salt.utils.json.dumps(post_body)
+            'Failed to create alarm on metric: %s in '
+            'deployment %s: payload: %s',
+            metric_name, deployment_id, salt.utils.json.dumps(post_body)
         )
 
     return response.status_code >= 200 and response.status_code < 300, response.json()
@@ -376,7 +376,7 @@ def delete_alarms(deployment_id, alert_id=None, metric_name=None, api_key=None, 
                 _update_cache(deployment_id, metric_name, None)
 
         except requests.exceptions.RequestException as e:
-            log.error('Delete failed: %s', six.text_type(e))
+            log.error('Delete failed: %s', e)
 
         if response.status_code != 200:
             failed_to_delete.append(id)
