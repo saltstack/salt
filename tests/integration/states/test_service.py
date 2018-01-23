@@ -31,7 +31,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         if os_family == 'RedHat':
             self.service_name = 'crond'
         elif os_family == 'Arch':
-            self.service_name = 'systemd-journald'
+            self.service_name = 'sshd'
             cmd_name = 'systemctl'
         elif os_family == 'MacOS':
             self.service_name = 'org.ntp.ntpd'
