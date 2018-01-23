@@ -20,7 +20,7 @@ import hmac
 import logging
 import salt.config
 import re
-import six
+from salt.ext import six
 
 # Import Salt libs
 import salt.utils.hashutils
