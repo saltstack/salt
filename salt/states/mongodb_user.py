@@ -9,7 +9,6 @@ Management of Mongodb users
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-from salt.ext import six
 import salt.utils.versions
 
 # Define the module's virtual name
