@@ -2089,7 +2089,7 @@ def build_network_settings(**settings):
 
         # A search line didn't exist so we'll add one in
         # with the new search domain
-        if not found_search:
+        if not found_search and searchdomain:
             if new_contents[0].startswith('domain'):
                 new_contents.insert(1, 'search {0}\n' . format(searchdomain))
             else:
