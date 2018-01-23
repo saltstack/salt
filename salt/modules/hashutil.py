@@ -280,7 +280,7 @@ def github_signature(string, shared_secret, challenge_hmac):
     msg = string
     key = shared_secret
     hashtype, challenge = challenge_hmac.split('=')
-    if six.PY3:
+    if six.text_type:
         msg = salt.utils.stringutils.to_bytes(msg)
         key = salt.utils.stringutils.to_bytes(key)
     hmac_hash = hmac.new(key, msg, getattr(hashlib, hashtype))
