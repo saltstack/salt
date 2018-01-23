@@ -3,8 +3,9 @@
 Use the :ref:`Salt Event System <events>` to fire events from the
 master to the minion and vice-versa.
 '''
-from __future__ import absolute_import
+
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import logging
 import os
@@ -42,7 +43,7 @@ def fire_master(data, tag, preload=None):
     '''
     if (__opts__.get('local', None) or __opts__.get('file_client', None) == 'local') and not __opts__.get('use_master_when_local', False):
         #  We can't send an event if we're in masterless mode
-        log.warning('Local mode detected. Event with tag {0} will NOT be sent.'.format(tag))
+        log.warning('Local mode detected. Event with tag %s will NOT be sent.', tag)
         return False
     if __opts__['transport'] == 'raet':
         channel = salt.transport.Channel.factory(__opts__)
