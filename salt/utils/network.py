@@ -1732,11 +1732,8 @@ def mac_str_to_bytes(mac_str):
         mac_str = mac_str.replace(sep, '')
     else:
         raise ValueError('Invalid MAC address')
-    if six.PY3:
-        mac_bytes = bytes(int(mac_str[s:s+2], 16) for s in range(0, 12, 2))
-    else:
-        mac_bytes = salt.utils.stringutils.to_bytes(''.join(chr(int(mac_str[s:s+2], 16)) for s in range(0, 12, 2)))
-    return mac_bytes
+    chars = (int(mac_str[s:s+2], 16) for s in range(0, 12, 2))
+    return bytes(chars) if six.PY3 else b''.join(chr(x) for x in chars)
 
 
 def refresh_dns():

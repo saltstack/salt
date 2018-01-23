@@ -4,7 +4,7 @@ Manage Perl modules using CPAN
 
 .. versionadded:: 2015.5.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -110,6 +110,7 @@ def remove(module, details=False):
         mfile = os.path.join(build_dir, 'MANIFEST')
         with salt.utils.files.fopen(mfile, 'r') as fh_:
             for line in fh_.readlines():
+                line = salt.utils.stringutils.to_unicode(line)
                 if line.startswith('lib/'):
                     files.append(line.replace('lib/', ins_path).strip())
 
