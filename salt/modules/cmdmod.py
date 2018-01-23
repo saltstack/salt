@@ -2750,7 +2750,7 @@ def shell_info(shell, list_modules=False):
                 'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
                 'Install')
             if install_data.get('vtype') == 'REG_DWORD' and \
-                    install_data.get('vdata') == salt.utils.to_unicode(1, 'mbcs'):
+                    install_data.get('vdata') == 1:
                 details = __salt__['reg.list_values'](
                     'HKEY_LOCAL_MACHINE',
                     'Software\\Microsoft\\PowerShell\\{0}\\'
