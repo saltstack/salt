@@ -2801,7 +2801,8 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
                 mode = 'rb' if six.PY3 else 'r'
                 with salt.utils.files.fopen(fpath, mode) as fh_:
-                    minions[driver][prov][minion_id] = salt.utils.data.decode(msgpack.load(fh_))
+                    minions[driver][prov][minion_id] = msgpack.load(fh_, encoding='utf-8')
+
     return minions
 
 
