@@ -2605,7 +2605,8 @@ def request_minion_cachedir(
 
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, 'requested', fname)
-    with salt.utils.files.fopen(path, 'w') as fh_:
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.files.fopen(path, mode) as fh_:
         msgpack.dump(data, fh_)
 
 
@@ -2715,8 +2716,9 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 # Finally, get a list of full minion data
                 fpath = os.path.join(min_dir, fname)
                 minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
-                with salt.utils.files.fopen(fpath, 'r') as fh_:
-                    minions[driver][prov][minion_id] = salt.utils.data.decode(msgpack.load(fh_))
+                mode = 'rb' if six.PY3 else 'r'
+                with salt.utils.files.fopen(fpath, mode) as fh_:
+                    minions[driver][prov][minion_id] = msgpack.load(fh_, encoding='utf-8')
 
     return minions
 
@@ -2891,7 +2893,8 @@ def cache_node_list(nodes, provider, opts):
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
         path = os.path.join(prov_dir, '{0}.p'.format(node))
-        with salt.utils.files.fopen(path, 'w') as fh_:
+        mode = 'wb' if six.PY3 else 'w'
+        with salt.utils.files.fopen(path, mode) as fh_:
             msgpack.dump(nodes[node], fh_)
 
 
@@ -2916,7 +2919,8 @@ def cache_node(node, provider, opts):
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
     path = os.path.join(prov_dir, '{0}.p'.format(node['name']))
-    with salt.utils.files.fopen(path, 'w') as fh_:
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.files.fopen(path, mode) as fh_:
         msgpack.dump(node, fh_)
 
 
