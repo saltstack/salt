@@ -306,3 +306,23 @@ class SSDPFactoryTestCase(TestCase):
             assert factory._sendto.called
             assert factory._sendto.call_args[0][0] == "{}:@:{{}}".format(signature)
             assert 'Received "%s" from %s:%s' in factory.log.debug.call_args[0][0]
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(pytest is None, 'PyTest is missing')
+class SSDPServerTestCase(TestCase):
+    '''
+    Server-related test cases
+    '''
+    def test_config_detached(self):
+        '''
+        Test if configuration is not a reference.
+        :return:
+        '''
+        old_ip = '10.10.10.10'
+        new_ip = '20.20.20.20'
+        config = {'answer': {'master': old_ip}}
+        with patch('salt.utils.ssdp.SSDPDiscoveryServer.get_self_ip', MagicMock(return_value=new_ip)):
+            srv = ssdp.SSDPDiscoveryServer(**config)
+            assert srv._config['answer']['master'] == new_ip
+            assert config['answer']['master'] == old_ip
