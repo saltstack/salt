@@ -2689,7 +2689,7 @@ def request_minion_cachedir(
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, 'requested', fname)
     mode = 'wb' if six.PY3 else 'w'
-    with salt.utils.files.fopen(path, 'w') as fh_:
+    with salt.utils.files.fopen(path, mode) as fh_:
         msgpack.dump(data, fh_)
 
 
