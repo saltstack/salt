@@ -367,3 +367,23 @@ class SSDPServerTestCase(TestCase):
             assert 'local_addr' in cde_args
             assert not cfg_ip_addr == ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.LISTEN_IP] and cfg_ip_addr == '10.10.10.10'
             assert not cfg_port == ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.PORT] and cfg_port == 12345
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(pytest is None, 'PyTest is missing')
+class SSDPClientTestCase(TestCase):
+    '''
+    Client-related test cases
+    '''
+    def test_config_passed(self):
+        '''
+        Test if the configuration is passed.
+        :return:
+        '''
+        config = {ssdp.SSDPBase.SIGNATURE: 'SUSE Enterprise Server',
+                  ssdp.SSDPBase.TIMEOUT: 5, ssdp.SSDPBase.PORT: 12345}
+        clnt = ssdp.SSDPDiscoveryClient(**config)
+        assert clnt._config[ssdp.SSDPBase.SIGNATURE] == config[ssdp.SSDPBase.SIGNATURE]
+        assert clnt._config[ssdp.SSDPBase.PORT] == config[ssdp.SSDPBase.PORT]
+        assert clnt._config[ssdp.SSDPBase.TIMEOUT] == config[ssdp.SSDPBase.TIMEOUT]
+
