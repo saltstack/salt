@@ -326,3 +326,41 @@ class SSDPServerTestCase(TestCase):
             srv = ssdp.SSDPDiscoveryServer(**config)
             assert srv._config['answer']['master'] == new_ip
             assert config['answer']['master'] == old_ip
+
+    @patch('salt.utils.ssdp.SSDPFactory', MagicMock())
+    def test_run(self):
+        '''
+        Test server runner.
+        :return:
+        '''
+        config = {'answer': {'master': '10.10.10.10'},
+                  ssdp.SSDPBase.LISTEN_IP: '10.10.10.10',
+                  ssdp.SSDPBase.PORT: 12345}
+        srv = ssdp.SSDPDiscoveryServer(**config)
+        srv.create_datagram_endpoint = MagicMock()
+
+        trnsp = MagicMock()
+        proto = MagicMock()
+        loop = MagicMock()
+        loop.run_until_complete = MagicMock(return_value=(trnsp, proto))
+
+        io = MagicMock()
+        io.ported = False
+        io.get_event_loop = MagicMock(return_value=loop)
+
+        with patch('salt.utils.ssdp.asyncio', io):
+            srv.run()
+            cde_args = io.get_event_loop().create_datagram_endpoint.call_args[1]
+            cfg_ip_addr, cfg_port = cde_args['local_addr']
+
+            assert io.get_event_loop.called
+            assert io.get_event_loop().run_until_complete.called
+            assert io.get_event_loop().run_forever.called
+            assert io.get_event_loop().create_datagram_endpoint.called
+            assert trnsp.close.called
+            assert loop.close.called
+            assert 'allow_broadcast' in cde_args
+            assert cde_args['allow_broadcast']
+            assert 'local_addr' in cde_args
+            assert not cfg_ip_addr == ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.LISTEN_IP] and cfg_ip_addr == '10.10.10.10'
+            assert not cfg_port == ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.PORT] and cfg_port == 12345
