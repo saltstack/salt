@@ -4,7 +4,7 @@ Generate the salt thin tarball from the installed python files
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
@@ -72,6 +72,7 @@ import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
 import salt.utils.path
+import salt.utils.stringutils
 import salt.exceptions
 import salt.version
 
@@ -90,7 +91,7 @@ sys.path.insert(
 from salt.scripts import salt_call
 if __name__ == '__main__':
     salt_call()
-'''
+'''.encode('utf-8')
 
 
 def thin_path(cachedir):
@@ -181,7 +182,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     thinver = os.path.join(thindir, 'version')
     pythinver = os.path.join(thindir, '.thin-gen-py-version')
     salt_call = os.path.join(thindir, 'salt-call')
-    with salt.utils.files.fopen(salt_call, 'w+') as fp_:
+    with salt.utils.files.fopen(salt_call, 'wb') as fp_:
         fp_.write(SALTCALL)
     if os.path.isfile(thintar):
         if not overwrite:
@@ -190,7 +191,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                     overwrite = fh_.read() != salt.version.__version__
                 if overwrite is False and os.path.isfile(pythinver):
                     with salt.utils.files.fopen(pythinver) as fh_:
-                        overwrite = fh_.read() != str(sys.version_info[0])
+                        overwrite = fh_.read() != str(sys.version_info[0])  # future lint: disable=blacklisted-function
             else:
                 overwrite = True
 
@@ -321,7 +322,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     with salt.utils.files.fopen(thinver, 'w+') as fp_:
         fp_.write(salt.version.__version__)
     with salt.utils.files.fopen(pythinver, 'w+') as fp_:
-        fp_.write(str(sys.version_info[0]))
+        fp_.write(str(sys.version_info[0]))  # future lint: disable=blacklisted-function
     os.chdir(os.path.dirname(thinver))
     if compress == 'gzip':
         tfp.add('version')
@@ -366,7 +367,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
     minver = os.path.join(mindir, 'version')
     pyminver = os.path.join(mindir, '.min-gen-py-version')
     salt_call = os.path.join(mindir, 'salt-call')
-    with salt.utils.files.fopen(salt_call, 'w+') as fp_:
+    with salt.utils.files.fopen(salt_call, 'wb') as fp_:
         fp_.write(SALTCALL)
     if os.path.isfile(mintar):
         if not overwrite:
@@ -375,7 +376,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
                     overwrite = fh_.read() != salt.version.__version__
                 if overwrite is False and os.path.isfile(pyminver):
                     with salt.utils.files.fopen(pyminver) as fh_:
-                        overwrite = fh_.read() != str(sys.version_info[0])
+                        overwrite = fh_.read() != str(sys.version_info[0])  # future lint: disable=blacklisted-function
             else:
                 overwrite = True
 
@@ -613,7 +614,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
     with salt.utils.files.fopen(minver, 'w+') as fp_:
         fp_.write(salt.version.__version__)
     with salt.utils.files.fopen(pyminver, 'w+') as fp_:
-        fp_.write(str(sys.version_info[0]))
+        fp_.write(str(sys.version_info[0]))  # future lint: disable=blacklisted-function
     os.chdir(os.path.dirname(minver))
     tfp.add('version')
     tfp.add('.min-gen-py-version')
