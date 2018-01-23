@@ -5,10 +5,26 @@
 from __future__ import absolute_import
 import logging
 import pkg_resources
+import os.path
+
+# Import Salt Libs
+import salt.config
+from salt.ext import six
+import salt.loader
+import salt.modules.boto_route53 as boto_route53
+import salt.utils.versions
+
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.paths import TESTS_DIR
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
+    import boto
+    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
     from moto import mock_route53_deprecated
     HAS_MOTO = True
 except ImportError:
@@ -25,18 +41,6 @@ except ImportError:
             pass
         return stub_function
 # pylint: enable=import-error
-
-# Import Salt Libs
-import salt.config
-from salt.ext import six
-import salt.loader
-import salt.modules.boto_route53 as boto_route53
-import salt.utils.versions
-
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 log = logging.getLogger(__name__)
 

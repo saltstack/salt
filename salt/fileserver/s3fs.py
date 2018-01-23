@@ -2,6 +2,8 @@
 '''
 Amazon S3 Fileserver Backend
 
+.. versionadded:: 0.16.0
+
 This backend exposes directories in S3 buckets as Salt environments. To enable
 this backend, add ``s3fs`` to the :conf_master:`fileserver_backend` option in the
 Master config file.

@@ -3,7 +3,7 @@
 Get Version information from Windows
 '''
 # http://stackoverflow.com/questions/32300004/python-ctypes-getting-0-with-getversionex-function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Third Party Libs
 import ctypes

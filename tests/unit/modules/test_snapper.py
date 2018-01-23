@@ -36,18 +36,18 @@ DBUS_RET = {
          {'userdata2': 'userval2', 'salt_jid': '20160607130930720112'}]
     ],
     'ListConfigs': [
-        [u'root', u'/', {
-            u'SUBVOLUME': u'/', u'NUMBER_MIN_AGE': u'1800',
-            u'TIMELINE_LIMIT_YEARLY': u'4-10', u'NUMBER_LIMIT_IMPORTANT': u'10',
-            u'FSTYPE': u'btrfs', u'TIMELINE_LIMIT_MONTHLY': u'4-10',
-            u'ALLOW_GROUPS': u'', u'EMPTY_PRE_POST_MIN_AGE': u'1800',
-            u'EMPTY_PRE_POST_CLEANUP': u'yes', u'BACKGROUND_COMPARISON': u'yes',
-            u'TIMELINE_LIMIT_HOURLY': u'4-10', u'ALLOW_USERS': u'',
-            u'TIMELINE_LIMIT_WEEKLY': u'0', u'TIMELINE_CREATE': u'no',
-            u'NUMBER_CLEANUP': u'yes', u'TIMELINE_CLEANUP': u'yes',
-            u'SPACE_LIMIT': u'0.5', u'NUMBER_LIMIT': u'10',
-            u'TIMELINE_MIN_AGE': u'1800', u'TIMELINE_LIMIT_DAILY': u'4-10',
-            u'SYNC_ACL': u'no', u'QGROUP': u'1/0'}
+        ['root', '/', {
+            'SUBVOLUME': '/', 'NUMBER_MIN_AGE': '1800',
+            'TIMELINE_LIMIT_YEARLY': '4-10', 'NUMBER_LIMIT_IMPORTANT': '10',
+            'FSTYPE': 'btrfs', 'TIMELINE_LIMIT_MONTHLY': '4-10',
+            'ALLOW_GROUPS': '', 'EMPTY_PRE_POST_MIN_AGE': '1800',
+            'EMPTY_PRE_POST_CLEANUP': 'yes', 'BACKGROUND_COMPARISON': 'yes',
+            'TIMELINE_LIMIT_HOURLY': '4-10', 'ALLOW_USERS': '',
+            'TIMELINE_LIMIT_WEEKLY': '0', 'TIMELINE_CREATE': 'no',
+            'NUMBER_CLEANUP': 'yes', 'TIMELINE_CLEANUP': 'yes',
+            'SPACE_LIMIT': '0.5', 'NUMBER_LIMIT': '10',
+            'TIMELINE_MIN_AGE': '1800', 'TIMELINE_LIMIT_DAILY': '4-10',
+            'SYNC_ACL': 'no', 'QGROUP': '1/0'}
         ]
     ],
     'GetFiles': [
@@ -86,18 +86,18 @@ MODULE_RET = {
         }
     ],
     'LISTCONFIGS': {
-        u'root': {
-            u'SUBVOLUME': u'/', u'NUMBER_MIN_AGE': u'1800',
-            u'TIMELINE_LIMIT_YEARLY': u'4-10', u'NUMBER_LIMIT_IMPORTANT': u'10',
-            u'FSTYPE': u'btrfs', u'TIMELINE_LIMIT_MONTHLY': u'4-10',
-            u'ALLOW_GROUPS': u'', u'EMPTY_PRE_POST_MIN_AGE': u'1800',
-            u'EMPTY_PRE_POST_CLEANUP': u'yes', u'BACKGROUND_COMPARISON': u'yes',
-            u'TIMELINE_LIMIT_HOURLY': u'4-10', u'ALLOW_USERS': u'',
-            u'TIMELINE_LIMIT_WEEKLY': u'0', u'TIMELINE_CREATE': u'no',
-            u'NUMBER_CLEANUP': u'yes', u'TIMELINE_CLEANUP': u'yes',
-            u'SPACE_LIMIT': u'0.5', u'NUMBER_LIMIT': u'10',
-            u'TIMELINE_MIN_AGE': u'1800', u'TIMELINE_LIMIT_DAILY': u'4-10',
-            u'SYNC_ACL': u'no', u'QGROUP': u'1/0'
+        'root': {
+            'SUBVOLUME': '/', 'NUMBER_MIN_AGE': '1800',
+            'TIMELINE_LIMIT_YEARLY': '4-10', 'NUMBER_LIMIT_IMPORTANT': '10',
+            'FSTYPE': 'btrfs', 'TIMELINE_LIMIT_MONTHLY': '4-10',
+            'ALLOW_GROUPS': '', 'EMPTY_PRE_POST_MIN_AGE': '1800',
+            'EMPTY_PRE_POST_CLEANUP': 'yes', 'BACKGROUND_COMPARISON': 'yes',
+            'TIMELINE_LIMIT_HOURLY': '4-10', 'ALLOW_USERS': '',
+            'TIMELINE_LIMIT_WEEKLY': '0', 'TIMELINE_CREATE': 'no',
+            'NUMBER_CLEANUP': 'yes', 'TIMELINE_CLEANUP': 'yes',
+            'SPACE_LIMIT': '0.5', 'NUMBER_LIMIT': '10',
+            'TIMELINE_MIN_AGE': '1800', 'TIMELINE_LIMIT_DAILY': '4-10',
+            'SYNC_ACL': 'no', 'QGROUP': '1/0'
         }
     },
     'GETFILES': {
