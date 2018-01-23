@@ -11,7 +11,7 @@ Module for Solaris 10's zoneadm
 .. warning::
     Oracle Solaris 11's zoneadm is not supported by this module!
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
