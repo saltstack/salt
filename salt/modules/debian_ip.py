@@ -2099,7 +2099,8 @@ def build_network_settings(**settings):
 
         # Write /etc/resolv.conf
         if not ('test' in settings and settings['test']):
-            _write_file_network(new_resolv, _DEB_RESOLV_FILE)
+            if not __salt__['file.is_link'](_DEB_RESOLV_FILE):
+                _write_file_network(new_resolv, _DEB_RESOLV_FILE)
 
     #  used for returning the results back
     try:
