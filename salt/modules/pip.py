@@ -83,7 +83,7 @@ import shutil
 import logging
 import sys
 import tempfile
-from pkg_resources import parse_version
+import pkg_resources
 
 # Import Salt libs
 import salt.utils.data
@@ -1359,7 +1359,7 @@ def list_all_versions(pkg,
         match = re.search(r'\s*Could not find a version.* \(from versions: (.*)\)', line)
         if match:
             versions = [v for v in match.group(1).split(', ') if v and excludes.match(v)]
-            versions.sort(key=parse_version)
+            versions.sort(key=pkg_resources.parse_version)
             break
     if not versions:
         return None

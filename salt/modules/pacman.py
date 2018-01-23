@@ -542,6 +542,7 @@ def install(name=None,
         cmd.extend(['systemd-run', '--scope'])
     cmd.append('pacman')
 
+    targets = []
     errors = []
     targets = []
     if pkg_type == 'file':
