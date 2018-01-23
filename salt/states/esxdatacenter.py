@@ -49,10 +49,11 @@ State configuration:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
+from salt.ext import six
 import salt.exceptions
 
 # Get Logging Started
@@ -130,5 +131,5 @@ def datacenter_configured(name):
             __salt__['vsphere.disconnect'](si)
         ret.update({
             'result': False if not __opts__['test'] else None,
-            'comment': str(exc)})
+            'comment': six.text_type(exc)})
         return ret
