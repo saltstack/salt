@@ -1,326 +1,17 @@
 # -*- coding: utf-8 -*-
+
+# See doc/topics/jobs/index.rst
 '''
 Scheduling routines are located here. To activate the scheduler make the
-schedule option available to the master or minion configurations (master config
-file or for the minion via config or pillar)
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-
-This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
-(every hour).
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-        splay: 15
-
-This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
-(every hour) splaying the time between 0 and 15 seconds.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-        splay:
-          start: 10
-          end: 15
-
-This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
-(every hour) splaying the time between 10 and 15 seconds.
-
-.. versionadded:: 2014.7.0
-
-Frequency of jobs can also be specified using date strings supported by
-the Python ``dateutil`` library. This requires the Python ``dateutil`` library
-to be installed.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        args:
-          - httpd
-        kwargs:
-          test: True
-        when: 5:00pm
-
-This will schedule the command: ``state.sls httpd test=True`` at 5:00 PM minion
-localtime.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        args:
-          - httpd
-        kwargs:
-          test: True
-        when:
-          - Monday 5:00pm
-          - Tuesday 3:00pm
-          - Wednesday 5:00pm
-          - Thursday 3:00pm
-          - Friday 5:00pm
-
-This will schedule the command: ``state.sls httpd test=True`` at 5:00 PM on
-Monday, Wednesday and Friday, and 3:00 PM on Tuesday and Thursday.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-        range:
-          start: 8:00am
-          end: 5:00pm
-
-This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
-(every hour) between the hours of 8:00 AM and 5:00 PM. The range parameter must
-be a dictionary with the date strings using the ``dateutil`` format.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
-        range:
-          invert: True
-          start: 8:00am
-          end: 5:00pm
-
-Using the invert option for range, this will schedule the command
-``state.sls httpd test=True`` every 3600 seconds (every hour) until the current
-time is between the hours of 8:00 AM and 5:00 PM. The range parameter must be
-a dictionary with the date strings using the ``dateutil`` format.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: pkg.install
-        kwargs:
-          pkgs: [{'bar': '>1.2.3'}]
-          refresh: true
-        once: '2016-01-07T14:30:00'
-
-This will schedule the function ``pkg.install`` to be executed once at the
-specified time. The schedule entry ``job1`` will not be removed after the job
-completes, therefore use ``schedule.delete`` to manually remove it afterwards.
-
-The default date format is ISO 8601 but can be overridden by also specifying the
-``once_fmt`` option, like this:
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: test.ping
-        once: 2015-04-22T20:21:00
-        once_fmt: '%Y-%m-%dT%H:%M:%S'
-
-.. versionadded:: 2014.7.0
-
-The scheduler also supports ensuring that there are no more than N copies of
-a particular routine running.  Use this for jobs that may be long-running
-and could step on each other or pile up in case of infrastructure outage.
-
-The default for ``maxrunning`` is 1.
-
-.. code-block:: yaml
-
-    schedule:
-      long_running_job:
-        function: big_file_transfer
-        jid_include: True
-        maxrunning: 1
-
-.. versionadded:: 2014.7.0
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        cron: '*/15 * * * *'
-        args:
-          - httpd
-        kwargs:
-          test: True
-
-The scheduler also supports scheduling jobs using a cron like format.
-This requires the Python ``croniter`` library.
-
-.. versionadded:: 2015.5.0
-
-By default, data about jobs runs from the Salt scheduler is returned to the
-master. Setting the ``return_job`` parameter to False will prevent the data
-from being sent back to the Salt master.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: scheduled_job_function
-        return_job: False
-
-.. versionadded:: 2015.5.0
-
-It can be useful to include specific data to differentiate a job from other
-jobs. Using the metadata parameter special values can be associated with
-a scheduled job. These values are not used in the execution of the job,
-but can be used to search for specific jobs later if combined with the
-``return_job`` parameter. The metadata parameter must be specified as a
-dictionary, othewise it will be ignored.
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: scheduled_job_function
-        metadata:
-          foo: bar
-
-.. versionadded:: 2015.5.0
-
-By default any job scheduled based on the startup time of the minion will run
-the scheduled job when the minion starts up. Sometimes this is not the desired
-situation. Using the ``run_on_start`` parameter set to ``False`` will cause the
-scheduler to skip this first run and wait until the next scheduled run:
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 3600
-        run_on_start: False
-        args:
-          - httpd
-        kwargs:
-          test: True
-
-.. versionadded:: 2015.8.0
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 15
-        until: '12/31/2015 11:59pm'
-        args:
-          - httpd
-        kwargs:
-          test: True
-
-Using the until argument, the Salt scheduler allows you to specify
-an end time for a scheduled job. If this argument is specified, jobs
-will not run once the specified time has passed. Time should be specified
-in a format supported by the ``dateutil`` library.
-This requires the Python ``dateutil`` library to be installed.
-
-.. versionadded:: 2015.8.0
-
-.. code-block:: yaml
-
-    schedule:
-      job1:
-        function: state.sls
-        seconds: 15
-        after: '12/31/2015 11:59pm'
-        args:
-          - httpd
-        kwargs:
-          test: True
-
-Using the after argument, the Salt scheduler allows you to specify
-an start time for a scheduled job.  If this argument is specified, jobs
-will not run until the specified time has passed. Time should be specified
-in a format supported by the ``dateutil`` library.
-This requires the Python ``dateutil`` library to be installed.
-
-The scheduler also supports ensuring that there are no more than N copies of
-a particular routine running.  Use this for jobs that may be long-running
-and could step on each other or pile up in case of infrastructure outage.
-
-The default for maxrunning is 1.
-
-.. code-block:: yaml
-
-    schedule:
-      long_running_job:
-          function: big_file_transfer
-          jid_include: True
-          maxrunning: 1
-
-By default, data about jobs runs from the Salt scheduler is returned to the
-master.  Setting the ``return_job`` parameter to False will prevent the data
-from being sent back to the Salt master.
-
-.. versionadded:: 2015.5.0
-
-    schedule:
-      job1:
-          function: scheduled_job_function
-          return_job: False
-
-Setting the ``return_job`` parameter to 'nocache' prevents the salt master
-from storing the job in the master cache. Still, an event is fired on the
-master event bus in the form 'salt/job/nocache/ret/myminion'.
-
-It can be useful to include specific data to differentiate a job from other
-jobs.  Using the metadata parameter special values can be associated with
-a scheduled job.  These values are not used in the execution of the job,
-but can be used to search for specific jobs later if combined with the
-return_job parameter.  The metadata parameter must be specified as a
-dictionary, othewise it will be ignored.
-
-.. versionadded:: 2015.5.0
-
-    schedule:
-      job1:
-          function: scheduled_job_function
-          metadata:
-            foo: bar
-
+``schedule`` option available to the master or minion configurations (master
+config file or for the minion via config or pillar).
+
+Detailed tutorial about scheduling jobs can be found :ref:`here
+<scheduling-jobs>`.
 '''
 
 # Import python libs
-from __future__ import absolute_import, with_statement
+from __future__ import absolute_import, with_statement, print_function, unicode_literals
 import os
 import sys
 import time
@@ -332,16 +23,21 @@ import threading
 import logging
 import errno
 import random
-import yaml
-import copy
+import weakref
 
 # Import Salt libs
 import salt.config
-import salt.utils
-import salt.utils.jid
-import salt.utils.process
 import salt.utils.args
+import salt.utils.error
+import salt.utils.event
+import salt.utils.files
+import salt.utils.jid
 import salt.utils.minion
+import salt.utils.platform
+import salt.utils.process
+import salt.utils.stringutils
+import salt.utils.user
+import salt.utils.yaml
 import salt.loader
 import salt.minion
 import salt.payload
@@ -350,11 +46,9 @@ import salt.exceptions
 import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
-from salt.utils.process import os_is_running, default_signals, SignalHandlingMultiprocessingProcess
-from salt.utils.yamldumper import SafeOrderedDumper
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # pylint: disable=import-error
 try:
@@ -381,7 +75,7 @@ class Schedule(object):
     '''
     instance = None
 
-    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
+    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
         '''
         Only create one instance of Schedule
         '''
@@ -391,33 +85,38 @@ class Schedule(object):
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
             cls.instance = object.__new__(cls)
-            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy)
+            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy, standalone)
         else:
             log.debug('Re-using Schedule')
         return cls.instance
 
     # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
+    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
+    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
         self.opts = opts
         self.proxy = proxy
         self.functions = functions
+        self.standalone = standalone
+        self.skip_function = None
+        self.skip_during_range = None
         if isinstance(intervals, dict):
             self.intervals = intervals
         else:
             self.intervals = {}
-        if hasattr(returners, '__getitem__'):
-            self.returners = returners
-        else:
-            self.returners = returners.loader.gen_functions()
+        if not self.standalone:
+            if hasattr(returners, '__getitem__'):
+                self.returners = returners
+            else:
+                self.returners = returners.loader.gen_functions()
         self.time_offset = self.functions.get('timezone.get_offset', lambda: '0000')()
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = six.MAXSIZE
-        clean_proc_dir(opts)
+        if not self.standalone:
+            clean_proc_dir(opts)
         if cleanup:
             for prefix in cleanup:
                 self.delete_job_prefix(prefix)
@@ -473,12 +172,11 @@ class Schedule(object):
         schedule_conf = os.path.join(minion_d_dir, '_schedule.conf')
         log.debug('Persisting schedule')
         try:
-            with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
+            with salt.utils.files.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
-                    salt.utils.to_bytes(
-                        yaml.dump(
-                            {'schedule': self._get_schedule(include_pillar=False)},
-                            Dumper=SafeOrderedDumper
+                    salt.utils.stringutils.to_bytes(
+                        salt.utils.yaml.safe_dump(
+                            {'schedule': self._get_schedule(include_pillar=False)}
                         )
                     )
                 )
@@ -494,8 +192,7 @@ class Schedule(object):
         if name in self.opts['schedule']:
             del self.opts['schedule'][name]
         elif name in self._get_schedule(include_opts=False):
-            log.warning('Cannot delete job {0}, '
-                        'it`s in the pillar!'.format(name))
+            log.warning("Cannot delete job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -519,8 +216,7 @@ class Schedule(object):
                 del self.opts['schedule'][job]
         for job in self._get_schedule(include_opts=False):
             if job.startswith(name):
-                log.warning('Cannot delete job {0}, '
-                            'it`s in the pillar!'.format(job))
+                log.warning("Cannot delete job %s, it's in the pillar!", job)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -558,16 +254,14 @@ class Schedule(object):
         new_job = next(six.iterkeys(data))
 
         if new_job in self._get_schedule(include_opts=False):
-            log.warning('Cannot update job {0}, '
-                        'it`s in the pillar!'.format(new_job))
+            log.warning("Cannot update job %s, it's in the pillar!", new_job)
 
         elif new_job in self.opts['schedule']:
-            log.info('Updating job settings for scheduled '
-                     'job: {0}'.format(new_job))
+            log.info('Updating job settings for scheduled job: %s', new_job)
             self.opts['schedule'].update(data)
 
         else:
-            log.info('Added new job {0} to scheduler'.format(new_job))
+            log.info('Added new job %s to scheduler', new_job)
             self.opts['schedule'].update(data)
 
         # Fire the complete event back along with updated list of schedule
@@ -585,10 +279,9 @@ class Schedule(object):
         # ensure job exists, then enable it
         if name in self.opts['schedule']:
             self.opts['schedule'][name]['enabled'] = True
-            log.info('Enabling job {0} in scheduler'.format(name))
+            log.info('Enabling job %s in scheduler', name)
         elif name in self._get_schedule(include_opts=False):
-            log.warning('Cannot modify job {0}, '
-                        'it`s in the pillar!'.format(name))
+            log.warning("Cannot modify job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -605,10 +298,9 @@ class Schedule(object):
         # ensure job exists, then disable it
         if name in self.opts['schedule']:
             self.opts['schedule'][name]['enabled'] = False
-            log.info('Disabling job {0} in scheduler'.format(name))
+            log.info('Disabling job %s in scheduler', name)
         elif name in self._get_schedule(include_opts=False):
-            log.warning('Cannot modify job {0}, '
-                        'it`s in the pillar!'.format(name))
+            log.warning("Cannot modify job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -626,8 +318,7 @@ class Schedule(object):
         if name in self.opts['schedule']:
             self.delete_job(name, persist)
         elif name in self._get_schedule(include_opts=False):
-            log.warning('Cannot modify job {0}, '
-                        'it`s in the pillar!'.format(name))
+            log.warning("Cannot modify job %s, it's in the pillar!", name)
             return
 
         self.opts['schedule'][name] = schedule
@@ -651,25 +342,22 @@ class Schedule(object):
             func = None
         if func not in self.functions:
             log.info(
-                'Invalid function: {0} in scheduled job {1}.'.format(
-                    func, name
-                )
+                'Invalid function: %s in scheduled job %s.',
+                func, name
             )
 
         if 'name' not in data:
             data['name'] = name
-        log.info(
-            'Running Job: {0}.'.format(name)
-        )
+        log.info('Running Job: %s', name)
 
         multiprocessing_enabled = self.opts.get('multiprocessing', True)
         if multiprocessing_enabled:
-            thread_cls = SignalHandlingMultiprocessingProcess
+            thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
         else:
             thread_cls = threading.Thread
 
         if multiprocessing_enabled:
-            with default_signals(signal.SIGINT, signal.SIGTERM):
+            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
                 proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
                 # Reset current signals before starting the process in
                 # order not to inherit the current signal handlers
@@ -739,11 +427,82 @@ class Schedule(object):
         evt.fire_event({'complete': True},
                        tag='/salt/minion/minion_schedule_saved')
 
+    def postpone_job(self, name, data):
+        '''
+        Postpone a job in the scheduler.
+        Ignores jobs from pillar
+        '''
+        time = data['time']
+        new_time = data['new_time']
+
+        # ensure job exists, then disable it
+        if name in self.opts['schedule']:
+            if 'skip_explicit' not in self.opts['schedule'][name]:
+                self.opts['schedule'][name]['skip_explicit'] = []
+            self.opts['schedule'][name]['skip_explicit'].append(time)
+
+            if 'run_explicit' not in self.opts['schedule'][name]:
+                self.opts['schedule'][name]['run_explicit'] = []
+            self.opts['schedule'][name]['run_explicit'].append(new_time)
+
+        elif name in self._get_schedule(include_opts=False):
+            log.warning("Cannot modify job %s, it's in the pillar!", name)
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
+                       tag='/salt/minion/minion_schedule_postpone_job_complete')
+
+    def skip_job(self, name, data):
+        '''
+        Skip a job at a specific time in the scheduler.
+        Ignores jobs from pillar
+        '''
+        time = data['time']
+
+        # ensure job exists, then disable it
+        if name in self.opts['schedule']:
+            if 'skip_explicit' not in self.opts['schedule'][name]:
+                self.opts['schedule'][name]['skip_explicit'] = []
+            self.opts['schedule'][name]['skip_explicit'].append(time)
+
+        elif name in self._get_schedule(include_opts=False):
+            log.warning("Cannot modify job %s, it's in the pillar!", name)
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
+                       tag='/salt/minion/minion_schedule_skip_job_complete')
+
+    def get_next_fire_time(self, name):
+        '''
+        Return the  next fire time for the specified job
+        '''
+
+        schedule = self._get_schedule()
+        _next_fire_time = None
+        if schedule:
+            _next_fire_time = schedule.get(name, {}).get('_next_fire_time', None)
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        evt.fire_event({'complete': True, 'next_fire_time': _next_fire_time},
+                       tag='/salt/minion/minion_schedule_next_fire_time_complete')
+
+    def job_status(self, name):
+        '''
+        Return the specified schedule item
+        '''
+
+        schedule = self._get_schedule()
+        return schedule.get(name, {})
+
     def handle_func(self, multiprocessing_enabled, func, data):
         '''
         Execute this method in a multiprocess or thread
         '''
-        if salt.utils.is_windows() or self.opts.get('transport') == 'zeromq':
+        if salt.utils.platform.is_windows() \
+                or self.opts.get('transport') == 'zeromq':
             # Since function references can't be pickled and pickling
             # is required when spawning new processes on Windows, regenerate
             # the functions and returners.
@@ -759,7 +518,7 @@ class Schedule(object):
                'fun': func,
                'fun_args': [],
                'schedule': data['name'],
-               'jid': salt.utils.jid.gen_jid()}
+               'jid': salt.utils.jid.gen_jid(self.opts)}
 
         if 'metadata' in data:
             if isinstance(data['metadata'], dict):
@@ -771,55 +530,64 @@ class Schedule(object):
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
 
-        salt.utils.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
+        salt.utils.process.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
 
-        proc_fn = os.path.join(
-            salt.minion.get_proc_dir(self.opts['cachedir']),
-            ret['jid']
-        )
+        if not self.standalone:
+            proc_fn = os.path.join(
+                salt.minion.get_proc_dir(self.opts['cachedir']),
+                ret['jid']
+            )
 
-        # Check to see if there are other jobs with this
-        # signature running.  If there are more than maxrunning
-        # jobs present then don't start another.
-        # If jid_include is False for this job we can ignore all this
-        # NOTE--jid_include defaults to True, thus if it is missing from the data
-        # dict we treat it like it was there and is True
-        if 'jid_include' not in data or data['jid_include']:
-            jobcount = 0
-            for job in salt.utils.minion.running(self.opts):
-                if 'schedule' in job:
-                    log.debug('schedule.handle_func: Checking job against '
-                              'fun {0}: {1}'.format(ret['fun'], job))
-                    if ret['schedule'] == job['schedule'] and os_is_running(job['pid']):
-                        jobcount += 1
+            # Check to see if there are other jobs with this
+            # signature running.  If there are more than maxrunning
+            # jobs present then don't start another.
+            # If jid_include is False for this job we can ignore all this
+            # NOTE--jid_include defaults to True, thus if it is missing from the data
+            # dict we treat it like it was there and is True
+            if 'jid_include' not in data or data['jid_include']:
+                jobcount = 0
+                for job in salt.utils.minion.running(self.opts):
+                    if 'schedule' in job:
                         log.debug(
-                            'schedule.handle_func: Incrementing jobcount, now '
-                            '{0}, maxrunning is {1}'.format(
-                                jobcount, data['maxrunning']))
-                        if jobcount >= data['maxrunning']:
+                            'schedule.handle_func: Checking job against fun '
+                            '%s: %s', ret['fun'], job
+                        )
+                        if ret['schedule'] == job['schedule'] \
+                                and salt.utils.process.os_is_running(job['pid']):
+                            jobcount += 1
                             log.debug(
-                                'schedule.handle_func: The scheduled job {0} '
-                                'was not started, {1} already running'.format(
-                                    ret['schedule'], data['maxrunning']))
-                            return False
+                                'schedule.handle_func: Incrementing jobcount, '
+                                'now %s, maxrunning is %s',
+                                jobcount, data['maxrunning']
+                            )
+                            if jobcount >= data['maxrunning']:
+                                log.debug(
+                                    'schedule.handle_func: The scheduled job '
+                                    '%s was not started, %s already running',
+                                    ret['schedule'], data['maxrunning']
+                                )
+                                return False
 
-        if multiprocessing_enabled and not salt.utils.is_windows():
+        if multiprocessing_enabled and not salt.utils.platform.is_windows():
             # Reconfigure multiprocessing logging after daemonizing
             log_setup.setup_multiprocessing_logging()
 
         # Don't *BEFORE* to go into try to don't let it triple execute the finally section.
-        salt.utils.daemonize_if(self.opts)
+        salt.utils.process.daemonize_if(self.opts)
 
         # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
         try:
             ret['pid'] = os.getpid()
 
-            if 'jid_include' not in data or data['jid_include']:
-                log.debug('schedule.handle_func: adding this job to the jobcache '
-                          'with data {0}'.format(ret))
-                # write this to /var/cache/salt/minion/proc
-                with salt.utils.fopen(proc_fn, 'w+b') as fp_:
-                    fp_.write(salt.payload.Serial(self.opts).dumps(ret))
+            if not self.standalone:
+                if 'jid_include' not in data or data['jid_include']:
+                    log.debug(
+                        'schedule.handle_func: adding this job to the '
+                        'jobcache with data %s', ret
+                    )
+                    # write this to /var/cache/salt/minion/proc
+                    with salt.utils.files.fopen(proc_fn, 'w+b') as fp_:
+                        fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
             args = tuple()
             if 'args' in data:
@@ -842,42 +610,84 @@ class Schedule(object):
             if argspec.keywords:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in six.iteritems(ret):
-                    kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
+                    if key is not 'kwargs':
+                        kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
+
+            # Only include these when running runner modules
+            if self.opts['__role'] == 'master':
+                jid = salt.utils.jid.gen_jid(self.opts)
+                tag = salt.utils.event.tagify(jid, prefix='salt/scheduler/')
+
+                event = salt.utils.event.get_event(
+                        self.opts['__role'],
+                        self.opts['sock_dir'],
+                        self.opts['transport'],
+                        opts=self.opts,
+                        listen=False)
+
+                namespaced_event = salt.utils.event.NamespacedEvent(
+                    event,
+                    tag,
+                    print_func=None
+                )
+
+                func_globals = {
+                    '__jid__': jid,
+                    '__user__': salt.utils.user.get_user(),
+                    '__tag__': tag,
+                    '__jid_event__': weakref.proxy(namespaced_event),
+                }
+                self_functions = copy.copy(self.functions)
+                salt.utils.lazy.verify_fun(self_functions, func)
+
+                # Inject some useful globals to *all* the function's global
+                # namespace only once per module-- not per func
+                completed_funcs = []
+
+                for mod_name in six.iterkeys(self_functions):
+                    if '.' not in mod_name:
+                        continue
+                    mod, _ = mod_name.split('.', 1)
+                    if mod in completed_funcs:
+                        continue
+                    completed_funcs.append(mod)
+                    for global_key, value in six.iteritems(func_globals):
+                        self.functions[mod_name].__globals__[global_key] = value
 
             ret['return'] = self.functions[func](*args, **kwargs)
 
-            # runners do not provide retcode
-            if 'retcode' in self.functions.pack['__context__']:
-                ret['retcode'] = self.functions.pack['__context__']['retcode']
+            if not self.standalone:
+                # runners do not provide retcode
+                if 'retcode' in self.functions.pack['__context__']:
+                    ret['retcode'] = self.functions.pack['__context__']['retcode']
 
-            ret['success'] = True
+                ret['success'] = True
 
-            data_returner = data.get('returner', None)
-            if data_returner or self.schedule_returner:
-                if 'return_config' in data:
-                    ret['ret_config'] = data['return_config']
-                if 'return_kwargs' in data:
-                    ret['ret_kwargs'] = data['return_kwargs']
-                rets = []
-                for returner in [data_returner, self.schedule_returner]:
-                    if isinstance(returner, str):
-                        rets.append(returner)
-                    elif isinstance(returner, list):
-                        rets.extend(returner)
-                # simple de-duplication with order retained
-                for returner in OrderedDict.fromkeys(rets):
-                    ret_str = '{0}.returner'.format(returner)
-                    if ret_str in self.returners:
-                        self.returners[ret_str](ret)
-                    else:
-                        log.info(
-                            'Job {0} using invalid returner: {1}. Ignoring.'.format(
+                data_returner = data.get('returner', None)
+                if data_returner or self.schedule_returner:
+                    if 'return_config' in data:
+                        ret['ret_config'] = data['return_config']
+                    if 'return_kwargs' in data:
+                        ret['ret_kwargs'] = data['return_kwargs']
+                    rets = []
+                    for returner in [data_returner, self.schedule_returner]:
+                        if isinstance(returner, six.string_types):
+                            rets.append(returner)
+                        elif isinstance(returner, list):
+                            rets.extend(returner)
+                    # simple de-duplication with order retained
+                    for returner in OrderedDict.fromkeys(rets):
+                        ret_str = '{0}.returner'.format(returner)
+                        if ret_str in self.returners:
+                            self.returners[ret_str](ret)
+                        else:
+                            log.info(
+                                'Job %s using invalid returner: %s. Ignoring.',
                                 func, returner
                             )
-                        )
 
         except Exception:
-            log.exception("Unhandled exception running {0}".format(ret['fun']))
+            log.exception('Unhandled exception running %s', ret['fun'])
             # Although catch-all exception handlers are bad, the exception here
             # is to let the exception bubble up to the top of the thread context,
             # where the thread will die silently, which is worse.
@@ -914,31 +724,37 @@ class Schedule(object):
                     try:
                         event.fire_event(load, '__schedule_return')
                     except Exception as exc:
-                        log.exception("Unhandled exception firing event: {0}".format(exc))
+                        log.exception('Unhandled exception firing __schedule_return event')
 
-            log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
+            if not self.standalone:
+                log.debug('schedule.handle_func: Removing %s', proc_fn)
 
-            try:
-                os.unlink(proc_fn)
-            except OSError as exc:
-                if exc.errno == errno.EEXIST or exc.errno == errno.ENOENT:
-                    # EEXIST and ENOENT are OK because the file is gone and that's what
-                    # we wanted
-                    pass
-                else:
-                    log.error("Failed to delete '{0}': {1}".format(proc_fn, exc.errno))
-                    # Otherwise, failing to delete this file is not something
-                    # we can cleanly handle.
-                    raise
-            finally:
-                if multiprocessing_enabled:
-                    # Let's make sure we exit the process!
-                    sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+                try:
+                    os.unlink(proc_fn)
+                except OSError as exc:
+                    if exc.errno == errno.EEXIST or exc.errno == errno.ENOENT:
+                        # EEXIST and ENOENT are OK because the file is gone and that's what
+                        # we wanted
+                        pass
+                    else:
+                        log.error("Failed to delete '%s': %s", proc_fn, exc.errno)
+                        # Otherwise, failing to delete this file is not something
+                        # we can cleanly handle.
+                        raise
+                finally:
+                    if multiprocessing_enabled:
+                        # Let's make sure we exit the process!
+                        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
-    def eval(self):
+    def eval(self, now=None):
         '''
         Evaluate and execute the schedule
+
+        :param int now: Override current time with a Unix timestamp``
+
         '''
+
+        log.trace('==== evaluating schedule now %s =====', now)
 
         def _splay(splaytime):
             '''
@@ -961,14 +777,25 @@ class Schedule(object):
             raise ValueError('Schedule must be of type dict.')
         if 'enabled' in schedule and not schedule['enabled']:
             return
+        if 'skip_function' in schedule:
+            self.skip_function = schedule['skip_function']
+        if 'skip_during_range' in schedule:
+            self.skip_during_range = schedule['skip_during_range']
+
+        _hidden = ['enabled',
+                   'skip_function',
+                   'skip_during_range']
         for job, data in six.iteritems(schedule):
-            if job == 'enabled' or not data:
+            run = False
+
+            if job in _hidden and not data:
                 continue
+
             if not isinstance(data, dict):
-                log.error('Scheduled job "{0}" should have a dict value, not {1}'.format(job, type(data)))
-                continue
-            # Job is disabled, continue
-            if 'enabled' in data and not data['enabled']:
+                log.error(
+                    'Scheduled job "%s" should have a dict value, not %s',
+                    job, type(data)
+                )
                 continue
             if 'function' in data:
                 func = data['function']
@@ -980,9 +807,8 @@ class Schedule(object):
                 func = None
             if func not in self.functions:
                 log.info(
-                    'Invalid function: {0} in scheduled job {1}.'.format(
-                        func, job
-                    )
+                    'Invalid function: %s in scheduled job %s.',
+                    func, job
                 )
             if 'name' not in data:
                 data['name'] = job
@@ -998,7 +824,8 @@ class Schedule(object):
                     '_run_on_start' not in data:
                 data['_run_on_start'] = True
 
-            now = int(time.time())
+            if not now:
+                now = int(time.time())
 
             if 'until' in data:
                 if not _WHEN_SUPPORTED:
@@ -1009,8 +836,10 @@ class Schedule(object):
                     until = int(time.mktime(until__.timetuple()))
 
                     if until <= now:
-                        log.debug('Until time has passed '
-                                  'skipping job: {0}.'.format(data['name']))
+                        log.debug(
+                            'Until time has passed skipping job: %s.',
+                            data['name']
+                        )
                         continue
 
             if 'after' in data:
@@ -1022,8 +851,10 @@ class Schedule(object):
                     after = int(time.mktime(after__.timetuple()))
 
                     if after >= now:
-                        log.debug('After time has not passed '
-                                  'skipping job: {0}.'.format(data['name']))
+                        log.debug(
+                            'After time has not passed skipping job: %s.',
+                            data['name']
+                        )
                         continue
 
             # Used for quick lookups when detecting invalid option combinations.
@@ -1036,8 +867,10 @@ class Schedule(object):
                     for i in itertools.combinations(scheduling_elements, 2)]
 
             if any(i <= schedule_keys for i in invalid_sched_combos):
-                log.error('Unable to use "{0}" options together. Ignoring.'
-                          .format('", "'.join(scheduling_elements)))
+                log.error(
+                    'Unable to use "%s" options together. Ignoring.',
+                    '", "'.join(scheduling_elements)
+                )
                 continue
 
             invalid_time_combos = []
@@ -1047,10 +880,29 @@ class Schedule(object):
                     set(itertools.combinations(all_items, 2)))
 
             if any(set(x) <= schedule_keys for x in invalid_time_combos):
-                log.error('Unable to use "{0}" with "{1}" options. Ignoring'
-                          .format('", "'.join(time_elements),
-                                  '", "'.join(scheduling_elements)))
+                log.error(
+                    'Unable to use "%s" with "%s" options. Ignoring',
+                    '", "'.join(time_elements),
+                    '", "'.join(scheduling_elements)
+                )
                 continue
+
+            if 'run_explicit' in data:
+                _run_explicit = data['run_explicit']
+
+                if isinstance(_run_explicit, six.integer_types):
+                    _run_explicit = [_run_explicit]
+
+                # Copy the list so we can loop through it
+                for i in copy.deepcopy(_run_explicit):
+                    if len(_run_explicit) > 1:
+                        if int(i) < now - self.opts['loop_interval']:
+                            _run_explicit.remove(i)
+
+                if _run_explicit:
+                    if int(_run_explicit[0]) <= now < int(_run_explicit[0] + self.opts['loop_interval']):
+                        run = True
+                        data['_next_fire_time'] = _run_explicit[0]
 
             if True in [True for item in time_elements if item in data]:
                 if '_seconds' not in data:
@@ -1069,7 +921,8 @@ class Schedule(object):
 
             elif 'once' in data:
                 if data['_next_fire_time'] and \
-                        data['_next_fire_time'] != now and \
+                        data['_next_fire_time'] < now - self.opts['loop_interval'] and \
+                        data['_next_fire_time'] > now and \
                         not data['_splay']:
                     continue
 
@@ -1085,13 +938,15 @@ class Schedule(object):
                         log.error('Date string could not be parsed: %s, %s',
                                   data['once'], once_fmt)
                         continue
-                    if data['_next_fire_time'] != now:
+                    # If _next_fire_time is less than now or greater
+                    # than now, continue.
+                    if data['_next_fire_time'] < now - self.opts['loop_interval'] and \
+                            data['_next_fire_time'] > now:
                         continue
 
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil. '
-                              'Ignoring job {0}.'.format(job))
+                    log.error('Missing python-dateutil. Ignoring job %s.', job)
                     continue
 
                 if isinstance(data['when'], list):
@@ -1127,8 +982,10 @@ class Schedule(object):
                             try:
                                 when__ = dateutil_parser.parse(i)
                             except ValueError:
-                                log.error('Invalid date string {0}. '
-                                          'Ignoring job {1}.'.format(i, job))
+                                log.error(
+                                    'Invalid date string %s. Ignoring job %s.',
+                                    i, job
+                                )
                                 continue
                         _when.append(int(time.mktime(when__.timetuple())))
 
@@ -1138,11 +995,13 @@ class Schedule(object):
                     # Sort the list of "whens" from earlier to later schedules
                     _when.sort()
 
-                    for i in _when:
-                        if i < now and len(_when) > 1:
-                            # Remove all missed schedules except the latest one.
-                            # We need it to detect if it was triggered previously.
-                            _when.remove(i)
+                    # Copy the list so we can loop through it
+                    for i in copy.deepcopy(_when):
+                        if len(_when) > 1:
+                            if i < now - self.opts['loop_interval']:
+                                # Remove all missed schedules except the latest one.
+                                # We need it to detect if it was triggered previously.
+                                _when.remove(i)
 
                     if _when:
                         # Grab the first element, which is the next run time or
@@ -1151,12 +1010,13 @@ class Schedule(object):
 
                         if '_run' not in data:
                             # Prevent run of jobs from the past
-                            data['_run'] = bool(when >= now)
+                            data['_run'] = bool(when >= now - self.opts['loop_interval'])
 
                         if not data['_next_fire_time']:
                             data['_next_fire_time'] = when
 
                         if data['_next_fire_time'] < when and \
+                                not run and \
                                 not data['_run']:
                             data['_next_fire_time'] = when
                             data['_run'] = True
@@ -1197,8 +1057,9 @@ class Schedule(object):
                             continue
                     when = int(time.mktime(when__.timetuple()))
 
-                    if when < now and \
+                    if when < now - self.opts['loop_interval'] and \
                             not data.get('_run', False) and \
+                            not run and \
                             not data['_splay']:
                         data['_next_fire_time'] = None
                         continue
@@ -1216,7 +1077,7 @@ class Schedule(object):
 
             elif 'cron' in data:
                 if not _CRON_SUPPORTED:
-                    log.error('Missing python-croniter. Ignoring job {0}'.format(job))
+                    log.error('Missing python-croniter. Ignoring job %s', job)
                     continue
 
                 if data['_next_fire_time'] is None:
@@ -1240,73 +1101,190 @@ class Schedule(object):
             else:
                 continue
 
-            run = False
             seconds = data['_next_fire_time'] - now
-            if data['_splay']:
-                seconds = data['_splay'] - now
-            if seconds <= 0:
-                if '_seconds' in data:
+
+            if 'splay' in data:
+                # Got "splay" configured, make decision to run a job based on that
+                if not data['_splay']:
+                    # Try to add "splay" time only if next job fire time is
+                    # still in the future. We should trigger job run
+                    # immediately otherwise.
+                    splay = _splay(data['splay'])
+                    if now < data['_next_fire_time'] + splay:
+                        log.debug(
+                            'schedule.handle_func: Adding splay of %s seconds '
+                            'to next run.', splay
+                        )
+                        data['_splay'] = data['_next_fire_time'] + splay
+                        if 'when' in data:
+                            data['_run'] = True
+                    else:
+                        run = True
+
+                if data['_splay']:
+                    # The "splay" configuration has been already processed, just use it
+                    seconds = data['_splay'] - now
+
+            if '_seconds' in data:
+                if seconds <= 0:
                     run = True
-                elif 'when' in data and data['_run']:
+            elif 'when' in data and data['_run']:
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + self.opts['loop_interval']):
                     data['_run'] = False
                     run = True
-                elif 'cron' in data:
-                    # Reset next scheduled time because it is in the past now,
-                    # and we should trigger the job run, then wait for the next one.
+            elif 'cron' in data:
+                # Reset next scheduled time because it is in the past now,
+                # and we should trigger the job run, then wait for the next one.
+                if seconds <= 0:
                     data['_next_fire_time'] = None
                     run = True
-                elif seconds == 0:
+            elif 'once' in data:
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + self.opts['loop_interval']):
                     run = True
+            elif seconds == 0:
+                run = True
 
             if '_run_on_start' in data and data['_run_on_start']:
                 run = True
                 data['_run_on_start'] = False
             elif run:
-                if 'splay' in data and not data['_splay']:
-                    splay = _splay(data['splay'])
-                    if now < data['_next_fire_time'] + splay:
-                        log.debug('schedule.handle_func: Adding splay of '
-                                  '{0} seconds to next run.'.format(splay))
-                        run = False
-                        data['_splay'] = data['_next_fire_time'] + splay
-                        if 'when' in data:
-                            data['_run'] = True
-
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
-                        log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
+                        log.error('Missing python-dateutil. Ignoring job %s', job)
                         continue
                     else:
                         if isinstance(data['range'], dict):
                             try:
                                 start = int(time.mktime(dateutil_parser.parse(data['range']['start']).timetuple()))
                             except ValueError:
-                                log.error('Invalid date string for start. Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for start. Ignoring job %s.', job)
                                 continue
                             try:
                                 end = int(time.mktime(dateutil_parser.parse(data['range']['end']).timetuple()))
                             except ValueError:
-                                log.error('Invalid date string for end. Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for end. Ignoring job %s.', job)
                                 continue
                             if end > start:
                                 if 'invert' in data['range'] and data['range']['invert']:
                                     if now <= start or now >= end:
                                         run = True
                                     else:
+                                        data['_skip_reason'] = 'in_skip_range'
                                         run = False
                                 else:
                                     if start <= now <= end:
                                         run = True
                                     else:
-                                        run = False
+                                        if self.skip_function:
+                                            run = True
+                                            func = self.skip_function
+                                        else:
+                                            data['_skip_reason'] = 'not_in_range'
+                                            run = False
                             else:
-                                log.error('schedule.handle_func: Invalid range, end must be larger than start. \
-                                         Ignoring job {0}.'.format(job))
+                                log.error(
+                                    'schedule.handle_func: Invalid range, end '
+                                    'must be larger than start. Ignoring job %s.',
+                                    job
+                                )
                                 continue
                         else:
-                            log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
-                                     Ignoring job {0}.'.format(job))
+                            log.error(
+                                'schedule.handle_func: Invalid, range must be '
+                                'specified as a dictionary. Ignoring job %s.',
+                                job
+                            )
                             continue
+
+                # If there is no job specific skip_during_range available,
+                # grab the global which defaults to None.
+                if 'skip_during_range' not in data:
+                    data['skip_during_range'] = self.skip_during_range
+
+                if 'skip_during_range' in data and data['skip_during_range']:
+                    if not _RANGE_SUPPORTED:
+                        log.error('Missing python-dateutil. Ignoring job %s', job)
+                        continue
+                    else:
+                        if isinstance(data['skip_during_range'], dict):
+                            try:
+                                start = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['start']).timetuple()))
+                            except ValueError:
+                                log.error(
+                                    'Invalid date string for start in '
+                                    'skip_during_range. Ignoring job %s.',
+                                    job
+                                )
+                                continue
+                            try:
+                                end = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['end']).timetuple()))
+                            except ValueError:
+                                log.error(
+                                    'Invalid date string for end in '
+                                    'skip_during_range. Ignoring job %s.',
+                                    job
+                                )
+                                log.error(data)
+                                continue
+
+                            # Check to see if we should run the job immediately
+                            # after the skip_during_range is over
+                            if 'run_after_skip_range' in data and \
+                               data['run_after_skip_range']:
+                                if 'run_explicit' not in data:
+                                    data['run_explicit'] = []
+                                # Add a run_explicit for immediately after the
+                                # skip_during_range ends
+                                _run_immediate = end + self.opts['loop_interval']
+                                if _run_immediate not in data['run_explicit']:
+                                    data['run_explicit'].append(_run_immediate)
+
+                            if end > start:
+                                if start <= now <= end:
+                                    if self.skip_function:
+                                        run = True
+                                        func = self.skip_function
+                                    else:
+                                        data['_skip_reason'] = 'in_skip_range'
+                                        run = False
+                                else:
+                                    run = True
+                            else:
+                                log.error(
+                                    'schedule.handle_func: Invalid range, end '
+                                    'must be larger than start. Ignoring job %s.',
+                                    job
+                                )
+                                continue
+                        else:
+                            log.error(
+                                'schedule.handle_func: Invalid, range must be '
+                                'specified as a dictionary. Ignoring job %s.',
+                                job
+                            )
+                            continue
+
+                if 'skip_explicit' in data:
+                    _skip_explicit = data['skip_explicit']
+
+                    if isinstance(_skip_explicit, six.string_types):
+                        _skip_explicit = [_skip_explicit]
+
+                    # Copy the list so we can loop through it
+                    for i in copy.deepcopy(_skip_explicit):
+                        if i < now - self.opts['loop_interval']:
+                            _skip_explicit.remove(i)
+
+                    if _skip_explicit:
+                        if _skip_explicit[0] <= now <= (_skip_explicit[0] + self.opts['loop_interval']):
+                            if self.skip_function:
+                                run = True
+                                func = self.skip_function
+                            else:
+                                run = False
+                                data['_skip_reason'] = 'skip_explicit'
+                        else:
+                            run = True
 
             if not run:
                 continue
@@ -1316,23 +1294,27 @@ class Schedule(object):
                 miss_msg = ' (runtime missed ' \
                            'by {0} seconds)'.format(abs(seconds))
 
-            log.info('Running scheduled job: {0}{1}'.format(job, miss_msg))
+            log.info('Running scheduled job: %s%s', job, miss_msg)
 
             if 'jid_include' not in data or data['jid_include']:
                 data['jid_include'] = True
                 log.debug('schedule: This job was scheduled with jid_include, '
                           'adding to cache (jid_include defaults to True)')
                 if 'maxrunning' in data:
-                    log.debug('schedule: This job was scheduled with a max '
-                              'number of {0}'.format(data['maxrunning']))
+                    log.debug(
+                        'schedule: This job was scheduled with a max number '
+                        'of %s', data['maxrunning']
+                    )
                 else:
-                    log.info('schedule: maxrunning parameter was not specified for '
-                             'job {0}, defaulting to 1.'.format(job))
+                    log.info(
+                        'schedule: maxrunning parameter was not specified '
+                        'for job %s, defaulting to 1.', job
+                    )
                     data['maxrunning'] = 1
 
             multiprocessing_enabled = self.opts.get('multiprocessing', True)
 
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Temporarily stash our function references.
                 # You can't pickle function references, and pickling is
                 # required when spawning new processes on Windows.
@@ -1341,27 +1323,34 @@ class Schedule(object):
                 returners = self.returners
                 self.returners = {}
             try:
-                if multiprocessing_enabled:
-                    thread_cls = SignalHandlingMultiprocessingProcess
+                # Job is disabled, continue
+                if 'enabled' in data and not data['enabled']:
+                    log.debug('Job: %s is disabled', job)
+                    data['_skip_reason'] = 'disabled'
+                    continue
                 else:
-                    thread_cls = threading.Thread
-                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                    if multiprocessing_enabled:
+                        thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                    else:
+                        thread_cls = threading.Thread
+                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
 
-                if multiprocessing_enabled:
-                    with default_signals(signal.SIGINT, signal.SIGTERM):
-                        # Reset current signals before starting the process in
-                        # order not to inherit the current signal handlers
+                    if multiprocessing_enabled:
+                        with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                            # Reset current signals before starting the process in
+                            # order not to inherit the current signal handlers
+                            proc.start()
+                    else:
                         proc.start()
-                else:
-                    proc.start()
 
-                if multiprocessing_enabled:
-                    proc.join()
+                    if multiprocessing_enabled:
+                        proc.join()
             finally:
                 if '_seconds' in data:
                     data['_next_fire_time'] = now + data['_seconds']
+                data['_last_run'] = now
                 data['_splay'] = None
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Restore our function references.
                 self.functions = functions
                 self.returners = returners
@@ -1376,28 +1365,32 @@ def clean_proc_dir(opts):
 
     for basefilename in os.listdir(salt.minion.get_proc_dir(opts['cachedir'])):
         fn_ = os.path.join(salt.minion.get_proc_dir(opts['cachedir']), basefilename)
-        with salt.utils.fopen(fn_, 'rb') as fp_:
+        with salt.utils.files.fopen(fn_, 'rb') as fp_:
             job = None
             try:
                 job = salt.payload.Serial(opts).load(fp_)
             except Exception:  # It's corrupted
                 # Windows cannot delete an open file
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     fp_.close()
                 try:
                     os.unlink(fn_)
                     continue
                 except OSError:
                     continue
-            log.debug('schedule.clean_proc_dir: checking job {0} for process '
-                      'existence'.format(job))
+            log.debug(
+                'schedule.clean_proc_dir: checking job %s for process '
+                'existence', job
+            )
             if job is not None and 'pid' in job:
                 if salt.utils.process.os_is_running(job['pid']):
-                    log.debug('schedule.clean_proc_dir: Cleaning proc dir, '
-                              'pid {0} still exists.'.format(job['pid']))
+                    log.debug(
+                        'schedule.clean_proc_dir: Cleaning proc dir, pid %s '
+                        'still exists.', job['pid']
+                    )
                 else:
                     # Windows cannot delete an open file
-                    if salt.utils.is_windows():
+                    if salt.utils.platform.is_windows():
                         fp_.close()
                     # Maybe the file is already gone
                     try:

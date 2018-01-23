@@ -3,13 +3,13 @@
 RAET transport classes
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 
 # Import Salt Libs
 import logging
 
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 from salt.transport.client import ReqChannel
 
 log = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ class RAETReqChannel(ReqChannel):
                 self.stack = jobber_stack
             else:
                 self.stack = jobber_stack = self._setup_stack(ryn=self.ryn)
-        log.debug("RAETReqChannel Using Jobber Stack at = {0}\n".format(self.stack.ha))
+        log.debug("RAETReqChannel Using Jobber Stack at = %s\n", self.stack.ha)
 
     def _setup_stack(self, ryn='manor'):
         '''
@@ -117,7 +117,7 @@ class RAETReqChannel(ReqChannel):
                                    name=ryn,
                                    lanename=lanename,
                                    dirpath=self.opts['sock_dir']))
-        log.debug("Created Channel Jobber Stack {0}\n".format(stack.name))
+        log.debug("Created Channel Jobber Stack %s\n", stack.name)
         return stack
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):

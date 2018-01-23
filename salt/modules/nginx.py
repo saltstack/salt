@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.decorators as decorators
 
 import re
@@ -19,7 +19,7 @@ import re
 # for nginx over and over and over for each function herein
 @decorators.memoize
 def __detect_os():
-    return salt.utils.which('nginx')
+    return salt.utils.path.which('nginx')
 
 
 def __virtual__():

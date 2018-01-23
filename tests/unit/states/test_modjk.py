@@ -13,7 +13,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.modjk as modjk
-import salt.ext.six as six
+from salt.ext import six
 
 
 if six.PY2:

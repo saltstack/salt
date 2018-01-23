@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 
 # Import Salt Testing libs
@@ -11,8 +11,8 @@ from tests.support.helpers import (
     destructiveTest,
 )
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 
 def _find_new_locale(current_locale):
@@ -21,8 +21,8 @@ def _find_new_locale(current_locale):
             return locale
 
 
-@skipIf(salt.utils.is_windows(), 'minion is windows')
-@skipIf(salt.utils.is_darwin(), 'locale method is not supported on mac')
+@skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+@skipIf(salt.utils.platform.is_darwin(), 'locale method is not supported on mac')
 @requires_salt_modules('locale')
 class LocaleModuleTest(ModuleCase):
     def test_get_locale(self):

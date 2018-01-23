@@ -16,12 +16,12 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-import salt.utils
 import salt.modules.groupadd as groupadd
+import salt.utils.platform
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), "Module not available on Windows")
+@skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
 class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.groupadd
@@ -118,16 +118,16 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         os_version_list = [
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
-             'cmd': ('gpasswd', '-a', 'root', 'test')},
+             'cmd': ['gpasswd', '-a', 'root', 'test']},
 
             {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
-             'cmd': ('usermod', '-A', 'test', 'root')},
+             'cmd': ['usermod', '-A', 'test', 'root']},
 
             {'grains': {'kernel': 'Linux'},
-             'cmd': ('gpasswd', '--add', 'root', 'test')},
+             'cmd': ['gpasswd', '--add', 'root', 'test']},
 
             {'grains': {'kernel': 'OTHERKERNEL'},
-             'cmd': ('usermod', '-G', 'test', 'root')},
+             'cmd': ['usermod', '-G', 'test', 'root']},
         ]
 
         for os_version in os_version_list:
@@ -145,16 +145,16 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         os_version_list = [
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
-             'cmd': ('gpasswd', '-d', 'root', 'test')},
+             'cmd': ['gpasswd', '-d', 'root', 'test']},
 
             {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
-             'cmd': ('usermod', '-R', 'test', 'root')},
+             'cmd': ['usermod', '-R', 'test', 'root']},
 
             {'grains': {'kernel': 'Linux'},
-             'cmd': ('gpasswd', '--del', 'root', 'test')},
+             'cmd': ['gpasswd', '--del', 'root', 'test']},
 
             {'grains': {'kernel': 'OpenBSD'},
-             'cmd': 'usermod -S foo root'},
+             'cmd': ['usermod', '-S', 'foo', 'root']},
         ]
 
         for os_version in os_version_list:
@@ -180,16 +180,16 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         os_version_list = [
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
-             'cmd': ('gpasswd', '-M', 'foo', 'test')},
+             'cmd': ['gpasswd', '-M', 'foo', 'test']},
 
             {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
-             'cmd': ('groupmod', '-A', 'foo', 'test')},
+             'cmd': ['groupmod', '-A', 'foo', 'test']},
 
             {'grains': {'kernel': 'Linux'},
-             'cmd': ('gpasswd', '--members', 'foo', 'test')},
+             'cmd': ['gpasswd', '--members', 'foo', 'test']},
 
             {'grains': {'kernel': 'OpenBSD'},
-             'cmd': 'usermod -G test foo'},
+             'cmd': ['usermod', '-G', 'test', 'foo']},
         ]
 
         for os_version in os_version_list:

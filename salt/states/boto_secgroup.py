@@ -126,6 +126,8 @@ def present(
         vpc_name=None,
         rules=None,
         rules_egress=None,
+        delete_ingress_rules=True,
+        delete_egress_rules=True,
         region=None,
         key=None,
         keyid=None,
@@ -160,6 +162,16 @@ def present(
         the egress rules will be unmanaged. If set to an empty list, ``[]``,
         then all egress rules will be removed.
 
+    delete_ingress_rules
+        Some tools (EMR comes to mind) insist on adding rules on-the-fly, which
+        salt will happily remove on the next run.  Set this param to False to
+        avoid deleting rules which were added outside of salt.
+
+    delete_egress_rules
+        Some tools (EMR comes to mind) insist on adding rules on-the-fly, which
+        salt will happily remove on the next run.  Set this param to False to
+        avoid deleting rules which were added outside of salt.
+
     region
         Region to connect to.
 
@@ -191,17 +203,18 @@ def present(
         elif ret['result'] is None:
             return ret
     if rules is not None:
-        _ret = _rules_present(name, rules, vpc_id=vpc_id, vpc_name=vpc_name,
-                              region=region, key=key, keyid=keyid,
-                              profile=profile)
+        _ret = _rules_present(name, rules, delete_ingress_rules, vpc_id=vpc_id,
+                              vpc_name=vpc_name, region=region, key=key,
+                              keyid=keyid, profile=profile)
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
         if not _ret['result']:
             ret['result'] = _ret['result']
     if rules_egress is not None:
-        _ret = _rules_egress_present(name, rules_egress, vpc_id=vpc_id,
-                                     vpc_name=vpc_name, region=region, key=key,
-                                     keyid=keyid, profile=profile)
+        _ret = _rules_egress_present(name, rules_egress, delete_egress_rules,
+                                     vpc_id=vpc_id, vpc_name=vpc_name,
+                                     region=region, key=key, keyid=keyid,
+                                     profile=profile)
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
         if not _ret['result']:
@@ -389,13 +402,14 @@ def _get_rule_changes(rules, _rules):
     return (to_delete, to_create)
 
 
-def _rules_present(name, rules, vpc_id=None, vpc_name=None,
-                   region=None, key=None, keyid=None, profile=None):
+def _rules_present(name, rules, delete_ingress_rules=True, vpc_id=None,
+                   vpc_name=None, region=None, key=None, keyid=None, profile=None):
     '''
     given a group name or group name and vpc_id (or vpc name):
     1. get lists of desired rule changes (using _get_rule_changes)
-    2. delete/revoke or authorize/create rules
-    3. return 'old' and 'new' group rules
+    2. authorize/create rules missing rules
+    3. if delete_ingress_rules is True, delete/revoke non-requested rules
+    4. return 'old' and 'new' group rules
     '''
     ret = {'result': True, 'comment': '', 'changes': {}}
     sg = __salt__['boto_secgroup.get_config'](name=name, group_id=None, region=region, key=key,
@@ -424,11 +438,13 @@ def _rules_present(name, rules, vpc_id=None, vpc_name=None,
     # rules = rules that exist in salt state
     # sg['rules'] = that exist in present group
     to_delete, to_create = _get_rule_changes(rules, sg['rules'])
+    to_delete = to_delete if delete_ingress_rules else []
     if to_create or to_delete:
         if __opts__['test']:
             msg = """Security group {0} set to have rules modified.
             To be created: {1}
-            To be deleted: {2}""".format(name, pprint.pformat(to_create), pprint.pformat(to_delete))
+            To be deleted: {2}""".format(name, pprint.pformat(to_create),
+                                         pprint.pformat(to_delete))
             ret['comment'] = msg
             ret['result'] = None
             return ret
@@ -470,13 +486,14 @@ def _rules_present(name, rules, vpc_id=None, vpc_name=None,
     return ret
 
 
-def _rules_egress_present(name, rules_egress, vpc_id=None, vpc_name=None,
-                          region=None, key=None, keyid=None, profile=None):
+def _rules_egress_present(name, rules_egress, delete_egress_rules=True, vpc_id=None,
+                          vpc_name=None, region=None, key=None, keyid=None, profile=None):
     '''
     given a group name or group name and vpc_id (or vpc name):
     1. get lists of desired rule changes (using _get_rule_changes)
-    2. delete/revoke or authorize/create rules
-    3. return 'old' and 'new' group rules
+    2. authorize/create missing rules
+    3. if delete_egress_rules is True, delete/revoke non-requested rules
+    4. return 'old' and 'new' group rules
     '''
     ret = {'result': True, 'comment': '', 'changes': {}}
     sg = __salt__['boto_secgroup.get_config'](name=name, group_id=None, region=region, key=key,
@@ -504,20 +521,20 @@ def _rules_egress_present(name, rules_egress, vpc_id=None, vpc_name=None,
                 rule['source_group_group_id'] = _group_id
     # rules_egress = rules that exist in salt state
     # sg['rules_egress'] = that exist in present group
-    to_delete_egress, to_create_egress = _get_rule_changes(
-        rules_egress, sg['rules_egress']
-    )
-    if to_create_egress or to_delete_egress:
+    to_delete, to_create = _get_rule_changes(rules_egress, sg['rules_egress'])
+    to_delete = to_delete if delete_egress_rules else []
+    if to_create or to_delete:
         if __opts__['test']:
             msg = """Security group {0} set to have rules modified.
             To be created: {1}
-            To be deleted: {2}""".format(name, pprint.pformat(to_create_egress), pprint.pformat(to_delete_egress))
+            To be deleted: {2}""".format(name, pprint.pformat(to_create),
+                                         pprint.pformat(to_delete))
             ret['comment'] = msg
             ret['result'] = None
             return ret
-        if to_delete_egress:
+        if to_delete:
             deleted = True
-            for rule in to_delete_egress:
+            for rule in to_delete:
                 _deleted = __salt__['boto_secgroup.revoke'](
                     name, vpc_id=vpc_id, vpc_name=vpc_name, region=region,
                     key=key, keyid=keyid, profile=profile, egress=True, **rule)
@@ -530,9 +547,9 @@ def _rules_egress_present(name, rules_egress, vpc_id=None, vpc_name=None,
                 msg = 'Failed to remove egress rule on {0} security group.'
                 ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
                 ret['result'] = False
-        if to_create_egress:
+        if to_create:
             created = True
-            for rule in to_create_egress:
+            for rule in to_create:
                 _created = __salt__['boto_secgroup.authorize'](
                     name, vpc_id=vpc_id, vpc_name=vpc_name, region=region,
                     key=key, keyid=keyid, profile=profile, egress=True, **rule)

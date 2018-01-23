@@ -4,7 +4,7 @@ Base classes for gitfs/git_pillar integration tests
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import errno
 import logging
@@ -15,10 +15,11 @@ import signal
 import tempfile
 import textwrap
 import time
-import yaml
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.yaml
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
@@ -330,7 +331,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         '''
         cachedir = tempfile.mkdtemp(dir=TMP)
         self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
-        ext_pillar_opts = yaml.safe_load(
+        ext_pillar_opts = salt.utils.yaml.safe_load(
             ext_pillar_conf.format(
                 cachedir=cachedir,
                 extmods=os.path.join(cachedir, 'extmods'),
@@ -340,8 +341,8 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         with patch.dict(git_pillar.__opts__, ext_pillar_opts):
             return git_pillar.ext_pillar(
                 'minion',
-                ext_pillar_opts['ext_pillar'][0]['git'],
-                {}
+                {},
+                *ext_pillar_opts['ext_pillar'][0]['git']
             )
 
     def make_repo(self, root_dir, user='root'):
@@ -384,14 +385,14 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 user=user,
             )
 
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'top.sls'), 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             base:
               '*':
                 - foo
             '''))
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'foo.sls'), 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             branch: master
@@ -405,7 +406,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 master: True
             '''))
         # Add another file to be referenced using git_pillar_includes
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'bar.sls'), 'w') as fp_:
             fp_.write('included_pillar: True\n')
         _push('master', 'initial commit')
@@ -421,14 +422,14 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             'git.rm',
             [self.admin_repo, 'bar.sls'],
             user=user)
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'top.sls'), 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             dev:
               '*':
                 - foo
             '''))
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'foo.sls'), 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             branch: dev
@@ -455,7 +456,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             'git.rm',
             [self.admin_repo, 'foo.sls'],
             user=user)
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'top.sls'), 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             base:
@@ -500,7 +501,7 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         super(GitPillarSSHTestBase, self).setUp()
         self.sshd_proc = self.find_proc(name='sshd',
                                         search=self.sshd_config)
-        self.sshd_bin = salt.utils.which('sshd')
+        self.sshd_bin = salt.utils.path.which('sshd')
 
         if self.sshd_proc is None:
             self.spawn_server()

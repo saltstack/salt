@@ -149,6 +149,28 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(lvm.__opts__, {'test': True}):
                 self.assertDictEqual(lvm.lv_present(name), ret)
 
+    def test_lv_present_with_force(self):
+        '''
+        Test to create a new logical volume with force=True
+        '''
+        name = '/dev/sda5'
+
+        comt = ('Logical Volume {0} already present'.format(name))
+
+        ret = {'name': name,
+               'changes': {},
+               'result': True,
+               'comment': comt}
+
+        mock = MagicMock(side_effect=[True, False])
+        with patch.dict(lvm.__salt__, {'lvm.lvdisplay': mock}):
+            self.assertDictEqual(lvm.lv_present(name, force=True), ret)
+
+            comt = ('Logical Volume {0} is set to be created'.format(name))
+            ret.update({'comment': comt, 'result': None})
+            with patch.dict(lvm.__opts__, {'test': True}):
+                self.assertDictEqual(lvm.lv_present(name, force=True), ret)
+
     # 'lv_absent' function tests: 1
 
     def test_lv_absent(self):

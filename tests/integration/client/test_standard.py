@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 
 class StdTest(ModuleCase):
@@ -43,7 +43,7 @@ class StdTest(ModuleCase):
         # create fake minion
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'footest')
         # touch the file
-        with salt.utils.fopen(key_file, 'a'):
+        with salt.utils.files.fopen(key_file, 'a'):
             pass
         # ping that minion and ensure it times out
         try:
@@ -126,7 +126,7 @@ class StdTest(ModuleCase):
         # Create a minion key, but do not start the "fake" minion. This mimics
         # a disconnected minion.
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'disconnected')
-        with salt.utils.fopen(key_file, 'a'):
+        with salt.utils.files.fopen(key_file, 'a'):
             pass
 
         # ping disconnected minion and ensure it times out and returns with correct message
@@ -147,3 +147,33 @@ class StdTest(ModuleCase):
 
         finally:
             os.unlink(key_file)
+
+    def test_missing_minion_list(self):
+        '''
+        test cmd with missing minion in nodegroup
+        '''
+        ret = self.client.cmd(
+                'minion,ghostminion',
+                'test.ping',
+                tgt_type='list'
+                )
+        self.assertIn('minion', ret)
+        self.assertIn('ghostminion', ret)
+        self.assertEqual(True, ret['minion'])
+        self.assertEqual(u'Minion did not return. [No response]',
+                         ret['ghostminion'])
+
+    def test_missing_minion_nodegroup(self):
+        '''
+        test cmd with missing minion in nodegroup
+        '''
+        ret = self.client.cmd(
+                'missing_minion',
+                'test.ping',
+                tgt_type='nodegroup'
+                )
+        self.assertIn('minion', ret)
+        self.assertIn('ghostminion', ret)
+        self.assertEqual(True, ret['minion'])
+        self.assertEqual(u'Minion did not return. [No response]',
+                         ret['ghostminion'])

@@ -54,7 +54,8 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
         Tests write the active configuration state to config file
         '''
         mock = MagicMock(return_value='SALT')
-        with patch.dict(znc.__salt__, {'ps.pkill': mock}):
+        with patch.dict(znc.__salt__, {'ps.pkill': mock}), \
+                patch.object(znc, 'signal', MagicMock()):
             self.assertEqual(znc.dumpconf(), 'SALT')
 
     # 'rehashconf' function tests: 1
@@ -64,7 +65,8 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
         Tests rehash the active configuration state from config file
         '''
         mock = MagicMock(return_value='SALT')
-        with patch.dict(znc.__salt__, {'ps.pkill': mock}):
+        with patch.dict(znc.__salt__, {'ps.pkill': mock}), \
+                patch.object(znc, 'signal', MagicMock()):
             self.assertEqual(znc.rehashconf(), 'SALT')
 
     # 'version' function tests: 1

@@ -25,6 +25,9 @@ configuration:
         - web*:
           - test.*
           - pkg.*
+      # Allow managers to use saltutil module functions
+      manager_.*:
+        - saltutil.*
 
 Permission Issues
 -----------------

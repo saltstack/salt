@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import threading
 
 import tornado.gen
@@ -13,8 +13,9 @@ import tornado.concurrent
 from tornado.testing import AsyncTestCase, gen_test
 
 import salt.config
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.platform
+import salt.utils.process
 import salt.transport.server
 import salt.transport.client
 import salt.exceptions
@@ -100,7 +101,7 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
-@skipIf(salt.utils.is_darwin(), 'hanging test suite on MacOS')
+@skipIf(salt.utils.platform.is_darwin(), 'hanging test suite on MacOS')
 class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     '''
     Test all of the clear msg stuff
@@ -120,7 +121,7 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
-@skipIf(salt.utils.is_darwin(), 'hanging test suite on MacOS')
+@skipIf(salt.utils.platform.is_darwin(), 'hanging test suite on MacOS')
 class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     def setUp(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config)

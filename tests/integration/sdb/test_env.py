@@ -2,7 +2,7 @@
 '''
 Test case for env sdb module
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import textwrap
 
@@ -12,7 +12,7 @@ from tests.support.paths import FILES
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 STATE_DIR = os.path.join(FILES, 'file', 'base')
 
@@ -23,7 +23,7 @@ class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.state_name = 'test_sdb_env'
         self.state_file_name = self.state_name + '.sls'
         self.state_file_set_var = os.path.join(STATE_DIR, self.state_file_name)
-        with salt.utils.fopen(self.state_file_set_var, 'w') as wfh:
+        with salt.utils.files.fopen(self.state_file_set_var, 'w') as wfh:
             wfh.write(textwrap.dedent('''\
                 set some env var:
                   cmd.run:

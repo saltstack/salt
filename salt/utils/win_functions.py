@@ -3,7 +3,7 @@
 Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import platform
 
 # Import Salt Libs
@@ -111,7 +111,7 @@ def get_sid_from_name(name):
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'User {0} found: {1}'.format(name, exc.strerror))
+            'User {0} not found: {1}'.format(name, exc))
 
     return win32security.ConvertSidToStringSid(sid)
 
@@ -135,7 +135,7 @@ def get_current_user():
                 user_name = 'SYSTEM'
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed to get current user: {0}'.format(exc.strerror))
+            'Failed to get current user: {0}'.format(exc))
 
     if not user_name:
         return False
@@ -144,16 +144,27 @@ def get_current_user():
 
 
 def get_sam_name(username):
-    '''
+    r'''
     Gets the SAM name for a user. It basically prefixes a username without a
-    backslash with the computer name. If the username contains a backslash, it
-    is returned as is.
+    backslash with the computer name. If the user does not exist, a SAM
+    compatible name will be returned using the local hostname as the domain.
 
-    Everything is returned lower case
+    i.e. salt.utils.get_same_name('Administrator') would return 'DOMAIN.COM\Administrator'
 
-    i.e. salt.utils.fix_local_user('Administrator') would return 'computername\administrator'
+    .. note:: Long computer names are truncated to 15 characters
     '''
-    if '\\' not in username:
-        username = '{0}\\{1}'.format(platform.node(), username)
+    try:
+        sid_obj = win32security.LookupAccountName(None, username)[0]
+    except pywintypes.error:
+        return '\\'.join([platform.node()[:15].upper(), username])
+    username, domain, _ = win32security.LookupAccountSid(None, sid_obj)
+    return '\\'.join([domain, username])
 
-    return username.lower()
+
+def enable_ctrl_logoff_handler():
+    if HAS_WIN32:
+        ctrl_logoff_event = 5
+        win32api.SetConsoleCtrlHandler(
+            lambda event: True if event == ctrl_logoff_event else False,
+            1
+        )

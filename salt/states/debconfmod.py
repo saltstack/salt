@@ -38,7 +38,7 @@ set_file
     the values in the ``data`` dict must be indented four spaces instead of two.
 '''
 from __future__ import absolute_import
-import salt.ext.six as six
+from salt.ext import six
 
 
 # Define the module's virtual name

@@ -6,7 +6,7 @@ Introduced in Salt version ``2017.7.0`` it is now possible to run select states
 in parallel. This is accomplished very easily by adding the ``parallel: True``
 option to your state declaration:
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     nginx:
       service.running:
@@ -24,7 +24,7 @@ state to finish.
 
 Given this example:
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     sleep 10:
       cmd.run:
@@ -51,7 +51,7 @@ actually speed things up.
 To run the above state much faster make sure that the ``sleep 5`` is evaluated
 before the ``nginx`` state
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     sleep 10:
       cmd.run:
@@ -74,16 +74,16 @@ also complete.
 Things to be Careful of
 =======================
 
-Parallel States does not prevent you from creating parallel conflicts on your
+Parallel States do not prevent you from creating parallel conflicts on your
 system. This means that if you start multiple package installs using Salt then
 the package manager will block or fail. If you attempt to manage the same file
 with multiple states in parallel then the result can produce an unexpected
 file.
 
 Make sure that the states you choose to run in parallel do not conflict, or
-else, like in and parallel programming environment, the outcome may not be
+else, like in any parallel programming environment, the outcome may not be
 what you expect. Doing things like just making all states run in parallel
-will almost certinly result in unexpected behavior.
+will almost certainly result in unexpected behavior.
 
 With that said, running states in parallel should be safe the vast majority
 of the time and the most likely culprit for unexpected behavior is running

@@ -1,5 +1,5 @@
-salt.runners.auth module
-========================
+salt.runners.auth
+=================
 
 .. automodule:: salt.runners.auth
     :members:

@@ -1,0 +1,6 @@
+============================
+Salt 2017.7.3 Release Notes
+============================
+
+Version 2017.7.3 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+

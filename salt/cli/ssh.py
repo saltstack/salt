@@ -2,17 +2,21 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
+import sys
 import salt.client.ssh
-from salt.utils import parsers
+import salt.utils.parsers
 from salt.utils.verify import verify_log
 
 
-class SaltSSH(parsers.SaltSSHOptionParser):
+class SaltSSH(salt.utils.parsers.SaltSSHOptionParser):
     '''
     Used to Execute the salt ssh routine
     '''
 
     def run(self):
+        if '-H' in sys.argv or '--hosts' in sys.argv:
+            sys.argv += ['x', 'x']  # Hack: pass a mandatory two options
+                                    # that won't be used anyways with -H or --hosts
         self.parse_args()
         self.setup_logfile_logger()
         verify_log(self.config)

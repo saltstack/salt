@@ -29,6 +29,13 @@ will follow symbolic links to other directories.
     Be careful when using ``follow_dir_links``, as a recursive symlink chain
     will result in unexpected results.
 
+.. versionchanged:: Oxygen
+    If ``root_dir`` is a relative path, it will be treated as relative to the
+    :conf_master:`pillar_roots` of the environment specified by
+    :conf_minion:`pillarenv`. If an environment specifies multiple
+    roots, this module will search for files relative to all of them, in order,
+    merging the results.
+
 If ``keep_newline`` is set to ``True``, then the pillar values for files ending
 in newlines will keep that newline. The default behavior is to remove the
 end-of-file newline. ``keep_newline`` should be turned on if the pillar data is
@@ -171,7 +178,7 @@ will result in the following pillar data for minions in the node group
                 file2.txt:
                     Contents of file #2.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import fnmatch
@@ -180,11 +187,13 @@ import os
 
 # Import salt libs
 import salt.loader
-import salt.utils
 import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.minions
+import salt.utils.path
 import salt.utils.stringio
 import salt.template
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -192,7 +201,7 @@ log = logging.getLogger(__name__)
 
 def _on_walk_error(err):
     '''
-    Log os.walk() error.
+    Log salt.utils.path.os_walk() error.
     '''
     log.error('%s: %s', err.filename, err.strerror)
 
@@ -213,7 +222,7 @@ def _check_newline(prefix, file_name, keep_newline):
             if fnmatch.fnmatch(full_path, pattern):
                 return False
         except TypeError:
-            if fnmatch.fnmatch(full_path, str(pattern)):
+            if fnmatch.fnmatch(full_path, six.text_type(pattern)):
                 return False
     return True
 
@@ -232,7 +241,7 @@ def _construct_pillar(top_dir,
     renderers = salt.loader.render(__opts__, __salt__)
 
     norm_top_dir = os.path.normpath(top_dir)
-    for dir_path, dir_names, file_names in os.walk(
+    for dir_path, dir_names, file_names in salt.utils.path.os_walk(
             top_dir, topdown=True, onerror=_on_walk_error,
             followlinks=follow_dir_links):
         # Find current path in pillar tree
@@ -259,14 +268,14 @@ def _construct_pillar(top_dir,
                 log.error('file_tree: %s: not a regular file', file_path)
                 continue
 
-            contents = ''
+            contents = b''
             try:
-                with salt.utils.fopen(file_path, 'rb') as fhr:
+                with salt.utils.files.fopen(file_path, 'rb') as fhr:
                     buf = fhr.read(__opts__['file_buffer_size'])
                     while buf:
                         contents += buf
                         buf = fhr.read(__opts__['file_buffer_size'])
-                    if contents.endswith('\n') \
+                    if contents.endswith(b'\n') \
                             and _check_newline(prefix,
                                                file_name,
                                                keep_newline):
@@ -311,6 +320,60 @@ def ext_pillar(minion_id,
         log.error('file_tree: no root_dir specified')
         return {}
 
+    if not os.path.isabs(root_dir):
+        pillarenv = __opts__['pillarenv']
+        if pillarenv is None:
+            log.error('file_tree: root_dir is relative but pillarenv is not set')
+            return {}
+        log.debug('file_tree: pillarenv = %s', pillarenv)
+
+        env_roots = __opts__['pillar_roots'].get(pillarenv, None)
+        if env_roots is None:
+            log.error('file_tree: root_dir is relative but no pillar_roots are specified '
+                      ' for pillarenv %s', pillarenv)
+            return {}
+
+        env_dirs = []
+        for env_root in env_roots:
+            env_dir = os.path.normpath(os.path.join(env_root, root_dir))
+            # don't redundantly load consecutively, but preserve any expected precedence
+            if env_dir not in env_dirs or env_dir != env_dirs[-1]:
+                env_dirs.append(env_dir)
+        dirs = env_dirs
+    else:
+        dirs = [root_dir]
+
+    result_pillar = {}
+    for root in dirs:
+        dir_pillar = _ext_pillar(minion_id,
+                                 root,
+                                 follow_dir_links,
+                                 debug,
+                                 keep_newline,
+                                 render_default,
+                                 renderer_blacklist,
+                                 renderer_whitelist,
+                                 template)
+        result_pillar = salt.utils.dictupdate.merge(result_pillar,
+                                                    dir_pillar,
+                                                    strategy='recurse')
+    return result_pillar
+
+
+def _ext_pillar(minion_id,
+                root_dir,
+                follow_dir_links,
+                debug,
+                keep_newline,
+                render_default,
+                renderer_blacklist,
+                renderer_whitelist,
+                template):
+    '''
+    Compile pillar data for a single root_dir for the specified minion ID
+    '''
+    log.debug('file_tree: reading %s', root_dir)
+
     if not os.path.isdir(root_dir):
         log.error(
             'file_tree: root_dir %s does not exist or is not a directory',
@@ -336,20 +399,22 @@ def ext_pillar(minion_id,
                 if (os.path.isdir(nodegroups_dir) and
                         nodegroup in master_ngroups):
                     ckminions = salt.utils.minions.CkMinions(__opts__)
-                    match = ckminions.check_minions(
+                    _res = ckminions.check_minions(
                         master_ngroups[nodegroup],
                         'compound')
+                    match = _res['minions']
                     if minion_id in match:
                         ngroup_dir = os.path.join(
-                            nodegroups_dir, str(nodegroup))
-                        ngroup_pillar.update(
+                            nodegroups_dir, six.text_type(nodegroup))
+                        ngroup_pillar = salt.utils.dictupdate.merge(ngroup_pillar,
                             _construct_pillar(ngroup_dir,
                                               follow_dir_links,
                                               keep_newline,
                                               render_default,
                                               renderer_blacklist,
                                               renderer_whitelist,
-                                              template)
+                                              template),
+                            strategy='recurse'
                         )
         else:
             if debug is True:

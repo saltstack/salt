@@ -5,7 +5,6 @@ Unit Tests for the k8s execution module.
 
 # Import Python libs
 from __future__ import absolute_import
-import json
 import hashlib
 import base64
 import time
@@ -16,7 +15,8 @@ from tests.support.unit import TestCase
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.json
 import salt.modules.k8s as k8s
 
 # Import 3rd-party libs
@@ -32,7 +32,7 @@ class TestK8SNamespace(TestCase):
         res = k8s.get_namespaces(apiserver_url="http://127.0.0.1:8080")
         a = len(res.get("items"))
         proc = Popen(["kubectl", "get", "namespaces", "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = len(kubectl_out.get("items"))
         self.assertEqual(a, b)
 
@@ -40,7 +40,7 @@ class TestK8SNamespace(TestCase):
         res = k8s.get_namespaces("default", apiserver_url="http://127.0.0.1:8080")
         a = res.get("metadata", {}).get("name", "a")
         proc = Popen(["kubectl", "get", "namespaces", "default", "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
         self.assertEqual(a, b)
 
@@ -50,7 +50,7 @@ class TestK8SNamespace(TestCase):
         nsname = hash.hexdigest()[:16]
         res = k8s.create_namespace(nsname, apiserver_url="http://127.0.0.1:8080")
         proc = Popen(["kubectl", "get", "namespaces", nsname, "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         # if creation is failed, kubernetes return non json error message
         self.assertTrue(isinstance(kubectl_out, dict))
 
@@ -79,15 +79,15 @@ class TestK8SSecrets(TestCase):
         res = k8s.get_secrets("default", apiserver_url="http://127.0.0.1:8080")
         a = len(res.get("items", []))
         proc = Popen(["kubectl", "--namespace=default", "get", "secrets", "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = len(kubectl_out.get("items", []))
         self.assertEqual(a, b)
 
     def test_get_one_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
-            json.dump(self.request, f)
+        with salt.utils.files.fopen(filename, 'w') as f:
+            salt.utils.json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
         # wee need to give kubernetes time save data in etcd
@@ -95,15 +95,15 @@ class TestK8SSecrets(TestCase):
         res = k8s.get_secrets("default", name, apiserver_url="http://127.0.0.1:8080")
         a = res.get("metadata", {}).get("name", "a")
         proc = Popen(["kubectl", "--namespace=default", "get", "secrets", name, "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
         self.assertEqual(a, b)
 
     def test_get_decoded_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
-            json.dump(self.request, f)
+        with salt.utils.files.fopen(filename, 'w') as f:
+            salt.utils.json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
         # wee need to give etcd to populate data on all nodes
@@ -118,12 +118,12 @@ class TestK8SSecrets(TestCase):
         expected_data = {}
         for i in range(2):
             names.append("/tmp/{0}-{1}".format(name, i))
-            with salt.utils.fopen("/tmp/{0}-{1}".format(name, i), 'w') as f:
+            with salt.utils.files.fopen("/tmp/{0}-{1}".format(name, i), 'w') as f:
                 expected_data["{0}-{1}".format(name, i)] = base64.b64encode("{0}{1}".format(name, i))
                 f.write("{0}{1}".format(name, i))
         res = k8s.create_secret("default", name, names, apiserver_url="http://127.0.0.1:8080")
         proc = Popen(["kubectl", "--namespace=default", "get", "secrets", name, "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         # if creation is failed, kubernetes return non json error message
         b = kubectl_out.get("data", {})
         self.assertTrue(isinstance(kubectl_out, dict))
@@ -132,8 +132,8 @@ class TestK8SSecrets(TestCase):
     def test_update_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
-            json.dump(self.request, f)
+        with salt.utils.files.fopen(filename, 'w') as f:
+            salt.utils.json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
         # wee need to give kubernetes time save data in etcd
@@ -142,14 +142,14 @@ class TestK8SSecrets(TestCase):
         names = []
         for i in range(3):
             names.append("/tmp/{0}-{1}-updated".format(name, i))
-            with salt.utils.fopen("/tmp/{0}-{1}-updated".format(name, i), 'w') as f:
+            with salt.utils.files.fopen("/tmp/{0}-{1}-updated".format(name, i), 'w') as f:
                 expected_data["{0}-{1}-updated".format(name, i)] = base64.b64encode("{0}{1}-updated".format(name, i))
                 f.write("{0}{1}-updated".format(name, i))
 
         res = k8s.update_secret("default", name, names, apiserver_url="http://127.0.0.1:8080")
         # if creation is failed, kubernetes return non json error message
         proc = Popen(["kubectl", "--namespace=default", "get", "secrets", name, "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         # if creation is failed, kubernetes return non json error message
         b = kubectl_out.get("data", {})
         self.assertTrue(isinstance(kubectl_out, dict))
@@ -158,8 +158,8 @@ class TestK8SSecrets(TestCase):
     def test_delete_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
-            json.dump(self.request, f)
+        with salt.utils.files.fopen(filename, 'w') as f:
+            salt.utils.json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
         # wee need to give kubernetes time save data in etcd
@@ -205,7 +205,7 @@ spec:
     services: "5"
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
@@ -214,7 +214,7 @@ spec:
         res = k8s.get_resource_quotas(namespace, apiserver_url="http://127.0.0.1:8080")
         a = len(res.get("items", []))
         proc = Popen(["kubectl", "--namespace={0}".format(namespace), "get", "quota", "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = len(kubectl_out.get("items", []))
         self.assertEqual(a, b)
 
@@ -239,7 +239,7 @@ spec:
     services: "5"
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
@@ -248,7 +248,7 @@ spec:
         res = k8s.get_resource_quotas(namespace, name, apiserver_url="http://127.0.0.1:8080")
         a = res.get("metadata", {}).get("name", "a")
         proc = Popen(["kubectl", "--namespace={0}".format(namespace), "get", "quota", name, "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
         self.assertEqual(a, b)
 
@@ -262,7 +262,7 @@ spec:
         }
         res = k8s.create_resource_quota(namespace, quota, name=name, apiserver_url="http://127.0.0.1:8080")
         proc = Popen(["kubectl", "--namespace={0}".format(namespace), "get", "quota", name, "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         self.assertTrue(isinstance(kubectl_out, dict))
 
     def test_update_resource_quota(self):
@@ -286,7 +286,7 @@ spec:
     services: "5"
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
@@ -298,7 +298,7 @@ spec:
         }
         res = k8s.create_resource_quota(namespace, quota, name=name, apiserver_url="http://127.0.0.1:8080", update=True)
         proc = Popen(["kubectl", "--namespace={0}".format(namespace), "get", "quota", name, "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         limit = kubectl_out.get("spec").get("hard").get("memory")
         self.assertEqual("2Gi", limit)
 
@@ -324,7 +324,7 @@ class TestK8SLimitRange(TestCase):
         }
         res = k8s.create_limit_range("default", limits, name=name, apiserver_url="http://127.0.0.1:8080")
         proc = Popen(["kubectl", "--namespace=default", "get", "limits", name, "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         self.assertTrue(isinstance(kubectl_out, dict))
 
     def test_update_limit_range(self):
@@ -352,7 +352,7 @@ spec:
             }
         }
         filename = "/tmp/{0}.yaml".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -360,7 +360,7 @@ spec:
         time.sleep(0.1)
         res = k8s.create_limit_range("default", limits, name=name, apiserver_url="http://127.0.0.1:8080", update=True)
         proc = Popen(["kubectl", "--namespace=default", "get", "limits", name, "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         limit = kubectl_out.get("spec").get("limits")[0].get("defaultRequest").get("cpu")
         self.assertEqual("100m", limit)
 
@@ -368,7 +368,7 @@ spec:
         res = k8s.get_limit_ranges("default", apiserver_url="http://127.0.0.1:8080")
         a = len(res.get("items", []))
         proc = Popen(["kubectl", "--namespace=default", "get", "limits", "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = len(kubectl_out.get("items", []))
         self.assertEqual(a, b)
 
@@ -390,7 +390,7 @@ spec:
     type: Container
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -399,6 +399,6 @@ spec:
         res = k8s.get_limit_ranges("default", name, apiserver_url="http://127.0.0.1:8080")
         a = res.get("metadata", {}).get("name", "a")
         proc = Popen(["kubectl", "--namespace=default", "get", "limits", name, "-o", "json"], stdout=PIPE)
-        kubectl_out = json.loads(proc.communicate()[0])
+        kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
         self.assertEqual(a, b)

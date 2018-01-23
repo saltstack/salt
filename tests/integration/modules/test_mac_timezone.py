@@ -10,7 +10,7 @@ Time sync do the following:
     - Set time to 'Do not sync'
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import datetime
 
@@ -19,13 +19,14 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
-@skipIf(not salt.utils.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacTimezoneModuleTest(ModuleCase):
     '''
     Validate the mac_timezone module

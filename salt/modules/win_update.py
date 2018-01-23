@@ -74,9 +74,10 @@ except ImportError:
     HAS_DEPENDENCIES = False
 # pylint: enable=import-error
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 import salt.utils.locales
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -85,8 +86,8 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES:
-        salt.utils.warn_until(
+    if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The \'win_update\' module is being deprecated and will be removed '
             'in Salt {version}. Please use the \'win_wua\' module instead.'
@@ -194,7 +195,10 @@ class PyWinUpdater(object):
                 # if this update is already downloaded, it doesn't need to be in
                 # the download_collection. so skipping it unless the user mandates re-download.
                 if self.skipDownloaded and update.IsDownloaded:
-                    log.debug(u'Skipped update {0} - already downloaded'.format(update.title))
+                    log.debug(
+                        'Skipped update %s - already downloaded',
+                        update.title
+                    )
                     continue
 
                 # check this update's categories against the ones desired.
@@ -205,7 +209,7 @@ class PyWinUpdater(object):
                     if self.categories is None or category.Name in self.categories:
                         # adds it to the list to be downloaded.
                         self.download_collection.Add(update)
-                        log.debug(u'added update {0}'.format(update.title))
+                        log.debug('added update %s', update.title)
                         # ever update has 2 categories. this prevents the
                         # from being added twice.
                         break
@@ -293,10 +297,10 @@ class PyWinUpdater(object):
         try:
             for update in self.search_results.Updates:
                 if not update.EulaAccepted:
-                    log.debug(u'Accepting EULA: {0}'.format(update.Title))
+                    log.debug('Accepting EULA: %s', update.Title)
                     update.AcceptEula()
         except Exception as exc:
-            log.info('Accepting Eula failed: {0}'.format(exc))
+            log.info('Accepting Eula failed: %s', exc)
             return exc
 
         # if the blugger is empty. no point it starting the install process.
@@ -308,7 +312,7 @@ class PyWinUpdater(object):
                 log.info('Installation of updates complete')
                 return True
             except Exception as exc:
-                log.info('Installation failed: {0}'.format(exc))
+                log.info('Installation failed: %s', exc)
                 return exc
         else:
             log.info('no new updates.')
@@ -370,7 +374,7 @@ class PyWinUpdater(object):
 
         for update in self.download_collection:
             if update.InstallationBehavior.CanRequestUserInput:
-                log.debug(u'Skipped update {0}'.format(update.title))
+                log.debug('Skipped update %s', update.title)
                 continue
             # More fields can be added from https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
             update_com_fields = ['Categories', 'Deadline', 'Description',
@@ -383,7 +387,7 @@ class PyWinUpdater(object):
             update_dict = {}
             for f in update_com_fields:
                 v = getattr(update, f)
-                if not any([isinstance(v, bool), isinstance(v, str)]):
+                if not any([isinstance(v, bool), isinstance(v, six.string_types)]):
                     # Fields that require special evaluation.
                     if f in simple_enums:
                         v = [x for x in v]
@@ -400,7 +404,7 @@ class PyWinUpdater(object):
                              'UpdateID': v.UpdateID}
                 update_dict[f] = v
             updates.append(update_dict)
-            log.debug(u'added update {0}'.format(update.title))
+            log.debug('added update %s', update.title)
         return updates
 
     def GetSearchResults(self, fields=None):
@@ -669,8 +673,8 @@ def download_updates(skips=None, retries=5, categories=None):
     try:
         comment = quidditch.GetDownloadResults()
     except Exception as exc:
-        comment = u'could not get results, but updates were installed. {0}'.format(exc)
-    return u'Windows is up to date. \n{0}'.format(comment)
+        comment = 'could not get results, but updates were installed. {0}'.format(exc)
+    return 'Windows is up to date. \n{0}'.format(comment)
 
 
 def install_updates(skips=None, retries=5, categories=None):

@@ -52,7 +52,8 @@ except ImportError:
     import resource
 
 # Import salt libs
-import salt.utils
+import salt.utils.crypt
+import salt.utils.stringutils
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 
@@ -492,7 +493,7 @@ class Terminal(object):
                 # Close parent FDs
                 os.close(stdout_parent_fd)
                 os.close(stderr_parent_fd)
-                salt.utils.reinit_crypto()
+                salt.utils.crypt.reinit_crypto()
 
                 # ----- Make STDOUT the controlling PTY --------------------->
                 child_name = os.ttyname(stdout_child_fd)
@@ -553,7 +554,7 @@ class Terminal(object):
                 # <---- Duplicate Descriptors --------------------------------
             else:
                 # Parent. Close Child PTY's
-                salt.utils.reinit_crypto()
+                salt.utils.crypt.reinit_crypto()
                 os.close(stdout_child_fd)
                 os.close(stderr_child_fd)
 
@@ -643,7 +644,7 @@ class Terminal(object):
             if self.child_fde in rlist:
                 try:
                     stderr = self._translate_newlines(
-                        salt.utils.to_str(
+                        salt.utils.stringutils.to_str(
                             os.read(self.child_fde, maxsize)
                         )
                     )
@@ -676,7 +677,7 @@ class Terminal(object):
             if self.child_fd in rlist:
                 try:
                     stdout = self._translate_newlines(
-                        salt.utils.to_str(
+                        salt.utils.stringutils.to_str(
                             os.read(self.child_fd, maxsize)
                         )
                     )

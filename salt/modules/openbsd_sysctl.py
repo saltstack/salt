@@ -4,9 +4,10 @@ Module for viewing and modifying OpenBSD sysctl parameters
 '''
 from __future__ import absolute_import
 import os
+import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -73,7 +74,11 @@ def assign(name, value):
     cmd = 'sysctl {0}="{1}"'.format(name, value)
     data = __salt__['cmd.run_all'](cmd)
 
-    if data['retcode'] != 0:
+    # Certain values cannot be set from this console, at the current
+    # securelevel or there are other restrictions that prevent us
+    # from applying the setting rightaway.
+    if re.match(r'^sysctl:.*: Operation not permitted$', data['stderr']) or \
+      data['retcode'] != 0:
         raise CommandExecutionError('sysctl failed: {0}'.format(
             data['stderr']))
     new_name, new_value = data['stdout'].split(':', 1)
@@ -98,13 +103,13 @@ def persist(name, value, config='/etc/sysctl.conf'):
     # create /etc/sysctl.conf if not present
     if not os.path.isfile(config):
         try:
-            with salt.utils.fopen(config, 'w+'):
+            with salt.utils.files.fopen(config, 'w+'):
                 pass
         except (IOError, OSError):
             msg = 'Could not create {0}'
             raise CommandExecutionError(msg.format(config))
 
-    with salt.utils.fopen(config, 'r') as ifile:
+    with salt.utils.files.fopen(config, 'r') as ifile:
         for line in ifile:
             if not line.startswith('{0}='.format(name)):
                 nlines.append(line)
@@ -125,7 +130,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
                 edited = True
     if not edited:
         nlines.append('{0}={1}\n'.format(name, value))
-    with salt.utils.fopen(config, 'w+') as ofile:
+    with salt.utils.files.fopen(config, 'w+') as ofile:
         ofile.writelines(nlines)
 
     assign(name, value)

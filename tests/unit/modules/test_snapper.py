@@ -22,7 +22,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 import salt.modules.snapper as snapper
 
@@ -36,18 +36,18 @@ DBUS_RET = {
          {'userdata2': 'userval2', 'salt_jid': '20160607130930720112'}]
     ],
     'ListConfigs': [
-        [u'root', u'/', {
-            u'SUBVOLUME': u'/', u'NUMBER_MIN_AGE': u'1800',
-            u'TIMELINE_LIMIT_YEARLY': u'4-10', u'NUMBER_LIMIT_IMPORTANT': u'10',
-            u'FSTYPE': u'btrfs', u'TIMELINE_LIMIT_MONTHLY': u'4-10',
-            u'ALLOW_GROUPS': u'', u'EMPTY_PRE_POST_MIN_AGE': u'1800',
-            u'EMPTY_PRE_POST_CLEANUP': u'yes', u'BACKGROUND_COMPARISON': u'yes',
-            u'TIMELINE_LIMIT_HOURLY': u'4-10', u'ALLOW_USERS': u'',
-            u'TIMELINE_LIMIT_WEEKLY': u'0', u'TIMELINE_CREATE': u'no',
-            u'NUMBER_CLEANUP': u'yes', u'TIMELINE_CLEANUP': u'yes',
-            u'SPACE_LIMIT': u'0.5', u'NUMBER_LIMIT': u'10',
-            u'TIMELINE_MIN_AGE': u'1800', u'TIMELINE_LIMIT_DAILY': u'4-10',
-            u'SYNC_ACL': u'no', u'QGROUP': u'1/0'}
+        ['root', '/', {
+            'SUBVOLUME': '/', 'NUMBER_MIN_AGE': '1800',
+            'TIMELINE_LIMIT_YEARLY': '4-10', 'NUMBER_LIMIT_IMPORTANT': '10',
+            'FSTYPE': 'btrfs', 'TIMELINE_LIMIT_MONTHLY': '4-10',
+            'ALLOW_GROUPS': '', 'EMPTY_PRE_POST_MIN_AGE': '1800',
+            'EMPTY_PRE_POST_CLEANUP': 'yes', 'BACKGROUND_COMPARISON': 'yes',
+            'TIMELINE_LIMIT_HOURLY': '4-10', 'ALLOW_USERS': '',
+            'TIMELINE_LIMIT_WEEKLY': '0', 'TIMELINE_CREATE': 'no',
+            'NUMBER_CLEANUP': 'yes', 'TIMELINE_CLEANUP': 'yes',
+            'SPACE_LIMIT': '0.5', 'NUMBER_LIMIT': '10',
+            'TIMELINE_MIN_AGE': '1800', 'TIMELINE_LIMIT_DAILY': '4-10',
+            'SYNC_ACL': 'no', 'QGROUP': '1/0'}
         ]
     ],
     'GetFiles': [
@@ -86,18 +86,18 @@ MODULE_RET = {
         }
     ],
     'LISTCONFIGS': {
-        u'root': {
-            u'SUBVOLUME': u'/', u'NUMBER_MIN_AGE': u'1800',
-            u'TIMELINE_LIMIT_YEARLY': u'4-10', u'NUMBER_LIMIT_IMPORTANT': u'10',
-            u'FSTYPE': u'btrfs', u'TIMELINE_LIMIT_MONTHLY': u'4-10',
-            u'ALLOW_GROUPS': u'', u'EMPTY_PRE_POST_MIN_AGE': u'1800',
-            u'EMPTY_PRE_POST_CLEANUP': u'yes', u'BACKGROUND_COMPARISON': u'yes',
-            u'TIMELINE_LIMIT_HOURLY': u'4-10', u'ALLOW_USERS': u'',
-            u'TIMELINE_LIMIT_WEEKLY': u'0', u'TIMELINE_CREATE': u'no',
-            u'NUMBER_CLEANUP': u'yes', u'TIMELINE_CLEANUP': u'yes',
-            u'SPACE_LIMIT': u'0.5', u'NUMBER_LIMIT': u'10',
-            u'TIMELINE_MIN_AGE': u'1800', u'TIMELINE_LIMIT_DAILY': u'4-10',
-            u'SYNC_ACL': u'no', u'QGROUP': u'1/0'
+        'root': {
+            'SUBVOLUME': '/', 'NUMBER_MIN_AGE': '1800',
+            'TIMELINE_LIMIT_YEARLY': '4-10', 'NUMBER_LIMIT_IMPORTANT': '10',
+            'FSTYPE': 'btrfs', 'TIMELINE_LIMIT_MONTHLY': '4-10',
+            'ALLOW_GROUPS': '', 'EMPTY_PRE_POST_MIN_AGE': '1800',
+            'EMPTY_PRE_POST_CLEANUP': 'yes', 'BACKGROUND_COMPARISON': 'yes',
+            'TIMELINE_LIMIT_HOURLY': '4-10', 'ALLOW_USERS': '',
+            'TIMELINE_LIMIT_WEEKLY': '0', 'TIMELINE_CREATE': 'no',
+            'NUMBER_CLEANUP': 'yes', 'TIMELINE_CLEANUP': 'yes',
+            'SPACE_LIMIT': '0.5', 'NUMBER_LIMIT': '10',
+            'TIMELINE_MIN_AGE': '1800', 'TIMELINE_LIMIT_DAILY': '4-10',
+            'SYNC_ACL': 'no', 'QGROUP': '1/0'
         }
     },
     'GETFILES': {
@@ -141,6 +141,7 @@ MODULE_RET = {
 }
 
 
+@skipIf(sys.platform.startswith('win'), 'Snapper not available on Windows')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SnapperTestCase(TestCase, LoaderModuleMockMixin):
 
@@ -337,7 +338,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.snapper.changed_files', MagicMock(return_value=["/tmp/foo2"])), \
                 patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True)), \
                 patch('os.path.isfile', MagicMock(side_effect=[False, True])), \
-                patch('salt.utils.fopen', mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post'])), \
+                patch('salt.utils.files.fopen', mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post'])), \
                 patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs'])):
             if sys.version_info < (2, 7):
                 self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo26']})
@@ -360,7 +361,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 mock_open(read_data=FILE_CONTENT["/tmp/foo"]['post']).return_value,
                 mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']).return_value,
             ]
-            with patch('salt.utils.fopen') as fopen_mock:
+            with patch('salt.utils.files.fopen') as fopen_mock:
                 fopen_mock.side_effect = fopen_effect
                 module_ret = {
                     "/tmp/foo": MODULE_RET['DIFF']["/tmp/foo"],
@@ -388,7 +389,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 mock_open(read_data="dummy binary").return_value,
                 mock_open(read_data="dummy binary").return_value,
             ]
-            with patch('salt.utils.fopen') as fopen_mock:
+            with patch('salt.utils.files.fopen') as fopen_mock:
                 fopen_mock.side_effect = fopen_effect
                 module_ret = {
                     "/tmp/foo3": MODULE_RET['DIFF']["/tmp/foo3"],

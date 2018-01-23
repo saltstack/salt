@@ -4,11 +4,11 @@ Service support for the REST example
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 
-# Import Salt's libs
-import salt.utils
+# Import Salts libs
+import salt.utils.platform
 
 
 log = logging.getLogger(__name__)
@@ -22,12 +22,21 @@ def __virtual__():
     Only work on proxy
     '''
     try:
-        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'ssh_sample':
+        if salt.utils.platform.is_proxy() \
+                and __opts__['proxy']['proxytype'] == 'ssh_sample':
             return __virtualname__
     except KeyError:
-        return (False, 'The ssh_package execution module failed to load.  Check the proxy key in pillar.')
+        return (
+            False,
+            'The ssh_package execution module failed to load. Check the '
+            'proxy key in pillar.'
+        )
 
-    return (False, 'The ssh_package execution module failed to load: only works on an ssh_sample proxy minion.')
+    return (
+        False,
+        'The ssh_package execution module failed to load: only works on an '
+        'ssh_sample proxy minion.'
+    )
 
 
 def list_pkgs(versions_as_list=False, **kwargs):

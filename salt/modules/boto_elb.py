@@ -48,17 +48,17 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
+import time
 
 log = logging.getLogger(__name__)
 
 # Import Salt libs
+import salt.utils.json
 import salt.utils.odict as odict
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
-import salt.ext.six as six
-from salt.ext.six import string_types
+from salt.ext import six
 try:
     import boto
     import boto.ec2  # pylint: enable=unused-import
@@ -160,49 +160,58 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elb.exists myelb region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    retries = 30
 
-    try:
-        lb = conn.get_all_load_balancers(load_balancer_names=[name])
-        lb = lb[0]
-        ret = {}
-        ret['availability_zones'] = lb.availability_zones
-        listeners = []
-        for _listener in lb.listeners:
-            listener_dict = {}
-            listener_dict['elb_port'] = _listener.load_balancer_port
-            listener_dict['elb_protocol'] = _listener.protocol
-            listener_dict['instance_port'] = _listener.instance_port
-            listener_dict['instance_protocol'] = _listener.instance_protocol
-            listener_dict['policies'] = _listener.policy_names
-            if _listener.ssl_certificate_id:
-                listener_dict['certificate'] = _listener.ssl_certificate_id
-            listeners.append(listener_dict)
-        ret['listeners'] = listeners
-        backends = []
-        for _backend in lb.backends:
-            bs_dict = {}
-            bs_dict['instance_port'] = _backend.instance_port
-            bs_dict['policies'] = [p.policy_name for p in _backend.policies]
-            backends.append(bs_dict)
-        ret['backends'] = backends
-        ret['subnets'] = lb.subnets
-        ret['security_groups'] = lb.security_groups
-        ret['scheme'] = lb.scheme
-        ret['dns_name'] = lb.dns_name
-        ret['tags'] = _get_all_tags(conn, name)
-        lb_policy_lists = [
-            lb.policies.app_cookie_stickiness_policies,
-            lb.policies.lb_cookie_stickiness_policies,
-            lb.policies.other_policies
-            ]
-        policies = []
-        for policy_list in lb_policy_lists:
-            policies += [p.policy_name for p in policy_list]
-        ret['policies'] = policies
-        return ret
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        return {}
+    while retries:
+        try:
+            lb = conn.get_all_load_balancers(load_balancer_names=[name])
+            lb = lb[0]
+            ret = {}
+            ret['availability_zones'] = lb.availability_zones
+            listeners = []
+            for _listener in lb.listeners:
+                listener_dict = {}
+                listener_dict['elb_port'] = _listener.load_balancer_port
+                listener_dict['elb_protocol'] = _listener.protocol
+                listener_dict['instance_port'] = _listener.instance_port
+                listener_dict['instance_protocol'] = _listener.instance_protocol
+                listener_dict['policies'] = _listener.policy_names
+                if _listener.ssl_certificate_id:
+                    listener_dict['certificate'] = _listener.ssl_certificate_id
+                listeners.append(listener_dict)
+            ret['listeners'] = listeners
+            backends = []
+            for _backend in lb.backends:
+                bs_dict = {}
+                bs_dict['instance_port'] = _backend.instance_port
+                bs_dict['policies'] = [p.policy_name for p in _backend.policies]
+                backends.append(bs_dict)
+            ret['backends'] = backends
+            ret['subnets'] = lb.subnets
+            ret['security_groups'] = lb.security_groups
+            ret['scheme'] = lb.scheme
+            ret['dns_name'] = lb.dns_name
+            ret['tags'] = _get_all_tags(conn, name)
+            lb_policy_lists = [
+                lb.policies.app_cookie_stickiness_policies,
+                lb.policies.lb_cookie_stickiness_policies,
+                lb.policies.other_policies
+                ]
+            policies = []
+            for policy_list in lb_policy_lists:
+                policies += [p.policy_name for p in policy_list]
+            ret['policies'] = policies
+            return ret
+        except boto.exception.BotoServerError as error:
+            if error.error_code == 'Throttling':
+                log.debug('Throttled by AWS API, will retry in 5 seconds.')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error('Error fetching config for ELB {0}: {1}'.format(name, error.message))
+            log.error(error)
+            return {}
+    return {}
 
 
 def listener_dict_to_tuple(listener):
@@ -244,11 +253,11 @@ def create(name, availability_zones, listeners, subnets=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if exists(name, region, key, keyid, profile):
         return True
-    if isinstance(availability_zones, string_types):
-        availability_zones = json.loads(availability_zones)
+    if isinstance(availability_zones, six.string_types):
+        availability_zones = salt.utils.json.loads(availability_zones)
 
-    if isinstance(listeners, string_types):
-        listeners = json.loads(listeners)
+    if isinstance(listeners, six.string_types):
+        listeners = salt.utils.json.loads(listeners)
 
     _complex_listeners = []
     for listener in listeners:
@@ -311,8 +320,8 @@ def create_listeners(name, listeners, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(listeners, string_types):
-        listeners = json.loads(listeners)
+    if isinstance(listeners, six.string_types):
+        listeners = salt.utils.json.loads(listeners)
 
     _complex_listeners = []
     for listener in listeners:
@@ -342,8 +351,8 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(ports, string_types):
-        ports = json.loads(ports)
+    if isinstance(ports, six.string_types):
+        ports = salt.utils.json.loads(ports)
     try:
         conn.delete_load_balancer_listeners(name, ports)
         msg = 'Deleted ELB listeners on {0}'.format(name)
@@ -369,8 +378,8 @@ def apply_security_groups(name, security_groups, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(security_groups, string_types):
-        security_groups = json.loads(security_groups)
+    if isinstance(security_groups, six.string_types):
+        security_groups = salt.utils.json.loads(security_groups)
     try:
         conn.apply_security_groups_to_lb(name, security_groups)
         msg = 'Applied security_groups on ELB {0}'.format(name)
@@ -397,8 +406,8 @@ def enable_availability_zones(name, availability_zones, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(availability_zones, string_types):
-        availability_zones = json.loads(availability_zones)
+    if isinstance(availability_zones, six.string_types):
+        availability_zones = salt.utils.json.loads(availability_zones)
     try:
         conn.enable_availability_zones(name, availability_zones)
         msg = 'Enabled availability_zones on ELB {0}'.format(name)
@@ -424,8 +433,8 @@ def disable_availability_zones(name, availability_zones, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(availability_zones, string_types):
-        availability_zones = json.loads(availability_zones)
+    if isinstance(availability_zones, six.string_types):
+        availability_zones = salt.utils.json.loads(availability_zones)
     try:
         conn.disable_availability_zones(name, availability_zones)
         msg = 'Disabled availability_zones on ELB {0}'.format(name)
@@ -451,8 +460,8 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(subnets, string_types):
-        subnets = json.loads(subnets)
+    if isinstance(subnets, six.string_types):
+        subnets = salt.utils.json.loads(subnets)
     try:
         conn.attach_lb_to_subnets(name, subnets)
         msg = 'Attached ELB {0} on subnets.'.format(name)
@@ -478,8 +487,8 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(subnets, string_types):
-        subnets = json.loads(subnets)
+    if isinstance(subnets, six.string_types):
+        subnets = salt.utils.json.loads(subnets)
     try:
         conn.detach_lb_from_subnets(name, subnets)
         msg = 'Detached ELB {0} from subnets.'.format(name)
@@ -503,31 +512,38 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elb.get_attributes myelb
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    retries = 30
 
-    try:
-        lbattrs = conn.get_all_lb_attributes(name)
-        ret = odict.OrderedDict()
-        ret['access_log'] = odict.OrderedDict()
-        ret['cross_zone_load_balancing'] = odict.OrderedDict()
-        ret['connection_draining'] = odict.OrderedDict()
-        ret['connecting_settings'] = odict.OrderedDict()
-        al = lbattrs.access_log
-        czlb = lbattrs.cross_zone_load_balancing
-        cd = lbattrs.connection_draining
-        cs = lbattrs.connecting_settings
-        ret['access_log']['enabled'] = al.enabled
-        ret['access_log']['s3_bucket_name'] = al.s3_bucket_name
-        ret['access_log']['s3_bucket_prefix'] = al.s3_bucket_prefix
-        ret['access_log']['emit_interval'] = al.emit_interval
-        ret['cross_zone_load_balancing']['enabled'] = czlb.enabled
-        ret['connection_draining']['enabled'] = cd.enabled
-        ret['connection_draining']['timeout'] = cd.timeout
-        ret['connecting_settings']['idle_timeout'] = cs.idle_timeout
-        return ret
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        log.error('ELB {0} does not exist: {1}'.format(name, error))
-        return {}
+    while retries:
+        try:
+            lbattrs = conn.get_all_lb_attributes(name)
+            ret = odict.OrderedDict()
+            ret['access_log'] = odict.OrderedDict()
+            ret['cross_zone_load_balancing'] = odict.OrderedDict()
+            ret['connection_draining'] = odict.OrderedDict()
+            ret['connecting_settings'] = odict.OrderedDict()
+            al = lbattrs.access_log
+            czlb = lbattrs.cross_zone_load_balancing
+            cd = lbattrs.connection_draining
+            cs = lbattrs.connecting_settings
+            ret['access_log']['enabled'] = al.enabled
+            ret['access_log']['s3_bucket_name'] = al.s3_bucket_name
+            ret['access_log']['s3_bucket_prefix'] = al.s3_bucket_prefix
+            ret['access_log']['emit_interval'] = al.emit_interval
+            ret['cross_zone_load_balancing']['enabled'] = czlb.enabled
+            ret['connection_draining']['enabled'] = cd.enabled
+            ret['connection_draining']['timeout'] = cd.timeout
+            ret['connecting_settings']['idle_timeout'] = cs.idle_timeout
+            return ret
+        except boto.exception.BotoServerError as e:
+            if e.error_code == 'Throttling':
+                log.debug("Throttled by AWS API, will retry in 5 seconds...")
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error('ELB {0} does not exist: {1}'.format(name, e.message))
+            return {}
+    return {}
 
 
 def set_attributes(name, attributes, region=None, key=None, keyid=None,
@@ -644,22 +660,29 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elb.get_health_check myelb
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    retries = 30
 
-    try:
-        lb = conn.get_all_load_balancers(load_balancer_names=[name])
-        lb = lb[0]
-        ret = odict.OrderedDict()
-        hc = lb.health_check
-        ret['interval'] = hc.interval
-        ret['target'] = hc.target
-        ret['healthy_threshold'] = hc.healthy_threshold
-        ret['timeout'] = hc.timeout
-        ret['unhealthy_threshold'] = hc.unhealthy_threshold
-        return ret
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        log.error('ELB {0} does not exist: {1}'.format(name, error))
-        return {}
+    while True:
+        try:
+            lb = conn.get_all_load_balancers(load_balancer_names=[name])
+            lb = lb[0]
+            ret = odict.OrderedDict()
+            hc = lb.health_check
+            ret['interval'] = hc.interval
+            ret['target'] = hc.target
+            ret['healthy_threshold'] = hc.healthy_threshold
+            ret['timeout'] = hc.timeout
+            ret['unhealthy_threshold'] = hc.unhealthy_threshold
+            return ret
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, will retry in 5 seconds.')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(error)
+            log.error('ELB {0} not found.'.format(name))
+            return {}
 
 
 def set_health_check(name, health_check, region=None, key=None, keyid=None,
@@ -674,16 +697,23 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
         salt myminion boto_elb.set_health_check myelb '{"target": "HTTP:80/"}'
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    retries = 30
 
     hc = HealthCheck(**health_check)
-    try:
-        conn.configure_health_check(name, hc)
-        log.info('Configured health check on ELB {0}'.format(name))
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        log.info('Failed to configure health check on ELB {0}: {1}'.format(name, error))
-        return False
-    return True
+    while True:
+        try:
+            conn.configure_health_check(name, hc)
+            log.info('Configured health check on ELB {0}'.format(name))
+            return True
+        except boto.exception.BotoServerError as error:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, will retry in 5 seconds.')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(error)
+            log.error('Failed to configure health check on ELB {0}'.format(name))
+            return False
 
 
 def register_instances(name, instances, region=None, key=None, keyid=None,
@@ -706,7 +736,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     '''
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the register_instances method
-    if isinstance(instances, str) or isinstance(instances, six.text_type):
+    if isinstance(instances, six.string_types) or isinstance(instances, six.text_type):
         instances = [instances]
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -750,7 +780,7 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     '''
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the deregister_instances method
-    if isinstance(instances, str) or isinstance(instances, six.text_type):
+    if isinstance(instances, six.string_types) or isinstance(instances, six.text_type):
         instances = [instances]
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 

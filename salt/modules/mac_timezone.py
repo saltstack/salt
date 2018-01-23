@@ -9,9 +9,9 @@ from __future__ import absolute_import
 # Import python libs
 from datetime import datetime
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.mac_utils
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError
 
 __virtualname__ = 'timezone'
@@ -21,7 +21,7 @@ def __virtual__():
     '''
     Only for macOS
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return (False, 'The mac_timezone module could not be loaded: '
                        'module only works on macOS systems.')
 

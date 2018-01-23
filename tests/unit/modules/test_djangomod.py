@@ -25,7 +25,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.djangomod
     '''
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher = patch('salt.utils.path.which', lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
         return {djangomod: {'_get_django_admin': MagicMock(return_value=True)}}
@@ -92,7 +92,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.djangomod
     '''
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher = patch('salt.utils.path.which', lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
         return {djangomod: {}}

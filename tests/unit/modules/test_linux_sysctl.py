@@ -91,7 +91,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=cmd)
         with patch.dict(linux_sysctl.__salt__, {'cmd.run_stdout': mock_cmd,
                                                 'cmd.run_all': mock_asn_cmd}):
-            with patch('salt.utils.fopen', mock_open()) as m_open:
+            with patch('salt.utils.files.fopen', mock_open()) as m_open:
                 self.assertRaises(CommandExecutionError,
                                   linux_sysctl.persist,
                                   'net.ipv4.ip_forward',
@@ -110,7 +110,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
             sys_cmd = 'systemd 208\n+PAM +LIBWRAP'
             mock_sys_cmd = MagicMock(return_value=sys_cmd)
 
-            with patch('salt.utils.fopen', mock_open()) as m_open:
+            with patch('salt.utils.files.fopen', mock_open()) as m_open:
                 with patch.dict(linux_sysctl.__context__, {'salt.utils.systemd.version': 232}):
                     with patch.dict(linux_sysctl.__salt__,
                                     {'cmd.run_stdout': mock_sys_cmd,
@@ -136,7 +136,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
             sys_cmd = 'systemd 208\n+PAM +LIBWRAP'
             mock_sys_cmd = MagicMock(return_value=sys_cmd)
 
-            with patch('salt.utils.fopen', mock_open()):
+            with patch('salt.utils.files.fopen', mock_open()):
                 with patch.dict(linux_sysctl.__context__, {'salt.utils.systemd.version': 232}):
                     with patch.dict(linux_sysctl.__salt__,
                                     {'cmd.run_stdout': mock_sys_cmd,

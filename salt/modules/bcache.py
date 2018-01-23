@@ -25,7 +25,7 @@ import re
 from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -44,14 +44,14 @@ __func_alias__ = {
     'super_': 'super',
 }
 
-HAS_BLKDISCARD = salt.utils.which('blkdiscard') is not None
+HAS_BLKDISCARD = salt.utils.path.which('blkdiscard') is not None
 
 
 def __virtual__():
     '''
     Only work when make-bcache is installed
     '''
-    return salt.utils.which('make-bcache') is not None
+    return salt.utils.path.which('make-bcache') is not None
 
 
 def uuid(dev=None):
@@ -71,7 +71,7 @@ def uuid(dev=None):
     try:
         if dev is None:
             # take the only directory in /sys/fs/bcache and return it's basename
-            return list(os.walk('/sys/fs/bcache/'))[0][1][0]
+            return list(salt.utils.path.os_walk('/sys/fs/bcache/'))[0][1][0]
         else:
             # basename of the /sys/block/{dev}/bcache/cache symlink target
             return os.path.basename(_bcsys(dev, 'cache'))
@@ -425,12 +425,12 @@ def status(stats=False, config=False, internals=False, superblock=False, alldevs
     :param superblock: include superblock
     '''
     bdevs = []
-    for _, links, _ in os.walk('/sys/block/'):
+    for _, links, _ in salt.utils.path.os_walk('/sys/block/'):
         for block in links:
             if 'bcache' in block:
                 continue
 
-            for spath, sdirs, _ in os.walk('/sys/block/{0}'.format(block), followlinks=False):
+            for spath, sdirs, _ in salt.utils.path.os_walk('/sys/block/{0}'.format(block), followlinks=False):
                 if 'bcache' in sdirs:
                     bdevs.append(os.path.basename(spath))
     statii = {}

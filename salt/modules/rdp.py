@@ -8,9 +8,9 @@ from __future__ import absolute_import
 import logging
 import re
 
-# Import salt libs
+# Import Salt libs
+import salt.utils.platform
 from salt.utils.decorators import depends
-import salt.utils
 
 try:
     from pywintypes import error as PyWinError
@@ -26,7 +26,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return 'rdp'
     return (False, 'Module only works on Windows.')
 

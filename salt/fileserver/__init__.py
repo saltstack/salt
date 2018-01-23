@@ -15,12 +15,15 @@ import time
 
 # Import salt libs
 import salt.loader
-import salt.utils
+import salt.utils.files
 import salt.utils.locales
+import salt.utils.path
+import salt.utils.url
+import salt.utils.versions
 from salt.utils.args import get_function_argspec as _argspec
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)
@@ -126,7 +129,7 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                     age = opts.get('fileserver_list_cache_time', 20) + 1
                 if age < opts.get('fileserver_list_cache_time', 20):
                     # Young enough! Load this sucker up!
-                    with salt.utils.fopen(list_cache, 'rb') as fp_:
+                    with salt.utils.files.fopen(list_cache, 'rb') as fp_:
                         log.trace('Returning file_lists cache data from '
                                   '{0}'.format(list_cache))
                         return serial.load(fp_).get(form, []), False, False
@@ -151,7 +154,7 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
     backend to determine if the cache needs to be refreshed/written).
     '''
     serial = salt.payload.Serial(opts)
-    with salt.utils.fopen(list_cache, 'w+b') as fp_:
+    with salt.utils.files.fopen(list_cache, 'w+b') as fp_:
         fp_.write(serial.dumps(data))
         _unlock_cache(w_lock)
         log.trace('Lockfile {0} removed'.format(w_lock))
@@ -164,7 +167,7 @@ def check_env_cache(opts, env_cache):
     if not os.path.isfile(env_cache):
         return None
     try:
-        with salt.utils.fopen(env_cache, 'rb') as fp_:
+        with salt.utils.files.fopen(env_cache, 'rb') as fp_:
             log.trace('Returning env cache data from {0}'.format(env_cache))
             serial = salt.payload.Serial(opts)
             return serial.load(fp_)
@@ -180,7 +183,7 @@ def generate_mtime_map(opts, path_map):
     file_map = {}
     for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
-            for directory, dirnames, filenames in os.walk(path):
+            for directory, dirnames, filenames in salt.utils.path.os_walk(path):
                 # Don't walk any directories that match file_ignore_regex or glob
                 dirnames[:] = [d for d in dirnames if not is_file_ignored(opts, d)]
                 for item in filenames:
@@ -223,7 +226,7 @@ def reap_fileserver_cache_dir(cache_base, find_func):
     '''
     for saltenv in os.listdir(cache_base):
         env_base = os.path.join(cache_base, saltenv)
-        for root, dirs, files in os.walk(env_base):
+        for root, dirs, files in salt.utils.path.os_walk(env_base):
             # if we have an empty directory, lets cleanup
             # This will only remove the directory on the second time
             # "_reap_cache" is called (which is intentional)
@@ -320,7 +323,7 @@ class Fileserver(object):
         self.opts = opts
         self.servers = salt.loader.fileserver(opts, opts['fileserver_backend'])
 
-    def _gen_back(self, back):
+    def backends(self, back=None):
         '''
         Return the backend list
         '''
@@ -386,7 +389,7 @@ class Fileserver(object):
         Clear the cache of all of the fileserver backends that support the
         clear_cache function or the named backend(s) only.
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         cleared = []
         errors = []
         for fsb in back:
@@ -409,7 +412,7 @@ class Fileserver(object):
         information, or a pattern. If the latter, then remotes for which the URL
         matches the pattern will be locked.
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         locked = []
         errors = []
         for fsb in back:
@@ -443,7 +446,7 @@ class Fileserver(object):
             If specified, then any remotes which contain the passed string will
             have their lock cleared.
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         cleared = []
         errors = []
         for fsb in back:
@@ -461,18 +464,31 @@ class Fileserver(object):
         Update all of the enabled fileserver backends which support the update
         function, or
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         for fsb in back:
             fstr = '{0}.update'.format(fsb)
             if fstr in self.servers:
                 log.debug('Updating {0} fileserver cache'.format(fsb))
                 self.servers[fstr]()
 
+    def update_intervals(self, back=None):
+        '''
+        Return the update intervals for all of the enabled fileserver backends
+        which support variable update intervals.
+        '''
+        back = self.backends(back)
+        ret = {}
+        for fsb in back:
+            fstr = '{0}.update_intervals'.format(fsb)
+            if fstr in self.servers:
+                ret[fsb] = self.servers[fstr]()
+        return ret
+
     def envs(self, back=None, sources=False):
         '''
         Return the environments for the named backend or all backends
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         ret = set()
         if sources:
             ret = {}
@@ -494,7 +510,7 @@ class Fileserver(object):
         '''
         Initialize the backend, only do so if the fs supports an init function
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         for fsb in back:
             fstr = '{0}.init'.format(fsb)
             if fstr in self.servers:
@@ -527,7 +543,7 @@ class Fileserver(object):
         Find the path and return the fnd structure, this structure is passed
         to other backend interfaces.
         '''
-        back = self._gen_back(back)
+        back = self.backends(back)
         kwargs = {}
         fnd = {'path': '',
                'rel': ''}
@@ -551,12 +567,7 @@ class Fileserver(object):
                     kwargs[args[0]] = args[1]
 
         if 'env' in kwargs:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             kwargs.pop('env')
         if 'saltenv' in kwargs:
             saltenv = kwargs.pop('saltenv')
@@ -581,12 +592,7 @@ class Fileserver(object):
                'dest': ''}
 
         if 'env' in load:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
@@ -607,13 +613,7 @@ class Fileserver(object):
         Common code for hashing and stating files
         '''
         if 'env' in load:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list. '
-                'This parameter is no longer used and has been replaced by '
-                '\'saltenv\' as of Salt 2016.11.0. This warning will be removed '
-                'in Salt Oxygen.'
-            )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         if 'path' not in load or 'saltenv' not in load:
@@ -654,12 +654,7 @@ class Fileserver(object):
         Deletes the file_lists cache files
         '''
         if 'env' in load:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         saltenv = load.get('saltenv', [])
@@ -675,7 +670,7 @@ class Fileserver(object):
                     saltenv[idx] = six.text_type(val)
 
         ret = {}
-        fsb = self._gen_back(load.pop('fsbackend', None))
+        fsb = self.backends(load.pop('fsbackend', None))
         list_cachedir = os.path.join(self.opts['cachedir'], 'file_lists')
         try:
             file_list_backends = os.listdir(list_cachedir)
@@ -736,12 +731,7 @@ class Fileserver(object):
         Return a list of files from the dominant environment
         '''
         if 'env' in load:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         ret = set()
@@ -750,7 +740,7 @@ class Fileserver(object):
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
-        for fsb in self._gen_back(load.pop('fsbackend', None)):
+        for fsb in self.backends(load.pop('fsbackend', None)):
             fstr = '{0}.file_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -767,12 +757,7 @@ class Fileserver(object):
         List all emptydirs in the given environment
         '''
         if 'env' in load:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         ret = set()
@@ -781,7 +766,7 @@ class Fileserver(object):
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
-        for fsb in self._gen_back(None):
+        for fsb in self.backends(None):
             fstr = '{0}.file_list_emptydirs'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -798,12 +783,7 @@ class Fileserver(object):
         List all directories in the given environment
         '''
         if 'env' in load:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         ret = set()
@@ -812,7 +792,7 @@ class Fileserver(object):
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
-        for fsb in self._gen_back(load.pop('fsbackend', None)):
+        for fsb in self.backends(load.pop('fsbackend', None)):
             fstr = '{0}.dir_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -829,12 +809,7 @@ class Fileserver(object):
         Return a list of symlinked files and dirs
         '''
         if 'env' in load:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         ret = {}
@@ -843,7 +818,7 @@ class Fileserver(object):
         if not isinstance(load['saltenv'], six.string_types):
             load['saltenv'] = six.text_type(load['saltenv'])
 
-        for fsb in self._gen_back(load.pop('fsbackend', None)):
+        for fsb in self.backends(load.pop('fsbackend', None)):
             symlstr = '{0}.symlink_list'.format(fsb)
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)
@@ -876,7 +851,7 @@ class FSChan(object):
                 self.opts['__fs_update'] = True
         else:
             self.fs.update()
-        self.cmd_stub = {'ext_nodes': {}}
+        self.cmd_stub = {'master_tops': {}}
 
     def send(self, load, tries=None, timeout=None, raw=False):  # pylint: disable=unused-argument
         '''

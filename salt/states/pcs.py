@@ -164,13 +164,16 @@ Create a cluster from scratch:
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 import os
 
-# Import salt libs
-import salt.utils
-import salt.ext.six as six
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -179,7 +182,7 @@ def __virtual__():
     '''
     Only load if pcs package is installed
     '''
-    if salt.utils.which('pcs'):
+    if salt.utils.path.which('pcs'):
         return 'pcs'
     return False
 
@@ -190,7 +193,7 @@ def _file_read(path):
     '''
     content = False
     if os.path.exists(path):
-        with salt.utils.fopen(path, 'r+') as fp_:
+        with salt.utils.files.fopen(path, 'r+') as fp_:
             content = fp_.read()
         fp_.close()
     return content
@@ -200,7 +203,7 @@ def _file_write(path, content):
     '''
     Write content to a file
     '''
-    with salt.utils.fopen(path, 'w+') as fp_:
+    with salt.utils.files.fopen(path, 'w+') as fp_:
         fp_.write(content)
     fp_.close()
 

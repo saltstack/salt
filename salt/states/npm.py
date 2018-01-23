@@ -24,7 +24,7 @@ from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -296,7 +296,7 @@ def bootstrap(name, user=None, silent=True):
         return ret
 
     # npm.install will return a string if it can't parse a JSON result
-    if isinstance(call, str):
+    if isinstance(call, six.string_types):
         ret['result'] = False
         ret['changes'] = call
         ret['comment'] = 'Could not bootstrap directory'

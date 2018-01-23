@@ -30,7 +30,12 @@ def query(url, **kwargs):
         salt '*' http.query http://somelink.com/ method=POST \
             data='<xml>somecontent</xml>'
     '''
-    return salt.utils.http.query(url=url, opts=__opts__, **kwargs)
+    opts = __opts__.copy()
+    if 'opts' in kwargs:
+        opts.update(kwargs['opts'])
+        del kwargs['opts']
+
+    return salt.utils.http.query(url=url, opts=opts, **kwargs)
 
 
 def wait_for_successful_query(url, wait_for=300, **kwargs):

@@ -7,14 +7,16 @@
     Module to deploy and manage salt-proxy processes
     on a minion.
 '''
+# Import Python libs
 from __future__ import absolute_import
-
-import salt.ext.six.moves
-
 import os
 import logging
 
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+
+# Import 3rd-party libs
+import salt.ext.six.moves
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ def _write_proxy_conf(proxyfile):
 
     if proxyfile:
         log.debug('Writing proxy conf file')
-        with salt.utils.fopen(proxyfile, 'w') as proxy_conf:
+        with salt.utils.files.fopen(proxyfile, 'w') as proxy_conf:
             proxy_conf.write('master = {0}'
                              .format(__grains__['master']))
         msg = 'Wrote proxy file {0}'.format(proxyfile)

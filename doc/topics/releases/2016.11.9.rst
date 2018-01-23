@@ -1,0 +1,22 @@
+============================
+Salt 2016.11.9 Release Notes
+============================
+
+Version 2016.11.9 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.]
+
+
+Windows
+=======
+Execution module pkg
+--------------------
+Significate changes (PR #43708, damon-atkins) have been made to the pkg execution module. Users should test this release against their existing package sls definition files.
+
+- ``pkg.list_available`` no longer defaults to refreshing the winrepo meta database.
+- ``pkg.install`` without a ``version`` parameter no longer upgrades software if the software is already installed. Use ``pkg.install version=latest`` or in a state use ``pkg.latest`` to get the old behavior. 
+- Documentation was update for the execution module to match the style in new versions, some corrections as well.
+- All install/remove commands are prefix with cmd.exe shell and cmdmod is called with a command line string instead of a list. Some sls files in saltstack/salt-winrepo-ng expected the commands to be prefixed with cmd.exe (i.e. the use of ``&``).
+- Some execution module functions results, now behavour more like their Unix/Linux versions.
+Execution module cmdmod
+--------------------
+Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don't list-ify string commands on Windows" PR #43807. Linux/Unix OS command & arguments requires a list. Windows was being treated the same. Windows requires commands & arguments to be a string, which this PR fixes.  
+

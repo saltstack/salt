@@ -26,7 +26,6 @@ Support for RFC 2136 dynamic DNS updates.
 from __future__ import absolute_import
 # Import python libs
 import logging
-import json
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +38,8 @@ try:
 except ImportError as e:
     dns_support = False
 
-import salt.utils
+import salt.utils.files
+import salt.utils.json
 
 
 def __virtual__():
@@ -70,8 +70,8 @@ def _config(name, key=None, **kwargs):
 def _get_keyring(keyfile):
     keyring = None
     if keyfile:
-        with salt.utils.fopen(keyfile) as _f:
-            keyring = dns.tsigkeyring.from_text(json.load(_f))
+        with salt.utils.files.fopen(keyfile) as _f:
+            keyring = dns.tsigkeyring.from_text(salt.utils.json.load(_f))
     return keyring
 
 

@@ -110,6 +110,8 @@ def present(name,
        - group
        - function
 
+       View permissions should specify `object_type: table`.
+
     privileges
        List of privileges to grant, from the list below:
 
@@ -230,6 +232,8 @@ def absent(name,
        - database
        - group
        - function
+
+       View permissions should specify `object_type: table`.
 
     privileges
        Comma separated list of privileges to revoke, from the list below:

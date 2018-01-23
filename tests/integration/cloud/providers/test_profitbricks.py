@@ -4,45 +4,33 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
-import random
-import string
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
 from tests.support.unit import skipIf
-from tests.support.helpers import expensiveTest
+from tests.support.helpers import expensiveTest, generate_random_name
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
-from salt.ext.six.moves import range
 
 # Import Third-Party Libs
 try:
-    from profitbricks.client import ProfitBricksService  # pylint: disable=unused-import
+    # pylint: disable=unused-import
+    from profitbricks.client import ProfitBricksService
     HAS_PROFITBRICKS = True
 except ImportError:
     HAS_PROFITBRICKS = False
 
-
-def __random_name(size=6):
-    '''
-    Generates a random cloud instance name
-    '''
-    return 'CLOUD-TEST-' + ''.join(
-        random.choice(string.ascii_uppercase + string.digits)
-        for x in range(size)
-    )
-
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = __random_name()
+INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'profitbricks'
 DRIVER_NAME = 'profitbricks'
 
 
-@skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 2.3.0')
+@skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 4.1.0')
 class ProfitBricksTest(ShellCase):
     '''
     Integration tests for the ProfitBricks cloud provider
@@ -78,6 +66,7 @@ class ProfitBricksTest(ShellCase):
         username = config[profile_str][DRIVER_NAME]['username']
         password = config[profile_str][DRIVER_NAME]['password']
         datacenter_id = config[profile_str][DRIVER_NAME]['datacenter_id']
+        self.datacenter_id = datacenter_id
         if username == '' or password == '' or datacenter_id == '':
             self.skipTest(
                 'A username, password, and an datacenter must be provided to '
@@ -90,10 +79,104 @@ class ProfitBricksTest(ShellCase):
         '''
         Tests the return of running the --list-images command for ProfitBricks
         '''
-        image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
+        list_images = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
         self.assertIn(
-            'Ubuntu-16.04-LTS-server-2016-10-06',
-            [i.strip() for i in image_list]
+            'Ubuntu-16.04-LTS-server-2017-10-01',
+            [i.strip() for i in list_images]
+        )
+
+    def test_list_image_alias(self):
+        '''
+        Tests the return of running the -f list_images
+        command for ProfitBricks
+        '''
+        cmd = '-f list_images {0}'.format(PROVIDER_NAME)
+        list_images = self.run_cloud(cmd)
+        self.assertIn(
+            '- ubuntu:latest',
+            [i.strip() for i in list_images]
+        )
+
+    def test_list_sizes(self):
+        '''
+        Tests the return of running the --list_sizes command for ProfitBricks
+        '''
+        list_sizes = self.run_cloud('--list-sizes {0}'.format(PROVIDER_NAME))
+        self.assertIn(
+            'Micro Instance:',
+            [i.strip() for i in list_sizes]
+        )
+
+    def test_list_datacenters(self):
+        '''
+        Tests the return of running the -f list_datacenters
+        command for ProfitBricks
+        '''
+        cmd = '-f list_datacenters {0}'.format(PROVIDER_NAME)
+        list_datacenters = self.run_cloud(cmd)
+        self.assertIn(
+            self.datacenter_id,
+            [i.strip() for i in list_datacenters]
+        )
+
+    def test_list_nodes(self):
+        '''
+        Tests the return of running the -f list_nodes command for ProfitBricks
+        '''
+        list_nodes = self.run_cloud('-f list_nodes {0}'.format(PROVIDER_NAME))
+        self.assertIn(
+            'state:',
+            [i.strip() for i in list_nodes]
+        )
+
+        self.assertIn(
+            'name:',
+            [i.strip() for i in list_nodes]
+        )
+
+    def test_list_nodes_full(self):
+        '''
+        Tests the return of running the -f list_nodes_full
+        command for ProfitBricks
+        '''
+        cmd = '-f list_nodes_full {0}'.format(PROVIDER_NAME)
+        list_nodes = self.run_cloud(cmd)
+        self.assertIn(
+            'state:',
+            [i.strip() for i in list_nodes]
+        )
+
+        self.assertIn(
+            'name:',
+            [i.strip() for i in list_nodes]
+        )
+
+    def test_list_location(self):
+        '''
+        Tests the return of running the --list-locations
+        command for ProfitBricks
+        '''
+        cmd = '--list-locations {0}'.format(PROVIDER_NAME)
+        list_locations = self.run_cloud(cmd)
+
+        self.assertIn(
+            'de/fkb',
+            [i.strip() for i in list_locations]
+        )
+
+        self.assertIn(
+            'de/fra',
+            [i.strip() for i in list_locations]
+        )
+
+        self.assertIn(
+            'us/las',
+            [i.strip() for i in list_locations]
+        )
+
+        self.assertIn(
+            'us/ewr',
+            [i.strip() for i in list_locations]
         )
 
     def test_instance(self):
@@ -105,11 +188,15 @@ class ProfitBricksTest(ShellCase):
             self.assertIn(
                 INSTANCE_NAME,
                 [i.strip() for i in self.run_cloud(
-                    '-p profitbricks-test {0}'.format(INSTANCE_NAME), timeout=500
+                    '-p profitbricks-test {0}'.format(INSTANCE_NAME),
+                    timeout=500
                 )]
             )
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            self.run_cloud(
+                '-d {0} --assume-yes'.format(INSTANCE_NAME),
+                timeout=500
+            )
             raise
 
         # delete the instance
@@ -132,4 +219,7 @@ class ProfitBricksTest(ShellCase):
 
         # if test instance is still present, delete it
         if ret in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            self.run_cloud(
+                '-d {0} --assume-yes'.format(INSTANCE_NAME),
+                timeout=500
+            )

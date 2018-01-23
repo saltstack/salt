@@ -34,7 +34,9 @@ import tempfile
 
 # Import Salt libs
 import salt.defaults.exitcodes
-import salt.utils
+import salt.utils.args
+import salt.utils.functools
+import salt.utils.path
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
@@ -84,7 +86,7 @@ def _ensure_exists(wrapped):
             raise CommandExecutionError(
                 'Container \'{0}\' does not exist'.format(name)
             )
-        return wrapped(name, *args, **salt.utils.clean_kwargs(**kwargs))
+        return wrapped(name, *args, **salt.utils.args.clean_kwargs(**kwargs))
     return check_exists
 
 
@@ -146,7 +148,7 @@ def _bootstrap_arch(name, **kwargs):
     '''
     Bootstrap an Arch Linux container
     '''
-    if not salt.utils.which('pacstrap'):
+    if not salt.utils.path.which('pacstrap'):
         raise CommandExecutionError(
             'pacstrap not found, is the arch-install-scripts package '
             'installed?'
@@ -774,7 +776,7 @@ def bootstrap_salt(name,
             pub_key=pub_key, priv_key=priv_key)
         if needs_install or force_install or unconditional_install:
             if install:
-                rstr = __salt__['test.rand_str']()
+                rstr = __salt__['test.random_hash']()
                 configdir = '/tmp/.c_{0}'.format(rstr)
                 run(name,
                     'install -m 0700 -d {0}'.format(configdir),
@@ -888,7 +890,7 @@ def list_running():
 
 # 'machinectl list' shows only running containers, so allow this to work as an
 # alias to nspawn.list_running
-list_ = salt.utils.alias_function(list_running, 'list_')
+list_ = salt.utils.functools.alias_function(list_running, 'list_')
 
 
 def list_stopped():
@@ -961,10 +963,10 @@ def info(name, **kwargs):
         salt myminion nspawn.info arch1
         salt myminion nspawn.info arch1 force_start=False
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     start_ = kwargs.pop('start', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if not start_:
         _ensure_running(name)
@@ -1261,7 +1263,7 @@ def remove(name, stop=False):
 
 
 # Compatibility between LXC and nspawn
-destroy = salt.utils.alias_function(remove, 'destroy')
+destroy = salt.utils.functools.alias_function(remove, 'destroy')
 
 
 @_ensure_exists
@@ -1317,7 +1319,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False):
         overwrite=overwrite,
         makedirs=makedirs)
 
-cp = salt.utils.alias_function(copy_to, 'cp')
+cp = salt.utils.functools.alias_function(copy_to, 'cp')
 
 
 # Everything below requres systemd >= 219
@@ -1341,14 +1343,14 @@ def _pull_image(pull_type, image, name, **kwargs):
             'Unsupported image type \'{0}\''.format(pull_type)
         )
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     bad_kwargs = dict(
-        [(x, y) for x, y in six.iteritems(salt.utils.clean_kwargs(**kwargs))
+        [(x, y) for x, y in six.iteritems(salt.utils.args.clean_kwargs(**kwargs))
          if x not in valid_kwargs]
     )
 
     if bad_kwargs:
-        salt.utils.invalid_kwargs(bad_kwargs)
+        salt.utils.args.invalid_kwargs(bad_kwargs)
 
     pull_opts = []
 
@@ -1482,4 +1484,4 @@ def pull_dkr(url, name, index):
     '''
     return _pull_image('dkr', url, name, index=index)
 
-pull_docker = salt.utils.alias_function(pull_dkr, 'pull_docker')
+pull_docker = salt.utils.functools.alias_function(pull_dkr, 'pull_docker')

@@ -31,11 +31,10 @@ by adding more tags to the submission.
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
-import salt.utils
 import salt.utils.jid
 import salt.returners
 
@@ -76,7 +75,7 @@ def _get_options(ret=None):
 
     _options['api_url'] = _options.get('api_url', 'metrics-api.librato.com')
 
-    log.debug("Retrieved Librato options: {0}".format(_options))
+    log.debug('Retrieved Librato options: %s', _options)
     return _options
 
 
@@ -113,7 +112,7 @@ def _calculate_runtimes(states):
             # Count durations
             results['runtime'] += resultset['duration']
 
-    log.debug("Parsed state metrics: {0}".format(results))
+    log.debug('Parsed state metrics: %s', results)
     return results
 
 
@@ -126,31 +125,37 @@ def returner(ret):
     q = librato_conn.new_queue()
 
     if ret['fun'] == 'state.highstate':
-        log.debug("Found returned Highstate data.")
+        log.debug('Found returned Highstate data.')
         # Calculate the runtimes and number of failed states.
         stats = _calculate_runtimes(ret['return'])
-        log.debug("Batching Metric retcode with {0}".format(ret['retcode']))
-        q.add("saltstack.highstate.retcode", ret[
-              'retcode'], tags={'Name': ret['id']})
+        log.debug('Batching Metric retcode with %s', ret['retcode'])
+        q.add('saltstack.highstate.retcode',
+              ret['retcode'], tags={'Name': ret['id']})
 
-        log.debug("Batching Metric num_failed_jobs with {0}".format(
-            stats['num_failed_states']))
-        q.add("saltstack.highstate.failed_states",
+        log.debug(
+            'Batching Metric num_failed_jobs with %s',
+            stats['num_failed_states']
+        )
+        q.add('saltstack.highstate.failed_states',
               stats['num_failed_states'], tags={'Name': ret['id']})
 
-        log.debug("Batching Metric num_passed_states with {0}".format(
-            stats['num_passed_states']))
-        q.add("saltstack.highstate.passed_states",
+        log.debug(
+            'Batching Metric num_passed_states with %s',
+            stats['num_passed_states']
+        )
+        q.add('saltstack.highstate.passed_states',
               stats['num_passed_states'], tags={'Name': ret['id']})
 
-        log.debug("Batching Metric runtime with {0}".format(stats['runtime']))
-        q.add("saltstack.highstate.runtime",
+        log.debug('Batching Metric runtime with %s', stats['runtime'])
+        q.add('saltstack.highstate.runtime',
               stats['runtime'], tags={'Name': ret['id']})
 
-        log.debug("Batching Metric runtime with {0}".format(
-            stats['num_failed_states'] + stats['num_passed_states']))
-        q.add("saltstack.highstate.total_states", stats[
+        log.debug(
+            'Batching Metric runtime with %s',
+            stats['num_failed_states'] + stats['num_passed_states']
+        )
+        q.add('saltstack.highstate.total_states', stats[
               'num_failed_states'] + stats['num_passed_states'], tags={'Name': ret['id']})
 
-    log.info("Sending metrics to Librato.")
+    log.info('Sending metrics to Librato.')
     q.submit()

@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 Return/control aspects of the grains data
+
+Grains set or altered with this module are stored in the 'grains'
+file on the minions. By default, this file is located at: ``/etc/salt/grains``
+
+.. Note::
+
+   This does **NOT** override any grains set in the minion config file.
 '''
 
 # Import python libs
@@ -10,18 +17,17 @@ import random
 import logging
 import operator
 import collections
-import json
 import math
 from functools import reduce  # pylint: disable=redefined-builtin
 
-# Import 3rd-party libs
-import yaml
+# Import Salt libs
+from salt.ext import six
 import salt.utils.compat
-import salt.ext.six as six
-
-# Import salt libs
-import salt.utils
-import salt.utils.yamldumper
+import salt.utils.data
+import salt.utils.files
+import salt.utils.json
+import salt.utils.platform
+import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.ext.six.moves import range
@@ -109,16 +115,17 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     if ordered is True:
         grains = __grains__
     else:
-        grains = json.loads(json.dumps(__grains__))
-    return salt.utils.traverse_dict_and_list(grains,
-                                             key,
-                                             default,
-                                             delimiter)
+        grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__))
+    return salt.utils.data.traverse_dict_and_list(
+        grains,
+        key,
+        default,
+        delimiter)
 
 
 def has_value(key):
     '''
-    Determine whether a named value exists in the grains dictionary.
+    Determine whether a key exists in the grains dictionary.
 
     Given a grains dictionary that contains the following structure::
 
@@ -134,7 +141,10 @@ def has_value(key):
 
         salt '*' grains.has_value pkg:apache
     '''
-    return True if salt.utils.traverse_dict_and_list(__grains__, key, False) else False
+    return salt.utils.data.traverse_dict_and_list(
+        __grains__,
+        key,
+        KeyError) is not KeyError
 
 
 def items(sanitize=False):
@@ -153,7 +163,7 @@ def items(sanitize=False):
 
         salt '*' grains.items sanitize=True
     '''
-    if salt.utils.is_true(sanitize):
+    if salt.utils.data.is_true(sanitize):
         out = dict(__grains__)
         for key, func in six.iteritems(_SANITIZERS):
             if key in out:
@@ -186,14 +196,15 @@ def item(*args, **kwargs):
 
     try:
         for arg in args:
-            ret[arg] = salt.utils.traverse_dict_and_list(__grains__,
-                                                        arg,
-                                                        default,
-                                                        delimiter)
+            ret[arg] = salt.utils.data.traverse_dict_and_list(
+                __grains__,
+                arg,
+                default,
+                delimiter)
     except KeyError:
         pass
 
-    if salt.utils.is_true(kwargs.get('sanitize')):
+    if salt.utils.data.is_true(kwargs.get('sanitize')):
         for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
                 ret[arg] = func(ret[arg])
@@ -219,26 +230,50 @@ def setvals(grains, destructive=False):
         raise SaltException('setvals grains must be a dictionary.')
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
-        gfn = os.path.join(
-            os.path.dirname(__opts__['conf_file']),
-            'grains'
-        )
+        if salt.utils.platform.is_proxy():
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'proxy.d',
+                __opts__['id'],
+                'grains'
+            )
+        else:
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'grains'
+            )
     elif os.path.isdir(__opts__['conf_file']):
-        gfn = os.path.join(
-            __opts__['conf_file'],
-            'grains'
-        )
+        if salt.utils.platform.is_proxy():
+            gfn = os.path.join(
+                __opts__['conf_file'],
+                'proxy.d',
+                __opts__['id'],
+                'grains'
+            )
+        else:
+            gfn = os.path.join(
+                __opts__['conf_file'],
+                'grains'
+            )
     else:
-        gfn = os.path.join(
-            os.path.dirname(__opts__['conf_file']),
-            'grains'
-        )
+        if salt.utils.platform.is_proxy():
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'proxy.d',
+                __opts__['id'],
+                'grains'
+            )
+        else:
+            gfn = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'grains'
+            )
 
     if os.path.isfile(gfn):
-        with salt.utils.fopen(gfn, 'rb') as fp_:
+        with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
-                grains = yaml.safe_load(fp_.read())
-            except yaml.YAMLError as exc:
+                grains = salt.utils.yaml.safe_load(fp_)
+            except salt.utils.yaml.YAMLError as exc:
                 return 'Unable to read existing grains file: {0}'.format(exc)
         if not isinstance(grains, dict):
             grains = {}
@@ -251,17 +286,16 @@ def setvals(grains, destructive=False):
         else:
             grains[key] = val
             __grains__[key] = val
-    cstr = salt.utils.yamldumper.safe_dump(grains, default_flow_style=False)
     try:
-        with salt.utils.fopen(gfn, 'w+') as fp_:
-            fp_.write(cstr)
+        with salt.utils.files.fopen(gfn, 'w+') as fp_:
+            salt.utils.yaml.safe_dump(grains, fp_, default_flow_style=False)
     except (IOError, OSError):
         msg = 'Unable to write to grains file at {0}. Check permissions.'
         log.error(msg.format(gfn))
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
-        with salt.utils.flopen(fn_, 'w+') as fp_:
-            fp_.write('')
+        with salt.utils.files.flopen(fn_, 'w+'):
+            pass
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
@@ -409,6 +443,7 @@ def delkey(key):
     CLI Example:
 
     .. code-block:: bash
+
         salt '*' grains.delkey key
     '''
     setval(key, None, destructive=True)
@@ -553,12 +588,12 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         salt '*' grains.filter_by '{default: {A: {B: C}, D: E}, F: {A: {B: G}}, H: {D: I}}' 'xxx' '{D: J}' 'F' 'default'
         # next same as above when default='H' instead of 'F' renders {A: {B: C}, D: J}
     '''
-    return salt.utils.filter_by(lookup_dict=lookup_dict,
-                                lookup=grain,
-                                traverse=__grains__,
-                                merge=merge,
-                                default=default,
-                                base=base)
+    return salt.utils.data.filter_by(lookup_dict=lookup_dict,
+                                     lookup=grain,
+                                     traverse=__grains__,
+                                     merge=merge,
+                                     default=default,
+                                     base=base)
 
 
 def _dict_from_path(path, val, delimiter=DEFAULT_TARGET_DELIM):

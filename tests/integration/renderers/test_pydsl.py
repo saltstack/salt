@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import textwrap
 
@@ -9,7 +9,9 @@ import textwrap
 from tests.support.case import ModuleCase
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.stringutils
 
 
 class PyDSLRendererIncludeTestCase(ModuleCase):
@@ -36,7 +38,7 @@ class PyDSLRendererIncludeTestCase(ModuleCase):
 
         # Windows adds `linefeed` in addition to `newline`. There's also an
         # unexplainable space before the `linefeed`...
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             expected = 'X1 \r\n' \
                        'X2 \r\n' \
                        'X3 \r\n' \
@@ -47,8 +49,8 @@ class PyDSLRendererIncludeTestCase(ModuleCase):
                        'hello green 2 \r\n' \
                        'hello blue 3 \r\n'
 
-        with salt.utils.fopen('/tmp/output', 'r') as f:
-            ret = f.read()
+        with salt.utils.files.fopen('/tmp/output', 'r') as f:
+            ret = salt.utils.stringutils.to_unicode(f.read())
 
         os.remove('/tmp/output')
 

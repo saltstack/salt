@@ -4,7 +4,7 @@ This module contains the function calls to execute command line scripts
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import time
@@ -96,12 +96,13 @@ def minion_process():
     '''
     Start a minion process
     '''
-    import salt.utils
+    import salt.utils.platform
+    import salt.utils.process
     import salt.cli.daemons
 
     # salt_minion spawns this function in a new process
 
-    salt.utils.appendproctitle('KeepAlive')
+    salt.utils.process.appendproctitle('KeepAlive')
 
     def handle_hup(manager, sig, frame):
         manager.minion.reload()
@@ -117,15 +118,15 @@ def minion_process():
             time.sleep(5)
             try:
                 # check pid alive (Unix only trick!)
-                if os.getuid() == 0 and not salt.utils.is_windows():
+                if os.getuid() == 0 and not salt.utils.platform.is_windows():
                     os.kill(parent_pid, 0)
             except OSError as exc:
                 # forcibly exit, regular sys.exit raises an exception-- which
                 # isn't sufficient in a thread
-                log.error('Minion process encountered exception: {0}'.format(exc))
+                log.error('Minion process encountered exception: %s', exc)
                 os._exit(salt.defaults.exitcodes.EX_GENERIC)
 
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
         thread.start()
 
@@ -143,7 +144,7 @@ def minion_process():
         if minion is not None and hasattr(minion, 'config'):
             delay = minion.config.get('random_reauth_delay', 60)
         delay = randint(1, delay)
-        log.info('waiting random_reauth_delay {0}s'.format(delay))
+        log.info('waiting random_reauth_delay %ss', delay)
         time.sleep(delay)
         sys.exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
 
@@ -155,6 +156,7 @@ def salt_minion():
     '''
     import signal
 
+    import salt.utils.platform
     import salt.utils.process
     salt.utils.process.notify_systemd()
 
@@ -163,7 +165,7 @@ def salt_minion():
     if '' in sys.path:
         sys.path.remove('')
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         minion = salt.cli.daemons.Minion()
         minion.start()
         return
@@ -230,6 +232,7 @@ def proxy_minion_process(queue):
     Start a proxy minion process
     '''
     import salt.cli.daemons
+    import salt.utils.platform
     # salt_minion spawns this function in a new process
 
     def suicide_when_without_parent(parent_pid):
@@ -249,7 +252,7 @@ def proxy_minion_process(queue):
                 # isn't sufficient in a thread
                 os._exit(999)
 
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
         thread.start()
 
@@ -275,7 +278,7 @@ def proxy_minion_process(queue):
             if hasattr(proxyminion, 'config'):
                 delay = proxyminion.config.get('random_reauth_delay', 60)
         random_delay = randint(1, delay)
-        log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
+        log.info('Sleeping random_reauth_delay of %s seconds', random_delay)
         # preform delay after minion resources have been cleaned
         queue.put(random_delay)
     else:
@@ -288,11 +291,12 @@ def salt_proxy():
     Start a proxy minion.
     '''
     import salt.cli.daemons
+    import salt.utils.platform
     import multiprocessing
     if '' in sys.path:
         sys.path.remove('')
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
         return
@@ -440,7 +444,7 @@ def salt_cloud():
         import salt.cloud.cli
     except ImportError as e:
         # No salt cloud on Windows
-        log.error("Error importing salt cloud {0}".format(e))
+        log.error('Error importing salt cloud: %s', e)
         print('salt-cloud is not available in this system')
         sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
     if '' in sys.path:

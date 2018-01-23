@@ -15,7 +15,7 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -28,10 +28,14 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin() and _LooseVersion(__grains__['osrelease']) >= '10.9':
+    if salt.utils.platform.is_darwin() \
+            and _LooseVersion(__grains__['osrelease']) >= '10.9':
         return True
-    return False, 'The assistive module cannot be loaded: must be run on ' \
-                  'macOS 10.9 or newer.'
+    return (
+        False,
+        'The assistive module cannot be loaded: must be run on '
+        'macOS 10.9 or newer.'
+    )
 
 
 def install(app_id, enable=True):

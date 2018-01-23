@@ -6,7 +6,7 @@ in here
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # import sys  # Use if sys is commented out below
 import logging
 import gc
@@ -16,11 +16,11 @@ import datetime
 import salt.log
 import salt.crypt
 import salt.transport.frame
+import salt.utils.immutabletypes as immutabletypes
 from salt.exceptions import SaltReqTimeoutError
-from salt.utils import immutabletypes
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import zmq
 except ImportError:
@@ -105,7 +105,7 @@ class Serial(object):
     def __init__(self, opts):
         if isinstance(opts, dict):
             self.serial = opts.get('serial', 'msgpack')
-        elif isinstance(opts, str):
+        elif isinstance(opts, six.string_types):
             self.serial = opts
         else:
             self.serial = 'msgpack'
@@ -140,10 +140,13 @@ class Serial(object):
             if six.PY3 and encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:
-            log.critical('Could not deserialize msgpack message.'
-                         'This often happens when trying to read a file not in binary mode'
-                         'To see message payload, enable debug logging and retry. Exception: {0}'.format(exc))
-            log.debug('Msgpack deserialization failure on message: {0}'.format(msg))
+            log.critical(
+                'Could not deserialize msgpack message. This often happens '
+                'when trying to read a file not in binary mode. '
+                'To see message payload, enable debug logging and retry. '
+                'Exception: %s', exc
+            )
+            log.debug('Msgpack deserialization failure on message: %s', msg)
             gc.collect()
             raise
         finally:
@@ -198,9 +201,9 @@ class Serial(object):
                 # This is a spurious lint failure as we are gating this check
                 # behind a check for six.PY2.
                 if six.PY2 and isinstance(obj, long) and long > pow(2, 64):  # pylint: disable=incompatible-py3-code
-                    return str(obj)
+                    return six.text_type(obj)
                 elif six.PY3 and isinstance(obj, int) and int > pow(2, 64):
-                    return str(obj)
+                    return six.text_type(obj)
                 else:
                     return obj
             if msgpack.version >= (0, 4, 0):
@@ -241,7 +244,7 @@ class Serial(object):
                     return obj
 
             def immutable_encoder(obj):
-                log.debug('IMMUTABLE OBJ: {0}'.format(obj))
+                log.debug('IMMUTABLE OBJ: %s', obj)
                 if isinstance(obj, immutabletypes.ImmutableDict):
                     return dict(obj)
                 if isinstance(obj, immutabletypes.ImmutableList):
@@ -249,12 +252,12 @@ class Serial(object):
                 if isinstance(obj, immutabletypes.ImmutableSet):
                     return set(obj)
 
-            if "datetime.datetime" in str(e):
+            if "datetime.datetime" in six.text_type(e):
                 if msgpack.version >= (0, 4, 0):
                     return msgpack.dumps(datetime_encoder(msg), use_bin_type=use_bin_type)
                 else:
                     return msgpack.dumps(datetime_encoder(msg))
-            elif "Immutable" in str(e):
+            elif "Immutable" in six.text_type(e):
                 if msgpack.version >= (0, 4, 0):
                     return msgpack.dumps(msg, default=immutable_encoder, use_bin_type=use_bin_type)
                 else:
@@ -287,9 +290,10 @@ class Serial(object):
             else:
                 return msgpack.dumps(odict_encoder(msg))
         except (SystemError, TypeError) as exc:  # pylint: disable=W0705
-            log.critical('Unable to serialize message! Consider upgrading msgpack. '
-                         'Message which failed was {failed_message} '
-                         'with exception {exception_message}').format(msg, exc)
+            log.critical(
+                'Unable to serialize message! Consider upgrading msgpack. '
+                'Message which failed was %s, with exception %s', msg, exc
+            )
 
     def dump(self, msg, fn_):
         '''
@@ -371,11 +375,11 @@ class SREQ(object):
             if isinstance(self.poller.sockets, dict):
                 sockets = list(self.poller.sockets.keys())
                 for socket in sockets:
-                    log.trace('Unregistering socket: {0}'.format(socket))
+                    log.trace('Unregistering socket: %s', socket)
                     self.poller.unregister(socket)
             else:
                 for socket in self.poller.sockets:
-                    log.trace('Unregistering socket: {0}'.format(socket))
+                    log.trace('Unregistering socket: %s', socket)
                     self.poller.unregister(socket[0])
             del self._socket
 
@@ -395,12 +399,15 @@ class SREQ(object):
             if polled:
                 break
             if tries > 1:
-                log.info('SaltReqTimeoutError: after {0} seconds. (Try {1} of {2})'.format(
-                  timeout, tried, tries))
+                log.info(
+                    'SaltReqTimeoutError: after %s seconds. (Try %s of %s)',
+                    timeout, tried, tries
+                )
             if tried >= tries:
                 self.clear_socket()
                 raise SaltReqTimeoutError(
-                    'SaltReqTimeoutError: after {0} seconds, ran {1} tries'.format(timeout * tried, tried)
+                    'SaltReqTimeoutError: after {0} seconds, ran {1} '
+                    'tries'.format(timeout * tried, tried)
                 )
         return self.serial.loads(self.socket.recv())
 

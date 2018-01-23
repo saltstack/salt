@@ -24,7 +24,7 @@ for this the :mod:`module.wait <salt.states.module.wait>` state can be used:
 
     fetch_out_of_band:
       module.run:
-        git.fetch:
+        - git.fetch:
           - cwd: /path/to/my/repo
           - user: myuser
           - opts: '--all'
@@ -35,7 +35,7 @@ Another example:
 
     mine.send:
       module.run:
-        network.ip_addrs:
+        - network.ip_addrs:
           - interface: eth0
 
 And more complex example:
@@ -44,7 +44,7 @@ And more complex example:
 
     eventsviewer:
       module.run:
-        task.create_task:
+        - task.create_task:
           - name: events-viewer
           - user_name: System
           - action_type: Execute
@@ -158,7 +158,7 @@ functions at once the following way:
 
     call_something:
       module.run:
-        git.fetch:
+        - git.fetch:
           - cwd: /path/to/my/repo
           - user: myuser
           - opts: '--all'
@@ -176,7 +176,8 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.loader
-import salt.utils
+import salt.utils.args
+import salt.utils.functools
 import salt.utils.jid
 from salt.ext import six
 from salt.ext.six.moves import range
@@ -213,7 +214,7 @@ def wait(name, **kwargs):
             'comment': ''}
 
 # Alias module.watch to module.wait
-watch = salt.utils.alias_function(wait, 'watch')
+watch = salt.utils.functools.alias_function(wait, 'watch')
 
 
 @with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
@@ -253,7 +254,7 @@ def run(**kwargs):
     if 'name' in kwargs:
         kwargs.pop('name')
     ret = {
-        'name': kwargs.keys(),
+        'name': list(kwargs),
         'changes': {},
         'comment': '',
         'result': None,
@@ -358,7 +359,7 @@ def _call_function(name, returner=None, **kwargs):
         returners = salt.loader.returners(__opts__, __salt__)
         if returner in returners:
             returners[returner]({'id': __opts__['id'], 'ret': mret,
-                                 'fun': name, 'jid': salt.utils.jid.gen_jid()})
+                                 'fun': name, 'jid': salt.utils.jid.gen_jid(__opts__)})
 
     return mret
 
@@ -505,7 +506,7 @@ def _run(name, **kwargs):
                 'id': __opts__['id'],
                 'ret': mret,
                 'fun': name,
-                'jid': salt.utils.jid.gen_jid()}
+                'jid': salt.utils.jid.gen_jid(__opts__)}
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)
@@ -533,4 +534,4 @@ def _get_result(func_ret, changes):
 
     return res
 
-mod_watch = salt.utils.alias_function(run, 'mod_watch')
+mod_watch = salt.utils.functools.alias_function(run, 'mod_watch')

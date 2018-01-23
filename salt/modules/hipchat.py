@@ -30,7 +30,6 @@ Module for sending messages to hipchat.
 '''
 # Import Python Libs
 from __future__ import absolute_import
-import json
 import logging
 
 # Import 3rd-party Libs
@@ -41,6 +40,7 @@ from salt.ext.six.moves import range
 import salt.ext.six.moves.http_client
 
 import salt.utils.http
+import salt.utils.json
 
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -154,7 +154,7 @@ def _query(function,
     elif api_version == 'v2':
         headers['Authorization'] = 'Bearer {0}'.format(api_key)
         if data:
-            data = json.dumps(data)
+            data = salt.utils.json.dumps(data)
 
         if method == 'POST':
             headers['Content-Type'] = 'application/json'
@@ -176,8 +176,9 @@ def _query(function,
     if result.get('status', None) == salt.ext.six.moves.http_client.OK:
         response = hipchat_functions.get(api_version).get(function).get('response')
         return result.get('dict', {}).get(response, None)
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
-        return False
+    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT and \
+        api_version == 'v2':
+        return True
     else:
         log.debug(url)
         log.debug(query_params)

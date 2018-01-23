@@ -6,14 +6,18 @@ This module allows SPM to use the local filesystem to install files for SPM.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import os.path
 import logging
 
 # Import Salt libs
 import salt.syspaths
-import salt.utils
+import salt.utils.files
+import salt.utils.stringutils
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -51,7 +55,7 @@ def check_existing(package, pkg_files, formula_def, conn=None):
     if conn is None:
         conn = init()
 
-    node_type = str(__opts__.get('spm_node_type'))
+    node_type = six.text_type(__opts__.get('spm_node_type'))
 
     existing_files = []
     for member in pkg_files:
@@ -91,7 +95,7 @@ def check_existing(package, pkg_files, formula_def, conn=None):
         if os.path.exists(out_file):
             existing_files.append(out_file)
             if not __opts__['force']:
-                log.error('{0} already exists, not installing'.format(out_file))
+                log.error('%s already exists, not installing', out_file)
 
     return existing_files
 
@@ -106,7 +110,7 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
     if conn is None:
         conn = init()
 
-    node_type = str(__opts__.get('spm_node_type'))
+    node_type = six.text_type(__opts__.get('spm_node_type'))
 
     out_path = conn['formula_path']
 
@@ -114,7 +118,7 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
     new_name = member.name.replace('{0}/'.format(package), '', 1)
     if not new_name.startswith(tld) and not new_name.startswith('_') and not \
             new_name.startswith('pillar.example') and not new_name.startswith('README'):
-        log.debug('{0} not in top level directory, not installing'.format(new_name))
+        log.debug('%s not in top level directory, not installing', new_name)
         return False
 
     for line in formula_def.get('files', []):
@@ -159,7 +163,7 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
     if len(comps) > 1 and comps[0] == comps[1]:
         member.path = '/'.join(comps[1:])
 
-    log.debug('Installing package file {0} to {1}'.format(member.name, out_path))
+    log.debug('Installing package file %s to %s', member.name, out_path)
     formula_tar.extract(member, out_path)
 
     return out_path
@@ -172,7 +176,7 @@ def remove_file(path, conn=None):
     if conn is None:
         conn = init()
 
-    log.debug('Removing package file {0}'.format(path))
+    log.debug('Removing package file %s', path)
     os.remove(path)
 
 
@@ -183,8 +187,8 @@ def hash_file(path, hashobj, conn=None):
     if os.path.isdir(path):
         return ''
 
-    with salt.utils.fopen(path, 'r') as f:
-        hashobj.update(salt.utils.to_bytes(f.read()))
+    with salt.utils.files.fopen(path, 'r') as f:
+        hashobj.update(salt.utils.stringutils.to_bytes(f.read()))
         return hashobj.hexdigest()
 
 

@@ -14,7 +14,7 @@ import os
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def __virtual__():
     '''
     Only load the module if htpasswd is installed
     '''
-    if salt.utils.which('htpasswd'):
+    if salt.utils.path.which('htpasswd'):
         return __virtualname__
     return (False, 'The htpasswd execution mdule cannot be loaded: htpasswd binary not in path.')
 

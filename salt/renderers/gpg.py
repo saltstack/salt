@@ -209,20 +209,20 @@ pillar data like so:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import logging
 from subprocess import Popen, PIPE
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.stringio
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -233,7 +233,7 @@ def _get_gpg_exec():
     '''
     return the GPG executable or raise an error
     '''
-    gpg_exec = salt.utils.which('gpg')
+    gpg_exec = salt.utils.path.which('gpg')
     if gpg_exec:
         return gpg_exec
     else:
@@ -288,7 +288,7 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
     else:
         if six.PY3 and isinstance(decrypted_data, bytes):
             decrypted_data = decrypted_data.decode(__salt_system_encoding__)
-        return str(decrypted_data)
+        return six.text_type(decrypted_data)
 
 
 def _decrypt_object(obj, translate_newlines=False):

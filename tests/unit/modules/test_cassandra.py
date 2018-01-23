@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.modules.cassandra as cassandra
 
 

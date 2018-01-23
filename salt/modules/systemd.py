@@ -10,19 +10,24 @@ Provides the service module for systemd
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import errno
 import glob
 import logging
 import os
+import fnmatch
 import re
 import shlex
 
-# Import 3rd-party libs
+# Import Salt libs
+import salt.utils.files
 import salt.utils.itertools
+import salt.utils.path
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -151,7 +156,7 @@ def _default_runlevel():
     # Try to get the "main" default.  If this fails, throw up our
     # hands and just guess "2", because things are horribly broken
     try:
-        with salt.utils.fopen('/etc/init/rc-sysinit.conf') as fp_:
+        with salt.utils.files.fopen('/etc/init/rc-sysinit.conf') as fp_:
             for line in fp_:
                 if line.startswith('env DEFAULT_RUNLEVEL'):
                     runlevel = line.split('=')[-1].strip()
@@ -160,7 +165,7 @@ def _default_runlevel():
 
     # Look for an optional "legacy" override in /etc/inittab
     try:
-        with salt.utils.fopen('/etc/inittab') as fp_:
+        with salt.utils.files.fopen('/etc/inittab') as fp_:
             for line in fp_:
                 if not line.startswith('#') and 'initdefault' in line:
                     runlevel = line.split(':')[1]
@@ -172,7 +177,7 @@ def _default_runlevel():
     try:
         valid_strings = set(
             ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
-        with salt.utils.fopen('/proc/cmdline') as fp_:
+        with salt.utils.files.fopen('/proc/cmdline') as fp_:
             for line in fp_:
                 for arg in line.strip().split():
                     if arg in valid_strings:
@@ -252,7 +257,7 @@ def _get_service_exec():
     if contextkey not in __context__:
         executables = ('update-rc.d', 'chkconfig')
         for executable in executables:
-            service_exec = salt.utils.which(executable)
+            service_exec = salt.utils.path.which(executable)
             if service_exec is not None:
                 break
         else:
@@ -1017,19 +1022,41 @@ def force_reload(name, no_block=True, unmask=False, unmask_runtime=False):
 # established by Salt's service management states.
 def status(name, sig=None):  # pylint: disable=unused-argument
     '''
-    Return the status for a service via systemd, returns ``True`` if the
-    service is running and ``False`` if it is not.
+    Return the status for a service via systemd.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
+
+    Args:
+        name (str): The name of the service to check
+        sig (str): Not implemented
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name>
+        salt '*' service.status <service name> [service signature]
     '''
-    _check_for_unit_changes(name)
-    return __salt__['cmd.retcode'](_systemctl_cmd('is-active', name),
-                                   python_shell=False,
-                                   ignore_retcode=True) == 0
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        _check_for_unit_changes(service)
+        results[service] = __salt__['cmd.retcode'](_systemctl_cmd('is-active', service),
+                                                   python_shell=False,
+                                                   ignore_retcode=True) == 0
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 # **kwargs is required to maintain consistency with the API established by

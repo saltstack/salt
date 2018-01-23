@@ -18,16 +18,16 @@ from __future__ import absolute_import
 
 import os
 import re
-import json
 import logging as logger
 import base64
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 
 # TODO Remove requests dependency
 
-import salt.utils
+import salt.utils.files
 import salt.utils.http as http
+import salt.utils.json
 
 __virtualname__ = 'k8s'
 
@@ -55,7 +55,7 @@ def _guess_apiserver(apiserver_url=None):
         config = __salt__['config.get']('k8s:config', default_config)
         kubeapi_regex = re.compile("""KUBE_MASTER=['"]--master=(.*)['"]""",
                                    re.MULTILINE)
-        with salt.utils.fopen(config) as fh_k8s:
+        with salt.utils.files.fopen(config) as fh_k8s:
             for line in fh_k8s.readlines():
                 match_line = kubeapi_regex.match(line)
             if match_line:
@@ -74,12 +74,15 @@ def _kpost(url, data):
     headers = {"Content-Type": "application/json"}
     # Make request
     log.trace("url is: {0}, data is: {1}".format(url, data))
-    ret = http.query(url, method='POST', header_dict=headers, data=json.dumps(data))
+    ret = http.query(url,
+                     method='POST',
+                     header_dict=headers,
+                     data=salt.utils.json.dumps(data))
     # Check requests status
     if ret.get('error'):
         return ret
     else:
-        return json.loads(ret.get('body'))
+        return salt.utils.json.loads(ret.get('body'))
 
 
 def _kput(url, data):
@@ -88,12 +91,15 @@ def _kput(url, data):
     # Prepare headers
     headers = {"Content-Type": "application/json"}
     # Make request
-    ret = http.query(url, method='PUT', header_dict=headers, data=json.dumps(data))
+    ret = http.query(url,
+                     method='PUT',
+                     header_dict=headers,
+                     data=salt.utils.json.dumps(data))
     # Check requests status
     if ret.get('error'):
         return ret
     else:
-        return json.loads(ret.get('body'))
+        return salt.utils.json.loads(ret.get('body'))
 
 
 def _kpatch(url, data):
@@ -103,13 +109,13 @@ def _kpatch(url, data):
     headers = {"Content-Type": "application/json-patch+json"}
     # Make request
     ret = http.query(url, method='PATCH', header_dict=headers,
-                     data=json.dumps(data))
+                     data=salt.utils.json.dumps(data))
     # Check requests status
     if ret.get('error'):
         log.error("Got an error: {0}".format(ret.get("error")))
         return ret
     else:
-        return json.loads(ret.get('body'))
+        return salt.utils.json.loads(ret.get('body'))
 
 
 def _kname(obj):
@@ -179,7 +185,7 @@ def _get_labels(node, apiserver_url):
     ret = http.query(url)
     # Check requests status
     if 'body' in ret:
-        ret = json.loads(ret.get('body'))
+        ret = salt.utils.json.loads(ret.get('body'))
     elif ret.get('status', 0) == 404:
         return "Node {0} doesn't exist".format(node)
     else:
@@ -387,7 +393,7 @@ def _get_namespaces(apiserver_url, name=""):
     # Make request
     ret = http.query(url)
     if ret.get("body"):
-        return json.loads(ret.get("body"))
+        return salt.utils.json.loads(ret.get("body"))
     else:
         return None
 
@@ -493,7 +499,7 @@ def _get_secrets(namespace, name, apiserver_url):
     # Make request
     ret = http.query(url)
     if ret.get("body"):
-        return json.loads(ret.get("body"))
+        return salt.utils.json.loads(ret.get("body"))
     else:
         return None
 
@@ -541,7 +547,7 @@ def _is_valid_secret_file(filename):
 
 def _file_encode(filename):
     log.trace("Encoding secret file: {0}".format(filename))
-    with salt.utils.fopen(filename, "rb") as f:
+    with salt.utils.files.fopen(filename, "rb") as f:
         data = f.read()
         return base64.b64encode(data)
 

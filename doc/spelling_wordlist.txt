@@ -777,8 +777,6 @@ Stateconf
 stderr
 stdin
 stdout
-stormpath
-Stormpath
 str
 strftime
 subfolder

@@ -8,7 +8,6 @@ worker_threads: 3
 pidfile: master.pid
 sock_dir: master_sock
 timeout: 12
-open_mode: True
 fileserver_list_cache_time: 0
 file_buffer_size: 8192
 file_recv: True
@@ -78,6 +77,7 @@ nodegroups:
   redundant_minions: N@min or N@mins
   nodegroup_loop_a: N@nodegroup_loop_b
   nodegroup_loop_b: N@nodegroup_loop_a
+  missing_minion: L@minion,ghostminion
 
 
 mysql.host: localhost
@@ -96,3 +96,9 @@ libcloud_dns:
     key: 12345
     secret: mysecret
     shopper_id: 12345
+
+autosign_grains_dir: autosign_grains
+autosign_file: autosign_file
+
+# disable discovery for test suite saltstack/salt-jenkins#683
+discovery: false

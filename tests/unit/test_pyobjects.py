@@ -17,7 +17,7 @@ from tests.support.unit import TestCase
 import tests.integration as integration
 import salt.config
 import salt.state
-import salt.utils
+import salt.utils.files
 from salt.template import compile_template
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (StateFactory, State, Registry,
@@ -297,7 +297,7 @@ class RendererMixin(object):
 
     def write_template_file(self, filename, content):
         full_path = os.path.join(self.state_tree_dir, filename)
-        with salt.utils.fopen(full_path, 'w') as f:
+        with salt.utils.files.fopen(full_path, 'w') as f:
             f.write(content)
         return full_path
 

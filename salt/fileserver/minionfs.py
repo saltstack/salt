@@ -6,15 +6,19 @@ The :mod:`cp.push <salt.modules.cp.push>` function allows Minions to push files
 up to the Master. Using this backend, these pushed files are exposed to other
 Minions via the Salt fileserver.
 
-To enable minionfs, :conf_master:`file_recv` needs to be set to ``True`` in
-the master config file (otherwise :mod:`cp.push <salt.modules.cp.push>` will
-not be allowed to push files to the Master), and ``minion`` must be added to
-the :conf_master:`fileserver_backends` list.
+To enable minionfs, :conf_master:`file_recv` needs to be set to ``True`` in the
+master config file (otherwise :mod:`cp.push <salt.modules.cp.push>` will not be
+allowed to push files to the Master), and ``minionfs`` must be added to the
+:conf_master:`fileserver_backends` list.
 
 .. code-block:: yaml
 
     fileserver_backend:
-      - minion
+      - minionfs
+
+.. note::
+    ``minion`` also works here. Prior to the Oxygen release, *only* ``minion``
+    would work.
 
 Other minionfs settings include: :conf_master:`minionfs_whitelist`,
 :conf_master:`minionfs_blacklist`, :conf_master:`minionfs_mountpoint`, and
@@ -31,17 +35,22 @@ import logging
 
 # Import salt libs
 import salt.fileserver
-import salt.utils
+import salt.utils.files
+import salt.utils.gzip_util
+import salt.utils.hashutils
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.url
+import salt.utils.versions
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 
 # Define the module's virtual name
-__virtualname__ = 'minion'
+__virtualname__ = 'minionfs'
 
 
 def __virtual__():
@@ -57,7 +66,7 @@ def _is_exposed(minion):
     '''
     Check if the minion is exposed, based on the whitelist and blacklist
     '''
-    return salt.utils.check_whitelist_blacklist(
+    return salt.utils.stringutils.check_whitelist_blacklist(
         minion,
         whitelist=__opts__['minionfs_whitelist'],
         blacklist=__opts__['minionfs_blacklist']
@@ -129,10 +138,10 @@ def serve_file(load, fnd):
     # AP
     # May I sleep here to slow down serving of big files?
     # How many threads are serving files?
-    with salt.utils.fopen(fpath, 'rb') as fp_:
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -162,12 +171,7 @@ def file_hash(load, fnd):
     ret = {}
 
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if load['saltenv'] not in envs():
@@ -191,7 +195,7 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'rb') as fp_:
+            with salt.utils.files.fopen(cache_path, 'rb') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
@@ -215,14 +219,14 @@ def file_hash(load, fnd):
             return ret
 
     # if we don't have a cache entry-- lets make one
-    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+    ret['hsum'] = salt.utils.hashutils.get_hash(path, __opts__['hash_type'])
     cache_dir = os.path.dirname(cache_path)
     # make cache directory if it doesn't exist
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
-    with salt.utils.flopen(cache_path, 'w') as fp_:
+    with salt.utils.files.flopen(cache_path, 'w') as fp_:
         fp_.write(cache_object)
     return ret
 
@@ -232,12 +236,7 @@ def file_list(load):
     Return a list of all files on the file server in a specified environment
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if load['saltenv'] not in envs():
@@ -281,7 +280,7 @@ def file_list(load):
             continue
         walk_dir = os.path.join(minion_files_dir, prefix)
         # Do not follow links for security reasons
-        for root, _, files in os.walk(walk_dir, followlinks=False):
+        for root, _, files in salt.utils.path.os_walk(walk_dir, followlinks=False):
             for fname in files:
                 # Ignore links for security reasons
                 if os.path.islink(os.path.join(root, fname)):
@@ -316,12 +315,7 @@ def dir_list(load):
             - source-minion/absolute/path
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if load['saltenv'] not in envs():
@@ -365,7 +359,7 @@ def dir_list(load):
             continue
         walk_dir = os.path.join(minion_files_dir, prefix)
         # Do not follow links for security reasons
-        for root, _, _ in os.walk(walk_dir, followlinks=False):
+        for root, _, _ in salt.utils.path.os_walk(walk_dir, followlinks=False):
             relpath = os.path.relpath(root, minion_files_dir)
             # Ensure that the current directory and directories outside of
             # the minion dir do not end up in return list

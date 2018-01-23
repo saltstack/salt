@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 '''
 Use pycrypto to generate random passwords on the fly.
@@ -28,7 +27,7 @@ except ImportError:
     HAS_CRYPT = False
 
 # Import salt libs
-import salt.utils
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 
 
@@ -43,7 +42,7 @@ def secure_password(length=20, use_random=True):
             pw += re.sub(
                 r'\W',
                 '',
-                salt.utils.to_str(CRand.get_random_bytes(1))
+                salt.utils.stringutils.to_str(CRand.get_random_bytes(1))
             )
         else:
             pw += random.SystemRandom().choice(string.ascii_letters + string.digits)

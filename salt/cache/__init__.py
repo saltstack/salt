@@ -73,7 +73,7 @@ class Cache(object):
             self.cachedir = opts.get('cachedir', salt.syspaths.CACHE_DIR)
         else:
             self.cachedir = cachedir
-        self.driver = opts.get('cache', salt.config.DEFAULT_MASTER_OPTS)
+        self.driver = opts.get('cache', salt.config.DEFAULT_MASTER_OPTS['cache'])
         self.serial = Serial(opts)
         self._modules = None
         self._kwargs = kwargs

@@ -22,13 +22,13 @@ import logging
 import sys
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.freebsdports import _normalize, _options_file_exists
 
 # Needed by imported function _options_file_exists
 import os  # pylint: disable=W0611
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def _repack_options(options):
     return dict(
         [
             (str(x), _normalize(y))
-            for x, y in six.iteritems(salt.utils.repack_dictlist(options))
+            for x, y in six.iteritems(salt.utils.data.repack_dictlist(options))
         ]
     )
 

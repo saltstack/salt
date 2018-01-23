@@ -116,7 +116,7 @@ entry on the minion already contains a numeric value, then using the ``random``
 keyword will not modify it.
 
 Added the opportunity to set a job with a special keyword like '@reboot' or
-'@hourly'.
+'@hourly'. Quotes must be used, otherwise PyYAML will strip the '@' sign.
 
 .. code-block:: yaml
 
@@ -143,7 +143,6 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 from salt.modules.cron import (
     _needs_change,
@@ -202,7 +201,14 @@ def _check_cron(user,
                 return 'present'
     else:
         for cron in lst['special']:
-            if special == cron['spec'] and cmd == cron['cmd']:
+            if _cron_matched(cron, cmd, identifier):
+                if any([_needs_change(x, y) for x, y in
+                        ((cron['spec'], special),
+                         (cron['identifier'], identifier),
+                         (cron['cmd'], cmd),
+                         (cron['comment'], comment),
+                         (cron['commented'], commented))]):
+                    return 'update'
                 return 'present'
     return 'absent'
 
@@ -300,10 +306,11 @@ def present(name,
 
     identifier
         Custom-defined identifier for tracking the cron line for future crontab
-        edits. This defaults to the state id
+        edits. This defaults to the state name
 
     special
-        A special keyword to specify periodicity (eg. @reboot, @hourly...)
+        A special keyword to specify periodicity (eg. @reboot, @hourly...).
+        Quotes must be used, otherwise PyYAML will strip the '@' sign.
 
         .. versionadded:: 2016.3.0
     '''
@@ -348,7 +355,12 @@ def present(name,
                                         commented=commented,
                                         identifier=identifier)
     else:
-        data = __salt__['cron.set_special'](user, special, name)
+        data = __salt__['cron.set_special'](user=user,
+                                            special=special,
+                                            cmd=name,
+                                            comment=comment,
+                                            commented=commented,
+                                            identifier=identifier)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -386,14 +398,15 @@ def absent(name,
 
     identifier
         Custom-defined identifier for tracking the cron line for future crontab
-        edits. This defaults to the state id
+        edits. This defaults to the state name
 
     special
-        The special keyword used in the job (eg. @reboot, @hourly...)
+        The special keyword used in the job (eg. @reboot, @hourly...).
+        Quotes must be used, otherwise PyYAML will strip the '@' sign.
     '''
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
+    # NOTE: The keyword arguments in **kwargs are ignored in this state, but
+    #       cannot be removed from the function definition, otherwise the use
+    #       of unsupported arguments will result in a traceback.
 
     name = name.strip()
     if identifier is False:
@@ -416,7 +429,7 @@ def absent(name,
     if special is None:
         data = __salt__['cron.rm_job'](user, name, identifier=identifier)
     else:
-        data = __salt__['cron.rm_special'](user, special, name)
+        data = __salt__['cron.rm_special'](user, name, special=special, identifier=identifier)
 
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)
@@ -536,7 +549,7 @@ def file(name,
         return ret
 
     cron_path = salt.utils.files.mkstemp()
-    with salt.utils.fopen(cron_path, 'w+') as fp_:
+    with salt.utils.files.fopen(cron_path, 'w+') as fp_:
         raw_cron = __salt__['cron.raw_cron'](user)
         if not raw_cron.endswith('\n'):
             raw_cron = "{0}\n".format(raw_cron)
@@ -565,6 +578,7 @@ def file(name,
                                              user,
                                              group,
                                              mode,
+                                             [],  # no special attrs for cron
                                              template,
                                              context,
                                              defaults,

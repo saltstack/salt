@@ -39,10 +39,10 @@ from __future__ import absolute_import
 import sys
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import Salt libs
-import salt.utils
+import salt.utils.platform
 import salt.utils.win_functions
 
 
@@ -61,15 +61,15 @@ def _changes(name,
 
     # User and Domain names are not case sensitive in Windows. Let's make them
     # all lower case so we can compare properly
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if lgrp['members']:
             lgrp['members'] = [user.lower() for user in lgrp['members']]
         if members:
-            members = [salt.utils.win_functions.get_sam_name(user) for user in members]
+            members = [salt.utils.win_functions.get_sam_name(user).lower() for user in members]
         if addusers:
-            addusers = [salt.utils.win_functions.get_sam_name(user) for user in addusers]
+            addusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in addusers]
         if delusers:
-            delusers = [salt.utils.win_functions.get_sam_name(user) for user in delusers]
+            delusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in delusers]
 
     change = {}
     if gid:
@@ -244,9 +244,7 @@ def present(name,
                 return ret
 
         # Group is not present, make it.
-        if __salt__['group.add'](name,
-                                 gid,
-                                 system=system):
+        if __salt__['group.add'](name, gid=gid, system=system):
             # if members to be added
             grp_members = None
             if members:
@@ -269,7 +267,7 @@ def present(name,
                 ret['result'] = False
                 ret['comment'] = (
                     'Group {0} has been created but, some changes could not'
-                    ' be applied')
+                    ' be applied'.format(name))
                 ret['changes'] = {'Failed': changes}
         else:
             ret['result'] = False

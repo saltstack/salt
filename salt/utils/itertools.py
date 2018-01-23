@@ -4,11 +4,12 @@ Helpful generators and other tools
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
+import fnmatch
 import re
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 
 
 def split(orig, sep=None):
@@ -53,7 +54,7 @@ def read_file(fh_, chunk_size=1048576):
                 chunk = fh_.read(chunk_size)
             except AttributeError:
                 # Open the file and re-attempt the read
-                fh_ = salt.utils.fopen(fh_, 'rb')  # pylint: disable=W8470
+                fh_ = salt.utils.files.fopen(fh_, 'rb')  # pylint: disable=W8470
                 chunk = fh_.read(chunk_size)
             if not chunk:
                 break
@@ -63,3 +64,25 @@ def read_file(fh_, chunk_size=1048576):
             fh_.close()
         except AttributeError:
             pass
+
+
+def fnmatch_multiple(candidates, pattern):
+    '''
+    Convenience function which runs fnmatch.fnmatch() on each element of passed
+    iterable. The first matching candidate is returned, or None if there is no
+    matching candidate.
+    '''
+    # Make sure that candidates is iterable to avoid a TypeError when we try to
+    # iterate over its items.
+    try:
+        candidates_iter = iter(candidates)
+    except TypeError:
+        return None
+
+    for candidate in candidates_iter:
+        try:
+            if fnmatch.fnmatch(candidate, pattern):
+                return candidate
+        except TypeError:
+            pass
+    return None

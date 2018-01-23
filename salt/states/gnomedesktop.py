@@ -29,6 +29,9 @@ from __future__ import absolute_import
 import logging
 import re
 
+# Import 3rd-party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 
@@ -65,7 +68,7 @@ def _do(name, gnome_kwargs, preferences):
 
         elif isinstance(value, int):
             ftype = 'int'
-        elif isinstance(value, str):
+        elif isinstance(value, six.string_types):
             ftype = 'string'
         else:
             ftype = 'string'

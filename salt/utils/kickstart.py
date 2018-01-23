@@ -4,11 +4,11 @@ Utilities for managing kickstart
 
 .. versionadded:: Beryllium
 '''
-from __future__ import absolute_import
-import yaml
+from __future__ import absolute_import, unicode_literals
 import shlex
 import argparse  # pylint: disable=minimum-python-version
-import salt.utils
+import salt.utils.files
+import salt.utils.yaml
 from salt.ext.six.moves import range
 
 
@@ -898,7 +898,7 @@ def mksls(src, dst=None):
     mode = 'command'
     sls = {}
     ks_opts = {}
-    with salt.utils.fopen(src, 'r') as fh_:
+    with salt.utils.files.fopen(src, 'r') as fh_:
         for line in fh_:
             if line.startswith('#'):
                 continue
@@ -1175,7 +1175,7 @@ def mksls(src, dst=None):
             sls[package] = {'pkg': ['absent']}
 
     if dst:
-        with salt.utils.fopen(dst, 'w') as fp_:
-            fp_.write(yaml.safe_dump(sls, default_flow_style=False))
+        with salt.utils.files.fopen(dst, 'w') as fp_:
+            salt.utils.yaml.safe_dump(sls, fp_, default_flow_style=False)
     else:
-        return yaml.safe_dump(sls, default_flow_style=False)
+        return salt.utils.yaml.safe_dump(sls, default_flow_style=False)

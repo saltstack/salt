@@ -10,7 +10,7 @@ import time
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 
 log = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class VirtKey(object):
         Accept the provided key
         '''
         try:
-            with salt.utils.fopen(self.path, 'r') as fp_:
+            with salt.utils.files.fopen(self.path, 'r') as fp_:
                 expiry = int(fp_.read())
         except (OSError, IOError):
             log.error(
@@ -56,7 +56,7 @@ class VirtKey(object):
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 self.id)
-        with salt.utils.fopen(pubfn, 'w+') as fp_:
+        with salt.utils.files.fopen(pubfn, 'w+') as fp_:
             fp_.write(pub)
         self.void()
         return True
@@ -65,7 +65,7 @@ class VirtKey(object):
         '''
         Prepare the master to expect a signing request
         '''
-        with salt.utils.fopen(self.path, 'w+') as fp_:
+        with salt.utils.files.fopen(self.path, 'w+') as fp_:
             fp_.write(str(int(time.time())))
         return True
 

@@ -9,11 +9,12 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import python libs
-import json
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.json
+import salt.utils.path
+import salt.utils.user
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -32,7 +33,7 @@ def __virtual__():
     Only work when npm is installed.
     '''
     try:
-        if salt.utils.which('npm') is not None:
+        if salt.utils.path.which('npm') is not None:
             _check_valid_version()
             return True
         else:
@@ -155,7 +156,7 @@ def install(pkg=None,
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -168,7 +169,7 @@ def install(pkg=None,
     # npm >1.2.21 is putting the output to stderr even though retcode is 0
     npm_output = result['stdout'] or result['stderr']
     try:
-        return json.loads(npm_output)
+        return salt.utils.json.loads(npm_output)
     except ValueError:
         pass
 
@@ -191,7 +192,7 @@ def _extract_json(npm_output):
     while lines and (lines[0].startswith('[fsevents]') or lines[0].startswith('Pass ')):
         lines = lines[1:]
     try:
-        return json.loads(''.join(lines))
+        return salt.utils.json.loads(''.join(lines))
     except ValueError:
         pass
     return None
@@ -234,7 +235,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -293,7 +294,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -321,7 +322,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     if result['retcode'] != 0 and result['stderr']:
         raise CommandExecutionError(result['stderr'])
 
-    return json.loads(result['stdout']).get('dependencies', {})
+    return salt.utils.json.loads(result['stdout']).get('dependencies', {})
 
 
 def cache_clean(path=None, runas=None, env=None, force=False):
@@ -356,7 +357,7 @@ def cache_clean(path=None, runas=None, env=None, force=False):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -403,7 +404,7 @@ def cache_list(path=None, runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -443,7 +444,7 @@ def cache_path(runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 

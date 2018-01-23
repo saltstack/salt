@@ -15,7 +15,7 @@ from tests.support.paths import PILLAR_DIR
 from tests.support.helpers import destructiveTest
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 
 
 BLACKOUT_PILLAR = os.path.join(PILLAR_DIR, 'base', 'blackout.sls')
@@ -30,7 +30,7 @@ class MinionBlackoutTestCase(ModuleCase):
         '''
         setup minion blackout mode
         '''
-        with salt.utils.fopen(BLACKOUT_PILLAR, 'w') as wfh:
+        with salt.utils.files.fopen(BLACKOUT_PILLAR, 'w') as wfh:
             wfh.write(blackout_data)
         self.run_function('saltutil.refresh_pillar')
         sleep(5)  # wait for minion to enter blackout mode
@@ -39,7 +39,7 @@ class MinionBlackoutTestCase(ModuleCase):
         '''
         takedown minion blackout mode
         '''
-        with salt.utils.fopen(BLACKOUT_PILLAR, 'w') as blackout_pillar:
+        with salt.utils.files.fopen(BLACKOUT_PILLAR, 'w') as blackout_pillar:
             blackout_pillar.write(textwrap.dedent('''\
                 minion_blackout: False
                 '''))

@@ -7,6 +7,7 @@
 # Import Python libs
 from __future__ import absolute_import
 import os
+import re
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
@@ -14,7 +15,7 @@ from tests.support.unit import TestCase
 # Import Salt libs
 import tests.integration as integration
 import salt.modules.cmdmod
-import salt.utils
+import salt.utils.platform
 
 
 class DocTestCase(TestCase):
@@ -35,7 +36,7 @@ class DocTestCase(TestCase):
         '''
         salt_dir = integration.CODE_DIR
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # No grep in Windows, use findstr
             # findstr in windows doesn't prepend 'Binary` to binary files, so
             # use the '/P' switch to skip files with unprintable characters
@@ -44,7 +45,7 @@ class DocTestCase(TestCase):
             salt_dir += '/'
             cmd = 'grep -r :doc: ' + salt_dir
 
-        grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd).split('\n')
+        grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd).split(os.linesep)
 
         test_ret = {}
         for line in grep_call:
@@ -52,12 +53,10 @@ class DocTestCase(TestCase):
             if line.startswith('Binary'):
                 continue
 
-            if salt.utils.is_windows():
-                # Need the space after the colon so it doesn't split the drive
-                # letter
-                key, val = line.split(': ', 1)
-            else:
-                key, val = line.split(':', 1)
+            # Only split on colons not followed by a '\' as is the case with
+            # Windows Drives
+            regex = re.compile(r':(?!\\)')
+            key, val = regex.split(line, 1)
 
             # Don't test man pages, this file,
             # the page that documents to not use ":doc:", or

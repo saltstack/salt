@@ -52,7 +52,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(os.environ, {}), \
                 patch.dict(environ.__salt__, {'reg.set_value': MagicMock(),
                                               'reg.delete_value': MagicMock()}), \
-                    patch('salt.utils.is_windows', MagicMock(return_value=True)):
+                    patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
 
             environ.setval('key', 'Test', permanent=True)
             environ.__salt__['reg.set_value'].assert_called_with('HKCU', 'Environment', 'key', 'Test')
@@ -70,7 +70,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         Set multiple salt process environment variables from a dict.
         Returns a dict.
         '''
-        mock_environ = {'key': 'value'}
+        mock_environ = {'KEY': 'value'}
         with patch.dict(os.environ, mock_environ):
             self.assertFalse(environ.setenv('environ'))
 
@@ -83,7 +83,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(os.environ, mock_environ):
             mock_setval = MagicMock(return_value=None)
             with patch.object(environ, 'setval', mock_setval):
-                self.assertEqual(environ.setenv({}, False, True, False)['key'],
+                self.assertEqual(environ.setenv({}, False, True, False)['KEY'],
                                  None)
 
     def test_get(self):

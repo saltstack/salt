@@ -367,14 +367,14 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(xapi.is_hyper())
 
         with patch.dict(xapi.__grains__, {'virtual_subtype': 'Xen Dom0'}):
-            with patch('salt.utils.fopen', mock_open(read_data="salt")):
+            with patch('salt.utils.files.fopen', mock_open(read_data="salt")):
                 self.assertFalse(xapi.is_hyper())
 
-            with patch('salt.utils.fopen', mock_open()) as mock_read:
+            with patch('salt.utils.files.fopen', mock_open()) as mock_read:
                 mock_read.side_effect = IOError
                 self.assertFalse(xapi.is_hyper())
 
-            with patch('salt.utils.fopen', mock_open(read_data="xen_")):
+            with patch('salt.utils.files.fopen', mock_open(read_data="xen_")):
                 with patch.dict(xapi.__grains__, {'ps': 'salt'}):
                     mock = MagicMock(return_value={'xenstore': 'salt'})
                     with patch.dict(xapi.__salt__, {'cmd.run': mock}):

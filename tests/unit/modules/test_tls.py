@@ -188,7 +188,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
         mock_opt = MagicMock(return_value=ca_path)
-        with patch('salt.utils.fopen',
+        with patch('salt.utils.files.fopen',
                    mock_open(read_data=_TLS_TEST_DATA['ca_cert'])), \
                 patch.dict(tls.__salt__, {'config.option': mock_opt}), \
                 patch('os.path.exists', MagicMock(return_value=True)), \
@@ -269,7 +269,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 if 'extensions' not in reference:
                     del source['extensions']
 
-            with patch('salt.utils.fopen',
+            with patch('salt.utils.files.fopen',
                        mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
                 try:
                     result = ignore_extensions(tls.cert_info(certp))

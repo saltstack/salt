@@ -20,7 +20,7 @@ A module used to create and manage PostgreSQL tablespaces.
 from __future__ import absolute_import
 
 # Import salt libs
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 
 # Import 3rd-party libs
 from salt.ext.six import iteritems

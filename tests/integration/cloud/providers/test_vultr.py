@@ -4,35 +4,21 @@ Integration tests for Vultr
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
-import random
-import string
 import time
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest
+from tests.support.helpers import expensiveTest, generate_random_name
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-
-def __random_name(size=6):
-    '''
-    Generates a random cloud instance name
-    '''
-    return 'CLOUD-TEST-' + ''.join(
-        random.choice(string.ascii_uppercase + string.digits)
-        for x in range(size)
-    )
+from salt.ext import six
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = __random_name()
+INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'vultr'
 
 
@@ -162,7 +148,7 @@ class VultrTest(ShellCase):
                 INSTANCE_NAME,
                 [i.strip() for i in create_vm]
             )
-            self.assertNotIn('Failed to start', str(create_vm))
+            self.assertNotIn('Failed to start', six.text_type(create_vm))
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             raise

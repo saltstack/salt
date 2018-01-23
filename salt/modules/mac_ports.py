@@ -37,13 +37,17 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.functools
+import salt.utils.path
 import salt.utils.pkg
+import salt.utils.platform
 import salt.utils.mac_utils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -55,10 +59,10 @@ def __virtual__():
     '''
     Confine this module to Mac OS with MacPorts.
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return False, 'mac_ports only available on MacOS'
 
-    if not salt.utils.which('port'):
+    if not salt.utils.path.which('port'):
         return False, 'mac_ports requires the "port" binary'
 
     return __virtualname__
@@ -92,9 +96,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # 'removed', 'purge_desired' not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -159,7 +163,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3>
     '''
 
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if salt.utils.data.is_true(kwargs.get('refresh', True)):
         refresh_db()
 
     available = _list(' '.join(names)) or {}
@@ -168,7 +172,7 @@ def latest_version(*names, **kwargs):
     ret = {}
 
     for key, val in six.iteritems(available):
-        if key not in installed or salt.utils.compare_versions(ver1=installed[key], oper='<', ver2=val):
+        if key not in installed or salt.utils.versions.compare(ver1=installed[key], oper='<', ver2=val):
             ret[key] = val
         else:
             ret[key] = '{0} (installed)'.format(version(key))
@@ -176,7 +180,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -225,7 +229,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if err_message:
         raise CommandExecutionError(
@@ -295,11 +299,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         salt '*' pkg.install 'package package package'
     '''
     pkg_params, pkg_type = \
-        __salt__['pkg_resource.parse_targets'](name,
-                                               pkgs,
-                                               {})
+        __salt__['pkg_resource.parse_targets'](name, pkgs, {})
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     # Handle version kwarg for a single package target
@@ -335,7 +337,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if err_message:
         raise CommandExecutionError(
@@ -428,7 +430,7 @@ def upgrade(refresh=True):  # pylint: disable=W0613
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(

@@ -19,17 +19,19 @@ import re
 import subprocess
 
 # Import salt libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.decorators.path
 import salt.utils.files
-import salt.utils.decorators as decorators
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ if six.PY3:
 
 def __virtual__():
     # TODO: This could work on windows with some love
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The module cannot be loaded on windows.')
     return True
 
@@ -149,20 +151,27 @@ def _replace_auth_key(
 
     try:
         # open the file for both reading AND writing
-        with salt.utils.fopen(full, 'r') as _fh:
+        with salt.utils.files.fopen(full, 'r') as _fh:
             for line in _fh:
+                # We don't need any whitespace-only containing lines or arbitrary doubled newlines
+                line = line.strip()
+                if line == '':
+                    continue
+                line += '\n'
+
                 if line.startswith('#'):
                     # Commented Line
                     lines.append(line)
                     continue
                 comps = re.findall(r'((.*)\s)?(ssh-[a-z0-9-]+|ecdsa-[a-z0-9-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?', line)
                 if len(comps) > 0 and len(comps[0]) > 3 and comps[0][3] == key:
+                    # Found our key, replace it
                     lines.append(auth_line)
                 else:
                     lines.append(line)
             _fh.close()
             # Re-open the file writable after properly closing it
-            with salt.utils.fopen(full, 'w') as _fh:
+            with salt.utils.files.fopen(full, 'w') as _fh:
                 # Write out any changes
                 _fh.writelines(lines)
     except (IOError, OSError) as exc:
@@ -179,8 +188,14 @@ def _validate_keys(key_file, fingerprint_hash_type):
     linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
 
     try:
-        with salt.utils.fopen(key_file, 'r') as _fh:
+        with salt.utils.files.fopen(key_file, 'r') as _fh:
             for line in _fh:
+                # We don't need any whitespace-only containing lines or arbitrary doubled newlines
+                line = line.strip()
+                if line == '':
+                    continue
+                line += '\n'
+
                 if line.startswith('#'):
                     # Commented Line
                     continue
@@ -295,7 +310,7 @@ def _get_known_hosts_file(config=None, user=None):
     return full
 
 
-def host_keys(keydir=None, private=True):
+def host_keys(keydir=None, private=True, certs=True):
     '''
     Return the minion's host keys
 
@@ -306,6 +321,7 @@ def host_keys(keydir=None, private=True):
         salt '*' ssh.host_keys
         salt '*' ssh.host_keys keydir=/etc/ssh
         salt '*' ssh.host_keys keydir=/etc/ssh private=False
+        salt '*' ssh.host_keys keydir=/etc/ssh certs=False
     '''
     # TODO: support parsing sshd_config for the key directory
     if not keydir:
@@ -315,22 +331,29 @@ def host_keys(keydir=None, private=True):
             # If keydir is None, os.listdir() will blow up
             raise SaltInvocationError('ssh.host_keys: Please specify a keydir')
     keys = {}
+    fnre = re.compile(
+        r'ssh_host_(?P<type>.+)_key(?P<pub>(?P<cert>-cert)?\.pub)?')
     for fn_ in os.listdir(keydir):
-        if fn_.startswith('ssh_host_'):
-            if fn_.endswith('.pub') is False and private is False:
+        m = fnre.match(fn_)
+        if m:
+            if not m.group('pub') and private is False:
                 log.info(
                     'Skipping private key file {0} as private is set to False'
                     .format(fn_)
                 )
                 continue
+            if m.group('cert') and certs is False:
+                log.info(
+                    'Skipping key file {0} as certs is set to False'
+                    .format(fn_)
+                )
+                continue
 
-            top = fn_.split('.')
-            comps = top[0].split('_')
-            kname = comps[2]
-            if len(top) > 1:
-                kname += '.{0}'.format(top[1])
+            kname = m.group('type')
+            if m.group('pub'):
+                kname += m.group('pub')
             try:
-                with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
+                with salt.utils.files.fopen(os.path.join(keydir, fn_), 'r') as _fh:
                     # As of RFC 4716 "a key file is a text file, containing a
                     # sequence of lines", although some SSH implementations
                     # (e.g. OpenSSH) manage their own format(s).  Please see
@@ -560,8 +583,14 @@ def rm_auth_key(user,
         try:
             # Read every line in the file to find the right ssh key
             # and then write out the correct one. Open the file once
-            with salt.utils.fopen(full, 'r') as _fh:
+            with salt.utils.files.fopen(full, 'r') as _fh:
                 for line in _fh:
+                    # We don't need any whitespace-only containing lines or arbitrary doubled newlines
+                    line = line.strip()
+                    if line == '':
+                        continue
+                    line += '\n'
+
                     if line.startswith('#'):
                         # Commented Line
                         lines.append(line)
@@ -591,7 +620,7 @@ def rm_auth_key(user,
 
             # Let the context manager do the right thing here and then
             # re-open the file in write mode to save the changes out.
-            with salt.utils.fopen(full, 'w') as _fh:
+            with salt.utils.files.fopen(full, 'w') as _fh:
                 _fh.writelines(lines)
         except (IOError, OSError) as exc:
             log.warning('Could not read/write key file: {0}'.format(str(exc)))
@@ -726,7 +755,7 @@ def set_auth_key(
                 os.chown(dpath, uinfo['uid'], uinfo['gid'])
             os.chmod(dpath, 448)
             # If SELINUX is available run a restorecon on the file
-            rcon = salt.utils.which('restorecon')
+            rcon = salt.utils.path.which('restorecon')
             if rcon:
                 cmd = [rcon, dpath]
                 subprocess.call(cmd)
@@ -737,13 +766,16 @@ def set_auth_key(
             new_file = False
 
         try:
-            with salt.utils.fopen(fconfig, 'ab+') as _fh:
+            with salt.utils.files.fopen(fconfig, 'ab+') as _fh:
                 if new_file is False:
                     # Let's make sure we have a new line at the end of the file
-                    _fh.seek(1024, 2)
-                    if not _fh.read(1024).rstrip(six.b(' ')).endswith(six.b('\n')):
-                        _fh.seek(0, 2)
-                        _fh.write(six.b('\n'))
+                    _fh.seek(0, 2)
+                    if _fh.tell() > 0:
+                        # File isn't empty, check if last byte is a newline
+                        # If not, add one
+                        _fh.seek(-1, 2)
+                        if _fh.read(1) != six.b('\n'):
+                            _fh.write(six.b('\n'))
                 if six.PY3:
                     auth_line = auth_line.encode(__salt_system_encoding__)
                 _fh.write(auth_line)
@@ -756,11 +788,27 @@ def set_auth_key(
                 os.chown(fconfig, uinfo['uid'], uinfo['gid'])
             os.chmod(fconfig, 384)
             # If SELINUX is available run a restorecon on the file
-            rcon = salt.utils.which('restorecon')
+            rcon = salt.utils.path.which('restorecon')
             if rcon:
                 cmd = [rcon, fconfig]
                 subprocess.call(cmd)
         return 'new'
+
+
+def _get_matched_host_line_numbers(lines, enc):
+    '''
+    Helper function which parses ssh-keygen -F function output and yield line
+    number of known_hosts entries with encryption key type matching enc,
+    one by one.
+    '''
+    enc = enc if enc else "rsa"
+    for i, line in enumerate(lines):
+        if i % 2 == 0:
+            line_no = int(line.strip().split()[-1])
+            line_enc = lines[i + 1].strip().split()[-2]
+            if line_enc != enc:
+                continue
+            yield line_no
 
 
 def _parse_openssh_output(lines, fingerprint_hash_type=None):
@@ -769,6 +817,12 @@ def _parse_openssh_output(lines, fingerprint_hash_type=None):
     and yield dict with keys information, one by one.
     '''
     for line in lines:
+        # We don't need any whitespace-only containing lines or arbitrary doubled newlines
+        line = line.strip()
+        if line == '':
+            continue
+        line += '\n'
+
         if line.startswith('#'):
             continue
         try:
@@ -783,7 +837,7 @@ def _parse_openssh_output(lines, fingerprint_hash_type=None):
                'fingerprint': fingerprint}
 
 
-@decorators.which('ssh-keygen')
+@salt.utils.decorators.path.which('ssh-keygen')
 def get_known_host(user,
                    hostname,
                    config=None,
@@ -793,11 +847,41 @@ def get_known_host(user,
     Return information about known host from the configfile, if any.
     If there is no such key, return None.
 
+    .. deprecated:: Oxygen
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ssh.get_known_host <user> <hostname>
+    '''
+    salt.utils.versions.warn_until(
+            'Neon',
+            '\'get_known_host\' has been deprecated in favour of '
+            '\'get_known_host_entries\'. \'get_known_host\' will be '
+            'removed in Salt Neon.'
+    )
+    known_hosts = get_known_host_entries(user, hostname, config, port, fingerprint_hash_type)
+    return known_hosts[0] if known_hosts else None
+
+
+@salt.utils.decorators.path.which('ssh-keygen')
+def get_known_host_entries(user,
+                           hostname,
+                           config=None,
+                           port=None,
+                           fingerprint_hash_type=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Return information about known host entries from the configfile, if any.
+    If there are no entries for a matching hostname, return None.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ssh.get_known_host_entries <user> <hostname>
     '''
     full = _get_known_hosts_file(config=config, user=user)
 
@@ -809,14 +893,14 @@ def get_known_host(user,
     lines = __salt__['cmd.run'](cmd,
                                 ignore_retcode=True,
                                 python_shell=False).splitlines()
-    known_hosts = list(
+    known_host_entries = list(
         _parse_openssh_output(lines,
                               fingerprint_hash_type=fingerprint_hash_type)
     )
-    return known_hosts[0] if known_hosts else None
+    return known_host_entries if known_host_entries else None
 
 
-@decorators.which('ssh-keyscan')
+@salt.utils.decorators.path.which('ssh-keyscan')
 def recv_known_host(hostname,
                     enc=None,
                     port=None,
@@ -826,6 +910,8 @@ def recv_known_host(hostname,
     '''
     Retrieve information about host public key from remote server
 
+    .. deprecated:: Oxygen
+
     hostname
         The name of the remote host (e.g. "github.com")
 
@@ -834,9 +920,8 @@ def recv_known_host(hostname,
         or ssh-dss
 
     port
-        optional parameter, denoting the port of the remote host, which will be
-        used in case, if the public key will be requested from it. By default
-        the port 22 is used.
+        Optional parameter, denoting the port of the remote host on which an
+        SSH daemon is running. By default the port 22 is used.
 
     hash_known_hosts : True
         Hash all hostnames and addresses in the known hosts file.
@@ -850,8 +935,8 @@ def recv_known_host(hostname,
         .. versionadded:: 2016.3.0
 
     fingerprint_hash_type
-        The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``sha256`` if not specified.
+        The fingerprint hash type that the public key fingerprints were
+        originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
         .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
@@ -861,6 +946,61 @@ def recv_known_host(hostname,
     .. code-block:: bash
 
         salt '*' ssh.recv_known_host <hostname> enc=<enc> port=<port>
+    '''
+    salt.utils.versions.warn_until(
+            'Neon',
+            '\'recv_known_host\' has been deprecated in favour of '
+            '\'recv_known_host_entries\'. \'recv_known_host\' will be '
+            'removed in Salt Neon.'
+    )
+    known_hosts = recv_known_host_entries(hostname, enc, port, hash_known_hosts, timeout, fingerprint_hash_type)
+    return known_hosts[0] if known_hosts else None
+
+
+@salt.utils.decorators.path.which('ssh-keyscan')
+def recv_known_host_entries(hostname,
+                            enc=None,
+                            port=None,
+                            hash_known_hosts=True,
+                            timeout=5,
+                            fingerprint_hash_type=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Retrieve information about host public keys from remote server
+
+    hostname
+        The name of the remote host (e.g. "github.com")
+
+    enc
+        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
+        or ssh-dss
+
+    port
+        Optional parameter, denoting the port of the remote host on which an
+        SSH daemon is running. By default the port 22 is used.
+
+    hash_known_hosts : True
+        Hash all hostnames and addresses in the known hosts file.
+
+    timeout : int
+        Set the timeout for connection attempts.  If ``timeout`` seconds have
+        elapsed since a connection was initiated to a host or since the last
+        time anything was read from that host, then the connection is closed
+        and the host in question considered unavailable.  Default is 5 seconds.
+
+    fingerprint_hash_type
+        The fingerprint hash type that the public key fingerprints were
+        originally hashed with. This defaults to ``sha256`` if not specified.
+
+        .. versionadded:: 2016.11.4
+        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ssh.recv_known_host_entries <hostname> enc=<enc> port=<port>
     '''
     # The following list of OSes have an old version of openssh-clients
     # and thus require the '-t' option for ssh-keyscan
@@ -882,9 +1022,9 @@ def recv_known_host(hostname,
     while not lines and attempts > 0:
         attempts = attempts - 1
         lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    known_hosts = list(_parse_openssh_output(lines,
+    known_host_entries = list(_parse_openssh_output(lines,
                                              fingerprint_hash_type=fingerprint_hash_type))
-    return known_hosts[0] if known_hosts else None
+    return known_host_entries if known_host_entries else None
 
 
 def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
@@ -915,18 +1055,20 @@ def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
     else:
         config = config or '.ssh/known_hosts'
 
-    known_host = get_known_host(user,
+    known_host_entries = get_known_host_entries(user,
                                 hostname,
                                 config=config,
                                 port=port,
                                 fingerprint_hash_type=fingerprint_hash_type)
+    known_keys = [h['key'] for h in known_host_entries] if known_host_entries else []
+    known_fingerprints = [h['fingerprint'] for h in known_host_entries] if known_host_entries else []
 
-    if not known_host or 'fingerprint' not in known_host:
+    if not known_host_entries:
         return 'add'
     if key:
-        return 'exists' if key == known_host['key'] else 'update'
+        return 'exists' if key in known_keys else 'update'
     elif fingerprint:
-        return ('exists' if fingerprint == known_host['fingerprint']
+        return ('exists' if fingerprint in known_fingerprints
                 else 'update')
     else:
         return 'exists'
@@ -1046,61 +1188,99 @@ def set_known_host(user=None,
 
     update_required = False
     check_required = False
-    stored_host = get_known_host(user,
+    stored_host_entries = get_known_host_entries(user,
                                  hostname,
                                  config=config,
                                  port=port,
                                  fingerprint_hash_type=fingerprint_hash_type)
+    stored_keys = [h['key'] for h in stored_host_entries] if stored_host_entries else []
+    stored_fingerprints = [h['fingerprint'] for h in stored_host_entries] if stored_host_entries else []
 
-    if not stored_host:
+    if not stored_host_entries:
         update_required = True
-    elif fingerprint and fingerprint != stored_host['fingerprint']:
+    elif fingerprint and fingerprint not in stored_fingerprints:
         update_required = True
-    elif key and key != stored_host['key']:
+    elif key and key not in stored_keys:
         update_required = True
-    elif key != stored_host['key']:
+    elif key is None and fingerprint is None:
         check_required = True
 
     if not update_required and not check_required:
-        return {'status': 'exists', 'key': stored_host['key']}
+        return {'status': 'exists', 'keys': stored_keys}
 
     if not key:
-        remote_host = recv_known_host(hostname,
+        remote_host_entries = recv_known_host_entries(hostname,
                                       enc=enc,
                                       port=port,
                                       hash_known_hosts=hash_known_hosts,
                                       timeout=timeout,
                                       fingerprint_hash_type=fingerprint_hash_type)
-        if not remote_host:
+        known_keys = [h['key'] for h in remote_host_entries] if remote_host_entries else []
+        known_fingerprints = [h['fingerprint'] for h in remote_host_entries] if remote_host_entries else []
+        if not remote_host_entries:
             return {'status': 'error',
-                    'error': 'Unable to receive remote host key'}
+                    'error': 'Unable to receive remote host keys'}
 
-        if fingerprint and fingerprint != remote_host['fingerprint']:
+        if fingerprint and fingerprint not in known_fingerprints:
             return {'status': 'error',
-                    'error': ('Remote host public key found but its fingerprint '
-                              'does not match one you have provided')}
+                    'error': ('Remote host public keys found but none of their'
+                              'fingerprints match the one you have provided')}
 
         if check_required:
-            if remote_host['key'] == stored_host['key']:
-                return {'status': 'exists', 'key': stored_host['key']}
-
-    # remove everything we had in the config so far
-    rm_known_host(user, hostname, config=config)
-    # set up new value
+            for key in known_keys:
+                if key in stored_keys:
+                    return {'status': 'exists', 'keys': stored_keys}
 
     full = _get_known_hosts_file(config=config, user=user)
 
     if isinstance(full, dict):
         return full
 
-    if key:
-        remote_host = {'hostname': hostname, 'enc': enc, 'key': key}
+    if os.path.isfile(full):
+        origmode = os.stat(full).st_mode
 
-    if hash_known_hosts or port in [DEFAULT_SSH_PORT, None] or ':' in remote_host['hostname']:
-        line = '{hostname} {enc} {key}\n'.format(**remote_host)
+        # remove existing known_host entry with matching hostname and encryption key type
+        # use ssh-keygen -F to find the specific line(s) for this host + enc combo
+        ssh_hostname = _hostname_and_port_to_ssh_hostname(hostname, port)
+        cmd = ['ssh-keygen', '-F', ssh_hostname, '-f', full]
+        lines = __salt__['cmd.run'](cmd,
+                                    ignore_retcode=True,
+                                    python_shell=False).splitlines()
+        remove_lines = list(
+            _get_matched_host_line_numbers(lines, enc)
+        )
+
+        if remove_lines:
+            try:
+                with salt.utils.files.fopen(full, 'r+') as ofile:
+                    known_hosts_lines = list(ofile)
+                    # Delete from last line to first to avoid invalidating earlier indexes
+                    for line_no in sorted(remove_lines, reverse=True):
+                        del known_hosts_lines[line_no - 1]
+                    # Write out changed known_hosts file
+                    ofile.seek(0)
+                    ofile.truncate()
+                    for line in known_hosts_lines:
+                        ofile.write(line)
+            except (IOError, OSError) as exception:
+                raise CommandExecutionError(
+                    "Couldn't remove old entry(ies) from known hosts file: '{0}'".format(exception)
+                )
     else:
-        remote_host['port'] = port
-        line = '[{hostname}]:{port} {enc} {key}\n'.format(**remote_host)
+        origmode = None
+
+    # set up new value
+    if key:
+        remote_host_entries = [{'hostname': hostname, 'enc': enc, 'key': key}]
+
+    lines = []
+    for entry in remote_host_entries:
+        if hash_known_hosts or port in [DEFAULT_SSH_PORT, None] or ':' in entry['hostname']:
+            line = '{hostname} {enc} {key}\n'.format(**entry)
+        else:
+            entry['port'] = port
+            line = '[{hostname}]:{port} {enc} {key}\n'.format(**entry)
+        lines.append(line)
 
     # ensure ~/.ssh exists
     ssh_dir = os.path.dirname(full)
@@ -1125,8 +1305,9 @@ def set_known_host(user=None,
 
     # write line to known_hosts file
     try:
-        with salt.utils.fopen(full, 'a') as ofile:
-            ofile.write(line)
+        with salt.utils.files.fopen(full, 'a') as ofile:
+            for line in lines:
+                ofile.write(line)
     except (IOError, OSError) as exception:
         raise CommandExecutionError(
             "Couldn't append to known hosts file: '{0}'".format(exception)
@@ -1134,12 +1315,16 @@ def set_known_host(user=None,
 
     if os.geteuid() == 0 and user:
         os.chown(full, uinfo['uid'], uinfo['gid'])
-    os.chmod(full, 0o644)
+    if origmode:
+        os.chmod(full, origmode)
+    else:
+        os.chmod(full, 0o600)
 
     if key and hash_known_hosts:
         cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)
 
-    return {'status': 'updated', 'old': stored_host, 'new': remote_host}
+    rval = {'status': 'updated', 'old': stored_host_entries, 'new': remote_host_entries}
+    return rval
 
 
 def user_keys(user=None, pubfile=None, prvfile=None):
@@ -1206,7 +1391,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
 
             if os.path.exists(fn_):
                 try:
-                    with salt.utils.fopen(fn_, 'r') as _fh:
+                    with salt.utils.files.fopen(fn_, 'r') as _fh:
                         keys[u][keyname] = ''.join(_fh.readlines()).strip()
                 except (IOError, OSError):
                     pass
@@ -1219,7 +1404,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
     return _keys
 
 
-@decorators.which('ssh-keygen')
+@salt.utils.decorators.path.which('ssh-keygen')
 def hash_known_hosts(user=None, config=None):
     '''
 
@@ -1284,7 +1469,7 @@ def key_is_encrypted(key):
         salt '*' ssh.key_is_encrypted /root/id_rsa
     '''
     try:
-        with salt.utils.fopen(key, 'r') as fp_:
+        with salt.utils.files.fopen(key, 'r') as fp_:
             key_data = fp_.read()
     except (IOError, OSError) as exc:
         # Raise a CommandExecutionError

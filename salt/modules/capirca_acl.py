@@ -32,15 +32,15 @@ import datetime
 log = logging.getLogger(__file__)
 
 # Import third party libs
+from salt.ext import six
 try:
     import aclgen
     HAS_CAPIRCA = True
 except ImportError:
     HAS_CAPIRCA = False
 
-# Import Salt modules
-import salt.utils
-from salt.ext import six
+# Import Salt libs
+import salt.utils.files
 
 # ------------------------------------------------------------------------------
 # module properties
@@ -131,7 +131,8 @@ _TERM_FIELDS = {
     'flattened': False,
     'flattened_addr': None,
     'flattened_saddr': None,
-    'flattened_daddr': None
+    'flattened_daddr': None,
+    'priority': None
 }
 
 # IP-type fields
@@ -213,7 +214,7 @@ def _get_services_mapping():
         return _SERVICES
     services_txt = ''
     try:
-        with salt.utils.fopen('/etc/services', 'r') as srv_f:
+        with salt.utils.files.fopen('/etc/services', 'r') as srv_f:
             services_txt = srv_f.read()
     except IOError as ioe:
         log.error('Unable to read from /etc/services:')
@@ -746,6 +747,7 @@ def get_term_config(platform,
         - flattened_addr
         - flattened_saddr
         - flattened_daddr
+        - priority
 
     .. note::
         The following fields can be also a single value and a list of values:

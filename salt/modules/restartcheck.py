@@ -19,7 +19,8 @@ import subprocess
 import sys
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 
 HAS_PSUTIL = False
 try:
@@ -126,7 +127,7 @@ def _deleted_files():
         try:
             pinfo = proc.as_dict(attrs=['pid', 'name'])
             try:
-                maps = salt.utils.fopen('/proc/{0}/maps'.format(pinfo['pid']))  # pylint: disable=resource-leakage
+                maps = salt.utils.files.fopen('/proc/{0}/maps'.format(pinfo['pid']))  # pylint: disable=resource-leakage
                 dirpath = '/proc/' + str(pinfo['pid']) + '/fd/'
                 listdir = os.listdir(dirpath)
             except (OSError, IOError):
@@ -158,7 +159,7 @@ def _deleted_files():
                     if os.path.isfile(readlink):
                         filenames.append(readlink)
                     elif os.path.isdir(readlink) and readlink != '/':
-                        for root, dummy_dirs, files in os.walk(readlink, followlinks=True):
+                        for root, dummy_dirs, files in salt.utils.path.os_walk(readlink, followlinks=True):
                             for name in files:
                                 filenames.append(os.path.join(root, name))
 
@@ -408,7 +409,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
                pth.find('.wants') == -1:
                 is_oneshot = False
                 try:
-                    servicefile = salt.utils.fopen(pth)  # pylint: disable=resource-leakage
+                    servicefile = salt.utils.files.fopen(pth)  # pylint: disable=resource-leakage
                 except IOError:
                     continue
                 sysfold_len = len(systemd_folder)

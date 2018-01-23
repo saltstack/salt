@@ -26,3 +26,15 @@ def combine_comments(comments):
         else:
             comments = [comments]
     return ' '.join(comments).strip()
+
+
+def strip_uri(repo):
+    '''
+    Remove the trailing slash from the URI in a repo definition
+    '''
+    splits = repo.split()
+    for idx in range(len(splits)):
+        if any(splits[idx].startswith(x)
+               for x in ('http://', 'https://', 'ftp://')):
+            splits[idx] = splits[idx].rstrip('/')
+    return ' '.join(splits)

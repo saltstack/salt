@@ -7,10 +7,10 @@ Module for managing IIS SMTP server configuration on Windows servers.
 from __future__ import absolute_import
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
 
 _DEFAULT_SERVER = 'SmtpSvc/1'
 
@@ -39,7 +39,7 @@ def _normalize_server_settings(**settings):
     Convert setting values that has been improperly converted to a dict back to a string.
     '''
     ret = dict()
-    settings = salt.utils.clean_kwargs(**settings)
+    settings = salt.utils.args.clean_kwargs(**settings)
 
     for setting in settings:
         if isinstance(settings[setting], dict):

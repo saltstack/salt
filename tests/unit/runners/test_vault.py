@@ -4,7 +4,7 @@ Unit tests for the Vault runner
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Testing Libs
@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.runners.vault as vault
 
 log = logging.getLogger(__name__)
@@ -85,9 +85,9 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
             output = vault._expand_pattern_lists(case, **mappings)  # pylint: disable=protected-access
             diff = set(output).symmetric_difference(set(correct_output))
             if len(diff) != 0:
-                log.debug('Test {0} failed'.format(case))
-                log.debug('Expected:\n\t{0}\nGot\n\t{1}'.format(output, correct_output))
-                log.debug('Difference:\n\t{0}'.format(diff))
+                log.debug('Test %s failed', case)
+                log.debug('Expected:\n\t%s\nGot\n\t%s', output, correct_output)
+                log.debug('Difference:\n\t%s', diff)
             self.assertEqual(output, correct_output)
 
     def test_get_policies_for_nonexisting_minions(self):
@@ -105,9 +105,9 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                 output = vault._get_policies(minion_id, test_config)  # pylint: disable=protected-access
                 diff = set(output).symmetric_difference(set(correct_output))
                 if len(diff) != 0:
-                    log.debug('Test {0} failed'.format(case))
-                    log.debug('Expected:\n\t{0}\nGot\n\t{1}'.format(output, correct_output))
-                    log.debug('Difference:\n\t{0}'.format(diff))
+                    log.debug('Test %s failed', case)
+                    log.debug('Expected:\n\t%s\nGot\n\t%s', output, correct_output)
+                    log.debug('Difference:\n\t%s', diff)
                 self.assertEqual(output, correct_output)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -146,7 +146,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                 output = vault._get_policies('test-minion', test_config)  # pylint: disable=protected-access
                 diff = set(output).symmetric_difference(set(correct_output))
                 if len(diff) != 0:
-                    log.debug('Test {0} failed'.format(case))
-                    log.debug('Expected:\n\t{0}\nGot\n\t{1}'.format(output, correct_output))
-                    log.debug('Difference:\n\t{0}'.format(diff))
+                    log.debug('Test %s failed', case)
+                    log.debug('Expected:\n\t%s\nGot\n\t%s', output, correct_output)
+                    log.debug('Difference:\n\t%s', diff)
                 self.assertEqual(output, correct_output)

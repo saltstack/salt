@@ -8,14 +8,14 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
 
 # Import salt libs
-from salt.utils import build_whitespace_split_regex
+from salt.utils.stringutils import build_whitespace_split_regex
 
 DOUBLE_TXT = '''\
 # set variable identifying the chroot you work in (used in the prompt below)

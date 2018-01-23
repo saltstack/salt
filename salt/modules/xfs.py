@@ -33,11 +33,13 @@ import time
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -47,7 +49,8 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return not salt.utils.is_windows() and __grains__.get('kernel') == 'Linux'
+    return not salt.utils.platform.is_windows() \
+        and __grains__.get('kernel') == 'Linux'
 
 
 def _verify_run(out, cmd=None):
@@ -183,7 +186,7 @@ def dump(device, destination, level=0, label=None, noerase=None):
         salt '*' xfs.dump /dev/sda1 /detination/on/the/client label='Company accountancy'
         salt '*' xfs.dump /dev/sda1 /detination/on/the/client noerase=True
     '''
-    if not salt.utils.which("xfsdump"):
+    if not salt.utils.path.which("xfsdump"):
         raise CommandExecutionError("Utility \"xfsdump\" has to be installed or missing.")
 
     label = label and label or time.strftime("XFS dump for \"{0}\" of %Y.%m.%d, %H:%M".format(device),
@@ -507,7 +510,7 @@ def _get_mounts():
     List mounted filesystems.
     '''
     mounts = {}
-    with salt.utils.fopen("/proc/mounts") as fhr:
+    with salt.utils.files.fopen("/proc/mounts") as fhr:
         for line in fhr.readlines():
             device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
             if fstype != 'xfs':

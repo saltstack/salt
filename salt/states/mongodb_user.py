@@ -7,6 +7,10 @@ Management of Mongodb users
     This module requires PyMongo to be installed.
 '''
 
+from __future__ import absolute_import
+
+import salt.utils.versions
+
 # Define the module's virtual name
 __virtualname__ = 'mongodb_user'
 
@@ -27,6 +31,9 @@ def present(name,
             authdb=None,
             roles=None):
     '''
+    .. deprecated:: Fluorine
+        Use ``mongodb.user_present`` instead
+
     Ensure that the user is present with the specified properties
 
     name
@@ -77,6 +84,13 @@ def present(name,
               - dbOwner
 
     '''
+
+    salt.utils.versions.warn_until(
+        'Fluorine',
+        'The \'mongodb_user.present\' function has been deprecated and will be removed in Salt '
+        '{version}. Please use \'mongodb.user_present\' instead.'
+    )
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -97,8 +111,14 @@ def present(name,
     # check if user exists
     users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
     if len(users) > 0:
-        # check each user occurrence
-        users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
+        # check for errors returned in users e.g.
+        #    users= (False, 'Failed to connect to MongoDB database localhost:27017')
+        #    users= (False, 'not authorized on admin to execute command { usersInfo: "root" }')
+        if not users[0]:
+            ret['result'] = False
+            ret['comment'] = "Mongo Err: "+str(users[1])
+            return ret
+
         # check each user occurrence
         for usr in users:
             # prepare empty list for current roles
@@ -147,6 +167,9 @@ def absent(name,
            database="admin",
            authdb=None):
     '''
+    .. deprecated:: Fluorine
+        Use ``mongodb.user_absent`` instead
+
     Ensure that the named user is absent
 
     name
@@ -171,6 +194,13 @@ def absent(name,
     authdb
         The database in which to authenticate
     '''
+
+    salt.utils.versions.warn_until(
+        'Fluorine',
+        'The \'mongodb_user.absent\' function has been deprecated and will be removed in Salt '
+        '{version}. Please use \'mongodb.user_absent\' instead.'
+    )
+
     ret = {'name': name,
            'changes': {},
            'result': True,

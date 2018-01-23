@@ -8,8 +8,9 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +22,8 @@ def __virtual__():
     '''
     Provides virt on SmartOS
     '''
-    if salt.utils.is_smartos_globalzone() and salt.utils.which('vmadm'):
+    if salt.utils.platform.is_smartos_globalzone() \
+            and salt.utils.path.which('vmadm'):
         return __virtualname__
     return (
         False,

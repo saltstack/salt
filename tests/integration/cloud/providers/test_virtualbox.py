@@ -3,7 +3,7 @@
 # being in PYTHONPATH, or installed system-wide
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import socket
@@ -22,7 +22,7 @@ from tests.integration.cloud.helpers.virtualbox import (VirtualboxTestCase,
                                                         DEPLOY_PROFILE_NAME)
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.config import cloud_providers_config, vm_profiles_config
 from salt.utils.virtualbox import (vb_xpcom_to_attribute_dict,

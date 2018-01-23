@@ -11,7 +11,7 @@ import logging
 
 from salt.utils.odict import OrderedDict
 from salt.utils.schema import Prepareable
-import salt.ext.six as six
+from salt.ext import six
 
 REQUISITES = ('listen', 'onchanges', 'onfail', 'require', 'watch', 'use', 'listen_in', 'onchanges_in', 'onfail_in', 'require_in', 'watch_in', 'use_in')
 

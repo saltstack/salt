@@ -9,22 +9,19 @@ Edit ini files
 
 (for example /etc/sysctl.conf)
 '''
-
-from __future__ import absolute_import, print_function
-
 # Import Python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import re
-import json
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils
+import salt.utils.files
+import salt.utils.json
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
 
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'ini'
 
@@ -318,17 +315,18 @@ class _Section(OrderedDict):
         yield '{0}[{1}]{0}'.format(os.linesep, self.name)
         sections_dict = OrderedDict()
         for name, value in six.iteritems(self):
+            # Handle Comment Lines
             if com_regx.match(name):
                 yield '{0}{1}'.format(value, os.linesep)
+            # Handle Sections
             elif isinstance(value, _Section):
                 sections_dict.update({name: value})
+            # Key / Value pairs
+            # Adds spaces between the separator
             else:
                 yield '{0}{1}{2}{3}'.format(
                     name,
-                    (
-                        ' {0} '.format(self.sep) if self.sep != ' '
-                        else self.sep
-                    ),
+                    ' {0} '.format(self.sep) if self.sep != ' ' else self.sep,
                     value,
                     os.linesep
                 )
@@ -348,10 +346,10 @@ class _Section(OrderedDict):
     def __repr__(self, _repr_running=None):
         _repr_running = _repr_running or {}
         super_repr = super(_Section, self).__repr__(_repr_running)
-        return os.linesep.join((super_repr, json.dumps(self, indent=4)))
+        return os.linesep.join((super_repr, salt.utils.json.dumps(self, indent=4)))
 
     def __str__(self):
-        return json.dumps(self, indent=4)
+        return salt.utils.json.dumps(self, indent=4)
 
     def __eq__(self, item):
         return (isinstance(item, self.__class__) and
@@ -369,13 +367,14 @@ class _Ini(_Section):
     def refresh(self, inicontents=None):
         if inicontents is None:
             try:
-                with salt.utils.fopen(self.name) as rfh:
+                with salt.utils.files.fopen(self.name) as rfh:
                     inicontents = rfh.read()
             except (OSError, IOError) as exc:
-                raise CommandExecutionError(
-                    "Unable to open file '{0}'. "
-                    "Exception: {1}".format(self.name, exc)
-                )
+                if __opts__['test'] is False:
+                    raise CommandExecutionError(
+                        "Unable to open file '{0}'. "
+                        "Exception: {1}".format(self.name, exc)
+                    )
         if not inicontents:
             return
         # Remove anything left behind from a previous run.
@@ -395,7 +394,7 @@ class _Ini(_Section):
 
     def flush(self):
         try:
-            with salt.utils.fopen(self.name, 'w') as outfile:
+            with salt.utils.files.fopen(self.name, 'w') as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
                 outfile.writelines(ini_gen)

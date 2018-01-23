@@ -6,15 +6,15 @@ Compendium of generic DNS utilities.
 
     Some functions in the ``dnsutil`` execution module depend on ``dig``.
 '''
+# Import python libs
 from __future__ import absolute_import
+import logging
+import socket
+import time
 
 # Import salt libs
-import salt.utils
-import socket
-
-# Import python libs
-import logging
-import time
+import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def parse_hosts(hostsfile='/etc/hosts', hosts=None):
     '''
     if not hosts:
         try:
-            with salt.utils.fopen(hostsfile, 'r') as fp_:
+            with salt.utils.files.fopen(hostsfile, 'r') as fp_:
                 hosts = fp_.read()
         except Exception:
             return 'Error: hosts data was not found'
@@ -79,7 +79,7 @@ def hosts_append(hostsfile='/etc/hosts', ip_addr=None, entries=None):
         return 'No additional hosts were added to {0}'.format(hostsfile)
 
     append_line = '\n{0} {1}'.format(ip_addr, ' '.join(host_list))
-    with salt.utils.fopen(hostsfile, 'a') as fp_:
+    with salt.utils.files.fopen(hostsfile, 'a') as fp_:
         fp_.write(append_line)
 
     return 'The following line was added to {0}:{1}'.format(hostsfile,
@@ -99,11 +99,11 @@ def hosts_remove(hostsfile='/etc/hosts', entries=None):
         salt '*' dnsutil.hosts_remove /etc/hosts ad1.yuk.co
         salt '*' dnsutil.hosts_remove /etc/hosts ad2.yuk.co,ad1.yuk.co
     '''
-    with salt.utils.fopen(hostsfile, 'r') as fp_:
+    with salt.utils.files.fopen(hostsfile, 'r') as fp_:
         hosts = fp_.read()
 
     host_list = entries.split(',')
-    with salt.utils.fopen(hostsfile, 'w') as out_file:
+    with salt.utils.files.fopen(hostsfile, 'w') as out_file:
         for line in hosts.splitlines():
             if not line or line.strip().startswith('#'):
                 out_file.write('{0}\n'.format(line))
@@ -129,7 +129,7 @@ def parse_zone(zonefile=None, zone=None):
     '''
     if zonefile:
         try:
-            with salt.utils.fopen(zonefile, 'r') as fp_:
+            with salt.utils.files.fopen(zonefile, 'r') as fp_:
                 zone = fp_.read()
         except Exception:
             pass
@@ -225,7 +225,7 @@ def _has_dig():
     because they are also DNS utilities, a compatibility layer exists. This
     function helps add that layer.
     '''
-    return salt.utils.which('dig') is not None
+    return salt.utils.path.which('dig') is not None
 
 
 def check_ip(ip_addr):

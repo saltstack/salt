@@ -7,7 +7,7 @@ user present
 user present with custom homedir
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import sys
@@ -20,10 +20,10 @@ from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, requires_system_grains, skip_if_not_root
 from tests.support.mixins import SaltReturnAssertsMixin
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
-if salt.utils.is_darwin():
+if salt.utils.platform.is_darwin():
     USER = 'macuser'
     GROUP = 'macuser'
     GID = randint(400, 500)
@@ -45,7 +45,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
     user_home = '/var/lib/salt_test'
 
     def setUp(self):
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             #on mac we need to add user, because there is
             #no creationtime for nobody user.
             add_user = self.run_function('user.add', [USER], gid=GID)
@@ -84,7 +84,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         And then destroys that user.
         Assume that it will break any system you run it on.
         '''
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             HOMEDIR = '/Users/home_of_' + self.user_name
         else:
             HOMEDIR = '/home/home_of_' + self.user_name
@@ -104,7 +104,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('user.present', name=self.user_name,
                              home=self.user_home)
         self.assertSaltTrueReturn(ret)
-        if not salt.utils.is_darwin():
+        if not salt.utils.platform.is_darwin():
             self.assertTrue(os.path.isdir(self.user_home))
 
     @requires_system_grains
@@ -128,7 +128,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
-        if not salt.utils.is_darwin():
+        if not salt.utils.platform.is_darwin():
             self.assertTrue(os.path.isdir(self.user_home))
         if grains['os_family'] in ('Suse',):
             self.assertEqual(group_name, 'users')
@@ -153,7 +153,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
-        if not salt.utils.is_darwin():
+        if not salt.utils.platform.is_darwin():
             self.assertTrue(os.path.isdir(self.user_home))
         self.assertEqual(group_name, self.user_name)
         ret = self.run_state('user.absent', name=self.user_name)
@@ -229,13 +229,13 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual('', ret['fullname'])
         # MacOS does not supply the following GECOS fields
-        if not salt.utils.is_darwin():
+        if not salt.utils.platform.is_darwin():
             self.assertEqual('', ret['roomnumber'])
             self.assertEqual('', ret['workphone'])
             self.assertEqual('', ret['homephone'])
 
     def tearDown(self):
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             check_user = self.run_function('user.list_users')
             if USER in check_user:
                 del_user = self.run_function('user.delete', [USER], remove=True)

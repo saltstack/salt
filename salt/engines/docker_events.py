@@ -5,13 +5,13 @@ Send events from Docker events
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-import json
 import logging
 import traceback
 
-import salt.utils
+import salt.utils.json
+import salt.utils.event
 
 # pylint: disable=import-error
 try:
@@ -74,12 +74,16 @@ def start(docker_url='unix://var/run/docker.sock',
         else:
             __salt__['event.send'](tag, msg)
 
-    client = docker.Client(base_url=docker_url,
-                           timeout=timeout)
+    try:
+        # docker-py 2.0 renamed this client attribute
+        client = docker.APIClient(base_url=docker_url, timeout=timeout)
+    except AttributeError:
+        client = docker.Client(base_url=docker_url, timeout=timeout)
+
     try:
         events = client.events()
         for event in events:
-            data = json.loads(event.decode(__salt_system_encoding__, errors='replace'))
+            data = salt.utils.json.loads(event.decode(__salt_system_encoding__, errors='replace'))
             # https://github.com/docker/cli/blob/master/cli/command/system/events.go#L109
             # https://github.com/docker/engine-api/blob/master/types/events/events.go
             # Each output includes the event type, actor id, name and action.

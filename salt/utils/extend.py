@@ -29,7 +29,7 @@ from jinja2 import Template
 from salt.serializers.yaml import deserialize
 from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
-import salt.utils
+import salt.utils.files
 import salt.version
 
 log = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def _get_template(path, option_key):
     :returns: Details about the template
     :rtype: ``tuple``
     '''
-    with salt.utils.fopen(path, "r") as template_f:
+    with salt.utils.files.fopen(path, 'r') as template_f:
         template = deserialize(template_f)
         info = (option_key, template.get('description', ''), template)
     return info
@@ -138,10 +138,10 @@ def _mergetreejinja(src, dst, context):
             if item != TEMPLATE_FILE_NAME:
                 d = Template(d).render(context)
                 log.info("Copying file {0} to {1}".format(s, d))
-                with salt.utils.fopen(s, 'r') as source_file:
+                with salt.utils.files.fopen(s, 'r') as source_file:
                     src_contents = source_file.read()
                     dest_contents = Template(src_contents).render(context)
-                with salt.utils.fopen(d, 'w') as dest_file:
+                with salt.utils.files.fopen(d, 'w') as dest_file:
                     dest_file.write(dest_contents)
 
 
@@ -176,16 +176,16 @@ def _prompt_choice(var_name, options):
     :returns: The selected user
     '''
     choice_map = OrderedDict(
-        (u'{0}'.format(i), value) for i, value in enumerate(options, 1) if value[0] != 'test'
+        ('{0}'.format(i), value) for i, value in enumerate(options, 1) if value[0] != 'test'
     )
     choices = choice_map.keys()
-    default = u'1'
+    default = '1'
 
-    choice_lines = [u'{0} - {1} - {2}'.format(c[0], c[1][0], c[1][1]) for c in choice_map.items()]
-    prompt = u'\n'.join((
-        u'Select {0}:'.format(var_name),
-        u'\n'.join(choice_lines),
-        u'Choose from {0}'.format(u', '.join(choices))
+    choice_lines = ['{0} - {1} - {2}'.format(c[0], c[1][0], c[1][1]) for c in choice_map.items()]
+    prompt = '\n'.join((
+        'Select {0}:'.format(var_name),
+        '\n'.join(choice_lines),
+        'Choose from {0}'.format(', '.join(choices))
     ))
 
     user_choice = click.prompt(

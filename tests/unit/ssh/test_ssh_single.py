@@ -14,8 +14,8 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
 import tests.integration as integration
+import salt.utils.thin as thin
 from salt.client import ssh
-from salt.utils import thin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

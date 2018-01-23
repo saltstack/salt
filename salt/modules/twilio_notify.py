@@ -21,8 +21,15 @@ import logging
 
 HAS_LIBS = False
 try:
-    from twilio.rest import TwilioRestClient
-    from twilio import TwilioRestException
+    import twilio
+    if twilio.__version__ > 5:
+        TWILIO_5 = False
+        from twilio.rest import Client as TwilioRestClient
+        from twilio.rest import TwilioException as TwilioRestException
+    else:
+        TWILIO_5 = True
+        from twilio.rest import TwilioRestClient
+        from twilio import TwilioRestException
     HAS_LIBS = True
 except ImportError:
     pass
@@ -67,7 +74,10 @@ def send_sms(profile, body, to, from_):
     ret['message']['sid'] = None
     client = _get_twilio(profile)
     try:
-        message = client.sms.messages.create(body=body, to=to, from_=from_)
+        if TWILIO_5:
+            message = client.sms.messages.create(body=body, to=to, from_=from_)
+        else:
+            message = client.messages.create(body=body, to=to, from_=from_)
     except TwilioRestException as exc:
         ret['_error'] = {}
         ret['_error']['code'] = exc.code

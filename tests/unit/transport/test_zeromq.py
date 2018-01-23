@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import threading
@@ -25,8 +25,8 @@ import tornado.gen
 
 # Import Salt libs
 import salt.config
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.process
 import salt.transport.server
 import salt.transport.client
 import salt.exceptions

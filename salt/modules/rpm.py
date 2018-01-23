@@ -11,10 +11,11 @@ import re
 import datetime
 
 # Import Salt libs
-import salt.utils
+import salt.utils.decorators.path
 import salt.utils.itertools
-import salt.utils.decorators as decorators
+import salt.utils.path
 import salt.utils.pkg.rpm
+import salt.utils.versions
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import zip
 from salt.ext import six
@@ -44,7 +45,7 @@ def __virtual__():
     '''
     Confine this module to rpm based systems
     '''
-    if not salt.utils.which('rpm'):
+    if not salt.utils.path.which('rpm'):
         return (False, 'The rpm execution module failed to load: rpm binary is not in the path.')
     try:
         os_grain = __grains__['os'].lower()
@@ -420,9 +421,9 @@ def owner(*paths):
     return ret
 
 
-@decorators.which('rpm2cpio')
-@decorators.which('cpio')
-@decorators.which('diff')
+@salt.utils.decorators.path.which('rpm2cpio')
+@salt.utils.decorators.path.which('cpio')
+@salt.utils.decorators.path.which('diff')
 def diff(package, path):
     '''
     Return a formatted diff between current file and original in a package.
@@ -658,7 +659,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 log.debug('rpmUtils.miscutils.compareEVR is not available')
 
         if cmp_func is None:
-            if salt.utils.which('rpmdev-vercmp'):
+            if salt.utils.path.which('rpmdev-vercmp'):
                 # rpmdev-vercmp always uses epochs, even when zero
                 def _ensure_epoch(ver):
                     def _prepend(ver):
@@ -687,7 +688,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 elif result['retcode'] == 12:
                     return -1
                 else:
-                    # We'll need to fall back to salt.utils.version_cmp()
+                    # We'll need to fall back to salt.utils.versions.version_cmp()
                     log.warning(
                         'Failed to interpret results of rpmdev-vercmp output. '
                         'This is probably a bug, and should be reported. '
@@ -695,7 +696,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                         result['retcode'], result['stdout']
                     )
             else:
-                # We'll need to fall back to salt.utils.version_cmp()
+                # We'll need to fall back to salt.utils.versions.version_cmp()
                 log.warning(
                     'rpmdevtools is not installed, please install it for '
                     'more accurate version comparisons'
@@ -705,8 +706,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
             # otherwise would be equal, ignore the release. This can happen if
             # e.g. you are checking if a package version 3.2 is satisfied by
             # 3.2-1.
-            (ver1_e, ver1_v, ver1_r) = salt.utils.str_version_to_evr(ver1)
-            (ver2_e, ver2_v, ver2_r) = salt.utils.str_version_to_evr(ver2)
+            (ver1_e, ver1_v, ver1_r) = salt.utils.pkg.rpm.version_to_evr(ver1)
+            (ver2_e, ver2_v, ver2_r) = salt.utils.pkg.rpm.version_to_evr(ver2)
             if not ver1_r or not ver2_r:
                 ver1_r = ver2_r = ''
 
@@ -727,7 +728,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
     # We would already have normalized the versions at the beginning of this
     # function if ignore_epoch=True, so avoid unnecessary work and just pass
     # False for this value.
-    return salt.utils.version_cmp(ver1, ver2, ignore_epoch=False)
+    return salt.utils.versions.version_cmp(ver1, ver2, ignore_epoch=False)
 
 
 def checksum(*paths):

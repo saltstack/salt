@@ -6,7 +6,7 @@ Utilities for accessing storage container blobs on Azure
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import inspect
 
@@ -19,7 +19,7 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltSystemExit
 
 log = logging.getLogger(__name__)
@@ -186,12 +186,12 @@ def object_to_dict(obj):
         ret = obj
     else:
         ret = {}
-        for item in dir(obj):
+        for item in obj.__dict__:
             if item.startswith('_'):
                 continue
             # This is ugly, but inspect.isclass() doesn't seem to work
             try:
-                if inspect.isclass(obj) or 'class' in str(type(obj.__dict__.get(item))):
+                if inspect.isclass(obj) or 'class' in six.text_type(type(obj.__dict__.get(item))):
                     ret[item] = object_to_dict(obj.__dict__[item])
                 elif isinstance(obj.__dict__[item], six.text_type):
                     ret[item] = obj.__dict__[item].encode('ascii', 'replace')

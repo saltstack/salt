@@ -43,9 +43,12 @@ Module to provide Citrix Netscaler compatibility to Salt (compatible with netsca
         salt-call netscaler.server_up server_name3 netscaler_host=1.2.3.6 netscaler_useSSL=False
 
 '''
+# Import Python libs
 from __future__ import absolute_import
 import logging
-import salt.utils
+
+# Import Salt libs
+import salt.utils.platform
 
 try:
     from nsnitro.nsnitro import NSNitro
@@ -68,11 +71,19 @@ def __virtual__():
     '''
     Only load this module if the nsnitro library is installed
     '''
-    if salt.utils.is_windows():
-        return (False, 'The netscaler execution module failed to load: not available on Windows.')
+    if salt.utils.platform.is_windows():
+        return (
+            False,
+            'The netscaler execution module failed to load: not available '
+            'on Windows.'
+        )
     if HAS_NSNITRO:
         return 'netscaler'
-    return (False, 'The netscaler execution module failed to load: the nsnitro python library is not available.')
+    return (
+        False,
+        'The netscaler execution module failed to load: the nsnitro python '
+        'library is not available.'
+    )
 
 
 def _connect(**kwargs):
