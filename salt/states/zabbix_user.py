@@ -7,7 +7,7 @@ Management of Zabbix users.
 
 '''
 from __future__ import absolute_import
-from json import loads, dumps
+from salt.utils.json import loads, dumps
 from copy import deepcopy
 
 

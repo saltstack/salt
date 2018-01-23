@@ -100,6 +100,7 @@ def dump(obj, fp, **kwargs):
     json_module = kwargs.pop('_json_module', json)
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False
+    obj = salt.utils.thread_local_proxy.ThreadLocalProxy.unproxy_recursive(obj)
     obj = salt.utils.data.encode(obj)
     return json.dump(obj, fp, **kwargs)  # future lint: blacklisted-function
 
@@ -121,5 +122,6 @@ def dumps(obj, **kwargs):
     json_module = kwargs.pop('_json_module', json)
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False
+    obj = salt.utils.thread_local_proxy.ThreadLocalProxy.unproxy_recursive(obj)
     obj = salt.utils.data.encode(obj)
     return json_module.dumps(obj, **kwargs)  # future lint: blacklisted-function

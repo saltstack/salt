@@ -54,6 +54,10 @@ except ImportError:
         #sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
+if HAS_MSGPACK:
+    import salt.utils.msgpack
+
+
 if HAS_MSGPACK and not hasattr(msgpack, 'exceptions'):
     class PackValueError(Exception):
         '''
@@ -74,14 +78,15 @@ def package(payload):
     This method for now just wraps msgpack.dumps, but it is here so that
     we can make the serialization a custom option in the future with ease.
     '''
-    return msgpack.dumps(payload)
+    return salt.utils.msgpack.dumps(payload, _msgpack_module=msgpack)
 
 
 def unpackage(package_):
     '''
     Unpackages a payload
     '''
-    return msgpack.loads(package_, use_list=True)
+    return salt.utils.msgpack.loads(package_, use_list=True,
+                                    _msgpack_module=msgpack)
 
 
 def format_payload(enc, **kwargs):
@@ -134,9 +139,12 @@ class Serial(object):
                 # Due to this, if we don't need it, don't pass it at all so
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
-                ret = msgpack.loads(msg, use_list=True, encoding=encoding)
+                ret = salt.utils.msgpack.loads(msg, use_list=True,
+                                               encoding=encoding,
+                                               _msgpack_module=msgpack)
             else:
-                ret = msgpack.loads(msg, use_list=True)
+                ret = salt.utils.msgpack.loads(msg, use_list=True,
+                                               _msgpack_module=msgpack)
             if six.PY3 and encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:
@@ -181,9 +189,10 @@ class Serial(object):
                 # Due to this, if we don't need it, don't pass it at all so
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
-                return msgpack.dumps(msg, use_bin_type=use_bin_type)
+                return salt.utils.msgpack.dumps(msg, use_bin_type=use_bin_type,
+                                                _msgpack_module=msgpack)
             else:
-                return msgpack.dumps(msg)
+                return salt.utils.msgpack.dumps(msg, _msgpack_module=msgpack)
         except (OverflowError, msgpack.exceptions.PackValueError):
             # msgpack can't handle the very long Python longs for jids
             # Convert any very long longs to strings
@@ -207,9 +216,12 @@ class Serial(object):
                 else:
                     return obj
             if msgpack.version >= (0, 4, 0):
-                return msgpack.dumps(verylong_encoder(msg), use_bin_type=use_bin_type)
+                return salt.utils.msgpack.dumps(verylong_encoder(msg),
+                                                use_bin_type=use_bin_type,
+                                                _msgpack_module=msgpack)
             else:
-                return msgpack.dumps(verylong_encoder(msg))
+                return salt.utils.msgpack.dumps(verylong_encoder(msg),
+                                                _msgpack_module=msgpack)
         except TypeError as e:
             # msgpack doesn't support datetime.datetime datatype
             # So here we have converted datetime.datetime to custom datatype
@@ -220,9 +232,14 @@ class Serial(object):
             def dt_encode(obj):
                 datetime_str = obj.strftime("%Y%m%dT%H:%M:%S.%f")
                 if msgpack.version >= (0, 4, 0):
-                    return msgpack.packb(datetime_str, default=default, use_bin_type=use_bin_type)
+                    return salt.utils.msgpack.packb(datetime_str,
+                                                    default=default,
+                                                    use_bin_type=use_bin_type,
+                                                    _msgpack_module=msgpack)
                 else:
-                    return msgpack.packb(datetime_str, default=default)
+                    return salt.utils.msgpack.packb(datetime_str,
+                                                    default=default,
+                                                    _msgpack_module=msgpack)
 
             def datetime_encoder(obj):
                 if isinstance(obj, dict):
@@ -254,14 +271,22 @@ class Serial(object):
 
             if "datetime.datetime" in six.text_type(e):
                 if msgpack.version >= (0, 4, 0):
-                    return msgpack.dumps(datetime_encoder(msg), use_bin_type=use_bin_type)
+                    return salt.utils.msgpack.dumps(datetime_encoder(msg),
+                                                    use_bin_type=use_bin_type,
+                                                    _msgpack_module=msgpack)
                 else:
-                    return msgpack.dumps(datetime_encoder(msg))
+                    return salt.utils.msgpack.dumps(datetime_encoder(msg),
+                                                    _msgpack_module=msgpack)
             elif "Immutable" in six.text_type(e):
                 if msgpack.version >= (0, 4, 0):
-                    return msgpack.dumps(msg, default=immutable_encoder, use_bin_type=use_bin_type)
+                    return salt.utils.msgpack.dumps(msg,
+                                                    default=immutable_encoder,
+                                                    use_bin_type=use_bin_type,
+                                                    _msgpack_module=msgpack)
                 else:
-                    return msgpack.dumps(msg, default=immutable_encoder)
+                    return salt.utils.msgpack.dumps(msg,
+                                                    default=immutable_encoder,
+                                                    _msgpack_module=msgpack)
 
             if msgpack.version >= (0, 2, 0):
                 # Should support OrderedDict serialization, so, let's
@@ -286,9 +311,12 @@ class Serial(object):
                     return obj
                 return obj
             if msgpack.version >= (0, 4, 0):
-                return msgpack.dumps(odict_encoder(msg), use_bin_type=use_bin_type)
+                return salt.utils.msgpack.dumps(odict_encoder(msg),
+                                                use_bin_type=use_bin_type,
+                                                _msgpack_module=msgpack)
             else:
-                return msgpack.dumps(odict_encoder(msg))
+                return salt.utils.msgpack.dumps(odict_encoder(msg),
+                                                _msgpack_module=msgpack)
         except (SystemError, TypeError) as exc:  # pylint: disable=W0705
             log.critical(
                 'Unable to serialize message! Consider upgrading msgpack. '
