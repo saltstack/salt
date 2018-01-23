@@ -26,6 +26,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         self.service_name = 'cron'
         cmd_name = 'crontab'
         os_family = self.run_function('grains.get', ['os_family'])
+        os_release = self.run_function('grains.get', ['osrelease'])
         self.stopped = False
         self.running = True
         if os_family == 'RedHat':
@@ -35,6 +36,8 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             cmd_name = 'systemctl'
         elif os_family == 'MacOS':
             self.service_name = 'org.ntp.ntpd'
+            if int(os_release.split('.')[1]) >= 13:
+                self.service_name = 'com.apple.AirPlayXPCHelper'
             self.stopped = ''
             self.running = '[0-9]'
 
