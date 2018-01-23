@@ -153,7 +153,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn(self.pkg, remove_ret)
 
         if version and isinstance(version, dict):
-            version = version[pkg]
+            version = version[self.pkg]
 
         if version:
             test_remove()
