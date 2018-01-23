@@ -124,8 +124,17 @@ def assign(name, value):
         salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
     value = six.text_type(value)
-    trantab = ''.maketrans('./', '/.') if six.PY3 else string.maketrans('./', '/.')
-    sysctl_file = '/proc/sys/{0}'.format(name.translate(trantab))
+
+    if six.PY3:
+        tran_tab = name.translate(''.maketrans('./', '/.'))
+    else:
+        if isinstance(name, unicode):  # pylint: disable=incompatible-py3-code
+            trans_args = ({ord(x): None for x in ''.join(['./', '/.'])},)
+        else:
+            trans_args = string.maketrans('./', '/.')
+        tran_tab = name.translate(*trans_args)
+
+    sysctl_file = '/proc/sys/{0}'.format(tran_tab)
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
