@@ -413,3 +413,33 @@ class SSDPClientTestCase(TestCase):
             assert message == '{}{}'.format(config[ssdp.SSDPBase.SIGNATURE], f_time)
             assert target[0] == '<broadcast>'
             assert target[1] == config[ssdp.SSDPBase.PORT]
+
+    def test_get_masters_map(self):
+        '''
+        Test getting map of the available masters on the network
+        :return:
+        '''
+        class Resource(object):
+            '''
+            Fake network reader
+            '''
+            def __init__(self):
+                self.pool = [('some', '10.10.10.10'),
+                             ('data', '20.20.20.20'),
+                             ('data', '10.10.10.10'),
+                             (None, None)]
+
+            def read(self, *args, **kwargs):
+                return self.pool.pop(0)
+
+        _socket = MagicMock()
+        response = {}
+        with patch('salt.utils.ssdp.socket', _socket):
+            clnt = ssdp.SSDPDiscoveryClient()
+            clnt._socket.recvfrom = Resource().read
+            clnt.log = MagicMock()
+            clnt._collect_masters_map(response=response)
+            assert '10.10.10.10' in response
+            assert '20.20.20.20' in response
+            assert response['10.10.10.10'] == ['some', 'data']
+            assert response['20.20.20.20'] == ['data']
