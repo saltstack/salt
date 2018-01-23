@@ -11,9 +11,6 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-# Import Salt libs
-import salt.exceptions
-import salt.state
 from salt.utils import ssdp
 import datetime
 
