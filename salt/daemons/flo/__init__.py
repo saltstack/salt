@@ -121,6 +121,7 @@ class IofloMinion(object):
         '''
         warn_deprecated()
         self.opts = opts
+        self.restart = False
 
     def tune_in(self, behaviors=None):
         '''
