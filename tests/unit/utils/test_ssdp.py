@@ -338,6 +338,7 @@ class SSDPServerTestCase(TestCase):
                   ssdp.SSDPBase.PORT: 12345}
         srv = ssdp.SSDPDiscoveryServer(**config)
         srv.create_datagram_endpoint = MagicMock()
+        srv.log = MagicMock()
 
         trnsp = MagicMock()
         proto = MagicMock()
@@ -355,10 +356,12 @@ class SSDPServerTestCase(TestCase):
 
             assert io.get_event_loop.called
             assert io.get_event_loop().run_until_complete.called
-            assert io.get_event_loop().run_forever.called
             assert io.get_event_loop().create_datagram_endpoint.called
+            assert io.get_event_loop().run_forever.called
             assert trnsp.close.called
             assert loop.close.called
+            assert srv.log.info.called
+            assert srv.log.info.call_args[0][0] == 'Stopping service discovery listener.'
             assert 'allow_broadcast' in cde_args
             assert cde_args['allow_broadcast']
             assert 'local_addr' in cde_args
