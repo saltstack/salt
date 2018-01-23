@@ -377,9 +377,18 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         except WindowsError:  # pylint: disable=E0602
             ret['vdata'] = ('(value not set)')
             ret['vtype'] = 'REG_SZ'
-    except pywintypes.error:  # pylint: disable=E0602
-        log.debug(r'Cannot find key: %s\%s', local_hive, local_key, exc_info=True)
-        ret['comment'] = r'Cannot find key: {0}\{1}'.format(local_hive, local_key)
+        except pywintypes.error as exc:  # pylint: disable=E0602
+            msg = 'Cannot find {0} in {1}\\{2}' \
+                  ''.format(local_vname, local_hive, local_key)
+            log.trace(exc)
+            log.trace(msg)
+            ret['comment'] = msg
+            ret['success'] = False
+    except pywintypes.error as exc:  # pylint: disable=E0602
+        msg = 'Cannot find key: {0}\\{1}'.format(local_hive, local_key)
+        log.trace(exc)
+        log.trace(msg)
+        ret['comment'] = msg
         ret['success'] = False
     return ret
 
