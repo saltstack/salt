@@ -5,7 +5,7 @@ lack of support for reading NTFS links.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import errno
 import logging
@@ -238,7 +238,10 @@ def which(exe=None):
                     # safely rely on that behavior
                     if _is_executable_file_or_link(full_path + ext):
                         return full_path + ext
-        log.trace('\'{0}\' could not be found in the following search path: \'{1}\''.format(exe, search_path))
+        log.trace(
+            '\'%s\' could not be found in the following search path: \'%s\'',
+            exe, search_path
+        )
     else:
         log.error('No executable was passed to be searched by salt.utils.path.which()')
 

@@ -71,7 +71,7 @@ config:
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import logging
 import os
@@ -275,8 +275,10 @@ def thing_type_absent(name, thingTypeName,
 
     # wait required 5 minutes since deprecation time
     if _delete_wait_timer:
-        log.warning('wait for {0} seconds per AWS (5 minutes after deprecation time) '
-                 'before we can delete iot thing type'.format(_delete_wait_timer))
+        log.warning(
+            'wait for %s seconds per AWS (5 minutes after deprecation time) '
+            'before we can delete iot thing type', _delete_wait_timer
+        )
         time.sleep(_delete_wait_timer)
 
     # delete thing type
