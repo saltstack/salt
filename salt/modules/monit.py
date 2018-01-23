@@ -3,7 +3,7 @@
 Monit service module. This module will create a monit type
 service watcher.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import re
