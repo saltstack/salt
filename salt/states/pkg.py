@@ -74,7 +74,7 @@ state module
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import logging
 import os
@@ -424,9 +424,8 @@ def _find_remove_targets(name=None,
         if not _fulfills_version_spec(cver, oper, verstr,
                                       ignore_epoch=ignore_epoch):
             log.debug(
-                'Current version ({0}) did not match desired version '
-                'specification ({1}), will not remove'
-                .format(cver, verstr)
+                'Current version (%s) did not match desired version '
+                'specification (%s), will not remove', cver, verstr
             )
         else:
             targets.append(pkgname)
@@ -439,9 +438,8 @@ def _find_remove_targets(name=None,
 
     if not targets:
         # All specified packages are already absent
-        msg = (
-            'All specified packages{0} are already absent'
-            .format(' (matching specified versions)' if version_spec else '')
+        msg = 'All specified packages{0} are already absent'.format(
+            ' (matching specified versions)' if version_spec else ''
         )
         return {'name': name,
                 'changes': {},
@@ -757,9 +755,9 @@ def _find_install_targets(name=None,
                     altered_files[key] = verify_result
             else:
                 log.debug(
-                    'Current version ({0}) did not match desired version '
-                    'specification ({1}), adding to installation targets'
-                    .format(cver, val)
+                    'Current version (%s) did not match desired version '
+                    'specification (%s), adding to installation targets',
+                    cver, val
                 )
                 targets[key] = val
 
@@ -1498,7 +1496,7 @@ def installed(
                 'comment': 'pkg.verify not implemented'}
 
     if not isinstance(version, six.string_types) and version is not None:
-        version = str(version)
+        version = six.text_type(version)
 
     kwargs['allow_updates'] = allow_updates
 
@@ -1536,7 +1534,7 @@ def installed(
                     return {'name': name,
                             'changes': {},
                             'result': False,
-                            'comment': str(exc)}
+                            'comment': six.text_type(exc)}
 
                 if 'result' in hold_ret and not hold_ret['result']:
                     return {'name': name,
@@ -1701,7 +1699,7 @@ def installed(
                             name=name, pkgs=pkgs, sources=sources
                         )
                 except (CommandExecutionError, SaltInvocationError) as exc:
-                    comment.append(str(exc))
+                    comment.append(six.text_type(exc))
                     ret = {'name': name,
                            'changes': changes,
                            'result': False,
@@ -2921,7 +2919,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
                 packages = [pkg for pkg in packages if pkg in pkgs]
                 expected = {pkgname: pkgver for pkgname, pkgver in six.iteritems(expected) if pkgname in pkgs}
         except Exception as exc:
-            ret['comment'] = str(exc)
+            ret['comment'] = six.text_type(exc)
             return ret
     else:
         ret['comment'] = 'refresh must be either True or False'
@@ -3027,7 +3025,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
             return ret
         for idx, item in enumerate(skip):
             if not isinstance(item, six.string_types):
-                skip[idx] = str(item)
+                skip[idx] = six.text_type(item)
 
     if include is None:
         include = []
@@ -3037,7 +3035,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
             return ret
         for idx, item in enumerate(include):
             if not isinstance(item, six.string_types):
-                include[idx] = str(item)
+                include[idx] = six.text_type(item)
 
     try:
         diff = __salt__['pkg.group_diff'](name)

@@ -15,7 +15,7 @@ Support for YUM/DNF
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import contextlib
 import datetime
 import fnmatch
@@ -824,14 +824,14 @@ def list_repo_pkgs(*args, **kwargs):
         try:
             fromrepo = [x.strip() for x in fromrepo.split(',')]
         except AttributeError:
-            fromrepo = [x.strip() for x in str(fromrepo).split(',')]
+            fromrepo = [x.strip() for x in six.text_type(fromrepo).split(',')]
 
     if disablerepo and not isinstance(disablerepo, list):
         try:
             disablerepo = [x.strip() for x in disablerepo.split(',')
                            if x != '*']
         except AttributeError:
-            disablerepo = [x.strip() for x in str(disablerepo).split(',')
+            disablerepo = [x.strip() for x in six.text_type(disablerepo).split(',')
                            if x != '*']
 
     if enablerepo and not isinstance(enablerepo, list):
@@ -839,7 +839,7 @@ def list_repo_pkgs(*args, **kwargs):
             enablerepo = [x.strip() for x in enablerepo.split(',')
                           if x != '*']
         except AttributeError:
-            enablerepo = [x.strip() for x in str(enablerepo).split(',')
+            enablerepo = [x.strip() for x in six.text_type(enablerepo).split(',')
                           if x != '*']
 
     if fromrepo:
@@ -849,7 +849,7 @@ def list_repo_pkgs(*args, **kwargs):
             repo_name for repo_name, repo_info in six.iteritems(list_repos())
             if repo_name in enablerepo
             or (repo_name not in disablerepo
-                and str(repo_info.get('enabled', '1')) == '1')
+                and six.text_type(repo_info.get('enabled', '1')) == '1')
         ]
 
     ret = {}
@@ -1618,7 +1618,7 @@ def install(name=None,
         if not to_unhold:
             yield
         else:
-            log.debug('Unholding packages: {0}'.format(', '.join(to_unhold)))
+            log.debug('Unholding packages: %s', ', '.join(to_unhold))
             try:
                 # Using list() here for python3 compatibility, dict.keys() no
                 # longer returns a list in python3.
@@ -2705,7 +2705,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         content += '\n{0}\n'.format(comments)
 
     with salt.utils.files.fopen(repofile, 'w') as fileout:
-        fileout.write(content)
+        fileout.write(salt.utils.stringutils.to_str(content))
 
     return 'Repo {0} has been removed from {1}'.format(repo, repofile)
 
@@ -2846,7 +2846,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         content += '\n{0}\n'.format(comments)
 
     with salt.utils.files.fopen(repofile, 'w') as fileout:
-        fileout.write(content)
+        fileout.write(salt.utils.stringutils.to_str(content))
 
     return {repofile: filerepos}
 
@@ -2862,7 +2862,8 @@ def _parse_repo_file(filename):
         parsed.read(filename)
     except configparser.MissingSectionHeaderError as err:
         log.error(
-            'Failed to parse file {0}, error: {1}'.format(filename, err.message)
+            'Failed to parse file %s, error: %s',
+            filename, err.message
         )
         return ('', {})
 
@@ -2875,12 +2876,13 @@ def _parse_repo_file(filename):
     headers = ''
     with salt.utils.files.fopen(filename, 'r') as rawfile:
         for line in rawfile:
+            line = salt.utils.stringutils.to_unicode(line)
             if line.strip().startswith('#'):
                 headers += '{0}\n'.format(line.strip())
             else:
                 break
 
-    return (headers, config)
+    return (headers, salt.utils.data.decode(config))
 
 
 def file_list(*packages):

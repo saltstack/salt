@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 
 @jinja_filter('to_bytes')
-def to_bytes(s, encoding=None):
+def to_bytes(s, encoding=None, errors='strict'):
     '''
     Given bytes, bytearray, str, or unicode (python 2), return bytes (str for
     python 2)
@@ -36,19 +36,19 @@ def to_bytes(s, encoding=None):
             return bytes(s)
         if isinstance(s, six.string_types):
             if encoding:
-                return s.encode(encoding)
+                return s.encode(encoding, errors)
             else:
                 try:
-                    return s.encode(__salt_system_encoding__)
+                    return s.encode(__salt_system_encoding__, errors)
                 except UnicodeEncodeError:
                     # Fall back to UTF-8
-                    return s.encode('utf-8')
+                    return s.encode('utf-8', errors)
         raise TypeError('expected bytes, bytearray, or str')
     else:
-        return to_str(s, encoding)
+        return to_str(s, encoding, errors)
 
 
-def to_str(s, encoding=None):
+def to_str(s, encoding=None, errors='strict'):
     '''
     Given str, bytes, bytearray, or unicode (py2), return str
     '''
@@ -58,55 +58,56 @@ def to_str(s, encoding=None):
         return s
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
-            # https://docs.python.org/3/howto/unicode.html#the-unicode-type
-            # replace error with U+FFFD, REPLACEMENT CHARACTER
             if encoding:
-                return s.decode(encoding, 'replace')
+                return s.decode(encoding, errors)
             else:
                 try:
-                    return s.decode(__salt_system_encoding__, 'replace')
+                    return s.decode(__salt_system_encoding__, errors)
                 except UnicodeDecodeError:
                     # Fall back to UTF-8
-                    return s.decode('utf-8', 'replace')
+                    return s.decode('utf-8', errors)
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
             return str(s)  # future lint: disable=blacklisted-function
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             if encoding:
-                return s.encode(encoding)
+                return s.encode(encoding, errors)
             else:
                 try:
-                    return s.encode(__salt_system_encoding__)
+                    return s.encode(__salt_system_encoding__, errors)
                 except UnicodeEncodeError:
                     # Fall back to UTF-8
-                    return s.encode('utf-8')
+                    return s.encode('utf-8', errors)
         raise TypeError('expected str, bytearray, or unicode')
 
 
-def to_unicode(s, encoding=None):
+def to_unicode(s, encoding=None, errors='strict'):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
-    if not isinstance(s, (bytes, bytearray, six.string_types)):
-        return s
     if six.PY3:
-        if isinstance(s, (bytes, bytearray)):
-            return to_str(s, encoding)
+        if isinstance(s, str):
+            return s
+        elif isinstance(s, (bytes, bytearray)):
+            return to_str(s, encoding, errors)
+        raise TypeError('expected str, bytes, or bytearray')
     else:
         # This needs to be str and not six.string_types, since if the string is
         # already a unicode type, it does not need to be decoded (and doing so
         # will raise an exception).
-        if isinstance(s, str):
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+            return s
+        elif isinstance(s, (str, bytearray)):
             if encoding:
-                return s.decode(encoding)
+                return s.decode(encoding, errors)
             else:
                 try:
-                    return s.decode(__salt_system_encoding__)
+                    return s.decode(__salt_system_encoding__, errors)
                 except UnicodeDecodeError:
                     # Fall back to UTF-8
-                    return s.decode('utf-8')
-    return s
+                    return s.decode('utf-8', errors)
+        raise TypeError('expected str or bytearray')
 
 
 @jinja_filter('str_to_num')  # Remove this for Neon
