@@ -169,7 +169,10 @@ def state(name,
         containing a single sls file, or a list of sls files
 
     test
-        Pass ``test=true`` through to the state function
+        Pass ``test=true`` or ``test=false`` through to the state function. This
+        can be used to overide a test mode set in the minion's config file. If 
+        left as the default of None and the 'test' mode is supplied on the
+        command line, that value is passed instead.
 
     pillar
         Pass the ``pillar`` kwarg through to the state function
