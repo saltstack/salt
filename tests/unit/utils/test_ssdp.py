@@ -387,3 +387,14 @@ class SSDPClientTestCase(TestCase):
         assert clnt._config[ssdp.SSDPBase.PORT] == config[ssdp.SSDPBase.PORT]
         assert clnt._config[ssdp.SSDPBase.TIMEOUT] == config[ssdp.SSDPBase.TIMEOUT]
 
+    def test_config_detached(self):
+        '''
+        Test if the passed configuration is not a reference.
+        :return:
+        '''
+        config = {ssdp.SSDPBase.SIGNATURE: 'SUSE Enterprise Server',}
+        clnt = ssdp.SSDPDiscoveryClient(**config)
+        clnt._config['foo'] = 'bar'
+        assert 'foo' in clnt._config
+        assert 'foo' not in config
+
