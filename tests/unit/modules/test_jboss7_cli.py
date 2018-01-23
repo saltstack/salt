@@ -256,7 +256,7 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
                  "outcome" => "success",
                  "result" => {
                     "binding-type" => "simple",
-                    "value" => "DOMAIN\\user"
+                    "value" => "DOMAIN\\foo"
                    }
                 }'''
 
@@ -264,7 +264,7 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(result['outcome'], 'success')
         self.assertEqual(result['result']['binding-type'], 'simple')
-        self.assertEqual(result['result']['value'], r'DOMAIN\\user')
+        self.assertEqual(result['result']['value'], r'DOMAIN\foo')
 
     def test_numbers_without_quotes(self):
         text = r'''{
