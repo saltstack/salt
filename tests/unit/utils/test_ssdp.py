@@ -389,7 +389,7 @@ class SSDPClientTestCase(TestCase):
         Test if the passed configuration is not a reference.
         :return:
         '''
-        config = {ssdp.SSDPBase.SIGNATURE: 'SUSE Enterprise Server',}
+        config = {ssdp.SSDPBase.SIGNATURE: 'SUSE Enterprise Server', }
         clnt = ssdp.SSDPDiscoveryClient(**config)
         clnt._config['foo'] = 'bar'
         assert 'foo' in clnt._config
