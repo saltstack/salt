@@ -296,9 +296,15 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
             value = {'hive':   local_hive,
                      'key':    local_key,
                      'vname':  _to_mbcs(vname),
-                     'vdata':  _to_mbcs(vdata),
                      'vtype':  registry.vtype_reverse[vtype],
                      'success': True}
+            # Only convert text types to unicode
+            if vtype == win32con.REG_MULTI_SZ:
+                value['vdata'] = [_to_mbcs(i) for i in vdata]
+            elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
+                value['vdata'] = _to_mbcs(vdata)
+            else:
+                value['vdata'] = vdata
             values.append(value)
     except pywintypes.error as exc:  # pylint: disable=E0602
         log.debug(exc)
@@ -372,11 +378,14 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
             # RegQueryValueEx returns and accepts unicode data
             vdata, vtype = win32api.RegQueryValueEx(handle, local_vname)
             if vdata or vdata in [0, '']:
+                # Only convert text types to unicode
                 ret['vtype'] = registry.vtype_reverse[vtype]
-                if vtype == 7:
+                if vtype == win32con.REG_MULTI_SZ:
                     ret['vdata'] = [_to_mbcs(i) for i in vdata]
-                else:
+                elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
                     ret['vdata'] = _to_mbcs(vdata)
+                else:
+                    ret['vdata'] = vdata
             else:
                 ret['comment'] = 'Empty Value'
         except WindowsError:  # pylint: disable=E0602
