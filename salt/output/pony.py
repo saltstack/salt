@@ -42,19 +42,19 @@ Example output:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import subprocess
 
 # Import Salt libs
-import salt.utils
 import salt.utils.locales
+import salt.utils.path
 
 
 __virtualname__ = 'pony'
 
 
 def __virtual__():
-    if salt.utils.which('ponysay'):
+    if salt.utils.path.which('ponysay'):
         return __virtualname__
     return False
 

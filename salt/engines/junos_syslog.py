@@ -83,11 +83,11 @@ Below is a sample syslog event which is received from the junos device:
 The source for parsing the syslog messages is taken from:
 https://gist.github.com/leandrosilva/3651640#file-xlog-py
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import re
-from time import strftime
 import logging
+import time
 
 try:
     from twisted.internet.protocol import DatagramProtocol
@@ -102,8 +102,11 @@ except ImportError:
     class DatagramProtocol(object):
         pass
 
-from salt.utils import event
-from salt.ext.six import moves
+import salt.utils.event as event
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 # logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -175,7 +178,7 @@ class _Parser(object):
             payload["priority"] = int(parsed[0])
             payload["severity"] = payload["priority"] & 0x07
             payload["facility"] = payload["priority"] >> 3
-            payload["timestamp"] = strftime("%Y-%m-%d %H:%M:%S")
+            payload["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
             payload["hostname"] = parsed[4]
             payload["daemon"] = 'unknown'
             payload["message"] = parsed[5]
@@ -187,7 +190,7 @@ class _Parser(object):
             payload["priority"] = int(parsed[0])
             payload["severity"] = payload["priority"] & 0x07
             payload["facility"] = payload["priority"] >> 3
-            payload["timestamp"] = strftime("%Y-%m-%d %H:%M:%S")
+            payload["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
             payload["hostname"] = parsed[4]
             payload["daemon"] = parsed[5]
             payload["message"] = parsed[6]
@@ -202,7 +205,7 @@ class _Parser(object):
             payload["priority"] = int(parsed[0])
             payload["severity"] = payload["priority"] & 0x07
             payload["facility"] = payload["priority"] >> 3
-            payload["timestamp"] = strftime("%Y-%m-%d %H:%M:%S")
+            payload["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
             payload["hostname"] = parsed[4]
             payload["daemon"] = parsed[5]
             payload["pid"] = parsed[6]
@@ -220,7 +223,7 @@ class _Parser(object):
             payload["priority"] = int(parsed[1])
             payload["severity"] = payload["priority"] & 0x07
             payload["facility"] = payload["priority"] >> 3
-            payload["timestamp"] = strftime("%Y-%m-%d %H:%M:%S")
+            payload["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
             payload["hostname"] = parsed[5]
             payload["daemon"] = parsed[6]
             payload["pid"] = parsed[7]
@@ -264,7 +267,7 @@ class _SyslogServerFactory(DatagramProtocol):
                     "jnpr/syslog". Using the default topic.')
                 self.title = ['jnpr', 'syslog', 'hostname', 'event']
             else:
-                for i in moves.range(2, len(topics)):
+                for i in range(2, len(topics)):
                     if topics[i] not in data:
                         log.debug(
                             'Please check the topic specified. \
@@ -299,19 +302,20 @@ class _SyslogServerFactory(DatagramProtocol):
         data = self.obj.parse(data)
         data['hostip'] = host
         log.debug(
-            'Junos Syslog - received {0} from {1}, \
-            sent from port {2}'.format(data, host, port))
+            'Junos Syslog - received %s from %s, sent from port %s',
+            data, host, port
+        )
 
         send_this_event = True
         for key in options:
             if key in data:
-                if isinstance(options[key], (str, int)):
-                    if str(options[key]) != str(data[key]):
+                if isinstance(options[key], (six.string_types, int)):
+                    if six.text_type(options[key]) != six.text_type(data[key]):
                         send_this_event = False
                         break
                 elif isinstance(options[key], list):
                     for opt in options[key]:
-                        if str(opt) == str(data[key]):
+                        if six.text_type(opt) == six.text_type(data[key]):
                             break
                     else:
                         send_this_event = False
@@ -328,11 +332,12 @@ class _SyslogServerFactory(DatagramProtocol):
             if 'event' in data:
                 topic = 'jnpr/syslog'
 
-                for i in moves.range(2, len(self.title)):
-                    topic += '/' + str(data[self.title[i]])
+                for i in range(2, len(self.title)):
+                    topic += '/' + six.text_type(data[self.title[i]])
                     log.debug(
-                        'Junos Syslog - sending this event on the bus: \
-                        {0} from {1}'.format(data, host))
+                        'Junos Syslog - sending this event on the bus: %s from %s',
+                        data, host
+                    )
                 result = {'send': True, 'data': data, 'topic': topic}
                 return result
             else:
@@ -383,6 +388,6 @@ class _SyslogServerFactory(DatagramProtocol):
 
 def start(port=516, **kwargs):
 
-    log.info('Starting junos syslog engine (port {0})'.format(port))
+    log.info('Starting junos syslog engine (port %s)', port)
     reactor.listenUDP(port, _SyslogServerFactory(kwargs))
     reactor.run()

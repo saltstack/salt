@@ -25,17 +25,17 @@ Most parameters will fall back to cli.ini defaults if None is given.
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import datetime
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
-LEA = salt.utils.which_bin(['certbot', 'letsencrypt',
+LEA = salt.utils.path.which_bin(['certbot', 'letsencrypt',
                             'certbot-auto', 'letsencrypt-auto',
                             '/opt/letsencrypt/letsencrypt-auto'])
 LE_LIVE = '/etc/letsencrypt/live/'
@@ -125,14 +125,14 @@ def cert(name,
         salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
     '''
 
-    cmd = [LEA, 'certonly', '--quiet']
+    cmd = [LEA, 'certonly', '--non-interactive']
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):
-        log.debug('Certificate {0} does not exist (yet)'.format(cert_file))
+        log.debug('Certificate %s does not exist (yet)', cert_file)
         renew = False
     elif needs_renewal(name, renew):
-        log.debug('Certificate {0} will be renewed'.format(cert_file))
+        log.debug('Certificate %s will be renewed', cert_file)
         cmd.append('--renew-by-default')
         renew = True
     if server:

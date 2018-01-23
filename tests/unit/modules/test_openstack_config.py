@@ -27,7 +27,7 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.openstack_config
     '''
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', MagicMock(return_value=True))
+        patcher = patch('salt.utils.path.which', MagicMock(return_value=True))
         patcher.start()
         self.addCleanup(patcher.stop)
         return {openstack_config: {}}

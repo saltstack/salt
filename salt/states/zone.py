@@ -115,9 +115,9 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
-import salt.utils.files
+import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.files
 from salt.modules.zonecfg import _parse_value, _zonecfg_resource_default_selectors
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
@@ -284,7 +284,7 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
            'comment': ''}
 
     # sanitize input
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     resource_selector_value = _parse_value(resource_selector_value)
     for k, v in kwargs.items():
         kwargs[k] = _parse_value(kwargs[k])

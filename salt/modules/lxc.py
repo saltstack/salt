@@ -25,18 +25,21 @@ import re
 import random
 
 # Import salt libs
-import salt
-import salt.utils.odict
-import salt.utils
-import salt.utils.dictupdate
-import salt.utils.network
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.args
 import salt.utils.cloud
+import salt.utils.dictupdate
+import salt.utils.files
+import salt.utils.functools
+import salt.utils.hashutils
+import salt.utils.network
+import salt.utils.odict
+import salt.utils.path
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.config
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
@@ -61,7 +64,7 @@ _marker = object()
 
 
 def __virtual__():
-    if salt.utils.which('lxc-start'):
+    if salt.utils.path.which('lxc-start'):
         return __virtualname__
     # To speed up the whole thing, we decided to not use the
     # subshell way and assume things are in place for lxc
@@ -70,7 +73,7 @@ def __virtual__():
     # lxc-version presence is not sufficient, in lxc1.0 alpha
     # (precise backports), we have it and it is sufficient
     # for the module to execute.
-    # elif salt.utils.which('lxc-version'):
+    # elif salt.utils.path.which('lxc-version'):
     #     passed = False
     #     try:
     #         passed = subprocess.check_output(
@@ -288,10 +291,8 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         any extra argument for the salt minion config
     dnsservers
         list of DNS servers to set inside the container
-        (Defaults to 8.8.8.8 and 4.4.4.4 until Oxygen release)
     dns_via_dhcp
         do not set the dns servers, let them be set by the dhcp.
-        (Defaults to False until Oxygen release)
     autostart
         autostart the container at boot time
     password
@@ -404,13 +405,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     snapshot = _cloud_get('snapshot', False)
     autostart = bool(_cloud_get('autostart', True))
     dnsservers = _cloud_get('dnsservers', [])
-    dns_via_dhcp = _cloud_get('dns_via_dhcp', False)
-    if not dnsservers and not dns_via_dhcp:
-        salt.utils.warn_until('Oxygen', (
-            'dnsservers will stop defaulting to 8.8.8.8 and 4.4.4.4 '
-            'in Oxygen.  Please set your dnsservers.'
-        ))
-        dnsservers = ['8.8.8.8', '4.4.4.4']
+    dns_via_dhcp = _cloud_get('dns_via_dhcp', True)
     password = _cloud_get('password', 's3cr3t')
     password_encrypted = _cloud_get('password_encrypted', False)
     fstype = _cloud_get('fstype', None)
@@ -489,7 +484,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
                 ethx['mac'] = iopts[i]
                 break
         if 'mac' not in ethx:
-            ethx['mac'] = salt.utils.gen_mac()
+            ethx['mac'] = salt.utils.network.gen_mac()
     # last round checking for unique gateway and such
     gw = None
     for ethx in [a for a in nic_opts]:
@@ -577,7 +572,7 @@ def _get_profile(key, name, **kwargs):
         raise CommandExecutionError('lxc.{0} must be a dictionary'.format(key))
 
     # Overlay the kwargs to override matched profile data
-    overrides = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    overrides = salt.utils.args.clean_kwargs(**copy.deepcopy(kwargs))
     profile_match = salt.utils.dictupdate.update(
         copy.deepcopy(profile_match),
         overrides
@@ -792,7 +787,7 @@ def _network_conf(conf_tuples=None, **kwargs):
                 'test': not mac,
                 'value': mac,
                 'old': old_if.get('lxc.network.hwaddr'),
-                'default': salt.utils.gen_mac()}),
+                'default': salt.utils.network.gen_mac()}),
             ('lxc.network.ipv4', {
                 'test': not ipv4,
                 'value': ipv4,
@@ -901,7 +896,8 @@ def _get_lxc_default_data(**kwargs):
             ret['lxc.start.auto'] = '0'
     memory = kwargs.get('memory')
     if memory is not None:
-        ret['lxc.cgroup.memory.limit_in_bytes'] = memory * 1024
+        # converting the config value from MB to bytes
+        ret['lxc.cgroup.memory.limit_in_bytes'] = memory * 1024 * 1024
     cpuset = kwargs.get('cpuset')
     if cpuset:
         ret['lxc.cgroup.cpuset.cpus'] = cpuset
@@ -1002,7 +998,7 @@ class _LXCConfig(object):
         if self.name:
             self.path = os.path.join(path, self.name, 'config')
             if os.path.isfile(self.path):
-                with salt.utils.fopen(self.path) as fhr:
+                with salt.utils.files.fopen(self.path) as fhr:
                     for line in fhr.readlines():
                         match = self.pattern.findall((line.strip()))
                         if match:
@@ -1042,7 +1038,7 @@ class _LXCConfig(object):
             content = self.as_string()
             # 2 step rendering to be sure not to open/wipe the config
             # before as_string succeeds.
-            with salt.utils.fopen(self.path, 'w') as fic:
+            with salt.utils.files.fopen(self.path, 'w') as fic:
                 fic.write(content)
                 fic.flush()
 
@@ -1099,7 +1095,7 @@ def _get_base(**kwargs):
         proto = _urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
         img_name = os.path.basename(img_tar)
-        hash_ = salt.utils.get_hash(
+        hash_ = salt.utils.hashutils.get_hash(
                 img_tar,
                 __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
@@ -2602,7 +2598,7 @@ def destroy(name, stop=False, path=None):
     return _change_state('lxc-destroy', name, None, path=path)
 
 # Compatibility between LXC and nspawn
-remove = salt.utils.alias_function(destroy, 'remove')
+remove = salt.utils.functools.alias_function(destroy, 'remove')
 
 
 def exists(name, path=None):
@@ -2768,7 +2764,7 @@ def info(name, path=None):
 
         ret = {}
         config = []
-        with salt.utils.fopen(conf_file) as fp_:
+        with salt.utils.files.fopen(conf_file) as fp_:
             for line in fp_:
                 comps = [x.strip() for x in
                          line.split('#', 1)[0].strip().split('=', 1)]
@@ -2945,7 +2941,7 @@ def set_password(name, users, password, encrypted=True, path=None):
         )
     return True
 
-set_pass = salt.utils.alias_function(set_password, 'set_pass')
+set_pass = salt.utils.functools.alias_function(set_password, 'set_pass')
 
 
 def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
@@ -2978,8 +2974,8 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
     changes = {'edited': [], 'added': [], 'removed': []}
     ret = {'changes': changes, 'result': True, 'comment': ''}
 
-    # do not use salt.utils.fopen !
-    with salt.utils.fopen(lxc_conf_p, 'r') as fic:
+    # do not use salt.utils.files.fopen !
+    with salt.utils.files.fopen(lxc_conf_p, 'r') as fic:
         filtered_lxc_conf = []
         for row in lxc_conf:
             if not row:
@@ -3036,11 +3032,11 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
         conf_changed = conf != orig_config
         chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         if conf_changed:
-            # DO NOT USE salt.utils.fopen here, i got (kiorky)
+            # DO NOT USE salt.utils.files.fopen here, i got (kiorky)
             # problems with lxc configs which were wiped !
-            with salt.utils.fopen('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
+            with salt.utils.files.fopen('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
                 wfic.write(conf)
-            with salt.utils.fopen(lxc_conf_p, 'w') as wfic:
+            with salt.utils.files.fopen(lxc_conf_p, 'w') as wfic:
                 wfic.write(conf)
             ret['comment'] = 'Updated'
             ret['result'] = True
@@ -3105,7 +3101,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
     #   operation.
     #  - We also teach resolvconf to use the aforementioned dns.
     #  - We finally also set /etc/resolv.conf in all cases
-    rstr = __salt__['test.rand_str']()
+    rstr = __salt__['test.random_hash']()
     # no tmp here, apparmor won't let us execute !
     script = '/sbin/{0}_dns.sh'.format(rstr)
     DNS_SCRIPT = "\n".join([
@@ -3166,7 +3162,7 @@ def running_systemd(name, cache=True, path=None):
     k = 'lxc.systemd.test.{0}{1}'.format(name, path)
     ret = __context__.get(k, None)
     if ret is None or not cache:
-        rstr = __salt__['test.rand_str']()
+        rstr = __salt__['test.random_hash']()
         # no tmp here, apparmor won't let us execute !
         script = '/sbin/{0}_testsystemd.sh'.format(rstr)
         # ubuntu already had since trusty some bits of systemd but was
@@ -3503,7 +3499,7 @@ def bootstrap(name,
             pub_key=pub_key, priv_key=priv_key)
         if needs_install or force_install or unconditional_install:
             if install:
-                rstr = __salt__['test.rand_str']()
+                rstr = __salt__['test.random_hash']()
                 configdir = '/var/tmp/.c_{0}'.format(rstr)
 
                 cmd = 'install -m 0700 -d {0}'.format(configdir)
@@ -4210,7 +4206,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
         overwrite=overwrite,
         makedirs=makedirs)
 
-cp = salt.utils.alias_function(copy_to, 'cp')
+cp = salt.utils.functools.alias_function(copy_to, 'cp')
 
 
 def read_conf(conf_file, out_format='simple'):
@@ -4232,7 +4228,7 @@ def read_conf(conf_file, out_format='simple'):
     '''
     ret_commented = []
     ret_simple = {}
-    with salt.utils.fopen(conf_file, 'r') as fp_:
+    with salt.utils.files.fopen(conf_file, 'r') as fp_:
         for line in fp_.readlines():
             if '=' not in line:
                 ret_commented.append(line)
@@ -4316,7 +4312,7 @@ def write_conf(conf_file, conf):
                 if out_line:
                     content += out_line
                     content += '\n'
-    with salt.utils.fopen(conf_file, 'w') as fp_:
+    with salt.utils.files.fopen(conf_file, 'w') as fp_:
         fp_.write(content)
     return {}
 
@@ -4646,7 +4642,7 @@ def apply_network_profile(name, network_profile, nic_opts=None, path=None):
     cfgpath = os.path.join(cpath, name, 'config')
 
     before = []
-    with salt.utils.fopen(cfgpath, 'r') as fp_:
+    with salt.utils.files.fopen(cfgpath, 'r') as fp_:
         for line in fp_:
             before.append(line)
 
@@ -4663,7 +4659,7 @@ def apply_network_profile(name, network_profile, nic_opts=None, path=None):
         edit_conf(cfgpath, out_format='commented', **network_params)
 
     after = []
-    with salt.utils.fopen(cfgpath, 'r') as fp_:
+    with salt.utils.files.fopen(cfgpath, 'r') as fp_:
         for line in fp_:
             after.append(line)
 

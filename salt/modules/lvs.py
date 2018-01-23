@@ -7,7 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.decorators as decorators
 from salt.exceptions import SaltException
 
@@ -20,7 +20,7 @@ __func_alias__ = {
 # Cache the output of running which('ipvsadm')
 @decorators.memoize
 def __detect_os():
-    return salt.utils.which('ipvsadm')
+    return salt.utils.path.which('ipvsadm')
 
 
 def __virtual__():

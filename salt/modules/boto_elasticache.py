@@ -51,7 +51,7 @@ import logging
 import time
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 import salt.utils.odict as odict
 
@@ -75,7 +75,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return (False, 'The modle boto_elasticache could not be loaded: boto libraries not found')
+        return (False, 'The model boto_elasticache could not be loaded: boto libraries not found')
     __utils__['boto.assign_funcs'](__name__, 'elasticache', pack=__salt__)
     return True
 

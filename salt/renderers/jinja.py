@@ -6,7 +6,7 @@ For Jinja usage information see :ref:`Understanding Jinja <understanding-jinja>`
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -14,7 +14,7 @@ from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ def render(template_file, saltenv='base', sls='', argline='',
     from_str = argline == '-s'
     if not from_str and argline:
         raise SaltRenderError(
-                'Unknown renderer option: {opt}'.format(opt=argline)
+            'Unknown renderer option: {opt}'.format(opt=argline)
         )
 
     tmp_data = salt.utils.templates.JINJA(template_file,
@@ -72,6 +72,6 @@ def render(template_file, saltenv='base', sls='', argline='',
         raise SaltRenderError(
                 tmp_data.get('data', 'Unknown render error in jinja renderer')
         )
-    if six.PY3 and isinstance(tmp_data['data'], bytes):
+    if isinstance(tmp_data['data'], bytes):
         tmp_data['data'] = tmp_data['data'].decode(__salt_system_encoding__)
     return StringIO(tmp_data['data'])

@@ -22,8 +22,9 @@ class DecoratorTest(ModuleCase):
         self.assertTrue(isinstance(ret['time'], float))
 
     def test_missing_depends(self):
-        self.assertIn(
-                'is not available',
+        self.assertEqual(
+                {'runtests_decorators.missing_depends_will_fallback': '\n    CLI Example:\n\n    ',
+                 'runtests_decorators.missing_depends': "'runtests_decorators.missing_depends' is not available."},
                 self.run_function('runtests_decorators.missing_depends'
                     )
                 )

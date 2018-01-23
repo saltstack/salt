@@ -9,7 +9,8 @@ import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.data
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ def __virtual__():
     '''
     Only load if hg is installed
     '''
-    if salt.utils.which('hg') is None:
+    if salt.utils.path.which('hg') is None:
         return (False,
                 'The hg execution module cannot be loaded: hg unavailable.')
     else:
@@ -322,7 +323,7 @@ def status(cwd, opts=None, user=None):
             ret[t].append(f)
         return ret
 
-    if salt.utils.is_iter(cwd):
+    if salt.utils.data.is_iter(cwd):
         return dict((cwd, _status(cwd)) for cwd in cwd)
     else:
         return _status(cwd)

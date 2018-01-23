@@ -28,7 +28,8 @@ import hmac
 import base64
 import subprocess
 
-# Import third party libs
+# Import 3rd-party libs
+from salt.ext import six
 HAS_LIBS = False
 try:
     import splunklib.client
@@ -280,7 +281,7 @@ def update_user(email, profile="splunk", **kwargs):
             if k.lower() == 'name':
                 continue
             if k.lower() == 'roles':
-                if isinstance(v, str):
+                if isinstance(v, six.string_types):
                     v = v.split(',')
                 if set(roles) != set(v):
                     kwargs['roles'] = list(set(v))

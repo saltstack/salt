@@ -27,7 +27,7 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.modules.inspectlib.exceptions import InspectorKiwiProcessorException
 
 # Import third party libs
@@ -148,14 +148,14 @@ class KiwiExporter(object):
         '''
         # Get real local users with the local passwords
         shadow = {}
-        with salt.utils.fopen('/etc/shadow') as rfh:
+        with salt.utils.files.fopen('/etc/shadow') as rfh:
             for sh_line in rfh.read().split(os.linesep):
                 if sh_line.strip():
                     login, pwd = sh_line.split(":")[:2]
                     if pwd and pwd[0] not in '!*':
                         shadow[login] = {'p': pwd}
 
-        with salt.utils.fopen('/etc/passwd') as rfh:
+        with salt.utils.files.fopen('/etc/passwd') as rfh:
             for ps_line in rfh.read().split(os.linesep):
                 if ps_line.strip():
                     ps_line = ps_line.strip().split(':')

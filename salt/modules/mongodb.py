@@ -17,16 +17,16 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import json
 import re
 
 # Import salt libs
+import salt.utils.json
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import get_error_message as _get_error_message
 
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import pymongo
     HAS_MONGODB = True
@@ -80,7 +80,7 @@ def _to_dict(objects):
     """
     try:
         if isinstance(objects, six.string_types):
-            objects = json.loads(objects)
+            objects = salt.utils.json.loads(objects)
     except ValueError as err:
         log.error("Could not parse objects: %s", err)
         raise err

@@ -30,7 +30,7 @@ class MockUrllibStatus(object):
 class NginxTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/nginx'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/nginx'))
         patcher.start()
         self.addCleanup(patcher.stop)
         return {nginx: {'_urlopen': Mock(return_value=MockUrllibStatus())}}

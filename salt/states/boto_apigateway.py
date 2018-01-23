@@ -48,17 +48,18 @@ config:
 
 # Import Python Libs
 from __future__ import absolute_import
+import hashlib
 import logging
 import os
-import os.path
-import hashlib
 import re
-import json
-import yaml
+
 # Import Salt Libs
-import salt.ext.six as six
-import salt.utils
-from salt.utils.yamlloader import SaltYamlSafeLoader
+import salt.utils.files
+import salt.utils.json
+import salt.utils.yaml
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -124,7 +125,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
     with the following schema.  The lambda functions should throw exceptions for any non successful responses.
     An optional pattern field can be specified in errorMessage field to aid the response mapping from Lambda
     to the proper error return status codes.
+
         .. code-block:: yaml
+
             Error:
               type: object
               properties:
@@ -432,7 +435,7 @@ def _gen_md5_filehash(fname, *args):
     and participates in the hash calculation
     '''
     _hash = hashlib.md5()
-    with salt.utils.fopen(fname, 'rb') as f:
+    with salt.utils.files.fopen(fname, 'rb') as f:
         for chunk in iter(lambda: f.read(4096), b''):
             _hash.update(chunk)
 
@@ -445,7 +448,7 @@ def _dict_to_json_pretty(d, sort_keys=True):
     '''
     helper function to generate pretty printed json output
     '''
-    return json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
+    return salt.utils.json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
 
 
 # Heuristic on whether or not the property name loosely matches given set of 'interesting' factors
@@ -713,11 +716,8 @@ class _Swagger(object):
                 self._md5_filehash = _gen_md5_filehash(self._swagger_file,
                                                        error_response_template,
                                                        response_template)
-                with salt.utils.fopen(self._swagger_file, 'rb') as sf:
-                    self._cfg = yaml.load(
-                        sf,
-                        Loader=SaltYamlSafeLoader
-                    )
+                with salt.utils.files.fopen(self._swagger_file, 'rb') as sf:
+                    self._cfg = salt.utils.yaml.safe_load(sf)
                 self._swagger_version = ''
             else:
                 raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))

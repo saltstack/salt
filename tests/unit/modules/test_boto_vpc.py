@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 import random
 import string
+import os.path
 # pylint: disable=3rd-party-module-not-gated
 import pkg_resources
 from pkg_resources import DistributionNotFound
@@ -16,6 +17,7 @@ from pkg_resources import DistributionNotFound
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.paths import TESTS_DIR
 
 # Import Salt libs
 import salt.config
@@ -26,12 +28,13 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # pylint: disable=no-name-in-module,unused-import
 try:
     import boto
+    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
     HAS_BOTO = True
@@ -103,7 +106,7 @@ def _get_moto_version():
     Returns the moto version
     '''
     try:
-        return LooseVersion(moto.__version__)
+        return LooseVersion(six.text_type(moto.__version__))
     except AttributeError:
         try:
             return LooseVersion(pkg_resources.get_distribution('moto').version)

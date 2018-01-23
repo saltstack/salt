@@ -12,8 +12,8 @@ from __future__ import absolute_import
 import re
 
 # Import Salt Libs
+import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-import salt.utils
 from salt.ext.six.moves import map
 
 
@@ -21,7 +21,7 @@ def __virtual__():
     '''
     Only load if csf exists on the system
     '''
-    if salt.utils.which('csf') is None:
+    if salt.utils.path.which('csf') is None:
         return (False,
                 'The csf execution module cannot be loaded: csf unavailable.')
     else:
@@ -77,7 +77,7 @@ def __csf_cmd(cmd):
     '''
     Execute csf command
     '''
-    csf_cmd = '{0} {1}'.format(salt.utils.which('csf'), cmd)
+    csf_cmd = '{0} {1}'.format(salt.utils.path.which('csf'), cmd)
     out = __salt__['cmd.run_all'](csf_cmd)
 
     if out['retcode'] != 0:

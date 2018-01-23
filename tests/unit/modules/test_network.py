@@ -20,8 +20,9 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.network
+import salt.utils.path
 import salt.modules.network as network
 from salt.exceptions import CommandExecutionError
 if six.PY2:
@@ -118,7 +119,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Performs a traceroute to a 3rd party host
         '''
-        with patch.object(salt.utils, 'which', side_effect=[False, True]):
+        with patch.object(salt.utils.path, 'which', side_effect=[False, True]):
             self.assertListEqual(network.traceroute('host'), [])
 
             with patch.object(salt.utils.network, 'sanitize_host',
@@ -131,7 +132,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Performs a DNS lookup with dig
         '''
-        with patch('salt.utils.which', MagicMock(return_value='dig')), \
+        with patch('salt.utils.path.which', MagicMock(return_value='dig')), \
                 patch.object(salt.utils.network, 'sanitize_host',
                              return_value='A'), \
                 patch.dict(network.__salt__, {'cmd.run':
@@ -145,7 +146,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(network.__salt__,
                         {'cmd.run':
                          MagicMock(return_value='A,B,C,D\nE,F,G,H\n')}), \
-                patch('salt.utils.which', MagicMock(return_value='')):
+                patch('salt.utils.path.which', MagicMock(return_value='')):
             self.assertDictEqual(network.arp(), {})
 
     def test_interfaces(self):
@@ -230,11 +231,11 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertFalse(network.mod_hostname(None))
 
-        with patch.object(salt.utils, 'which', return_value='hostname'):
+        with patch.object(salt.utils.path, 'which', return_value='hostname'):
             with patch.dict(network.__salt__,
                             {'cmd.run': MagicMock(return_value=None)}):
                 file_d = '\n'.join(['#', 'A B C D,E,F G H'])
-                with patch('salt.utils.fopen', mock_open(read_data=file_d),
+                with patch('salt.utils.files.fopen', mock_open(read_data=file_d),
                            create=True) as mfi:
                     mfi.return_value.__iter__.return_value = file_d.splitlines()
                     with patch.dict(network.__grains__, {'os_family': 'A'}):

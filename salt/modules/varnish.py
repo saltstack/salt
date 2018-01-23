@@ -16,7 +16,7 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def __virtual__():
     '''
     Only load the module if varnish is installed
     '''
-    if salt.utils.which('varnishd') and salt.utils.which('varnishadm'):
+    if salt.utils.path.which('varnishd') and salt.utils.path.which('varnishadm'):
         return __virtualname__
     return (False, 'The varnish execution module failed to load: either varnishd or varnishadm is not in the path.')
 
