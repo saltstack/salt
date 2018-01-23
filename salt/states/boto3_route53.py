@@ -65,7 +65,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 #pylint: disable=E1320
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import uuid
 
 # Import Salt Libs
@@ -129,7 +129,7 @@ def _to_aws_encoding(instring):
             raise SaltInvocationError("Invalid Route53 domain character seen (octal {0}) in string "
                                       "{1}.  Do you need to punycode it?".format(octal, instring))
     ret = ''.join(outlist)
-    log.debug('Name after massaging is: {}'.format(ret))
+    log.debug('Name after massaging is: %s', ret)
     return ret
 
 
@@ -247,7 +247,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
         if len(fixed_vpcs) > 1:
             add_vpcs = fixed_vpcs[1:]
             fixed_vpcs = fixed_vpcs[:1]
-        CallerReference = CallerReference if CallerReference else str(uuid.uuid4())
+        CallerReference = CallerReference if CallerReference else str(uuid.uuid4())  # future lint: disable=blacklisted-function
     else:
         # Currently the only modifiable traits about a zone are associated VPCs and the comment.
         zone = zone[0]
@@ -650,9 +650,9 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             profile=profile)
 
     if SetIdentifier and recordsets:
-        log.debug('Filter recordsets {} by SetIdentifier {}.'.format(recordsets, SetIdentifier))
+        log.debug('Filter recordsets %s by SetIdentifier %s.', recordsets, SetIdentifier)
         recordsets = [r for r in recordsets if r.get('SetIdentifier') == SetIdentifier]
-        log.debug('Resulted in recordsets {}.'.format(recordsets))
+        log.debug('Resulted in recordsets %s.', recordsets)
 
     create = False
     update = False
@@ -793,9 +793,9 @@ def rr_absent(name, HostedZoneId=None, DomainName=None, PrivateZone=False,
             StartRecordName=Name, StartRecordType=Type, region=region, key=key, keyid=keyid,
             profile=profile)
     if SetIdentifier and recordsets:
-        log.debug('Filter recordsets {} by SetIdentifier {}.'.format(recordsets, SetIdentifier))
+        log.debug('Filter recordsets %s by SetIdentifier %s.', recordsets, SetIdentifier)
         recordsets = [r for r in recordsets if r.get('SetIdentifier') == SetIdentifier]
-        log.debug('Resulted in recordsets {}.'.format(recordsets))
+        log.debug('Resulted in recordsets %s.', recordsets)
     if not recordsets:
         ret['comment'] = 'Route 53 resource record {} with type {} already absent.'.format(
                 Name, Type)
