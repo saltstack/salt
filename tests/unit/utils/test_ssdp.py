@@ -13,6 +13,7 @@ from tests.support.mock import (
 
 from salt.utils import ssdp
 import datetime
+import socket
 
 try:
     import pytest
@@ -443,3 +444,21 @@ class SSDPClientTestCase(TestCase):
             assert '20.20.20.20' in response
             assert response['10.10.10.10'] == ['some', 'data']
             assert response['20.20.20.20'] == ['data']
+
+    def test_get_masters_map_timeout_handling(self):
+        '''
+        Test getting map handles timeout network exception
+        :return:
+        '''
+        def socket_timeout(message):
+            raise socket.timeout('testing timeout: {}'.format(message))
+
+        _socket = MagicMock()
+        response = {}
+        with patch('salt.utils.ssdp.socket', _socket):
+            clnt = ssdp.SSDPDiscoveryClient()
+            clnt._socket.recvfrom = MagicMock(side_effect=socket_timeout)
+            clnt.log = MagicMock()
+            with pytest.raises(socket.timeout) as err:
+                clnt._collect_masters_map(response=response)
+            assert 'testing timeout' in str(err)
