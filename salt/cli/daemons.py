@@ -82,7 +82,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         :param action
         :return:
         '''
-        log.info('%s the Salt %s', self.__class__.__name__, action)
+        log.info('%s the Salt %s', action, self.__class__.__name__)
 
     def start_log_info(self):
         '''

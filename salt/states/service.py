@@ -58,7 +58,7 @@ service, then set the reload value to True:
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 
 # Import Salt libs
