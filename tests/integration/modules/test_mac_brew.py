@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
@@ -90,7 +90,7 @@ class BrewModuleTest(ModuleCase):
                               the list of installed packages: {1}'
                               .format(ADD_PKG, pkg_list)))
                 #make sure the version is accurate and is listed in the pkg_list
-                self.assertIn(version, str(pkg_list[ADD_PKG]),
+                self.assertIn(version, six.text_type(pkg_list[ADD_PKG]),
                               msg=('The {0} version: {1} is \
                               not listed in the pkg_list: {2}'
                               .format(ADD_PKG, version, pkg_list[ADD_PKG])))

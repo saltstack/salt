@@ -4,7 +4,7 @@ Validate the mac-keychain module
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing Libs
@@ -14,6 +14,9 @@ from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 CERT = os.path.join(
     FILES,
@@ -82,7 +85,7 @@ class MacKeychainModuleTest(ModuleCase):
 
         # check to ensure the cert was uninstalled
         try:
-            self.assertNotIn(CERT_ALIAS, str(certs_list))
+            self.assertNotIn(CERT_ALIAS, six.text_type(certs_list))
         except CommandExecutionError:
             self.run_function('keychain.uninstall', [CERT_ALIAS])
 
