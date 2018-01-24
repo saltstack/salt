@@ -23,7 +23,7 @@ private key file:
 .. versionadded:: Oxygen
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 from salt.exceptions import CommandExecutionError
