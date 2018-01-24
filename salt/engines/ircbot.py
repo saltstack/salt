@@ -51,7 +51,7 @@ Example of usage
 
 .. code-block:: txt
 
-    [DEBUG   ] Sending event: tag = salt/engines/ircbot/test/tag/ircbot; data = {'_stamp': '2016-11-28T14:34:16.633623', 'data': [u'irc', u'is', u'usefull']}
+    [DEBUG   ] Sending event: tag = salt/engines/ircbot/test/tag/ircbot; data = {'_stamp': '2016-11-28T14:34:16.633623', 'data': ['irc', 'is', 'useful']}
 
 '''
 from __future__ import absolute_import, print_function, unicode_literals

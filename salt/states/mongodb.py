@@ -7,6 +7,9 @@ Management of Mongodb users and databases
     This module requires PyMongo to be installed.
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 # Define the module's virtual name
 __virtualname__ = 'mongodb'
 

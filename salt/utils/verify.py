@@ -2,7 +2,7 @@
 '''
 A few checks to make sure the environment is sane
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
@@ -173,8 +173,8 @@ def verify_files(files, user):
                     if err.errno != errno.EEXIST:
                         raise
             if not os.path.isfile(fn_):
-                with salt.utils.files.fopen(fn_, 'w+') as fp_:
-                    fp_.write('')
+                with salt.utils.files.fopen(fn_, 'w'):
+                    pass
 
         except IOError as err:
             if os.path.isfile(dirname):
@@ -444,9 +444,8 @@ def check_max_open_files(opts):
     accepted_count = len(os.listdir(accepted_keys_dir))
 
     log.debug(
-        'This salt-master instance has accepted {0} minion keys.'.format(
-            accepted_count
-        )
+        'This salt-master instance has accepted %s minion keys.',
+        accepted_count
     )
 
     level = logging.INFO

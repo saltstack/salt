@@ -9,7 +9,6 @@ import os
 import re
 import sys
 import glob
-import getpass
 import time
 import codecs
 import logging
@@ -33,7 +32,6 @@ import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yaml
-import salt.utils.yamlloader as yamlloader
 import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
@@ -57,6 +55,7 @@ _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s'
 )
 _DFLT_REFSPECS = ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']
+DEFAULT_INTERVAL = 60
 
 if salt.utils.platform.is_windows():
     # Since an 'ipc_mode' of 'ipc' will never work on Windows due to lack of
@@ -254,13 +253,13 @@ VALID_OPTS = {
     'autoload_dynamic_modules': bool,
 
     # Force the minion into a single environment when it fetches files from the master
-    'saltenv': six.string_types,
+    'saltenv': (type(None), six.string_types),
 
     # Prevent saltenv from being overriden on the command line
     'lock_saltenv': bool,
 
     # Force the minion into a single pillar root when it fetches pillar data from the master
-    'pillarenv': six.string_types,
+    'pillarenv': (type(None), six.string_types),
 
     # Make the pillarenv always match the effective saltenv
     'pillarenv_from_saltenv': bool,
@@ -268,7 +267,7 @@ VALID_OPTS = {
     # Allows a user to provide an alternate name for top.sls
     'state_top': six.string_types,
 
-    'state_top_saltenv': six.string_types,
+    'state_top_saltenv': (type(None), six.string_types),
 
     # States to run when a minion starts up
     'startup_states': six.string_types,
@@ -404,7 +403,7 @@ VALID_OPTS = {
     'log_level': six.string_types,
 
     # The log level to log to a given file
-    'log_level_logfile': six.string_types,
+    'log_level_logfile': (type(None), six.string_types),
 
     # The format to construct dates in log files
     'log_datefmt': six.string_types,
@@ -496,10 +495,10 @@ VALID_OPTS = {
     'permissive_pki_access': bool,
 
     # The passphrase of the master's private key
-    'key_pass': six.string_types,
+    'key_pass': (type(None), six.string_types),
 
     # The passphrase of the master's private signing key
-    'signing_key_pass': six.string_types,
+    'signing_key_pass': (type(None), six.string_types),
 
     # The path to a directory to pull in configuration file includes
     'default_include': six.string_types,
@@ -643,6 +642,16 @@ VALID_OPTS = {
 
     # Frequency of the proxy_keep_alive, in minutes
     'proxy_keep_alive_interval': int,
+
+    # Update intervals
+    'roots_update_interval': int,
+    'azurefs_update_interval': int,
+    'gitfs_update_interval': int,
+    'hgfs_update_interval': int,
+    'minionfs_update_interval': int,
+    's3fs_update_interval': int,
+    'svnfs_update_interval': int,
+
     'git_pillar_base': six.string_types,
     'git_pillar_branch': six.string_types,
     'git_pillar_env': six.string_types,
@@ -1016,8 +1025,8 @@ VALID_OPTS = {
     'max_minions': int,
 
 
-    'username': six.string_types,
-    'password': six.string_types,
+    'username': (type(None), six.string_types),
+    'password': (type(None), six.string_types),
 
     # Use zmq.SUSCRIBE to limit listening sockets to only process messages bound for them
     'zmq_filtering': bool,
@@ -1161,27 +1170,14 @@ VALID_OPTS = {
     # Setting it to False disables discovery
     'discovery': (dict, bool),
 
-    # SSDP discovery mapping
-    # Defines arbitrary data for description and grouping minions across various types of masters,
-    # especially when masters are not related to each other.
-    'mapping': dict,
-
-    # SSDP discovery mapping matcher policy
-    # Values: "any" where at least one key/value pair should be found or
-    # "all", where every key/value should be identical
-    'match': six.string_types,
-
-    # Port definition.
-    'port': int,
-
-    # SSDP discovery attempts to send query to the Universe
-    'attempts': int,
-
-    # SSDP discovery pause between the attempts
-    'pause': int,
-
     # Scheduler should be a dictionary
     'schedule': dict,
+
+    # Whether to fire auth events
+    'auth_events': bool,
+
+    # Whether to fire Minion data cache refresh events
+    'minion_data_cache_events': bool,
 
     # Enable calling ssh minions from the salt master
     'enable_ssh_minions': bool,
@@ -1275,6 +1271,16 @@ DEFAULT_MINION_OPTS = {
     'decrypt_pillar_delimiter': ':',
     'decrypt_pillar_default': 'gpg',
     'decrypt_pillar_renderers': ['gpg'],
+
+    # Update intervals
+    'roots_update_interval': DEFAULT_INTERVAL,
+    'azurefs_update_interval': DEFAULT_INTERVAL,
+    'gitfs_update_interval': DEFAULT_INTERVAL,
+    'hgfs_update_interval': DEFAULT_INTERVAL,
+    'minionfs_update_interval': DEFAULT_INTERVAL,
+    's3fs_update_interval': DEFAULT_INTERVAL,
+    'svnfs_update_interval': DEFAULT_INTERVAL,
+
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
@@ -1335,7 +1341,7 @@ DEFAULT_MINION_OPTS = {
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': None,
+    'ipv6': False,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
@@ -1469,13 +1475,7 @@ DEFAULT_MINION_OPTS = {
         'automatic': ['IPAddress', 'Gateway',
                       'GlobalIPv6Address', 'IPv6Gateway'],
     },
-    'discovery': {
-        'attempts': 3,
-        'pause': 5,
-        'port': 4520,
-        'match': 'any',
-        'mapping': {},
-    },
+    'discovery': False,
     'schedule': {},
 }
 
@@ -1525,6 +1525,16 @@ DEFAULT_MASTER_OPTS = {
     'pillarenv': None,
     'default_top': 'base',
     'file_client': 'local',
+
+    # Update intervals
+    'roots_update_interval': DEFAULT_INTERVAL,
+    'azurefs_update_interval': DEFAULT_INTERVAL,
+    'gitfs_update_interval': DEFAULT_INTERVAL,
+    'hgfs_update_interval': DEFAULT_INTERVAL,
+    'minionfs_update_interval': DEFAULT_INTERVAL,
+    's3fs_update_interval': DEFAULT_INTERVAL,
+    'svnfs_update_interval': DEFAULT_INTERVAL,
+
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
@@ -1796,11 +1806,10 @@ DEFAULT_MASTER_OPTS = {
     'salt_cp_chunk_size': 98304,
     'require_minion_sign_messages': False,
     'drop_messages_signature_fail': False,
-    'discovery': {
-        'port': 4520,
-        'mapping': {},
-    },
+    'discovery': False,
     'schedule': {},
+    'auth_events': True,
+    'minion_data_cache_events': True,
     'enable_ssh': False,
     'enable_ssh_minions': False,
 }
@@ -1977,8 +1986,10 @@ def _validate_opts(opts):
 
     errors = []
 
-    err = ('Key \'{0}\' with value {1} has an invalid type of {2}, a {3} is '
-           'required for this value')
+    err = (
+        'Config option \'{0}\' with value {1} has an invalid type of {2}, a '
+        '{3} is required for this option'
+    )
     for key, val in six.iteritems(opts):
         if key in VALID_OPTS:
             if val is None:
@@ -2326,7 +2337,8 @@ def minion_config(path,
                   defaults=None,
                   cache_minion_id=False,
                   ignore_config_errors=True,
-                  minion_id=None):
+                  minion_id=None,
+                  role='minion'):
     '''
     Reads in the minion configuration file and sets up special options
 
@@ -2366,6 +2378,7 @@ def minion_config(path,
     opts = apply_minion_config(overrides, defaults,
                                cache_minion_id=cache_minion_id,
                                minion_id=minion_id)
+    opts['__role'] = role
     apply_sdb(opts)
     _validate_opts(opts)
     return opts
@@ -3677,6 +3690,15 @@ def apply_minion_config(overrides=None,
             )
             opts['saltenv'] = opts['environment']
 
+    for idx, val in enumerate(opts['fileserver_backend']):
+        if val in ('git', 'hg', 'svn', 'minion'):
+            new_val = val + 'fs'
+            log.debug(
+                'Changed %s to %s in minion opts\' fileserver_backend list',
+                val, new_val
+            )
+            opts['fileserver_backend'][idx] = new_val
+
     opts['__cli'] = os.path.basename(sys.argv[0])
 
     # No ID provided. Will getfqdn save us?
@@ -3759,8 +3781,29 @@ def apply_minion_config(overrides=None,
 
     # Check and update TLS/SSL configuration
     _update_ssl_config(opts)
+    _update_discovery_config(opts)
 
     return opts
+
+
+def _update_discovery_config(opts):
+    '''
+    Update discovery config for all instances.
+
+    :param opts:
+    :return:
+    '''
+    if opts.get('discovery') not in (None, False):
+        if opts['discovery'] is True:
+            opts['discovery'] = {}
+        discovery_config = {'attempts': 3, 'pause': 5, 'port': 4520, 'match': 'any', 'mapping': {}}
+        for key in opts['discovery']:
+            if key not in discovery_config:
+                raise salt.exceptions.SaltConfigurationError('Unknown discovery option: {0}'.format(key))
+        if opts.get('__role') != 'minion':
+            for key in ['attempts', 'pause', 'match']:
+                del discovery_config[key]
+        opts['discovery'] = salt.utils.dictupdate.update(discovery_config, opts['discovery'], True, True)
 
 
 def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_config_errors=False):
@@ -3815,7 +3858,6 @@ def apply_master_config(overrides=None, defaults=None):
     '''
     Returns master configurations dict.
     '''
-    import salt.crypt
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
 
@@ -3842,6 +3884,15 @@ def apply_master_config(overrides=None, defaults=None):
                 opts['environment']
             )
             opts['saltenv'] = opts['environment']
+
+    for idx, val in enumerate(opts['fileserver_backend']):
+        if val in ('git', 'hg', 'svn', 'minion'):
+            new_val = val + 'fs'
+            log.debug(
+                'Changed %s to %s in master opts\' fileserver_backend list',
+                val, new_val
+            )
+            opts['fileserver_backend'][idx] = new_val
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
@@ -3948,6 +3999,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     # Check and update TLS/SSL configuration
     _update_ssl_config(opts)
+    _update_discovery_config(opts)
 
     return opts
 

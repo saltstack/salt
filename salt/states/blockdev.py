@@ -20,7 +20,7 @@ A state module to manage blockdevices
 
 .. versionadded:: 2014.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -167,7 +167,7 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
     # This retry maybe superfluous - switching to blkid
     for i in range(10):
 
-        log.info('Check blk fstype attempt %s of 10', str(i+1))
+        log.info('Check blk fstype attempt %d of 10', i + 1)
         current_fs = _checkblk(name)
 
         if current_fs == fs_type:

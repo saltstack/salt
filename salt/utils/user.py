@@ -4,7 +4,7 @@ Functions for querying and modifying a user account and the groups to which it
 belongs.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import ctypes

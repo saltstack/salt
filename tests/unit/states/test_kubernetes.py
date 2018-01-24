@@ -84,7 +84,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             'kind': 'Node',
             'metadata': {
                 'annotations': {
-                    u'node.alpha.kubernetes.io/ttl': '0',
+                    'node.alpha.kubernetes.io/ttl': '0',
                 },
                 'labels': self.make_node_labels(name=name),
                 'name': name,

@@ -15,7 +15,7 @@ without the need for a swarm of real minions.
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -39,7 +39,7 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
     def action(self):
         while self.publish.value:
             pub = self.publish.value.popleft()
-            log.debug('Dummy publisher publishing: {0}'.format(pub))
+            log.debug('Dummy publisher publishing: %s', pub)
             msg = self._fill_tmpl(pub)
             self.lane_stack.value.transmit(msg, self.lane_stack.value.fetchUidByName(next(self.workers.value)))
 
@@ -55,14 +55,14 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
                     'retcode': 0,
                     'success': True,
                     'cmd': '_return',
-                    'fun': u'test.ping',
+                    'fun': 'test.ping',
                     'id': 'silver'
                },
                'route': {
-                    'src': (u'silver_minion', u'jobber50e73ccefd052167c7', 'jid_ret'),
-                    'dst': (u'silver_master_master', None, 'remote_cmd')
+                    'src': ('silver_minion', 'jobber50e73ccefd052167c7', 'jid_ret'),
+                    'dst': ('silver_master_master', None, 'remote_cmd')
                 }
                }
 
-        log.debug('Dummy publisher faking return with: {0}'.format(msg))
+        log.debug('Dummy publisher faking return with: %s', msg)
         return msg

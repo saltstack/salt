@@ -19,7 +19,7 @@ relies on the CIMC proxy module to interface with the device.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__name__)
