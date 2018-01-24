@@ -6,9 +6,12 @@ Currently this only works when run through a proxy minion.
 
 .. versionadded:: 2015.8.2
 '''
-from __future__ import absolute_import
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
+# Import Salt libs
 import salt.utils.http
 import salt.utils.json
 import salt.utils.platform

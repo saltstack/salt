@@ -16,6 +16,8 @@ import weakref
 from random import randint
 
 # Import Salt Libs
+from salt.ext import six
+from salt.ext.six.moves import map
 import salt.auth
 import salt.crypt
 import salt.utils.event
@@ -54,7 +56,6 @@ import tornado.gen
 import tornado.concurrent
 
 # Import third party libs
-from salt.ext import six
 try:
     from Cryptodome.Cipher import PKCS1_OAEP
 except ImportError:

@@ -85,12 +85,16 @@ LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
 
 _MODIFY_OK = frozenset(['uri', 'comps', 'architectures', 'disabled',
                         'file', 'dist'])
-DPKG_ENV_VARS = salt.utils.data.encode({
+DPKG_ENV_VARS = {
     'APT_LISTBUGS_FRONTEND': 'none',
     'APT_LISTCHANGES_FRONTEND': 'none',
     'DEBIAN_FRONTEND': 'noninteractive',
     'UCF_FORCE_CONFFOLD': '1',
-})
+}
+if six.PY2:
+    # Ensure no unicode in env vars on PY2, as it causes problems with
+    # subprocess.Popen()
+    DPKG_ENV_VARS = salt.utils.data.encode(DPKG_ENV_VARS)
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -117,7 +121,7 @@ def __init__(opts):
     a few env variables to keep apt happy and
     non-interactive.
     '''
-    if __virtual__():
+    if __virtual__() == __virtualname__:
         # Export these puppies so they persist
         os.environ.update(DPKG_ENV_VARS)
 
