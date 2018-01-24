@@ -311,6 +311,50 @@ class DataTestCase(TestCase):
         with patch.object(builtins, '__salt_system_encoding__', 'CP1252'):
             self.assertEqual(salt.utils.data.encode('Ψ'), _b('Ψ'))
 
+    menu_item = ['спам', 'спам', 'спам', 'яйца', 'спам']
+
+    def _gen(self, unicode_strings=True):
+        for item in self.menu_item:
+            yield item if unicode_strings else _b(item)
+
+    def test_decode_generator(self):
+        '''
+        Test decoding when a generator is encountered, in which case the
+        generator should be converted to (and returned as) a list
+        '''
+        decoded = self.menu_item
+        bare_gen = self._gen(unicode_strings=False)
+        dict_gen = {'foo': self._gen(unicode_strings=False)}
+        list_gen = [self._gen(unicode_strings=False)]
+        tuple_gen = (self._gen(unicode_strings=False),)
+
+        self.assertEqual(salt.utils.data.decode(bare_gen), decoded)
+        self.assertEqual(salt.utils.data.decode(dict_gen), {'foo': decoded})
+        self.assertEqual(salt.utils.data.decode(list_gen), [decoded])
+        self.assertEqual(
+            salt.utils.data.decode(tuple_gen, preserve_tuples=True),
+            (decoded,)
+        )
+
+    def test_encode_generator(self):
+        '''
+        Test encoding when a generator is encountered, in which case the
+        generator should be converted to (and returned as) a list
+        '''
+        encoded = [_b(x) for x in self.menu_item]
+        bare_gen = self._gen(unicode_strings=True)
+        dict_gen = {'foo': self._gen(unicode_strings=True)}
+        list_gen = [self._gen(unicode_strings=True)]
+        tuple_gen = (self._gen(unicode_strings=True),)
+
+        self.assertEqual(salt.utils.data.encode(bare_gen), encoded)
+        self.assertEqual(salt.utils.data.encode(dict_gen), {_b('foo'): encoded})
+        self.assertEqual(salt.utils.data.encode(list_gen), [encoded])
+        self.assertEqual(
+            salt.utils.data.encode(tuple_gen, preserve_tuples=True),
+            (encoded,)
+        )
+
     def test_repack_dict(self):
         list_of_one_element_dicts = [{'dict_key_1': 'dict_val_1'},
                                      {'dict_key_2': 'dict_val_2'},
