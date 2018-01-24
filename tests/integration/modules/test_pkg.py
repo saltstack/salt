@@ -28,12 +28,13 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.refresh_db')
 
         os_release = self.run_function('grains.get', ['osrelease'])
-        self.pkg = 'htop'
 
-        if int(os_release.split('.')[1]) >= 13 and salt.utils.is_darwin():
+        if salt.utils.is_darwin() and int(os_release.split('.')[1]) >= 13:
             self.pkg = 'wget'
-        elif salt.utils.is_windows:
+        elif salt.utils.is_windows():
             self.pkg = 'putty'
+        else:
+            self.pkg = 'htop'
 
     def test_list(self):
         '''
