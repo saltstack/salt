@@ -91,6 +91,10 @@ DPKG_ENV_VARS = {
     'DEBIAN_FRONTEND': 'noninteractive',
     'UCF_FORCE_CONFFOLD': '1',
 }
+if six.PY2:
+    # Ensure no unicode in env vars on PY2, as it causes problems with
+    # subprocess.Popen()
+    DPKG_ENV_VARS = salt.utils.data.encode(DPKG_ENV_VARS)
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'

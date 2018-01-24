@@ -21,9 +21,14 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
 import salt.exceptions
-from salt.ext import six
 import salt.state
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
+from salt.utils.decorators import state as statedecorators
+
+try:
+    import pytest
+except ImportError as err:
+    pytest = None
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -479,29 +484,71 @@ class TopFileMergeTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(merged_tops, expected_merge)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(pytest is None, 'PyTest is missing')
 class StateReturnsTestCase(TestCase):
     '''
     TestCase for code handling state returns.
     '''
 
-    def test_comment_lists_are_converted_to_string(self):
+    def test_state_output_check_changes_is_dict(self):
         '''
-        Tests that states returning a list of comments
-        have that converted to a single string
+        Test that changes key contains a dictionary.
+        :return:
         '''
-        ret = {
-            'name': 'myresource',
-            'result': True,
-            'comment': ['comment 1', 'comment 2'],
-            'changes': {},
-        }
-        salt.state.State.verify_ret(ret)  # sanity check
-        with self.assertRaises(salt.exceptions.SaltException):
-            # Not suitable for export as is
-            salt.state.State.verify_ret_for_export(ret)
-        salt.state.State.munge_ret_for_export(ret)
-        self.assertIsInstance(ret['comment'], six.string_types)
-        salt.state.State.verify_ret_for_export(ret)
+        data = {'changes': []}
+        out = statedecorators.OutputUnifier('content_check')(lambda: data)()
+        assert "'Changes' should be a dictionary" in out['comment']
+        assert not out['result']
+
+    def test_state_output_check_return_is_dict(self):
+        '''
+        Test for the entire return is a dictionary
+        :return:
+        '''
+        data = ['whatever']
+        out = statedecorators.OutputUnifier('content_check')(lambda: data)()
+        assert 'Malformed state return. Data must be a dictionary type' in out['comment']
+        assert not out['result']
+
+    def test_state_output_check_return_has_nrc(self):
+        '''
+        Test for name/result/comment keys are inside the return.
+        :return:
+        '''
+        data = {'arbitrary': 'data', 'changes': {}}
+        out = statedecorators.OutputUnifier('content_check')(lambda: data)()
+        assert ' The following keys were not present in the state return: name, result, comment' in out['comment']
+        assert not out['result']
+
+    def test_state_output_unifier_comment_is_not_list(self):
+        '''
+        Test for output is unified so the comment is converted to a multi-line string
+        :return:
+        '''
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'fantastic!'}
+        expected = {'comment': 'data\nin\nthe\nlist', 'changes': {}, 'name': None, 'result': True}
+        assert statedecorators.OutputUnifier('unify')(lambda: data)() == expected
+
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': None}
+        expected = 'data\nin\nthe\nlist'
+        assert statedecorators.OutputUnifier('unify')(lambda: data)()['comment'] == expected
+
+    def test_state_output_unifier_result_converted_to_true(self):
+        '''
+        Test for output is unified so the result is converted to True
+        :return:
+        '''
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'Fantastic'}
+        assert statedecorators.OutputUnifier('unify')(lambda: data)()['result'] is True
+
+    def test_state_output_unifier_result_converted_to_false(self):
+        '''
+        Test for output is unified so the result is converted to False
+        :return:
+        '''
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': ''}
+        assert statedecorators.OutputUnifier('unify')(lambda: data)()['result'] is False
 
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):

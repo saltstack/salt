@@ -310,7 +310,7 @@ class TestGetTemplate(TestCase):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
             with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
-                    salt.utils.stringutils.to_unicode(fp_.read()),
+                    salt.utils.stringutils.to_unicode(fp_.read(), 'utf-8'),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
@@ -376,7 +376,7 @@ class TestGetTemplate(TestCase):
             salt=self.local_salt
         )
         with salt.utils.files.fopen(out['data']) as fp:
-            result = salt.utils.stringutils.to_unicode(fp.read())
+            result = salt.utils.stringutils.to_unicode(fp.read(), 'utf-8')
             self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
 
     def test_get_context_has_enough_context(self):
