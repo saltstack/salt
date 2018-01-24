@@ -388,28 +388,28 @@ class SSDPDiscoveryClient(SSDPBase):
         if not response:
             msg = 'No master has been discovered.'
             self.log.info(msg)
-        masters = {}
-        for addr, descriptions in response.items():
-            for data in descriptions:  # Several masters can run at the same machine.
-                msg = data.decode()
-                if msg.startswith(self.signature):
-                    msg = msg.split(self.signature)[-1]
-                    self.log.debug(
-                        "Service announcement at '%s:%s'. Response: '%s'",
-                        addr[0], addr[1], msg
-                    )
-                    if ':E:' in msg:
-                        err = msg.split(':E:')[-1]
-                        self.log.error(
-                            'Error response from the service publisher at %s: %s',
-                            addr, err
+        else:
+            for addr, descriptions in response.items():
+                for data in descriptions:  # Several masters can run at the same machine.
+                    msg = data.decode()
+                    if msg.startswith(self.signature):
+                        msg = msg.split(self.signature)[-1]
+                        self.log.debug(
+                            "Service announcement at '%s:%s'. Response: '%s'",
+                            addr[0], addr[1], msg
                         )
-                        if "timestamp" in err:
-                            self.log.error('Publisher sent shifted timestamp from %s', addr)
-                    else:
-                        if addr not in masters:
-                            masters[addr] = []
-                        masters[addr].append(
-                            salt.utils.json.loads(msg.split(':@:')[-1], _json_module=_json)
-                        )
+                        if ':E:' in msg:
+                            err = msg.split(':E:')[-1]
+                            self.log.error(
+                                'Error response from the service publisher at %s: %s',
+                                addr, err
+                            )
+                            if "timestamp" in err:
+                                self.log.error('Publisher sent shifted timestamp from %s', addr)
+                        else:
+                            if addr not in masters:
+                                masters[addr] = []
+                            masters[addr].append(
+                                salt.utils.json.loads(msg.split(':@:')[-1], _json_module=_json)
+                            )
         return masters
