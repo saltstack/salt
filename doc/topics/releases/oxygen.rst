@@ -284,6 +284,16 @@ master config file, the master will create a SaltSSH client process which
 connects to the minion and returns the output for the `salt` commandline to use
 like a regular minion. This can be used anywhere the LocalClient is used.
 
+Exceptions Raised for Authentication/Authorization Errors
+---------------------------------------------------------
+
+When sending ``publish`` commands via ``master.py`` and ``masterapi.py`` and an
+authorization or authentication problem is encountered, Salt will now raise the
+appropriate exceptions instead of returning an empty string: ``''``.
+
+The reasoning behind this change is to make it easier to debug various scenarios
+surrounding authentication and authorization issues more effectively.
+
 Comparison Operators in Package Installation
 --------------------------------------------
 
