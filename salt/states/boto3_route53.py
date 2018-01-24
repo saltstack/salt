@@ -601,7 +601,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                 fields = rr.split(':')
                 if fields[1] == 'ec2_instance_tag':
                     if len(fields) != 5:
-                        log.warning("Invalid magic RR value seen: '{}'.  Passing as-is.".format(rr))
+                        log.warning("Invalid magic RR value seen: '%s'.  Passing as-is." % (rr))
                         fixed_rrs += [rr]
                         continue
                     tag_name = fields[2]
@@ -626,7 +626,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                     instance = r[0]
                     res = getattr(instance, instance_attr, None)
                     if res:
-                        log.debug('Found {} {} for instance {}'.format(instance_attr, res, instance.id))
+                        log.debug('Found %s %s for instance %s' % (instance_attr, res, instance.id))
                         fixed_rrs += [_to_aws_encoding(res)]
                     else:
                         ret['comment'] = 'Attribute {} not found on instance {}'.format(instance_attr,
