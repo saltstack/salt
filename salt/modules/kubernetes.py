@@ -209,7 +209,7 @@ def ping(**kwargs):
     return status
 
 
-def nodes(**kwargs):
+def nodes(label_selector='', **kwargs):
     '''
     Return the names of the nodes composing the kubernetes cluster
 
@@ -221,7 +221,7 @@ def nodes(**kwargs):
     _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
-        api_response = api_instance.list_node()
+        api_response = api_instance.list_node(label_selector=label_selector)
 
         return [k8s_node['metadata']['name'] for k8s_node in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
@@ -236,18 +236,18 @@ def nodes(**kwargs):
         _cleanup()
 
 
-def node(name, **kwargs):
+def node(name, label_selector='', **kwargs):
     '''
     Return the details of the node identified by the specified name
 
     CLI Examples::
 
-        salt '*' kubernetes.node name='minikube'
+        salt '*' kubernetes.node name='minikube' label_selector='io.kompose.service=nginx'
     '''
     _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
-        api_response = api_instance.list_node()
+        api_response = api_instance.list_node(label_selector=label_selector)
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
@@ -381,19 +381,19 @@ def namespaces(**kwargs):
         _cleanup()
 
 
-def deployments(namespace='default', **kwargs):
+def deployments(namespace='default', label_selector='', **kwargs):
     '''
     Return a list of kubernetes deployments defined in the namespace
 
     CLI Examples::
 
         salt '*' kubernetes.deployments
-        salt '*' kubernetes.deployments namespace=default
+        salt '*' kubernetes.deployments namespace=default label_selector='environment=production'
     '''
     _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.ExtensionsV1beta1Api()
-        api_response = api_instance.list_namespaced_deployment(namespace)
+        api_response = api_instance.list_namespaced_deployment(namespace, label_selector=label_selector)
 
         return [dep['metadata']['name'] for dep in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
@@ -410,19 +410,19 @@ def deployments(namespace='default', **kwargs):
         _cleanup()
 
 
-def services(namespace='default', **kwargs):
+def services(namespace='default', label_selector='', **kwargs):
     '''
     Return a list of kubernetes services defined in the namespace
 
     CLI Examples::
 
         salt '*' kubernetes.services
-        salt '*' kubernetes.services namespace=default
+        salt '*' kubernetes.services namespace=default label_selector='environment=production'
     '''
     _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
-        api_response = api_instance.list_namespaced_service(namespace)
+        api_response = api_instance.list_namespaced_service(namespace, label_selector=label_selector)
 
         return [srv['metadata']['name'] for srv in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
@@ -438,19 +438,19 @@ def services(namespace='default', **kwargs):
         _cleanup()
 
 
-def pods(namespace='default', **kwargs):
+def pods(namespace='default', label_selector='', **kwargs):
     '''
     Return a list of kubernetes pods defined in the namespace
 
     CLI Examples::
 
         salt '*' kubernetes.pods
-        salt '*' kubernetes.pods namespace=default
+        salt '*' kubernetes.pods namespace=default label_selector='io.kompose.service=tutor-environment-server'
     '''
     _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
-        api_response = api_instance.list_namespaced_pod(namespace)
+        api_response = api_instance.list_namespaced_pod(namespace, label_selector=label_selector)
 
         return [pod['metadata']['name'] for pod in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
