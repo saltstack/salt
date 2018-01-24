@@ -51,7 +51,7 @@ Connection module for Amazon CloudFront
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -111,9 +111,7 @@ def _list_distributions(
 
             id_ = partial_dist['Id']
             if 'Name' not in tags:
-                log.warning(
-                    'CloudFront distribution {0} has no Name tag.'.format(id_),
-                )
+                log.warning('CloudFront distribution %s has no Name tag.', id_)
                 continue
             distribution_name = tags.pop('Name', None)
             if name is not None and distribution_name != name:
