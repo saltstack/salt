@@ -380,12 +380,12 @@ class SSDPDiscoveryClient(SSDPBase):
 
         :return:
         '''
-        self.log.info("Looking for a server discovery")
         response = {}
-        try:
-            self._query()
-            self._collect_masters_map(response)
-        except socket.timeout:
+        masters = {}
+        self.log.info("Looking for a server discovery")
+        self._query()
+        self._collect_masters_map(response)
+        if not response:
             msg = 'No master has been discovered.'
             self.log.info(msg)
         masters = {}
