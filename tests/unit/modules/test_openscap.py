@@ -190,12 +190,16 @@ class OpenscapTestCase(TestCase):
 
     def test_openscap_xccdf_eval_fail_not_implemented_action(self):
         response = openscap.xccdf('info {0}'.format(self.policy_file))
+        if six.PY2:
+            mock_err = "argument action: invalid choice: 'info' (choose from u'eval')"
+        else:
+            mock_err = "argument action: invalid choice: 'info' (choose from 'eval')"
 
         self.assertEqual(
             response,
             {
                 'upload_dir': None,
-                'error': "argument action: invalid choice: 'info' (choose from 'eval')",
+                'error': mock_err,
                 'success': False,
                 'returncode': None
             }
