@@ -47,6 +47,7 @@ except ImportError:
 
 if salt.utils.is_windows():
     from salt.utils.win_runas import runas as win_runas
+    from salt.utils.win_functions import escape_argument as win_cmd_quote
     HAS_WIN_RUNAS = True
 else:
     HAS_WIN_RUNAS = False
@@ -2147,7 +2148,10 @@ def script(source,
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
 
-    path = _cmd_quote(path)
+    if salt.utils.is_windows():
+        path = win_cmd_quote(path)
+    else:
+        path = _cmd_quote(path)
 
     ret = _run(path + ' ' + str(args) if args else path,
                cwd=cwd,
