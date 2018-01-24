@@ -77,13 +77,13 @@ of the 2015.5 branch:
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import logging
 import os
+import pkg_resources
 import re
 import shutil
-import logging
 import sys
 import tempfile
-from pkg_resources import parse_version  # pylint: disable=3rd-party-module-not-gated
 
 # Import Salt libs
 import salt.utils.data
@@ -91,6 +91,7 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.locales
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.ext import six
@@ -1366,7 +1367,7 @@ def list_all_versions(pkg,
         match = re.search(r'\s*Could not find a version.* \(from versions: (.*)\)', line)
         if match:
             versions = [v for v in match.group(1).split(', ') if v and excludes.match(v)]
-            versions.sort(key=parse_version)
+            versions.sort(key=pkg_resources.parse_version)
             break
     if not versions:
         return None

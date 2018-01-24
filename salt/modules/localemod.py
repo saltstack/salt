@@ -2,7 +2,7 @@
 '''
 Module for managing locales on POSIX-like systems.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -55,10 +55,9 @@ def _parse_dbus_locale():
         if match:
             ret[match.group(1)] = match.group(2).replace('"', '')
         else:
-            log.error('Odd locale parameter "{0}" detected in dbus locale '
+            log.error('Odd locale parameter "%s" detected in dbus locale '
                       'output. This should not happen. You should '
-                      'probably investigate what caused this.'.format(
-                          env_var))
+                      'probably investigate what caused this.', env_var)
 
     return ret
 
@@ -95,7 +94,7 @@ def _localectl_set(locale=''):
     sure not to trample on other params that have been set.
     '''
     locale_params = _parse_dbus_locale() if HAS_DBUS else _parse_localectl()
-    locale_params['LANG'] = str(locale)
+    locale_params['LANG'] = six.text_type(locale)
     args = ' '.join(['{0}="{1}"'.format(k, v)
                      for k, v in six.iteritems(locale_params)])
     cmd = 'localectl set-locale {0}'.format(args)
@@ -232,7 +231,7 @@ def avail(locale):
     try:
         normalized_locale = salt.utils.locales.normalize_locale(locale)
     except IndexError:
-        log.error('Unable to validate locale "{0}"'.format(locale))
+        log.error('Unable to validate locale "%s"', locale)
         return False
     avail_locales = __salt__['locale.list_avail']()
     locale_exists = next((True for x in avail_locales
@@ -298,7 +297,7 @@ def gen_locale(locale, **kwargs):
 
     if not valid:
         log.error(
-            'The provided locale "{0}" is not found in {1}'.format(locale, search))
+            'The provided locale "%s" is not found in %s', locale, search)
         return False
 
     if os.path.exists('/etc/locale.gen'):
