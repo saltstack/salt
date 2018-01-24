@@ -370,13 +370,9 @@ class SSDPDiscoveryClient(SSDPBase):
                     response[addr].append(data)
                 else:
                     break
-            except socket.timeout:
+            except Exception as err:
+                self.log.error('Discovery master collection failure: %s', err)
                 break
-            except socket.error as err:
-                self.log.error(
-                    'Error ocurred while discovering masters from the network: %s',
-                    err
-                )
 
     def discover(self):
         '''
