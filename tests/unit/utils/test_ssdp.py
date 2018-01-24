@@ -450,15 +450,15 @@ class SSDPClientTestCase(TestCase):
         Test getting map handles timeout network exception
         :return:
         '''
-        def socket_timeout(message):
-            raise socket.timeout('testing timeout: {}'.format(message))
-
         _socket = MagicMock()
         response = {}
+        error_msg = 'fake testing timeout just had happened'
         with patch('salt.utils.ssdp.socket', _socket):
             clnt = ssdp.SSDPDiscoveryClient()
-            clnt._socket.recvfrom = MagicMock(side_effect=socket_timeout)
+            clnt._socket.recvfrom = MagicMock(side_effect=Exception(error_msg))
             clnt.log = MagicMock()
-            with pytest.raises(socket.timeout) as err:
-                clnt._collect_masters_map(response=response)
-            assert 'testing timeout' in str(err)
+            clnt._collect_masters_map(response=response)
+            assert clnt.log.error.called
+            assert 'Discovery master collection failure' in clnt.log.error.call_args[0][0]
+            assert error_msg == str(clnt.log.error.call_args[0][1])
+            assert not response
