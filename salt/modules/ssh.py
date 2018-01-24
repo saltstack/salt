@@ -774,8 +774,8 @@ def set_auth_key(
                         # File isn't empty, check if last byte is a newline
                         # If not, add one
                         _fh.seek(-1, 2)
-                        if _fh.read(1) != six.b('\n'):
-                            _fh.write(six.b('\n'))
+                        if _fh.read(1) != b'\n':
+                            _fh.write(b'\n')
                 if six.PY3:
                     auth_line = auth_line.encode(__salt_system_encoding__)
                 _fh.write(auth_line)

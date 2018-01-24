@@ -428,7 +428,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         name = os.path.join(TMP, 'grail_not_scene33')
         with salt.utils.files.fopen(name, 'wb') as fp_:
-            fp_.write(six.b('test_managed_show_changes_false\n'))
+            fp_.write(b'test_managed_show_changes_false\n')
 
         ret = self.run_state(
             'file.managed', name=name, source='salt://grail/scene33',

@@ -21,8 +21,6 @@ import salt.exceptions as excs
 
 # Import Salt libraries
 import salt.utils.vmware
-# Import Third Party Libs
-from salt.ext import six
 
 try:
     from pyVmomi import vim, vmodl
@@ -95,7 +93,7 @@ class GssapiTokenTest(TestCase):
             ret = salt.utils.vmware.get_gssapi_token('principal', 'host',
                                                      'domain')
             self.assertEqual(mock_context.return_value.step.called, 1)
-            self.assertEqual(ret, base64.b64encode(six.b('out_token')))
+            self.assertEqual(ret, base64.b64encode(b'out_token'))
 
     @skipIf(not HAS_GSSAPI, 'The \'gssapi\' library is missing')
     def test_out_token_undefined(self):

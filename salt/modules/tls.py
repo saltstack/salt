@@ -227,7 +227,9 @@ def _new_serial(ca_name):
     '''
     hashnum = int(
         binascii.hexlify(
-            six.b('{0}_{1}'.format(_microtime(), os.urandom(5)))
+            salt.utils.stringutils.to_bytes(
+                '{0}_{1}'.format(_microtime(), os.urandom(5))
+            )
         ),
         16
     )
@@ -710,17 +712,17 @@ def create_ca(ca_name,
     if X509_EXT_ENABLED:
         ca.add_extensions([
             OpenSSL.crypto.X509Extension(
-                six.b('basicConstraints'), True, six.b('CA:TRUE, pathlen:0')),
+                b'basicConstraints', True, b'CA:TRUE, pathlen:0'),
             OpenSSL.crypto.X509Extension(
-                six.b('keyUsage'), True, six.b('keyCertSign, cRLSign')),
+                b'keyUsage', True, b'keyCertSign, cRLSign'),
             OpenSSL.crypto.X509Extension(
-                six.b('subjectKeyIdentifier'), False, six.b('hash'), subject=ca)])
+                b'subjectKeyIdentifier', False, b'hash', subject=ca)])
 
         ca.add_extensions([
             OpenSSL.crypto.X509Extension(
-                six.b('authorityKeyIdentifier'),
+                b'authorityKeyIdentifier',
                 False,
-                six.b('issuer:always,keyid:always'),
+                b'issuer:always,keyid:always',
                 issuer=ca)])
     ca.sign(key, digest)
 
@@ -1027,7 +1029,7 @@ def create_csr(ca_name,
 
             extension_adds.append(
                 OpenSSL.crypto.X509Extension(
-                    six.b('subjectAltName'), False, six.b(", ".join(subjectAltName))))
+                    b'subjectAltName', False, b', '.join(subjectAltName)))
         else:
             raise ValueError('subjectAltName cannot be set as X509 '
                              'extensions are not supported in pyOpenSSL '

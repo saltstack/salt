@@ -25,9 +25,6 @@ import salt.utils.files
 import salt.cache.localfs as localfs
 from salt.exceptions import SaltCacheError
 
-# Import 3rd-party libs
-from salt.ext import six
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalFSTest(TestCase, LoaderModuleMockMixin):
@@ -95,7 +92,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         # Read in the contents of the key.p file and assert "payload data" was written
         with salt.utils.files.fopen(tmp_dir + '/bank/key.p', 'rb') as fh_:
             for line in fh_:
-                self.assertIn(six.b(str('payload data')), line)  # future lint: disable=blacklisted-function
+                self.assertIn(b'payload data', line)
 
     # 'fetch' function tests: 3
 
