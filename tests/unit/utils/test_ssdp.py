@@ -445,7 +445,7 @@ class SSDPClientTestCase(TestCase):
             assert response['10.10.10.10'] == ['some', 'data']
             assert response['20.20.20.20'] == ['data']
 
-    def test_get_masters_map_timeout_handling(self):
+    def test_get_masters_map_error_handling(self):
         '''
         Test getting map handles timeout network exception
         :return:
