@@ -1411,7 +1411,10 @@ def symlink(
                 __salt__['file.move'](name, backupname)
             except Exception as exc:
                 ret['changes'] = {}
-                log.debug(traceback.format_exc())
+                log.debug(
+                    'Encountered error renaming %s to %s',
+                    name, backupname, exc_info=True
+                )
                 return _error(ret, ('Unable to rename {0} to backup {1} -> '
                                     ': {2}'.format(name, backupname, exc)))
         elif force:
