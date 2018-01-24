@@ -44,8 +44,8 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {},
                'comment': ''}
 
-        comt1 = ("Dashboard myservice is set to be updated. The following rows "
-                 "set to be updated: ['systemhealth']")
+        comt1 = ('Dashboard myservice is set to be updated. The following rows '
+                 'set to be updated: {0}'.format(['systemhealth']))
         self.assertRaises(SaltInvocationError, grafana.dashboard_present, name,
                           profile=False)
 
