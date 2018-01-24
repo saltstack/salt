@@ -41,16 +41,17 @@ Module for handling OpenStack Heat calls
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import logging
 
 # Import Salt libs
+from salt.exceptions import SaltInvocationError
 from salt.ext import six
 import salt.utils.files
 import salt.utils.json
+import salt.utils.stringutils
 import salt.utils.yaml
-from salt.exceptions import SaltInvocationError
 
 # pylint: disable=import-error
 HAS_HEAT = False
@@ -223,8 +224,8 @@ def _get_stack_events(h_client, stack_id, event_args):
     event_args['resource_name'] = None
     try:
         events = h_client.events.list(**event_args)
-    except heatclient.exc.HTTPNotFound as ex:
-        raise heatclient.exc.CommandError(str(ex))
+    except heatclient.exc.HTTPNotFound as exc:
+        raise heatclient.exc.CommandError(six.text_type(exc))
     else:
         for event in events:
             event.stack_name = stack_id.split('/')[0]
@@ -400,9 +401,9 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
         ret['result'] = False
         ret['comment'] = 'No stack {0}'.format(name)
     except heatclient.exc.HTTPForbidden as forbidden:
-        log.exception(str(forbidden))
+        log.exception(forbidden)
         ret['result'] = False
-        ret['comment'] = str(forbidden)
+        ret['comment'] = six.text_type(forbidden)
     if ret['result'] is False:
         return ret
 
@@ -509,11 +510,9 @@ def create_stack(name=None, template_file=None, enviroment=None,
             dir_mode=None)
         if template_manage_result['result']:
             with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
-                tpl = tfp_.read()
+                tpl = salt.utils.stringutils.to_unicode(tfp_.read())
                 salt.utils.files.safe_rm(template_tmp_file)
                 try:
-                    if isinstance(tpl, six.binary_type):
-                        tpl = tpl.decode('utf-8')
                     template = _parse_template(tpl)
                 except ValueError as ex:
                     ret['result'] = False
@@ -571,7 +570,7 @@ def create_stack(name=None, template_file=None, enviroment=None,
             dir_mode=None)
         if enviroment_manage_result['result']:
             with salt.utils.files.fopen(enviroment_tmp_file, 'r') as efp_:
-                env_str = efp_.read()
+                env_str = salt.utils.stringutils.to_unicode(efp_.read())
                 salt.utils.files.safe_rm(enviroment_tmp_file)
                 try:
                     env = _parse_enviroment(env_str)
@@ -698,11 +697,9 @@ def update_stack(name=None, template_file=None, enviroment=None,
             dir_mode=None)
         if template_manage_result['result']:
             with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
-                tpl = tfp_.read()
+                tpl = salt.utils.stringutils.to_unicode(tfp_.read())
                 salt.utils.files.safe_rm(template_tmp_file)
                 try:
-                    if isinstance(tpl, six.binary_type):
-                        tpl = tpl.decode('utf-8')
                     template = _parse_template(tpl)
                 except ValueError as ex:
                     ret['result'] = False
@@ -760,7 +757,7 @@ def update_stack(name=None, template_file=None, enviroment=None,
             dir_mode=None)
         if enviroment_manage_result['result']:
             with salt.utils.files.fopen(enviroment_tmp_file, 'r') as efp_:
-                env_str = efp_.read()
+                env_str = salt.utils.stringutils.to_unicode(efp_.read())
                 salt.utils.files.safe_rm(enviroment_tmp_file)
                 try:
                     env = _parse_enviroment(env_str)
