@@ -51,6 +51,7 @@ import tornado.gen  # pylint: disable=F0401
 import salt.crypt
 import salt.client
 import salt.client.ssh.client
+import salt.exceptions
 import salt.payload
 import salt.pillar
 import salt.state
@@ -86,7 +87,6 @@ import salt.utils.verify
 import salt.utils.zeromq
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.exceptions import FileserverConfigError
 from salt.transport import iter_transport_opts
 from salt.utils.debug import (
     enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
@@ -597,7 +597,7 @@ class Master(SMaster):
                 # double-check configuration
                 try:
                     fileserver.init()
-                except FileserverConfigError as exc:
+                except salt.exceptions.FileserverConfigError as exc:
                     critical_errors.append('{0}'.format(exc))
 
         if not self.opts['fileserver_backend']:
@@ -630,7 +630,7 @@ class Master(SMaster):
                                 repo['git'],
                                 per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
                                 per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
-                        except FileserverConfigError as exc:
+                        except salt.exceptions.FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
                     del new_opts
@@ -2024,7 +2024,8 @@ class ClearFuncs(object):
                 'your local administrator if you believe this is in '
                 'error.\n', clear_load['user'], clear_load['fun']
             )
-            return ''
+            return {'error': {'name': 'AuthorizationError',
+                              'message': 'Authorization error occurred.'}}
 
         # Retrieve the minions list
         delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
@@ -2050,7 +2051,8 @@ class ClearFuncs(object):
         if auth_check.get('error'):
             # Authentication error occurred: do not continue.
             log.warning(err_msg)
-            return ''
+            return {'error': {'name': 'AuthenticationError',
+                              'message': 'Authentication error occurred.'}}
 
         # All Token, Eauth, and non-root users must pass the authorization check
         if auth_type != 'user' or (auth_type == 'user' and auth_list):
@@ -2069,7 +2071,8 @@ class ClearFuncs(object):
             if not authorized:
                 # Authorization error occurred. Do not continue.
                 log.warning(err_msg)
-                return ''
+                return {'error': {'name': 'AuthorizationError',
+                                  'message': 'Authorization error occurred.'}}
 
             # Perform some specific auth_type tasks after the authorization check
             if auth_type == 'token':
