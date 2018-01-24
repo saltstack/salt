@@ -569,10 +569,10 @@ class assert_device_rates(Assert):
                 continue
 
             # Error case: Not an absolute path
-            path = os.sep.join(('foo', 'bar', 'baz'))
+            path = os.path.join('foo', 'bar', 'baz')
             with testcase.assertRaisesRegex(
                     CommandExecutionError,
-                    "Path '{0}' is not absolute".format(path)):
+                    "Path '{0}' is not absolute".format(path.replace('\\', '\\\\'))):
                 salt.utils.docker.translate_input(
                     self.translator,
                     **{item: '{0}:1048576'.format(path)}
@@ -1769,10 +1769,10 @@ class TranslateContainerInputTestCase(TranslateBase):
         Should be a list of absolute paths
         '''
         # Error case: Not an absolute path
-        path = os.sep.join(('foo', 'bar', 'baz'))
+        path = os.path.join('foo', 'bar', 'baz')
         with self.assertRaisesRegex(
                 CommandExecutionError,
-                "'{0}' is not an absolute path".format(path)):
+                "'{0}' is not an absolute path".format(path.replace('\\', '\\\\'))):
             salt.utils.docker.translate_input(
                 self.translator,
                 volumes=path
@@ -1791,10 +1791,10 @@ class TranslateContainerInputTestCase(TranslateBase):
         Should be a single absolute path
         '''
         # Error case: Not an absolute path
-        path = os.sep.join(('foo', 'bar', 'baz'))
+        path = os.path.join('foo', 'bar', 'baz')
         with self.assertRaisesRegex(
                 CommandExecutionError,
-                "'{0}' is not an absolute path".format(path)):
+                "'{0}' is not an absolute path".format(path.replace('\\', '\\\\'))):
             salt.utils.docker.translate_input(
                 self.translator,
                 working_dir=path
