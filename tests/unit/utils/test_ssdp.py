@@ -462,3 +462,18 @@ class SSDPClientTestCase(TestCase):
             assert 'Discovery master collection failure' in clnt.log.error.call_args[0][0]
             assert error_msg == str(clnt.log.error.call_args[0][1])
             assert not response
+
+    def test_discover_no_masters(self):
+        '''
+        Test discover available master on the network (none found).
+        :return:
+        '''
+
+        clnt = ssdp.SSDPDiscoveryClient()
+        clnt._query = MagicMock()
+        clnt._collect_masters_map = MagicMock()
+        clnt.log = MagicMock()
+        clnt.discover()
+
+        assert clnt.log.info.called
+        assert clnt.log.info.call_args[0][0] == 'No master has been discovered.'
