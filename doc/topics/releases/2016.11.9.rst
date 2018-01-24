@@ -9,13 +9,13 @@ Changes for v2016.11.8..v2016.11.9
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2018-01-19T21:22:52Z*
+*Generated at: 2018-01-24T21:13:27Z*
 
 Statistics:
 
-- Total Merges: **140**
+- Total Merges: **143**
 - Total Issue references: **65**
-- Total PR references: **171**
+- Total PR references: **175**
 
 Changes:
 
@@ -36,7 +36,31 @@ Significate changes (PR #43708 & #45390, damon-atkins) have been made to the pkg
 - Some execution module functions results, now behavour more like their Unix/Linux versions.
 Execution module cmdmod
 --------------------
-Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don't list-ify string commands on Windows" PR #43807. Linux/Unix OS command & arguments requires a list. Windows was being treated the same. Windows requires commands & arguments to be a string, which this PR fixes.  
+Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don't list-ify string commands on Windows" PR #43807. Linux/Unix OS command & arguments requires a list. Windows was being treated the same. Windows requires commands & arguments to be a string, which this PR fixes.
+
+- **PR** `#45638`_: (*twangboy*) Win fix shell info
+  @ *2018-01-23T22:38:22Z*
+
+  * 10812969f0 Merge pull request `#45638`_ from twangboy/win_fix_shell_info
+  * 872da3ffba Only convert text types in the list_values function
+
+  * 0e41535cdb Fix reg.py to only convert text types to unicode
+
+  * 3579534ea5 Fix issue with detecting powershell
+
+- **PR** `#45564`_: (*Ch3LL*) Add PR changes to 2016.11.9 Release Notes
+  @ *2018-01-19T21:36:05Z*
+
+  * 2d1dd1186e Merge pull request `#45564`_ from Ch3LL/r-notes-2016
+  * 325f4cbcda Add PR changes to 2016.11.9 Release Notes
+
+- **PR** `#45563`_: (*Ch3LL*) Update man pages for 2016.11.9
+  @ *2018-01-19T21:19:00Z*
+
+  * 28e4398150 Merge pull request `#45563`_ from Ch3LL/man_2016
+  * 529bc0c680 update release number for salt-call man page 2016.11.9
+
+  * 11b7222148 Update man pages for 2016.11.9
 
 - **PR** `#45532`_: (*gtmanfred*) fix mock for opensuse
   @ *2018-01-18T22:48:30Z*
@@ -1540,6 +1564,9 @@ Windows cmdmod forcing cmd to be a list (issue #43522) resolved by "cmdmod: Don'
 .. _`#45493`: https://github.com/saltstack/salt/pull/45493
 .. _`#45518`: https://github.com/saltstack/salt/pull/45518
 .. _`#45532`: https://github.com/saltstack/salt/pull/45532
+.. _`#45563`: https://github.com/saltstack/salt/pull/45563
+.. _`#45564`: https://github.com/saltstack/salt/pull/45564
+.. _`#45638`: https://github.com/saltstack/salt/pull/45638
 .. _`#598`: https://github.com/saltstack/salt/issues/598
 .. _`bp-41305`: https://github.com/saltstack/salt/pull/41305
 .. _`bp-43329`: https://github.com/saltstack/salt/pull/43329
