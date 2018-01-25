@@ -65,7 +65,7 @@ class MockLBDriver(BaseDriver):
     def balancer_detach_member(self, balancer, member):
         assert isinstance(balancer, LoadBalancer)
         assert isinstance(member, Member)
-        assert member.id is 'member_id'
+        assert member.id == 'member_id'
         assert balancer.id == 'test_id'
         return True
 
