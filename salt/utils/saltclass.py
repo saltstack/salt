@@ -40,15 +40,20 @@ def get_class(_class, salt_data):
     l_files = []
     saltclass_path = salt_data['path']
 
-    straight = '{0}/classes/{1}.yml'.format(saltclass_path, _class)
-    sub_straight = '{0}/classes/{1}.yml'.format(saltclass_path,
-                                                _class.replace('.', '/'))
-    sub_init = '{0}/classes/{1}/init.yml'.format(saltclass_path,
-                                                 _class.replace('.', '/'))
+    straight = os.path.join(saltclass_path,
+                            'classes',
+                            '{0}.yml'.format(_class))
+    sub_straight = os.path.join(saltclass_path,
+                                'classes',
+                                '{0}.yml'.format(_class.replace('.', os.sep)))
+    sub_init = os.path.join(saltclass_path,
+                            'classes',
+                            _class.replace('.', os.sep),
+                            'init.yml')
 
-    for root, dirs, files in salt.utils.path.os_walk('{0}/classes'.format(saltclass_path)):
+    for root, dirs, files in salt.utils.path.os_walk(os.path.join(saltclass_path, 'classes')):
         for l_file in files:
-            l_files.append('{0}/{1}'.format(root, l_file))
+            l_files.append(os.path.join(root, l_file))
 
     if straight in l_files:
         return render_yaml(straight, salt_data)
@@ -220,7 +225,7 @@ def expanded_dict_from_minion(minion_id, salt_data):
     _file = ''
     saltclass_path = salt_data['path']
     # Start
-    for root, dirs, files in salt.utils.path.os_walk('{0}/nodes'.format(saltclass_path)):
+    for root, dirs, files in salt.utils.path.os_walk(os.path.join(saltclass_path, 'nodes')):
         for minion_file in files:
             if minion_file == '{0}.yml'.format(minion_id):
                 _file = os.path.join(root, minion_file)
@@ -245,6 +250,7 @@ def expanded_dict_from_minion(minion_id, salt_data):
     for exp_dict in expanded_classes:
         if 'pillars' in exp_dict:
             dict_merge(pillars_dict, exp_dict)
+
 
     return expanded_classes, pillars_dict, classes_list, states_list
 
