@@ -37,7 +37,7 @@ def __virtual__():
 
 def _ensure_string(val):
     # Account for cases where the identifier is not a string
-#   # which would cause to_unicode to fail.
+    # which would cause to_unicode to fail.
     if not isinstance(val, six.string_types):
         val = str(val)  # future lint: enable=blacklisted-function
     try:
