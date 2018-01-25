@@ -13,6 +13,7 @@ from tests.support.mock import (
 
 from salt.utils import ssdp
 import datetime
+from salt.ext.six.moves import zip
 
 try:
     import pytest
