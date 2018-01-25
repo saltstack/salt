@@ -91,7 +91,15 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
 
-    azure-ubuntu:
+    azure-ubuntu-pass:
+      provider: my-azure-config
+      image: Canonical|UbuntuServer|14.04.5-LTS|14.04.201612050
+      size: Standard_D1_v2
+      location: eastus
+      ssh_username: azureuser
+      ssh_password: verybadpass
+
+    azure-ubuntu-key:
       provider: my-azure-config
       image: Canonical|UbuntuServer|14.04.5-LTS|14.04.201612050
       size: Standard_D1_v2
