@@ -22,6 +22,7 @@ from raet.abiding import ns2u
 from raet.lane.stacking import LaneStack
 from raet.road.stacking import RoadStack
 
+import salt.utils.stringutils
 from salt.utils.event import tagify
 
 
@@ -77,11 +78,12 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         self.resolve()  # resolve House, Framer, Frame, Acts, Actors
 
         self.frame.enter()
-        self.assertDictEqual(act.actor.Ioinits,
-                             {'opts': '.salt.opts',
-                              'stats_req': '.salt.stats.event_req',
-                              'lane_stack': '.salt.lane.manor.stack',
-                              'road_stack': '.salt.road.manor.stack'})
+        self.assertDictEqual(
+                act.actor.Ioinits,
+                {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),
+                 'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+                 'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack')})
 
         self.assertTrue(hasattr(act.actor, 'opts'))
         self.assertTrue(hasattr(act.actor, 'stats_req'))
@@ -384,11 +386,12 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         self.resolve()  # resolve House, Framer, Frame, Acts, Actors
 
         self.frame.enter()
-        self.assertDictEqual(act.actor.Ioinits,
-                             {'opts': '.salt.opts',
-                              'stats_req': '.salt.stats.event_req',
-                              'lane_stack': '.salt.lane.manor.stack',
-                              'road_stack': '.salt.road.manor.stack'})
+        self.assertDictEqual(
+                act.actor.Ioinits,
+                {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),
+                 'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+                 'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack')})
 
         self.assertTrue(hasattr(act.actor, 'opts'))
         self.assertTrue(hasattr(act.actor, 'stats_req'))

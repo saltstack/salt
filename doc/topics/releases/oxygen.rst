@@ -1691,3 +1691,11 @@ Sentry Log Handler
 Configuring sentry raven python client via ``project``, ``servers``, ``public_key
 and ``secret_key`` is deprecated and won't work with sentry clients > 3.0.
 Instead, the ``dsn`` config param must be used.
+
+RAET transport
+--------------
+
+We haven't been doing development on RAET for quite some time and decided that
+Oxygen is the time to announce the deprecation. RAET support will be removed in
+Neon. Please consider to move to ``zeromq`` or ``tcp`` transport instead of
+``raet``.
