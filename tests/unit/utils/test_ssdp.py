@@ -479,3 +479,27 @@ class SSDPClientTestCase(TestCase):
 
         assert clnt.log.info.called
         assert clnt.log.info.call_args[0][0] == 'No master has been discovered.'
+
+    def test_discover_general_error(self):
+        '''
+        Test discover available master on the network (erroneous found)
+        :return:
+        '''
+
+        _socket = MagicMock()
+        error = 'Admins on strike due to broken coffee machine'
+        signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
+        fake_resource = SSDPClientTestCase.Resource()
+        fake_resource.pool = [('{}:E:{}'.format(signature, error), '10.10.10.10'),
+                              (None, None)]
+
+        with patch('salt.utils.ssdp.socket', _socket):
+            clnt = ssdp.SSDPDiscoveryClient()
+            clnt._socket.recvfrom = fake_resource.read
+            clnt._query = MagicMock()
+            clnt.log = MagicMock()
+            clnt.discover()
+            assert 'Error response from the service publisher' in clnt.log.error.call_args[0][0]
+            assert '10.10.10.10' == clnt.log.error.call_args[0][1]
+            assert clnt.log.error.call_args[1] == {}
+            assert clnt.log.error.call_args[0][2] == error
