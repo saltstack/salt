@@ -134,9 +134,11 @@ class Registry(object):  # pylint: disable=R0903
         # delete_key_recursive uses this to check the subkey contains enough \
         # as we do not want to remove all or most of the registry
         self.subkey_slash_check = {
-            win32con.HKEY_CURRENT_USER:  0,
-            win32con.HKEY_LOCAL_MACHINE: 1,
-            win32con.HKEY_USERS:         1
+            win32con.HKEY_CURRENT_USER:   0,
+            win32con.HKEY_LOCAL_MACHINE:  1,
+            win32con.HKEY_USERS:          1,
+            win32con.HKEY_CURRENT_CONFIG: 1,
+            win32con.HKEY_CLASSES_ROOT:   1
         }
 
         self.registry_32 = {
