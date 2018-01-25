@@ -504,3 +504,29 @@ class SSDPClientTestCase(TestCase):
             assert '10.10.10.10' == clnt.log.error.call_args[0][1]
             assert clnt.log.error.call_args[1] == {}
             assert clnt.log.error.call_args[0][2] == error
+
+    def test_discover_timestamp_error(self):
+        '''
+        Test discover available master on the network (outdated timestamp)
+        :return:
+        '''
+
+        _socket = MagicMock()
+        error = 'We only support a 1200 bps connection. Routing timestamp problems on neural net.'
+        signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
+        fake_resource = SSDPClientTestCase.Resource()
+        fake_resource.pool = [('{}:E:{}'.format(signature, error), '10.10.10.10'),
+                              (None, None)]
+
+        with patch('salt.utils.ssdp.socket', _socket):
+            clnt = ssdp.SSDPDiscoveryClient()
+            clnt._socket.recvfrom = fake_resource.read
+            clnt._query = MagicMock()
+            clnt.log = MagicMock()
+            clnt.discover()
+            assert len(clnt.log.error.mock_calls) == 2
+            assert 'Error response from the service publisher' in clnt.log.error.mock_calls[0][1][0]
+            assert clnt.log.error.mock_calls[0][1][2] == error
+            assert clnt.log.error.mock_calls[0][2] == {}
+            assert 'Publisher sent shifted timestamp' in clnt.log.error.mock_calls[1][1][0]
+            assert clnt.log.error.mock_calls[1][1][1] == clnt.log.error.mock_calls[0][1][1] == '10.10.10.10'
