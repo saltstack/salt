@@ -90,7 +90,7 @@ class SSDPBaseTestCase(TestCase, Mocks):
         for key in v_keys:
             assert key in base.DEFAULTS
 
-        for key in base.DEFAULTS.keys():
+        for key in base.DEFAULTS:
             assert key in v_keys
 
         for key, value in zip(v_keys, v_vals):
