@@ -112,6 +112,7 @@ import binascii
 from datetime import datetime
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -1041,7 +1042,7 @@ def create_csr(ca_name,
                 OpenSSL.crypto.X509Extension(
                     b'subjectAltName',
                     False,
-                    salt.utils.stringutils.to_str(b', '.join(subjectAltName))
+                    b', '.join(salt.utils.data.encode(subjectAltName))
                 )
             )
         else:
@@ -1560,8 +1561,8 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
                                                          ca_name,
                                                          CN), 'wb') as ofile:
         ofile.write(
-            salt.utils.stringutils.to_bytes(
-                pkcs12.export(passphrase=passphrase)
+            pkcs12.export(
+                passphrase=salt.utils.stringutils.to_bytes(passphrase)
             )
         )
 
