@@ -4,9 +4,9 @@ Setup of Python virtualenv sandboxes.
 
 .. versionadded:: 0.17.0
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 

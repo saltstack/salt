@@ -522,7 +522,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-    @skipIf(salt.utils.is_windows(), 'lsattr is not available on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'lsattr is not available on Windows')
     def test_check_file_meta_no_lsattr(self):
         '''
         Ensure that we skip attribute comparison if lsattr(1) is not found
