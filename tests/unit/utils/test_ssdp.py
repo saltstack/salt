@@ -373,6 +373,21 @@ class SSDPClientTestCase(TestCase):
     '''
     Client-related test cases
     '''
+
+    class Resource(object):
+        '''
+        Fake network reader
+        '''
+
+        def __init__(self):
+            self.pool = [('some', '10.10.10.10'),
+                         ('data', '20.20.20.20'),
+                         ('data', '10.10.10.10'),
+                         (None, None)]
+
+        def read(self, *args, **kwargs):
+            return self.pool.pop(0)
+
     def test_config_passed(self):
         '''
         Test if the configuration is passed.
@@ -420,24 +435,11 @@ class SSDPClientTestCase(TestCase):
         Test getting map of the available masters on the network
         :return:
         '''
-        class Resource(object):
-            '''
-            Fake network reader
-            '''
-            def __init__(self):
-                self.pool = [('some', '10.10.10.10'),
-                             ('data', '20.20.20.20'),
-                             ('data', '10.10.10.10'),
-                             (None, None)]
-
-            def read(self, *args, **kwargs):
-                return self.pool.pop(0)
-
         _socket = MagicMock()
         response = {}
         with patch('salt.utils.ssdp.socket', _socket):
             clnt = ssdp.SSDPDiscoveryClient()
-            clnt._socket.recvfrom = Resource().read
+            clnt._socket.recvfrom = SSDPClientTestCase.Resource().read
             clnt.log = MagicMock()
             clnt._collect_masters_map(response=response)
             assert '10.10.10.10' in response
