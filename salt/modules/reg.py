@@ -95,9 +95,13 @@ class Registry(object):  # pylint: disable=R0903
     '''
     def __init__(self):
         self.hkeys = {
+            'HKEY_CURRENT_CONFIG': win32con.HKEY_CURRENT_CONFIG,
+            'HKEY_CLASSES_ROOT': win32con.HKEY_CLASSES_ROOT,
             'HKEY_CURRENT_USER':  win32con.HKEY_CURRENT_USER,
             'HKEY_LOCAL_MACHINE': win32con.HKEY_LOCAL_MACHINE,
             'HKEY_USERS': win32con.HKEY_USERS,
+            'HKCC': win32con.HKEY_CURRENT_CONFIG,
+            'HKCR': win32con.HKEY_CLASSES_ROOT,
             'HKCU': win32con.HKEY_CURRENT_USER,
             'HKLM': win32con.HKEY_LOCAL_MACHINE,
             'HKU':  win32con.HKEY_USERS,
@@ -203,6 +207,8 @@ def list_keys(hive, key=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name. If a key is
         not passed, the keys under the hive will be returned.
@@ -257,6 +263,8 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name. If a key is
         not passed, the values under the hive will be returned.
@@ -325,6 +333,8 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -422,6 +432,8 @@ def set_value(hive,
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -562,6 +574,8 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param key: The key to remove (looks like a path)
 
@@ -656,6 +670,8 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
