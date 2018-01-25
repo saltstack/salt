@@ -4,7 +4,7 @@ Module for managing dnsmasq
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -173,6 +173,7 @@ def _parse_dnamasq(filename):
 
     with salt.utils.files.fopen(filename, 'r') as fp_:
         for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
             if not line.strip():
                 continue
             if line.startswith('#'):

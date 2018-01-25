@@ -120,7 +120,7 @@ def _iterate_read_data(read_data):
     # Retrieve lines from read_data via a generator so that separate calls to
     # readline, read, and readlines are properly interleaved
     if six.PY3 and isinstance(read_data, six.binary_type):
-        data_as_list = ['{0}\n'.format(l.decode(__salt_system_encoding__)) for l in read_data.split(six.b('\n'))]
+        data_as_list = ['{0}\n'.format(l.decode(__salt_system_encoding__)) for l in read_data.split(b'\n')]
     else:
         data_as_list = ['{0}\n'.format(l) for l in read_data.split('\n')]
 

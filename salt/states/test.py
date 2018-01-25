@@ -3,8 +3,8 @@
 Test States
 ===========
 
-Provide test case states that enable easy testing of things to do with
- state calls, e.g. running, calling, logging, output filtering etc.
+Provide test case states that enable easy testing of things to do with state
+calls, e.g. running, calling, logging, output filtering etc.
 
 .. code-block:: yaml
 
@@ -44,15 +44,16 @@ Provide test case states that enable easy testing of things to do with
         - integer:
             - bar
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import logging
 import random
-from salt.state import _gen_tag
-from salt.exceptions import SaltInvocationError
 
-log = logging.getLogger(__name__)
+# Import Salt libs
+import salt.utils.data
+from salt.state import _gen_tag
+from salt.ext import six
+from salt.exceptions import SaltInvocationError
 
 
 def nop(name, **kwargs):
@@ -345,11 +346,11 @@ def _if_str_then_list(listing):
     A str will be turned into a list with the
     str as its only element.
     '''
-    if type(listing) is str:
-        return [listing]
-    elif type(listing) is not list:
+    if isinstance(listing, six.string_types):
+        return [salt.utils.stringutils.to_unicode(listing)]
+    elif not isinstance(listing, list):
         raise TypeError
-    return listing
+    return salt.utils.data.decode_list(listing)
 
 
 def check_pillar(name,

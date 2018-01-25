@@ -18,6 +18,7 @@ import salt.acl
 import salt.crypt
 import salt.cache
 import salt.client
+import salt.exceptions
 import salt.payload
 import salt.pillar
 import salt.state
@@ -46,7 +47,6 @@ import salt.utils.verify
 import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
-from salt.exceptions import FileserverConfigError, SaltMasterError
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -78,7 +78,7 @@ def init_git_pillar(opts):
                     per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
                     per_remote_only=git_pillar.PER_REMOTE_ONLY)
                 ret.append(pillar)
-            except FileserverConfigError:
+            except salt.exceptions.FileserverConfigError:
                 if opts.get('git_pillar_verify_config', True):
                     raise
                 else:
@@ -261,7 +261,7 @@ def fileserver_update(fileserver):
                 'No fileservers loaded, the master will not be able to '
                 'serve files to minions'
             )
-            raise SaltMasterError('No fileserver backends available')
+            raise salt.exceptions.SaltMasterError('No fileserver backends available')
         fileserver.update()
     except Exception as exc:
         log.error(
@@ -370,7 +370,7 @@ class AutoKey(object):
 
                     with salt.utils.files.fopen(grain_file, 'r') as f:
                         for line in f:
-                            line = line.strip()
+                            line = salt.utils.stringutils.to_unicode(line).strip()
                             if line.startswith('#'):
                                 continue
                             if autosign_grains[grain] == line:
@@ -692,7 +692,7 @@ class RemoteFuncs(object):
         with salt.utils.files.fopen(cpath, mode) as fp_:
             if load['loc']:
                 fp_.seek(load['loc'])
-            fp_.write(load['data'])
+            fp_.write(salt.utils.stringutils.to_str(load['data']))
         return True
 
     def _pillar(self, load):
@@ -717,7 +717,7 @@ class RemoteFuncs(object):
                              'data',
                              {'grains': load['grains'], 'pillar': data})
             if self.opts.get('minion_data_cache_events') is True:
-                self.event.fire_event('Minion data cache refresh', salt.utils.event.tagify(load['id'], 'refresh', 'minion'))
+                self.event.fire_event({'comment': 'Minion data cache refresh'}, salt.utils.event.tagify(load['id'], 'refresh', 'minion'))
         return data
 
     def _minion_event(self, load):
@@ -851,7 +851,7 @@ class RemoteFuncs(object):
                 os.makedirs(auth_cache)
             jid_fn = os.path.join(auth_cache, load['jid'])
             with salt.utils.files.fopen(jid_fn, 'r') as fp_:
-                if not load['id'] == fp_.read():
+                if not load['id'] == salt.utils.stringutils.to_unicode(fp_.read()):
                     return {}
 
             return self.local.get_cache_returns(load['jid'])
@@ -909,7 +909,7 @@ class RemoteFuncs(object):
             os.makedirs(auth_cache)
         jid_fn = os.path.join(auth_cache, six.text_type(ret['jid']))
         with salt.utils.files.fopen(jid_fn, 'w+') as fp_:
-            fp_.write(load['id'])
+            fp_.write(salt.utils.stringutils.to_str(load['id']))
         return ret
 
     def minion_publish(self, load):
@@ -1176,7 +1176,8 @@ class LocalFuncs(object):
                 'your local administrator if you believe this is in error.',
                 load['user'], load['fun']
             )
-            return ''
+            return {'error': {'name': 'AuthorizationError',
+                              'message': 'Authorization error occurred.'}}
 
         # Retrieve the minions list
         delimiter = load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
@@ -1202,7 +1203,8 @@ class LocalFuncs(object):
         if error:
             # Authentication error occurred: do not continue.
             log.warning(err_msg)
-            return ''
+            return {'error': {'name': 'AuthenticationError',
+                              'message': 'Authentication error occurred.'}}
 
         # All Token, Eauth, and non-root users must pass the authorization check
         if auth_type != 'user' or (auth_type == 'user' and auth_list):
@@ -1221,7 +1223,8 @@ class LocalFuncs(object):
             if not authorized:
                 # Authorization error occurred. Log warning and do not continue.
                 log.warning(err_msg)
-                return ''
+                return {'error': {'name': 'AuthorizationError',
+                                  'message': 'Authorization error occurred.'}}
 
             # Perform some specific auth_type tasks after the authorization check
             if auth_type == 'token':

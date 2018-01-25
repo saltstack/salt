@@ -5,7 +5,7 @@ Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import random
@@ -181,8 +181,8 @@ def _output_to_dict(cmdoutput, values_mapper=None):
             # set it to an empty string to preserve rabbitmq reporting behavior.
             # e.g. A user's permission string for '/' is set to ['', '', ''],
             # Rabbitmq reports this only as '/' from the rabbitmqctl command.
-            log.debug('Could not find any values for key \'{0}\'. '
-                      'Setting to \'{0}\' to an empty string.'.format(row))
+            log.debug('Could not find any values for key \'%s\'. '
+                      'Setting to \'%s\' to an empty string.', row, row)
             ret[row] = ''
             continue
         ret[key] = values_mapper(values)
@@ -877,7 +877,7 @@ def set_policy(vhost, name, pattern, definition, priority=None, apply_to=None, r
         cmd.extend(['--apply-to', apply_to])
     cmd.extend([name, pattern, definition])
     res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
-    log.debug('Set policy: {0}'.format(res['stdout']))
+    log.debug('Set policy: %s', res['stdout'])
     return _format_response(res, 'Set')
 
 
@@ -899,7 +899,7 @@ def delete_policy(vhost, name, runas=None):
         [RABBITMQCTL, 'clear_policy', '-p', vhost, name],
         runas=runas,
         python_shell=False)
-    log.debug('Delete policy: {0}'.format(res['stdout']))
+    log.debug('Delete policy: %s', res['stdout'])
     return _format_response(res, 'Deleted')
 
 
