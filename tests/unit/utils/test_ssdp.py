@@ -16,7 +16,7 @@ import datetime
 
 try:
     import pytest
-except ImportError as err:
+except ImportError:
     pytest = None
 
 
