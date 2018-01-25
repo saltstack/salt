@@ -251,7 +251,6 @@ def expanded_dict_from_minion(minion_id, salt_data):
         if 'pillars' in exp_dict:
             dict_merge(pillars_dict, exp_dict)
 
-
     return expanded_classes, pillars_dict, classes_list, states_list
 
 
