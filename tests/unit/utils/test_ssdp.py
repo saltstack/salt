@@ -499,6 +499,7 @@ class SSDPClientTestCase(TestCase):
             clnt._query = MagicMock()
             clnt.log = MagicMock()
             clnt.discover()
+            assert len(clnt.log.error.mock_calls) == 1
             assert 'Error response from the service publisher' in clnt.log.error.call_args[0][0]
             assert '10.10.10.10' == clnt.log.error.call_args[0][1]
             assert clnt.log.error.call_args[1] == {}
