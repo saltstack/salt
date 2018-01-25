@@ -13,7 +13,6 @@ from tests.support.mock import (
 
 from salt.utils import ssdp
 import datetime
-import socket
 
 try:
     import pytest
