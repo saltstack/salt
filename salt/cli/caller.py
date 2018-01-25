@@ -5,7 +5,7 @@ minion modules.
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
@@ -101,7 +101,7 @@ class BaseCaller(object):
         try:
             self.minion = salt.minion.SMinion(opts)
         except SaltClientError as exc:
-            raise SystemExit(str(exc))
+            raise SystemExit(six.text_type(exc))
 
     def print_docs(self):
         '''
@@ -230,11 +230,11 @@ class BaseCaller(object):
                 self.opts['log_level'].lower(), logging.ERROR)
             if active_level <= logging.DEBUG:
                 sys.stderr.write(traceback.format_exc())
-            sys.stderr.write(msg.format(fun, str(exc)))
+            sys.stderr.write(msg.format(fun, exc))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except CommandNotFoundError as exc:
             msg = 'Command required for \'{0}\' not found: {1}\n'
-            sys.stderr.write(msg.format(fun, str(exc)))
+            sys.stderr.write(msg.format(fun, exc))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         try:
             os.remove(proc_fn)
@@ -420,7 +420,7 @@ class RAETCaller(BaseCaller):
                                    name='manor',
                                    lanename=lanename,
                                    dirpath=sockdirpath))
-        log.debug("Created Caller Jobber Stack {0}\n".format(stack.name))
+        log.debug("Created Caller Jobber Stack %s\n", stack.name)
 
         return stack
 

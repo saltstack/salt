@@ -44,7 +44,7 @@ Connection module for Amazon CloudWatch Events
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -142,7 +142,7 @@ def create_or_update(Name,
         rule = conn.put_rule(Name=Name,
                               **kwargs)
         if rule:
-            log.info('The newly created event rule is {0}'.format(rule.get('RuleArn')))
+            log.info('The newly created event rule is %s', rule.get('RuleArn'))
 
             return {'created': True, 'arn': rule.get('RuleArn')}
         else:
