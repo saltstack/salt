@@ -159,7 +159,7 @@ def expand_classes_in_order(minion_dict,
                             seen_classes,
                             expanded_classes,
                             classes_to_expand):
-    # Get classes to expand from minion dictionnary
+    # Get classes to expand from minion dictionary
     if not classes_to_expand and 'classes' in minion_dict:
         classes_to_expand = minion_dict['classes']
 
@@ -230,7 +230,7 @@ def expanded_dict_from_minion(minion_id, salt_data):
             if minion_file == '{0}.yml'.format(minion_id):
                 _file = os.path.join(root, minion_file)
 
-    # Load the minion_id definition if existing, else an exmpty dict
+    # Load the minion_id definition if existing, else an empty dict
     node_dict = {}
     if _file:
         node_dict[minion_id] = render_yaml(_file, salt_data)
