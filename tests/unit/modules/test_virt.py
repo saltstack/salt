@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import os
 
@@ -216,7 +216,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('name').text, 'vmname/system.qcow2')
         self.assertEqual(root.find('key').text, 'vmname/system')
         self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
-        self.assertEqual(root.find('capacity').text, str(8192 * 1024))
+        self.assertEqual(root.find('capacity').text, six.text_type(8192 * 1024))
 
     def test_gen_vol_xml_for_esxi(self):
         xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'esxi')
@@ -224,7 +224,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('name').text, 'vmname/system.vmdk')
         self.assertEqual(root.find('key').text, 'vmname/system')
         self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
-        self.assertEqual(root.find('capacity').text, str(8192 * 1024))
+        self.assertEqual(root.find('capacity').text, six.text_type(8192 * 1024))
 
     def test_gen_xml_for_kvm_default_profile(self):
         diskp = virt._disk_profile('default', 'kvm')
@@ -240,7 +240,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'kvm')
         self.assertEqual(root.find('vcpu').text, '1')
-        self.assertEqual(root.find('memory').text, str(512 * 1024))
+        self.assertEqual(root.find('memory').text, six.text_type(512 * 1024))
         self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
 
         disks = root.findall('.//disk')
@@ -279,7 +279,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'vmware')
         self.assertEqual(root.find('vcpu').text, '1')
-        self.assertEqual(root.find('memory').text, str(512 * 1024))
+        self.assertEqual(root.find('memory').text, six.text_type(512 * 1024))
         self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
 
         disks = root.findall('.//disk')
@@ -344,7 +344,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib['type'], 'vmware')
             self.assertEqual(root.find('vcpu').text, '1')
-            self.assertEqual(root.find('memory').text, str(512 * 1024))
+            self.assertEqual(root.find('memory').text, six.text_type(512 * 1024))
             self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
             self.assertTrue(len(root.findall('.//disk')) == 2)
             self.assertTrue(len(root.findall('.//interface')) == 2)
@@ -391,7 +391,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib['type'], 'kvm')
             self.assertEqual(root.find('vcpu').text, '1')
-            self.assertEqual(root.find('memory').text, str(512 * 1024))
+            self.assertEqual(root.find('memory').text, six.text_type(512 * 1024))
             self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
             self.assertTrue(len(root.findall('.//disk')) == 2)
             self.assertTrue(len(root.findall('.//interface')) == 2)

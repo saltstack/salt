@@ -10,6 +10,9 @@ functions accept api_opts:
     api_password:  [default to pillar value]
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def present(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
     '''

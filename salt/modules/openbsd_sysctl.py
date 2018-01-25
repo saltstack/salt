@@ -2,12 +2,15 @@
 '''
 Module for viewing and modifying OpenBSD sysctl parameters
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 
 # Import salt libs
+from salt.ext import six
+import salt.utils.data
 import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -98,7 +101,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     '''
     nlines = []
     edited = False
-    value = str(value)
+    value = six.text_type(value)
 
     # create /etc/sysctl.conf if not present
     if not os.path.isfile(config):
@@ -111,6 +114,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
 
     with salt.utils.files.fopen(config, 'r') as ifile:
         for line in ifile:
+            line = salt.utils.stringutils.to_unicode(line)
             if not line.startswith('{0}='.format(name)):
                 nlines.append(line)
                 continue
@@ -130,8 +134,8 @@ def persist(name, value, config='/etc/sysctl.conf'):
                 edited = True
     if not edited:
         nlines.append('{0}={1}\n'.format(name, value))
-    with salt.utils.files.fopen(config, 'w+') as ofile:
-        ofile.writelines(nlines)
+    with salt.utils.files.fopen(config, 'wb') as ofile:
+        ofile.writelines(salt.utils.data.encode(nlines))
 
     assign(name, value)
     return 'Updated'
