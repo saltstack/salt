@@ -16,6 +16,8 @@ import weakref
 from random import randint
 
 # Import Salt Libs
+from salt.ext import six
+from salt.ext.six.moves import map
 import salt.auth
 import salt.crypt
 import salt.utils.event
@@ -54,7 +56,6 @@ import tornado.gen
 import tornado.concurrent
 
 # Import third party libs
-from salt.ext import six
 try:
     from Cryptodome.Cipher import PKCS1_OAEP
 except ImportError:
@@ -338,7 +339,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             zmq.eventloop.ioloop.install()
             self.io_loop = tornado.ioloop.IOLoop.current()
 
-        self.hexid = hashlib.sha1(six.b(self.opts['id'])).hexdigest()
+        self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()
 
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
 

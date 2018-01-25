@@ -20,6 +20,7 @@ import hmac
 import logging
 import salt.config
 import re
+from salt.ext import six
 
 # Import Salt libs
 import salt.utils.hashutils
@@ -256,7 +257,7 @@ def sig4(method, endpoint, params, prov_dict,
     if token != '':
         new_headers['X-Amz-security-token'] = token
 
-    for header in sorted(new_headers.keys(), key=str.lower):
+    for header in sorted(new_headers.keys(), key=six.text_type.lower):
         lower_header = header.lower()
         a_canonical_headers.append('{0}:{1}'.format(lower_header, new_headers[header].strip()))
         a_signed_headers.append(lower_header)

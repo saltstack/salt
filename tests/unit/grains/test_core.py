@@ -708,10 +708,11 @@ SwapTotal:       4789244 kB'''
                     log.debug(
                         'Testing Docker cgroup substring \'%s\'', cgroup_substr)
                     with patch('salt.utils.files.fopen', mock_open(read_data=cgroup_data)):
-                        self.assertEqual(
-                            core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
-                            'Docker'
-                        )
+                        with patch.dict(core.__salt__, {'cmd.run_all': MagicMock()}):
+                            self.assertEqual(
+                                core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                                'Docker'
+                            )
 
     def _check_ipaddress(self, value, ip_v):
         '''

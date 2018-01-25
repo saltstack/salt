@@ -19,7 +19,7 @@
     .. __: https://github.com/pexpect/pexpect
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -213,7 +213,7 @@ class Terminal(object):
             # A lot can go wrong, so that's why we're catching the most general
             # exception type
             log.warning(
-                'Failed to spawn the VT: {0}'.format(err),
+                'Failed to spawn the VT: %s', err,
                  exc_info_on_loglevel=logging.DEBUG
             )
             raise TerminalException(
@@ -221,15 +221,15 @@ class Terminal(object):
             )
 
         log.debug(
-            'Child Forked! PID: {0}  STDOUT_FD: {1}  STDERR_FD: '
-            '{2}'.format(self.pid, self.child_fd, self.child_fde)
+            'Child Forked! PID: %s  STDOUT_FD: %s  STDERR_FD: %s',
+            self.pid, self.child_fd, self.child_fde
         )
         terminal_command = ' '.join(self.args)
         if 'decode("base64")' in terminal_command or 'base64.b64decode(' in terminal_command:
             log.debug('VT: Salt-SSH SHIM Terminal Command executed. Logged to TRACE')
-            log.trace('Terminal Command: {0}'.format(terminal_command))
+            log.trace('Terminal Command: %s', terminal_command)
         else:
-            log.debug('Terminal Command: {0}'.format(terminal_command))
+            log.debug('Terminal Command: %s', terminal_command)
         # <---- Spawn our terminal -------------------------------------------
 
         # ----- Setup Logging ----------------------------------------------->
@@ -441,10 +441,8 @@ class Terminal(object):
                         self.setwinsize(self.rows, self.cols)
                     except IOError as err:
                         log.warning(
-                            'Failed to set the VT terminal size: {0}'.format(
-                                err
-                            ),
-                            exc_info_on_loglevel=logging.DEBUG
+                            'Failed to set the VT terminal size: %s',
+                            err, exc_info_on_loglevel=logging.DEBUG
                         )
 
                 # Do not allow child to inherit open file descriptors from

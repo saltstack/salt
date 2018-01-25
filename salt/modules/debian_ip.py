@@ -8,7 +8,7 @@ References:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import logging
 import os.path
@@ -283,6 +283,7 @@ def _parse_current_network_settings():
     if os.path.isfile(_DEB_NETWORKING_FILE):
         with salt.utils.files.fopen(_DEB_NETWORKING_FILE) as contents:
             for line in contents:
+                salt.utils.stringutils.to_unicode(line)
                 if line.startswith('#'):
                     continue
                 elif line.startswith('CONFIGURE_INTERFACES'):
@@ -425,7 +426,7 @@ DEBIAN_ATTR_TO_SALT_ATTR_MAP['hwaddress'] = 'hwaddress'
 IPV4_VALID_PROTO = ['bootp', 'dhcp', 'static', 'manual', 'loopback', 'ppp']
 
 IPV4_ATTR_MAP = {
-    'proto': __within(IPV4_VALID_PROTO, dtype=str),
+    'proto': __within(IPV4_VALID_PROTO, dtype=six.text_type),
     # ipv4 static & manual
     'address': __ipv4_quad,
     'netmask': __ipv4_netmask,
@@ -435,7 +436,7 @@ IPV4_ATTR_MAP = {
     'pointopoint':  __ipv4_quad,
     'hwaddress':  __mac,
     'mtu':  __int,
-    'scope': __within(['global', 'link', 'host'], dtype=str),
+    'scope': __within(['global', 'link', 'host'], dtype=six.text_type),
     # dhcp
     'hostname': __anything,
     'leasehours':  __int,
@@ -447,7 +448,7 @@ IPV4_ATTR_MAP = {
     'server':  __ipv4_quad,
     'hwaddr':  __mac,
     # tunnel
-    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP', '802.3ad'], dtype=str),
+    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP', '802.3ad'], dtype=six.text_type),
     'endpoint':  __ipv4_quad,
     'dstaddr':  __ipv4_quad,
     'local':  __ipv4_quad,
@@ -483,7 +484,7 @@ IPV6_ATTR_MAP = {
     'gateway': __ipv6,  # supports a colon-delimited list
     'hwaddress':  __mac,
     'mtu':  __int,
-    'scope': __within(['global', 'site', 'link', 'host'], dtype=str),
+    'scope': __within(['global', 'site', 'link', 'host'], dtype=six.text_type),
     # inet6 auto
     'privext': __within([0, 1, 2], dtype=int),
     'dhcp':  __within([0, 1], dtype=int),
@@ -497,7 +498,7 @@ IPV6_ATTR_MAP = {
     # bond
     'slaves': __anything,
     # tunnel
-    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP', '802.3ad'], dtype=str),
+    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP', '802.3ad'], dtype=six.text_type),
     'endpoint': __ipv4_quad,
     'local':  __ipv4_quad,
     'ttl':  __int,
@@ -579,6 +580,7 @@ def _parse_interfaces(interface_files=None):
             # This ensures iface_dict exists, but does not ensure we're not reading a new interface.
             iface_dict = {}
             for line in interfaces:
+                line = salt.utils.stringutils.to_unicode(line)
                 # Identify the clauses by the first word of each line.
                 # Go to the next line if the current line is a comment
                 # or all spaces.
@@ -724,7 +726,7 @@ def _parse_ethtool_opts(opts, iface):
 
     if 'speed' in opts:
         valid = ['10', '100', '1000', '10000']
-        if str(opts['speed']) in valid:
+        if six.text_type(opts['speed']) in valid:
             config.update({'speed': opts['speed']})
         else:
             _raise_error_iface(iface, opts['speed'], valid)
@@ -1491,7 +1493,7 @@ def _write_file(iface, data, folder, pattern):
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.files.flopen(filename, 'w') as fout:
-        fout.write(data)
+        fout.write(salt.utils.stringutils.to_str(data))
     return filename
 
 
@@ -1516,7 +1518,7 @@ def _write_file_routes(iface, data, folder, pattern):
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.files.flopen(filename, 'w') as fout:
-        fout.write(data)
+        fout.write(salt.utils.stringutils.to_str(data))
 
     __salt__['file.set_mode'](filename, '0755')
     return filename
@@ -1535,7 +1537,7 @@ def _write_file_network(data, filename, create=False):
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.files.flopen(filename, 'w') as fout:
-        fout.write(data)
+        fout.write(salt.utils.stringutils.to_str(data))
 
 
 def _read_temp(data):
@@ -1612,9 +1614,9 @@ def _write_file_ifaces(iface, data, **settings):
         raise AttributeError(msg)
     with salt.utils.files.flopen(filename, 'w') as fout:
         if _SEPARATE_FILE:
-            fout.write(saved_ifcfg)
+            fout.write(salt.utils.stringutils.to_str(saved_ifcfg))
         else:
-            fout.write(ifcfg)
+            fout.write(salt.utils.stringutils.to_str(ifcfg))
 
     # Return as an array so the difflib works
     return saved_ifcfg.split('\n')
@@ -1644,7 +1646,7 @@ def _write_file_ppp_ifaces(iface, data):
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.files.fopen(filename, 'w') as fout:
-        fout.write(ifcfg)
+        fout.write(salt.utils.stringutils.to_str(ifcfg))
 
     # Return as an array so the difflib works
     return filename
