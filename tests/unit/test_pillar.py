@@ -538,7 +538,6 @@ generic:
             self.assertEqual(compiled_pillar['foo1'], 'bar1')
             self.assertEqual(compiled_pillar['foo2'], 'bar2')
 
-
     def _setup_test_include_mocks(self, Matcher, get_file_client):
         self.top_file = top_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         top_file.write(b'''
