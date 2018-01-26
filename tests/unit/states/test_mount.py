@@ -176,8 +176,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                              'group.info': mock_group}):
                 with patch.dict(mount.__opts__, {'test': True}):
                     with patch.object(os.path, 'exists', mock_t):
-                        comt = 'Target was already mounted. ' + \
-                               'Entry already exists in the fstab.'
+                        comt = 'Target was already mounted. Entry already exists in the fstab.'
                         ret.update({'name': name2, 'result': True})
                         ret.update({'comment': comt, 'changes': {}})
                         self.assertDictEqual(mount.mounted(name2, device2,
