@@ -2334,8 +2334,11 @@ class State(object):
                     run_dict = self.pre
                 else:
                     run_dict = running
+                start_time, duration = _calculate_fake_duration()
                 run_dict[tag] = {'changes': {},
                                  'result': False,
+                                 'duration': duration,
+                                 'start_time': start_time,
                                  'comment': comment,
                                  '__run_num__': self.__run_num,
                                  '__sls__': low['__sls__']}
