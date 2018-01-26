@@ -122,7 +122,7 @@ class Base(TestCase, LoaderModuleMockMixin):
 
 @skipIf(True, 'These tests are not running reliably')
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-        'The \'virtualenv\' packaged needs to be installed')
+        "The 'virtualenv' packaged needs to be installed")
 @skip_if_binaries_missing(['tar'])
 class BuildoutTestCase(Base):
 
