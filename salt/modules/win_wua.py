@@ -51,8 +51,7 @@ Group Policy using the ``lgpo`` module.
         - salt.utils.win_update
 '''
 # Import Python libs
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt libs
@@ -800,7 +799,7 @@ def download(names):
         names = [names]
 
     if isinstance(names, six.integer_types):
-        names = [str(names)]
+        names = [six.text_type(names)]
 
     if updates.count() > len(names):
         raise CommandExecutionError('Multiple updates found, names need to be '
@@ -919,7 +918,7 @@ def install(names):
         names = [names]
 
     if isinstance(names, six.integer_types):
-        names = [str(names)]
+        names = [six.text_type(names)]
 
     if updates.count() > len(names):
         raise CommandExecutionError('Multiple updates found, names need to be '
