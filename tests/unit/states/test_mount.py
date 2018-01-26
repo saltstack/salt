@@ -299,9 +299,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {'name': name,
                'result': True,
-               'comment': '',
+               'comment': 'Watch not supported in unmount at this time',
                'changes': {}}
 
-        comt = ('Watch not supported in unmount at this time')
-        ret.update({'comment': comt})
         self.assertDictEqual(mount.mod_watch(name, sfun='unmount'), ret)

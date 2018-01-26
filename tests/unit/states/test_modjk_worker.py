@@ -41,7 +41,7 @@ class ModjkWorkerTestCase(TestCase, LoaderModuleMockMixin):
                'comment': '',
                'changes': {}}
 
-        comt = ('no servers answered the published command modjk.worker_status')
+        comt = 'no servers answered the published command modjk.worker_status'
         mock = MagicMock(return_value=False)
         with patch.dict(modjk_worker.__salt__, {'publish.publish': mock}):
             ret.update({'comment': comt})
@@ -63,7 +63,7 @@ class ModjkWorkerTestCase(TestCase, LoaderModuleMockMixin):
                'comment': '',
                'changes': {}}
 
-        comt = ('no servers answered the published command modjk.worker_status')
+        comt = 'no servers answered the published command modjk.worker_status'
         mock = MagicMock(return_value=False)
         with patch.dict(modjk_worker.__salt__, {'publish.publish': mock}):
             ret.update({'comment': comt})
@@ -85,7 +85,7 @@ class ModjkWorkerTestCase(TestCase, LoaderModuleMockMixin):
                'comment': '',
                'changes': {}}
 
-        comt = ('no servers answered the published command modjk.worker_status')
+        comt = 'no servers answered the published command modjk.worker_status'
         mock = MagicMock(return_value=False)
         with patch.dict(modjk_worker.__salt__, {'publish.publish': mock}):
             ret.update({'comment': comt})
