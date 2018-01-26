@@ -17,9 +17,6 @@ import shutil
 from datetime import datetime
 import logging
 
-# Import 3rd-party libs
-import yaml
-
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
@@ -30,6 +27,7 @@ from tests.integration.utils import testprogram
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.yaml
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -175,7 +173,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             os.makedirs(config_dir)
 
         with salt.utils.files.fopen(self.get_config_file_path('master')) as fhr:
-            master_config = yaml.load(fhr.read())
+            master_config = salt.utils.yaml.safe_load(fhr)
 
         master_root_dir = master_config['root_dir']
         this_minion_key = os.path.join(
@@ -205,9 +203,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             # Let's first test with a master running
 
             with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                fh_.write(
-                    yaml.dump(minion_config, default_flow_style=False)
-                )
+                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
             ret = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
@@ -235,9 +231,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             minion_config.pop('master')
             minion_config.pop('master_port')
             with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                fh_.write(
-                    yaml.dump(minion_config, default_flow_style=False)
-                )
+                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
 
             out = self.run_script(
                 'salt-call',
@@ -283,9 +277,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             # Should work with local file client
             minion_config['file_client'] = 'local'
             with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                fh_.write(
-                    yaml.dump(minion_config, default_flow_style=False)
-                )
+                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
             ret = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
@@ -310,12 +302,10 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         os.chdir(config_dir)
 
         with salt.utils.files.fopen(self.get_config_file_path('minion'), 'r') as fh_:
-            minion_config = yaml.load(fh_.read())
+            minion_config = salt.utils.yaml.safe_load(fh_)
             minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
             with salt.utils.files.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
-                fh_.write(
-                    yaml.dump(minion_config, default_flow_style=False)
-                )
+                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
         ret = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(

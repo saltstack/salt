@@ -47,17 +47,16 @@ config:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 import logging
 import os
 import re
-import yaml
 
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.json
-from salt.utils.yamlloader import SaltYamlSafeLoader
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -441,7 +440,10 @@ def _gen_md5_filehash(fname, *args):
             _hash.update(chunk)
 
     for extra_arg in args:
-        _hash.update(six.b(str(extra_arg)))
+        try:
+            _hash.update(salt.utils.stringutils.to_bytes(extra_arg))
+        except TypeError:
+            _hash.update(salt.utils.stringutils.to_bytes(six.text_type(extra_arg)))
     return _hash.hexdigest()
 
 
@@ -718,10 +720,7 @@ class _Swagger(object):
                                                        error_response_template,
                                                        response_template)
                 with salt.utils.files.fopen(self._swagger_file, 'rb') as sf:
-                    self._cfg = yaml.load(
-                        sf,
-                        Loader=SaltYamlSafeLoader
-                    )
+                    self._cfg = salt.utils.yaml.safe_load(sf)
                 self._swagger_version = ''
             else:
                 raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
@@ -752,7 +751,7 @@ class _Swagger(object):
                 if 'responses' not in opobj:
                     raise ValueError('missing mandatory responses field in path item object')
                 for rescode, resobj in six.iteritems(opobj.get('responses')):
-                    if not self._is_http_error_rescode(str(rescode)):
+                    if not self._is_http_error_rescode(str(rescode)):  # future lint: disable=blacklisted-function
                         continue
 
                     # only check for response code from 400-599
@@ -1602,7 +1601,7 @@ class _Swagger(object):
 
         if 'responses' in method_data:
             for response, response_data in six.iteritems(method_data['responses']):
-                httpStatus = str(response)
+                httpStatus = str(response)  # future lint: disable=blacklisted-function
                 method_response = self._parse_method_response(method_name.lower(),
                                                               _Swagger.SwaggerMethodResponse(response_data), httpStatus)
 

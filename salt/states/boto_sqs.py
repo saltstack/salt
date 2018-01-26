@@ -57,12 +57,11 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import difflib
 import logging
-import yaml
 
 # Import Salt libs
 import salt.utils.json
@@ -189,10 +188,10 @@ def present(
             if isinstance(val, six.string_types):
                 val = salt.utils.json.loads(val)
             if _val != val:
-                log.debug('Policies differ:\n{0}\n{1}'.format(_val, val))
+                log.debug('Policies differ:\n%s\n%s', _val, val)
                 attrs_to_set[attr] = salt.utils.json.dumps(val, sort_keys=True)
-        elif str(_val) != str(val):
-            log.debug('Attributes differ:\n{0}\n{1}'.format(_val, val))
+        elif six.text_type(_val) != six.text_type(val):
+            log.debug('Attributes differ:\n%s\n%s', _val, val)
             attrs_to_set[attr] = val
     attr_names = ', '.join(attrs_to_set)
 
@@ -204,14 +203,15 @@ def present(
     final_attributes.update(attrs_to_set)
 
     def _yaml_safe_dump(attrs):
-        '''Safely dump YAML using a readable flow style'''
-        dumper_name = 'IndentedSafeOrderedDumper'
-        dumper = __utils__['yamldumper.get_dumper'](dumper_name)
-        return yaml.dump(
+        '''
+        Safely dump YAML using a readable flow style
+        '''
+        dumper = __utils__['yaml.get_dumper']('IndentedSafeOrderedDumper')
+        return __utils__['yaml.dump'](
             attrs,
             default_flow_style=False,
-            Dumper=dumper,
-        )
+            Dumper=dumper)
+
     attributes_diff = ''.join(difflib.unified_diff(
         _yaml_safe_dump(current_attributes).splitlines(True),
         _yaml_safe_dump(final_attributes).splitlines(True),
@@ -287,7 +287,7 @@ def absent(
     )
     if 'error' in r:
         ret['result'] = False
-        ret['comment'] = str(r['error'])
+        ret['comment'] = six.text_type(r['error'])
         return ret
 
     if not r['result']:
@@ -312,7 +312,7 @@ def absent(
     )
     if 'error' in r:
         ret['result'] = False
-        ret['comment'] = str(r['error'])
+        ret['comment'] = six.text_type(r['error'])
         return ret
 
     ret['comment'] = 'SQS queue {0} was deleted.'.format(name)

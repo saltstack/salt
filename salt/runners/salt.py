@@ -99,7 +99,8 @@ def cmd(fun, *args, **kwargs):
 
     functions = salt.loader.minion_mods(
         opts,
-        utils=salt.loader.utils(opts))
+        utils=salt.loader.utils(opts),
+        context=__context__)
 
     return functions[fun](*args, **kwargs) \
         if fun in functions \

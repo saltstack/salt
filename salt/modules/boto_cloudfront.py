@@ -51,14 +51,12 @@ Connection module for Amazon CloudFront
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
 import salt.ext.six as six
 from salt.utils.odict import OrderedDict
-
-import yaml
 
 # Import third party libs
 try:
@@ -113,9 +111,7 @@ def _list_distributions(
 
             id_ = partial_dist['Id']
             if 'Name' not in tags:
-                log.warning(
-                    'CloudFront distribution {0} has no Name tag.'.format(id_),
-                )
+                log.warning('CloudFront distribution %s has no Name tag.', id_)
                 continue
             distribution_name = tags.pop('Name', None)
             if name is not None and distribution_name != name:
@@ -273,8 +269,8 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
         # as opposed to being called from execution or state modules
         raise err
 
-    dumper = __utils__['yamldumper.get_dumper']('IndentedSafeOrderedDumper')
-    return yaml.dump(
+    dumper = __utils__['yaml.get_dumper']('IndentedSafeOrderedDumper')
+    return __utils__['yaml.dump'](
         results,
         default_flow_style=False,
         Dumper=dumper,

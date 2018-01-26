@@ -46,6 +46,9 @@ This example would allow the file state to change, but would limit the
 concurrency of the trafficserver service restart to 4.
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 # TODO: use depends decorator to make these per function deps, instead of all or nothing
 REQUIRED_FUNCS = (
     'zk_concurrency.lock',

@@ -15,9 +15,6 @@ import pipes
 import shutil
 import tempfile
 
-# Import 3rd-party libs
-import yaml
-
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.paths import TMP
@@ -25,6 +22,7 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -42,7 +40,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
         for line in self.run_salt('--out yaml "*" test.ping'):
             if not line:
                 continue
-            data = yaml.load(line)
+            data = salt.utils.yaml.safe_load(line)
             minions.extend(data.keys())
 
         self.assertNotEqual(minions, [])
@@ -62,7 +60,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                     pipes.quote(minion), TMP
                 )
             )
-            data = yaml.load('\n'.join(ret))
+            data = salt.utils.yaml.safe_load('\n'.join(ret))
             if data[minion] is False:
                 ret = self.run_salt(
                     '--out yaml {0} file.makedirs {1}'.format(
@@ -71,7 +69,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                     )
                 )
 
-                data = yaml.load('\n'.join(ret))
+                data = salt.utils.yaml.safe_load('\n'.join(ret))
                 self.assertTrue(data[minion])
 
             minion_testfile = os.path.join(
@@ -84,7 +82,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 pipes.quote(minion_testfile)
             ))
 
-            data = yaml.load('\n'.join(ret))
+            data = salt.utils.yaml.safe_load('\n'.join(ret))
             for part in six.itervalues(data):
                 self.assertTrue(part[minion_testfile])
 
@@ -94,7 +92,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                     pipes.quote(minion_testfile)
                 )
             )
-            data = yaml.load('\n'.join(ret))
+            data = salt.utils.yaml.safe_load('\n'.join(ret))
             self.assertTrue(data[minion])
 
             ret = self.run_salt(
@@ -104,7 +102,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                     pipes.quote(testfile_contents)
                 )
             )
-            data = yaml.load('\n'.join(ret))
+            data = salt.utils.yaml.safe_load('\n'.join(ret))
             self.assertTrue(data[minion])
             ret = self.run_salt(
                 '--out yaml {0} file.remove {1}'.format(
@@ -112,7 +110,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                     pipes.quote(minion_testfile)
                 )
             )
-            data = yaml.load('\n'.join(ret))
+            data = salt.utils.yaml.safe_load('\n'.join(ret))
             self.assertTrue(data[minion])
 
     def test_issue_7754(self):
@@ -126,12 +124,10 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
         config_file_name = 'master'
         with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = yaml.load(fhr.read())
+            config = salt.utils.yaml.safe_load(fhr)
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
             with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                fhw.write(
-                    yaml.dump(config, default_flow_style=False)
-                )
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
 
         try:
             fd_, fn_ = tempfile.mkstemp()

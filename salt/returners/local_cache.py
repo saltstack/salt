@@ -72,7 +72,11 @@ def _walk_through(job_dir):
                 continue
 
             with salt.utils.files.fopen(load_path, 'rb') as rfh:
-                job = serial.load(rfh)
+                try:
+                    job = serial.load(rfh)
+                except Exception:
+                    log.exception('Failed to deserialize %s', load_path)
+                    continue
                 jid = job['jid']
                 yield jid, job, t_path, final
 
@@ -420,16 +424,16 @@ def clean_old_jobs():
             for final in t_path_dirs:
                 f_path = os.path.join(t_path, final)
                 jid_file = os.path.join(f_path, 'jid')
-                if not os.path.isfile(jid_file) and os.path.exists(t_path):
+                if not os.path.isfile(jid_file) and os.path.exists(f_path):
                     # No jid file means corrupted cache entry, scrub it
-                    # by removing the entire t_path directory
-                    shutil.rmtree(t_path)
+                    # by removing the entire f_path directory
+                    shutil.rmtree(f_path)
                 elif os.path.isfile(jid_file):
                     jid_ctime = os.stat(jid_file).st_ctime
                     hours_difference = (time.time()- jid_ctime) / 3600.0
                     if hours_difference > __opts__['keep_jobs'] and os.path.exists(t_path):
-                        # Remove the entire t_path from the original JID dir
-                        shutil.rmtree(t_path)
+                        # Remove the entire f_path from the original JID dir
+                        shutil.rmtree(f_path)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug

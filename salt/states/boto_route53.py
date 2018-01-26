@@ -72,13 +72,14 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import uuid
 
 # Import Salt Libs
 import salt.utils.data
 import salt.utils.json
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -156,13 +157,11 @@ def present(name, value, zone, record_type, ttl=None, identifier=None, region=No
                                                 in_states=in_states,
                                                 profile=profile)
         if len(r) < 1:
-            msg = 'Error: instance with Name tag {0} not found'.format(name_tag)
-            ret['comment'] = msg
+            ret['comment'] = 'Error: instance with Name tag {0} not found'.format(name_tag)
             ret['result'] = False
             return ret
         if len(r) > 1:
-            msg = 'Error: Name tag {0} matched more than one instance'
-            ret['comment'] = msg.format(name_tag)
+            ret['comment'] = 'Error: Name tag {0} matched more than one instance'.format(name_tag)
             ret['result'] = False
             return ret
         instance = r[0]
@@ -170,17 +169,14 @@ def present(name, value, zone, record_type, ttl=None, identifier=None, region=No
         public_ip = getattr(instance, 'ip_address', None)
         if value.startswith('private:'):
             value = private_ip
-            log.info('Found private IP {0} for instance {1}'.format(private_ip,
-                                                                    name_tag))
+            log.info('Found private IP %s for instance %s', private_ip, name_tag)
         else:
             if public_ip is None:
-                msg = 'Error: No Public IP assigned to instance with Name {0}'
-                ret['comment'] = msg.format(name_tag)
+                ret['comment'] = 'Error: No Public IP assigned to instance with Name {0}'.format(name_tag)
                 ret['result'] = False
                 return ret
             value = public_ip
-            log.info('Found public IP {0} for instance {1}'.format(public_ip,
-                                                                    name_tag))
+            log.info('Found public IP %s for instance %s', public_ip, name_tag)
 
     try:
         record = __salt__['boto_route53.get_record'](name, zone, record_type,
@@ -229,12 +225,11 @@ def present(name, value, zone, record_type, ttl=None, identifier=None, region=No
             need_to_update = True
         if identifier and identifier != record['identifier']:
             need_to_update = True
-        if ttl and str(ttl) != str(record['ttl']):
+        if ttl and six.text_type(ttl) != six.text_type(record['ttl']):
             need_to_update = True
         if need_to_update:
             if __opts__['test']:
-                msg = 'Route53 record {0} set to be updated.'.format(name)
-                ret['comment'] = msg
+                ret['comment'] = 'Route53 record {0} set to be updated.'.format(name)
                 ret['result'] = None
                 return ret
             updated = __salt__['boto_route53.update_record'](name, value, zone,
@@ -255,8 +250,7 @@ def present(name, value, zone, record_type, ttl=None, identifier=None, region=No
                 ret['comment'] = 'Updated {0} Route53 record.'.format(name)
             else:
                 ret['result'] = False
-                msg = 'Failed to update {0} Route53 record.'.format(name)
-                ret['comment'] = msg
+                ret['comment'] = 'Failed to update {0} Route53 record.'.format(name)
         else:
             ret['comment'] = '{0} exists.'.format(name)
     return ret
@@ -324,8 +318,7 @@ def absent(
                                                  private_zone, identifier)
     if record:
         if __opts__['test']:
-            msg = 'Route53 record {0} set to be deleted.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'Route53 record {0} set to be deleted.'.format(name)
             ret['result'] = None
             return ret
         deleted = __salt__['boto_route53.delete_record'](name, zone,
@@ -342,8 +335,7 @@ def absent(
             ret['comment'] = 'Deleted {0} Route53 record.'.format(name)
         else:
             ret['result'] = False
-            msg = 'Failed to delete {0} Route53 record.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'Failed to delete {0} Route53 record.'.format(name)
     else:
         ret['comment'] = '{0} does not exist.'.format(name)
     return ret
@@ -416,15 +408,16 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=N
         if vpc_region and vpcs:
             vpcs = [v for v in vpcs if v['region'] == vpc_region]
         if not vpcs:
-            msg = ('Private zone requested but a VPC matching given criteria not found.')
+            msg = 'Private zone requested but a VPC matching given criteria not found.'
             log.error(msg)
-            ret['result'] = False
             ret['comment'] = msg
+            ret['result'] = False
             return ret
         if len(vpcs) > 1:
-            msg = ('Private zone requested but multiple VPCs matching given criteria found: '
-                   '{0}.'.format([v['id'] for v in vpcs]))
-            log.error(msg)
+            log.error(
+                'Private zone requested but multiple VPCs matching given '
+                'criteria found: %s', [v['id'] for v in vpcs]
+            )
             return None
         vpc = vpcs[0]
         if vpc_name:
@@ -462,14 +455,14 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=N
             # toes.  We can't just fail, because some scenarios (think split
             # horizon DNS) require zones with identical names but different
             # settings...
-            log.info('A Hosted Zone with name {0} already exists, but with '
+            log.info('A Hosted Zone with name %s already exists, but with '
                      'different settings.  Will attempt to create the one '
                      'requested on the assumption this is what is desired.  '
-                     'This may fail...'.format(domain_name))
+                     'This may fail...', domain_name)
 
     if create:
         if caller_ref is None:
-            caller_ref = str(uuid.uuid4())
+            caller_ref = six.text_type(uuid.uuid4())
         if __opts__['test']:
             ret['comment'] = 'Route53 Hosted Zone {0} set to be added.'.format(
                     domain_name)

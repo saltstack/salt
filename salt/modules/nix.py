@@ -17,7 +17,7 @@ For more information on nix, see the `nix documentation`_.
 .. _`nix-daemon`: https://nixos.org/nix/manual/#ssec-multi-user
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import itertools
