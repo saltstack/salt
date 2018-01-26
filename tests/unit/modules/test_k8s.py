@@ -4,7 +4,7 @@ Unit Tests for the k8s execution module.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import hashlib
 import base64
 import time
@@ -21,6 +21,7 @@ import salt.modules.k8s as k8s
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error
+from salt.ext import six
 
 
 @skip_if_binaries_missing(['kubectl'])
@@ -46,7 +47,7 @@ class TestK8SNamespace(TestCase):
 
     def test_create_namespace(self):
         hash = hashlib.sha1()
-        hash.update(str(time.time()))
+        hash.update(six.text_Type(time.time()))
         nsname = hash.hexdigest()[:16]
         res = k8s.create_namespace(nsname, apiserver_url="http://127.0.0.1:8080")
         proc = Popen(["kubectl", "get", "namespaces", nsname, "-o", "json"], stdout=PIPE)
@@ -62,7 +63,7 @@ class TestK8SSecrets(TestCase):
 
     def setUp(self):
         hash = hashlib.sha1()
-        hash.update(str(time.time()))
+        hash.update(six.text_type(time.time()))
         self.name = hash.hexdigest()[:16]
         data = {"testsecret": base64.encodestring("teststring")}
         self.request = {
@@ -120,7 +121,7 @@ class TestK8SSecrets(TestCase):
             names.append("/tmp/{0}-{1}".format(name, i))
             with salt.utils.files.fopen("/tmp/{0}-{1}".format(name, i), 'w') as f:
                 expected_data["{0}-{1}".format(name, i)] = base64.b64encode("{0}{1}".format(name, i))
-                f.write("{0}{1}".format(name, i))
+                f.write(salt.utils.stringutils.to_str("{0}{1}".format(name, i)))
         res = k8s.create_secret("default", name, names, apiserver_url="http://127.0.0.1:8080")
         proc = Popen(["kubectl", "--namespace=default", "get", "secrets", name, "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
@@ -180,7 +181,7 @@ class TestK8SResourceQuotas(TestCase):
 
     def setUp(self):
         hash = hashlib.sha1()
-        hash.update(str(time.time()))
+        hash.update(six.text_type(time.time()))
         self.name = hash.hexdigest()[:16]
 
     def test_get_resource_quotas(self):
@@ -206,7 +207,7 @@ spec:
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
         with salt.utils.files.fopen(filename, 'w') as f:
-            f.write(request)
+            f.write(salt.utils.stringutils.to_str(request))
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
         # wee need to give kubernetes time save data in etcd
@@ -240,7 +241,7 @@ spec:
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
         with salt.utils.files.fopen(filename, 'w') as f:
-            f.write(request)
+            f.write(salt.utils.stringutils.to_str(request))
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
         # wee need to give kubernetes time save data in etcd
@@ -287,7 +288,7 @@ spec:
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
         with salt.utils.files.fopen(filename, 'w') as f:
-            f.write(request)
+            f.write(salt.utils.stringutils.to_str(request))
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
         # wee need to give kubernetes time save data in etcd
@@ -310,7 +311,7 @@ class TestK8SLimitRange(TestCase):
 
     def setUp(self):
         hash = hashlib.sha1()
-        hash.update(str(time.time()))
+        hash.update(six.text_type(time.time()))
         self.name = hash.hexdigest()[:16]
 
     def test_create_limit_range(self):
@@ -353,7 +354,7 @@ spec:
         }
         filename = "/tmp/{0}.yaml".format(name)
         with salt.utils.files.fopen(filename, 'w') as f:
-            f.write(request)
+            f.write(salt.utils.stringutils.to_str(request))
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
         # wee need to give kubernetes time save data in etcd
@@ -391,7 +392,7 @@ spec:
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
         with salt.utils.files.fopen(filename, 'w') as f:
-            f.write(request)
+            f.write(salt.utils.stringutils.to_str(request))
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
         # wee need to give kubernetes time save data in etcd
