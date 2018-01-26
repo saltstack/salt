@@ -2802,6 +2802,7 @@ def create(vm_=None, call=None):
 
     # Ensure that the latest node data is returned
     node = _get_node(instance_id=vm_['instance_id'])
+    __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
     ret.update(node)
 
     return ret
