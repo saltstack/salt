@@ -166,7 +166,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
                                 'watcher']
 
         _os_query_results = {'data': [
-            {'build_platform': 'ubunt', 'start_time': '1514484833',
+            {'build_platform': 'ubuntu', 'start_time': '1514484833',
              'uuid': 'D31FD400-7277-11E3-ABA6-B8AEED7E173B',
              'build_distro': 'xenial',
              'pid': '24288',
@@ -204,7 +204,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
                                 'watcher']
 
         _os_query_results = {'data': [
-            {'build_platform': 'ubunt', 'start_time': '1514484833'}],
+            {'build_platform': 'ubuntu', 'start_time': '1514484833'}],
             'result': True}
 
         with patch.object(osquery, '_table_attrs',
