@@ -56,10 +56,12 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                                           'jboss7.update_datasource': update_mock}):
 
             # when
-            result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties=datasource_properties, profile=None)
+            result = jboss7.datasource_exists(name='appDS', jboss_config={},
+                                              datasource_properties=datasource_properties, profile=None)
 
             # then
-            create_mock.assert_called_with(name='appDS', jboss_config={}, datasource_properties=datasource_properties, profile=None)
+            create_mock.assert_called_with(name='appDS', jboss_config={},
+                                           datasource_properties=datasource_properties, profile=None)
 
             self.assertFalse(update_mock.called)
             self.assertEqual(result['comment'], 'Datasource created.')
@@ -83,9 +85,13 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(jboss7.__salt__, {'jboss7.read_datasource': read_mock,
                                           'jboss7.create_datasource': create_mock,
                                           'jboss7.update_datasource': update_mock}):
-            result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/new-connection-url'}, profile=None)
+            result = jboss7.datasource_exists(name='appDS', jboss_config={},
+                                              datasource_properties={'connection-url': 'jdbc:/new-connection-url'},
+                                              profile=None)
 
-            update_mock.assert_called_with(name='appDS', jboss_config={}, new_properties={'connection-url': 'jdbc:/new-connection-url'}, profile=None)
+            update_mock.assert_called_with(name='appDS', jboss_config={},
+                                           new_properties={'connection-url': 'jdbc:/new-connection-url'},
+                                           profile=None)
             self.assertTrue(read_mock.called)
             self.assertEqual(result['comment'], 'Datasource updated.')
 
@@ -100,10 +106,14 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                                           'jboss7.remove_datasource': remove_mock,
                                           'jboss7.update_datasource': update_mock}):
 
-            result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/same-connection-url'}, recreate=True)
+            result = jboss7.datasource_exists(name='appDS', jboss_config={},
+                                              datasource_properties={'connection-url': 'jdbc:/same-connection-url'},
+                                              recreate=True)
 
             remove_mock.assert_called_with(name='appDS', jboss_config={}, profile=None)
-            create_mock.assert_called_with(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/same-connection-url'}, profile=None)
+            create_mock.assert_called_with(name='appDS', jboss_config={},
+                                           datasource_properties={'connection-url': 'jdbc:/same-connection-url'},
+                                           profile=None)
             self.assertEqual(result['changes']['removed'], 'appDS')
             self.assertEqual(result['changes']['created'], 'appDS')
 
@@ -119,9 +129,11 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                                           'jboss7.remove_datasource': remove_mock,
                                           'jboss7.update_datasource': update_mock}):
 
-            result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/old-connection-url'})
+            result = jboss7.datasource_exists(name='appDS', jboss_config={},
+                                              datasource_properties={'connection-url': 'jdbc:/old-connection-url'})
 
-            update_mock.assert_called_with(name='appDS', jboss_config={}, new_properties={'connection-url': 'jdbc:/old-connection-url'}, profile=None)
+            update_mock.assert_called_with(name='appDS', jboss_config={},
+                                           new_properties={'connection-url': 'jdbc:/old-connection-url'}, profile=None)
             self.assertFalse(create_mock.called)
             self.assertEqual(result['comment'], 'Datasource not changed.')
 
@@ -242,7 +254,9 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
 
             # when
             try:
-                jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': '!@#!///some weird value'}, profile=None)
+                jboss7.bindings_exist(name='bindings', jboss_config={},
+                                      bindings={'env': '!@#!///some weird value'},
+                                      profile=None)
                 self.fail('An exception should be thrown')
             except CommandExecutionError as e:
-                self.assertEqual(str(e), 'Incorrect binding name.')
+                self.assertEqual(text_type(e), 'Incorrect binding name.')
