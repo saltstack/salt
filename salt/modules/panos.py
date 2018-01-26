@@ -29,7 +29,7 @@ through the XML API or through a brokered connection to Panorama.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
