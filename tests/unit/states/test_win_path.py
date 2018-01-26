@@ -218,6 +218,37 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             }
         )
 
+    def test_exists_change_negative_index_success(self):
+        '''
+        Tests win_path.exists when the directory is already in the PATH and
+        needs to be moved to a different position (successful run).
+
+        This tests a negative index.
+        '''
+        dunder_salt = {
+            'win_path.get_path': MagicMock(side_effect=[
+                ['foo', 'bar', NAME, 'baz'],
+                ['foo', 'bar', 'baz', NAME]
+            ]),
+            'win_path.add': Mock(),
+            'win_path.remove': Mock(),
+        }
+        dunder_opts = {'test': False}
+
+        with patch.dict(win_path.__salt__, dunder_salt), \
+                patch.dict(win_path.__opts__, dunder_opts):
+            ret = win_path.exists(NAME, index=-1)
+
+        self.assertDictEqual(
+            ret,
+            {
+                'name': NAME,
+                'changes': {'index': {'old': -2, 'new': -1}},
+                'result': True,
+                'comment': 'Moved {0} from index -2 to -1.'.format(NAME)
+            }
+        )
+
     def test_exists_change_index_remove_exception(self):
         '''
         Tests win_path.exists when the directory is already in the PATH but an
@@ -227,7 +258,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', 'baz', NAME],
-                ['foo', 'bar', 'baz', NAME],
+                ['foo', 'bar', 'baz', NAME]
             ]),
             'win_path.remove': MagicMock(
                 side_effect=Exception('Global Thermonuclear War')
@@ -247,6 +278,40 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 'result': False,
                 'comment': 'Encountered error: Global Thermonuclear War. '
                            'Failed to move {0} from index 3 to 0.'.format(NAME)
+            }
+        )
+
+    def test_exists_change_negative_index_remove_exception(self):
+        '''
+        Tests win_path.exists when the directory is already in the PATH but an
+        exception is raised when we attempt to remove the key from its
+        original location.
+
+        This tests a negative index.
+        '''
+        dunder_salt = {
+            'win_path.get_path': MagicMock(side_effect=[
+                ['foo', 'bar', NAME, 'baz'],
+                ['foo', 'bar', NAME, 'baz']
+            ]),
+            'win_path.remove': MagicMock(
+                side_effect=Exception('Global Thermonuclear War')
+            ),
+        }
+        dunder_opts = {'test': False}
+
+        with patch.dict(win_path.__salt__, dunder_salt), \
+                patch.dict(win_path.__opts__, dunder_opts):
+            ret = win_path.exists(NAME, index=-1)
+
+        self.assertDictEqual(
+            ret,
+            {
+                'name': NAME,
+                'changes': {},
+                'result': False,
+                'comment': 'Encountered error: Global Thermonuclear War. '
+                           'Failed to move {0} from index -2 to -1.'.format(NAME)
             }
         )
 
@@ -284,6 +349,42 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             }
         )
 
+    def test_exists_change_negative_index_add_exception(self):
+        '''
+        Tests win_path.exists when the directory is already in the PATH but an
+        exception is raised when we attempt to add the key to its new location.
+
+        This tests a negative index.
+        '''
+        dunder_salt = {
+            'win_path.get_path': MagicMock(side_effect=[
+                ['foo', 'bar', NAME, 'baz'],
+                ['foo', 'bar', 'baz'],
+            ]),
+            'win_path.add': MagicMock(
+                side_effect=Exception('Global Thermonuclear War')
+            ),
+            'win_path.remove': Mock(),
+        }
+        dunder_opts = {'test': False}
+
+        with patch.dict(win_path.__salt__, dunder_salt), \
+                patch.dict(win_path.__opts__, dunder_opts):
+            ret = win_path.exists(NAME, index=-1)
+
+        self.assertDictEqual(
+            ret,
+            {
+                'name': NAME,
+                'changes': {'index': {'old': -2, 'new': None}},
+                'result': False,
+                'comment': 'Successfully removed {0} from the PATH '
+                           'at index -2, but failed to add it back at index -1. '
+                           'Encountered error: Global Thermonuclear War. '
+                           'Failed to move {0} from index -2 to -1.'.format(NAME)
+            }
+        )
+
     def test_exists_change_index_failure(self):
         '''
         Tests win_path.exists when the directory is already in the PATH and
@@ -310,6 +411,37 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 'changes': {},
                 'result': False,
                 'comment': 'Failed to move {0} from index 3 to 0.'.format(NAME)
+            }
+        )
+
+    def test_exists_change_negative_index_failure(self):
+        '''
+        Tests win_path.exists when the directory is already in the PATH and
+        needs to be moved to a different position (failed run).
+
+        This tests a negative index.
+        '''
+        dunder_salt = {
+            'win_path.get_path': MagicMock(side_effect=[
+                ['foo', 'bar', NAME, 'baz'],
+                ['foo', 'bar', NAME, 'baz']
+            ]),
+            'win_path.add': Mock(),
+            'win_path.remove': Mock(),
+        }
+        dunder_opts = {'test': False}
+
+        with patch.dict(win_path.__salt__, dunder_salt), \
+                patch.dict(win_path.__opts__, dunder_opts):
+            ret = win_path.exists(NAME, index=-1)
+
+        self.assertDictEqual(
+            ret,
+            {
+                'name': NAME,
+                'changes': {},
+                'result': False,
+                'comment': 'Failed to move {0} from index -2 to -1.'.format(NAME)
             }
         )
 
@@ -340,6 +472,33 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             }
         )
 
+    def test_exists_change_negative_index_test_mode(self):
+        '''
+        Tests win_path.exists when the directory is already in the PATH and
+        needs to be moved to a different position (test mode enabled).
+        '''
+        dunder_salt = {
+            'win_path.get_path': MagicMock(side_effect=[
+                ['foo', 'bar', NAME, 'baz'],
+            ]),
+            'win_path.add': Mock(),
+        }
+        dunder_opts = {'test': True}
+
+        with patch.dict(win_path.__salt__, dunder_salt), \
+                patch.dict(win_path.__opts__, dunder_opts):
+            ret = win_path.exists(NAME, index=-1)
+
+        self.assertDictEqual(
+            ret,
+            {
+                'name': NAME,
+                'changes': {'index': {'old': -2, 'new': -1}},
+                'result': None,
+                'comment': '{0} would be moved from index -2 to -1.'.format(NAME)
+            }
+        )
+
     def _test_exists_add_already_present(self, index, test_mode):
         '''
         Tests win_path.exists when the directory already exists in the PATH.
@@ -350,7 +509,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         if index is None:
             current_path.append(NAME)
         else:
-            current_path.insert(index, NAME)
+            pos = index if index >= 0 else len(current_path) + index + 1
+            current_path.insert(pos, NAME)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[current_path]),
         }
@@ -382,7 +542,11 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     def test_exists_add_index_already_present(self):
         self._test_exists_add_already_present(1, False)
         self._test_exists_add_already_present(2, False)
+        self._test_exists_add_already_present(-1, False)
+        self._test_exists_add_already_present(-2, False)
 
     def test_exists_add_index_already_present_test_mode(self):
         self._test_exists_add_already_present(1, True)
         self._test_exists_add_already_present(2, True)
+        self._test_exists_add_already_present(-1, True)
+        self._test_exists_add_already_present(-2, True)
