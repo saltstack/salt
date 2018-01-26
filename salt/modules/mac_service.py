@@ -127,7 +127,7 @@ def launchctl(sub_cmd, *args, **kwargs):
 
         salt '*' service.launchctl debug org.cups.cupsd
     '''
-    return salt.utils.mac_utils.launchctl(sub_cmd=sub_cmd, *args, *kwargs)
+    return salt.utils.mac_utils.launchctl(sub_cmd, args, kwargs)
 
 
 def list_(name=None, runas=None):
