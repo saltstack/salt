@@ -1856,8 +1856,6 @@ class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
                              'connected via the ESXi host')
 
     def test_get_cluster_call(self):
-        # with patch('salt.modules.vsphere.get_proxy_type',
-        #           MagicMock(return_value='esxcluster')):
         vsphere._get_proxy_target(self.mock_si)
         self.mock_get_datacenter.assert_called_once_with(self.mock_si,
                                                          'datacenter')
