@@ -280,7 +280,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(random_org.generateBlobs(api_key='peW',
                                                       api_version='1'), ret2)
 
-        ret3 = {'message': ('Number of blobs must be between 1 and 100'),
+        ret3 = {'message': 'Number of blobs must be between 1 and 100',
                 'res': False}
         self.assertDictEqual(random_org.generateBlobs(api_key='peW',
                                                       api_version='1',
