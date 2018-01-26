@@ -2,7 +2,7 @@
 '''
 Module for running vmadm command on SmartOS
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -757,9 +757,9 @@ def reprovision(vm, image, key='uuid'):
         ret['Error'] = 'Image ({0}) is not present on this host'.format(image)
         return ret
     # vmadm reprovision <uuid> [-f <filename>]
-    cmd = str('echo {image} | {vmadm} reprovision {uuid}').format(  # future lint: disable=blacklisted-function
-        vmadm=salt.utils.stringutils.to_str(vmadm),
-        uuid=salt.utils.stringutils.to_str(vm),
+    cmd = six.text_type('echo {image} | {vmadm} reprovision {uuid}').format(
+        vmadm=salt.utils.stringutils.to_unicode(vmadm),
+        uuid=salt.utils.stringutils.to_unicode(vm),
         image=_quote_args(salt.utils.json.dumps({'image_uuid': image}))
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
