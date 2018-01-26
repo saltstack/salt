@@ -15,7 +15,9 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* Azure Cli ```pip install 'azure-cli>=2.0.12'```
+* `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc6
+* `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32
+* `AutoRest swagger generator Python client runtime (Azure-specific module) <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4
 * A Microsoft Azure account
 * `Salt <https://github.com/saltstack/salt>`_
 
@@ -89,13 +91,21 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
 
-    azure-ubuntu:
+    azure-ubuntu-pass:
       provider: my-azure-config
       image: Canonical|UbuntuServer|14.04.5-LTS|14.04.201612050
       size: Standard_D1_v2
       location: eastus
       ssh_username: azureuser
       ssh_password: verybadpass
+
+    azure-ubuntu-key:
+      provider: my-azure-config
+      image: Canonical|UbuntuServer|14.04.5-LTS|14.04.201612050
+      size: Standard_D1_v2
+      location: eastus
+      ssh_username: azureuser
+      ssh_publickeyfile: /path/to/ssh_public_key.pub
 
     azure-win2012:
       provider: my-azure-config
@@ -179,13 +189,23 @@ be viewed using the following command:
 
 ssh_username
 ------------
-Required for Linux. The user to use to log into the newly-created Linux VM to
-install Salt.
+Required for Linux. The admin user to add on the instance. It is also used to log
+into the newly-created VM to install Salt.
+
+ssh_keyfile
+-----------
+Required if using SSH key authentication. The path on the Salt master to the SSH private
+key used during the minion bootstrap process.
+
+ssh_publickeyfile
+-----------------
+Use either ``ssh_publickeyfile`` or ``ssh_password``. The path on the Salt master to the
+SSH public key which will be pushed to the Linux VM.
 
 ssh_password
 ------------
-Required for Linux. The password to use to log into the newly-created Linux VM
-to install Salt.
+Use either ``ssh_publickeyfile`` or ``ssh_password``. The password for the admin user on
+the newly-created Linux virtual machine.
 
 win_username
 ------------
