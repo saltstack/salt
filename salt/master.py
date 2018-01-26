@@ -21,12 +21,6 @@ import multiprocessing
 import threading
 import salt.serializers.msgpack
 
-# Import third party libs
-try:
-    from Cryptodome.PublicKey import RSA
-except ImportError:
-    # Fall back to pycrypto
-    from Crypto.PublicKey import RSA
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
@@ -1174,9 +1168,7 @@ class AESFuncs(object):
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
 
         try:
-            with salt.utils.files.fopen(pub_path, 'r') as fp_:
-                minion_pub = fp_.read()
-                pub = RSA.importKey(minion_pub)
+            pub = salt.crypt.get_rsa_pub_key(pub_path)
         except (IOError, OSError):
             log.warning(
                 'Salt minion claiming to be %s attempted to communicate with '

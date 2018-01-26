@@ -1548,6 +1548,15 @@ Slot syntax looks close to the simple python function call. Here is a simple exa
 
 Read more :ref:`here <slots-subsystem>`.
 
+Cryptographic layer changes
+---------------------------
+
+M2Crypto is coming back. We are making the crypto backend modular but in this
+release M2Crypto is enabled if it's importable by Python. If not Cryptodome or
+PyCrypto is used as it was in the previous releases. M2Crypto is used in the
+same way as PyCrypto so there would be no compatibility issues, different nodes
+could use different backends.
+
 Deprecations
 ------------
 
