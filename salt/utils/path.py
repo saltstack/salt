@@ -408,11 +408,8 @@ def safe_path(path, allow_path=None):
 
 def os_walk(top, *args, **kwargs):
     '''
-    This is a helper to ensure that we get unicode paths when walking a
-    filesystem. The reason for this is that when using os.walk, the paths in
-    the generator which is returned are all the same type as the top directory
-    passed in. This can cause problems when a str path is passed and the
-    filesystem underneath that path contains files with unicode characters in
-    the filename.
+    This is a helper than ensures that all paths returned from os.walk are
+    unicode.
     '''
-    return os.walk(salt.utils.stringutils.to_unicode(top), *args, **kwargs)
+    for item in os.walk(top, *args, **kwargs):
+        yield salt.utils.data.decode(item, preserve_tuples=True)

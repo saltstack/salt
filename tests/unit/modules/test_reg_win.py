@@ -7,8 +7,7 @@
     versionadded:: 2016.11.0
 '''
 # Import Python future libs
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 # Import Python Libs
 import sys
 import time

@@ -65,7 +65,7 @@ Management zpool
     Filesystem properties are also not updated, this should be managed by the zfs state module.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import os
@@ -176,7 +176,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
     elif __grains__['kernel'] == 'Linux':
         config['device_dir'] = '/dev'
     config.update(state_config)
-    log.debug('zpool.present::{0}::config - {1}'.format(name, config))
+    log.debug('zpool.present::%s::config - %s', name, config)
 
     # parse layout
     if layout:
@@ -185,7 +185,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
                 continue
             layout[root_dev] = layout[root_dev].keys() if isinstance(layout[root_dev], OrderedDict) else layout[root_dev].split(' ')
 
-        log.debug('zpool.present::{0}::layout - {1}'.format(name, layout))
+        log.debug('zpool.present::%s::layout - %s', name, layout)
 
     # ensure properties conform to the zfs parsable format
     for prop in properties:
@@ -228,7 +228,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
     else:  # import or create
         if config['import']:  # try import
-            log.debug('zpool.present::{0}::importing'.format(name))
+            log.debug('zpool.present::%s::importing', name)
             ret['result'] = __salt__['zpool.import'](
                 name,
                 force=config['force'],
@@ -243,7 +243,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
             if not layout:
                 ret['comment'] = 'storage pool {0} was not imported, no layout specified for creation'.format(name)
             else:
-                log.debug('zpool.present::{0}::creating'.format(name))
+                log.debug('zpool.present::%s::creating', name)
                 if __opts__['test']:
                     ret['result'] = True
                 else:
@@ -298,8 +298,8 @@ def absent(name, export=False, force=False):
            'comment': ''}
 
     # config defaults
-    log.debug('zpool.absent::{0}::config::force = {1}'.format(name, force))
-    log.debug('zpool.absent::{0}::config::export = {1}'.format(name, export))
+    log.debug('zpool.absent::%s::config::force = %s', name, force)
+    log.debug('zpool.absent::%s::config::export = %s', name, export)
 
     # ensure the pool is absent
     if __salt__['zpool.exists'](name):  # looks like we need to do some work

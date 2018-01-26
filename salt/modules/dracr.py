@@ -6,7 +6,7 @@ Manage Dell DRAC.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import re
@@ -1007,7 +1007,7 @@ def get_slotname(slot, host=None, admin_username=None, admin_password=None):
                            admin_password=admin_password)
     # The keys for this dictionary are strings, not integers, so convert the
     # argument to a string
-    slot = str(slot)
+    slot = six.text_type(slot)
     return slots[slot]['slotname']
 
 
