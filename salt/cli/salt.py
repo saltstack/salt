@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 sys.modules['pkg_resources'] = None
 import os
@@ -13,6 +13,8 @@ import salt.utils.stringutils
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 from salt.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
     EauthAuthenticationError,
     LoaderError,
     SaltClientError,
@@ -210,8 +212,12 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
                 sys.exit(11)
 
-        except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
-            ret = str(exc)
+        except (AuthenticationError,
+                AuthorizationError,
+                SaltInvocationError,
+                EauthAuthenticationError,
+                SaltClientError) as exc:
+            ret = six.text_type(exc)
             self._output_ret(ret, '', retcode=1)
 
     def _preview_target(self):

@@ -7,7 +7,7 @@ Compendium of generic DNS utilities.
     Some functions in the ``dnsutil`` execution module depend on ``dig``.
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import socket
 import time
@@ -15,6 +15,8 @@ import time
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +42,7 @@ def parse_hosts(hostsfile='/etc/hosts', hosts=None):
     if not hosts:
         try:
             with salt.utils.files.fopen(hostsfile, 'r') as fp_:
-                hosts = fp_.read()
+                hosts = salt.utils.stringutils.to_unicode(fp_.read())
         except Exception:
             return 'Error: hosts data was not found'
 
@@ -80,7 +82,7 @@ def hosts_append(hostsfile='/etc/hosts', ip_addr=None, entries=None):
 
     append_line = '\n{0} {1}'.format(ip_addr, ' '.join(host_list))
     with salt.utils.files.fopen(hostsfile, 'a') as fp_:
-        fp_.write(append_line)
+        fp_.write(salt.utils.stringutils.to_str(append_line))
 
     return 'The following line was added to {0}:{1}'.format(hostsfile,
                                                             append_line)
@@ -100,21 +102,21 @@ def hosts_remove(hostsfile='/etc/hosts', entries=None):
         salt '*' dnsutil.hosts_remove /etc/hosts ad2.yuk.co,ad1.yuk.co
     '''
     with salt.utils.files.fopen(hostsfile, 'r') as fp_:
-        hosts = fp_.read()
+        hosts = salt.utils.stringutils.to_unicode(fp_.read())
 
     host_list = entries.split(',')
     with salt.utils.files.fopen(hostsfile, 'w') as out_file:
         for line in hosts.splitlines():
             if not line or line.strip().startswith('#'):
-                out_file.write('{0}\n'.format(line))
+                out_file.write(salt.utils.stringutils.to_str('{0}\n'.format(line)))
                 continue
             comps = line.split()
             for host in host_list:
                 if host in comps[1:]:
                     comps.remove(host)
             if len(comps) > 1:
-                out_file.write(' '.join(comps))
-                out_file.write('\n')
+                out_file.write(salt.utils.stringutils.to_str(' '.join(comps)))
+                out_file.write(salt.utils.stringutils.to_str('\n'))
 
 
 def parse_zone(zonefile=None, zone=None):
@@ -130,7 +132,7 @@ def parse_zone(zonefile=None, zone=None):
     if zonefile:
         try:
             with salt.utils.files.fopen(zonefile, 'r') as fp_:
-                zone = fp_.read()
+                zone = salt.utils.stringutils.to_unicode(fp_.read())
         except Exception:
             pass
 
@@ -392,7 +394,7 @@ def serial(zone='', update=False):
     if not update:
         return stored or present
     if stored and stored >= present:
-        current = str(int(stored) + 1)
+        current = six.text_type(int(stored) + 1)
     else:
         current = present
     __salt__['grains.setval'](key=key, val=current)

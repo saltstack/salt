@@ -57,7 +57,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import difflib
@@ -188,10 +188,10 @@ def present(
             if isinstance(val, six.string_types):
                 val = salt.utils.json.loads(val)
             if _val != val:
-                log.debug('Policies differ:\n{0}\n{1}'.format(_val, val))
+                log.debug('Policies differ:\n%s\n%s', _val, val)
                 attrs_to_set[attr] = salt.utils.json.dumps(val, sort_keys=True)
-        elif str(_val) != str(val):
-            log.debug('Attributes differ:\n{0}\n{1}'.format(_val, val))
+        elif six.text_type(_val) != six.text_type(val):
+            log.debug('Attributes differ:\n%s\n%s', _val, val)
             attrs_to_set[attr] = val
     attr_names = ', '.join(attrs_to_set)
 
@@ -287,7 +287,7 @@ def absent(
     )
     if 'error' in r:
         ret['result'] = False
-        ret['comment'] = str(r['error'])
+        ret['comment'] = six.text_type(r['error'])
         return ret
 
     if not r['result']:
@@ -312,7 +312,7 @@ def absent(
     )
     if 'error' in r:
         ret['result'] = False
-        ret['comment'] = str(r['error'])
+        ret['comment'] = six.text_type(r['error'])
         return ret
 
     ret['comment'] = 'SQS queue {0} was deleted.'.format(name)

@@ -4,7 +4,7 @@ Support for rpm
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import re
@@ -184,7 +184,7 @@ def verify(*packages, **kwargs):
         try:
             ignore_types = [x.strip() for x in ignore_types.split(',')]
         except AttributeError:
-            ignore_types = [x.strip() for x in str(ignore_types).split(',')]
+            ignore_types = [x.strip() for x in six.text_type(ignore_types).split(',')]
 
     verify_options = kwargs.get('verify_options', [])
     if not isinstance(verify_options, (list, six.string_types)):
@@ -195,7 +195,7 @@ def verify(*packages, **kwargs):
         try:
             verify_options = [x.strip() for x in verify_options.split(',')]
         except AttributeError:
-            verify_options = [x.strip() for x in str(verify_options).split(',')]
+            verify_options = [x.strip() for x in six.text_type(verify_options).split(',')]
 
     cmd = ['rpm']
     cmd.extend(['--' + x for x in verify_options])
@@ -544,7 +544,7 @@ def info(*packages, **attr):
         comment = ''
         if 'stderr' in call:
             comment += (call['stderr'] or call['stdout'])
-        raise CommandExecutionError('{0}'.format(comment))
+        raise CommandExecutionError(comment)
     elif 'error' in call['stderr']:
         raise CommandExecutionError(call['stderr'])
     else:
@@ -582,7 +582,7 @@ def info(*packages, **attr):
                 try:
                     pkg_data[key] = datetime.datetime.utcfromtimestamp(int(value)).isoformat() + "Z"
                 except ValueError:
-                    log.warning('Could not convert "{0}" into Unix time'.format(value))
+                    log.warning('Could not convert "%s" into Unix time', value)
                 continue
 
             # Convert Unix ticks into an Integer
@@ -590,7 +590,7 @@ def info(*packages, **attr):
                 try:
                     pkg_data[key] = int(value)
                 except ValueError:
-                    log.warning('Could not convert "{0}" into Unix time'.format(value))
+                    log.warning('Could not convert "%s" into Unix time', value)
                 continue
             if key not in ['description', 'name'] and value:
                 pkg_data[key] = value
@@ -635,7 +635,9 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
-    normalize = lambda x: str(x).split(':', 1)[-1] if ignore_epoch else str(x)
+    normalize = lambda x: six.text_type(x).split(':', 1)[-1] \
+        if ignore_epoch \
+        else six.text_type(x)
     ver1 = normalize(ver1)
     ver2 = normalize(ver2)
 

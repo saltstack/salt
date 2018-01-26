@@ -32,15 +32,19 @@ API documents can be found on your infoblox server at:
             api_key=passs
 
 '''
-from __future__ import absolute_import
-
-
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import time
+
+# Import Salt libs
+from salt.ext import six
+
+
 IMPORT_ERR = None
 try:
     import libinfoblox
-except Exception as ex:
-    IMPORT_ERR = str(ex)
+except Exception as exc:
+    IMPORT_ERR = six.text_type(exc)
 __virtualname__ = 'infoblox'
 
 

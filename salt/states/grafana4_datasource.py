@@ -38,7 +38,7 @@ Basic auth setup
         - basic_auth_password: mypass
         - is_default: true
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.ext.six import string_types
 from salt.utils.dictdiffer import deep_diff

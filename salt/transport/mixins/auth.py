@@ -78,8 +78,10 @@ class AESReqServerMixin(object):
             # 'tcp_test.py' and 'zeromq_test.py'. Fix that. In normal
             # cases, 'aes' is already set in the secrets.
             salt.master.SMaster.secrets['aes'] = {
-                'secret': multiprocessing.Array(ctypes.c_char,
-                              six.b(salt.crypt.Crypticle.generate_key_string())),
+                'secret': multiprocessing.Array(
+                    ctypes.c_char,
+                    salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string())
+                ),
                 'reload': salt.crypt.Crypticle.generate_key_string
             }
 

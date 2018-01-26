@@ -168,7 +168,7 @@ The event examplified above has been fired when the device
 identified by the Minion id ``edge01.bjm01`` has been synchronized
 with a NTP server at a stratum level greater than 5.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Python std lib
 import re

@@ -3,7 +3,7 @@
 Unit tests for the boto_cloudfront state module.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import textwrap
 
@@ -164,8 +164,8 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
         }})
 
         diff = textwrap.dedent('''\
-            --- 
-            +++ 
+            ---
+            +++
             @@ -1,5 +1,5 @@
              config:
             -  Comment: to be removed
@@ -175,7 +175,15 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
              tags:
             -  bad existing tag: also to be removed
             +  test_tag1: value1
-        ''')
+
+        ''').splitlines()
+        # Difflib adds a trailing space after the +++/--- lines,
+        # programatically add them back here. Having them in the test file
+        # itself is not feasible since a few popular plugins for vim will
+        # remove trailing whitespace.
+        for idx in (0, 1):
+            diff[idx] += ' '
+        diff = '\n'.join(diff)
 
         with patch.multiple(boto_cloudfront,
             __salt__={'boto_cloudfront.get_distribution': mock_get},

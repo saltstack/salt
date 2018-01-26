@@ -20,7 +20,7 @@ Management of Solaris RBAC
         - authorizations:
             - solaris.audit.*
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -90,9 +90,9 @@ def managed(name, roles=None, profiles=None, authorizations=None):
         ret['result'] = False
         ret['comment'] = 'Property authorizations is not None or list!'
         return ret
-    log.debug('rbac.managed - roles={0}, profiles={1}, authorizations={2}'.format(
-        roles, profiles, authorizations
-    ))
+    log.debug('rbac.managed - roles=%s, profiles=%s, authorizations=%s',
+              roles, profiles, authorizations
+    )
 
     ## update roles
     if isinstance(roles, (list)):

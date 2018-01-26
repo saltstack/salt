@@ -523,7 +523,7 @@ def _run(cmd,
 
     kwargs = {'cwd': cwd,
               'shell': python_shell,
-              'env': run_env,
+              'env': run_env if six.PY3 else salt.utils.data.encode(run_env),
               'stdin': six.text_type(stdin) if stdin is not None else stdin,
               'stdout': stdout,
               'stderr': stderr,
