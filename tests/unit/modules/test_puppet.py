@@ -41,8 +41,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.args, 'clean_kwargs', mock):
             mock = MagicMock(return_value={'retcode': 0})
             mock_lst = MagicMock(return_value=[])
-            with patch.dict(puppet.__salt__, {'cmd.run_all': mock,
-                                                'cmd.run': mock_lst}):
+            with patch.dict(puppet.__salt__, {'cmd.run_all': mock, 'cmd.run': mock_lst}):
                 self.assertTrue(puppet.run())
 
     def test_noop(self):
@@ -64,9 +63,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value=True)
                 with patch.object(os, 'remove', mock):
                     self.assertTrue(puppet.enable())
-
-                with patch.object(os, 'remove',
-                                    MagicMock(side_effect=IOError)):
+                with patch.object(os, 'remove', MagicMock(side_effect=IOError)):
                     self.assertRaises(CommandExecutionError, puppet.enable)
 
             self.assertFalse(puppet.enable())
@@ -99,16 +96,14 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
             mock = MagicMock(side_effect=[True])
             with patch.object(os.path, 'isfile', mock):
-                self.assertEqual(puppet.status(),
-                                    "Administratively disabled")
+                self.assertEqual(puppet.status(), "Administratively disabled")
 
             mock = MagicMock(side_effect=[False, True])
             with patch.object(os.path, 'isfile', mock):
                 with patch('salt.utils.files.fopen', mock_open(read_data="1")):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'kill', mock):
-                        self.assertEqual(puppet.status(),
-                                            "Applying a catalog")
+                        self.assertEqual(puppet.status(), "Applying a catalog")
 
             mock = MagicMock(side_effect=[False, True])
             with patch.object(os.path, 'isfile', mock):
