@@ -754,6 +754,8 @@ class Pillar(object):
                     else:
                         # render included state(s)
                         include_states = []
+
+                        matched_pstates = []
                         for sub_sls in state.pop('include'):
                             if isinstance(sub_sls, dict):
                                 sub_sls, v = next(six.iteritems(sub_sls))
@@ -761,6 +763,16 @@ class Pillar(object):
                                 key = v.get('key', None)
                             else:
                                 key = None
+
+                            try:
+                                matched_pstates += fnmatch.filter(self.avail[saltenv], sub_sls)
+                            except KeyError:
+                                errors.extend(
+                                    ['No matching pillar environment for environment '
+                                     '\'{0}\' found'.format(saltenv)]
+                                )
+
+                        for sub_sls in set(matched_pstates):
                             if sub_sls not in mods:
                                 nstate, mods, err = self.render_pstate(
                                         sub_sls,
