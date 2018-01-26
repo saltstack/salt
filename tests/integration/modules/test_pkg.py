@@ -29,9 +29,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         os_release = self.run_function('grains.get', ['osrelease'])
 
-        if salt.utils.is_darwin() and int(os_release.split('.')[1]) >= 13:
+        if salt.utils.platform.is_darwin() and int(os_release.split('.')[1]) >= 13:
             self.pkg = 'wget'
-        elif salt.utils.is_windows():
+        elif salt.utils.platform.is_windows():
             self.pkg = 'putty'
         else:
             self.pkg = 'htop'

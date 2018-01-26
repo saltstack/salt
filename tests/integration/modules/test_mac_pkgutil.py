@@ -39,7 +39,7 @@ class MacPkgutilModuleTest(ModuleCase):
 
         os_release = self.run_function('grains.get', ['osrelease'])
         self.pkg_name = 'com.apple.pkg.BaseSystemResources'
-        if int(os_release.split('.')[1]) >= 13 and salt.utils.is_darwin():
+        if int(os_release.split('.')[1]) >= 13 and salt.utils.platform.is_darwin():
             self.pkg_name = 'com.apple.pkg.iTunesX'
 
     def tearDown(self):

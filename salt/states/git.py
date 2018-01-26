@@ -2333,7 +2333,7 @@ def detached(name,
                 for target_object in target_contents:
                     target_path = os.path.join(target, target_object)
                     try:
-                        salt.utils.rm_rf(target_path)
+                        salt.utils.files.rm_rf(target_path)
                     except OSError as exc:
                         if exc.errno != errno.ENOENT:
                             removal_errors[target_path] = exc
