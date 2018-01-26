@@ -4,7 +4,7 @@
 #       module functions.
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
 import os.path
