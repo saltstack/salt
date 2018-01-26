@@ -199,7 +199,7 @@ The functions have been moved as follows:
   instead.
 - ``salt.utils.compare_dicts``: use ``salt.utils.data.compare_dicts`` instead.
 - ``salt.utils.compare_lists``: use ``salt.utils.data.compare_lists`` instead.
-- ``salt.utils.decode_dict``: use ``salt.utils.data.decode_dict`` instead.
+- ``salt.utils.decode_dict``: use ``salt.utils.data.encode_dict`` instead.
 - ``salt.utils.decode_list``: use ``salt.utils.data.encode_list`` instead.
 - ``salt.utils.exactly_n``: use ``salt.utils.data.exactly_n`` instead.
 - ``salt.utils.exactly_one``: use ``salt.utils.data.exactly_one`` instead.
@@ -284,6 +284,16 @@ master config file, the master will create a SaltSSH client process which
 connects to the minion and returns the output for the `salt` commandline to use
 like a regular minion. This can be used anywhere the LocalClient is used.
 
+Exceptions Raised for Authentication/Authorization Errors
+---------------------------------------------------------
+
+When sending ``publish`` commands via ``master.py`` and ``masterapi.py`` and an
+authorization or authentication problem is encountered, Salt will now raise the
+appropriate exceptions instead of returning an empty string: ``''``.
+
+The reasoning behind this change is to make it easier to debug various scenarios
+surrounding authentication and authorization issues more effectively.
+
 Comparison Operators in Package Installation
 --------------------------------------------
 
@@ -335,8 +345,39 @@ they failed. Here's some example pseudocode:
             __context__['retcode'] = 1
         return result
 
+Variable Update Intervals for Fileserver Backends
+-------------------------------------------------
+
+Prior to this release, fileservers would be updated as part of a dedicated
+"maintenance" process, in which various routine maintenance tasks were
+performed. This tied the update interval to the :conf_master:`loop_interval`
+config option, and also forced all fileservers to update at the same interval.
+
+Oxygen adds the following configuration options for the various fileserver
+backends:
+
+- :conf_master:`roots_update_interval`
+- :conf_master:`azurefs_update_interval`
+- :conf_master:`gitfs_update_interval`
+- :conf_master:`hgfs_update_interval`
+- :conf_master:`minionfs_update_interval`
+- :conf_master:`s3fs_update_interval`
+- :conf_master:`svnfs_update_interval`
+
+These allow for update intervals to be set for each individual backend. The
+default value for each of these is 60 seconds.
+
+In addition, for :ref:`GitFS <tutorial-gitfs>` it is also possible to apply
+intervals to individual remotes. See :ref:`here <gitfs-update-intervals>` for
+examples.
+
+.. note::
+    git_pillar does not yet support variable update intervals, this is targeted
+    for the next feature release (Fluorine).
+
 LDAP via External Authentication Changes
 ----------------------------------------
+
 In this release of Salt, if LDAP Bind Credentials are supplied, then
 these credentials will be used for all LDAP access except the first
 authentication when a job is submitted.  The first authentication will
@@ -408,15 +449,78 @@ The new grains added are:
 
 * ``fc_wwn``: Show all fibre channel world wide port names for a host
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
-* ``swap_total``: Show the configured swap_total for Linux, *BSD, OS X and Solaris/SunOS
+* ``swap_total``: Show the configured swap_total for Linux, \*BSD, OS X and Solaris/SunOS
 
-Salt Minion Autodiscovery
+Salt Minion Auto-discovery
 ------------------------
 
-Salt Minion now no longer need to be configured against a specifig DNS name or IP address of a Master.
+Using auto-discovery, the Salt Minion now no longer needs to be configured
+against a specific DNS name or IP address of a Master.
 
 For this feature Salt Master now requires port 4520 for UDP broadcast packets to be opened
 and the Salt Minion be able to send UDP packets to the same port.
+
+Configuration
+=============
+
+By default, automatic discovery is disabled.
+
+..warning::
+   Due to the current limitations that will be changing in a future, before you turn on auto-discovery,
+   make sure your network is secured and trusted.
+
+Auto-discovery is configured on Master and Minion. Both of them are configured via the ``discovery`` option
+as follows:
+
+**Master configuration**
+
+To use the default configuration, which accepts any minion, simply set ``discovery`` to True:
+
+.. code-block:: yaml
+
+       discovery: true
+
+A sub-option called `mapping` allows auto-discovery to help find the proper
+Master. The mapping contains an arbitrary set of key/value pairs, which the
+Minion configuration can target. By default, no mappings are set.
+
+Example:
+
+.. code-block:: yaml
+
+       discovery:
+         mapping:
+           description: SES 5.0
+           node: 1
+
+It is also possible to change the port used from the default of ``4520``, by
+setting a ``port`` option under the Master's ``discovery`` configuration:
+
+.. code-block:: yaml
+
+    discovery:
+      port: 4567
+
+.. note::
+    When using a port number other than the default, the Minion's ``discovery``
+    configuraton must *also* have a port specified, otherwise the Minion will
+    still attempt to contact the Master on port ``4520``.
+
+**Minion configuration**
+
+In addition to the ``mapping`` and ``port`` options, the following additional options are available to Minions:
+
+- ``attempts`` - This option specifies how many broadcast requests should be
+  sent to the network, waiting for any Master response. Each attempt takes a
+  couple of seconds, so raising this value may result in a slower Minion
+  startup. Note that, on a properly-configured network, autodiscovery should
+  succeed on the first attempt. By default, this value is set to ``3``.
+- ``match`` - This option can be set to either ``all`` or ``any``, and it
+  determines how the values configured in ``mapping`` are matched. If set to
+  ``all``, then all of the key/value pairs in the Minion's ``mapping`` must
+  match a given Master. If set to ``any`` (the default), then any match to a
+  key/value mapping will constitute a match.
+- ``pause`` - The interval in seconds between attempts (default: 5).
 
 Connection to a type instead of DNS
 ===================================
@@ -427,7 +531,7 @@ Masters, each corresponds for a particular niche or environment or specific role
 is supposed to connect only to one of those Masters that is described approriately.
 
 To achieve such an effect, each `/etc/salt/master` configuration should have a `discovery` option,
-which should have a `mapping` element with arbitrary key/value pairs. The same configuration shoul
+which should have a `mapping` element with arbitrary key/value pairs. The same configuration should
 be on the Minion, so then when mapping matches, Minion recognises Master as its connection target.
 
 Example for Master configuration (`/etc/salt/master`):
@@ -1426,6 +1530,24 @@ thread of states because of a failure.
 
 The ``onfail_any`` requisite is applied in the same way as ``require_any`` and ``watch_any``:
 
+Basic Slots support in states compiler
+--------------------------------------
+
+Slots extend the state syntax and allows you to do things right before the
+state function is executed. So you can make a decision in the last moment right
+before a state is executed.
+
+Slot syntax looks close to the simple python function call. Here is a simple example:
+
+.. code-block:: yaml
+
+    copy-some-file:
+      file.copy:
+        - name: __slot__:salt:test.echo(text=/tmp/some_file)
+        - source: __slot__:salt:test.echo(/etc/hosts)
+
+Read more :ref:`here <slots-subsystem>`.
+
 Deprecations
 ------------
 
@@ -1569,3 +1691,11 @@ Sentry Log Handler
 Configuring sentry raven python client via ``project``, ``servers``, ``public_key
 and ``secret_key`` is deprecated and won't work with sentry clients > 3.0.
 Instead, the ``dsn`` config param must be used.
+
+RAET transport
+--------------
+
+We haven't been doing development on RAET for quite some time and decided that
+Oxygen is the time to announce the deprecation. RAET support will be removed in
+Neon. Please consider to move to ``zeromq`` or ``tcp`` transport instead of
+``raet``.

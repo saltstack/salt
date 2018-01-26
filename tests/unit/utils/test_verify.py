@@ -4,7 +4,7 @@ Test the verification routines
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import getpass
 import os
 import sys
@@ -47,6 +47,7 @@ from salt.utils.verify import (
 )
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
@@ -196,9 +197,9 @@ class TestVerify(TestCase):
                                       (127, 'WARNING'), (196, 'CRITICAL')):
 
                     for n in range(prev, newmax):
-                        kpath = os.path.join(keys_dir, str(n))
+                        kpath = os.path.join(keys_dir, six.text_type(n))
                         with salt.utils.files.fopen(kpath, 'w') as fp_:
-                            fp_.write(str(n))
+                            fp_.write(str(n))  # future lint: disable=blacklisted-function
 
                     opts = {
                         'max_open_files': newmax,
@@ -231,9 +232,9 @@ class TestVerify(TestCase):
 
                 newmax = mof_test
                 for n in range(prev, newmax):
-                    kpath = os.path.join(keys_dir, str(n))
+                    kpath = os.path.join(keys_dir, six.text_type(n))
                     with salt.utils.files.fopen(kpath, 'w') as fp_:
-                        fp_.write(str(n))
+                        fp_.write(str(n))  # future lint: disable=blacklisted-function
 
                 opts = {
                     'max_open_files': newmax,

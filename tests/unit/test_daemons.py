@@ -4,7 +4,8 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import multiprocessing
 
 # Import Salt Testing libs
@@ -14,6 +15,8 @@ from tests.support.mixins import SaltClientTestCaseMixin
 
 # Import Salt libs
 import salt.cli.daemons as daemons
+
+log = logging.getLogger(__name__)
 
 
 class LoggerMock(object):
@@ -34,25 +37,27 @@ class LoggerMock(object):
 
         :return:
         '''
-        self.messages = list()
+        self.messages = []
 
-    def info(self, data):
+    def info(self, message, *args, **kwargs):
         '''
         Collects the data from the logger of info type.
 
         :param data:
         :return:
         '''
-        self.messages.append({'message': data, 'type': 'info'})
+        self.messages.append({'message': message, 'args': args,
+                              'kwargs': kwargs, 'type': 'info'})
 
-    def warning(self, data):
+    def warning(self, message, *args, **kwargs):
         '''
         Collects the data from the logger of warning type.
 
         :param data:
         :return:
         '''
-        self.messages.append({'message': data, 'type': 'warning'})
+        self.messages.append({'message': message, 'args': args,
+                              'kwargs': kwargs, 'type': 'warning'})
 
     def has_message(self, msg, log_type=None):
         '''
@@ -62,7 +67,8 @@ class LoggerMock(object):
         :return:
         '''
         for data in self.messages:
-            if (data['type'] == log_type or not log_type) and data['message'].find(msg) > -1:
+            log_str = data['message'] % data['args']  # pylint: disable=incompatible-py3-code
+            if (data['type'] == log_type or not log_type) and log_str.find(msg) > -1:
                 return True
 
         return False
@@ -83,22 +89,26 @@ def _master_exec_test(child_pipe):
 
     _logger = LoggerMock()
     ret = True
-    with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-        with patch('salt.cli.daemons.log', _logger):
-            for alg in ['md5', 'sha1']:
-                _create_master().start()
-                ret = ret and _logger.messages \
-                      and _logger.has_message('Do not use {alg}'.format(alg=alg),
-                                              log_type='warning')
+    try:
+        with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
+            with patch('salt.cli.daemons.log', _logger):
+                for alg in ['md5', 'sha1']:
+                    _create_master().start()
+                    ret = ret and _logger.has_message(
+                        'Do not use {alg}'.format(alg=alg),
+                        log_type='warning')
 
-            _logger.reset()
+                _logger.reset()
 
-            for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
-                _create_master().start()
-                ret = ret and _logger.messages \
-                      and not _logger.has_message('Do not use ')
-            child_pipe.send(ret)
-            child_pipe.close()
+                for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
+                    _create_master().start()
+                    ret = ret and _logger.messages \
+                          and not _logger.has_message('Do not use ')
+    except Exception:
+        log.exception('Exception raised in master daemon unit test')
+        ret = False
+    child_pipe.send(ret)
+    child_pipe.close()
 
 
 def _minion_exec_test(child_pipe):
@@ -116,23 +126,26 @@ def _minion_exec_test(child_pipe):
         return obj
 
     ret = True
-    _logger = LoggerMock()
-    with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-        with patch('salt.cli.daemons.log', _logger):
-            for alg in ['md5', 'sha1']:
-                _create_minion().start()
-                ret = ret and _logger.messages \
-                      and _logger.has_message('Do not use {alg}'.format(alg=alg),
-                                              log_type='warning')
-            _logger.reset()
+    try:
+        _logger = LoggerMock()
+        with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
+            with patch('salt.cli.daemons.log', _logger):
+                for alg in ['md5', 'sha1']:
+                    _create_minion().start()
+                    ret = ret and _logger.has_message(
+                        'Do not use {alg}'.format(alg=alg),
+                        log_type='warning')
+                _logger.reset()
 
-            for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
-                _create_minion().start()
-                ret = ret and _logger.messages \
-                      and not _logger.has_message('Do not use ')
-
-        child_pipe.send(ret)
-        child_pipe.close()
+                for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
+                    _create_minion().start()
+                    ret = ret and _logger.messages \
+                          and not _logger.has_message('Do not use ')
+    except Exception:
+        log.exception('Exception raised in minion daemon unit test')
+        ret = False
+    child_pipe.send(ret)
+    child_pipe.close()
 
 
 def _proxy_exec_test(child_pipe):
@@ -150,21 +163,25 @@ def _proxy_exec_test(child_pipe):
         return obj
 
     ret = True
-    _logger = LoggerMock()
-    with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-        with patch('salt.cli.daemons.log', _logger):
-            for alg in ['md5', 'sha1']:
-                _create_proxy_minion().start()
-                ret = ret and _logger.messages \
-                      and _logger.has_message('Do not use {alg}'.format(alg=alg),
-                                              log_type='warning')
+    try:
+        _logger = LoggerMock()
+        with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
+            with patch('salt.cli.daemons.log', _logger):
+                for alg in ['md5', 'sha1']:
+                    _create_proxy_minion().start()
+                    ret = ret and _logger.has_message(
+                        'Do not use {alg}'.format(alg=alg),
+                        log_type='warning')
 
-            _logger.reset()
+                _logger.reset()
 
-            for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
-                _create_proxy_minion().start()
-                ret = ret and _logger.messages \
-                      and not _logger.has_message('Do not use ')
+                for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
+                    _create_proxy_minion().start()
+                    ret = ret and _logger.messages \
+                          and not _logger.has_message('Do not use ')
+    except Exception:
+        log.exception('Exception raised in proxy daemon unit test')
+        ret = False
     child_pipe.send(ret)
     child_pipe.close()
 
@@ -183,22 +200,25 @@ def _syndic_exec_test(child_pipe):
         return obj
 
     ret = True
-    _logger = LoggerMock()
-    with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-        with patch('salt.cli.daemons.log', _logger):
-            for alg in ['md5', 'sha1']:
-                _create_syndic().start()
-                ret = ret and _logger.messages \
-                      and _logger.has_message('Do not use {alg}'.format(alg=alg),
-                                              log_type='warning')
+    try:
+        _logger = LoggerMock()
+        with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
+            with patch('salt.cli.daemons.log', _logger):
+                for alg in ['md5', 'sha1']:
+                    _create_syndic().start()
+                    ret = ret and _logger.has_message(
+                        'Do not use {alg}'.format(alg=alg),
+                        log_type='warning')
 
-            _logger.reset()
+                _logger.reset()
 
-            for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
-                _create_syndic().start()
-                ret = ret and _logger.messages \
-                      and not _logger.has_message('Do not use ')
-
+                for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
+                    _create_syndic().start()
+                    ret = ret and _logger.messages \
+                          and not _logger.has_message('Do not use ')
+    except Exception:
+        log.exception('Exception raised in syndic daemon unit test')
+        ret = False
     child_pipe.send(ret)
     child_pipe.close()
 

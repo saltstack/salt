@@ -12,15 +12,15 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import numbers
 import sys
 import warnings
-# pylint: disable=blacklisted-module
+# pylint: disable=blacklisted-module,no-name-in-module
 from distutils.version import StrictVersion as _StrictVersion
 from distutils.version import LooseVersion as _LooseVersion
-# pylint: enable=blacklisted-module
+# pylint: enable=blacklisted-module,no-name-in-module
 
 # Import Salt libs
 import salt.version
@@ -49,7 +49,7 @@ class LooseVersion(_LooseVersion):
         if six.PY3:
             # Convert every part of the version to string in order to be able to compare
             self._str_version = [
-                str(vp).zfill(8) if isinstance(vp, int) else vp for vp in self.version]
+                six.text_type(vp).zfill(8) if isinstance(vp, int) else vp for vp in self.version]
 
     if six.PY3:
         def _cmp(self, other):
@@ -240,7 +240,8 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
     version2, and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     '''
-    normalize = lambda x: str(x).split(':', 1)[-1] if ignore_epoch else str(x)
+    normalize = lambda x: six.text_type(x).split(':', 1)[-1] \
+                if ignore_epoch else six.text_type(x)
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 

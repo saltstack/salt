@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -9,6 +9,7 @@ import os
 import logging
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
@@ -69,7 +70,7 @@ def config():
         log.debug('Loading static grains from %s', gfn)
         with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
-                return salt.utils.yaml.safe_load(fp_)
+                return salt.utils.data.decode(salt.utils.yaml.safe_load(fp_))
             except Exception:
                 log.warning("Bad syntax in grains file! Skipping.")
                 return {}

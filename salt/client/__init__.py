@@ -45,8 +45,13 @@ import salt.utils.versions
 import salt.utils.zeromq
 import salt.syspaths as syspaths
 from salt.exceptions import (
-    EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError,
-    SaltClientError, PublishError
+    AuthenticationError,
+    AuthorizationError,
+    EauthAuthenticationError,
+    PublishError,
+    SaltInvocationError,
+    SaltReqTimeoutError,
+    SaltClientError
 )
 
 # Import third party libs
@@ -1830,6 +1835,14 @@ class LocalClient(object):
 
         error = payload.pop('error', None)
         if error is not None:
+            if isinstance(error, dict):
+                err_name = error.get('name', '')
+                err_msg = error.get('message', '')
+                if err_name == 'AuthenticationError':
+                    raise AuthenticationError(err_msg)
+                elif err_name == 'AuthorizationError':
+                    raise AuthorizationError(err_msg)
+
             raise PublishError(error)
 
         if not payload:
@@ -1939,6 +1952,14 @@ class LocalClient(object):
 
         error = payload.pop('error', None)
         if error is not None:
+            if isinstance(error, dict):
+                err_name = error.get('name', '')
+                err_msg = error.get('message', '')
+                if err_name == 'AuthenticationError':
+                    raise AuthenticationError(err_msg)
+                elif err_name == 'AuthorizationError':
+                    raise AuthorizationError(err_msg)
+
             raise PublishError(error)
 
         if not payload:
