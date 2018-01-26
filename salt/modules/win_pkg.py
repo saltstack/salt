@@ -697,8 +697,8 @@ def refresh_db(**kwargs):
     # Cache repo-ng locally
     log.info('Fetching *.sls files from {0}'.format(repo_details.winrepo_source_dir))
     __salt__['cp.cache_dir'](
-        repo_details.winrepo_source_dir,
-        saltenv,
+        path=repo_details.winrepo_source_dir,
+        saltenv=saltenv,
         include_pat='*.sls',
         exclude_pat=r'E@\/\..*\/'  # Exclude all hidden directories (.git)
     )
@@ -1293,11 +1293,11 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             # single files
             if cache_dir and installer.startswith('salt:'):
                 path, _ = os.path.split(installer)
-                __salt__['cp.cache_dir'](path,
-                                         saltenv,
-                                         False,
-                                         None,
-                                         'E@init.sls$')
+                __salt__['cp.cache_dir'](path=path,
+                                         saltenv=saltenv,
+                                         include_empty=False,
+                                         include_pat=None,
+                                         exclude_pat='E@init.sls$')
 
             # Check to see if the cache_file is cached... if passed
             if cache_file and cache_file.startswith('salt:'):
