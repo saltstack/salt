@@ -66,12 +66,16 @@ def exists(name, index=None):
     '''
     Add the directory to the system PATH at index location
 
-    index: where the directory should be placed in the PATH (default: None).
-    This is 0-indexed, so 0 means to prepend at the very start of the PATH.
-    [Note:  Providing no index will append directory to PATH and
-    will not enforce its location within the PATH.]
+    index
+        Position where the directory should be placed in the PATH. This is
+        0-indexed, so 0 means to prepend at the very start of the PATH.
 
-    Example:
+        .. note::
+            If the index is not specified, and the directory needs to be added
+            to the PATH, then the directory will be appended to the PATH, and
+            this state will not enforce its location within the PATH.
+
+    Examples:
 
     .. code-block:: yaml
 
@@ -81,6 +85,10 @@ def exists(name, index=None):
         'C:\\sysinternals':
           win_path.exists:
             - index: 0
+
+        'C:\\mystuff':
+          win_path.exists:
+            - index: -1
     '''
     name = salt.utils.stringutils.to_unicode(name)
 
@@ -95,10 +103,17 @@ def exists(name, index=None):
         return ret
 
     def _index():
+        cur_path = __salt__['win_path.get_path']()
         try:
-            return __salt__['win_path.get_path']().index(name)
+            pos = cur_path.index(name)
         except ValueError:
             return None
+        else:
+            if index is not None and index < 0:
+                # We need to convert this to a negative index
+                return -(len(cur_path) - pos)
+            else:
+                return pos
 
     def _changes(old, new):
         return {'index': {'old': old, 'new': new}}
