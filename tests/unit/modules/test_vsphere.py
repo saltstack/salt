@@ -10,9 +10,14 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
+from six import text_type
 import salt.modules.vsphere as vsphere
-from salt.exceptions import CommandExecutionError, VMwareSaltError, \
-        ArgumentValueError, VMwareObjectRetrievalError
+from salt.exceptions import (
+    CommandExecutionError,
+    VMwareSaltError,
+    ArgumentValueError,
+    VMwareObjectRetrievalError
+)
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
