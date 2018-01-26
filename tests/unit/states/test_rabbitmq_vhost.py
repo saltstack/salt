@@ -38,7 +38,7 @@ class RabbitmqVhostTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'name': name,
                'changes': {'new': 'virtual_host', 'old': ''},
                'result': None,
-               'comment': 'Virtual Host \'virtual_host\' will be created.'}
+               'comment': "Virtual Host 'virtual_host' will be created."}
 
         mock = MagicMock(return_value=False)
         with patch.dict(rabbitmq_vhost.__salt__,
@@ -57,7 +57,7 @@ class RabbitmqVhostTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'name': name,
                'changes': {},
                'result': True,
-               'comment': 'Virtual Host \'{0}\' is not present.'.format(name)}
+               'comment': "Virtual Host '{0}' is not present.".format(name)}
 
         mock = MagicMock(return_value=False)
         with patch.dict(rabbitmq_vhost.__salt__,
