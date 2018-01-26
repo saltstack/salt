@@ -30,6 +30,7 @@ Multiple modules can be specified for both kmod.present and kmod.absent.
           - snd_timer
           - snd
 '''
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 def __virtual__():
