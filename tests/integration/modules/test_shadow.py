@@ -37,6 +37,8 @@ class ShadowModuleTest(ModuleCase):
         '''
         Get current settings
         '''
+        if 'ERROR' in self._password:
+            self.fail('Failed to generate password: {0}'.format(self._password))
         super(ShadowModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
         if os_grain['kernel'] not in 'Linux':

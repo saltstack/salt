@@ -211,7 +211,7 @@ def lock_password(name):
     '''
     .. versionadded:: 2016.11.0
 
-    Lock the password from name user
+    Lock the password from specified user
 
     CLI Example:
 
