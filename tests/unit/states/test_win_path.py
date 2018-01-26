@@ -4,12 +4,8 @@ Tests for win_path states
 '''
 
 # Import Python Libs
-<<<<<<< HEAD
-from __future__ import absolute_import, unicode_literals, print_function
-=======
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
->>>>>>> Improve/remove PATH environment modifications
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
