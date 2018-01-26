@@ -6,7 +6,7 @@ Note that not all Windows applications will rehash the PATH environment variable
 Only the ones that listen to the WM_SETTINGCHANGE message
 http://support.microsoft.com/kb/104011
 '''
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -15,6 +15,7 @@ import re
 
 # Import Salt libs
 import salt.utils.platform
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext.six.moves import map
@@ -38,11 +39,11 @@ def __virtual__():
     return (False, "Module win_path: module only works on Windows systems")
 
 
-def _normalize_dir(string):
+def _normalize_dir(string_):
     '''
     Normalize the directory to make comparison possible
     '''
-    return re.sub(r'\\$', '', string.lower())
+    return re.sub(r'\\$', '', string_.lower())
 
 
 def rehash():
@@ -68,9 +69,12 @@ def get_path():
 
         salt '*' win_path.get_path
     '''
-    ret = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE',
-                                   'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
-                                   'PATH')['vdata'].split(';')
+    ret = salt.utils.stringutils.to_unicode(
+        __salt__['reg.read_value'](
+            'HKEY_LOCAL_MACHINE',
+            'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
+            'PATH')['vdata']
+    ).split(';')
 
     # Trim ending backslash
     return list(map(_normalize_dir, ret))
@@ -115,9 +119,9 @@ def add(path, index=0):
         # Will add to the end of the path
         salt '*' win_path.add 'c:\\python27' index='-1'
     '''
+    path = salt.utils.stringutils.to_str(_normalize_dir(path))
     currIndex = -1
     sysPath = get_path()
-    path = _normalize_dir(path)
     index = int(index)
 
     # validate index boundaries
@@ -126,10 +130,16 @@ def add(path, index=0):
     if index > len(sysPath):
         index = len(sysPath)
 
-    localPath = os.environ["PATH"].split(os.pathsep)
+    pathsep = str(os.pathsep)  # future lint: disable=blacklisted-function
+    # The current path should not have any unicode in it, but don't take any
+    # chances.
+    localPath = [
+        salt.utils.stringutils.to_str(x)
+        for x in os.environ['PATH'].split(pathsep)
+    ]
     if path not in localPath:
         localPath.append(path)
-        os.environ["PATH"] = os.pathsep.join(localPath)
+        os.environ[str('PATH')] = pathsep.join(localPath)  # future lint: disable=blacklisted-function
 
     # Check if we are in the system path at the right location
     try:
@@ -147,7 +157,7 @@ def add(path, index=0):
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',
-        ';'.join(sysPath),
+        str(';').join(sysPath),  # future lint: disable=blacklisted-function
         'REG_EXPAND_SZ'
     )
 
@@ -172,13 +182,19 @@ def remove(path):
         # Will remove C:\Python27 from the path
         salt '*' win_path.remove 'c:\\python27'
     '''
-    path = _normalize_dir(path)
+    path = salt.utils.stringutils.to_str(_normalize_dir(path))
     sysPath = get_path()
 
-    localPath = os.environ["PATH"].split(os.pathsep)
+    pathsep = str(os.pathsep)  # future lint: disable=blacklisted-function
+    # The current path should not have any unicode in it, but don't take any
+    # chances.
+    localPath = [
+        salt.utils.stringutils.to_str(x)
+        for x in os.environ['PATH'].split(pathsep)
+    ]
     if path in localPath:
         localPath.remove(path)
-        os.environ["PATH"] = os.pathsep.join(localPath)
+        os.environ[str('PATH')] = pathsep.join(localPath)  # future lint: disable=blacklisted-function
 
     try:
         sysPath.remove(path)
@@ -189,7 +205,7 @@ def remove(path):
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',
-        ';'.join(sysPath),
+        str(';').join(sysPath),  # future lint: disable=blacklisted-function
         'REG_EXPAND_SZ'
     )
     if regedit:

@@ -2,11 +2,13 @@
 '''
 Manage the Windows System PATH
 '''
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Python Libs
-import re
-import os
+# Import Salt libs
+import salt.utils.stringutils
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -16,11 +18,9 @@ def __virtual__():
     return 'win_path' if 'win_path.rehash' in __salt__ else False
 
 
-def _normalize_dir(string):
-    '''
-    Normalize the directory to make comparison possible
-    '''
-    return re.sub(r'\\$', '', string.lower())
+def _format_comments(ret, comments):
+    ret['comment'] = ' '.join(comments)
+    return ret
 
 
 def absent(name):
@@ -41,23 +41,24 @@ def absent(name):
            'changes': {},
            'comment': ''}
 
-    localPath = os.environ["PATH"].split(os.pathsep)
-    if name in localPath:
-        localPath.remove(name)
-        os.environ["PATH"] = os.pathsep.join(localPath)
-
-    if __salt__['win_path.exists'](name):
-        ret['changes']['removed'] = name
-    else:
+    if not __salt__['win_path.exists'](name):
         ret['comment'] = '{0} is not in the PATH'.format(name)
+        return ret
 
     if __opts__['test']:
+        ret['comment'] = '{0} would be removed from the PATH'.format(name)
         ret['result'] = None
         return ret
 
-    ret['result'] = __salt__['win_path.remove'](name)
-    if not ret['result']:
-        ret['comment'] = 'could not remove {0} from the PATH'.format(name)
+    __salt__['win_path.remove'](name)
+
+    if __salt__['win_path.exists'](name):
+        ret['comment'] = 'Failed to remove {0} from the PATH'.format(name)
+        ret['result'] = False
+    else:
+        ret['comment'] = 'Removed {0} from the PATH'.format(name)
+        ret['changes']['removed'] = name
+
     return ret
 
 
@@ -81,52 +82,107 @@ def exists(name, index=None):
           win_path.exists:
             - index: 0
     '''
+    name = salt.utils.stringutils.to_unicode(name)
+
     ret = {'name': name,
            'result': True,
            'changes': {},
            'comment': ''}
 
-    # determine what to do
-    sysPath = __salt__['win_path.get_path']()
-    path = _normalize_dir(name)
-
-    localPath = os.environ["PATH"].split(os.pathsep)
-    if path not in localPath:
-        localPath.append(path)
-        os.environ["PATH"] = os.pathsep.join(localPath)
-
-    try:
-        currIndex = sysPath.index(path)
-        if index is not None:
-            index = int(index)
-            if index < 0:
-                index = len(sysPath) + index + 1
-            if index > len(sysPath):
-                index = len(sysPath)
-            # check placement within PATH
-            if currIndex != index:
-                sysPath.pop(currIndex)
-                ret['changes']['removed'] = '{0} was removed from index {1}'.format(name, currIndex)
-            else:
-                ret['comment'] = '{0} is already present in the PATH at the right location'.format(name)
-                return ret
-        else:  # path is in system PATH; don't care where
-            ret['comment'] = '{0} is already present in the PATH at the right location'.format(name)
-            return ret
-    except ValueError:
-        pass
-
-    if index is None:
-        index = len(sysPath)    # put it at the end
-    ret['changes']['added'] = '{0} will be added at index {1}'.format(name, index)
-    if __opts__['test']:
-        ret['result'] = None
+    if index is not None and not isinstance(index, six.integer_types):
+        ret['comment'] = 'Index must be an integer'
+        ret['result'] = False
         return ret
 
-    # Add it
-    ret['result'] = __salt__['win_path.add'](path, index)
-    if not ret['result']:
-        ret['comment'] = 'could not add {0} to the PATH'.format(name)
+    def _index():
+        try:
+            return __salt__['win_path.get_path']().index(name)
+        except ValueError:
+            return None
+
+    def _changes(old, new):
+        return {'index': {'old': old, 'new': new}}
+
+    old_index = _index()
+    comments = []
+    failed = False
+
+    if index is not None and old_index is not None:
+        if index == old_index:
+            comments.append(
+                '{0} already exists in the PATH at index {1}.'.format(
+                    name, index
+                )
+            )
+            return _format_comments(ret, comments)
+        else:
+            if __opts__['test']:
+                ret['result'] = None
+                comments.append(
+                    '{0} would be moved from index {1} to {2}.'.format(
+                        name, old_index, index
+                    )
+                )
+                ret['changes'] = _changes(old_index, index)
+                return _format_comments(ret, comments)
+
+            try:
+                __salt__['win_path.remove'](name)
+            except Exception as exc:
+                comments.append('Encountered error: {0}.'.format(exc))
+                failed = True
+
+    if not failed:
+        if index is None:
+            if old_index is not None:
+                comments.append('{0} already exists in the PATH.'.format(name))
+                return _format_comments(ret, comments)
+            else:
+                if __opts__['test']:
+                    ret['result'] = None
+                    comments.append(
+                        '{0} would be added to the PATH.'.format(name)
+                    )
+                    ret['changes'] = _changes(old_index, index)
+                    return _format_comments(ret, comments)
+
+        try:
+            __salt__['win_path.add'](name, index)
+        except Exception as exc:
+            if index is not None and old_index is not None:
+                comments.append(
+                    'Successfully removed {0} from the PATH at index {1}, but '
+                    'failed to add it back at index {2}.'.format(
+                        name, old_index, index
+                    )
+                )
+            comments.append('Encountered error: {0}.'.format(exc))
+
+    new_index = _index()
+
+    ret['result'] = new_index is not None \
+        if index is None \
+        else index == new_index
+
+    if index is not None and old_index is not None:
+        comments.append(
+            '{0} {1} from index {2} to {3}.'.format(
+                'Moved' if ret['result'] else 'Failed to move',
+                name,
+                old_index,
+                index
+            )
+        )
     else:
-        ret['changes']['added'] = '{0} was added at index {1}'.format(name, index)
-    return ret
+        comments.append(
+            '{0} {1} to the PATH{2}.'.format(
+                'Added' if ret['result'] else 'Failed to add',
+                name,
+                ' at index {0}'.format(index) if index else ''
+            )
+        )
+
+    if old_index != new_index:
+        ret['changes'] = _changes(old_index, new_index)
+
+    return _format_comments(ret, comments)
