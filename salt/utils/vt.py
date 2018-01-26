@@ -708,7 +708,7 @@ class Terminal(object):
         def __detect_parent_terminal_size(self):
             try:
                 TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
-                packed = struct.pack('HHHH', 0, 0, 0, 0)
+                packed = struct.pack(str('HHHH'), 0, 0, 0, 0)  # future lint: blacklisted-function
                 ioctl = fcntl.ioctl(sys.stdin.fileno(), TIOCGWINSZ, packed)
                 return struct.unpack('HHHH', ioctl)[0:2]
             except IOError:
