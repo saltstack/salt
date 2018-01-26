@@ -73,14 +73,14 @@ class Base(TestCase, LoaderModuleMockMixin):
         cls.rdir = tempfile.mkdtemp(dir=TMP)
         cls.tdir = os.path.join(cls.rdir, 'test')
         for idx, url in six.iteritems(buildout._URL_VERSIONS):
-            log.debug('Downloading bootstrap from {0}'.format(url))
+            log.debug('Downloading bootstrap from %s', url)
             dest = os.path.join(
                 cls.rdir, '{0}_bootstrap.py'.format(idx)
             )
             try:
                 download_to(url, dest)
             except URLError:
-                log.debug('Failed to download {0}'.format(url))
+                log.debug('Failed to download %s', url)
         # creating a new setuptools install
         cls.ppy_st = os.path.join(cls.rdir, 'psetuptools')
         cls.py_st = os.path.join(cls.ppy_st, 'bin', 'python')
