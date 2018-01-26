@@ -36,7 +36,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
     def setUp(self):
         if check_status() is False:
-            self.skipTest('External resource \'https://api.random.org/\' not available')
+            self.skipTest("External resource 'https://api.random.org/' not available")
 
     # 'getUsage' function tests: 1
 
