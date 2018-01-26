@@ -6,11 +6,11 @@ Connection module for Amazon Data Pipeline
 
 :depends: boto3
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-from salt._compat import string_types
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def activate_pipeline(pipeline_id, region=None, key=None, keyid=None, profile=No
         client.activate_pipeline(pipelineId=pipeline_id)
         r['result'] = True
     except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
-        r['error'] = str(e)
+        r['error'] = six.text_type(e)
     return r
 
 
@@ -75,7 +75,7 @@ def create_pipeline(name, unique_id, description='', region=None, key=None, keyi
         )
         r['result'] = response['pipelineId']
     except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
-        r['error'] = str(e)
+        r['error'] = six.text_type(e)
     return r
 
 
@@ -95,7 +95,7 @@ def delete_pipeline(pipeline_id, region=None, key=None, keyid=None, profile=None
         client.delete_pipeline(pipelineId=pipeline_id)
         r['result'] = True
     except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
-        r['error'] = str(e)
+        r['error'] = six.text_type(e)
     return r
 
 
@@ -114,7 +114,7 @@ def describe_pipelines(pipeline_ids, region=None, key=None, keyid=None, profile=
     try:
         r['result'] = client.describe_pipelines(pipelineIds=pipeline_ids)
     except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
-        r['error'] = str(e)
+        r['error'] = six.text_type(e)
     return r
 
 
@@ -137,7 +137,7 @@ def get_pipeline_definition(pipeline_id, version='latest', region=None, key=None
             version=version,
         )
     except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
-        r['error'] = str(e)
+        r['error'] = six.text_type(e)
     return r
 
 
@@ -160,7 +160,7 @@ def list_pipelines(region=None, key=None, keyid=None, profile=None):
             pipelines += page['pipelineIdList']
         r['result'] = pipelines
     except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
-        r['error'] = str(e)
+        r['error'] = six.text_type(e)
     return r
 
 
@@ -215,7 +215,7 @@ def put_pipeline_definition(pipeline_id, pipeline_objects, parameter_objects=Non
         else:
             r['result'] = response
     except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
-        r['error'] = str(e)
+        r['error'] = six.text_type(e)
     return r
 
 
@@ -236,7 +236,7 @@ def _get_session(region, key, keyid, profile):
     Get a boto3 session
     '''
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = __salt__['config.option'](profile)
         elif isinstance(profile, dict):
             _profile = profile

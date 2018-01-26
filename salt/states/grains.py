@@ -14,7 +14,7 @@ file on the minions, By default, this file is located at: ``/etc/salt/grains``
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import Salt libs
@@ -347,8 +347,7 @@ def absent(name,
         if __opts__['test']:
             ret['result'] = None
             if destructive is True:
-                ret['comment'] = 'Grain {0} is set to be deleted'\
-                    .format(name)
+                ret['comment'] = 'Grain {0} is set to be deleted'.format(name)
                 ret['changes'] = {'deleted': name}
             return ret
         ret = __salt__['grains.set'](name,
@@ -357,16 +356,14 @@ def absent(name,
                                      force=force)
         if ret['result']:
             if destructive is True:
-                ret['comment'] = 'Grain {0} was deleted'\
-                    .format(name)
+                ret['comment'] = 'Grain {0} was deleted'.format(name)
                 ret['changes'] = {'deleted': name}
         ret['name'] = name
     elif grain is not _non_existent:
         if __opts__['test']:
             ret['result'] = None
             if destructive is True:
-                ret['comment'] = 'Grain {0} is set to be deleted'\
-                    .format(name)
+                ret['comment'] = 'Grain {0} is set to be deleted'.format(name)
                 ret['changes'] = {'deleted': name}
             else:
                 ret['comment'] = 'Value for grain {0} is set to be ' \
@@ -379,12 +376,10 @@ def absent(name,
                                      force=force)
         if ret['result']:
             if destructive is True:
-                ret['comment'] = 'Grain {0} was deleted'\
-                    .format(name)
+                ret['comment'] = 'Grain {0} was deleted'.format(name)
                 ret['changes'] = {'deleted': name}
             else:
-                ret['comment'] = 'Value for grain {0} was set to None' \
-                                 .format(name)
+                ret['comment'] = 'Value for grain {0} was set to None'.format(name)
                 ret['changes'] = {'grain': name, 'value': None}
         ret['name'] = name
     else:
@@ -445,8 +440,7 @@ def append(name, value, convert=False,
                 ret['changes'] = {'added': value}
                 return ret
             __salt__['grains.append'](name, value)
-            ret['comment'] = 'Value {1} was added to grain {0}'\
-                .format(name, value)
+            ret['comment'] = 'Value {1} was added to grain {0}'.format(name, value)
             ret['changes'] = {'added': value}
         else:
             if convert is True:
@@ -460,13 +454,11 @@ def append(name, value, convert=False,
                 grain = [] if grain is None else [grain]
                 grain.append(value)
                 __salt__['grains.setval'](name, grain)
-                ret['comment'] = 'Value {1} was added to grain {0}'\
-                    .format(name, value)
+                ret['comment'] = 'Value {1} was added to grain {0}'.format(name, value)
                 ret['changes'] = {'added': value}
             else:
                 ret['result'] = False
-                ret['comment'] = 'Grain {0} is not a valid list'\
-                    .format(name)
+                ret['comment'] = 'Grain {0} is not a valid list'.format(name)
     else:
         ret['result'] = False
         ret['comment'] = 'Grain {0} does not exist'.format(name)

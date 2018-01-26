@@ -3,7 +3,7 @@
 Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import platform
 
 # Import Salt Libs
@@ -111,7 +111,7 @@ def get_sid_from_name(name):
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'User {0} not found: {1}'.format(name, exc.strerror))
+            'User {0} not found: {1}'.format(name, exc))
 
     return win32security.ConvertSidToStringSid(sid)
 
@@ -135,7 +135,7 @@ def get_current_user():
                 user_name = 'SYSTEM'
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed to get current user: {0}'.format(exc.strerror))
+            'Failed to get current user: {0}'.format(exc))
 
     if not user_name:
         return False

@@ -20,7 +20,6 @@ import collections
 import multiprocessing
 import threading
 import salt.serializers.msgpack
-import threading
 
 # Import third party libs
 try:
@@ -52,6 +51,7 @@ import tornado.gen  # pylint: disable=F0401
 import salt.crypt
 import salt.client
 import salt.client.ssh.client
+import salt.exceptions
 import salt.payload
 import salt.pillar
 import salt.state
@@ -81,13 +81,12 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
 import salt.utils.ssdp
+import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.config import DEFAULT_MASTER_OPTS
-from salt.exceptions import FileserverConfigError
 from salt.transport import iter_transport_opts
 from salt.utils.debug import (
     enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
@@ -303,7 +302,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
             for secret_key, secret_map in six.iteritems(SMaster.secrets):
                 # should be unnecessary-- since no one else should be modifying
                 with secret_map['secret'].get_lock():
-                    secret_map['secret'].value = six.b(secret_map['reload']())
+                    secret_map['secret'].value = salt.utils.stringutils.to_bytes(secret_map['reload']())
                 self.event.fire_event({'rotate_{0}_key'.format(secret_key): True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
@@ -598,7 +597,7 @@ class Master(SMaster):
                 # double-check configuration
                 try:
                     fileserver.init()
-                except FileserverConfigError as exc:
+                except salt.exceptions.FileserverConfigError as exc:
                     critical_errors.append('{0}'.format(exc))
 
         if not self.opts['fileserver_backend']:
@@ -631,7 +630,7 @@ class Master(SMaster):
                                 repo['git'],
                                 per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
                                 per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
-                        except FileserverConfigError as exc:
+                        except salt.exceptions.FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
                     del new_opts
@@ -666,7 +665,9 @@ class Master(SMaster):
             SMaster.secrets['aes'] = {
                 'secret': multiprocessing.Array(
                     ctypes.c_char,
-                    six.b(salt.crypt.Crypticle.generate_key_string())
+                    salt.utils.stringutils.to_bytes(
+                        salt.crypt.Crypticle.generate_key_string()
+                    )
                 ),
                 'reload': salt.crypt.Crypticle.generate_key_string
             }
@@ -743,21 +744,21 @@ class Master(SMaster):
                 kwargs=kwargs,
                 name='ReqServer')
 
+            self.process_manager.add_process(
+                FileserverUpdate,
+                args=(self.opts,))
+
             # Fire up SSDP discovery publisher
             if self.opts['discovery']:
                 if salt.utils.ssdp.SSDPDiscoveryServer.is_available():
                     self.process_manager.add_process(salt.utils.ssdp.SSDPDiscoveryServer(
-                        port=self.opts['discovery'].get('port', DEFAULT_MASTER_OPTS['discovery']['port']),
+                        port=self.opts['discovery']['port'],
                         listen_ip=self.opts['interface'],
                         answer={'mapping': self.opts['discovery'].get('mapping', {})}).run)
                 else:
                     log.error('Unable to load SSDP: asynchronous IO is not available.')
                     if sys.version_info.major == 2:
                         log.error('You are using Python 2, please install "trollius" module to enable SSDP discovery.')
-
-            self.process_manager.add_process(
-                FileserverUpdate,
-                args=(self.opts,))
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -1515,7 +1516,8 @@ class AESFuncs(object):
                                        'data',
                                        {'grains': load['grains'],
                                         'pillar': data})
-            self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
+            if self.opts.get('minion_data_cache_events') is True:
+                self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
         return data
 
     def _minion_event(self, load):
@@ -2022,7 +2024,8 @@ class ClearFuncs(object):
                 'your local administrator if you believe this is in '
                 'error.\n', clear_load['user'], clear_load['fun']
             )
-            return ''
+            return {'error': {'name': 'AuthorizationError',
+                              'message': 'Authorization error occurred.'}}
 
         # Retrieve the minions list
         delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
@@ -2048,7 +2051,8 @@ class ClearFuncs(object):
         if auth_check.get('error'):
             # Authentication error occurred: do not continue.
             log.warning(err_msg)
-            return ''
+            return {'error': {'name': 'AuthenticationError',
+                              'message': 'Authentication error occurred.'}}
 
         # All Token, Eauth, and non-root users must pass the authorization check
         if auth_type != 'user' or (auth_type == 'user' and auth_list):
@@ -2067,7 +2071,8 @@ class ClearFuncs(object):
             if not authorized:
                 # Authorization error occurred. Do not continue.
                 log.warning(err_msg)
-                return ''
+                return {'error': {'name': 'AuthorizationError',
+                                  'message': 'Authorization error occurred.'}}
 
             # Perform some specific auth_type tasks after the authorization check
             if auth_type == 'token':

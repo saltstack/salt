@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import grp
 import os
 import random
@@ -12,7 +12,9 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt libs
+from salt.ext import six
 from salt.ext.six.moves import range
+import salt.utils.data
 import salt.utils.files
 
 
@@ -67,8 +69,9 @@ class GroupModuleTest(ModuleCase):
         defs_file = '/etc/login.defs'
         if os.path.exists(defs_file):
             with salt.utils.files.fopen(defs_file) as defs_fd:
+                lines = salt.utils.data.decode(defs_fd.readlines())
                 login_defs = dict([x.split()
-                                   for x in defs_fd.readlines()
+                                   for x in lines
                                    if x.strip()
                                    and not x.strip().startswith('#')])
         else:
@@ -229,7 +232,7 @@ class GroupModuleTest(ModuleCase):
         self.run_function('user.add', [self._user])
         self.run_function('group.adduser', [self._group, self._user])
         ginfo = self.run_function('user.getent')
-        self.assertIn(self._group, str(ginfo))
-        self.assertIn(self._user, str(ginfo))
-        self.assertNotIn(self._no_group, str(ginfo))
-        self.assertNotIn(self._no_user, str(ginfo))
+        self.assertIn(self._group, six.text_type(ginfo))
+        self.assertIn(self._user, six.text_type(ginfo))
+        self.assertNotIn(self._no_group, six.text_type(ginfo))
+        self.assertNotIn(self._no_user, six.text_type(ginfo))

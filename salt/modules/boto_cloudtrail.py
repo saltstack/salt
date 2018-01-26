@@ -50,7 +50,7 @@ The dependencies listed above can be installed via package or pip.
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -165,7 +165,7 @@ def create(Name,
                                   S3BucketName=S3BucketName,
                                   **kwargs)
         if trail:
-            log.info('The newly created trail name is {0}'.format(trail['Name']))
+            log.info('The newly created trail name is %s', trail['Name'])
 
             return {'created': True, 'name': trail['Name']}
         else:
@@ -338,7 +338,7 @@ def update(Name,
                                   S3BucketName=S3BucketName,
                                   **kwargs)
         if trail:
-            log.info('The updated trail name is {0}'.format(trail['Name']))
+            log.info('The updated trail name is %s', trail['Name'])
 
             return {'updated': True, 'name': trail['Name']}
         else:
@@ -430,9 +430,9 @@ def add_tags(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         conn.add_tags(ResourceId=_get_trail_arn(Name,
                       region=region, key=key, keyid=keyid,
                       profile=profile), TagsList=tagslist)
@@ -461,9 +461,9 @@ def remove_tags(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         conn.remove_tags(ResourceId=_get_trail_arn(Name,
                               region=region, key=key, keyid=keyid,
                               profile=profile), TagsList=tagslist)

@@ -2,7 +2,7 @@
 '''
 Support for poudriere
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -11,6 +11,7 @@ import logging
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -118,7 +119,7 @@ def parse_config(config_file=None):
     if _check_config_exists(config_file):
         with salt.utils.files.fopen(config_file) as ifile:
             for line in ifile:
-                key, val = line.split('=')
+                key, val = salt.utils.stringutils.to_unicode(line).split('=')
                 ret[key] = val
         return ret
 

@@ -4,7 +4,7 @@ File server pluggable modules and generic backend functions
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import errno
 import fnmatch
@@ -15,6 +15,7 @@ import time
 
 # Import salt libs
 import salt.loader
+import salt.utils.data
 import salt.utils.files
 import salt.utils.locales
 import salt.utils.path
@@ -41,7 +42,7 @@ def _unlock_cache(w_lock):
         elif os.path.isfile(w_lock):
             os.unlink(w_lock)
     except (OSError, IOError) as exc:
-        log.trace('Error removing lockfile {0}: {1}'.format(w_lock, exc))
+        log.trace('Error removing lockfile %s: %s', w_lock, exc)
 
 
 def _lock_cache(w_lock):
@@ -52,7 +53,7 @@ def _lock_cache(w_lock):
             raise
         return False
     else:
-        log.trace('Lockfile {0} created'.format(w_lock))
+        log.trace('Lockfile %s created', w_lock)
         return True
 
 
@@ -95,9 +96,10 @@ def wait_lock(lk_fn, dest, wait_timeout=0):
         if timeout:
             if time.time() > timeout:
                 raise ValueError(
-                    'Timeout({0}s) for {1} '
-                    '(lock: {2}) elapsed'.format(
-                        wait_timeout, dest, lk_fn))
+                    'Timeout({0}s) for {1} (lock: {2}) elapsed'.format(
+                        wait_timeout, dest, lk_fn
+                    )
+                )
     return False
 
 
@@ -130,9 +132,11 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                 if age < opts.get('fileserver_list_cache_time', 20):
                     # Young enough! Load this sucker up!
                     with salt.utils.files.fopen(list_cache, 'rb') as fp_:
-                        log.trace('Returning file_lists cache data from '
-                                  '{0}'.format(list_cache))
-                        return serial.load(fp_).get(form, []), False, False
+                        log.trace(
+                            'Returning file_lists cache data from %s',
+                            list_cache
+                        )
+                        return salt.utils.data.decode(serial.load(fp_).get(form, [])), False, False
                 elif _lock_cache(w_lock):
                     # Set the w_lock and go
                     refresh_cache = True
@@ -157,7 +161,7 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
     with salt.utils.files.fopen(list_cache, 'w+b') as fp_:
         fp_.write(serial.dumps(data))
         _unlock_cache(w_lock)
-        log.trace('Lockfile {0} removed'.format(w_lock))
+        log.trace('Lockfile %s removed', w_lock)
 
 
 def check_env_cache(opts, env_cache):
@@ -168,9 +172,9 @@ def check_env_cache(opts, env_cache):
         return None
     try:
         with salt.utils.files.fopen(env_cache, 'rb') as fp_:
-            log.trace('Returning env cache data from {0}'.format(env_cache))
+            log.trace('Returning env cache data from %s', env_cache)
             serial = salt.payload.Serial(opts)
-            return serial.load(fp_)
+            return salt.utils.data.decode(serial.load(fp_))
     except (IOError, OSError):
         pass
     return None
@@ -193,8 +197,9 @@ def generate_mtime_map(opts, path_map):
                     except (OSError, IOError):
                         # skip dangling symlinks
                         log.info(
-                            'Failed to get mtime on {0}, '
-                            'dangling symlink ?'.format(file_path))
+                            'Failed to get mtime on %s, dangling symlink?',
+                            file_path
+                        )
                         continue
     return file_map
 
@@ -242,10 +247,10 @@ def reap_fileserver_cache_dir(cache_base, find_func):
                 try:
                     filename, _, hash_type = file_rel_path.rsplit('.', 2)
                 except ValueError:
-                    log.warning((
-                        'Found invalid hash file [{0}] when attempting to reap'
-                        ' cache directory.'
-                    ).format(file_))
+                    log.warning(
+                        'Found invalid hash file [%s] when attempting to reap '
+                        'cache directory', file_
+                    )
                     continue
                 # do we have the file?
                 ret = find_func(filename, saltenv=saltenv)
@@ -265,9 +270,8 @@ def is_file_ignored(opts, fname):
         for regex in opts['file_ignore_regex']:
             if re.search(regex, fname):
                 log.debug(
-                    'File matching file_ignore_regex. Skipping: {0}'.format(
-                        fname
-                    )
+                    'File matching file_ignore_regex. Skipping: %s',
+                    fname
                 )
                 return True
 
@@ -275,9 +279,8 @@ def is_file_ignored(opts, fname):
         for glob in opts['file_ignore_glob']:
             if fnmatch.fnmatch(fname, glob):
                 log.debug(
-                    'File matching file_ignore_glob. Skipping: {0}'.format(
-                        fname
-                    )
+                    'File matching file_ignore_glob. Skipping: %s',
+                    fname
                 )
                 return True
     return False
@@ -395,7 +398,7 @@ class Fileserver(object):
         for fsb in back:
             fstr = '{0}.clear_cache'.format(fsb)
             if fstr in self.servers:
-                log.debug('Clearing {0} fileserver cache'.format(fsb))
+                log.debug('Clearing %s fileserver cache', fsb)
                 failed = self.servers[fstr]()
                 if failed:
                     errors.extend(failed)
@@ -468,7 +471,7 @@ class Fileserver(object):
         for fsb in back:
             fstr = '{0}.update'.format(fsb)
             if fstr in self.servers:
-                log.debug('Updating {0} fileserver cache'.format(fsb))
+                log.debug('Updating %s fileserver cache', fsb)
                 self.servers[fstr]()
 
     def update_intervals(self, back=None):
@@ -543,6 +546,8 @@ class Fileserver(object):
         Find the path and return the fnd structure, this structure is passed
         to other backend interfaces.
         '''
+        path = salt.utils.locales.sdecode(path)
+        saltenv = salt.utils.locales.sdecode(saltenv)
         back = self.backends(back)
         kwargs = {}
         fnd = {'path': '',
@@ -663,7 +668,7 @@ class Fileserver(object):
                 try:
                     saltenv = [x.strip() for x in saltenv.split(',')]
                 except AttributeError:
-                    saltenv = [x.strip() for x in str(saltenv).split(',')]
+                    saltenv = [x.strip() for x in six.text_type(saltenv).split(',')]
 
             for idx, val in enumerate(saltenv):
                 if not isinstance(val, six.string_types):
@@ -858,7 +863,7 @@ class FSChan(object):
         Emulate the channel send method, the tries and timeout are not used
         '''
         if 'cmd' not in load:
-            log.error('Malformed request, no cmd: {0}'.format(load))
+            log.error('Malformed request, no cmd: %s', load)
             return {}
         cmd = load['cmd'].lstrip('_')
         if cmd in self.cmd_stub:
@@ -866,6 +871,6 @@ class FSChan(object):
         if cmd == 'file_envs':
             return self.fs.envs()
         if not hasattr(self.fs, cmd):
-            log.error('Malformed request, invalid cmd: {0}'.format(load))
+            log.error('Malformed request, invalid cmd: %s', load)
             return {}
         return getattr(self.fs, cmd)(load)

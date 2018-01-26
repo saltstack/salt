@@ -109,7 +109,7 @@ Or we can remove the limit altogether!
         - property: cpu-shares
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -320,11 +320,11 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
 
                     ## check if update reauired
                     for key in kwargs:
-                        log.debug('zone.resource_preent - key={0} value={1} current_value={2}'.format(
+                        log.debug('zone.resource_preent - key=%s value=%s current_value=%s',
                             key,
                             resource[key] if key in resource else None,
                             _parse_value(kwargs[key]),
-                        ))
+                        )
                         # note: something odd with ncpus property, we fix it here for now
                         if key == 'ncpus' and key in kwargs:
                             kwargs[key] = '{0:.2f}'.format(float(kwargs[key]))
@@ -914,7 +914,7 @@ def present(name, brand, zonepath, properties=None, resources=None):
         if isinstance(properties, list):
             for prop in properties:
                 if not isinstance(prop, OrderedDict) or len(prop) != 1:
-                    log.warning('zone.present - failed to parse property: {0}'.format(prop))
+                    log.warning('zone.present - failed to parse property: %s', prop)
                     continue
                 for key, value in prop.items():
                     res = None
@@ -932,7 +932,7 @@ def present(name, brand, zonepath, properties=None, resources=None):
         if isinstance(resources, list):
             for resource in resources:
                 if not isinstance(prop, OrderedDict) or len(prop) != 1:
-                    log.warning('zone.present - failed to parse resource: {0}'.format(resource))
+                    log.warning('zone.present - failed to parse resource: %s', resource)
                     continue
                 for key, value in resource.items():
                     zonecfg = __salt__['zonecfg.info'](name, show_all=True)
