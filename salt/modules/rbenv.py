@@ -380,7 +380,12 @@ def do(cmdline, runas=None, env=None):
     if not env:
         env = {}
 
-    env['PATH'] = '{0}/shims:{1}'.format(path, os.environ['PATH'])
+    env[str('PATH')] = salt.utils.stringutils.to_str(   # future lint: disable=blacklisted-function
+        '{0}/shims:{1}'.format(
+            path,
+            salt.utils.stringutils.to_unicode(os.environ['PATH'])
+        )
+    )
 
     try:
         cmdline = salt.utils.args.shlex_split(cmdline)
