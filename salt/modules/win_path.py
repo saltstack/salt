@@ -14,6 +14,7 @@ import os
 import re
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
 
@@ -157,7 +158,7 @@ def add(path, index=0):
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',
-        str(';').join(sysPath),  # future lint: disable=blacklisted-function
+        ';'.join(salt.utils.data.decode(sysPath)),
         'REG_EXPAND_SZ'
     )
 
@@ -205,7 +206,7 @@ def remove(path):
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',
-        str(';').join(sysPath),  # future lint: disable=blacklisted-function
+        ';'.join(salt.utils.data.decode(sysPath)),
         'REG_EXPAND_SZ'
     )
     if regedit:
