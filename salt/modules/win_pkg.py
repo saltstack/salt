@@ -695,6 +695,7 @@ def refresh_db(**kwargs):
         )
 
     # Cache repo-ng locally
+    log.info('Fetching *.sls files from {0}'.format(repo_details.winrepo_source_dir))
     __salt__['cp.cache_dir'](
         repo_details.winrepo_source_dir,
         saltenv,
