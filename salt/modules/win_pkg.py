@@ -790,11 +790,8 @@ def genrepo(**kwargs):
                     successful_verbose
                     )
     serial = salt.payload.Serial(__opts__)
-    # TODO: 2016.11 has PY2 mode as 'w+b' develop has 'w+' ? PY3 is 'wb+'
-    # also the reading of this is 'rb' in get_repo_data()
-    mode = 'w+' if six.PY2 else 'wb+'
 
-    with salt.utils.files.fopen(repo_details.winrepo_file, mode) as repo_cache:
+    with salt.utils.files.fopen(repo_details.winrepo_file, 'wb') as repo_cache:
         repo_cache.write(serial.dumps(ret))
     # For some reason we can not save ret into __context__['winrepo.data'] as this breaks due to utf8 issues
     successful_count = len(successful_verbose)

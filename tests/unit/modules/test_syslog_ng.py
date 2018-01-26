@@ -4,7 +4,7 @@ Test module for syslog_ng
 '''
 
 # Import Python modules
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from textwrap import dedent
 
 # Import Salt Testing libs

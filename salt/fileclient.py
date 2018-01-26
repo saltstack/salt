@@ -1392,7 +1392,7 @@ class RemoteClient(Client):
                 'id': self.opts['id'],
                 'opts': self.opts}
         if self.auth:
-            load['tok'] = self.auth.gen_token('salt')
+            load['tok'] = self.auth.gen_token(b'salt')
         return self.channel.send(load)
 
 

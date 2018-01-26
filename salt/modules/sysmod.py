@@ -2,7 +2,7 @@
 '''
 The sys module provides information about the available functions on the minion
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import fnmatch
@@ -609,7 +609,7 @@ def list_state_modules(*args):
 
     if not args:
         for func in st_.states:
-            log.debug('func {0}'.format(func))
+            log.debug('func %s', func)
             modules.add(func.split('.')[0])
         return sorted(modules)
 
