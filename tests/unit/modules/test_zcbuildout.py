@@ -471,6 +471,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue('buildout -c buildout.cfg -n install a' in comment)
 
 
+# TODO: Is this test even still needed?
 @skipIf(True, 'These tests are not running reliably')
 class BuildoutAPITestCase(TestCase):
 
