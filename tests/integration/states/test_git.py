@@ -4,7 +4,7 @@ Tests for the Git state
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import functools
 import inspect
@@ -506,8 +506,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             fname = os.path.join(name, 'stoptheprocess')
 
-            with salt.utils.files.fopen(fname, 'a') as fh_:
-                fh_.write('')
+            with salt.utils.files.fopen(fname, 'a'):
+                pass
 
             ret = self.run_state(
                 'git.present',

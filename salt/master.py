@@ -21,12 +21,6 @@ import multiprocessing
 import threading
 import salt.serializers.msgpack
 
-# Import third party libs
-try:
-    from Cryptodome.PublicKey import RSA
-except ImportError:
-    # Fall back to pycrypto
-    from Crypto.PublicKey import RSA
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
@@ -51,6 +45,7 @@ import tornado.gen  # pylint: disable=F0401
 import salt.crypt
 import salt.client
 import salt.client.ssh.client
+import salt.exceptions
 import salt.payload
 import salt.pillar
 import salt.state
@@ -80,12 +75,12 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
 import salt.utils.ssdp
+import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.exceptions import FileserverConfigError
 from salt.transport import iter_transport_opts
 from salt.utils.debug import (
     enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
@@ -301,7 +296,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
             for secret_key, secret_map in six.iteritems(SMaster.secrets):
                 # should be unnecessary-- since no one else should be modifying
                 with secret_map['secret'].get_lock():
-                    secret_map['secret'].value = six.b(secret_map['reload']())
+                    secret_map['secret'].value = salt.utils.stringutils.to_bytes(secret_map['reload']())
                 self.event.fire_event({'rotate_{0}_key'.format(secret_key): True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
@@ -596,7 +591,7 @@ class Master(SMaster):
                 # double-check configuration
                 try:
                     fileserver.init()
-                except FileserverConfigError as exc:
+                except salt.exceptions.FileserverConfigError as exc:
                     critical_errors.append('{0}'.format(exc))
 
         if not self.opts['fileserver_backend']:
@@ -629,7 +624,7 @@ class Master(SMaster):
                                 repo['git'],
                                 per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
                                 per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
-                        except FileserverConfigError as exc:
+                        except salt.exceptions.FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
                     del new_opts
@@ -664,7 +659,9 @@ class Master(SMaster):
             SMaster.secrets['aes'] = {
                 'secret': multiprocessing.Array(
                     ctypes.c_char,
-                    six.b(salt.crypt.Crypticle.generate_key_string())
+                    salt.utils.stringutils.to_bytes(
+                        salt.crypt.Crypticle.generate_key_string()
+                    )
                 ),
                 'reload': salt.crypt.Crypticle.generate_key_string
             }
@@ -1171,9 +1168,7 @@ class AESFuncs(object):
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
 
         try:
-            with salt.utils.files.fopen(pub_path, 'r') as fp_:
-                minion_pub = fp_.read()
-                pub = RSA.importKey(minion_pub)
+            pub = salt.crypt.get_rsa_pub_key(pub_path)
         except (IOError, OSError):
             log.warning(
                 'Salt minion claiming to be %s attempted to communicate with '
@@ -2021,7 +2016,8 @@ class ClearFuncs(object):
                 'your local administrator if you believe this is in '
                 'error.\n', clear_load['user'], clear_load['fun']
             )
-            return ''
+            return {'error': {'name': 'AuthorizationError',
+                              'message': 'Authorization error occurred.'}}
 
         # Retrieve the minions list
         delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
@@ -2047,7 +2043,8 @@ class ClearFuncs(object):
         if auth_check.get('error'):
             # Authentication error occurred: do not continue.
             log.warning(err_msg)
-            return ''
+            return {'error': {'name': 'AuthenticationError',
+                              'message': 'Authentication error occurred.'}}
 
         # All Token, Eauth, and non-root users must pass the authorization check
         if auth_type != 'user' or (auth_type == 'user' and auth_list):
@@ -2066,7 +2063,8 @@ class ClearFuncs(object):
             if not authorized:
                 # Authorization error occurred. Do not continue.
                 log.warning(err_msg)
-                return ''
+                return {'error': {'name': 'AuthorizationError',
+                                  'message': 'Authorization error occurred.'}}
 
             # Perform some specific auth_type tasks after the authorization check
             if auth_type == 'token':
