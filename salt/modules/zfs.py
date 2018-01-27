@@ -13,12 +13,14 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+from datetime import datetime
 
 # Import Salt libs
 import salt.utils.args
 import salt.utils.path
 import salt.modules.cmdmod
 from salt.utils.odict import OrderedDict
+from salt.ext.six.moves import zip
 
 __virtualname__ = 'zfs'
 log = logging.getLogger(__name__)
@@ -81,7 +83,6 @@ def exists(name, **kwargs):
     return res['retcode'] == 0
 
 
-# TODO: cleanup code below this point
 def create(name, **kwargs):
     '''
     Create a ZFS File System.
@@ -119,8 +120,6 @@ def create(name, **kwargs):
         salt '*' zfs.create myzpool/volume volume_size=1G properties="{'volblocksize': '512'}" [sparse=True|False]
 
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
@@ -149,13 +148,7 @@ def create(name, **kwargs):
         python_shell=False,
     )
 
-    # Check and see if the dataset is available
-    if res['retcode'] != 0:
-        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
-        ret[name] = 'created'
-
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'created')
 
 
 def destroy(name, **kwargs):
@@ -184,8 +177,6 @@ def destroy(name, **kwargs):
 
         salt '*' zfs.destroy myzpool/mydataset [force=True|False]
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
@@ -208,17 +199,7 @@ def destroy(name, **kwargs):
         python_shell=False,
     )
 
-    if res['retcode'] != 0:
-        if "operation does not apply to pools" in res['stderr']:
-            ret[name] = '{0}, use zpool.destroy to destroy the pool'.format(res['stderr'].splitlines()[0])
-        if "has children" in res['stderr']:
-            ret[name] = '{0}, you can add the "recursive=True" parameter'.format(res['stderr'].splitlines()[0])
-        else:
-            ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
-        ret[name] = 'destroyed'
-
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'destroyed')
 
 
 def rename(name, new_name, **kwargs):
@@ -248,8 +229,6 @@ def rename(name, new_name, **kwargs):
 
         salt '*' zfs.rename myzpool/mydataset myzpool/renameddataset
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
@@ -285,12 +264,7 @@ def rename(name, new_name, **kwargs):
         python_shell=False,
     )
 
-    if res['retcode'] != 0:
-        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
-        ret[name] = 'renamed to {0}'.format(new_name)
-
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'renamed')
 
 
 def list_(name=None, **kwargs):
@@ -375,27 +349,55 @@ def list_(name=None, **kwargs):
         python_shell=False,
     )
     if res['retcode'] == 0:
-        for ds in [l for l in res['stdout'].splitlines()]:
-            ds = ds.split("\t")
-            # NOTE: OrderedDict because we sort!
-            ds_data = OrderedDict()
-
-            for prop in properties:
-                ds_data[prop] = __utils__['zfs.to_auto'](
-                    prop,
-                    ds[properties.index(prop)],
-                    convert_to_human=not kwargs.get('parsable', True),
+        for ds in res['stdout'].splitlines():
+            if kwargs.get('parsable', True):
+                ds_data = __utils__['zfs.from_auto_dict'](
+                    OrderedDict(list(zip(properties, ds.split("\t")))),
+                )
+            else:
+                ds_data = __utils__['zfs.to_auto_dict'](
+                    OrderedDict(list(zip(properties, ds.split("\t")))),
+                    convert_to_human=True,
                 )
 
             ret[ds_data['name']] = ds_data
             del ret[ds_data['name']]['name']
     else:
-        ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        return __utils__['zfs.parse_command_result'](res)
 
     return ret
 
 
-## FIXME: also list mounted filesystems? (how to handle '-a' ?)
+def list_mount():
+    '''
+    List mounted zfs filesystems
+
+    .. versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.list_mount
+    '''
+    ## List mounted filesystem
+    res = __salt__['cmd.run_all'](
+        __utils__['zfs.zfs_command'](
+            command='mount',
+        ),
+        python_shell=False,
+    )
+
+    if res['retcode'] == 0:
+        ret = OrderedDict()
+        for mount in res['stdout'].splitlines():
+            mount = mount.split()
+            ret[mount[0]] = mount[-1]
+        return ret
+    else:
+        return __utils__['zfs.parse_command_result'](res)
+
+
 def mount(name=None, **kwargs):
     '''
     Mounts ZFS file systems
@@ -423,8 +425,6 @@ def mount(name=None, **kwargs):
         salt '*' zfs.mount myzpool/mydataset
         salt '*' zfs.mount myzpool/mydataset options=ro
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
@@ -453,12 +453,7 @@ def mount(name=None, **kwargs):
         python_shell=False,
     )
 
-    if res['retcode'] != 0:
-        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
-        ret[name] = 'mounted'
-
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'mounted')
 
 
 def unmount(name, **kwargs):
@@ -487,8 +482,6 @@ def unmount(name, **kwargs):
 
         salt '*' zfs.unmount myzpool/mydataset [force=True|False]
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
@@ -513,12 +506,7 @@ def unmount(name, **kwargs):
         python_shell=False,
     )
 
-    if res['retcode'] != 0:
-        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
-        ret[name] = 'unmounted'
-
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'unmounted')
 
 
 def inherit(prop, name, **kwargs):
@@ -544,8 +532,6 @@ def inherit(prop, name, **kwargs):
 
         salt '*' zfs.inherit canmount myzpool/mydataset [recursive=True|False]
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
@@ -567,17 +553,7 @@ def inherit(prop, name, **kwargs):
         python_shell=False,
     )
 
-    ret[name] = {}
-    if res['retcode'] != 0:
-        ret[name][prop] = res['stderr'] if 'stderr' in res else res['stdout']
-        if 'property cannot be inherited' in res['stderr']:
-            ret[name][prop] = '{0}, {1}'.format(
-                ret[name][prop],
-                'use revert=True to try and reset it to it\'s default value.'
-            )
-    else:
-        ret[name][prop] = 'cleared'
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'inherited')
 
 
 def diff(name_a, name_b, **kwargs):
@@ -594,6 +570,8 @@ def diff(name_a, name_b, **kwargs):
         display the path's inode change time as the first column of output. (default = False)
     show_indication : boolean
         display an indication of the type of file. (default = True)
+    parsable : boolean
+        if true we don't parse the timestamp to a more readable date (default = True)
 
     .. versionadded:: 2016.3.0
     .. versionchanged:: Fluorine
@@ -604,8 +582,6 @@ def diff(name_a, name_b, **kwargs):
 
         salt '*' zfs.diff myzpool/mydataset@yesterday myzpool/mydataset
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = ['-H']
@@ -632,13 +608,20 @@ def diff(name_a, name_b, **kwargs):
     )
 
     if res['retcode'] != 0:
-        ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        return __utils__['zfs.parse_command_result'](res)
     else:
-        # FIXME: parse timestamp if '-t'
-        ret = []
-        for line in res['stdout'].splitlines():
-            ret.append(line)
-    return ret
+        if not kwargs.get('parsable', True) and kwargs.get('show_changetime', False):
+            ret = OrderedDict()
+            for entry in res['stdout'].splitlines():
+                entry = entry.split()
+                entry_timestamp = datetime.fromtimestamp(
+                    float(entry[0]),
+                ).strftime('%Y-%m-%d.%H:%M:%S.%f')
+                entry_data = "\t\t".join(entry[1:])
+                ret[entry_timestamp] = entry_data
+        else:
+            ret = res['stdout'].splitlines()
+        return ret
 
 
 def rollback(name, **kwargs):
@@ -676,8 +659,6 @@ def rollback(name, **kwargs):
 
         salt '*' zfs.rollback myzpool/mydataset@yesterday
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
@@ -693,7 +674,7 @@ def rollback(name, **kwargs):
         else:
             log.warning('zfs.rollback - force=True can only be used with recursive_all=True or recursive=True')
 
-    ## Diff filesystem/snapshot
+    ## Rollback to snapshot
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zfs_command'](
             command='rollback',
@@ -703,11 +684,7 @@ def rollback(name, **kwargs):
         python_shell=False,
     )
 
-    if res['retcode'] != 0:
-        ret[name[:name.index('@')]] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
-        ret[name[:name.index('@')]] = 'rolledback to snapshot: {0}'.format(name[name.index('@')+1:])
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'rolledback')
 
 
 def clone(name_a, name_b, **kwargs):
@@ -741,8 +718,6 @@ def clone(name_a, name_b, **kwargs):
 
         salt '*' zfs.clone myzpool/mydataset@yesterday myzpool/mydataset_yesterday
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
@@ -770,11 +745,7 @@ def clone(name_a, name_b, **kwargs):
         python_shell=False,
     )
 
-    if res['retcode'] != 0:
-        ret[name_b] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
-        ret[name_b] = 'cloned from {0}'.format(name_a)
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'cloned')
 
 
 def promote(name):
@@ -808,8 +779,6 @@ def promote(name):
 
         salt '*' zfs.promote myzpool/myclone
     '''
-    ret = OrderedDict()
-
     ## Promote clone
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zfs_command'](
@@ -819,11 +788,7 @@ def promote(name):
         python_shell=False,
     )
 
-    if res['retcode'] != 0:
-        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
-        ret[name] = 'promoted'
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'promoted')
 
 
 def bookmark(snapshot, bookmark):
@@ -851,12 +816,9 @@ def bookmark(snapshot, bookmark):
 
         salt '*' zfs.bookmark myzpool/mydataset@yesterday myzpool/mydataset#complete
     '''
-    ret = OrderedDict()
-
     # abort if we do not have feature flags
     if not __utils__['zfs.has_feature_flags']():
-        ret['error'] = 'bookmarks are not supported'
-        return ret
+        return OrderedDict([('error', 'bookmarks are not supported')])
 
     ## Configure command
     # NOTE: initialize the defaults
@@ -875,11 +837,7 @@ def bookmark(snapshot, bookmark):
         python_shell=False,
     )
 
-    if res['retcode'] != 0:
-        ret[snapshot] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
-        ret[snapshot] = 'bookmarked as {0}'.format(bookmark)
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'bookmarked')
 
 
 def holds(snapshot, **kwargs):
@@ -899,8 +857,6 @@ def holds(snapshot, **kwargs):
 
         salt '*' zfs.holds myzpool/mydataset@baseline
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = ['-H']
@@ -923,27 +879,18 @@ def holds(snapshot, **kwargs):
         python_shell=False,
     )
 
+    ret = __utils__['zfs.parse_command_result'](res)
     if res['retcode'] == 0:
-        if res['stdout'] != '':
-            properties = "name,tag,timestamp".split(",")
-            for hold in [l for l in res['stdout'].splitlines()]:
-                hold = hold.split("\t")
-                hold_data = {}
+        for hold in res['stdout'].splitlines():
+            hold_data = OrderedDict(list(zip(
+                ['name', 'tag', 'timestamp'],
+                hold.split("\t"),
+            )))
+            ret[hold_data['tag']] = hold_data['timestamp']
 
-                for prop in properties:
-                    hold_data[prop] = hold[properties.index(prop)]
-
-                if hold_data['name'] not in ret:
-                    ret[hold_data['name']] = {}
-                ret[hold_data['name']][hold_data['tag']] = hold_data['timestamp']
-        else:
-            ret[snapshot] = 'no holds'
-    else:
-        ret[snapshot] = res['stderr'] if 'stderr' in res else res['stdout']
     return ret
 
 
-## FIXME: merge hold and release into one private function
 def hold(tag, *snapshot, **kwargs):
     '''
     Adds a single reference, named with the tag argument, to the specified
@@ -979,10 +926,8 @@ def hold(tag, *snapshot, **kwargs):
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot [recursive=True]
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
     '''
-    ret = OrderedDict()
-
     ## warn about tag change
-    ## NOTE: remove me 2 versions after Flourine
+    # NOTE: remove me 2 versions after Flourine
     if ',' in tag:
         log.warning('zfs.hold - on Flourine and later a comma in a tag will no longer create multiple tags!')
 
@@ -1009,24 +954,7 @@ def hold(tag, *snapshot, **kwargs):
         python_shell=False,
     )
 
-    if tag not in ret:
-        ret[tag] = OrderedDict()
-
-    if res['retcode'] != 0:
-        for err in res['stderr'].splitlines():
-            if err.startswith('cannot hold snapshot'):
-                ret[tag] = err[err.index(':')+2:]
-            elif err.startswith('cannot open'):
-                ret[tag] = err[err.index(':')+2:]
-            else:
-                # fallback in case we hit a weird error
-                if err == 'usage:':
-                    break
-                ret[tag] = res['stderr']
-    else:
-        ret[tag] = 'held'
-
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'held')
 
 
 def release(tag, *snapshot, **kwargs):
@@ -1063,10 +991,8 @@ def release(tag, *snapshot, **kwargs):
         salt '*' zfs.release mytag myzpool/mydataset@mysnapshot [recursive=True]
         salt '*' zfs.release mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
     '''
-    ret = OrderedDict()
-
     ## warn about tag change
-    ## NOTE: remove me 2 versions after Flourine
+    # NOTE: remove me 2 versions after Flourine
     if ',' in tag:
         log.warning('zfs.release - on Flourine and later a comma in a tag will no longer create multiple tags!')
 
@@ -1083,7 +1009,7 @@ def release(tag, *snapshot, **kwargs):
     target.append(tag)
     target.extend(snapshot)
 
-    ## hold snapshot
+    ## release snapshot
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zfs_command'](
             command='release',
@@ -1093,24 +1019,7 @@ def release(tag, *snapshot, **kwargs):
         python_shell=False,
     )
 
-    if tag not in ret:
-        ret[tag] = OrderedDict()
-
-    if res['retcode'] != 0:
-        for err in res['stderr'].splitlines():
-            if err.startswith('cannot hold snapshot'):
-                ret[tag] = err[err.index(':')+2:]
-            elif err.startswith('cannot open'):
-                ret[tag] = err[err.index(':')+2:]
-            else:
-                # fallback in case we hit a weird error
-                if err == 'usage:':
-                    break
-                ret[tag] = res['stderr']
-    else:
-        ret[tag] = 'released'
-
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'released')
 
 
 def snapshot(*snapshot, **kwargs):
@@ -1142,8 +1051,6 @@ def snapshot(*snapshot, **kwargs):
         salt '*' zfs.snapshot myzpool/mydataset@yesterday [recursive=True]
         salt '*' zfs.snapshot myzpool/mydataset@yesterday myzpool/myotherdataset@yesterday [recursive=True]
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
@@ -1166,17 +1073,7 @@ def snapshot(*snapshot, **kwargs):
         python_shell=False,
     )
 
-    if res['retcode'] != 0:
-        ## FIXME: abstract me to salt.utils.zfs ?
-        ret['error'] = []
-        for err in res['stderr'].splitlines():
-            if err == 'usage:':
-                break
-            ret['error'].append(err)
-        ret['error'] = "\n".join(ret['error'])
-    else:
-        ret = 'snapshotted'
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'snapshotted')
 
 
 def set(*dataset, **kwargs):
@@ -1216,8 +1113,6 @@ def set(*dataset, **kwargs):
         salt '*' zfs.set myzpool/mydataset myzpool/myotherdataset compression=off
         salt '*' zfs.set myzpool/mydataset myzpool/myotherdataset compression=lz4 canmount=off
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: push filesystem properties
     filesystem_properties = salt.utils.args.clean_kwargs(**kwargs)
@@ -1233,12 +1128,7 @@ def set(*dataset, **kwargs):
         python_shell=False,
     )
 
-    if res['retcode'] != 0:
-        ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
-    else:
-        ret = 'set'
-
-    return ret
+    return __utils__['zfs.parse_command_result'](res, 'set')
 
 
 def get(*dataset, **kwargs):
@@ -1282,8 +1172,6 @@ def get(*dataset, **kwargs):
         salt '*' zfs.get myzpool/mydataset properties="sharenfs,mountpoint" [recursive=True|False]
         salt '*' zfs.get myzpool/mydataset myzpool/myotherdataset properties=available fields=value depth=1
     '''
-    ret = OrderedDict()
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = ['-H', '-p']
@@ -1322,37 +1210,33 @@ def get(*dataset, **kwargs):
         python_shell=False,
     )
 
+    ret = __utils__['zfs.parse_command_result'](res)
     if res['retcode'] == 0:
-        for ds in [l for l in res['stdout'].splitlines()]:
-            ds = ds.split("\t")
-            ds_data = {}
-
-            for field in fields:
-                ds_data[field] = ds[fields.index(field)]
-
-            ds_name = ds_data['name']
-            ds_prop = ds_data['property']
-            del ds_data['name']
-            del ds_data['property']
+        for ds in res['stdout'].splitlines():
+            ds_data = OrderedDict(list(zip(
+                fields,
+                ds.split("\t")
+            )))
 
             if 'value' in ds_data:
                 if kwargs.get('parsable', True):
                     ds_data['value'] = __utils__['zfs.from_auto'](
-                        ds_prop,
+                        ds_data['property'],
                         ds_data['value'],
                     )
                 else:
                     ds_data['value'] = __utils__['zfs.to_auto'](
-                        ds_prop,
+                        ds_data['property'],
                         ds_data['value'],
                         convert_to_human=True,
                     )
 
-            if ds_name not in ret:
-                ret[ds_name] = {}
-            ret[ds_name][ds_prop] = ds_data
-    else:
-        ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
+            if ds_data['name'] not in ret:
+                ret[ds_data['name']] = OrderedDict()
+
+            ret[ds_data['name']][ds_data['property']] = ds_data
+            del ds_data['name']
+            del ds_data['property']
 
     return ret
 
