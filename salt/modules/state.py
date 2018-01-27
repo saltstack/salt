@@ -1826,6 +1826,95 @@ def show_sls(mods, test=None, queue=False, **kwargs):
     return high_
 
 
+def exists(mods, test=None, queue=False, **kwargs):
+    '''
+    Tests the state data from a specific sls or list of sls files on the
+    master. Similar to show_sls, rather than returning state details, returns
+    True or False. The default environment is ``base``, use ``saltenv`` to 
+    specify a different environment.
+
+    This function does not support topfiles.  For ``top.sls`` please use
+    ``show_top`` instead.
+
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
+    saltenv
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.exists core,edit.vim saltenv=dev
+    '''
+    if 'env' in kwargs:
+        # "env" is not supported; Use "saltenv".
+        kwargs.pop('env')
+
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        return conflict
+    orig_test = __opts__.get('test', None)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+
+    opts['test'] = _get_test_value(test, **kwargs)
+
+    # Since this is dealing with a specific SLS file (or files), fall back to
+    # the 'base' saltenv if none is configured and none was passed.
+    if opts['saltenv'] is None:
+        opts['saltenv'] = 'base'
+
+    pillar_override = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
+        )
+
+    try:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   initial_pillar=_get_initial_pillar(opts))
+
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
+        __context__['retcode'] = 5
+        raise CommandExecutionError('Pillar failed to render', info=errors)
+
+    if isinstance(mods, six.string_types):
+        mods = mods.split(',')
+    st_.push_active()
+    try:
+        high_, errors = st_.render_highstate({opts['saltenv']: mods})
+    finally:
+        st_.pop_active()
+    errors += st_.state.verify_high(high_)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
+    if errors:
+        __context__['retcode'] = 1
+        return False
+    return True
+
+
 def show_top(queue=False, **kwargs):
     '''
     Return the top data that the minion will use for a highstate
