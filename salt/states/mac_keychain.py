@@ -11,7 +11,7 @@ Install certificats to the macOS keychain
       keychain.installed:
         - password: test123
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
