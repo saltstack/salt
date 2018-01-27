@@ -710,7 +710,7 @@ class Terminal(object):
                 TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
                 packed = struct.pack(b'HHHH', 0, 0, 0, 0)
                 ioctl = fcntl.ioctl(sys.stdin.fileno(), TIOCGWINSZ, packed)
-                return struct.unpack('HHHH', ioctl)[0:2]
+                return struct.unpack(b'HHHH', ioctl)[0:2]
             except IOError:
                 # Return a default value of 24x80
                 return 24, 80
@@ -733,7 +733,7 @@ class Terminal(object):
             TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
             packed = struct.pack(b'HHHH', 0, 0, 0, 0)
             ioctl = fcntl.ioctl(self.child_fd, TIOCGWINSZ, packed)
-            return struct.unpack('HHHH', ioctl)[0:2]
+            return struct.unpack(b'HHHH', ioctl)[0:2]
 
         def setwinsize(self, rows, cols):
             '''
