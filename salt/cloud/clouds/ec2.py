@@ -113,6 +113,12 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as 
 # Import 3rd-Party Libs
 # Try to import PyCrypto, which may not be installed on a RAET-based system
 try:
+    from M2Crypto import RSA
+    HAS_M2 = True
+except ImportError:
+    HAS_M2 = False
+
+try:
     import Crypto
     # PKCS1_v1_5 was added in PyCrypto 2.5
     from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
@@ -194,6 +200,7 @@ def get_dependencies():
     '''
     deps = {
         'requests': HAS_REQUESTS,
+        'm2crypto': HAS_M2,
         'pycrypto': HAS_PYCRYPTO
     }
     return config.check_driver_dependencies(
@@ -4723,7 +4730,7 @@ def get_password_data(
     for item in data:
         ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
-    if not HAS_PYCRYPTO:
+    if not HAS_M2 and not HAS_PYCRYPTO:
         return ret
 
     if 'key' not in kwargs:
@@ -4736,11 +4743,16 @@ def get_password_data(
         if pwdata is not None:
             rsa_key = kwargs['key']
             pwdata = base64.b64decode(pwdata)
-            dsize = Crypto.Hash.SHA.digest_size
-            sentinel = Crypto.Random.new().read(15 + dsize)
-            key_obj = Crypto.PublicKey.RSA.importKey(rsa_key)
-            key_obj = PKCS1_v1_5.new(key_obj)
-            ret['password'] = key_obj.decrypt(pwdata, sentinel)
+            if HAS_M2:
+                key = RSA.load_key_string(rsa_key)
+                password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
+            else:
+                dsize = Crypto.Hash.SHA.digest_size
+                sentinel = Crypto.Random.new().read(15 + dsize)
+                key_obj = Crypto.PublicKey.RSA.importKey(rsa_key)
+                key_obj = PKCS1_v1_5.new(key_obj)
+                password = key_obj.decrypt(pwdata, sentinel)
+            ret['password'] = password
 
     return ret
 

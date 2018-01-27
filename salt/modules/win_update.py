@@ -59,7 +59,7 @@ The result code is then followed by the update name and its KB identifier.
 # pylint: disable=invalid-name,missing-docstring
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import 3rd-party libs
@@ -113,7 +113,7 @@ def _gather_update_categories(updateCollection):
         for j in range(update.Categories.Count):
             name = update.Categories.Item(j).Name
             if name not in categories:
-                log.debug('found category: {0}'.format(name))
+                log.debug('found category: %s', name)
                 categories.append(name)
     return categories
 
@@ -173,15 +173,15 @@ class PyWinUpdater(object):
 
     def Search(self, searchString):
         try:
-            log.debug('beginning search of the passed string: {0}'.format(searchString))
+            log.debug('beginning search of the passed string: %s', searchString)
             self.search_results = self.win_searcher.Search(searchString)
             log.debug('search completed successfully.')
         except Exception as exc:
-            log.info('search for updates failed. {0}'.format(exc))
+            log.info('search for updates failed. %s', exc)
             return exc
 
-        log.debug('parsing results. {0} updates were found.'.format(
-            self.search_results.Updates.Count))
+        log.debug('parsing results. %s updates were found.',
+            self.search_results.Updates.Count)
 
         try:
             # step through the list of the updates to ensure that the updates match the
@@ -217,10 +217,11 @@ class PyWinUpdater(object):
 
             # gets the categories of the updates available in this collection of updates
             self.foundCategories = _gather_update_categories(self.download_collection)
-            log.debug('found categories: {0}'.format(str(self.foundCategories)))
+            log.debug('found categories: %s',
+                      six.text_type(self.foundCategories))
             return True
         except Exception as exc:
-            log.info('parsing updates failed. {0}'.format(exc))
+            log.info('parsing updates failed. %s', exc)
             return exc
 
     def AutoSearch(self):
@@ -263,7 +264,7 @@ class PyWinUpdater(object):
         else:
             return False
             # if there is no type, the is nothing to search.
-        log.debug('generated search string: {0}'.format(search_string))
+        log.debug('generated search string: %s', search_string)
         return self.Search(search_string)
 
     def Download(self):
@@ -276,7 +277,7 @@ class PyWinUpdater(object):
                 log.debug('Skipped downloading, all updates were already cached.')
             return True
         except Exception as exc:
-            log.debug('failed in the downloading {0}.'.format(exc))
+            log.debug('failed in the downloading %s.', exc)
             return exc
 
     def Install(self):
@@ -290,7 +291,7 @@ class PyWinUpdater(object):
                     self.install_collection.Add(update)
             log.debug('Updates prepared. beginning installation')
         except Exception as exc:
-            log.info('Preparing install list failed: {0}'.format(exc))
+            log.info('Preparing install list failed: %s', exc)
             return exc
 
         # accept eula if not accepted
@@ -360,8 +361,8 @@ class PyWinUpdater(object):
         updates = []
         for i in range(self.download_collection.Count):
             updates.append('{0}: {1}'.format(
-                str(self.download_results.GetUpdateResult(i).ResultCode),
-                str(self.download_collection.Item(i).Title)))
+                six.text_type(self.download_results.GetUpdateResult(i).ResultCode),
+                six.text_type(self.download_collection.Item(i).Title)))
         results = {}
         for i, update in enumerate(updates):
             results['update {0}'.format(i)] = update
@@ -369,8 +370,8 @@ class PyWinUpdater(object):
 
     def GetSearchResultsVerbose(self):
         updates = []
-        log.debug('parsing results. {0} updates were found.'.format(
-            self.download_collection.count))
+        log.debug('parsing results. %s updates were found.',
+                  self.download_collection.count)
 
         for update in self.download_collection:
             if update.InstallationBehavior.CanRequestUserInput:
@@ -432,7 +433,7 @@ class PyWinUpdater(object):
                 value = i[next(six.iterkeys(i))]
                 skip = next(six.iterkeys(i))
                 self.SetSkip(skip, value)
-                log.debug('was asked to set {0} to {1}'.format(skip, value))
+                log.debug('was asked to set %s to %s', skip, value)
 
     def SetSkip(self, skip, state):
         if skip == 'UI':
@@ -451,9 +452,9 @@ class PyWinUpdater(object):
             self.skipSoftwareUpdates = state
         elif skip == 'driver':
             self.skipDriverUpdates = state
-        log.debug('new search state: \n\tUI: {0}\n\tDownload: {1}\n\tInstalled: {2}\n\treboot :{3}\n\tPresent: {4}\n\thidden: {5}\n\tsoftware: {6}\n\tdriver: {7}'.format(
-            self.skipUI, self.skipDownloaded, self.skipInstalled, self.skipReboot,
-            self.skipPresent, self.skipHidden, self.skipSoftwareUpdates, self.skipDriverUpdates))
+        log.debug('new search state: \n\tUI: %s\n\tDownload: %s\n\tInstalled: %s\n\treboot :%s\n\tPresent: %s\n\thidden: %s\n\tsoftware: %s\n\tdriver: %s',
+                  self.skipUI, self.skipDownloaded, self.skipInstalled, self.skipReboot,
+                  self.skipPresent, self.skipHidden, self.skipSoftwareUpdates, self.skipDriverUpdates)
 
     def __str__(self):
         results = 'There are {0} updates, by category there are:\n'.format(
@@ -477,10 +478,10 @@ def _search(quidditch, retries=5):
     clean = True
     comment = ''
     while not passed:
-        log.debug('Searching. tries left: {0}'.format(retries))
+        log.debug('Searching. tries left: %s', retries)
         # let the updater make its own search string. MORE POWER this way.
         passed = quidditch.AutoSearch()
-        log.debug('Done searching: {0}'.format(str(passed)))
+        log.debug('Done searching: %s', passed)
         if isinstance(passed, Exception):
             clean = False
             comment += 'Failed in the seeking/parsing process:\n\t\t{0}\n'.format(passed)
@@ -506,9 +507,9 @@ def _download(quidditch, retries=5):
     clean = True
     comment = ''
     while not passed:
-        log.debug('Downloading. tries left: {0}'.format(str(retries)))
+        log.debug('Downloading. tries left: %s', retries)
         passed = quidditch.Download()
-        log.debug('Done downloading: {0}'.format(str(passed)))
+        log.debug('Done downloading: %s', passed)
         if isinstance(passed, Exception):
             clean = False
             comment += 'Failed while trying to download updates:\n\t\t{0}\n'.format(str(passed))
@@ -532,10 +533,11 @@ def _install(quidditch, retries=5):
     clean = True
     comment = ''
     while not passed:
-        log.debug('download_collection is this long: {0}'.format(str(quidditch.install_collection.Count)))
-        log.debug('Installing. tries left: {0}'.format(str(retries)))
+        log.debug('download_collection is this long: %s',
+                  quidditch.install_collection.Count)
+        log.debug('Installing. tries left: %s', retries)
         passed = quidditch.Install()
-        log.info('Done installing: {0}'.format(str(passed)))
+        log.info('Done installing: %s', passed)
         if isinstance(passed, Exception):
             clean = False
             comment += 'Failed while trying to install the updates.\n\t\t{0}\n'.format(str(passed))
@@ -600,7 +602,7 @@ def list_updates(verbose=False, fields=None, skips=None, retries=5, categories=N
 
     '''
 
-    log.debug('categories to search for are: {0}'.format(str(categories)))
+    log.debug('categories to search for are: %s', categories)
     updates = PyWinUpdater()
     if categories:
         updates.SetCategories(categories)
@@ -610,7 +612,7 @@ def list_updates(verbose=False, fields=None, skips=None, retries=5, categories=N
     comment, passed, retries = _search(updates, retries)
     if not passed:
         return (comment, str(passed))
-    log.debug('verbose: {0}'.format(str(verbose)))
+    log.debug('verbose: %s', verbose)
     if verbose:
         return updates.GetSearchResultsVerbose()
     return updates.GetSearchResults(fields=fields)
@@ -655,7 +657,7 @@ def download_updates(skips=None, retries=5, categories=None):
 
     '''
 
-    log.debug('categories to search for are: {0}'.format(str(categories)))
+    log.debug('categories to search for are: %s', categories)
     quidditch = PyWinUpdater(skipDownloaded=True)
     quidditch.SetCategories(categories)
     quidditch.SetSkips(skips)
@@ -721,7 +723,7 @@ def install_updates(skips=None, retries=5, categories=None):
 
     '''
 
-    log.debug('categories to search for are: {0}'.format(str(categories)))
+    log.debug('categories to search for are: %s', categories)
     quidditch = PyWinUpdater()
     quidditch.SetCategories(categories)
     quidditch.SetSkips(skips)

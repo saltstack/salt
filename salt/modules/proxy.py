@@ -8,7 +8,7 @@ This module allows you to manage proxy settings
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import re
 

@@ -1314,7 +1314,7 @@ class StateFire(object):
             'tag': tag,
             'data': data,
             'cmd': '_minion_event',
-            'tok': self.auth.gen_token('salt'),
+            'tok': self.auth.gen_token(b'salt'),
         })
 
         channel = salt.transport.Channel.factory(self.opts)
