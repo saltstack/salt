@@ -228,11 +228,10 @@ def _new_serial(ca_name):
     '''
     hashnum = int(
         binascii.hexlify(
-            salt.utils.stringutils.to_bytes(
-                '{0}_{1}'.format(
-                    _microtime(),
-                    os.urandom(5).encode('hex'))
-            )
+            b'_'.join((
+                salt.utils.stringutils.to_bytes(_microtime()),
+                os.urandom(5) if six.PY3 else os.urandom(5).encode('hex')
+            ))
         ),
         16
     )
@@ -1020,15 +1019,15 @@ def create_csr(ca_name,
         extension_adds = []
 
         for ext, value in extensions.items():
-            if six.PY3:
-                ext = salt.utils.stringutils.to_bytes(ext)
-                if isinstance(value, six.string_types):
-                    value = salt.utils.stringutils.to_bytes(value)
+            if isinstance(value, six.string_types):
+                value = salt.utils.stringutils.to_bytes(value)
             extension_adds.append(
                 OpenSSL.crypto.X509Extension(
-                    salt.utils.stringutils.to_str(ext),
+                    salt.utils.stringutils.to_bytes(ext),
                     False,
-                    salt.utils.stringutils.to_str(value)))
+                    value
+                )
+            )
     except AssertionError as err:
         log.error(err)
         extensions = []
