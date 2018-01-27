@@ -14,7 +14,7 @@ from tests.support.mock import (
 from salt.utils import ssdp
 import datetime
 from salt.ext.six.moves import zip
-from salt.ext.six import text_type
+from salt.ext import six
 
 try:
     import pytest
@@ -463,7 +463,7 @@ class SSDPClientTestCase(TestCase):
             clnt._collect_masters_map(response=response)
             assert clnt.log.error.called
             assert 'Discovery master collection failure' in clnt.log.error.call_args[0][0]
-            assert error_msg == text_type(clnt.log.error.call_args[0][1])
+            assert error_msg == six.text_type(clnt.log.error.call_args[0][1])
             assert not response
 
     def test_discover_no_masters(self):
