@@ -107,12 +107,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         Tests win_path.exists when the directory isn't already in the PATH and
         no index is specified (successful run).
         '''
+        add_mock = MagicMock(return_value=True)
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', 'baz'],
                 ['foo', 'bar', 'baz', NAME]
             ]),
-            'win_path.add': Mock(),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': False}
 
@@ -120,6 +123,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME)
 
+        add_mock.assert_called_once_with(NAME, index=None, rehash=False)
+        self.assert_called_once(rehash_mock)
         self.assertDictEqual(
             ret,
             {
@@ -135,12 +140,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         Tests win_path.exists when the directory isn't already in the PATH and
         no index is specified (failed run).
         '''
+        add_mock = MagicMock(return_value=False)
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', 'baz'],
                 ['foo', 'bar', 'baz']
             ]),
-            'win_path.add': Mock(),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': False}
 
@@ -148,6 +156,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME)
 
+        add_mock.assert_called_once_with(NAME, index=None, rehash=False)
+        rehash_mock.assert_not_called()
         self.assertDictEqual(
             ret,
             {
@@ -163,14 +173,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         Tests win_path.exists when the directory isn't already in the PATH and
         no index is specified (failed run due to exception).
         '''
+        add_mock = MagicMock(side_effect=Exception('Global Thermonuclear War'))
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', 'baz'],
                 ['foo', 'bar', 'baz']
             ]),
-            'win_path.add': MagicMock(
-                side_effect=Exception('Global Thermonuclear War')
-            ),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': False}
 
@@ -178,6 +189,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME)
 
+        add_mock.assert_called_once_with(NAME, index=None, rehash=False)
+        rehash_mock.assert_not_called()
         self.assertDictEqual(
             ret,
             {
@@ -194,13 +207,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         Tests win_path.exists when the directory is already in the PATH and
         needs to be moved to a different position (successful run).
         '''
+        add_mock = MagicMock(return_value=True)
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', 'baz', NAME],
                 [NAME, 'foo', 'bar', 'baz']
             ]),
-            'win_path.add': Mock(),
-            'win_path.remove': Mock(),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': False}
 
@@ -208,6 +223,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME, index=0)
 
+        add_mock.assert_called_once_with(NAME, index=0, rehash=False)
+        self.assert_called_once(rehash_mock)
         self.assertDictEqual(
             ret,
             {
@@ -225,13 +242,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         This tests a negative index.
         '''
+        add_mock = MagicMock(return_value=True)
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', NAME, 'baz'],
                 ['foo', 'bar', 'baz', NAME]
             ]),
-            'win_path.add': Mock(),
-            'win_path.remove': Mock(),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': False}
 
@@ -239,6 +258,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME, index=-1)
 
+        add_mock.assert_called_once_with(NAME, index=-1, rehash=False)
+        self.assert_called_once(rehash_mock)
         self.assertDictEqual(
             ret,
             {
@@ -249,86 +270,20 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             }
         )
 
-    def test_exists_change_index_remove_exception(self):
-        '''
-        Tests win_path.exists when the directory is already in the PATH but an
-        exception is raised when we attempt to remove the key from its
-        original location.
-        '''
-        dunder_salt = {
-            'win_path.get_path': MagicMock(side_effect=[
-                ['foo', 'bar', 'baz', NAME],
-                ['foo', 'bar', 'baz', NAME]
-            ]),
-            'win_path.remove': MagicMock(
-                side_effect=Exception('Global Thermonuclear War')
-            ),
-        }
-        dunder_opts = {'test': False}
-
-        with patch.dict(win_path.__salt__, dunder_salt), \
-                patch.dict(win_path.__opts__, dunder_opts):
-            ret = win_path.exists(NAME, index=0)
-
-        self.assertDictEqual(
-            ret,
-            {
-                'name': NAME,
-                'changes': {},
-                'result': False,
-                'comment': 'Encountered error: Global Thermonuclear War. '
-                           'Failed to move {0} from index 3 to 0.'.format(NAME)
-            }
-        )
-
-    def test_exists_change_negative_index_remove_exception(self):
-        '''
-        Tests win_path.exists when the directory is already in the PATH but an
-        exception is raised when we attempt to remove the key from its
-        original location.
-
-        This tests a negative index.
-        '''
-        dunder_salt = {
-            'win_path.get_path': MagicMock(side_effect=[
-                ['foo', 'bar', NAME, 'baz'],
-                ['foo', 'bar', NAME, 'baz']
-            ]),
-            'win_path.remove': MagicMock(
-                side_effect=Exception('Global Thermonuclear War')
-            ),
-        }
-        dunder_opts = {'test': False}
-
-        with patch.dict(win_path.__salt__, dunder_salt), \
-                patch.dict(win_path.__opts__, dunder_opts):
-            ret = win_path.exists(NAME, index=-1)
-
-        self.assertDictEqual(
-            ret,
-            {
-                'name': NAME,
-                'changes': {},
-                'result': False,
-                'comment': 'Encountered error: Global Thermonuclear War. '
-                           'Failed to move {0} from index -2 to -1.'.format(NAME)
-            }
-        )
-
     def test_exists_change_index_add_exception(self):
         '''
         Tests win_path.exists when the directory is already in the PATH but an
         exception is raised when we attempt to add the key to its new location.
         '''
+        add_mock = MagicMock(side_effect=Exception('Global Thermonuclear War'))
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', 'baz', NAME],
-                ['foo', 'bar', 'baz'],
+                ['foo', 'bar', 'baz', NAME],
             ]),
-            'win_path.add': MagicMock(
-                side_effect=Exception('Global Thermonuclear War')
-            ),
-            'win_path.remove': Mock(),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': False}
 
@@ -336,15 +291,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME, index=0)
 
+        add_mock.assert_called_once_with(NAME, index=0, rehash=False)
+        rehash_mock.assert_not_called()
         self.assertDictEqual(
             ret,
             {
                 'name': NAME,
-                'changes': {'index': {'old': 3, 'new': None}},
+                'changes': {},
                 'result': False,
-                'comment': 'Successfully removed {0} from the PATH '
-                           'at index 3, but failed to add it back at index 0. '
-                           'Encountered error: Global Thermonuclear War. '
+                'comment': 'Encountered error: Global Thermonuclear War. '
                            'Failed to move {0} from index 3 to 0.'.format(NAME)
             }
         )
@@ -356,15 +311,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         This tests a negative index.
         '''
+        add_mock = MagicMock(side_effect=Exception('Global Thermonuclear War'))
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', NAME, 'baz'],
-                ['foo', 'bar', 'baz'],
+                ['foo', 'bar', NAME, 'baz'],
             ]),
-            'win_path.add': MagicMock(
-                side_effect=Exception('Global Thermonuclear War')
-            ),
-            'win_path.remove': Mock(),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': False}
 
@@ -372,15 +327,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME, index=-1)
 
+        add_mock.assert_called_once_with(NAME, index=-1, rehash=False)
+        rehash_mock.assert_not_called()
         self.assertDictEqual(
             ret,
             {
                 'name': NAME,
-                'changes': {'index': {'old': -2, 'new': None}},
+                'changes': {},
                 'result': False,
-                'comment': 'Successfully removed {0} from the PATH '
-                           'at index -2, but failed to add it back at index -1. '
-                           'Encountered error: Global Thermonuclear War. '
+                'comment': 'Encountered error: Global Thermonuclear War. '
                            'Failed to move {0} from index -2 to -1.'.format(NAME)
             }
         )
@@ -390,13 +345,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         Tests win_path.exists when the directory is already in the PATH and
         needs to be moved to a different position (failed run).
         '''
+        add_mock = MagicMock(return_value=False)
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', 'baz', NAME],
                 ['foo', 'bar', 'baz', NAME]
             ]),
-            'win_path.add': Mock(),
-            'win_path.remove': Mock(),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': False}
 
@@ -404,6 +361,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME, index=0)
 
+        add_mock.assert_called_once_with(NAME, index=0, rehash=False)
+        rehash_mock.assert_not_called()
         self.assertDictEqual(
             ret,
             {
@@ -421,13 +380,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         This tests a negative index.
         '''
+        add_mock = MagicMock(return_value=False)
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', NAME, 'baz'],
                 ['foo', 'bar', NAME, 'baz']
             ]),
-            'win_path.add': Mock(),
-            'win_path.remove': Mock(),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': False}
 
@@ -435,6 +396,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME, index=-1)
 
+        add_mock.assert_called_once_with(NAME, index=-1, rehash=False)
+        rehash_mock.assert_not_called()
         self.assertDictEqual(
             ret,
             {
@@ -450,11 +413,14 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         Tests win_path.exists when the directory is already in the PATH and
         needs to be moved to a different position (test mode enabled).
         '''
+        add_mock = Mock()
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', 'baz', NAME],
             ]),
-            'win_path.add': Mock(),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': True}
 
@@ -462,6 +428,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME, index=0)
 
+        add_mock.assert_not_called()
+        rehash_mock.assert_not_called()
         self.assertDictEqual(
             ret,
             {
@@ -477,11 +445,14 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         Tests win_path.exists when the directory is already in the PATH and
         needs to be moved to a different position (test mode enabled).
         '''
+        add_mock = Mock()
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[
                 ['foo', 'bar', NAME, 'baz'],
             ]),
-            'win_path.add': Mock(),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': True}
 
@@ -489,6 +460,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME, index=-1)
 
+        add_mock.assert_not_called()
+        rehash_mock.assert_not_called()
         self.assertDictEqual(
             ret,
             {
@@ -511,8 +484,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         else:
             pos = index if index >= 0 else len(current_path) + index + 1
             current_path.insert(pos, NAME)
+
+        add_mock = Mock()
+        rehash_mock = MagicMock(return_value=True)
         dunder_salt = {
             'win_path.get_path': MagicMock(side_effect=[current_path]),
+            'win_path.add': add_mock,
+            'win_path.rehash': rehash_mock,
         }
         dunder_opts = {'test': test_mode}
 
@@ -520,6 +498,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_path.__opts__, dunder_opts):
             ret = win_path.exists(NAME, index=index)
 
+        add_mock.assert_not_called()
+        rehash_mock.assert_not_called()
         self.assertDictEqual(
             ret,
             {

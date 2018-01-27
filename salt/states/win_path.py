@@ -90,7 +90,10 @@ def exists(name, index=None):
           win_path.exists:
             - index: -1
     '''
-    name = salt.utils.stringutils.to_unicode(name)
+    try:
+        name = salt.utils.stringutils.to_unicode(name)
+    except TypeError:
+        name = six.text_type(name)
 
     ret = {'name': name,
            'result': True,
@@ -102,82 +105,109 @@ def exists(name, index=None):
         ret['result'] = False
         return ret
 
-    def _index():
-        cur_path = __salt__['win_path.get_path']()
+    def _get_path_lowercase():
+        return [x.lower() for x in __salt__['win_path.get_path']()]
+
+    def _index(path=None):
+        if path is None:
+            path = _get_path_lowercase()
         try:
-            pos = cur_path.index(name)
+            pos = path.index(name.lower())
         except ValueError:
             return None
         else:
             if index is not None and index < 0:
-                # We need to convert this to a negative index
-                return -(len(cur_path) - pos)
+                # Since a negative index was used, convert the index to a
+                # negative index to make the changes dict easier to read, as
+                # well as making comparisons manageable.
+                return -(len(path) - pos)
             else:
                 return pos
 
     def _changes(old, new):
         return {'index': {'old': old, 'new': new}}
 
-    old_index = _index()
-    comments = []
-    failed = False
+    pre_path = _get_path_lowercase()
+    num_dirs = len(pre_path)
 
-    if index is not None and old_index is not None:
-        if index == old_index:
-            comments.append(
-                '{0} already exists in the PATH at index {1}.'.format(
-                    name, index
-                )
+    if index is not None:
+        if index > num_dirs:
+            ret.setdefault('warnings', []).append(
+                'There are only {0} directories in the PATH, using an index '
+                'of {0} instead of {1}.'.format(num_dirs, index)
             )
+            index = num_dirs
+        elif index <= -num_dirs:
+            ret.setdefault('warnings', []).append(
+                'There are only {0} directories in the PATH, using an index '
+                'of 0 instead of {1}.'.format(num_dirs, index)
+            )
+            index = 0
+
+    old_index = _index(pre_path)
+    comments = []
+
+    if old_index is not None:
+        # Directory exists in PATH
+
+        if index is None:
+            # We're not enforcing the index, and the directory is in the PATH.
+            # There's nothing to do here.
+            comments.append('{0} already exists in the PATH.'.format(name))
             return _format_comments(ret, comments)
         else:
-            if __opts__['test']:
-                ret['result'] = None
+            if index == old_index:
                 comments.append(
-                    '{0} would be moved from index {1} to {2}.'.format(
-                        name, old_index, index
+                    '{0} already exists in the PATH at index {1}.'.format(
+                        name, index
                     )
                 )
-                ret['changes'] = _changes(old_index, index)
-                return _format_comments(ret, comments)
-
-            try:
-                __salt__['win_path.remove'](name)
-            except Exception as exc:
-                comments.append('Encountered error: {0}.'.format(exc))
-                failed = True
-
-    if not failed:
-        if index is None:
-            if old_index is not None:
-                comments.append('{0} already exists in the PATH.'.format(name))
                 return _format_comments(ret, comments)
             else:
                 if __opts__['test']:
                     ret['result'] = None
                     comments.append(
-                        '{0} would be added to the PATH.'.format(name)
+                        '{0} would be moved from index {1} to {2}.'.format(
+                            name, old_index, index
+                        )
                     )
                     ret['changes'] = _changes(old_index, index)
                     return _format_comments(ret, comments)
 
-        try:
-            __salt__['win_path.add'](name, index)
-        except Exception as exc:
-            if index is not None and old_index is not None:
-                comments.append(
-                    'Successfully removed {0} from the PATH at index {1}, but '
-                    'failed to add it back at index {2}.'.format(
-                        name, old_index, index
-                    )
+    else:
+        # Directory does not exist in PATH
+        if __opts__['test']:
+            ret['result'] = None
+            comments.append(
+                '{0} would be added to the PATH{1}.'.format(
+                    name,
+                    ' at index {0}'.format(index) if index is not None else ''
                 )
-            comments.append('Encountered error: {0}.'.format(exc))
+            )
+            ret['changes'] = _changes(old_index, index)
+            return _format_comments(ret, comments)
+
+    try:
+        ret['result'] = __salt__['win_path.add'](name, index=index, rehash=False)
+    except Exception as exc:
+        comments.append('Encountered error: {0}.'.format(exc))
+        ret['result'] = False
+
+    if ret['result']:
+        ret['result'] = __salt__['win_path.rehash']()
+        if not ret['result']:
+            comments.append(
+                'Updated registry with new PATH, but failed to rehash.'
+            )
 
     new_index = _index()
 
-    ret['result'] = new_index is not None \
-        if index is None \
-        else index == new_index
+    if ret['result']:
+        # If we have not already determined a False result based on the return
+        # from either win_path.add or win_path.rehash, check the new_index.
+        ret['result'] = new_index is not None \
+            if index is None \
+            else index == new_index
 
     if index is not None and old_index is not None:
         comments.append(
