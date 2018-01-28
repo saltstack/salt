@@ -1403,6 +1403,12 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
             return ret
         if data.__class__.__bases__[0] == OpTable:
             ret['reply'] = json.loads(data.to_json())
+            # Sets key value if not present in YAML. To be used by returner
+            if ret['table'][table].get('key') is None:
+                ret['table'][table]['key'] = data.ITEM_NAME_XPATH
+            # If key is provided from salt state file.
+            if key is not None:
+                ret['table'][table]['key'] = data.KEY
         else:
             if target is not None:
                 ret['table'][table]['target'] = data.TARGET
