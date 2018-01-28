@@ -13,6 +13,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils.win_functions as win_functions
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinFunctionsTestCase(TestCase):
     '''

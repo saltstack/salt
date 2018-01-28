@@ -36,7 +36,6 @@ from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range, zip
-from salt.ext.six.moves import shlex_quote as _cmd_quote
 from salt.utils.locales import sdecode
 
 # Only available on POSIX systems, nonfatal on windows
@@ -47,9 +46,10 @@ except ImportError:
 
 if salt.utils.is_windows():
     from salt.utils.win_runas import runas as win_runas
-    from salt.utils.win_functions import escape_argument as win_cmd_quote
+    from salt.utils.win_functions import escape_argument as _cmd_quote
     HAS_WIN_RUNAS = True
 else:
+    from salt.ext.six.moves import shlex_quote as _cmd_quote
     HAS_WIN_RUNAS = False
 
 __proxyenabled__ = ['*']
@@ -2148,10 +2148,7 @@ def script(source,
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
 
-    if salt.utils.is_windows():
-        path = win_cmd_quote(path)
-    else:
-        path = _cmd_quote(path)
+    path = _cmd_quote(path)
 
     ret = _run(path + ' ' + str(args) if args else path,
                cwd=cwd,
