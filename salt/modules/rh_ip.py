@@ -936,11 +936,7 @@ def _read_file(path):
     '''
     try:
         with salt.utils.files.fopen(path, 'rb') as rfh:
-            contents = salt.utils.stringutils.to_unicode(rfh.read())
-            if six.PY3:
-                contents = contents.encode(__salt_system_encoding__)
-            # without newlines character. http://stackoverflow.com/questions/12330522/reading-a-file-without-newlines
-            lines = contents.splitlines()
+            lines = salt.utils.stringutils.to_unicode(rfh.read()).splitlines()
             try:
                 lines.remove('')
             except ValueError:
