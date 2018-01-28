@@ -15,6 +15,7 @@ from tests.support.mixins import RUNTIME_VARS
 # Import Salt libs
 import salt.config
 from salt.output import display_output
+from salt.ext import six
 
 
 class OutputReturnTest(ShellCase):
@@ -53,7 +54,7 @@ class OutputReturnTest(ShellCase):
         '''
         Tests the return of pprint-formatted data
         '''
-        expected = ["{'local': True}"]
+        expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
         ret = self.run_call('test.ping --out=pprint')
         self.assertEqual(ret, expected)
 
@@ -61,7 +62,7 @@ class OutputReturnTest(ShellCase):
         '''
         Tests the return of raw-formatted data
         '''
-        expected = ["{'local': True}"]
+        expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
         ret = self.run_call('test.ping --out=raw')
         self.assertEqual(ret, expected)
 

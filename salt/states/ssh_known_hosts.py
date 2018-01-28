@@ -19,7 +19,7 @@ Manage the information stored in the known_hosts files.
         - absent
         - user: root
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import os

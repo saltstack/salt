@@ -2,7 +2,7 @@
 '''
 Module for gathering and managing network information
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import re
@@ -93,7 +93,7 @@ def ping(host, timeout=False, return_boolean=False):
         # Windows ping differs by having timeout be for individual echo requests.'
         # Divide timeout by tries to mimic BSD behaviour.
         timeout = int(timeout) * 1000 // 4
-        cmd = ['ping', '-n', '4', '-w', str(timeout), salt.utils.network.sanitize_host(host)]
+        cmd = ['ping', '-n', '4', '-w', six.text_type(timeout), salt.utils.network.sanitize_host(host)]
     else:
         cmd = ['ping', '-n', '4', salt.utils.network.sanitize_host(host)]
     if return_boolean:

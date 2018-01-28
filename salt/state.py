@@ -33,6 +33,7 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.args
 import salt.utils.crypt
+import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
@@ -43,7 +44,6 @@ import salt.utils.url
 import salt.syspaths as syspaths
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
-    SaltException,
     SaltRenderError,
     SaltReqTimeoutError
 )
@@ -1020,66 +1020,6 @@ class State(object):
         elif data['state'] in ('pkg', 'ports'):
             self.module_refresh()
 
-    @staticmethod
-    def verify_ret(ret):
-        '''
-        Perform basic verification of the raw state return data
-        '''
-        if not isinstance(ret, dict):
-            raise SaltException(
-                'Malformed state return, return must be a dict'
-            )
-        bad = []
-        for val in ['name', 'result', 'changes', 'comment']:
-            if val not in ret:
-                bad.append(val)
-        if bad:
-            m = 'The following keys were not present in the state return: {0}'
-            raise SaltException(m.format(','.join(bad)))
-
-    @staticmethod
-    def munge_ret_for_export(ret):
-        '''
-        Process raw state return data to make it suitable for export,
-        to ensure consistency of the data format seen by external systems
-        '''
-        # We support lists of strings for ret['comment'] internal
-        # to the state system for improved ergonomics.
-        # However, to maintain backwards compatability with external tools,
-        # the list representation is not allowed to leave the state system,
-        # and should be converted like this at external boundaries.
-        if isinstance(ret['comment'], list):
-            ret['comment'] = '\n'.join(ret['comment'])
-
-    @staticmethod
-    def verify_ret_for_export(ret):
-        '''
-        Verify the state return data for export outside the state system
-        '''
-        State.verify_ret(ret)
-
-        for key in ['name', 'comment']:
-            if not isinstance(ret[key], six.string_types):
-                msg = (
-                    'The value for the {0} key in the state return '
-                    'must be a string, found {1}'
-                )
-                raise SaltException(msg.format(key, repr(ret[key])))
-
-        if ret['result'] not in [True, False, None]:
-            msg = (
-                'The value for the result key in the state return '
-                'must be True, False, or None, found {0}'
-            )
-            raise SaltException(msg.format(repr(ret['result'])))
-
-        if not isinstance(ret['changes'], dict):
-            msg = (
-                'The value for the changes key in the state return '
-                'must be a dict, found {0}'
-            )
-            raise SaltException(msg.format(repr(ret['changes'])))
-
     def verify_data(self, data):
         '''
         Verify the data, return an error statement if something is wrong
@@ -1835,6 +1775,7 @@ class State(object):
                 'proc': proc}
         return ret
 
+    @salt.utils.decorators.state.OutputUnifier('content_check', 'unify')
     def call(self, low, chunks=None, running=None, retries=1):
         '''
         Call a state directly with the low data structure, verify data
@@ -1959,13 +1900,12 @@ class State(object):
                         # run the state call in parallel, but only if not in a prereq
                         ret = self.call_parallel(cdata, low)
                     else:
+                        self.format_slots(cdata)
                         ret = self.states[cdata['full']](*cdata['args'],
-                                                          **cdata['kwargs'])
+                                                         **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
-            self.verify_ret(ret)
-            self.munge_ret_for_export(ret)
         except Exception:
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
@@ -1988,12 +1928,13 @@ class State(object):
             }
         finally:
             if low.get('__prereq__'):
-                sys.modules[self.states[cdata['full']].__module__].__opts__[
-                    'test'] = test
+                sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = test
 
             self.state_con.pop('runas', None)
             self.state_con.pop('runas_password', None)
-            self.verify_ret_for_export(ret)
+
+        if not isinstance(ret, dict):
+            return ret
 
         # If format_call got any warnings, let's show them to the user
         if 'warnings' in cdata:
@@ -2067,6 +2008,42 @@ class State(object):
                                                 low['retry']['until'],
                                                 low['retry']['splay'])])
         return ret
+
+    def __eval_slot(self, slot):
+        log.debug('Evaluating slot: %s', slot)
+        fmt = slot.split(':', 2)
+        if len(fmt) != 3:
+            log.warning('Malformed slot: %s', slot)
+            return slot
+        if fmt[1] != 'salt':
+            log.warning('Malformed slot: %s', slot)
+            log.warning('Only execution modules are currently supported in slots. This means slot '
+                        'should start with "__slot__:salt:"')
+            return slot
+        fun, args, kwargs = salt.utils.args.parse_function(fmt[2])
+        if not fun or fun not in self.functions:
+            log.warning('Malformed slot: %s', slot)
+            log.warning('Execution module should be specified in a function call format: '
+                        'test.arg(\'arg\', kw=\'kwarg\')')
+            return slot
+        log.debug('Calling slot: %s(%s, %s)', fun, args, kwargs)
+        return self.functions[fun](*args, **kwargs)
+
+    def format_slots(self, cdata):
+        '''
+        Read in the arguments from the low level slot syntax to make a last
+        minute runtime call to gather relevant data for the specific routine
+        '''
+        # __slot__:salt.cmd.run(foo, bar, baz=qux)
+        ctx = (('args', enumerate(cdata['args'])),
+               ('kwargs', cdata['kwargs'].items()))
+        for atype, avalues in ctx:
+            for ind, arg in avalues:
+                arg = sdecode(arg)
+                if not isinstance(arg, six.string_types) or not arg.startswith('__slot__:'):
+                    # Not a slot, skip it
+                    continue
+                cdata[atype][ind] = self.__eval_slot(arg)
 
     def verify_retry_data(self, retry_data):
         '''

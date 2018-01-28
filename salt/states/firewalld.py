@@ -77,7 +77,7 @@ would allow access to the salt master from the 10.0.0.0/8 subnet:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
@@ -417,7 +417,7 @@ def _present(name,
                     ret['comment'] = 'Error: {0}'.format(err)
                     return ret
         else:
-            log.error('{0} is an invalid ICMP type'.format(icmp_type))
+            log.error('%s is an invalid ICMP type', icmp_type)
 
     if prune_block_icmp:
         old_icmp_types = set(_current_icmp_blocks) - set(block_icmp)

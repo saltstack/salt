@@ -4,7 +4,7 @@ Manage Linux Containers
 =======================
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 __docformat__ = 'restructuredtext en'
 
 # Import salt libs

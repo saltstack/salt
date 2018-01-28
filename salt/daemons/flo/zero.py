@@ -21,6 +21,7 @@ try:
     import salt.crypt
     import salt.daemons.masterapi
     import salt.payload
+    import salt.utils.stringutils
     HAS_ZMQ = True
 except ImportError:
     HAS_ZMQ = False
@@ -38,9 +39,9 @@ class SaltZmqSetup(ioflo.base.deeding.Deed):
 
     This behavior must be run before any other zmq related
     '''
-    Ioinits = {'opts': '.salt.opts',
-           'mkey': '.salt.var.zmq.master_key',
-           'aes': '.salt.var.zmq.aes'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'mkey': salt.utils.stringutils.to_str('.salt.var.zmq.master_key'),
+               'aes': salt.utils.stringutils.to_str('.salt.var.zmq.aes')}
 
     def action(self):
         '''
@@ -52,12 +53,12 @@ class SaltZmqSetup(ioflo.base.deeding.Deed):
 
 
 @ioflo.base.deeding.deedify(
-        'SaltZmqRetFork',
+        salt.utils.stringutils.to_str('SaltZmqRetFork'),
         ioinits={
-            'opts': '.salt.opts',
-            'proc_mgr': '.salt.usr.proc_mgr',
-            'mkey': '.salt.var.zmq.master_key',
-            'aes': '.salt.var.zmq.aes'})
+            'opts': salt.utils.stringutils.to_str('.salt.opts'),
+            'proc_mgr': salt.utils.stringutils.to_str('.salt.usr.proc_mgr'),
+            'mkey': salt.utils.stringutils.to_str('.salt.var.zmq.master_key'),
+            'aes': salt.utils.stringutils.to_str('.salt.var.zmq.aes')})
 def zmq_ret_fork(self):
     '''
     Create the forked process for the ZeroMQ Ret Port
@@ -122,9 +123,9 @@ class SaltZmqCrypticleSetup(ioflo.base.deeding.Deed):
 
     do salt zmq crypticle setup at enter
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'aes': '.salt.var.zmq.aes',
-               'crypticle': '.salt.var.zmq.crypticle'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'aes': salt.utils.stringutils.to_str('.salt.var.zmq.aes'),
+               'crypticle': salt.utils.stringutils.to_str('.salt.var.zmq.crypticle')}
 
     def action(self):
         '''
@@ -149,11 +150,11 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
 
     before this deed
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'publish': '.salt.var.publish',
-               'zmq_behavior': '.salt.etc.zmq_behavior',
-               'aes': '.salt.var.zmq.aes',
-               'crypticle': '.salt.var.zmq.crypticle'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'publish': salt.utils.stringutils.to_str('.salt.var.publish'),
+               'zmq_behavior': salt.utils.stringutils.to_str('.salt.etc.zmq_behavior'),
+               'aes': salt.utils.stringutils.to_str('.salt.var.zmq.aes'),
+               'crypticle': salt.utils.stringutils.to_str('.salt.var.zmq.crypticle')}
 
     def _prepare(self):
         '''
@@ -225,9 +226,9 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
     '''
     The zeromq behavior for the workers
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'key': '.salt.access_keys',
-               'aes': '.salt.var.zmq.aes'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'key': salt.utils.stringutils.to_str('.salt.access_keys'),
+               'aes': salt.utils.stringutils.to_str('.salt.var.zmq.aes')}
 
     def _prepare(self):
         '''

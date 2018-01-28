@@ -146,6 +146,7 @@ Optional Dependencies
 .. _`ZeroMQ`: http://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
 .. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/
+.. _`M2Crypto`: https://gitlab.com/m2crypto/m2crypto
 .. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
 .. _`YAML`: http://pyyaml.org/
 .. _`Jinja2`: http://jinja.pocoo.org/

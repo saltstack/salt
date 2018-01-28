@@ -13,7 +13,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.helpers import skip_if_not_root
 # Import salt libs
-import salt.minion as minion
+import salt.minion
 import salt.utils.event as event
 from salt.exceptions import SaltSystemExit
 import salt.syspaths
@@ -27,7 +27,7 @@ __opts__ = {}
 class MinionTestCase(TestCase):
     def test_invalid_master_address(self):
         with patch.dict(__opts__, {'ipv6': False, 'master': float('127.0'), 'master_port': '4555', 'retry_dns': False}):
-            self.assertRaises(SaltSystemExit, minion.resolve_dns, __opts__)
+            self.assertRaises(SaltSystemExit, salt.minion.resolve_dns, __opts__)
 
     @skip_if_not_root
     def test_sock_path_len(self):
@@ -68,8 +68,8 @@ class MinionTestCase(TestCase):
         mock_data = {'fun': 'foo.bar',
                      'jid': 123}
         mock_jid_queue = [123]
+        minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
         try:
-            minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
             ret = minion._handle_decoded_payload(mock_data).result()
             self.assertEqual(minion.jid_queue, mock_jid_queue)
             self.assertIsNone(ret)
@@ -89,8 +89,8 @@ class MinionTestCase(TestCase):
             mock_data = {'fun': 'foo.bar',
                          'jid': mock_jid}
             mock_jid_queue = [123, 456]
+            minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
             try:
-                minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
 
                 # Assert that the minion's jid_queue attribute matches the mock_jid_queue as a baseline
                 # This can help debug any test failures if the _handle_decoded_payload call fails.
@@ -118,8 +118,8 @@ class MinionTestCase(TestCase):
             mock_data = {'fun': 'foo.bar',
                          'jid': 789}
             mock_jid_queue = [123, 456]
+            minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
             try:
-                minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
 
                 # Assert that the minion's jid_queue attribute matches the mock_jid_queue as a baseline
                 # This can help debug any test failures if the _handle_decoded_payload call fails.
@@ -148,9 +148,9 @@ class MinionTestCase(TestCase):
             mock_opts['minion_jid_queue_hwm'] = 100
             mock_opts["process_count_max"] = process_count_max
 
+            io_loop = tornado.ioloop.IOLoop()
+            minion = salt.minion.Minion(mock_opts, jid_queue=[], io_loop=io_loop)
             try:
-                io_loop = tornado.ioloop.IOLoop()
-                minion = salt.minion.Minion(mock_opts, jid_queue=[], io_loop=io_loop)
 
                 # mock gen.sleep to throw a special Exception when called, so that we detect it
                 class SleepCalledEception(Exception):
@@ -189,8 +189,8 @@ class MinionTestCase(TestCase):
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
             mock_opts = copy.copy(salt.config.DEFAULT_MINION_OPTS)
             mock_opts['beacons_before_connect'] = True
+            minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
             try:
-                minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
 
                 try:
                     minion.tune_in(start=True)
@@ -213,9 +213,8 @@ class MinionTestCase(TestCase):
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
             mock_opts = copy.copy(salt.config.DEFAULT_MINION_OPTS)
             mock_opts['scheduler_before_connect'] = True
+            minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
             try:
-                minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
-
                 try:
                     minion.tune_in(start=True)
                 except RuntimeError:
