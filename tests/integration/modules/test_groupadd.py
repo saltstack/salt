@@ -3,7 +3,6 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import grp
-import os
 import random
 import string
 
@@ -14,8 +13,8 @@ from tests.support.helpers import destructiveTest, skip_if_not_root
 # Import Salt libs
 from salt.ext import six
 from salt.ext.six.moves import range
-import salt.utils.data
 import salt.utils.files
+import salt.utils.stringutils
 
 
 @skip_if_not_root
@@ -66,15 +65,20 @@ class GroupModuleTest(ModuleCase):
         '''
         Returns (SYS_GID_MIN, SYS_GID_MAX)
         '''
-        defs_file = '/etc/login.defs'
-        if os.path.exists(defs_file):
-            with salt.utils.files.fopen(defs_file) as defs_fd:
-                lines = salt.utils.data.decode(defs_fd.readlines())
-                login_defs = dict([x.split()
-                                   for x in lines
-                                   if x.strip()
-                                   and not x.strip().startswith('#')])
-        else:
+        try:
+            login_defs = {}
+            with salt.utils.files.fopen('/etc/login.defs') as defs_fd:
+                for line in defs_fd:
+                    line = salt.utils.stringutils.to_unicode(line).strip()
+                    if line.startswith('#'):
+                        continue
+                    try:
+                        key, val = line.split()
+                    except ValueError:
+                        pass
+                    else:
+                        login_defs[key] = val
+        except OSError:
             login_defs = {'SYS_GID_MIN': 101,
                           'SYS_GID_MAX': 999}
 
