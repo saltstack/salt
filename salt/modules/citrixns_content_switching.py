@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The content_switching execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_csaction(name=None, targetlbvserver=None, targetvserver=None, targetvserverexpr=None, comment=None, newname=None,
                  save=False):
     '''
@@ -488,7 +487,7 @@ def add_csvserver(name=None, td=None, servicetype=None, ipv46=None, targettype=N
         UP from the DOWN state. Default value: DISABLED Possible values = ENABLED, DISABLED
 
     insertvserveripport(str): Insert the virtual servers VIP address and port number in the request header. Available values
-        function as follows:  VIPADDR - Header contains the vservers IP address and port number without any translation. 
+        function as follows:  VIPADDR - Header contains the vservers IP address and port number without any translation.
         OFF - The virtual IP and port header insertion option is disabled.  V6TOV4MAPPING - Header contains the mapped
         IPv4 address corresponding to the IPv6 address of the vserver and the port number. An IPv6 address can be mapped
         to a user-specified IPv4 address using the set ns ip6 command. Possible values = OFF, VIPADDR, V6TOV4MAPPING
@@ -5406,7 +5405,7 @@ def update_csvserver(name=None, td=None, servicetype=None, ipv46=None, targettyp
         UP from the DOWN state. Default value: DISABLED Possible values = ENABLED, DISABLED
 
     insertvserveripport(str): Insert the virtual servers VIP address and port number in the request header. Available values
-        function as follows:  VIPADDR - Header contains the vservers IP address and port number without any translation. 
+        function as follows:  VIPADDR - Header contains the vservers IP address and port number without any translation.
         OFF - The virtual IP and port header insertion option is disabled.  V6TOV4MAPPING - Header contains the mapped
         IPv4 address corresponding to the IPv6 address of the vserver and the port number. An IPv6 address can be mapped
         to a user-specified IPv4 address using the set ns ip6 command. Possible values = OFF, VIPADDR, V6TOV4MAPPING
@@ -5733,4 +5732,3 @@ def update_csvserver(name=None, td=None, servicetype=None, ipv46=None, targettyp
         result['save'] = 'False'
 
     return result
-

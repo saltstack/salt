@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The webinterface execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_wisite(sitepath=None, agurl=None, staurl=None, secondstaurl=None, sessionreliability=None, usetwotickets=None,
                authenticationpoint=None, agauthenticationmethod=None, wiauthenticationmethods=None,
                defaultcustomtextlocale=None, websessiontimeout=None, defaultaccessmethod=None, logintitle=None,
@@ -1342,4 +1341,3 @@ def update_wisite(sitepath=None, agurl=None, staurl=None, secondstaurl=None, ses
         result['save'] = 'False'
 
     return result
-

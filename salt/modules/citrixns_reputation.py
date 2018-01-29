@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The reputation execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def get_reputationsettings():
     '''
     Show the running configuration for the reputationsettings config key.
@@ -158,4 +157,3 @@ def update_reputationsettings(proxyserver=None, proxyport=None, save=False):
         result['save'] = 'False'
 
     return result
-

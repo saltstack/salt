@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The high_availability execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_hanode(id=None, ipaddress=None, inc=None, hastatus=None, hasync=None, haprop=None, hellointerval=None,
                deadinterval=None, failsafe=None, maxflips=None, maxfliptime=None, syncvlan=None, save=False):
     '''
@@ -782,4 +781,3 @@ def update_hanode(id=None, ipaddress=None, inc=None, hastatus=None, hasync=None,
         result['save'] = 'False'
 
     return result
-

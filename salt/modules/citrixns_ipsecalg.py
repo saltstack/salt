@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The ipsecalg execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_ipsecalgprofile(name=None, ikesessiontimeout=None, espsessiontimeout=None, espgatetimeout=None,
                         connfailover=None, save=False):
     '''
@@ -337,4 +336,3 @@ def update_ipsecalgprofile(name=None, ikesessiontimeout=None, espsessiontimeout=
         result['save'] = 'False'
 
     return result
-

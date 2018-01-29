@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The integrated_caching execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_cachecontentgroup(name=None, weakposrelexpiry=None, heurexpiryparam=None, relexpiry=None, relexpirymillisec=None,
                           absexpiry=None, absexpirygmt=None, weaknegrelexpiry=None, hitparams=None, invalparams=None,
                           ignoreparamvaluecase=None, matchcookies=None, invalrestrictedtohost=None, polleverytime=None,
@@ -2369,7 +2368,7 @@ def update_cacheparameter(memlimit=None, via=None, verifyusing=None, maxpostlen=
 
     enablebypass(str): Evaluate the request-time policies before attempting hit selection. If set to NO, an incoming request
         for which a matching object is found in cache storage results in a response regardless of the policy
-        configuration. If the request matches a policy with a NOCACHE action, the request bypasses all cache processing. 
+        configuration. If the request matches a policy with a NOCACHE action, the request bypasses all cache processing.
         This parameter does not affect processing of requests that match any invalidation policy. Possible values = YES,
         NO
 
@@ -2573,4 +2572,3 @@ def update_cacheselector(selectorname=None, rule=None, save=False):
         result['save'] = 'False'
 
     return result
-

@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The pcp execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_pcpprofile(name=None, mapping=None, peer=None, minmaplife=None, maxmaplife=None, announcemulticount=None,
                    thirdparty=None, save=False):
     '''
@@ -569,4 +568,3 @@ def update_pcpserver(name=None, ipaddress=None, port=None, pcpprofile=None, save
         result['save'] = 'False'
 
     return result
-

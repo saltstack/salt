@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The snmp execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_snmpcommunity(communityname=None, permissions=None, save=False):
     '''
     Add a new snmpcommunity to the running configuration.
@@ -427,7 +426,7 @@ def add_snmpuser(name=None, group=None, authtype=None, authpasswd=None, privtype
 
     privpasswd(str): Encryption key to be used by the encryption algorithm specified by the privType (Encryption Type)
         parameter. Can consist of 1 to 31 characters that include uppercase and lowercase letters, numbers, and the
-        hyphen (-), period (.) pound (#), space ( ), at sign (@), equals (=), colon (:), and underscore (_) characters. 
+        hyphen (-), period (.) pound (#), space ( ), at sign (@), equals (=), colon (:), and underscore (_) characters.
         The following requirement applies only to the NetScaler CLI: If the key includes one or more spaces, enclose it
         in double or single quotation marks (for example, "my key" or my key). Minimum length = 8
 
@@ -1857,7 +1856,7 @@ def update_snmpmib(contact=None, name=None, location=None, customid=None, ownern
 
     location(str): Physical location of the NetScaler appliance. For example, you can specify building name, lab number, and
         rack number. Can consist of 1 to 127 characters that include uppercase and lowercase letters, numbers, and the
-        hyphen (-), period (.) pound (#), space ( ), at sign (@), equals (=), colon (:), and underscore (_) characters. 
+        hyphen (-), period (.) pound (#), space ( ), at sign (@), equals (=), colon (:), and underscore (_) characters.
         The following requirement applies only to the NetScaler CLI: If the location includes one or more spaces, enclose
         it in double or single quotation marks (for example, "my location" or my location). Default value: "POP
         (default)" Minimum length = 1
@@ -2111,7 +2110,7 @@ def update_snmpuser(name=None, group=None, authtype=None, authpasswd=None, privt
 
     privpasswd(str): Encryption key to be used by the encryption algorithm specified by the privType (Encryption Type)
         parameter. Can consist of 1 to 31 characters that include uppercase and lowercase letters, numbers, and the
-        hyphen (-), period (.) pound (#), space ( ), at sign (@), equals (=), colon (:), and underscore (_) characters. 
+        hyphen (-), period (.) pound (#), space ( ), at sign (@), equals (=), colon (:), and underscore (_) characters.
         The following requirement applies only to the NetScaler CLI: If the key includes one or more spaces, enclose it
         in double or single quotation marks (for example, "my key" or my key). Minimum length = 8
 
@@ -2219,4 +2218,3 @@ def update_snmpview(name=None, subtree=None, ns_type=None, save=False):
         result['save'] = 'False'
 
     return result
-

@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The wf execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_wfsite(sitename=None, storefronturl=None, storename=None, html5receiver=None, workspacecontrol=None,
                displayroamingaccounts=None, xframeoptions=None, save=False):
     '''
@@ -279,4 +278,3 @@ def update_wfsite(sitename=None, storefronturl=None, storename=None, html5receiv
         result['save'] = 'False'
 
     return result
-

@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The responder execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_responderaction(name=None, ns_type=None, target=None, htmlpage=None, bypasssafetycheck=None, comment=None,
                         responsestatuscode=None, reasonphrase=None, newname=None, save=False):
     '''
@@ -75,7 +74,7 @@ def add_responderaction(name=None, ns_type=None, target=None, htmlpage=None, byp
         Enclose each stringbuilder expression element (either a NetScaler default-syntax expression or a string) in
         double quotation marks. Use the plus (+) character to join the elements.   Examples: 1) Respondwith expression
         that sends an HTTP 1.1 200 OK response: "HTTP/1.1 200 OK\\r\\n\\r\\n"  2) Redirect expression that redirects user
-        to the specified web host and appends the request URL to the redirect. "http://backupsite2.com" + HTTP.REQ.URL 
+        to the specified web host and appends the request URL to the redirect. "http://backupsite2.com" + HTTP.REQ.URL
         3) Respondwith expression that sends an HTTP 1.1 404 Not Found response with the request URL included in the
         response: "HTTP/1.1 404 Not Found\\r\\n\\r\\n"+ "HTTP.REQ.URL.HTTP_URL_SAFE" + "does not exist on the web
         server."  The following requirement applies only to the NetScaler CLI: Enclose the entire expression in single
@@ -267,7 +266,7 @@ def add_responderpolicy(name=None, rule=None, action=None, undefaction=None, com
         contain only letters, numbers, and the hyphen (-), period (.) pound (#), space ( ), at (@), equals (=), colon
         (:), and underscore characters. Can be changed after the responder policy is added.  The following requirement
         applies only to the NetScaler CLI: If the name includes one or more spaces, enclose the name in double or single
-        quotation marks (for example, "my responder policy" or my responder policy). 
+        quotation marks (for example, "my responder policy" or my responder policy).
 
     rule(str): Default syntax expression that the policy uses to determine whether to respond to the specified request.
 
@@ -1300,7 +1299,7 @@ def update_responderaction(name=None, ns_type=None, target=None, htmlpage=None, 
         Enclose each stringbuilder expression element (either a NetScaler default-syntax expression or a string) in
         double quotation marks. Use the plus (+) character to join the elements.   Examples: 1) Respondwith expression
         that sends an HTTP 1.1 200 OK response: "HTTP/1.1 200 OK\\r\\n\\r\\n"  2) Redirect expression that redirects user
-        to the specified web host and appends the request URL to the redirect. "http://backupsite2.com" + HTTP.REQ.URL 
+        to the specified web host and appends the request URL to the redirect. "http://backupsite2.com" + HTTP.REQ.URL
         3) Respondwith expression that sends an HTTP 1.1 404 Not Found response with the request URL included in the
         response: "HTTP/1.1 404 Not Found\\r\\n\\r\\n"+ "HTTP.REQ.URL.HTTP_URL_SAFE" + "does not exist on the web
         server."  The following requirement applies only to the NetScaler CLI: Enclose the entire expression in single
@@ -1439,7 +1438,7 @@ def update_responderpolicy(name=None, rule=None, action=None, undefaction=None, 
         contain only letters, numbers, and the hyphen (-), period (.) pound (#), space ( ), at (@), equals (=), colon
         (:), and underscore characters. Can be changed after the responder policy is added.  The following requirement
         applies only to the NetScaler CLI: If the name includes one or more spaces, enclose the name in double or single
-        quotation marks (for example, "my responder policy" or my responder policy). 
+        quotation marks (for example, "my responder policy" or my responder policy).
 
     rule(str): Default syntax expression that the policy uses to determine whether to respond to the specified request.
 
@@ -1517,4 +1516,3 @@ def update_responderpolicy(name=None, rule=None, action=None, undefaction=None, 
         result['save'] = 'False'
 
     return result
-

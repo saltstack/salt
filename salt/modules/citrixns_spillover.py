@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The spillover execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_spilloveraction(name=None, action=None, newname=None, save=False):
     '''
     Add a new spilloveraction to the running configuration.
@@ -485,4 +484,3 @@ def update_spilloverpolicy(name=None, rule=None, action=None, comment=None, newn
         result['save'] = 'False'
 
     return result
-

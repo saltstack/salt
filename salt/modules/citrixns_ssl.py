@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The ssl execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_sslaction(name=None, clientauth=None, clientcert=None, certheader=None, clientcertserialnumber=None,
                   certserialheader=None, clientcertsubject=None, certsubjectheader=None, clientcerthash=None,
                   certhashheader=None, clientcertfingerprint=None, certfingerprintheader=None,
@@ -9642,4 +9641,3 @@ def update_sslvserver(vservername=None, cleartextport=None, dh=None, dhfile=None
         result['save'] = 'False'
 
     return result
-

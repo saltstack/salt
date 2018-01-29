@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The tunnel execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_tunnelglobal_tunneltrafficpolicy_binding(priority=None, builtin=None, policyname=None, state=None, save=False):
     '''
     Add a new tunnelglobal_tunneltrafficpolicy_binding to the running configuration.
@@ -423,4 +422,3 @@ def update_tunneltrafficpolicy(name=None, rule=None, action=None, save=False):
         result['save'] = 'False'
 
     return result
-

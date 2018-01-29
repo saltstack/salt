@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The lsn execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_lsnappsprofile(appsprofilename=None, transportprotocol=None, ippooling=None, mapping=None, filtering=None,
                        tcpproxy=None, td=None, l2info=None, save=False):
     '''
@@ -71,7 +70,7 @@ def add_lsnappsprofile(appsprofilename=None, transportprotocol=None, ippooling=N
         function as follows: * Paired - The NetScaler ADC allocates the same NAT IP address for all sessions associated
         with the same subscriber. When all the ports of a NAT IP address are used in LSN sessions (for same or multiple
         subscribers), the NetScaler ADC drops any new connection from the subscriber. * Random - The NetScaler ADC
-        allocates random NAT IP addresses, from the pool, for different sessions associated with the same subscriber. 
+        allocates random NAT IP addresses, from the pool, for different sessions associated with the same subscriber.
         This parameter is applicable to dynamic NAT allocation only. Default value: RANDOM Possible values = PAIRED,
         RANDOM
 
@@ -80,7 +79,7 @@ def add_lsnappsprofile(appsprofilename=None, transportprotocol=None, ippooling=N
         IP:port (N:n), and external host IP:port (Y:y).  Available options function as follows:   * ENDPOINT-INDEPENDENT
         - Reuse the LSN mapping for subsequent packets sent from the same subscriber IP address and port (X:x) to any
         external IP address and port.   * ADDRESS-DEPENDENT - Reuse the LSN mapping for subsequent packets sent from the
-        same subscriber IP address and port (X:x) to the same external IP address (Y), regardless of the external port. 
+        same subscriber IP address and port (X:x) to the same external IP address (Y), regardless of the external port.
         * ADDRESS-PORT-DEPENDENT - Reuse the LSN mapping for subsequent packets sent from the same internal IP address
         and port (X:x) to the same external IP address and port (Y:y) while the mapping is still active. Default value:
         ADDRESS-PORT-DEPENDENT Possible values = ENDPOINT-INDEPENDENT, ADDRESS-DEPENDENT, ADDRESS-PORT-DEPENDENT
@@ -1222,9 +1221,9 @@ def add_lsnpool(poolname=None, nattype=None, portblockallocation=None, portreall
 
     portblockallocation(str): Allocate a random NAT port block, from the available NAT port pool of an NAT IP address, for
         each subscriber when the NAT allocation is set as Dynamic NAT. For any connection initiated from a subscriber,
-        the NetScaler ADC allocates a NAT port from the subscribers allocated NAT port block to create the LSN session. 
+        the NetScaler ADC allocates a NAT port from the subscribers allocated NAT port block to create the LSN session.
         You must set the port block size in the bound LSN group. For a subscriber, if all the ports are allocated from
-        the subscribers allocated port block, the NetScaler ADC allocates a new random port block for the subscriber. 
+        the subscribers allocated port block, the NetScaler ADC allocates a new random port block for the subscriber.
         For Deterministic NAT, this parameter is enabled by default, and you cannot disable it. Default value: DISABLED
         Possible values = ENABLED, DISABLED
 
@@ -1627,7 +1626,7 @@ def add_lsntransportprofile(transportprofilename=None, transportprotocol=None, s
         subscriber reach the limit, the NetScaler ADC does not allocate additional NAT ports for that subscriber. Default
         value: 0 Minimum value = 0 Maximum value = 65535
 
-    sessionquota(int): Maximum number of concurrent LSN sessions allowed for each subscriber for the specified protocol. 
+    sessionquota(int): Maximum number of concurrent LSN sessions allowed for each subscriber for the specified protocol.
         When the number of LSN sessions reaches the limit for a subscriber, the NetScaler ADC does not allow the
         subscriber to open additional sessions. Default value: 0 Minimum value = 0 Maximum value = 65535
 
@@ -3872,7 +3871,7 @@ def update_lsnappsprofile(appsprofilename=None, transportprotocol=None, ippoolin
         function as follows: * Paired - The NetScaler ADC allocates the same NAT IP address for all sessions associated
         with the same subscriber. When all the ports of a NAT IP address are used in LSN sessions (for same or multiple
         subscribers), the NetScaler ADC drops any new connection from the subscriber. * Random - The NetScaler ADC
-        allocates random NAT IP addresses, from the pool, for different sessions associated with the same subscriber. 
+        allocates random NAT IP addresses, from the pool, for different sessions associated with the same subscriber.
         This parameter is applicable to dynamic NAT allocation only. Default value: RANDOM Possible values = PAIRED,
         RANDOM
 
@@ -3881,7 +3880,7 @@ def update_lsnappsprofile(appsprofilename=None, transportprotocol=None, ippoolin
         IP:port (N:n), and external host IP:port (Y:y).  Available options function as follows:   * ENDPOINT-INDEPENDENT
         - Reuse the LSN mapping for subsequent packets sent from the same subscriber IP address and port (X:x) to any
         external IP address and port.   * ADDRESS-DEPENDENT - Reuse the LSN mapping for subsequent packets sent from the
-        same subscriber IP address and port (X:x) to the same external IP address (Y), regardless of the external port. 
+        same subscriber IP address and port (X:x) to the same external IP address (Y), regardless of the external port.
         * ADDRESS-PORT-DEPENDENT - Reuse the LSN mapping for subsequent packets sent from the same internal IP address
         and port (X:x) to the same external IP address and port (Y:y) while the mapping is still active. Default value:
         ADDRESS-PORT-DEPENDENT Possible values = ENDPOINT-INDEPENDENT, ADDRESS-DEPENDENT, ADDRESS-PORT-DEPENDENT
@@ -4352,9 +4351,9 @@ def update_lsnpool(poolname=None, nattype=None, portblockallocation=None, portre
 
     portblockallocation(str): Allocate a random NAT port block, from the available NAT port pool of an NAT IP address, for
         each subscriber when the NAT allocation is set as Dynamic NAT. For any connection initiated from a subscriber,
-        the NetScaler ADC allocates a NAT port from the subscribers allocated NAT port block to create the LSN session. 
+        the NetScaler ADC allocates a NAT port from the subscribers allocated NAT port block to create the LSN session.
         You must set the port block size in the bound LSN group. For a subscriber, if all the ports are allocated from
-        the subscribers allocated port block, the NetScaler ADC allocates a new random port block for the subscriber. 
+        the subscribers allocated port block, the NetScaler ADC allocates a new random port block for the subscriber.
         For Deterministic NAT, this parameter is enabled by default, and you cannot disable it. Default value: DISABLED
         Possible values = ENABLED, DISABLED
 
@@ -4615,7 +4614,7 @@ def update_lsntransportprofile(transportprofilename=None, transportprotocol=None
         subscriber reach the limit, the NetScaler ADC does not allocate additional NAT ports for that subscriber. Default
         value: 0 Minimum value = 0 Maximum value = 65535
 
-    sessionquota(int): Maximum number of concurrent LSN sessions allowed for each subscriber for the specified protocol. 
+    sessionquota(int): Maximum number of concurrent LSN sessions allowed for each subscriber for the specified protocol.
         When the number of LSN sessions reaches the limit for a subscriber, the NetScaler ADC does not allow the
         subscriber to open additional sessions. Default value: 0 Minimum value = 0 Maximum value = 65535
 
@@ -4711,4 +4710,3 @@ def update_lsntransportprofile(transportprofilename=None, transportprotocol=None
         result['save'] = 'False'
 
     return result
-

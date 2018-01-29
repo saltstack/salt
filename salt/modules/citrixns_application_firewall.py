@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The application_firewall execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_appfwconfidfield(fieldname=None, url=None, isregex=None, comment=None, state=None, save=False):
     '''
     Add a new appfwconfidfield to the running configuration.
@@ -7932,4 +7931,3 @@ def update_appfwsettings(defaultprofile=None, undefaction=None, sessiontimeout=N
         result['save'] = 'False'
 
     return result
-

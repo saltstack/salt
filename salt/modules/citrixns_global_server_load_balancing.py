@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The global_server_load_balancing execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_gslbservice(servicename=None, cnameentry=None, ip=None, servername=None, servicetype=None, port=None,
                     publicip=None, publicport=None, maxclient=None, healthmonitor=None, sitename=None, state=None,
                     cip=None, cipheader=None, sitepersistence=None, cookietimeout=None, siteprefix=None, clttimeout=None,
@@ -3653,4 +3652,3 @@ def update_gslbvserver(name=None, servicetype=None, iptype=None, dnsrecordtype=N
         result['save'] = 'False'
 
     return result
-

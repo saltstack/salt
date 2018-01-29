@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The basic execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_location(ipfrom=None, ipto=None, preferredlocation=None, longitude=None, latitude=None, save=False):
     '''
     Add a new location to the running configuration.
@@ -5041,4 +5040,3 @@ def update_vserver(name=None, backupvserver=None, redirecturl=None, cacheable=No
         result['save'] = 'False'
 
     return result
-

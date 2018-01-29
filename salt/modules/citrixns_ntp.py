@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The ntp execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_ntpserver(serverip=None, servername=None, minpoll=None, maxpoll=None, autokey=None, key=None,
                   preferredntpserver=None, save=False):
     '''
@@ -595,4 +594,3 @@ def update_ntpserver(serverip=None, servername=None, minpoll=None, maxpoll=None,
         result['save'] = 'False'
 
     return result
-

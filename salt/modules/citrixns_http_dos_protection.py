@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The http_dos_protection execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_dospolicy(name=None, qdepth=None, cltdetectrate=None, save=False):
     '''
     Add a new dospolicy to the running configuration.
@@ -244,4 +243,3 @@ def update_dospolicy(name=None, qdepth=None, cltdetectrate=None, save=False):
         result['save'] = 'False'
 
     return result
-

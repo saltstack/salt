@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The sure_connect execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_scpolicy(name=None, url=None, rule=None, delay=None, maxconn=None, action=None, altcontentsvcname=None,
                  altcontentpath=None, save=False):
     '''
@@ -490,4 +489,3 @@ def update_scpolicy(name=None, url=None, rule=None, delay=None, maxconn=None, ac
         result['save'] = 'False'
 
     return result
-

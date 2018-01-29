@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The audit execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_auditmessageaction(name=None, loglevel=None, stringbuilderexpr=None, logtonewnslog=None, bypasssafetycheck=None,
                            save=False):
     '''
@@ -414,7 +413,7 @@ def add_auditsyslogaction(name=None, serverip=None, serverdomainname=None, domai
 
     serverport(int): Port on which the syslog server accepts connections. Minimum value = 1
 
-    loglevel(list(str)): Audit log level, which specifies the types of events to log.  Available values function as follows: 
+    loglevel(list(str)): Audit log level, which specifies the types of events to log.  Available values function as follows:
         * ALL - All events. * EMERGENCY - Events that indicate an immediate crisis on the server. * ALERT - Events that
         might require action. * CRITICAL - Events that indicate an imminent server crisis. * ERROR - Events that indicate
         some type of error. * WARNING - Events that require action in the near future. * NOTICE - Events that the
@@ -2959,7 +2958,7 @@ def update_auditsyslogaction(name=None, serverip=None, serverdomainname=None, do
 
     serverport(int): Port on which the syslog server accepts connections. Minimum value = 1
 
-    loglevel(list(str)): Audit log level, which specifies the types of events to log.  Available values function as follows: 
+    loglevel(list(str)): Audit log level, which specifies the types of events to log.  Available values function as follows:
         * ALL - All events. * EMERGENCY - Events that indicate an immediate crisis on the server. * ALERT - Events that
         might require action. * CRITICAL - Events that indicate an imminent server crisis. * ERROR - Events that indicate
         some type of error. * WARNING - Events that require action in the near future. * NOTICE - Events that the
@@ -3297,4 +3296,3 @@ def update_auditsyslogpolicy(name=None, rule=None, action=None, save=False):
         result['save'] = 'False'
 
     return result
-

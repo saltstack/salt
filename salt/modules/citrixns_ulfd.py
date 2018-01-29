@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The ulfd execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_ulfdserver(loggerip=None, save=False):
     '''
     Add a new ulfdserver to the running configuration.
@@ -116,4 +115,3 @@ def get_ulfdserver(loggerip=None):
                     salt.proxy.citrixns.build_filter(search_filter))), 'ulfdserver')
 
     return response
-

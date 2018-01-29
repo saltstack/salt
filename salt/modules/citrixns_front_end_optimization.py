@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The front_end_optimization execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_feoaction(name=None, pageextendcache=None, cachemaxage=None, imgshrinktoattrib=None, imggiftopng=None,
                   imgtowebp=None, imgtojpegxr=None, imginline=None, cssimginline=None, jpgoptimize=None,
                   imglazyload=None, cssminify=None, cssinline=None, csscombine=None, convertimporttolink=None,
@@ -1217,4 +1216,3 @@ def update_feopolicy(name=None, rule=None, action=None, save=False):
         result['save'] = 'False'
 
     return result
-

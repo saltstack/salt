@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The ipsec execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_ipsecprofile(name=None, ikeversion=None, encalgo=None, hashalgo=None, lifetime=None, psk=None, publickey=None,
                      privatekey=None, peerpublickey=None, livenesscheckinterval=None, replaywindowsize=None,
                      ikeretryinterval=None, retransmissiontime=None, perfectforwardsecrecy=None, save=False):
@@ -443,4 +442,3 @@ def update_ipsecparameter(ikeversion=None, encalgo=None, hashalgo=None, lifetime
         result['save'] = 'False'
 
     return result
-

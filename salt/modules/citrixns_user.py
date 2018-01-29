@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The user execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_userprotocol(name=None, transport=None, extension=None, comment=None, save=False):
     '''
     Add a new userprotocol to the running configuration.
@@ -535,4 +534,3 @@ def update_uservserver(name=None, userprotocol=None, ipaddress=None, port=None, 
         result['save'] = 'False'
 
     return result
-

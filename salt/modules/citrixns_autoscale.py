@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The autoscale execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_autoscaleaction(name=None, ns_type=None, profilename=None, parameters=None, vmdestroygraceperiod=None,
                         quiettime=None, vserver=None, save=False):
     '''
@@ -781,4 +780,3 @@ def update_autoscaleprofile(name=None, ns_type=None, url=None, apikey=None, shar
         result['save'] = 'False'
 
     return result
-

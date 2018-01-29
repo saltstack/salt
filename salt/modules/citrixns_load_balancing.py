@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The load_balancing execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_lbgroup(name=None, persistencetype=None, persistencebackup=None, backuppersistencetimeout=None, persistmask=None,
                 cookiename=None, v6persistmasklen=None, cookiedomain=None, timeout=None, rule=None,
                 usevserverpersistency=None, mastervserver=None, newname=None, save=False):
@@ -1594,7 +1593,7 @@ def add_lbvserver(name=None, servicetype=None, ipv46=None, ippattern=None, ipmas
         request URL (or part of the URL). * DOMAINHASH - Create a hash of the domain name in the request (or part of the
         domain name). The domain name is taken from either the URL or the Host header. If the domain name appears in both
         locations, the URL is preferred. If the request does not contain a domain name, the load balancing method
-        defaults to LEASTCONNECTION. * DESTINATIONIPHASH - Create a hash of the destination IP address in the IP header. 
+        defaults to LEASTCONNECTION. * DESTINATIONIPHASH - Create a hash of the destination IP address in the IP header.
         * SOURCEIPHASH - Create a hash of the source IP address in the IP header.  * TOKEN - Extract a token from the
         request, create a hash of the token, and then select the service to which any previous requests with the same
         token hash value were sent.  * SRCIPDESTIPHASH - Create a hash of the string obtained by concatenating the source
@@ -10281,4 +10280,3 @@ def update_lbwlm(wlmname=None, ipaddress=None, port=None, lbuid=None, katimeout=
         result['save'] = 'False'
 
     return result
-

@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The ssl_vpn execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_vpnalwaysonprofile(name=None, networkaccessonvpnfailure=None, clientcontrol=None, locationbasedvpn=None,
                            save=False):
     '''
@@ -16727,4 +16726,3 @@ def update_vpnvserver(name=None, servicetype=None, ipv46=None, range=None, port=
         result['save'] = 'False'
 
     return result
-

@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The network execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_arp(ipaddress=None, td=None, mac=None, ifnum=None, vxlan=None, vtep=None, vlan=None, ownernode=None, nodeid=None,
             save=False):
     '''
@@ -13144,4 +13143,3 @@ def update_vxlan(id=None, vlan=None, port=None, dynamicrouting=None, ipv6dynamic
         result['save'] = 'False'
 
     return result
-

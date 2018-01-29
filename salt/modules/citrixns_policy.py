@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The policy execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_policydataset(name=None, ns_type=None, indextype=None, comment=None, save=False):
     '''
     Add a new policydataset to the running configuration.
@@ -1961,4 +1960,3 @@ def update_policystringmap(name=None, comment=None, save=False):
         result['save'] = 'False'
 
     return result
-

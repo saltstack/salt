@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The appflow execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_appflowaction(name=None, collectors=None, clientsidemeasurements=None, pagetracking=None, webinsight=None,
                       securityinsight=None, videoanalytics=None, distributionalgorithm=None, metricslog=None,
                       transactionlog=None, comment=None, newname=None, save=False):
@@ -2066,4 +2065,3 @@ def update_appflowpolicy(name=None, rule=None, action=None, undefaction=None, co
         result['save'] = 'False'
 
     return result
-

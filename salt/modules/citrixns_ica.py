@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The ica execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_icaaccessprofile(name=None, connectclientlptports=None, clientaudioredirection=None, localremotedatasharing=None,
                          clientclipboardredirection=None, clientcomportredirection=None, clientdriveredirection=None,
                          clientprinterredirection=None, multistream=None, clientusbdriveredirection=None, save=False):
@@ -1544,4 +1543,3 @@ def update_icapolicy(name=None, rule=None, action=None, comment=None, logaction=
         result['save'] = 'False'
 
     return result
-

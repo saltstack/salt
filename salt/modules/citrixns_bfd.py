@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The bfd execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def get_bfdsession(localip=None, remoteip=None):
     '''
     Show the running configuration for the bfdsession config key.
@@ -81,4 +80,3 @@ def get_bfdsession(localip=None, remoteip=None):
                     salt.proxy.citrixns.build_filter(search_filter))), 'bfdsession')
 
     return response
-

@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The cloud execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def get_cloudparameter():
     '''
     Show the running configuration for the cloudparameter config key.
@@ -201,4 +200,3 @@ def update_cloudparameter(controllerfqdn=None, controllerport=None, instanceid=N
         result['save'] = 'False'
 
     return result
-

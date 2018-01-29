@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The ns execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_nsacl(aclname=None, aclaction=None, td=None, srcip=None, srcipop=None, srcipval=None, srcport=None,
               srcportop=None, srcportval=None, destip=None, destipop=None, destipval=None, destport=None,
               destportop=None, destportval=None, ttl=None, srcmac=None, srcmacmask=None, protocol=None,
@@ -733,12 +732,12 @@ def add_nsencryptionkey(name=None, method=None, keyvalue=None, padding=None, iv=
 
     method(str): Cipher method to be used to encrypt and decrypt content.  NONE - no encryption or decryption is performed
         The output of ENCRYPT() and DECRYPT() is the same as the input.  RC4 - the RC4 stream cipher with a 128 bit (16
-        byte) key; RC4 is now considered insecure and should only be used if required by existing applciations. 
+        byte) key; RC4 is now considered insecure and should only be used if required by existing applciations.
         DES[-;lt;mode;gt;] - the Data Encryption Standard (DES) block cipher with a 64-bit (8 byte) key, with 56 data
         bits and 8 parity bits. DES is considered less secure than DES3 or AES so it should only be used if required by
-        an existing applicastion. The optional mode is described below; DES without a mode is equivalent to DES-CBC. 
+        an existing applicastion. The optional mode is described below; DES without a mode is equivalent to DES-CBC.
         DES3[-;lt;mode;gt;] - the Triple Data Encryption Standard (DES) block cipher with a 192-bit (24 byte) key. The
-        optional mode is described below; DES3 without a mode is equivalent to DES3-CBC. 
+        optional mode is described below; DES3 without a mode is equivalent to DES3-CBC.
         AES;lt;keysize;gt;[-;lt;mode;gt;] - the Advanced Encryption Standard block cipher, available with 128 bit (16
         byte), 192 bit (24 byte), and 256 bit (32 byte) keys. The optional mode is described below; AES;lt;keysize;gt;
         without a mode is equivalent to AES;lt;keysize;gt;-CBC.  For a block cipher, the ;lt;mode;gt; specifies how
@@ -775,7 +774,7 @@ def add_nsencryptionkey(name=None, method=None, keyvalue=None, padding=None, iv=
         practice is to not specify an IV, in which case a new random IV will be generated for each encryption. The format
         must be iv_data or keyid_iv_data to include the generated IV in the encrypted data. The IV should only be
         specified if it cannot be included in the encrypted data. The IV length is the cipher block size:  RC4 - not used
-        (error if IV is specified)  DES - 8 bytes (all modes)  DES3 - 8 bytes (all modes)  AES128 - 16 bytes (all modes) 
+        (error if IV is specified)  DES - 8 bytes (all modes)  DES3 - 8 bytes (all modes)  AES128 - 16 bytes (all modes)
         AES192 - 16 bytes (all modes)  AES256 - 16 bytes (all modes).
 
     comment(str): Comments associated with this encryption key.
@@ -930,7 +929,7 @@ def add_nshmackey(name=None, digest=None, keyvalue=None, comment=None, save=Fals
     keyvalue(str): The hex-encoded key to be used in the HMAC computation. The key can be any length (up to a
         NetScaler-imposed maximum of 255 bytes). If the length is less than the digest block size, it will be zero padded
         up to the block size. If it is greater than the block size, it will be hashed using the digest function to the
-        block size. The block size for each digest is:  MD2 - 16 bytes  MD4 - 16 bytes  MD5 - 16 bytes  SHA1 - 20 bytes 
+        block size. The block size for each digest is:  MD2 - 16 bytes  MD4 - 16 bytes  MD5 - 16 bytes  SHA1 - 20 bytes
         SHA224 - 28 bytes  SHA256 - 32 bytes  SHA384 - 48 bytes  SHA512 - 64 bytes Note that the key will be encrypted
         when it it is saved.
 
@@ -3640,9 +3639,9 @@ def add_nsvariable(name=None, ns_type=None, scope=None, iffull=None, ifvaluetoob
         expression object (HTTP callout, patset, dataset, stringmap, or named expression). Minimum length = 1
 
     ns_type(str): Specification of the variable type; one of the following:  ulong - singleton variable with an unsigned
-        64-bit value.  text(value-max-size) - singleton variable with a text string value. 
-        map(text(key-max-size),ulong,max-entries) - map of text string keys to unsigned 64-bit values. 
-        map(text(key-max-size),text(value-max-size),max-entries) - map of text string keys to text string values. where 
+        64-bit value.  text(value-max-size) - singleton variable with a text string value.
+        map(text(key-max-size),ulong,max-entries) - map of text string keys to unsigned 64-bit values.
+        map(text(key-max-size),text(value-max-size),max-entries) - map of text string keys to text string values. where
         value-max-size is a positive integer that is the maximum number of bytes in a text string value.  key-max-size is
         a positive integer that is the maximum number of bytes in a text string key.  max-entries is a positive integer
         that is the maximum number of entries in a map variable.  For a global singleton text variable, value-max-size
@@ -12942,12 +12941,12 @@ def update_nsencryptionkey(name=None, method=None, keyvalue=None, padding=None, 
 
     method(str): Cipher method to be used to encrypt and decrypt content.  NONE - no encryption or decryption is performed
         The output of ENCRYPT() and DECRYPT() is the same as the input.  RC4 - the RC4 stream cipher with a 128 bit (16
-        byte) key; RC4 is now considered insecure and should only be used if required by existing applciations. 
+        byte) key; RC4 is now considered insecure and should only be used if required by existing applciations.
         DES[-;lt;mode;gt;] - the Data Encryption Standard (DES) block cipher with a 64-bit (8 byte) key, with 56 data
         bits and 8 parity bits. DES is considered less secure than DES3 or AES so it should only be used if required by
-        an existing applicastion. The optional mode is described below; DES without a mode is equivalent to DES-CBC. 
+        an existing applicastion. The optional mode is described below; DES without a mode is equivalent to DES-CBC.
         DES3[-;lt;mode;gt;] - the Triple Data Encryption Standard (DES) block cipher with a 192-bit (24 byte) key. The
-        optional mode is described below; DES3 without a mode is equivalent to DES3-CBC. 
+        optional mode is described below; DES3 without a mode is equivalent to DES3-CBC.
         AES;lt;keysize;gt;[-;lt;mode;gt;] - the Advanced Encryption Standard block cipher, available with 128 bit (16
         byte), 192 bit (24 byte), and 256 bit (32 byte) keys. The optional mode is described below; AES;lt;keysize;gt;
         without a mode is equivalent to AES;lt;keysize;gt;-CBC.  For a block cipher, the ;lt;mode;gt; specifies how
@@ -12984,7 +12983,7 @@ def update_nsencryptionkey(name=None, method=None, keyvalue=None, padding=None, 
         practice is to not specify an IV, in which case a new random IV will be generated for each encryption. The format
         must be iv_data or keyid_iv_data to include the generated IV in the encrypted data. The IV should only be
         specified if it cannot be included in the encrypted data. The IV length is the cipher block size:  RC4 - not used
-        (error if IV is specified)  DES - 8 bytes (all modes)  DES3 - 8 bytes (all modes)  AES128 - 16 bytes (all modes) 
+        (error if IV is specified)  DES - 8 bytes (all modes)  DES3 - 8 bytes (all modes)  AES128 - 16 bytes (all modes)
         AES192 - 16 bytes (all modes)  AES256 - 16 bytes (all modes).
 
     comment(str): Comments associated with this encryption key.
@@ -13192,7 +13191,7 @@ def update_nshmackey(name=None, digest=None, keyvalue=None, comment=None, save=F
     keyvalue(str): The hex-encoded key to be used in the HMAC computation. The key can be any length (up to a
         NetScaler-imposed maximum of 255 bytes). If the length is less than the digest block size, it will be zero padded
         up to the block size. If it is greater than the block size, it will be hashed using the digest function to the
-        block size. The block size for each digest is:  MD2 - 16 bytes  MD4 - 16 bytes  MD5 - 16 bytes  SHA1 - 20 bytes 
+        block size. The block size for each digest is:  MD2 - 16 bytes  MD4 - 16 bytes  MD5 - 16 bytes  SHA1 - 20 bytes
         SHA224 - 28 bytes  SHA256 - 32 bytes  SHA384 - 48 bytes  SHA512 - 64 bytes Note that the key will be encrypted
         when it it is saved.
 
@@ -14577,7 +14576,7 @@ def update_nsparam(httpport=None, maxconn=None, maxreq=None, cip=None, cipheader
     aftpallowrandomsourceport(str): Allow the FTP server to come from a random source port for active FTP data connections.
         Default value: DISABLED Possible values = ENABLED, DISABLED
 
-    icaports(list(int)): The ICA ports on the Web server. This allows the system to perform connection off-load for any 
+    icaports(list(int)): The ICA ports on the Web server. This allows the system to perform connection off-load for any
         client request that has a destination port matching one of these configured ports. Minimum value = 1
 
     tcpcip(str): Enable or disable the insertion of the client TCP/IP header in TCP payload passed from the client to one,
@@ -15589,7 +15588,7 @@ def update_nstcpparam(ws=None, wsval=None, sack=None, learnvsvrmss=None, maxburs
     synattackdetection(str): Detect TCP SYN packet flood and send an SNMP trap. Default value: ENABLED Possible values =
         ENABLED, DISABLED
 
-    connflushifnomem(str): Flush an existing connection if no memory can be obtained for new connection. 
+    connflushifnomem(str): Flush an existing connection if no memory can be obtained for new connection.
         HALF_CLOSED_AND_IDLE: Flush a connection that is closed by us but not by peer, or failing that, a connection that
         is past configured idle time. New connection fails if no such connection can be found.  FIFO: If no half-closed
         or idle connection can be found, flush the oldest non-management connection, even if it is active. New connection
@@ -16358,9 +16357,9 @@ def update_nsvariable(name=None, ns_type=None, scope=None, iffull=None, ifvaluet
         expression object (HTTP callout, patset, dataset, stringmap, or named expression). Minimum length = 1
 
     ns_type(str): Specification of the variable type; one of the following:  ulong - singleton variable with an unsigned
-        64-bit value.  text(value-max-size) - singleton variable with a text string value. 
-        map(text(key-max-size),ulong,max-entries) - map of text string keys to unsigned 64-bit values. 
-        map(text(key-max-size),text(value-max-size),max-entries) - map of text string keys to text string values. where 
+        64-bit value.  text(value-max-size) - singleton variable with a text string value.
+        map(text(key-max-size),ulong,max-entries) - map of text string keys to unsigned 64-bit values.
+        map(text(key-max-size),text(value-max-size),max-entries) - map of text string keys to text string values. where
         value-max-size is a positive integer that is the maximum number of bytes in a text string value.  key-max-size is
         a positive integer that is the maximum number of bytes in a text string key.  max-entries is a positive integer
         that is the maximum number of entries in a map variable.  For a global singleton text variable, value-max-size
@@ -16603,4 +16602,3 @@ def update_nsxmlnamespace(prefix=None, namespace=None, description=None, save=Fa
         result['save'] = 'False'
 
     return result
-

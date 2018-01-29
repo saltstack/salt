@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The db execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_dbdbprofile(name=None, interpretquery=None, stickiness=None, kcdaccount=None, conmultiplex=None,
                     enablecachingconmuxoff=None, save=False):
     '''
@@ -458,4 +457,3 @@ def update_dbuser(username=None, password=None, loggedin=None, save=False):
         result['save'] = 'False'
 
     return result
-

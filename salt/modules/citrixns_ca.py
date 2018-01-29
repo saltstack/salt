@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The ca execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_caaction(name=None, accumressize=None, lbvserver=None, comment=None, ns_type=None, newname=None, save=False):
     '''
     Add a new caaction to the running configuration.
@@ -826,4 +825,3 @@ def update_capolicy(name=None, rule=None, action=None, undefaction=None, comment
         result['save'] = 'False'
 
     return result
-

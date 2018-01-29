@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The lldp execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def get_lldpneighbors(ifnum=None, nodeid=None):
     '''
     Show the running configuration for the lldpneighbors config key.
@@ -205,4 +204,3 @@ def update_lldpparam(holdtimetxmult=None, timer=None, mode=None, save=False):
         result['save'] = 'False'
 
     return result
-

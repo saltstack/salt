@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The aaa execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_aaaglobal_aaapreauthenticationpolicy_binding(priority=None, policy=None, builtin=None, save=False):
     '''
     Add a new aaaglobal_aaapreauthenticationpolicy_binding to the running configuration.
@@ -4358,7 +4357,7 @@ def update_aaaparameter(enablestaticpagecaching=None, enableenhancedauthfeedback
     enablesessionstickiness(str): Enables/Disables stickiness to authentication servers. Default value: NO Possible values =
         YES, NO
 
-    aaasessionloglevel(str): Audit log level, which specifies the types of events to log for cli executed commands. 
+    aaasessionloglevel(str): Audit log level, which specifies the types of events to log for cli executed commands.
         Available values function as follows:  * EMERGENCY - Events that indicate an immediate crisis on the server. *
         ALERT - Events that might require action. * CRITICAL - Events that indicate an imminent server crisis. * ERROR -
         Events that indicate some type of error. * WARNING - Events that require action in the near future. * NOTICE -
@@ -4914,4 +4913,3 @@ def update_aaauser(username=None, password=None, loggedin=None, save=False):
         result['save'] = 'False'
 
     return result
-

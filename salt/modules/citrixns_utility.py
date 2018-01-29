@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The utility execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def get_callhome():
     '''
     Show the running configuration for the callhome config key.
@@ -238,4 +237,3 @@ def update_callhome(emailaddress=None, hbcustominterval=None, proxymode=None, ip
         result['save'] = 'False'
 
     return result
-

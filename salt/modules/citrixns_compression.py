@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The compression execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_cmpaction(name=None, cmptype=None, addvaryheader=None, varyheadervalue=None, deltatype=None, newname=None,
                   save=False):
     '''
@@ -1416,4 +1415,3 @@ def update_cmppolicy(name=None, rule=None, resaction=None, newname=None, save=Fa
         result['save'] = 'False'
 
     return result
-

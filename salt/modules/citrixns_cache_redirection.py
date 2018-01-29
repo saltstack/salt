@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The cache_redirection execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_crpolicy(policyname=None, rule=None, action=None, logaction=None, newname=None, save=False):
     '''
     Add a new crpolicy to the running configuration.
@@ -3879,4 +3878,3 @@ def update_crvserver(name=None, td=None, servicetype=None, ipv46=None, port=None
         result['save'] = 'False'
 
     return result
-

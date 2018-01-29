@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The protocol execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def get_protocolhttpband():
     '''
     Show the running configuration for the protocolhttpband config key.
@@ -182,4 +181,3 @@ def update_protocolhttpband(reqbandsize=None, respbandsize=None, ns_type=None, n
         result['save'] = 'False'
 
     return result
-

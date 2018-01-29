@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The traffic_management execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_tmformssoaction(name=None, actionurl=None, userfield=None, passwdfield=None, ssosuccessrule=None,
                         namevaluepair=None, responsesize=None, nvtype=None, submitmethod=None, save=False):
     '''
@@ -4307,4 +4306,3 @@ def update_tmtrafficpolicy(name=None, rule=None, action=None, save=False):
         result['save'] = 'False'
 
     return result
-

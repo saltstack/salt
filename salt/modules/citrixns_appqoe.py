@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The appqoe execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_appqoeaction(name=None, priority=None, respondwith=None, customfile=None, altcontentsvcname=None,
                      altcontentpath=None, polqdepth=None, priqdepth=None, maxconn=None, delay=None,
                      dostrigexpression=None, dosaction=None, tcpprofile=None, save=False):
@@ -67,7 +66,7 @@ def add_appqoeaction(name=None, priority=None, respondwith=None, customfile=None
         available again. If priority is not configured then Lowest priority will be used to queue the request. Possible
         values = HIGH, MEDIUM, LOW, LOWEST
 
-    respondwith(str): Responder action to be taken when the threshold is reached. Available settings function as follows: 
+    respondwith(str): Responder action to be taken when the threshold is reached. Available settings function as follows:
         ACS - Serve content from an alternative content service  Threshold : maxConn or delay  NS - Serve from the
         NetScaler appliance (built-in response)  Threshold : maxConn or delay. Possible values = ACS, NS
 
@@ -620,7 +619,7 @@ def update_appqoeaction(name=None, priority=None, respondwith=None, customfile=N
         available again. If priority is not configured then Lowest priority will be used to queue the request. Possible
         values = HIGH, MEDIUM, LOW, LOWEST
 
-    respondwith(str): Responder action to be taken when the threshold is reached. Available settings function as follows: 
+    respondwith(str): Responder action to be taken when the threshold is reached. Available settings function as follows:
         ACS - Serve content from an alternative content service  Threshold : maxConn or delay  NS - Serve from the
         NetScaler appliance (built-in response)  Threshold : maxConn or delay. Possible values = ACS, NS
 
@@ -838,4 +837,3 @@ def update_appqoepolicy(name=None, rule=None, action=None, save=False):
         result['save'] = 'False'
 
     return result
-

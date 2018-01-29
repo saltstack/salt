@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The router execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_routerdynamicrouting(commandstring=None, nodeid=None, save=False):
     '''
     Add a new routerdynamicrouting to the running configuration.
@@ -216,4 +215,3 @@ def update_routerdynamicrouting(commandstring=None, nodeid=None, save=False):
         result['save'] = 'False'
 
     return result
-

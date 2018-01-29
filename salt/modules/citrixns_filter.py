@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The filter execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_filteraction(name=None, qual=None, servicename=None, value=None, respcode=None, page=None, save=False):
     '''
     Add a new filteraction to the running configuration.
@@ -1225,4 +1224,3 @@ def update_filterprebodyinjection(prebody=None, save=False):
         result['save'] = 'False'
 
     return result
-

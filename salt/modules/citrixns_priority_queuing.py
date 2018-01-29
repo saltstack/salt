@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The priority_queuing execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_pqpolicy(policyname=None, rule=None, priority=None, weight=None, qdepth=None, polqdepth=None, save=False):
     '''
     Add a new pqpolicy to the running configuration.
@@ -370,4 +369,3 @@ def update_pqpolicy(policyname=None, rule=None, priority=None, weight=None, qdep
         result['save'] = 'False'
 
     return result
-

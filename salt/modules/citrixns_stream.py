@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The stream execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_streamidentifier(name=None, selectorname=None, interval=None, samplecount=None, sort=None, snmptrap=None,
                          appflowlog=None, tracktransactions=None, maxtransactionthreshold=None,
                          mintransactionthreshold=None, acceptancethreshold=None, breachthreshold=None, save=False):
@@ -631,4 +630,3 @@ def update_streamselector(name=None, rule=None, save=False):
         result['save'] = 'False'
 
     return result
-

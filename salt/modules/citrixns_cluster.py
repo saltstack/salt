@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The cluster execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_clusterinstance(clid=None, deadinterval=None, hellointerval=None, preemption=None, quorumtype=None, inc=None,
                         processlocal=None, retainconnectionsoncluster=None, nodegroup=None, save=False):
     '''
@@ -2067,4 +2066,3 @@ def update_clusternodegroup(name=None, strict=None, sticky=None, state=None, pri
         result['save'] = 'False'
 
     return result
-

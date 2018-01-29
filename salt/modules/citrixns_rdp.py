@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The rdp execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_rdpclientprofile(name=None, rdpurloverride=None, redirectclipboard=None, redirectdrives=None,
                          redirectprinters=None, redirectcomports=None, redirectpnpdevices=None, keyboardhook=None,
                          audiocapturemode=None, videoplaybackmode=None, multimonitorsupport=None, rdpcookievalidity=None,
@@ -810,4 +809,3 @@ def update_rdpserverprofile(name=None, rdpip=None, rdpport=None, psk=None, save=
         result['save'] = 'False'
 
     return result
-

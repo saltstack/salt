@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The domain_name_service execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_dnsaaaarec(hostname=None, ipv6address=None, ttl=None, ecssubnet=None, ns_type=None, nodeid=None, save=False):
     '''
     Add a new dnsaaaarec to the running configuration.
@@ -208,7 +207,7 @@ def add_dnsaction64(actionname=None, prefix=None, mappedrule=None, excluderule=N
     prefix(str): The dns64 prefix to be used if the after evaluating the rules.
 
     mappedrule(str): The expression to select the criteria for ipv4 addresses to be used for synthesis.  Only if the
-        mappedrule is evaluated to true the corresponding ipv4 address is used for synthesis using respective prefix,  
+        mappedrule is evaluated to true the corresponding ipv4 address is used for synthesis using respective prefix,
         otherwise the A RR is discarded.
 
     excluderule(str): The expression to select the criteria for eliminating the corresponding ipv6 addresses from the
@@ -4666,7 +4665,7 @@ def update_dnsaction64(actionname=None, prefix=None, mappedrule=None, excluderul
     prefix(str): The dns64 prefix to be used if the after evaluating the rules.
 
     mappedrule(str): The expression to select the criteria for ipv4 addresses to be used for synthesis.  Only if the
-        mappedrule is evaluated to true the corresponding ipv4 address is used for synthesis using respective prefix,  
+        mappedrule is evaluated to true the corresponding ipv4 address is used for synthesis using respective prefix,
         otherwise the A RR is discarded.
 
     excluderule(str): The expression to select the criteria for eliminating the corresponding ipv6 addresses from the
@@ -5713,4 +5712,3 @@ def update_dnszone(zonename=None, proxymode=None, dnssecoffload=None, nsec=None,
         result['save'] = 'False'
 
     return result
-

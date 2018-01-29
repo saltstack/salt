@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The videooptimization execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_videooptimizationaction(name=None, ns_type=None, rate=None, comment=None, newname=None, save=False):
     '''
     Add a new videooptimizationaction to the running configuration.
@@ -1254,4 +1253,3 @@ def update_videooptimizationpolicy(name=None, rule=None, action=None, undefactio
         result['save'] = 'False'
 
     return result
-

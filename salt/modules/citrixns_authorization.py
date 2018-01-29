@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The authorization execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_authorizationpolicy(name=None, rule=None, action=None, newname=None, save=False):
     '''
     Add a new authorizationpolicy to the running configuration.
@@ -647,4 +646,3 @@ def update_authorizationpolicy(name=None, rule=None, action=None, newname=None, 
         result['save'] = 'False'
 
     return result
-

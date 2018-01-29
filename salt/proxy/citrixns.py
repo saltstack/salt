@@ -221,7 +221,7 @@ def post(path=None, payload=None):
 
     if not r:
         raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
-        
+
     if 'status' in r:
         if r['status'] == 200:
             return True
@@ -265,7 +265,7 @@ def put(path=None, payload=None):
 
     if not r:
         raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
-        
+
     if 'status' in r:
         if r['status'] == 200:
             return True
@@ -331,23 +331,23 @@ def grains():
         DETAILS['grains_cache'] = GRAINS_CACHE
         try:
             DETAILS['grains_cache']['citrixns'] = {}
-            
+
             nsconfig = get("config/nsconfig")
             nshardware = get("config/nshardware")
-            
+
             DETAILS['grains_cache']['citrixns']['version'] = get("config/nsversion")['nsversion']['version']
             DETAILS['grains_cache']['citrixns']['hostname'] = get("config/nshostname")['nshostname'][0]['hostname']
-            
+
             DETAILS['grains_cache']['citrixns']['ipaddress'] = nsconfig['nsconfig']['ipaddress']
             DETAILS['grains_cache']['citrixns']['netmask'] = nsconfig['nsconfig']['netmask']
             DETAILS['grains_cache']['citrixns']['systemtype'] = nsconfig['nsconfig']['systemtype']
             DETAILS['grains_cache']['citrixns']['primaryip'] = nsconfig['nsconfig']['primaryip']
             DETAILS['grains_cache']['citrixns']['timezone'] = nsconfig['nsconfig']['timezone']
             DETAILS['grains_cache']['citrixns']['lastconfigchangedtime'] = nsconfig['nsconfig']['lastconfigchangedtime']
-            
+
             DETAILS['grains_cache']['citrixns']['nshardware'] = nshardware['nshardware']['hwdescription']
             DETAILS['grains_cache']['citrixns']['serial'] = nshardware['nshardware']['serialno']
-            
+
         except Exception as err:
             pass
     return DETAILS['grains_cache']
@@ -378,4 +378,3 @@ def shutdown():
     shutdown is a no-op.
     '''
     log.debug('Citrix Netscaler proxy shutdown() called.')
-	

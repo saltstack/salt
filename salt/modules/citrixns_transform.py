@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The transform execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_transformaction(name=None, profilename=None, priority=None, state=None, requrlfrom=None, requrlinto=None,
                         resurlfrom=None, resurlinto=None, cookiedomainfrom=None, cookiedomaininto=None, comment=None,
                         save=False):
@@ -1593,4 +1592,3 @@ def update_transformprofile(name=None, ns_type=None, onlytransformabsurlinbody=N
         result['save'] = 'False'
 
     return result
-

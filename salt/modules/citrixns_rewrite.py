@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The rewrite execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_rewriteaction(name=None, ns_type=None, target=None, stringbuilderexpr=None, pattern=None, search=None,
                       bypasssafetycheck=None, refinesearch=None, comment=None, newname=None, save=False):
     '''
@@ -1578,4 +1577,3 @@ def update_rewritepolicy(name=None, rule=None, action=None, undefaction=None, co
         result['save'] = 'False'
 
     return result
-

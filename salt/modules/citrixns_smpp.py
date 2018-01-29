@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The smpp execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_smppuser(username=None, password=None, save=False):
     '''
     Add a new smppuser to the running configuration.
@@ -330,4 +329,3 @@ def update_smppuser(username=None, password=None, save=False):
         result['save'] = 'False'
 
     return result
-

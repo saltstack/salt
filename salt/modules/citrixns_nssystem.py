@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The system execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_systembackup(filename=None, level=None, comment=None, skipbackup=None, save=False):
     '''
     Add a new systembackup to the running configuration.
@@ -717,7 +716,7 @@ def add_systemgroup(groupname=None, promptstring=None, timeout=None, save=False)
         hash (#), space ( ), at (@), equal (=), colon (:), underscore (_), and the following variables:  * %u - Will be
         replaced by the user name. * %h - Will be replaced by the hostname of the NetScaler appliance. * %t - Will be
         replaced by the current time in 12-hour format. * %T - Will be replaced by the current time in 24-hour format. *
-        %d - Will be replaced by the current date. * %s - Will be replaced by the state of the NetScaler appliance. 
+        %d - Will be replaced by the current date. * %s - Will be replaced by the state of the NetScaler appliance.
         Note: The 63-character limit for the length of the string does not apply to the characters that replace the
         variables. Minimum length = 1
 
@@ -924,7 +923,7 @@ def add_systemuser(username=None, password=None, externalauth=None, promptstring
         hash (#), space ( ), at (@), equal (=), colon (:), underscore (_), and the following variables:  * %u - Will be
         replaced by the user name. * %h - Will be replaced by the hostname of the NetScaler appliance. * %t - Will be
         replaced by the current time in 12-hour format. * %T - Will be replaced by the current time in 24-hour format. *
-        %d - Will be replaced by the current date. * %s - Will be replaced by the state of the NetScaler appliance. 
+        %d - Will be replaced by the current date. * %s - Will be replaced by the state of the NetScaler appliance.
         Note: The 63-character limit for the length of the string does not apply to the characters that replace the
         variables. Minimum length = 1
 
@@ -2640,7 +2639,7 @@ def update_systemgroup(groupname=None, promptstring=None, timeout=None, save=Fal
         hash (#), space ( ), at (@), equal (=), colon (:), underscore (_), and the following variables:  * %u - Will be
         replaced by the user name. * %h - Will be replaced by the hostname of the NetScaler appliance. * %t - Will be
         replaced by the current time in 12-hour format. * %T - Will be replaced by the current time in 24-hour format. *
-        %d - Will be replaced by the current date. * %s - Will be replaced by the state of the NetScaler appliance. 
+        %d - Will be replaced by the current date. * %s - Will be replaced by the state of the NetScaler appliance.
         Note: The 63-character limit for the length of the string does not apply to the characters that replace the
         variables. Minimum length = 1
 
@@ -2703,7 +2702,7 @@ def update_systemparameter(rbaonresponse=None, promptstring=None, natpcbforceflu
         hash (#), space ( ), at (@), equal (=), colon (:), underscore (_), and the following variables:  * %u - Will be
         replaced by the user name. * %h - Will be replaced by the hostname of the NetScaler appliance. * %t - Will be
         replaced by the current time in 12-hour format. * %T - Will be replaced by the current time in 24-hour format. *
-        %d - Will be replaced by the current date. * %s - Will be replaced by the state of the NetScaler appliance. 
+        %d - Will be replaced by the current date. * %s - Will be replaced by the state of the NetScaler appliance.
         Note: The 63-character limit for the length of the string does not apply to the characters that replace the
         variables. Minimum length = 1
 
@@ -2863,7 +2862,7 @@ def update_systemuser(username=None, password=None, externalauth=None, promptstr
         hash (#), space ( ), at (@), equal (=), colon (:), underscore (_), and the following variables:  * %u - Will be
         replaced by the user name. * %h - Will be replaced by the hostname of the NetScaler appliance. * %t - Will be
         replaced by the current time in 12-hour format. * %T - Will be replaced by the current time in 24-hour format. *
-        %d - Will be replaced by the current date. * %s - Will be replaced by the state of the NetScaler appliance. 
+        %d - Will be replaced by the current date. * %s - Will be replaced by the state of the NetScaler appliance.
         Note: The 63-character limit for the length of the string does not apply to the characters that replace the
         variables. Minimum length = 1
 
@@ -2926,4 +2925,3 @@ def update_systemuser(username=None, password=None, externalauth=None, promptstr
         result['save'] = 'False'
 
     return result
-

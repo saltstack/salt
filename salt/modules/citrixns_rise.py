@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The rise execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def get_riseapbrsvc():
     '''
     Show the running configuration for the riseapbrsvc config key.
@@ -275,4 +274,3 @@ def update_riseparam(directmode=None, indirectmode=None, save=False):
         result['save'] = 'False'
 
     return result
-

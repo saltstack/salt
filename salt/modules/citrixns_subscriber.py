@@ -51,7 +51,6 @@ def __virtual__():
     return False, 'The subscriber execution module can only be loaded for citrixns proxy minions.'
 
 
-
 def add_subscriberprofile(ip=None, subscriberrules=None, subscriptionidtype=None, subscriptionidvalue=None,
                           servicepath=None, save=False):
     '''
@@ -748,4 +747,3 @@ def update_subscriberradiusinterface(listeningservice=None, save=False):
         result['save'] = 'False'
 
     return result
-

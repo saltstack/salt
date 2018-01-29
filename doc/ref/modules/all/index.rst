@@ -86,7 +86,6 @@ execution modules
     cimc
     cisconso
     citrixns_aaa
-    citrixns_app
     citrixns_appflow
     citrixns_application_firewall
     citrixns_appqoe
