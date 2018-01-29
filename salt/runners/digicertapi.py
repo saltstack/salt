@@ -50,7 +50,15 @@ import salt.utils.json
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import (CommandExecutionError, SaltRunnerError)
-from Crypto.PublicKey import RSA
+try:
+    from M2Crypto import RSA
+    HAS_M2 = True
+except ImportError:
+    HAS_M2 = False
+    try:
+        from Cryptodome.PublicKey import RSA
+    except ImportError:
+        from Crypto.PublicKey import RSA
 
 __virtualname__ = 'digicert'
 log = logging.getLogger(__name__)
@@ -490,8 +498,12 @@ def gen_key(minion_id, dns_name=None, password=None, key_len=2048):
     keygen_type = 'RSA'
 
     if keygen_type == "RSA":
-        gen = RSA.generate(bits=key_len)
-        private_key = gen.exportKey('PEM', password)
+        if HAS_M2:
+            gen = RSA.gen_key(key_len, 65537)
+            private_key = gen.as_pem(cipher='des_ede3_cbc', callback=lambda x: six.b(password))
+        else:
+            gen = RSA.generate(bits=key_len)
+            private_key = gen.exportKey('PEM', password)
         if dns_name is not None:
             bank = 'digicert/domains'
             cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)

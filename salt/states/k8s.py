@@ -25,7 +25,7 @@ Manage Kubernetes
         - node: myothernodename
         - apiserver: http://mykubeapiserer:8080
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt libs
 import salt.utils.versions

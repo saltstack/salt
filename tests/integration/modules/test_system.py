@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import logging
 import os
@@ -19,6 +19,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.states.file
 from salt.ext.six.moves import range
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -130,7 +131,7 @@ class SystemModuleTest(ModuleCase):
                             diff = abs(hwTime - swTime)
 
                             self.assertTrue(diff <= 2.0,
-                                msg=("hwclock difference too big: " + str(timeCompStr)))
+                                msg=("hwclock difference too big: " + six.text_type(timeCompStr)))
                             break
             except CompareTimeout:
                 p.terminate()

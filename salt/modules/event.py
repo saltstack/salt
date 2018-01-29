@@ -76,7 +76,7 @@ def fire_master(data, tag, preload=None):
         load = {'id': __opts__['id'],
                 'tag': tag,
                 'data': data,
-                'tok': auth.gen_token('salt'),
+                'tok': auth.gen_token(b'salt'),
                 'cmd': '_minion_event'}
 
         if isinstance(preload, dict):
