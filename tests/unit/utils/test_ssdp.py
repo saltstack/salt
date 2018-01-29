@@ -2,8 +2,9 @@
 '''
     :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
 '''
-
 from __future__ import absolute_import, print_function, unicode_literals
+import datetime
+
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     NO_MOCK,
@@ -11,10 +12,11 @@ from tests.support.mock import (
     MagicMock,
     patch)
 
-from salt.utils import ssdp
-import datetime
 from salt.ext.six.moves import zip
 from salt.ext import six
+
+import salt.utils.ssdp as ssdp
+import salt.utils.stringutils
 
 try:
     import pytest
@@ -427,7 +429,9 @@ class SSDPClientTestCase(TestCase):
             clnt._query()
             assert clnt._socket.sendto.called
             message, target = clnt._socket.sendto.call_args[0]
-            assert message == '{}{}'.format(config[ssdp.SSDPBase.SIGNATURE], f_time)
+            assert message == salt.utils.stringutils.to_bytes(
+                '{}{}'.format(config[ssdp.SSDPBase.SIGNATURE], f_time)
+            )
             assert target[0] == '<broadcast>'
             assert target[1] == config[ssdp.SSDPBase.PORT]
 
