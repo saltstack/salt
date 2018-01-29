@@ -29,6 +29,7 @@ import copy
 from collections import OrderedDict
 
 import salt.utils.json
+import salt.utils.stringutils
 
 _json = salt.utils.json.import_json()
 if not hasattr(_json, 'dumps'):
@@ -171,7 +172,7 @@ class SSDPFactory(SSDPBase):
         :param addr:
         :return:
         '''
-        message = data.decode()
+        message = salt.utils.stringutils.to_unicode(data)
         if message.startswith(self.signature):
             try:
                 timestamp = float(message[len(self.signature):])
@@ -200,7 +201,12 @@ class SSDPFactory(SSDPBase):
             )
         else:
             if self.disable_hidden:
-                self._sendto('{0}:E:{1}'.format(self.signature, 'Invalid packet signature').encode(), addr)
+                self._sendto(
+                    salt.utils.stringutils.to_bytes(
+                        '{0}:E:{1}'.format(self.signature, 'Invalid packet signature'),
+                        addr
+                    )
+                )
             self.log.debug('Received bad signature from %s:%s', *addr)
 
 
@@ -351,8 +357,9 @@ class SSDPDiscoveryClient(SSDPBase):
         Query the broadcast for defined services.
         :return:
         '''
-        query = "{}{}".format(self.signature, time.time())
-        self._socket.sendto(query.encode(), ('<broadcast>', self.port))
+        query = salt.utils.stringutils.to_bytes(
+            "{}{}".format(self.signature, time.time()))
+        self._socket.sendto(query, ('<broadcast>', self.port))
 
         return query
 
@@ -391,7 +398,7 @@ class SSDPDiscoveryClient(SSDPBase):
         else:
             for addr, descriptions in response.items():
                 for data in descriptions:  # Several masters can run at the same machine.
-                    msg = data.decode()
+                    msg = salt.utils.stringutils.to_unicode(data)
                     if msg.startswith(self.signature):
                         msg = msg.split(self.signature)[-1]
                         self.log.debug(
