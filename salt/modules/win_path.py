@@ -6,7 +6,7 @@ Note that not all Windows applications will rehash the PATH environment variable
 Only the ones that listen to the WM_SETTINGCHANGE message
 http://support.microsoft.com/kb/104011
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
