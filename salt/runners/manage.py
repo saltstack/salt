@@ -5,7 +5,7 @@ and what hosts are down
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import operator
 import re
@@ -24,6 +24,7 @@ import salt.key
 import salt.utils.compat
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.path
 import salt.utils.raetevent
 import salt.utils.versions
 import salt.client
@@ -39,7 +40,7 @@ log = logging.getLogger(__name__)
 
 def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     client = salt.client.get_local_client(__opts__['conf_file'])
-    pub_data = client.run_job(tgt, 'test.ping', (), tgt_type, '', timeout, '')
+    pub_data = client.run_job(tgt, 'test.ping', (), tgt_type, '', timeout, '', listen=True)
 
     if not pub_data:
         return pub_data
@@ -69,6 +70,15 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     return returned, not_returned
 
 
+def _warn_expr_form():
+    salt.utils.versions.warn_until(
+        'Fluorine',
+        'the target type should be passed using the \'tgt_type\' '
+        'argument instead of \'expr_form\'. Support for using '
+        '\'expr_form\' will be removed in Salt Fluorine.'
+    )
+
+
 def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):
     '''
     .. versionchanged:: 2017.7.0
@@ -88,12 +98,7 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
+        _warn_expr_form()
         tgt_type = expr_form
 
     ret = {}
@@ -103,7 +108,8 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
     if not gather_job_timeout:
         gather_job_timeout = __opts__['gather_job_timeout']
 
-    ret['up'], ret['down'] = _ping(tgt, tgt_type, timeout, gather_job_timeout)
+    res = _ping(tgt, tgt_type, timeout, gather_job_timeout)
+    ret['up'], ret['down'] = ([], []) if not res else res
     return ret
 
 
@@ -139,7 +145,7 @@ def key_regen():
         print(client_error)
         return False
 
-    for root, _, files in os.walk(__opts__['pki_dir']):
+    for root, _, files in salt.utils.path.os_walk(__opts__['pki_dir']):
         for fn_ in files:
             path = os.path.join(root, fn_)
             try:
@@ -177,6 +183,12 @@ def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
         salt-run manage.down tgt="webservers" tgt_type="nodegroup"
 
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        _warn_expr_form()
+        tgt_type = expr_form
+
     ret = status(output=False, tgt=tgt, tgt_type=tgt_type).get('down', [])
     for minion in ret:
         if removekeys:
@@ -201,6 +213,12 @@ def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeou
         salt-run manage.up tgt="webservers" tgt_type="nodegroup"
         salt-run manage.up timeout=5 gather_job_timeout=10
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        _warn_expr_form()
+        tgt_type = expr_form
+
     ret = status(
         output=False,
         tgt=tgt,
@@ -542,7 +560,7 @@ def get_stats(estate=None, stack='road'):
         event = salt.utils.raetevent.StatsEvent(__opts__, __opts__['sock_dir'], tag=tag, estate=estate)
         stats = event.get_event(wait=60, tag=tag)
     else:
-        #TODO: implement 0MQ analog
+        # TODO: implement 0MQ analog
         stats = 'Not implemented'
 
     return stats
@@ -595,6 +613,12 @@ def safe_accept(target, tgt_type='glob', expr_form=None):
         salt-run manage.safe_accept my_minion
         salt-run manage.safe_accept minion1,minion2 tgt_type=list
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        _warn_expr_form()
+        tgt_type = expr_form
+
     salt_key = salt.key.Key(__opts__)
     ssh_client = salt.client.ssh.client.SSHClient()
 
@@ -815,7 +839,7 @@ def bootstrap(version='develop',
             client_opts['argv'] = ['file.remove', tmp_dir]
             salt.client.ssh.SSH(client_opts).run()
         except SaltSystemExit as exc:
-            log.error(str(exc))
+            log.error(six.text_type(exc))
 
 
 def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',

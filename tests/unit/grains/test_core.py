@@ -4,8 +4,10 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
+import socket
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -19,11 +21,28 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.network
 import salt.utils.platform
 import salt.grains.core as core
 
 # Import 3rd-party libs
 from salt.ext import six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
+
+log = logging.getLogger(__name__)
+
+# Globals
+IPv4Address = ipaddress.IPv4Address
+IPv6Address = ipaddress.IPv6Address
+IP4_LOCAL = '127.0.0.1'
+IP4_ADD1 = '10.0.0.1'
+IP4_ADD2 = '10.0.0.2'
+IP6_LOCAL = '::1'
+IP6_ADD1 = '2001:4860:4860::8844'
+IP6_ADD2 = '2001:4860:4860::8888'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -482,6 +501,7 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.1991-05.com.microsoft:simon-x1'])
 
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_aix_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
             return_value='initiator_name iqn.localhost.hostid.7f000001'
@@ -497,6 +517,8 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.localhost.hostid.7f000001'])
 
+    @skipIf(salt.utils.platform.is_darwin(), 'MacOSX iscsi grains not supported')
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_linux_iscsi_iqn_grains(self):
         _iscsi_file = '## DO NOT EDIT OR REMOVE THIS FILE!\n' \
                       '## If you remove this file, the iSCSI daemon will not start.\n' \
@@ -600,6 +622,7 @@ SwapTotal:       4789244 kB'''
         self.assertEqual(os_grains.get('mem_total'), 15895)
         self.assertEqual(os_grains.get('swap_total'), 4676)
 
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_bsd_memdata(self):
         '''
         Test to memdata on *BSD systems
@@ -668,3 +691,172 @@ SwapTotal:       4789244 kB'''
 
         self.assertEqual(os_grains.get('mem_total'), 2023)
         self.assertEqual(os_grains.get('swap_total'), 400)
+
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
+    def test_docker_virtual(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        '''
+        with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
+            with patch.object(os.path,
+                              'isfile',
+                              MagicMock(side_effect=lambda x: True if x == '/proc/1/cgroup' else False)):
+                for cgroup_substr in (':/system.slice/docker', ':/docker/',
+                                       ':/docker-ce/'):
+                    cgroup_data = \
+                        '10:memory{0}a_long_sha256sum'.format(cgroup_substr)
+                    log.debug(
+                        'Testing Docker cgroup substring \'%s\'', cgroup_substr)
+                    with patch('salt.utils.files.fopen', mock_open(read_data=cgroup_data)):
+                        with patch.dict(core.__salt__, {'cmd.run_all': MagicMock()}):
+                            self.assertEqual(
+                                core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                                'Docker'
+                            )
+
+    def _check_ipaddress(self, value, ip_v):
+        '''
+        check if ip address in a list is valid
+        '''
+        for val in value:
+            assert isinstance(val, six.string_types)
+            ip_method = 'is_ipv{0}'.format(ip_v)
+            self.assertTrue(getattr(salt.utils.network, ip_method)(val))
+
+    def _check_empty(self, key, value, empty):
+        '''
+        if empty is False and value does not exist assert error
+        if empty is True and value exists assert error
+        '''
+        if not empty and not value:
+            raise Exception("{0} is empty, expecting a value".format(key))
+        elif empty and value:
+            raise Exception("{0} is suppose to be empty. value: {1} \
+                            exists".format(key, value))
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_fqdn_return(self):
+        '''
+        test ip4 and ip6 return values
+        '''
+        net_ip4_mock = [IP4_LOCAL, IP4_ADD1, IP4_ADD2]
+        net_ip6_mock = [IP6_LOCAL, IP6_ADD1, IP6_ADD2]
+
+        self._run_fqdn_tests(net_ip4_mock, net_ip6_mock,
+                             ip4_empty=False, ip6_empty=False)
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_fqdn6_empty(self):
+        '''
+        test when ip6 is empty
+        '''
+        net_ip4_mock = [IP4_LOCAL, IP4_ADD1, IP4_ADD2]
+        net_ip6_mock = []
+
+        self._run_fqdn_tests(net_ip4_mock, net_ip6_mock,
+                             ip4_empty=False)
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_fqdn4_empty(self):
+        '''
+        test when ip4 is empty
+        '''
+        net_ip4_mock = []
+        net_ip6_mock = [IP6_LOCAL, IP6_ADD1, IP6_ADD2]
+
+        self._run_fqdn_tests(net_ip4_mock, net_ip6_mock,
+                             ip6_empty=False)
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_fqdn_all_empty(self):
+        '''
+        test when both ip4 and ip6 are empty
+        '''
+        net_ip4_mock = []
+        net_ip6_mock = []
+
+        self._run_fqdn_tests(net_ip4_mock, net_ip6_mock)
+
+    def _run_fqdn_tests(self, net_ip4_mock, net_ip6_mock,
+                        ip6_empty=True, ip4_empty=True):
+
+        def _check_type(key, value, ip4_empty, ip6_empty):
+            '''
+            check type and other checks
+            '''
+            assert isinstance(value, list)
+
+            if '4' in key:
+                self._check_empty(key, value, ip4_empty)
+                self._check_ipaddress(value, ip_v='4')
+            elif '6' in key:
+                self._check_empty(key, value, ip6_empty)
+                self._check_ipaddress(value, ip_v='6')
+
+        ip4_mock = [(2, 1, 6, '', (IP4_ADD1, 0)),
+                    (2, 3, 0, '', (IP4_ADD2, 0))]
+        ip6_mock = [(10, 1, 6, '', (IP6_ADD1, 0, 0, 0)),
+                    (10, 3, 0, '', (IP6_ADD2, 0, 0, 0))]
+
+        with patch.dict(core.__opts__, {'ipv6': False}):
+            with patch.object(salt.utils.network, 'ip_addrs',
+                             MagicMock(return_value=net_ip4_mock)):
+                with patch.object(salt.utils.network, 'ip_addrs6',
+                                 MagicMock(return_value=net_ip6_mock)):
+                    with patch.object(core.socket, 'getaddrinfo', side_effect=[ip4_mock, ip6_mock]):
+                        get_fqdn = core.ip_fqdn()
+                        ret_keys = ['fqdn_ip4', 'fqdn_ip6', 'ipv4', 'ipv6']
+                        for key in ret_keys:
+                            value = get_fqdn[key]
+                            _check_type(key, value, ip4_empty, ip6_empty)
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_dns_return(self):
+        '''
+        test the return for a dns grain. test for issue:
+        https://github.com/saltstack/salt/issues/41230
+        '''
+        resolv_mock = {'domain': '', 'sortlist': [], 'nameservers':
+                   [ipaddress.IPv4Address(IP4_ADD1),
+                    ipaddress.IPv6Address(IP6_ADD1)], 'ip4_nameservers':
+                   [ipaddress.IPv4Address(IP4_ADD1)],
+                   'search': ['test.saltstack.com'], 'ip6_nameservers':
+                   [ipaddress.IPv6Address(IP6_ADD1)], 'options': []}
+        ret = {'dns': {'domain': '', 'sortlist': [], 'nameservers':
+                       [IP4_ADD1, IP6_ADD1], 'ip4_nameservers':
+                       [IP4_ADD1], 'search': ['test.saltstack.com'],
+                       'ip6_nameservers': [IP6_ADD1], 'options':
+                       []}}
+        self._run_dns_test(resolv_mock, ret)
+
+    def _run_dns_test(self, resolv_mock, ret):
+        with patch.object(salt.utils, 'is_windows',
+                          MagicMock(return_value=False)):
+            with patch.dict(core.__opts__, {'ipv6': False}):
+                with patch.object(salt.utils.dns, 'parse_resolv',
+                                  MagicMock(return_value=resolv_mock)):
+                    get_dns = core.dns()
+                    self.assertEqual(get_dns, ret)
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_fqdns_return(self):
+        '''
+        test the return for a dns grain. test for issue:
+        https://github.com/saltstack/salt/issues/41230
+        '''
+        reverse_resolv_mock = [('foo.bar.baz', [], ['1.2.3.4']),
+        ('rinzler.evil-corp.com', [], ['5.6.7.8']),
+        ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
+        ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
+        ret = {'fqdns': ['rinzler.evil-corp.com', 'foo.bar.baz', 'bluesniff.foo.bar']}
+        self._run_fqdns_test(reverse_resolv_mock, ret)
+
+    def _run_fqdns_test(self, reverse_resolv_mock, ret):
+        with patch.object(salt.utils, 'is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.network.ip_addrs',
+            MagicMock(return_value=['1.2.3.4', '5.6.7.8'])),\
+            patch('salt.utils.network.ip_addrs6',
+            MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef'])):
+                with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+                    fqdns = core.fqdns()
+                    self.assertEqual(fqdns, ret)

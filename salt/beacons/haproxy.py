@@ -7,7 +7,7 @@ Fire an event when over a specified threshold.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 from salt.ext.six.moves import map
 
@@ -47,7 +47,7 @@ def validate(config):
                                'must be a dictionary.')
             else:
                 for backend in _config['backends']:
-                    log.debug('_config {}'.format(_config['backends'][backend]))
+                    log.debug('_config %s', _config['backends'][backend])
                     if 'servers' not in _config['backends'][backend]:
                         return False, ('Backends for haproxy beacon '
                                        'require servers.')
@@ -92,10 +92,10 @@ def beacon(config):
                                'scur': scur,
                                'threshold': threshold,
                                }
-                    log.debug('Emit because {0} > {1}'
-                              ' for {2} in {3}'.format(scur,
-                                                       threshold,
-                                                       server,
-                                                       backend))
+                    log.debug('Emit because %s > %s'
+                              ' for %s in %s', scur,
+                                               threshold,
+                                               server,
+                                               backend)
                     ret.append(_server)
     return ret

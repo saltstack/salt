@@ -19,7 +19,7 @@ Dependencies
 .. versionchanged:: 2017.7.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python lib
 import logging
@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 import salt.utils.files
 import salt.utils.napalm
 import salt.utils.templates
+import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -230,7 +231,7 @@ def _config_logic(napalm_device,
 
 
 @salt.utils.napalm.proxy_napalm_wrap
-def connected(**kwarvs):  # pylint: disable=unused-argument
+def connected(**kwargs):  # pylint: disable=unused-argument
     '''
     Specifies if the connection to the device succeeded.
 
@@ -272,7 +273,7 @@ def facts(**kwargs):  # pylint: disable=unused-argument
     .. code-block:: python
 
         {
-            'os_version': u'13.3R6.5',
+            'os_version': '13.3R6.5',
             'uptime': 10117140,
             'interface_list': [
                 'lc-0/0/0',
@@ -285,11 +286,11 @@ def facts(**kwargs):  # pylint: disable=unused-argument
                 'gr-0/0/10',
                 'ip-0/0/10'
             ],
-            'vendor': u'Juniper',
-            'serial_number': u'JN131356FBFA',
-            'model': u'MX480',
-            'hostname': u're0.edge05.syd01',
-            'fqdn': u're0.edge05.syd01'
+            'vendor': 'Juniper',
+            'serial_number': 'JN131356FBFA',
+            'model': 'MX480',
+            'hostname': 're0.edge05.syd01',
+            'fqdn': 're0.edge05.syd01'
         }
     '''
 
@@ -509,14 +510,14 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     .. code-block:: python
 
         {
-            u'show version and haiku':  u'Hostname: re0.edge01.arn01
+            'show version and haiku':  'Hostname: re0.edge01.arn01
                                           Model: mx480
                                           Junos: 13.3R6.5
                                             Help me, Obi-Wan
                                             I just saw Episode Two
                                             You're my only hope
                                          ',
-            u'show chassis fan' :   u'Item                      Status   RPM     Measurement
+            'show chassis fan' :   'Item                      Status   RPM     Measurement
                                       Top Rear Fan              OK       3840    Spinning at intermediate-speed
                                       Bottom Rear Fan           OK       3840    Spinning at intermediate-speed
                                       Top Middle Fan            OK       3900    Spinning at intermediate-speed
@@ -572,22 +573,22 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         log.error(raw_cli_outputs['comment'])
         return raw_cli_outputs
     textfsm_template = kwargs.get('textfsm_template')
-    log.debug('textfsm_template: {}'.format(textfsm_template))
+    log.debug('textfsm_template: %s', textfsm_template)
     textfsm_path = kwargs.get('textfsm_path') or __opts__.get('textfsm_path') or\
                    __pillar__.get('textfsm_path')
-    log.debug('textfsm_path: {}'.format(textfsm_path))
+    log.debug('textfsm_path: %s', textfsm_path)
     textfsm_template_dict = kwargs.get('textfsm_template_dict') or __opts__.get('napalm_cli_textfsm_template_dict') or\
                             __pillar__.get('napalm_cli_textfsm_template_dict', {})
-    log.debug('TextFSM command-template mapping: {}'.format(textfsm_template_dict))
+    log.debug('TextFSM command-template mapping: %s', textfsm_template_dict)
     index_file = kwargs.get('index_file') or __opts__.get('textfsm_index_file') or\
                  __pillar__.get('textfsm_index_file')
-    log.debug('index_file: {}'.format(index_file))
+    log.debug('index_file: %s', index_file)
     platform_grain_name = kwargs.get('platform_grain_name') or __opts__.get('textfsm_platform_grain') or\
                           __pillar__.get('textfsm_platform_grain', 'os')
-    log.debug('platform_grain_name: {}'.format(platform_grain_name))
+    log.debug('platform_grain_name: %s', platform_grain_name)
     platform_column_name = kwargs.get('platform_column_name') or __opts__.get('textfsm_platform_column_name') or\
                            __pillar__.get('textfsm_platform_column_name', 'Platform')
-    log.debug('platform_column_name: {}'.format(platform_column_name))
+    log.debug('platform_column_name: %s', platform_column_name)
     saltenv = kwargs.get('saltenv', 'base')
     include_empty = kwargs.get('include_empty', False)
     include_pat = kwargs.get('include_pat')
@@ -600,11 +601,11 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     log.debug('Starting to analyse the raw outputs')
     for command in list(commands):
         command_output = raw_cli_outputs['out'][command]
-        log.debug('Output from command: {}'.format(command))
+        log.debug('Output from command: %s', command)
         log.debug(command_output)
         processed_command_output = None
         if textfsm_path:
-            log.debug('Using the templates under {}'.format(textfsm_path))
+            log.debug('Using the templates under %s', textfsm_path)
             processed_cli_output = __salt__['textfsm.index'](command,
                                                              platform_grain_name=platform_grain_name,
                                                              platform_column_name=platform_column_name,
@@ -623,7 +624,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                     processed_cli_output['comment'])
                 log.error(processed_cli_outputs['comment'])
             elif processed_cli_output['out']:
-                log.debug('All good, {} has a nice output!'.format(command))
+                log.debug('All good, %s has a nice output!', command)
                 processed_command_output = processed_cli_output['out']
             else:
                 comment = '''\nProcessing "{}" didn't fail, but didn't return anything either. Dumping raw.'''.format(
@@ -634,23 +635,25 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         elif textfsm_template or command in textfsm_template_dict:
             if command in textfsm_template_dict:
                 textfsm_template = textfsm_template_dict[command]
-            log.debug('Using {0} to process the command: {1}'.format(textfsm_template, command))
+            log.debug('Using %s to process the command: %s', textfsm_template, command)
             processed_cli_output = __salt__['textfsm.extract'](textfsm_template,
                                                                raw_text=command_output,
                                                                saltenv=saltenv)
             log.debug('Processed CLI output:')
             log.debug(processed_cli_output)
             if not processed_cli_output['result']:
-                log.debug('Apparently this didnt work, returnin the raw output')
+                log.debug('Apparently this didnt work, returning '
+                          'the raw output')
                 processed_command_output = command_output
                 processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}'.format(command,
                     processed_cli_output['comment'])
                 log.error(processed_cli_outputs['comment'])
             elif processed_cli_output['out']:
-                log.debug('All good, {} has a nice output!'.format(command))
+                log.debug('All good, %s has a nice output!', command)
                 processed_command_output = processed_cli_output['out']
             else:
-                log.debug('Processing {} didnt fail, but didnt return anything either. Dumping raw.'.format(command))
+                log.debug('Processing %s didnt fail, but didnt return'
+                          ' anything either. Dumping raw.', command)
                 processed_command_output = command_output
         else:
             log.error('No TextFSM template specified, or no TextFSM path defined')
@@ -849,28 +852,28 @@ def ipaddrs(**kwargs):  # pylint: disable=unused-argument
     .. code-block:: python
 
         {
-            u'FastEthernet8': {
-                u'ipv4': {
-                    u'10.66.43.169': {
+            'FastEthernet8': {
+                'ipv4': {
+                    '10.66.43.169': {
                         'prefix_length': 22
                     }
                 }
             },
-            u'Loopback555': {
-                u'ipv4': {
-                    u'192.168.1.1': {
+            'Loopback555': {
+                'ipv4': {
+                    '192.168.1.1': {
                         'prefix_length': 24
                     }
                 },
-                u'ipv6': {
-                    u'1::1': {
+                'ipv6': {
+                    '1::1': {
                         'prefix_length': 64
                     },
-                    u'2001:DB8:1::1': {
+                    '2001:DB8:1::1': {
                         'prefix_length': 64
                     },
-                    u'FE80::3': {
-                        'prefix_length': u'N/A'
+                    'FE80::3': {
+                        'prefix_length': 'N/A'
                     }
                 }
             }
@@ -905,21 +908,21 @@ def interfaces(**kwargs):  # pylint: disable=unused-argument
     .. code-block:: python
 
         {
-            u'Management1': {
+            'Management1': {
                 'is_up': False,
                 'is_enabled': False,
-                'description': u'',
+                'description': '',
                 'last_flapped': -1,
                 'speed': 1000,
-                'mac_address': u'dead:beef:dead',
+                'mac_address': 'dead:beef:dead',
             },
-            u'Ethernet1':{
+            'Ethernet1':{
                 'is_up': True,
                 'is_enabled': True,
-                'description': u'foo',
+                'description': 'foo',
                 'last_flapped': 1429978575.1554043,
                 'speed': 1000,
-                'mac_address': u'beef:dead:beef',
+                'mac_address': 'beef:dead:beef',
             }
         }
     '''
@@ -956,17 +959,17 @@ def lldp(interface='', **kwargs):  # pylint: disable=unused-argument
         {
             'TenGigE0/0/0/8': [
                 {
-                    'parent_interface': u'Bundle-Ether8',
-                    'interface_description': u'TenGigE0/0/0/8',
-                    'remote_chassis_id': u'8c60.4f69.e96c',
-                    'remote_system_name': u'switch',
-                    'remote_port': u'Eth2/2/1',
-                    'remote_port_description': u'Ethernet2/2/1',
-                    'remote_system_description': u'Cisco Nexus Operating System (NX-OS) Software 7.1(0)N1(1a)
+                    'parent_interface': 'Bundle-Ether8',
+                    'interface_description': 'TenGigE0/0/0/8',
+                    'remote_chassis_id': '8c60.4f69.e96c',
+                    'remote_system_name': 'switch',
+                    'remote_port': 'Eth2/2/1',
+                    'remote_port_description': 'Ethernet2/2/1',
+                    'remote_system_description': 'Cisco Nexus Operating System (NX-OS) Software 7.1(0)N1(1a)
                           TAC support: http://www.cisco.com/tac
                           Copyright (c) 2002-2015, Cisco Systems, Inc. All rights reserved.',
-                    'remote_system_capab': u'B, R',
-                    'remote_system_enable_capab': u'B'
+                    'remote_system_capab': 'B, R',
+                    'remote_system_enable_capab': 'B'
                 }
             ]
         }
@@ -1178,6 +1181,7 @@ def load_config(filename=None,
                 debug=False,
                 replace=False,
                 inherit_napalm_device=None,
+                saltenv='base',
                 **kwargs):  # pylint: disable=unused-argument
     '''
     Applies configuration changes on the device. It can be loaded from a file or from inline string.
@@ -1193,10 +1197,21 @@ def load_config(filename=None,
     To replace the config, set ``replace`` to ``True``.
 
     filename
-        Path to the file containing the desired configuration. By default is None.
+        Path to the file containing the desired configuration.
+        This can be specified using the absolute path to the file,
+        or using one of the following URL schemes:
+
+        - ``salt://``, to fetch the template from the Salt fileserver.
+        - ``http://`` or ``https://``
+        - ``ftp://``
+        - ``s3://``
+        - ``swift://``
+
+        .. versionchanged:: Oxygen
 
     text
         String containing the desired configuration.
+        This argument is ignored when ``filename`` is specified.
 
     test: False
         Dry run? If set as ``True``, will apply the config, discard and return the changes. Default: ``False``
@@ -1215,6 +1230,11 @@ def load_config(filename=None,
         Load and replace the configuration. Default: ``False``.
 
         .. versionadded:: 2016.11.2
+
+    saltenv: ``base``
+        Specifies the Salt environment name.
+
+        .. versionadded:: Oxygen
 
     :return: a dictionary having the following keys:
 
@@ -1246,7 +1266,6 @@ def load_config(filename=None,
             'diff': '[edit interfaces xe-0/0/5]+   description "Adding a description";'
         }
     '''
-
     fun = 'load_merge_candidate'
     if replace:
         fun = 'load_replace_candidate'
@@ -1259,11 +1278,22 @@ def load_config(filename=None,
         # compare_config, discard / commit
         # which have to be over the same session
         napalm_device['CLOSE'] = False  # pylint: disable=undefined-variable
+    if filename:
+        text = __salt__['cp.get_file_str'](filename, saltenv=saltenv)
+        if text is False:
+            # When using salt:// or https://, if the resource is not available,
+            #   it will either raise an exception, or return False.
+            ret = {
+                'result': False,
+                'out': None
+            }
+            ret['comment'] = 'Unable to read from {}. Please specify a valid file or text.'.format(filename)
+            log.error(ret['comment'])
+            return ret
     _loaded = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         fun,
         **{
-            'filename': filename,
             'config': text
         }
     )
@@ -1271,7 +1301,7 @@ def load_config(filename=None,
     if debug:
         if filename:
             with salt.utils.files.fopen(filename) as rfh:
-                loaded_config = rfh.read()
+                loaded_config = salt.utils.stringutils.to_unicode(rfh.read())
         else:
             loaded_config = text
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
@@ -1320,6 +1350,10 @@ def load_template(template_name,
 
     To replace the config, set ``replace`` to ``True``.
 
+    .. warning::
+        The support for native NAPALM templates will be dropped in Salt Fluorine.
+        Implicitly, the ``template_path`` argument will be removed.
+
     template_name
         Identifies path to the template source.
         The template can be either stored on the local machine, either remotely.
@@ -1355,6 +1389,9 @@ def load_template(template_name,
         E.g.: if ``template_name`` is specified as ``my_template.jinja``,
         in order to find the template, this argument must be provided:
         ``template_path: /absolute/path/to/``.
+
+        .. note::
+            This argument will be deprecated beginning with release codename ``Fluorine``.
 
     template_hash: None
         Hash of the template file. Format: ``{hash_type: 'md5', 'hsum': <md5sum>}``
@@ -1527,7 +1564,11 @@ def load_template(template_name,
         'out': None
     }
     loaded_config = None
-
+    if template_path:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Use of `template_path` detected. This argument will be removed in Salt Fluorine.'
+        )
     # prechecks
     if template_engine not in salt.utils.templates.TEMPLATE_REGISTRY:
         _loaded.update({
@@ -1623,7 +1664,7 @@ def load_template(template_name,
                     _loaded['comment'] = 'Error while rendering the template.'
                     return _loaded
                 with salt.utils.files.fopen(_temp_tpl_file) as rfh:
-                    _rendered = rfh.read()
+                    _rendered = salt.utils.stringutils.to_unicode(rfh.read())
                 __salt__['file.remove'](_temp_tpl_file)
             else:
                 return _loaded  # exit

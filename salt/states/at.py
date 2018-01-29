@@ -5,7 +5,7 @@ Configuration disposable regularly scheduled tasks for at.
 
 The at state can be add disposable regularly scheduled tasks for your system.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging

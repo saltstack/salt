@@ -183,7 +183,7 @@ and communicate with the ESXi host.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -228,13 +228,12 @@ def init(opts):
     This function gets called when the proxy starts up.
     For login the protocol and port are cached.
     '''
-    log.info('Initting vcenter proxy module in process {0}'
-             ''.format(os.getpid()))
+    log.info('Initting vcenter proxy module in process %s', os.getpid())
     log.trace('VCenter Proxy Validating vcenter proxy input')
     schema = VCenterProxySchema.serialize()
-    log.trace('schema = {}'.format(schema))
+    log.trace('schema = %s', schema)
     proxy_conf = merge(opts.get('proxy', {}), __pillar__.get('proxy', {}))
-    log.trace('proxy_conf = {0}'.format(proxy_conf))
+    log.trace('proxy_conf = %s', proxy_conf)
     try:
         jsonschema.validate(proxy_conf, schema)
     except jsonschema.exceptions.ValidationError as exc:
@@ -281,7 +280,7 @@ def init(opts):
             username, password = find_credentials()
             DETAILS['password'] = password
         except salt.exceptions.SaltSystemExit as err:
-            log.critical('Error: {0}'.format(err))
+            log.critical('Error: %s', err)
             return False
     return True
 

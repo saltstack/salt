@@ -55,7 +55,7 @@ States to manage Docker containers, images, volumes, and networks
     The old syntax will continue to work until the **Fluorine** release of
     Salt.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 

@@ -17,7 +17,6 @@ from salt.exceptions import CommandExecutionError
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PipTestCase(TestCase, LoaderModuleMockMixin):
-
     def setup_loader_modules(self):
         return {pip: {'__salt__': {'cmd.which_bin': lambda _: 'pip'}}}
 
@@ -1106,6 +1105,63 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     ret, {
                         'bbfreeze-loader': '1.1.0',
                         'bbfreeze': '1.1.0',
+                    }
+                )
+
+    def test_list_upgrades_legacy(self):
+        eggs = [
+            'apache-libcloud (1.1.0) - Latest: 2.2.1 [wheel]',
+            'appdirs (1.4.1) - Latest: 1.4.3 [wheel]',
+            'awscli (1.11.63) - Latest: 1.12.1 [sdist]'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.list_upgrades()
+                mock.assert_called_with(
+                    ['pip', 'list', '--outdated'],
+                    cwd=None,
+                    runas=None,
+                )
+                self.assertEqual(
+                    ret, {
+                        'apache-libcloud': '2.2.1 [wheel]',
+                        'appdirs': '1.4.3 [wheel]',
+                        'awscli': '1.12.1 [sdist]'
+                    }
+                )
+
+    def test_list_upgrades_gt9(self):
+        eggs = '''[{"latest_filetype": "wheel", "version": "1.1.0", "name": "apache-libcloud", "latest_version": "2.2.1"},
+                {"latest_filetype": "wheel", "version": "1.4.1", "name": "appdirs", "latest_version": "1.4.3"},
+                {"latest_filetype": "sdist", "version": "1.11.63", "name": "awscli", "latest_version": "1.12.1"}
+                ]'''
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '{0}'.format(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='9.1.1')):
+                ret = pip.list_upgrades()
+                mock.assert_called_with(
+                    ['pip', 'list', '--outdated', '--format=json'],
+                    cwd=None,
+                    runas=None,
+                )
+                self.assertEqual(
+                    ret, {
+                        'apache-libcloud': '2.2.1',
+                        'appdirs': '1.4.3',
+                        'awscli': '1.12.1'
                     }
                 )
 

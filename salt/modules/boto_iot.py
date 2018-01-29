@@ -50,14 +50,14 @@ The dependencies listed above can be installed via package or pip.
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import json
 import datetime
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.json
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -209,7 +209,7 @@ def create_thing_type(thingTypeName, thingTypeDescription,
         )
 
         if thingtype:
-            log.info('The newly created thing type ARN is {0}'.format(thingtype['thingTypeArn']))
+            log.info('The newly created thing type ARN is %s', thingtype['thingTypeArn'])
 
             return {'created': True, 'thingTypeArn': thingtype['thingTypeArn']}
         else:
@@ -329,11 +329,11 @@ def create_policy(policyName, policyDocument,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if not isinstance(policyDocument, string_types):
-            policyDocument = json.dumps(policyDocument)
+            policyDocument = salt.utils.json.dumps(policyDocument)
         policy = conn.create_policy(policyName=policyName,
                                     policyDocument=policyDocument)
         if policy:
-            log.info('The newly created policy version is {0}'.format(policy['policyVersionId']))
+            log.info('The newly created policy version is %s', policy['policyVersionId'])
 
             return {'created': True, 'versionId': policy['policyVersionId']}
         else:
@@ -446,12 +446,12 @@ def create_policy_version(policyName, policyDocument, setAsDefault=False,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if not isinstance(policyDocument, string_types):
-            policyDocument = json.dumps(policyDocument)
+            policyDocument = salt.utils.json.dumps(policyDocument)
         policy = conn.create_policy_version(policyName=policyName,
                                     policyDocument=policyDocument,
                                     setAsDefault=setAsDefault)
         if policy:
-            log.info('The newly created policy version is {0}'.format(policy['policyVersionId']))
+            log.info('The newly created policy version is %s', policy['policyVersionId'])
 
             return {'created': True, 'name': policy['policyVersionId']}
         else:
@@ -609,7 +609,7 @@ def set_default_policy_version(policyName, policyVersionId,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.set_default_policy_version(policyName=policyName,
-                                 policyVersionId=str(policyVersionId))
+                                 policyVersionId=str(policyVersionId))  # future lint: disable=blacklisted-function
         return {'changed': True}
     except ClientError as e:
         return {'changed': False, 'error': salt.utils.boto3.get_error(e)}

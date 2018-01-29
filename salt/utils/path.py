@@ -5,7 +5,7 @@ lack of support for reading NTFS links.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import errno
 import logging
@@ -238,7 +238,10 @@ def which(exe=None):
                     # safely rely on that behavior
                     if _is_executable_file_or_link(full_path + ext):
                         return full_path + ext
-        log.trace('\'{0}\' could not be found in the following search path: \'{1}\''.format(exe, search_path))
+        log.trace(
+            '\'%s\' could not be found in the following search path: \'%s\'',
+            exe, search_path
+        )
     else:
         log.error('No executable was passed to be searched by salt.utils.path.which()')
 
@@ -337,12 +340,12 @@ def sanitize_win_path(winpath):
     Remove illegal path characters for windows
     '''
     intab = '<>:|?*'
-    outtab = '_' * len(intab)
-    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
-    if isinstance(winpath, six.string_types):
+    if isinstance(winpath, six.text_type):
+        winpath = winpath.translate(dict((ord(c), '_') for c in intab))
+    elif isinstance(winpath, six.string_types):
+        outtab = '_' * len(intab)
+        trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
         winpath = winpath.translate(trantab)
-    elif isinstance(winpath, six.text_type):
-        winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
     return winpath
 
 
@@ -401,3 +404,12 @@ def safe_path(path, allow_path=None):
                 good_path = True
 
     return good_path
+
+
+def os_walk(top, *args, **kwargs):
+    '''
+    This is a helper than ensures that all paths returned from os.walk are
+    unicode.
+    '''
+    for item in os.walk(top, *args, **kwargs):
+        yield salt.utils.data.decode(item, preserve_tuples=True)

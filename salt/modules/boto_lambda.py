@@ -80,9 +80,8 @@ The dependencies listed above can be installed via package or pip.
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import json
 import time
 import random
 
@@ -90,6 +89,7 @@ import random
 from salt.ext import six
 import salt.utils.compat
 import salt.utils.files
+import salt.utils.json
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range  # pylint: disable=import-error
@@ -207,7 +207,7 @@ def _filedata(infile):
 
 def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
     if isinstance(conf, six.string_types):
-        conf = json.loads(conf)
+        conf = salt.utils.json.loads(conf)
     if not conf:
         return None
     if not isinstance(conf, dict):
@@ -300,8 +300,7 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
             else:
                 break
         if func:
-            log.info('The newly created function name is {0}'.format(
-                func['FunctionName']))
+            log.info('The newly created function name is %s', func['FunctionName'])
 
             return {'created': True, 'name': func['FunctionName']}
         else:
@@ -519,9 +518,9 @@ def add_permission(FunctionName, StatementId, Action, Principal, SourceArn=None,
         kwargs = {}
         for key in ('SourceArn', 'SourceAccount', 'Qualifier'):
             if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
+                kwargs[key] = str(locals()[key])  # future lint: disable=blacklisted-function
         conn.add_permission(FunctionName=FunctionName, StatementId=StatementId,
-                            Action=Action, Principal=str(Principal),
+                            Action=Action, Principal=str(Principal),  # future lint: disable=blacklisted-function
                             **kwargs)
         return {'updated': True}
     except ClientError as e:
@@ -583,7 +582,7 @@ def get_permissions(FunctionName, Qualifier=None,
                                  **kwargs)
         policy = policy.get('Policy', {})
         if isinstance(policy, six.string_types):
-            policy = json.loads(policy)
+            policy = salt.utils.json.loads(policy)
         if policy is None:
             policy = {}
         permissions = {}
@@ -681,8 +680,7 @@ def create_alias(FunctionName, Name, FunctionVersion, Description="",
         alias = conn.create_alias(FunctionName=FunctionName, Name=Name,
                                   FunctionVersion=FunctionVersion, Description=Description)
         if alias:
-            log.info(
-                'The newly created alias name is {0}'.format(alias['Name']))
+            log.info('The newly created alias name is %s', alias['Name'])
 
             return {'created': True, 'name': alias['Name']}
         else:
@@ -846,8 +844,7 @@ def create_event_source_mapping(EventSourceArn, FunctionName, StartingPosition,
                                                BatchSize=BatchSize,
                                                StartingPosition=StartingPosition)
         if obj:
-            log.info(
-                'The newly created event source mapping ID is {0}'.format(obj['UUID']))
+            log.info('The newly created event source mapping ID is %s', obj['UUID'])
 
             return {'created': True, 'id': obj['UUID']}
         else:

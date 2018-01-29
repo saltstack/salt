@@ -70,6 +70,7 @@ def get_invalid_docs():
         'nspawn.stop',
         'pkg.expand_repo_def',
         'pip.iteritems',
+        'pip.parse_version',
         'runtests_decorators.depends',
         'runtests_decorators.depends_will_fallback',
         'runtests_decorators.missing_depends',
@@ -125,3 +126,26 @@ def modules_available(*names):
         if not fnmatch.filter(list(__salt__), name):
             not_found.append(name)
     return not_found
+
+
+def nonzero_retcode_return_true():
+    '''
+    Sets a nonzero retcode before returning. Designed to test orchestration.
+    '''
+    __context__['retcode'] = 1
+    return True
+
+
+def nonzero_retcode_return_false():
+    '''
+    Sets a nonzero retcode before returning. Designed to test orchestration.
+    '''
+    __context__['retcode'] = 1
+    return False
+
+
+def fail_function(*args, **kwargs):  # pylint: disable=unused-argument
+    '''
+    Return False no matter what is passed to it
+    '''
+    return False

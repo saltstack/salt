@@ -96,6 +96,23 @@ The user to run the Salt processes
 
 .. conf_master:: ret_port
 
+``enable_ssh_minions``
+----------------------
+
+
+Default: ``False``
+
+Tell the master to also use salt-ssh when running commands against minions.
+
+.. code-block:: yaml
+
+    enable_ssh_minions: True
+
+.. note::
+
+    Cross-minion communication is still not possible.  The Salt mine and
+    publish.publish do not work between minion types.
+
 ``ret_port``
 ------------
 
@@ -140,7 +157,8 @@ an alternative root.
     This directory is prepended to the following options:
     :conf_master:`pki_dir`, :conf_master:`cachedir`, :conf_master:`sock_dir`,
     :conf_master:`log_file`, :conf_master:`autosign_file`,
-    :conf_master:`autoreject_file`, :conf_master:`pidfile`.
+    :conf_master:`autoreject_file`, :conf_master:`pidfile`,
+    :conf_master:`autosign_grains_dir`.
 
 .. conf_master:: conf_file
 
@@ -406,6 +424,19 @@ to False.
 .. code-block:: yaml
 
     color: False
+
+.. conf_master:: color_theme
+
+``color_theme``
+---------
+
+Default: ``""``
+
+Specifies a path to the color theme to use for colored command line output.
+
+.. code-block:: yaml
+
+    color_theme: /etc/salt/color_theme
 
 .. conf_master:: cli_summary
 
@@ -868,6 +899,29 @@ what you are doing! Transports are explained in :ref:`Salt Transports
         ret_port: 4606
       zeromq: []
 
+.. conf_master:: master_stats
+
+``master_stats``
+----------------
+
+Default: False
+
+Turning on the master stats enables runtime throughput and statistics events
+to be fired from the master event bus. These events will report on what
+functions have been run on the master and how long these runs have, on
+average, taken over a given period of time.
+
+.. conf_master:: master_stats_event_iter
+
+``master_stats_event_iter``
+---------------------------
+
+Default: 60
+
+The time in seconds to fire master_stats events. This will only fire in
+conjunction with receiving a request to the master, idle masters will not
+fire these events.
+
 .. conf_master:: sock_pool_size
 
 ``sock_pool_size``
@@ -957,6 +1011,38 @@ The TCP port for ``mworkers`` to connect to on the master.
 
     tcp_master_workers: 4515
 
+.. conf_master:: auth_events
+
+``auth_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire authentication events.
+:ref:`Authentication events <event-master_auth>` are fired when
+a minion performs an authentication check with the master.
+
+.. code-block:: yaml
+
+    auth_events: True
+
+.. conf_master:: minion_data_cache_events
+
+``minion_data_cache_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire minion data cache events.  Minion data
+cache events are fired when a minion requests a minion data cache refresh.
+
+.. code-block:: yaml
+
+    minion_data_cache_events: True
 
 .. _salt-ssh-configuration:
 
@@ -1297,6 +1383,32 @@ Works like :conf_master:`autosign_file`, but instead allows you to specify
 minion IDs for which keys will automatically be rejected. Will override both
 membership in the :conf_master:`autosign_file` and the
 :conf_master:`auto_accept` setting.
+
+.. conf_master:: autosign_grains_dir
+
+``autosign_grains_dir``
+-----------------------
+
+.. versionadded:: Oxygen
+
+Default: ``not defined``
+
+If the ``autosign_grains_dir`` is specified, incoming keys from minions with
+grain values that match those defined in files in the autosign_grains_dir
+will be accepted automatically. Grain values that should be accepted automatically
+can be defined by creating a file named like the corresponding grain in the
+autosign_grains_dir and writing the values into that file, one value per line.
+Lines starting with a ``#`` will be ignored.
+Minion must be configured to send the corresponding grains on authentication.
+This should still be considered a less than secure option, due to the fact
+that trust is based on just the requesting minion.
+
+Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
+documentation for more infomation.
+
+.. code-block:: yaml
+
+    autosign_grains_dir: /etc/salt/autosign_grains
 
 .. conf_master:: permissive_pki_access
 
@@ -2008,8 +2120,8 @@ The default options are:
       variable_end_string: '}}'
       comment_start_string: '{#'
       comment_end_string: '#}'
-      line_statement_prefix: 
-      line_comment_prefix: 
+      line_statement_prefix:
+      line_comment_prefix:
       trim_blocks: False
       lstrip_blocks: False
       newline_sequence: '\n'
@@ -2039,8 +2151,8 @@ The default options are:
       variable_end_string: '}}'
       comment_start_string: '{#'
       comment_end_string: '#}'
-      line_statement_prefix: 
-      line_comment_prefix: 
+      line_statement_prefix:
+      line_comment_prefix:
       trim_blocks: False
       lstrip_blocks: False
       newline_sequence: '\n'
@@ -2275,7 +2387,7 @@ Example:
 
     fileserver_backend:
       - roots
-      - git
+      - gitfs
 
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
@@ -2458,6 +2570,19 @@ nothing is ignored.
     fileserver, it is good practice to include ``'\*.swp'`` in the
     :conf_master:`file_ignore_glob`.
 
+.. conf_master:: master_roots
+
+``master_roots``
+----------------
+
+Default: ``/srv/salt-master``
+
+A master-only copy of the :conf_master:`file_roots` dictionary, used by the
+state compiler.
+
+.. code-block:: yaml
+
+    master_roots: /srv/salt-master
 
 roots: Master's Local File Server
 ---------------------------------
@@ -2501,21 +2626,28 @@ Example:
     For masterless Salt, this parameter must be specified in the minion config
     file.
 
-.. conf_master:: master_roots
+.. conf_master:: roots_update_interval
 
-``master_roots``
-----------------
+``roots_update_interval``
+*************************
 
-Default: ``/srv/salt-master``
+.. versionadded:: Oxygen
 
-A master-only copy of the file_roots dictionary, used by the state compiler.
+Default: ``60``
+
+This option defines the update interval (in seconds) for
+:conf_master:`file_roots`.
+
+.. note::
+    Since ``file_roots`` consists of files local to the minion, the update
+    process for this fileserver backend just reaps the cache for this backend.
 
 .. code-block:: yaml
 
-    master_roots: /srv/salt-master
+    roots_update_interval: 120
 
-git: Git Remote File Server Backend
------------------------------------
+gitfs: Git Remote File Server Backend
+-------------------------------------
 
 .. conf_master:: gitfs_remotes
 
@@ -2811,6 +2943,22 @@ they were created by a different master.
 
 .. __: http://www.gluster.org/
 
+.. conf_master:: gitfs_update_interval
+
+``gitfs_update_interval``
+*************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the default update interval (in seconds) for gitfs remotes.
+The update interval can also be set for a single repository via a
+:ref:`per-remote config option <gitfs-per-remote-config>`
+
+.. code-block:: yaml
+
+    gitfs_update_interval: 120
 
 GitFS Authentication Options
 ****************************
@@ -2969,8 +3117,8 @@ can be found in the :ref:`GitFS Walkthrough <gitfs-custom-refspecs>`.
       - '+refs/pull/*/head:refs/remotes/origin/pr/*'
       - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
 
-hg: Mercurial Remote File Server Backend
-----------------------------------------
+hgfs: Mercurial Remote File Server Backend
+------------------------------------------
 
 .. conf_master:: hgfs_remotes
 
@@ -3169,8 +3317,24 @@ blacklist will be exposed as fileserver environments.
       - v1.*
       - 'mybranch\d+'
 
-svn: Subversion Remote File Server Backend
-------------------------------------------
+.. conf_master:: hgfs_update_interval
+
+``hgfs_update_interval``
+************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for
+:conf_master:`hgfs_remotes`.
+
+.. code-block:: yaml
+
+    hgfs_update_interval: 120
+
+svnfs: Subversion Remote File Server Backend
+--------------------------------------------
 
 .. conf_master:: svnfs_remotes
 
@@ -3380,8 +3544,24 @@ will be exposed as fileserver environments.
       - v1.*
       - 'mybranch\d+'
 
-minion: MinionFS Remote File Server Backend
--------------------------------------------
+.. conf_master:: svnfs_update_interval
+
+``svnfs_update_interval``
+*************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for
+:conf_master:`svnfs_remotes`.
+
+.. code-block:: yaml
+
+    svnfs_update_interval: 120
+
+minionfs: MinionFS Remote File Server Backend
+---------------------------------------------
 
 .. conf_master:: minionfs_env
 
@@ -3469,6 +3649,72 @@ exposed.
       - server01
       - dev*
       - 'mail\d+.mydomain.tld'
+
+.. conf_master:: minionfs_update_interval
+
+``minionfs_update_interval``
+****************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for :ref:`MinionFS
+<tutorial-minionfs>`.
+
+.. note::
+    Since :ref:`MinionFS <tutorial-minionfs>` consists of files local to the
+    master, the update process for this fileserver backend just reaps the cache
+    for this backend.
+
+.. code-block:: yaml
+
+    minionfs_update_interval: 120
+
+azurefs: Azure File Server Backend
+----------------------------------
+
+.. versionadded:: 2015.8.0
+
+See the :mod:`azurefs documentation <salt.fileserver.azurefs>` for usage
+examples.
+
+.. conf_master:: azurefs_update_interval
+
+``azurefs_update_interval``
+***************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for azurefs.
+
+.. code-block:: yaml
+
+    azurefs_update_interval: 120
+
+s3fs: S3 File Server Backend
+----------------------------
+
+.. versionadded:: 0.16.0
+
+See the :mod:`s3fs documentation <salt.fileserver.s3fs>` for usage examples.
+
+.. conf_master:: s3fs_update_interval
+
+``s3fs_update_interval``
+************************
+
+.. versionadded:: Oxygen
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for s3fs.
+
+.. code-block:: yaml
+
+    s3fs_update_interval: 120
 
 
 .. _pillar-configuration-master:

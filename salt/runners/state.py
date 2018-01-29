@@ -3,7 +3,7 @@
 Execute orchestration functions
 '''
 # Import pytohn libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -13,6 +13,24 @@ import salt.utils.functools
 from salt.exceptions import SaltInvocationError
 
 LOGGER = logging.getLogger(__name__)
+
+
+def set_pause(jid, state_id, duration=None):
+    '''
+    Set up a state id pause, this instructs a running state to pause at a given
+    state id. This needs to pass in the jid of the running state and can
+    optionally pass in a duration in seconds.
+    '''
+    minion = salt.minion.MasterMinion(__opts__)
+    minion['state.set_pause'](jid, state_id, duration)
+
+
+def rm_pause(jid, state_id, duration=None):
+    '''
+    Remove a pause from a jid, allowing it to continue
+    '''
+    minion = salt.minion.MasterMinion(__opts__)
+    minion['state.rm_pause'](jid, state_id)
 
 
 def orchestrate(mods,

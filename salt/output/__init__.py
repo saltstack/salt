@@ -5,8 +5,7 @@ for managing outputters.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
@@ -117,10 +116,7 @@ def display_output(data, out=None, opts=None, **kwargs):
                         # even if we didn't encode it
                         pass
                 if fdata:
-                    if six.PY3:
-                        ofh.write(fdata.decode())
-                    else:
-                        ofh.write(fdata)
+                    ofh.write(salt.utils.stringutils.to_str(fdata))
                     ofh.write('\n')
             finally:
                 if fh_opened:
@@ -145,6 +141,17 @@ def get_printout(out, opts=None, **kwargs):
         # new --out option, but don't choke when using --out=highstate at CLI
         # See Issue #29796 for more information.
         out = opts['output']
+
+    # Handle setting the output when --static is passed.
+    if not out and opts.get('static'):
+        if opts.get('output'):
+            out = opts['output']
+        elif opts.get('fun', '').split('.')[0] == 'state':
+            # --static doesn't have an output set at this point, but if we're
+            # running a state function and "out" hasn't already been set, we
+            # should set the out variable to "highstate". Otherwise state runs
+            # are set to "nested" below. See Issue #44556 for more information.
+            out = 'highstate'
 
     if out == 'text':
         out = 'txt'

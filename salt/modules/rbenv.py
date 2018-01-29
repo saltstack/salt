@@ -11,7 +11,7 @@ http://misheska.com/blog/2013/06/15/using-rbenv-to-manage-multiple-versions-of-r
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import re
 import logging
@@ -67,8 +67,8 @@ def _parse_env(env):
         env = {}
 
     for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
-        log.error('Environment variable \'{0}\' passed without a value. '
-                  'Setting value to an empty string'.format(bad_env_key))
+        log.error('Environment variable \'%s\' passed without a value. '
+                  'Setting value to an empty string', bad_env_key)
         env[bad_env_key] = ''
 
     return env
@@ -247,7 +247,7 @@ def install_ruby(ruby, runas=None):
 
     ret = {}
     ret = _rbenv_exec(['install', ruby], env=env, runas=runas, ret=ret)
-    if ret['retcode'] == 0:
+    if ret is not False and ret['retcode'] == 0:
         rehash(runas=runas)
         return ret['stderr']
     else:
@@ -385,7 +385,7 @@ def do(cmdline, runas=None, env=None):
     try:
         cmdline = salt.utils.args.shlex_split(cmdline)
     except AttributeError:
-        cmdline = salt.utils.args.shlex_split(str(cmdline))
+        cmdauth = salt.utils.args.shlex_split(six.text_type(cmdline))
 
     result = __salt__['cmd.run_all'](
         cmdline,
@@ -421,7 +421,7 @@ def do_with_ruby(ruby, cmdline, runas=None):
     try:
         cmdline = salt.utils.args.shlex_split(cmdline)
     except AttributeError:
-        cmdline = salt.utils.args.shlex_split(str(cmdline))
+        cmdline = salt.utils.args.shlex_split(six.text_type(cmdline))
 
     env = {}
     if ruby:

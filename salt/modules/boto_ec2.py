@@ -46,14 +46,14 @@ Connection module for Amazon EC2
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
-import json
 
 # Import Salt libs
 import salt.utils.compat
 import salt.utils.data
+import salt.utils.json
 from salt.ext import six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -172,18 +172,20 @@ def get_unassociated_eip_address(domain='standard', region=None, key=None,
                                             key=key, keyid=keyid,
                                             profile=profile)[0]
         if address_info['instance_id']:
-            log.debug('{0} is already associated with the instance {1}'.format(
-                address, address_info['instance_id']))
+            log.debug('%s is already associated with the instance %s',
+                      address, address_info['instance_id'])
             continue
 
         if address_info['network_interface_id']:
-            log.debug('{0} is already associated with the network interface {1}'
-                      .format(address, address_info['network_interface_id']))
+            log.debug('%s is already associated with the network interface %s',
+                      address, address_info['network_interface_id'])
             continue
 
         if address_info['domain'] == domain:
-            log.debug("The first unassociated EIP address in the domain '{0}' "
-                      "is {1}".format(domain, address))
+            log.debug(
+                "The first unassociated EIP address in the domain '%s' is %s",
+                domain, address
+            )
             eip = address
             break
 
@@ -361,8 +363,10 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
             log.error(e)
             return False
         if not instance_id:
-            log.error("Given instance_name '{0}' cannot be mapped to an "
-                      "instance_id".format(instance_name))
+            log.error(
+                "Given instance_name '%s' cannot be mapped to an instance_id",
+                instance_name
+            )
             return False
 
     if network_interface_name:
@@ -374,8 +378,8 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
             log.error(e)
             return False
         if not network_interface_id:
-            log.error("Given network_interface_name '{0}' cannot be mapped to "
-                      "an network_interface_id".format(network_interface_name))
+            log.error("Given network_interface_name '%s' cannot be mapped to "
+                      "an network_interface_id", network_interface_name)
             return False
 
     try:
@@ -468,8 +472,8 @@ def assign_private_ip_addresses(network_interface_name=None, network_interface_i
             log.error(e)
             return False
         if not network_interface_id:
-            log.error("Given network_interface_name '{0}' cannot be mapped to "
-                      "an network_interface_id".format(network_interface_name))
+            log.error("Given network_interface_name '%s' cannot be mapped to "
+                      "an network_interface_id", network_interface_name)
             return False
 
     try:
@@ -522,8 +526,8 @@ def unassign_private_ip_addresses(network_interface_name=None, network_interface
             log.error(e)
             return False
         if not network_interface_id:
-            log.error("Given network_interface_name '{0}' cannot be mapped to "
-                      "an network_interface_id".format(network_interface_name))
+            log.error("Given network_interface_name '%s' cannot be mapped to "
+                      "an network_interface_id", network_interface_name)
             return False
 
     try:
@@ -586,13 +590,15 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
 
         reservations = conn.get_all_reservations(**filter_parameters)
         instances = [i for r in reservations for i in r.instances]
-        log.debug('The filters criteria {0} matched the following '
-                  'instances:{1}'.format(filter_parameters, instances))
+        log.debug('The filters criteria %s matched the following '
+                  'instances:%s', filter_parameters, instances)
 
         if in_states:
             instances = [i for i in instances if i.state in in_states]
-            log.debug('Limiting instance matches to those in the requested '
-                      'states: {0}'.format(instances))
+            log.debug(
+                'Limiting instance matches to those in the requested states: %s',
+                instances
+            )
         if instances:
             if return_objs:
                 return instances
@@ -674,8 +680,8 @@ def find_images(ami_name=None, executable_by=None, owners=None, image_ids=None, 
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         images = conn.get_all_images(**filter_parameters)
-        log.debug('The filters criteria {0} matched the following '
-                  'images:{1}'.format(filter_parameters, images))
+        log.debug('The filters criteria %s matched the following '
+                  'images:%s', filter_parameters, images)
 
         if images:
             if return_objs:
@@ -732,7 +738,7 @@ def get_id(name=None, tags=None, region=None, key=None,
                                   keyid=keyid, profile=profile, in_states=in_states,
                                   filters=filters)
     if instance_ids:
-        log.info("Instance ids: {0}".format(" ".join(instance_ids)))
+        log.info("Instance ids: %s", " ".join(instance_ids))
         if len(instance_ids) == 1:
             return instance_ids[0]
         else:
@@ -764,7 +770,7 @@ def get_tags(instance_id=None, keyid=None, key=None, profile=None,
         for tag in result:
             tags.append({tag.name: tag.value})
     else:
-        log.info("No tags found for instance_id {}".format(instance_id))
+        log.info("No tags found for instance_id %s", instance_id)
     return tags
 
 
@@ -822,10 +828,10 @@ def _to_blockdev_map(thing):
     if isinstance(thing, BlockDeviceMapping):
         return thing
     if isinstance(thing, six.string_types):
-        thing = json.loads(thing)
+        thing = salt.utils.json.loads(thing)
     if not isinstance(thing, dict):
-        log.error("Can't convert '{0}' of type {1} to a "
-                  "boto.ec2.blockdevicemapping.BlockDeviceMapping".format(thing, type(thing)))
+        log.error("Can't convert '%s' of type %s to a "
+                  "boto.ec2.blockdevicemapping.BlockDeviceMapping", thing, type(thing))
         return None
 
     bdm = BlockDeviceMapping()
@@ -980,7 +986,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                                                  region=region, key=key,
                                                  keyid=keyid, profile=profile)
         if 'id' not in r:
-            log.warning('Couldn\'t resolve subnet name {0}.').format(subnet_name)
+            log.warning('Couldn\'t resolve subnet name %s.', subnet_name)
             return False
         subnet_id = r['id']
 
@@ -994,7 +1000,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                                                        region=region, key=key,
                                                        keyid=keyid, profile=profile)
             if not r:
-                log.warning('Couldn\'t resolve security group name ' + str(sgn))
+                log.warning('Couldn\'t resolve security group name %s', sgn)
                 return False
             security_group_ids += [r]
 
@@ -1009,8 +1015,8 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         network_interface_id = result['result']
         if not network_interface_id:
             log.warning(
-                "Given network_interface_name '{0}' cannot be mapped to an "
-                "network_interface_id".format(network_interface_name)
+                "Given network_interface_name '%s' cannot be mapped to an "
+                "network_interface_id", network_interface_name
             )
 
     if network_interface_id:
@@ -1058,8 +1064,10 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
             instance.add_tags(tags)
         return {'instance_id': instance.id}
     else:
-        log.warning('Instance could not be started -- '
-                    'status is "{0}"'.format(status))
+        log.warning(
+            'Instance could not be started -- status is "%s"',
+            status
+        )
 
 
 def get_key(key_name, region=None, key=None, keyid=None, profile=None):
@@ -1076,7 +1084,7 @@ def get_key(key_name, region=None, key=None, keyid=None, profile=None):
 
     try:
         key = conn.get_key_pair(key_name)
-        log.debug("the key to return is : {0}".format(key))
+        log.debug("the key to return is : %s", key)
         if key is None:
             return False
         return key.name, key.fingerprint
@@ -1101,7 +1109,7 @@ def create_key(key_name, save_path, region=None, key=None, keyid=None,
 
     try:
         key = conn.create_key_pair(key_name)
-        log.debug("the key to return is : {0}".format(key))
+        log.debug("the key to return is : %s", key)
         key.save(save_path)
         return key.material
     except boto.exception.BotoServerError as e:
@@ -1130,7 +1138,7 @@ def import_key(key_name, public_key_material, region=None, key=None,
 
     try:
         key = conn.import_key_pair(key_name, public_key_material)
-        log.debug("the key to return is : {0}".format(key))
+        log.debug("the key to return is : %s", key)
         return key.fingerprint
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -1151,7 +1159,7 @@ def delete_key(key_name, region=None, key=None, keyid=None, profile=None):
 
     try:
         key = conn.delete_key_pair(key_name)
-        log.debug("the key to return is : {0}".format(key))
+        log.debug("the key to return is : %s", key)
         return key
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -1180,7 +1188,7 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
 
     try:
         keys = conn.get_all_key_pairs(keynames, filters)
-        log.debug("the key to return is : {0}".format(keys))
+        log.debug("the key to return is : %s", keys)
         key_values = []
         if keys:
             for key in keys:
@@ -1435,8 +1443,7 @@ def create_network_interface(name, subnet_id=None, subnet_name=None,
                                                         keyid=keyid,
                                                         profile=profile)
         if 'id' not in resource:
-            log.warning('Couldn\'t resolve subnet name {0}.').format(
-                subnet_name)
+            log.warning('Couldn\'t resolve subnet name %s.', subnet_name)
             return False
         subnet_id = resource['id']
 
@@ -1791,7 +1798,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
         tags = dict(tm.get('tags', {}))
         args = {'return_objs': True, 'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
         new_filters = {}
-        log.debug('got filters: {0}'.format(filters))
+        log.debug('got filters: %s', filters)
         instance_id = None
         in_states = tm.get('in_states', running_states)
         try:
@@ -1812,18 +1819,18 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
             continue  # Hmme, abort or do what we can...?  Guess the latter for now.
         args['filters'] = new_filters
         volumes = get_all_volumes(**args)
-        log.debug('got volume list: {0}'.format(volumes))
+        log.debug('got volume list: %s', volumes)
         for vol in volumes:
             tag_sets.setdefault(vol.id.replace('-', '_'), {'vol': vol, 'tags': tags.copy()})['tags'].update(tags.copy())
-    log.debug('tag_sets after munging: {0}'.format(tag_sets))
+    log.debug('tag_sets after munging: %s', tag_sets)
 
     ### ...then loop through all those volume->tag pairs and apply them.
     changes = {'old': {}, 'new': {}}
     for volume in tag_sets.values():
         vol, tags = volume['vol'], volume['tags']
-        log.debug('current tags on vol.id {0}: {1}'.format(vol.id, dict(getattr(vol, 'tags', {}))))
+        log.debug('current tags on vol.id %s: %s', vol.id, dict(getattr(vol, 'tags', {})))
         curr = set(dict(getattr(vol, 'tags', {})).keys())
-        log.debug('requested tags on vol.id {0}: {1}'.format(vol.id, tags))
+        log.debug('requested tags on vol.id %s: %s', vol.id, tags)
         req = set(tags.keys())
         add = list(req - curr)
         update = [r for r in (req & curr) if vol.tags[r] != tags[r]]
@@ -1832,13 +1839,13 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
             changes['old'][vol.id] = dict(getattr(vol, 'tags', {}))
             changes['new'][vol.id] = tags
         else:
-            log.debug('No changes needed for vol.id {0}'.format(vol.id))
+            log.debug('No changes needed for vol.id %s', vol.id)
         if len(add):
             d = dict((k, tags[k]) for k in add)
-            log.debug('New tags for vol.id {0}: {1}'.format(vol.id, d))
+            log.debug('New tags for vol.id %s: %s', vol.id, d)
         if len(update):
             d = dict((k, tags[k]) for k in update)
-            log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, d))
+            log.debug('Updated tags for vol.id %s: %s', vol.id, d)
         if not dry_run:
             if not create_tags(vol.id, tags, region=region, key=key, keyid=keyid, profile=profile):
                 ret['success'] = False
@@ -1846,7 +1853,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
                 return ret
             if authoritative:
                 if len(remove):
-                    log.debug('Removed tags for vol.id {0}: {1}'.format(vol.id, remove))
+                    log.debug('Removed tags for vol.id %s: %s', vol.id, remove)
                     if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
                         ret['success'] = False
                         ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)

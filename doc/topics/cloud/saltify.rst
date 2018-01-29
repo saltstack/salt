@@ -29,7 +29,7 @@ the salt-master:
     my-saltify-config:
       minion:
         master: 111.222.333.444
-      provider: saltify
+      driver: saltify
 
 However, if you wish to use the more advanced capabilities of salt-cloud, such as
 rebooting, listing, and disconnecting machines, then the salt master must fill

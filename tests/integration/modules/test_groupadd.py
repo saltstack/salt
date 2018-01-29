@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import grp
 import os
 import random
@@ -12,11 +12,14 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt libs
+from salt.ext import six
 from salt.ext.six.moves import range
+import salt.utils.data
 import salt.utils.files
 
 
 @skip_if_not_root
+@destructiveTest
 class GroupModuleTest(ModuleCase):
     '''
     Validate the linux group system module
@@ -42,7 +45,6 @@ class GroupModuleTest(ModuleCase):
                 )
             )
 
-    @destructiveTest
     def tearDown(self):
         '''
         Reset to original settings
@@ -67,8 +69,9 @@ class GroupModuleTest(ModuleCase):
         defs_file = '/etc/login.defs'
         if os.path.exists(defs_file):
             with salt.utils.files.fopen(defs_file) as defs_fd:
+                lines = salt.utils.data.decode(defs_fd.readlines())
                 login_defs = dict([x.split()
-                                   for x in defs_fd.readlines()
+                                   for x in lines
                                    if x.strip()
                                    and not x.strip().startswith('#')])
         else:
@@ -159,7 +162,6 @@ class GroupModuleTest(ModuleCase):
         # group does not exist
         self.assertFalse(self.run_function('group.delete', [self._no_group]))
 
-    @destructiveTest
     def test_info(self):
         '''
         Test the info group function
@@ -173,7 +175,6 @@ class GroupModuleTest(ModuleCase):
         self.assertEqual(group_info['gid'], self._gid)
         self.assertIn(self._user, group_info['members'])
 
-    @destructiveTest
     def test_chgid(self):
         '''
         Test the change gid function
@@ -183,7 +184,6 @@ class GroupModuleTest(ModuleCase):
         group_info = self.run_function('group.info', [self._group])
         self.assertEqual(group_info['gid'], self._new_gid)
 
-    @destructiveTest
     def test_adduser(self):
         '''
         Test the add user to group function
@@ -200,7 +200,6 @@ class GroupModuleTest(ModuleCase):
         # try to add a non existing user to a non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._no_user]))
 
-    @destructiveTest
     def test_deluser(self):
         '''
         Test the delete user from group function
@@ -212,7 +211,6 @@ class GroupModuleTest(ModuleCase):
         group_info = self.run_function('group.info', [self._group])
         self.assertNotIn(self._user, group_info['members'])
 
-    @destructiveTest
     def test_members(self):
         '''
         Test the members function
@@ -226,7 +224,6 @@ class GroupModuleTest(ModuleCase):
         self.assertIn(self._user, group_info['members'])
         self.assertIn(self._user1, group_info['members'])
 
-    @destructiveTest
     def test_getent(self):
         '''
         Test the getent function
@@ -235,7 +232,7 @@ class GroupModuleTest(ModuleCase):
         self.run_function('user.add', [self._user])
         self.run_function('group.adduser', [self._group, self._user])
         ginfo = self.run_function('user.getent')
-        self.assertIn(self._group, str(ginfo))
-        self.assertIn(self._user, str(ginfo))
-        self.assertNotIn(self._no_group, str(ginfo))
-        self.assertNotIn(self._no_user, str(ginfo))
+        self.assertIn(self._group, six.text_type(ginfo))
+        self.assertIn(self._user, six.text_type(ginfo))
+        self.assertNotIn(self._no_group, six.text_type(ginfo))
+        self.assertNotIn(self._no_user, six.text_type(ginfo))

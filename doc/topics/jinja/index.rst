@@ -869,26 +869,33 @@ Example:
 
 .. note::
 
-    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
-    This is due to the fact that YAML requires proper handling in regard to special
-    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
-    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
-    information.
+    This option may have adverse effects when using the default renderer,
+    ``yaml_jinja``. This is due to the fact that YAML requires proper handling
+    in regard to special characters. Please see the section on :ref:`YAML ASCII
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: json_decode_list
+.. jinja_ref:: json_encode_list
 
-``json_decode_list``
+``json_encode_list``
 --------------------
 
 .. versionadded:: 2017.7.0
+.. versionadded:: Oxygen
+    Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
+    something you get bytes, and when you decode, you get your locale's
+    encoding (usually a ``unicode`` type). This filter was incorrectly-named
+    when it was added. ``json_decode_list`` will be supported until the Neon
+    release.
 
-JSON decodes as unicode, Jinja needs bytes.
+Recursively encodes all string elements of the list to bytes.
 
 Example:
 
 .. code-block:: jinja
 
-  {{ [1, 2, 3] | json_decode_list }}
+  {{ [1, 2, 3] | json_encode_list }}
 
 Returns:
 
@@ -898,25 +905,35 @@ Returns:
 
 
 .. jinja_ref:: json_decode_dict
+.. jinja_ref:: json_encode_dict
 
-``json_decode_dict``
+``json_encode_dict``
 --------------------
 
 .. versionadded:: 2017.7.0
+.. versionadded:: Oxygen
+    Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
+    something you get bytes, and when you decode, you get your locale's
+    encoding (usually a ``unicode`` type). This filter was incorrectly-named
+    when it was added. ``json_decode_dict`` will be supported until the Neon
+    release.
 
-JSON decodes as unicode, Jinja needs bytes.
+Recursively encodes all string items in the dictionary to bytes.
 
 Example:
 
+Assuming that ``pillar['foo']`` contains ``{u'a': u'\u0414'}``, and your locale
+is ``en_US.UTF-8``:
+
 .. code-block:: jinja
 
-  {{ {'a': 'b'} | json_decode_dict }}
+  {{ pillar['foo'] | json_encode_dict }}
 
 Returns:
 
 .. code-block:: python
 
-  {'a': 'b'}
+  {'a': '\xd0\x94'}
 
 
 .. jinja_ref:: random_hash
@@ -927,7 +944,8 @@ Returns:
 .. versionadded:: 2017.7.0
 .. versionadded:: Oxygen
     Renamed from ``rand_str`` to ``random_hash`` to more accurately describe
-    what the filter does.
+    what the filter does. ``rand_str`` will be supported until the Neon
+    release.
 
 Generates a random number between 1 and the number passed to the filter, and
 then hashes it. The default hash type is the one specified by the minion's
@@ -1611,6 +1629,54 @@ Returns:
 
 Test supports additional optional arguments: ``ignorecase``, ``multiline``
 
+
+Escape filters
+--------------
+
+.. jinja_ref:: regex_escape
+
+``regex_escape``
+----------------
+
+.. versionadded:: 2017.7.0
+
+Allows escaping of strings so they can be interpreted literally by another function.
+
+Example:
+
+.. code-block:: jinja
+
+  regex_escape = {{ 'https://example.com?foo=bar%20baz' | regex_escape }}
+
+will be rendered as:
+
+.. code-block:: text
+
+  regex_escape = https\:\/\/example\.com\?foo\=bar\%20baz
+
+Set Theory Filters
+------------------
+
+.. jinja_ref:: unique
+
+``unique``
+----------
+
+.. versionadded:: 2017.7.0
+
+Performs set math using Jinja filters.
+
+Example:
+
+.. code-block:: jinja
+
+  unique = {{ ['foo', 'foo', 'bar'] | unique }}
+
+will be rendered as:
+
+.. code-block:: text
+
+  unique = ['foo', 'bar']
 
 Jinja in Files
 ==============

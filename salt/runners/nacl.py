@@ -151,7 +151,7 @@ Optional small program to encrypt data without needing salt modules.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import os
 
@@ -162,6 +162,8 @@ import salt.utils.win_functions
 import salt.utils.win_dacl
 import salt.syspaths
 
+# Import 3rd-party libs
+from salt.ext import six
 
 REQ_ERROR = None
 try:
@@ -209,7 +211,7 @@ def _get_sk(**kwargs):
     sk_file = config['sk_file']
     if not key and sk_file:
         with salt.utils.files.fopen(sk_file, 'rb') as keyf:
-            key = str(keyf.read()).rstrip('\n')
+            key = six.text_type(keyf.read()).rstrip('\n')
     if key is None:
         raise Exception('no key or sk_file found')
     return base64.b64decode(key)
@@ -224,10 +226,10 @@ def _get_pk(**kwargs):
     pk_file = config['pk_file']
     if not pubkey and pk_file:
         with salt.utils.files.fopen(pk_file, 'rb') as keyf:
-            pubkey = str(keyf.read()).rstrip('\n')
+            pubkey = six.text_type(keyf.read()).rstrip('\n')
     if pubkey is None:
         raise Exception('no pubkey or pk_file found')
-    pubkey = str(pubkey)
+    pubkey = six.text_type(pubkey)
     return base64.b64decode(pubkey)
 
 
@@ -283,7 +285,7 @@ def keygen(sk_file=None, pk_file=None):
     if os.path.isfile(sk_file) and not os.path.isfile(pk_file):
         # generate pk using the sk
         with salt.utils.files.fopen(sk_file, 'rb') as keyf:
-            sk = str(keyf.read()).rstrip('\n')
+            sk = six.text_type(keyf.read()).rstrip('\n')
             sk = base64.b64decode(sk)
         kp = libnacl.public.SecretKey(sk)
         with salt.utils.files.fopen(pk_file, 'w') as keyf:

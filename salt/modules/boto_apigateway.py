@@ -76,15 +76,15 @@ Connection module for Amazon APIGateway
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import json
 import datetime
 
 # Import Salt libs
 from salt.ext import six
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.json
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -952,7 +952,7 @@ def create_api_method(restApiId, resourcePath, httpMethod, authorizationType,
 
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             method = conn.put_method(restApiId=restApiId, resourceId=resource['id'], httpMethod=httpMethod,
-                                     authorizationType=str(authorizationType), apiKeyRequired=apiKeyRequired,
+                                     authorizationType=str(authorizationType), apiKeyRequired=apiKeyRequired,  # future lint: disable=blacklisted-function
                                      requestParameters=requestParameters, requestModels=requestModels)
             return {'created': True, 'method': method}
         return {'created': False, 'error': 'Failed to create method'}
@@ -1029,7 +1029,7 @@ def create_api_method_response(restApiId, resourcePath, httpMethod, statusCode, 
 
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             response = conn.put_method_response(restApiId=restApiId, resourceId=resource['id'],
-                                                httpMethod=httpMethod, statusCode=str(statusCode),
+                                                httpMethod=httpMethod, statusCode=str(statusCode),  # future lint: disable=blacklisted-function
                                                 responseParameters=responseParameters, responseModels=responseModels)
             return {'created': True, 'response': response}
         return {'created': False, 'error': 'no such resource'}
@@ -1055,7 +1055,7 @@ def delete_api_method_response(restApiId, resourcePath, httpMethod, statusCode,
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             conn.delete_method_response(restApiId=restApiId, resourceId=resource['id'],
-                                        httpMethod=httpMethod, statusCode=str(statusCode))
+                                        httpMethod=httpMethod, statusCode=str(statusCode))  # future lint: disable=blacklisted-function
             return {'deleted': True}
         return {'deleted': False, 'error': 'no such resource'}
     except ClientError as e:
@@ -1080,7 +1080,7 @@ def describe_api_method_response(restApiId, resourcePath, httpMethod, statusCode
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             response = conn.get_method_response(restApiId=restApiId, resourceId=resource['id'],
-                                                httpMethod=httpMethod, statusCode=str(statusCode))
+                                                httpMethod=httpMethod, statusCode=str(statusCode))  # future lint: disable=blacklisted-function
             return {'response': _convert_datetime_str(response)}
         return {'error': 'no such resource'}
     except ClientError as e:
@@ -1161,7 +1161,7 @@ def update_api_model_schema(restApiId, modelName, schema, region=None, key=None,
 
     '''
     try:
-        schema_json = json.dumps(schema) if isinstance(schema, dict) else schema
+        schema_json = salt.utils.json.dumps(schema) if isinstance(schema, dict) else schema
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         response = _api_model_patch_replace(conn, restApiId, modelName, '/schema', schema_json)
         return {'updated': True, 'model': _convert_datetime_str(response)}
@@ -1202,7 +1202,7 @@ def create_api_model(restApiId, modelName, modelDescription, schema, contentType
 
     '''
     try:
-        schema_json = json.dumps(schema) if isinstance(schema, dict) else schema
+        schema_json = salt.utils.json.dumps(schema) if isinstance(schema, dict) else schema
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         model = conn.create_model(restApiId=restApiId, name=modelName, description=modelDescription,
                                   schema=schema_json, contentType=contentType)
@@ -1511,7 +1511,7 @@ def create_usage_plan(name, description=None, throttle=None, quota=None, region=
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
     except (TypeError, ValueError) as e:
-        return {'error': '{0}'.format(e)}
+        return {'error': six.text_type(e)}
 
 
 def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
@@ -1563,17 +1563,17 @@ def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None,
             patchOperations.append({'op': 'remove', 'path': '/throttle'})
         else:
             if 'rateLimit' in throttle:
-                patchOperations.append({'op': 'replace', 'path': '/throttle/rateLimit', 'value': str(throttle['rateLimit'])})
+                patchOperations.append({'op': 'replace', 'path': '/throttle/rateLimit', 'value': str(throttle['rateLimit'])})  # future lint: disable=blacklisted-function
             if 'burstLimit' in throttle:
-                patchOperations.append({'op': 'replace', 'path': '/throttle/burstLimit', 'value': str(throttle['burstLimit'])})
+                patchOperations.append({'op': 'replace', 'path': '/throttle/burstLimit', 'value': str(throttle['burstLimit'])})  # future lint: disable=blacklisted-function
 
         if quota is None:
             patchOperations.append({'op': 'remove', 'path': '/quota'})
         else:
-            patchOperations.append({'op': 'replace', 'path': '/quota/period', 'value': str(quota['period'])})
-            patchOperations.append({'op': 'replace', 'path': '/quota/limit', 'value': str(quota['limit'])})
+            patchOperations.append({'op': 'replace', 'path': '/quota/period', 'value': str(quota['period'])})  # future lint: disable=blacklisted-function
+            patchOperations.append({'op': 'replace', 'path': '/quota/limit', 'value': str(quota['limit'])})  # future lint: disable=blacklisted-function
             if 'offset' in quota:
-                patchOperations.append({'op': 'replace', 'path': '/quota/offset', 'value': str(quota['offset'])})
+                patchOperations.append({'op': 'replace', 'path': '/quota/offset', 'value': str(quota['offset'])})  # future lint: disable=blacklisted-function
 
         if patchOperations:
             res = conn.update_usage_plan(usagePlanId=plan_id,
@@ -1585,7 +1585,7 @@ def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None,
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
     except (TypeError, ValueError) as e:
-        return {'error': '{0}'.format(e)}
+        return {'error': six.text_type(e)}
 
 
 def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):

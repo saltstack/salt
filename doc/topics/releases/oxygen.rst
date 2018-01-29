@@ -4,6 +4,296 @@
 Salt Release Notes - Codename Oxygen
 ====================================
 
+Lots of Docker Improvements
+---------------------------
+
+Much Improved Support for Docker Networking
+===========================================
+
+The :py:func:`docker_network.present <salt.states.docker_network.present>`
+state has undergone a full rewrite, which includes the following improvements:
+
+Full API Support for Network Management
+---------------------------------------
+
+The improvements made to input handling in the
+:py:func:`docker_container.running <salt.states.docker_container.running>`
+state for 2017.7.0 have now been expanded to :py:func:`docker_network.present
+<salt.states.docker_network.present>`. This brings with it full support for all
+tunable configuration arguments.
+
+Custom Subnets
+--------------
+
+Custom subnets can now be configured. Both IPv4 and mixed IPv4/IPv6 networks
+are supported. See :ref:`here <salt-states-docker-network-present-ipam>` for
+more information.
+
+Network Configuration in :py:func:`docker_container.running` States
+-------------------------------------------------------------------
+
+A long-requested feature has finally been added! It is now possible to
+configure static IPv4/IPv6 addresses, as well as links and labels. See
+:ref:`here <salt-states-docker-container-network-management>` for more
+information.
+
+.. note::
+    While the ``containers`` argument to :py:func:`docker_network.present`
+    will continue to be supported, it will no longer be the recommended way of
+    ensuring that a container is attached to a network.
+
+Improved Handling of Images from Custom Registries
+==================================================
+
+Rather than attempting to parse the tag from the passed image name, Salt will
+now resolve that tag down to an image ID and use that ID instead.
+
+.. important::
+    Due to this change, there are some backward-incompatible changes to image
+    management. See below for a full list of these changes.
+
+Backward-incompatible Changes to Docker Image Management
+********************************************************
+
+Passing image names to the following functions must now be done using separate
+``repository`` and ``tag`` arguments:
+
+- :py:func:`docker.build <salt.modules.dockermod.build>`
+- :py:func:`docker.commit <salt.modules.dockermod.commit>`
+- :py:func:`docker.import <salt.modules.dockermod.import_>`
+- :py:func:`docker.load <salt.modules.dockermod.load>`
+- :py:func:`docker.tag <salt.modules.dockermod.tag_>`
+- :py:func:`docker.sls_build <salt.modules.dockermod.sls_build>`
+
+Additionally, the ``tag`` argument must now be explicitly passed to the
+:py:func:`docker_image.present <salt.states.docker_image.present>` state,
+unless the image is being pulled from a docker registry.
+
+``utils`` functions moved into separate modules
+===============================================
+
+The Salt utility functions from ``salt.utils`` have been moved into different
+modules, grouped logically based on their functionality. This change is
+backwards compatible, but the old imports will no longer be supported starting
+with release Neon.
+
+The functions have been moved as follows:
+
+- ``salt.utils.appendproctitle``: use ``salt.utils.process.appendproctitle`` 
+  instead.
+- ``salt.utils.daemonize``: use ``salt.utils.process.daemonize`` instead.
+- ``salt.utils.daemonize_if``: use ``salt.utils.process.daemonize_if`` instead.
+- ``salt.utils.reinit_crypto``: use ``salt.utils.crypt.reinit_crypto`` instead.
+- ``salt.utils.pem_finger``: use ``salt.utils.crypt.pem_finger`` instead.
+- ``salt.utils.to_bytes``: use ``salt.utils.stringutils.to_bytes`` instead.
+- ``salt.utils.to_str``: use ``salt.utils.stringutils.to_str`` instead.
+- ``salt.utils.to_unicode``: use ``salt.utils.stringutils.to_unicode`` instead.
+- ``salt.utils.str_to_num``: use ``salt.utils.stringutils.to_num`` instead.
+- ``salt.utils.is_quoted``: use ``salt.utils.stringutils.is_quoted`` instead.
+- ``salt.utils.dequote``: use ``salt.utils.stringutils.dequote`` instead.
+- ``salt.utils.is_hex``: use ``salt.utils.stringutils.is_hex`` instead.
+- ``salt.utils.is_bin_str``: use ``salt.utils.stringutils.is_bin_str`` instead.
+- ``salt.utils.rand_string``: use ``salt.utils.stringutils.random`` instead.
+- ``salt.utils.contains_whitespace``: use 
+  ``salt.utils.stringutils.contains_whitespace`` instead.
+- ``salt.utils.build_whitespace_split_regex``: use 
+  ``salt.utils.stringutils.build_whitespace_split_regex`` instead.
+- ``salt.utils.expr_match``: use ``salt.utils.stringutils.expr_match`` instead.
+- ``salt.utils.check_whitelist_blacklist``: use 
+  ``salt.utils.stringutils.check_whitelist_blacklist`` instead.
+- ``salt.utils.check_include_exclude``: use 
+  ``salt.utils.stringutils.check_include_exclude`` instead.
+- ``salt.utils.print_cli``: use ``salt.utils.stringutils.print_cli`` instead.
+- ``salt.utils.clean_kwargs``: use ``salt.utils.args.clean_kwargs`` instead.
+- ``salt.utils.invalid_kwargs``: use ``salt.utils.args.invalid_kwargs`` 
+  instead.
+- ``salt.utils.shlex_split``: use ``salt.utils.args.shlex_split`` instead.
+- ``salt.utils.arg_lookup``: use ``salt.utils.args.arg_lookup`` instead.
+- ``salt.utils.argspec_report``: use ``salt.utils.args.argspec_report`` 
+  instead.
+- ``salt.utils.split_input``: use ``salt.utils.args.split_input`` instead.
+- ``salt.utils.test_mode``: use ``salt.utils.args.test_mode`` instead.
+- ``salt.utils.format_call``: use ``salt.utils.args.format_call`` instead.
+- ``salt.utils.which``: use ``salt.utils.path.which`` instead.
+- ``salt.utils.which_bin``: use ``salt.utils.path.which_bin`` instead.
+- ``salt.utils.path_join``: use ``salt.utils.path.join`` instead.
+- ``salt.utils.check_or_die``: use ``salt.utils.path.check_or_die`` instead.
+- ``salt.utils.sanitize_win_path_string``: use 
+  ``salt.utils.path.sanitize_win_path`` instead.
+- ``salt.utils.rand_str``: use ``salt.utils.hashutils.random_hash`` instead.
+- ``salt.utils.get_hash``: use ``salt.utils.hashutils.get_hash`` instead.
+- ``salt.utils.is_windows``: use ``salt.utils.platform.is_windows`` instead.
+- ``salt.utils.is_proxy``: use ``salt.utils.platform.is_proxy`` instead.
+- ``salt.utils.is_linux``: use ``salt.utils.platform.is_linux`` instead.
+- ``salt.utils.is_darwin``: use ``salt.utils.platform.is_darwin`` instead.
+- ``salt.utils.is_sunos``: use ``salt.utils.platform.is_sunos`` instead.
+- ``salt.utils.is_smartos``: use ``salt.utils.platform.is_smartos`` instead.
+- ``salt.utils.is_smartos_globalzone``: use 
+  ``salt.utils.platform.is_smartos_globalzone`` instead.
+- ``salt.utils.is_smartos_zone``: use ``salt.utils.platform.is_smartos_zone`` 
+  instead.
+- ``salt.utils.is_freebsd``: use ``salt.utils.platform.is_freebsd`` instead.
+- ``salt.utils.is_netbsd``: use ``salt.utils.platform.is_netbsd`` instead.
+- ``salt.utils.is_openbsd``: use ``salt.utils.platform.is_openbsd`` instead.
+- ``salt.utils.is_aix``: use ``salt.utils.platform.is_aix`` instead.
+- ``salt.utils.safe_rm``: use ``salt.utils.files.safe_rm`` instead.
+- ``salt.utils.is_empty``: use ``salt.utils.files.is_empty`` instead.
+- ``salt.utils.fopen``: use ``salt.utils.files.fopen`` instead.
+- ``salt.utils.flopen``: use ``salt.utils.files.flopen`` instead.
+- ``salt.utils.fpopen``: use ``salt.utils.files.fpopen`` instead.
+- ``salt.utils.rm_rf``: use ``salt.utils.files.rm_rf`` instead.
+- ``salt.utils.mkstemp``: use ``salt.utils.files.mkstemp`` instead.
+- ``salt.utils.istextfile``: use ``salt.utils.files.is_text_file`` instead.
+- ``salt.utils.is_bin_file``: use ``salt.utils.files.is_binary`` instead.
+- ``salt.utils.list_files``: use ``salt.utils.files.list_files`` instead.
+- ``salt.utils.safe_walk``: use ``salt.utils.files.safe_walk`` instead.
+- ``salt.utils.st_mode_to_octal``: use ``salt.utils.files.st_mode_to_octal`` 
+  instead.
+- ``salt.utils.normalize_mode``: use ``salt.utils.files.normalize_mode`` 
+  instead.
+- ``salt.utils.human_size_to_bytes``: use 
+  ``salt.utils.files.human_size_to_bytes`` instead.
+- ``salt.utils.backup_minion``: use ``salt.utils.files.backup_minion`` instead.
+- ``salt.utils.str_version_to_evr``: use ``salt.utils.pkg.rpm.version_to_evr``
+  instead.
+- ``salt.utils.parse_docstring``: use ``salt.utils.doc.parse_docstring`` 
+  instead.
+- ``salt.utils.compare_versions``: use ``salt.utils.versions.compare`` instead.
+- ``salt.utils.version_cmp``: use ``salt.utils.versions.version_cmp`` instead.
+- ``salt.utils.warn_until``: use ``salt.utils.versions.warn_until`` instead.
+- ``salt.utils.kwargs_warn_until``: use 
+  ``salt.utils.versions.kwargs_warn_until`` instead.
+- ``salt.utils.get_color_theme``: use ``salt.utils.color.get_color_theme`` 
+  instead.
+- ``salt.utils.get_colors``: use ``salt.utils.color.get_colors`` instead.
+- ``salt.utils.gen_state_tag``: use ``salt.utils.state.gen_tag`` instead.
+- ``salt.utils.search_onfail_requisites``: use 
+  ``salt.utils.state.search_onfail_requisites`` instead.
+- ``salt.utils.check_state_result``: use ``salt.utils.state.check_result`` 
+  instead.
+- ``salt.utils.get_user``: use ``salt.utils.user.get_user`` instead.
+- ``salt.utils.get_uid``: use ``salt.utils.user.get_uid`` instead.
+- ``salt.utils.get_specific_user``: use ``salt.utils.user.get_specific_user`` 
+  instead.
+- ``salt.utils.chugid``: use ``salt.utils.user.chugid`` instead.
+- ``salt.utils.chugid_and_umask``: use ``salt.utils.user.chugid_and_umask`` 
+  instead.
+- ``salt.utils.get_default_group``: use ``salt.utils.user.get_default_group`` 
+  instead.
+- ``salt.utils.get_group_list``: use ``salt.utils.user.get_group_list`` 
+  instead.
+- ``salt.utils.get_group_dict``: use ``salt.utils.user.get_group_dict`` 
+  instead.
+- ``salt.utils.get_gid_list``: use ``salt.utils.user.get_gid_list`` instead.
+- ``salt.utils.get_gid``: use ``salt.utils.user.get_gid`` instead.
+- ``salt.utils.enable_ctrl_logoff_handler``: use 
+  ``salt.utils.win_functions.enable_ctrl_logoff_handler`` instead.
+- ``salt.utils.traverse_dict``: use ``salt.utils.data.traverse_dict`` instead.
+- ``salt.utils.traverse_dict_and_list``: use 
+  ``salt.utils.data.traverse_dict_and_list`` instead.
+- ``salt.utils.filter_by``: use ``salt.utils.data.filter_by`` instead.
+- ``salt.utils.subdict_match``: use ``salt.utils.data.subdict_match`` instead.
+- ``salt.utils.substr_in_list``: use ``salt.utils.data.substr_in_list`` instead.
+- ``salt.utils.is_dictlist``: use ``salt.utils.data.is_dictlist``.
+- ``salt.utils.repack_dictlist``: use ``salt.utils.data.repack_dictlist`` 
+  instead.
+- ``salt.utils.compare_dicts``: use ``salt.utils.data.compare_dicts`` instead.
+- ``salt.utils.compare_lists``: use ``salt.utils.data.compare_lists`` instead.
+- ``salt.utils.decode_dict``: use ``salt.utils.data.encode_dict`` instead.
+- ``salt.utils.decode_list``: use ``salt.utils.data.encode_list`` instead.
+- ``salt.utils.exactly_n``: use ``salt.utils.data.exactly_n`` instead.
+- ``salt.utils.exactly_one``: use ``salt.utils.data.exactly_one`` instead.
+- ``salt.utils.is_list``: use ``salt.utils.data.is_list`` instead.
+- ``salt.utils.is_iter``: use ``salt.utils.data.is_iter`` instead.
+- ``salt.utils.isorted``: use ``salt.utils.data.sorted_ignorecase`` instead.
+- ``salt.utils.is_true``: use ``salt.utils.data.is_true`` instead.
+- ``salt.utils.mysql_to_dict``: use ``salt.utils.data.mysql_to_dict`` instead.
+- ``salt.utils.simple_types_filter``: use 
+  ``salt.utils.data.simple_types_filter`` instead.
+- ``salt.utils.ip_bracket``: use ``salt.utils.zeromq.ip_bracket`` instead.
+- ``salt.utils.gen_mac``: use ``salt.utils.network.gen_mac`` instead.
+- ``salt.utils.mac_str_to_bytes``: use ``salt.utils.network.mac_str_to_bytes`` 
+  instead.
+- ``salt.utils.refresh_dns``: use ``salt.utils.network.refresh_dns`` instead.
+- ``salt.utils.dns_check``: use ``salt.utils.network.dns_check`` instead.
+- ``salt.utils.get_context``: use ``salt.utils.templates.get_context`` instead.
+- ``salt.utils.get_master_key``: use ``salt.utils.master.get_master_key`` 
+  instead.
+- ``salt.utils.get_values_of_matching_keys``: use 
+  ``salt.utils.master.get_values_of_matching_keys`` instead.
+- ``salt.utils.date_cast``: use ``salt.utils.dateutils.date_cast`` instead.
+- ``salt.utils.date_format``: use ``salt.utils.dateutils.strftime`` instead.
+- ``salt.utils.total_seconds``: use ``salt.utils.dateutils.total_seconds`` 
+  instead.
+- ``salt.utils.find_json``: use ``salt.utils.json.find_json`` instead.
+- ``salt.utils.import_json``: use ``salt.utils.json.import_json`` instead.
+- ``salt.utils.namespaced_function``: use 
+  ``salt.utils.functools.namespaced_function`` instead.
+- ``salt.utils.alias_function``: use ``salt.utils.functools.alias_function`` 
+  instead.
+- ``salt.utils.profile_func``: use ``salt.utils.profile.profile_func`` instead.
+- ``salt.utils.activate_profile``: use ``salt.utils.profile.activate_profile`` 
+  instead.
+- ``salt.utils.output_profile``: use ``salt.utils.profile.output_profile`` 
+  instead.
+
+State and Execution Module Support for ``docker run`` Functionality
+===================================================================
+
+The :py:func:`docker_container.running <salt.states.docker_container.running>`
+state is good for containers which run services, but it is not as useful for
+cases in which the container only needs to run once. The ``start`` argument to
+:py:func:`docker_container.running <salt.states.docker_container.running>` can
+be set to ``False`` to prevent the container from being started again on a
+subsequent run, but for many use cases this is not sufficient. Therefore, the
+:py:func:`docker.run_container <salt.modules.dockermod.run_container>`
+remote-execution function was added. When used on the Salt CLI, it will return
+information about the container, such as its name, ID, exit code, and any
+output it produces.
+
+State support has also been added via the :py:func:`docker_container.run
+<salt.states.docker_container.run>` state. This state is modeled after the
+:py:func:`cmd.run <salt.states.cmd.run>` state, and includes arguments like
+``onlyif``, ``unless``, and ``creates`` to control whether or not the container
+is run.
+
+Full API Support for :py:func:`docker.logs <salt.modules.dockermod.logs>`
+=========================================================================
+
+This function now supports all of the functions that its Docker API counterpart
+does, allowing you to do things like include timestamps, and also suppress
+stdout/stderr, etc. in the return.
+
+`start` Argument Added to :py:func:`docker.create <salt.modules.dockermod.create>` Function
+===========================================================================================
+
+This removes the need to run :py:func:`docker.start
+<salt.modules.dockermod.start_>` separately when creating containers on the
+Salt CLI.
+
+.. code-block:: bash
+
+    salt myminion docker.create image=foo/bar:baz command=/path/to/command start=True
+
+Use SaltSSH Minions like regular Master-Minions
+-----------------------------------------------
+
+The Master process can now also call SSH minions as if they were connected to
+the master using ZeroMQ.  By setting `enable_ssh_minions: True` in the the
+master config file, the master will create a SaltSSH client process which
+connects to the minion and returns the output for the `salt` commandline to use
+like a regular minion. This can be used anywhere the LocalClient is used.
+
+Exceptions Raised for Authentication/Authorization Errors
+---------------------------------------------------------
+
+When sending ``publish`` commands via ``master.py`` and ``masterapi.py`` and an
+authorization or authentication problem is encountered, Salt will now raise the
+appropriate exceptions instead of returning an empty string: ``''``.
+
+The reasoning behind this change is to make it easier to debug various scenarios
+surrounding authentication and authorization issues more effectively.
+
 Comparison Operators in Package Installation
 --------------------------------------------
 
@@ -25,8 +315,69 @@ by any master tops matches that are not matched via a top file.
 To make master tops matches execute first, followed by top file matches, set
 the new :conf_minion:`master_tops_first` minion config option to ``True``.
 
+Several Jinja Filters Renamed
+-----------------------------
+
+The following Jinja filters (originally added in 2017.7.0) have been renamed
+due to the fact that they were inaccurately named when initially added. The
+original names will be supported until the Neon release of Salt.
+
+- :jinja_ref:`rand_str` renamed to :jinja_ref:`random_hash`
+- :jinja_ref:`jinja_decode_dict` renamed to :jinja_ref:`jinja_encode_dict`
+- :jinja_ref:`jinja_decode_list` renamed to :jinja_ref:`jinja_encode_list`
+
+Return Codes for Runner/Wheel Functions
+---------------------------------------
+
+When using :ref:`orchestration <orchestrate-runner>`, runner and wheel
+functions used to report a ``True`` result if the function ran to completion
+without raising an exception. It is now possible to set a return code in the
+``__context__`` dictionary, allowing runner and wheel functions to report that
+they failed. Here's some example pseudocode:
+
+.. code-block:: python
+
+    def myrunner():
+        ...
+        do stuff
+        ...
+        if some_error_condition:
+            __context__['retcode'] = 1
+        return result
+
+Variable Update Intervals for Fileserver Backends
+-------------------------------------------------
+
+Prior to this release, fileservers would be updated as part of a dedicated
+"maintenance" process, in which various routine maintenance tasks were
+performed. This tied the update interval to the :conf_master:`loop_interval`
+config option, and also forced all fileservers to update at the same interval.
+
+Oxygen adds the following configuration options for the various fileserver
+backends:
+
+- :conf_master:`roots_update_interval`
+- :conf_master:`azurefs_update_interval`
+- :conf_master:`gitfs_update_interval`
+- :conf_master:`hgfs_update_interval`
+- :conf_master:`minionfs_update_interval`
+- :conf_master:`s3fs_update_interval`
+- :conf_master:`svnfs_update_interval`
+
+These allow for update intervals to be set for each individual backend. The
+default value for each of these is 60 seconds.
+
+In addition, for :ref:`GitFS <tutorial-gitfs>` it is also possible to apply
+intervals to individual remotes. See :ref:`here <gitfs-update-intervals>` for
+examples.
+
+.. note::
+    git_pillar does not yet support variable update intervals, this is targeted
+    for the next feature release (Fluorine).
+
 LDAP via External Authentication Changes
 ----------------------------------------
+
 In this release of Salt, if LDAP Bind Credentials are supplied, then
 these credentials will be used for all LDAP access except the first
 authentication when a job is submitted.  The first authentication will
@@ -46,6 +397,49 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+
+New (Proxy) Minion Configuration Options
+----------------------------------------
+
+To be able to connect the Minion to the Master using a certain source IP address
+or port, the following options have been added:
+
+- :conf_minion:`source_interface_name`
+- :conf_minion:`source_address`
+- :conf_minion:`source_ret_port`
+- :conf_minion:`source_publish_port`
+
+:conf_minion:`environment` config option renamed to :conf_minion:`saltenv`
+--------------------------------------------------------------------------
+
+The :conf_minion:`environment` config option predates referring to a salt
+fileserver environment as a **saltenv**. To pin a minion to a single
+environment for running states, one would use :conf_minion:`environment`, but
+overriding that environment would be done with the ``saltenv`` argument. For
+consistency, :conf_minion:`environment` is now simply referred to as
+:conf_minion:`saltenv`. There are no plans to deprecate or remove
+:conf_minion:`environment`, if used it will log a warning and its value will be
+used as :conf_minion:`saltenv`.
+
+:conf_minion:`lock_saltenv` config option added
+-----------------------------------------------
+
+If set to ``True``, this option will prevent a minion from allowing the
+``saltenv`` argument to override the value set in :conf_minion:`saltenv` when
+running states.
+
+Failed Minions for State/Function Orchestration Jobs Added to Changes Dictionary
+--------------------------------------------------------------------------------
+
+For orchestration jobs which run states (or run remote execution functions and
+also use a :ref:`fail function <orchestrate-runner-fail-functions>` to indicate
+success or failure), minions which have ``False`` results were previously
+included as a formatted string in the comment field of the return for that
+orchestration job. This made the failed returns difficult to :ref:`parse
+programatically <orchestrate-runner-parsing-results-programatically>`. The
+failed returns in these cases are now included in the changes dictionary,
+making for much easier parsing.
+
 New Grains
 ----------
 
@@ -55,7 +449,127 @@ The new grains added are:
 
 * ``fc_wwn``: Show all fibre channel world wide port names for a host
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
-* ``swap_total``: Show the configured swap_total for Linux, *BSD, OS X and Solaris/SunOS
+* ``swap_total``: Show the configured swap_total for Linux, \*BSD, OS X and Solaris/SunOS
+
+Salt Minion Auto-discovery
+------------------------
+
+Using auto-discovery, the Salt Minion now no longer needs to be configured
+against a specific DNS name or IP address of a Master.
+
+For this feature Salt Master now requires port 4520 for UDP broadcast packets to be opened
+and the Salt Minion be able to send UDP packets to the same port.
+
+Configuration
+=============
+
+By default, automatic discovery is disabled.
+
+..warning::
+   Due to the current limitations that will be changing in a future, before you turn on auto-discovery,
+   make sure your network is secured and trusted.
+
+Auto-discovery is configured on Master and Minion. Both of them are configured via the ``discovery`` option
+as follows:
+
+**Master configuration**
+
+To use the default configuration, which accepts any minion, simply set ``discovery`` to True:
+
+.. code-block:: yaml
+
+       discovery: true
+
+A sub-option called `mapping` allows auto-discovery to help find the proper
+Master. The mapping contains an arbitrary set of key/value pairs, which the
+Minion configuration can target. By default, no mappings are set.
+
+Example:
+
+.. code-block:: yaml
+
+       discovery:
+         mapping:
+           description: SES 5.0
+           node: 1
+
+It is also possible to change the port used from the default of ``4520``, by
+setting a ``port`` option under the Master's ``discovery`` configuration:
+
+.. code-block:: yaml
+
+    discovery:
+      port: 4567
+
+.. note::
+    When using a port number other than the default, the Minion's ``discovery``
+    configuraton must *also* have a port specified, otherwise the Minion will
+    still attempt to contact the Master on port ``4520``.
+
+**Minion configuration**
+
+In addition to the ``mapping`` and ``port`` options, the following additional options are available to Minions:
+
+- ``attempts`` - This option specifies how many broadcast requests should be
+  sent to the network, waiting for any Master response. Each attempt takes a
+  couple of seconds, so raising this value may result in a slower Minion
+  startup. Note that, on a properly-configured network, autodiscovery should
+  succeed on the first attempt. By default, this value is set to ``3``.
+- ``match`` - This option can be set to either ``all`` or ``any``, and it
+  determines how the values configured in ``mapping`` are matched. If set to
+  ``all``, then all of the key/value pairs in the Minion's ``mapping`` must
+  match a given Master. If set to ``any`` (the default), then any match to a
+  key/value mapping will constitute a match.
+- ``pause`` - The interval in seconds between attempts (default: 5).
+
+Connection to a type instead of DNS
+===================================
+
+By now each Minion was connecting to a Master by DNS or IP address. From now on it is possible
+also to connect to a _type_ of a Master. For example, in a network there are three different
+Masters, each corresponds for a particular niche or environment or specific role etc. The Minion
+is supposed to connect only to one of those Masters that is described approriately.
+
+To achieve such an effect, each `/etc/salt/master` configuration should have a `discovery` option,
+which should have a `mapping` element with arbitrary key/value pairs. The same configuration should
+be on the Minion, so then when mapping matches, Minion recognises Master as its connection target.
+
+Example for Master configuration (`/etc/salt/master`):
+
+.. code-block:: yaml
+
+       discovery:
+         mapping:
+           description: SES 5.0
+           node: 1
+
+The example above describes a system that is running a particular product, where `description` is
+an arbitrary key and `SES 5.0` is just a string. In order to match exactly this Master, the
+following configuration at Minion should be present:
+
+.. code-block:: yaml
+
+       discovery:
+         match: all  # Can be "all" or "any"
+         mapping:
+           description: SES 5.0
+           node: 1
+
+Notice `match` criteria is set to `all`. This would mean that from all found Masters select only
+that, which `description` is set to `SES 5.0` _and_ `node` is set to `1`. All other Masters will
+be ignored.
+
+
+Limitations
+===========
+
+This feature has a couple of _temporary_ limitations that are subject to change in the future:
+
+- Only one Master on the network is supported. Currently the Minion cannot select which Master
+  out of few the same to choose. This will change to choosing the Master that is least loaded.
+- Minions will accept _any_ master that matches connection criteria without any particular
+  security applied (priv/pub key check, signature, fingerprint etc). That implies that administrator
+  is expected to know his network and make sure it is clean.
 
 Grains Changes
 --------------
@@ -78,6 +592,12 @@ New support for Cisco UCS Chassis
 
 The salt proxy minion now allows for control of Cisco USC chassis. See
 the ``cimc`` modules for details.
+
+New support for Cassandra v3
+----------------------------
+
+The ``cassandra_cql`` module now supports Cassandra v3 which has changed
+its internal schema to define keyspaces and columns.
 
 New salt-ssh roster
 -------------------
@@ -111,7 +631,7 @@ environments (i.e. ``saltenvs``) have been added:
    available as saltenvs.
 
 Additional output modes
-------------------
+-----------------------
 
 The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``terse_id``.
 Just like ``mixed_id``, these use the state ID as name in the highstate output.
@@ -1010,6 +1530,33 @@ thread of states because of a failure.
 
 The ``onfail_any`` requisite is applied in the same way as ``require_any`` and ``watch_any``:
 
+Basic Slots support in states compiler
+--------------------------------------
+
+Slots extend the state syntax and allows you to do things right before the
+state function is executed. So you can make a decision in the last moment right
+before a state is executed.
+
+Slot syntax looks close to the simple python function call. Here is a simple example:
+
+.. code-block:: yaml
+
+    copy-some-file:
+      file.copy:
+        - name: __slot__:salt:test.echo(text=/tmp/some_file)
+        - source: __slot__:salt:test.echo(/etc/hosts)
+
+Read more :ref:`here <slots-subsystem>`.
+
+Cryptographic layer changes
+---------------------------
+
+M2Crypto is coming back. We are making the crypto backend modular but in this
+release M2Crypto is enabled if it's importable by Python. If not Cryptodome or
+PyCrypto is used as it was in the previous releases. M2Crypto is used in the
+same way as PyCrypto so there would be no compatibility issues, different nodes
+could use different backends.
+
 Deprecations
 ------------
 
@@ -1153,3 +1700,11 @@ Sentry Log Handler
 Configuring sentry raven python client via ``project``, ``servers``, ``public_key
 and ``secret_key`` is deprecated and won't work with sentry clients > 3.0.
 Instead, the ``dsn`` config param must be used.
+
+RAET transport
+--------------
+
+We haven't been doing development on RAET for quite some time and decided that
+Oxygen is the time to announce the deprecation. RAET support will be removed in
+Neon. Please consider to move to ``zeromq`` or ``tcp`` transport instead of
+``raet``.
