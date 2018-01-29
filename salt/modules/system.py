@@ -12,7 +12,7 @@ Support for reboot, shutdown, etc on POSIX-like systems.
     ``salt`` will work as expected.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 from datetime import datetime, timedelta, tzinfo
@@ -521,6 +521,7 @@ def get_computer_desc():
         try:
             with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                 for line in mach_info.readlines():
+                    line = salt.utils.stringutils.to_unicode(line)
                     match = pattern.match(line)
                     if match:
                         # get rid of whitespace then strip off quotes
@@ -581,8 +582,8 @@ def set_computer_desc(desc):
             # time to write our changes to the file
             mach_info.seek(0, 0)
             mach_info.truncate()
-            mach_info.write(''.join(lines))
-            mach_info.write('\n')
+            mach_info.write(salt.utils.stringutils.to_str(''.join(lines)))
+            mach_info.write(salt.utils.stringutils.to_str('\n'))
             return True
     except IOError:
         return False

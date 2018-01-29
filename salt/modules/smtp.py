@@ -41,7 +41,7 @@ Module for Sending Messages via SMTP
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import socket
 
@@ -69,14 +69,14 @@ def __virtual__():
 
 
 def send_msg(recipient,
-        message,
-        subject='Message from Salt',
-        sender=None,
-        server=None,
-        use_ssl='True',
-        username=None,
-        password=None,
-        profile=None):
+             message,
+             subject='Message from Salt',
+             sender=None,
+             server=None,
+             use_ssl='True',
+             username=None,
+             password=None,
+             profile=None):
     '''
     Send a message to an SMTP recipient. Designed for use in states.
 
@@ -111,7 +111,7 @@ def send_msg(recipient,
             smtpconn = smtplib.SMTP(server)
 
     except socket.gaierror as _error:
-        log.debug("Exception: {0}" . format(_error))
+        log.debug("Exception: %s", _error)
         return False
 
     if use_ssl not in ('True', 'true'):
@@ -148,7 +148,7 @@ def send_msg(recipient,
         log.debug("The server didn’t reply properly to the HELO greeting.")
         return False
     except smtplib.SMTPSenderRefused:
-        log.debug("The server didn’t accept the {0}.".format(sender))
+        log.debug("The server didn’t accept the %s.", sender)
         return False
     except smtplib.SMTPDataError:
         log.debug("The server replied with an unexpected error code.")

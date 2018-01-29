@@ -4,7 +4,7 @@ Make me some salt!
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import warnings
 from salt.utils.verify import verify_log
@@ -69,9 +69,11 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         :return:
         '''
         if self.config['hash_type'].lower() in ['md5', 'sha1']:
-            log.warning('IMPORTANT: Do not use {h_type} hashing algorithm! Please set "hash_type" to '
-                        'sha256 in Salt {d_name} config!'.format(
-                        h_type=self.config['hash_type'], d_name=self.__class__.__name__))
+            log.warning(
+                'IMPORTANT: Do not use %s hashing algorithm! Please set '
+                '"hash_type" to sha256 in Salt %s config!',
+                self.config['hash_type'], self.__class__.__name__
+            )
 
     def action_log_info(self, action):
         '''
@@ -80,7 +82,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         :param action
         :return:
         '''
-        log.info('{action} the Salt {d_name}'.format(d_name=self.__class__.__name__, action=action))
+        log.info('%s the Salt %s', action, self.__class__.__name__)
 
     def start_log_info(self):
         '''
@@ -88,7 +90,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
 
         :return:
         '''
-        log.info('The Salt {d_name} is starting up'.format(d_name=self.__class__.__name__))
+        log.info('The Salt %s is starting up', self.__class__.__name__)
 
     def shutdown_log_info(self):
         '''
@@ -96,7 +98,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
 
         :return:
         '''
-        log.info('The Salt {d_name} is shut down'.format(d_name=self.__class__.__name__))
+        log.info('The Salt %s is shut down', self.__class__.__name__)
 
     def environment_failure(self, error):
         '''
@@ -105,8 +107,10 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         :param error:
         :return:
         '''
-        log.exception('Failed to create environment for {d_name}: {reason}'.format(
-            d_name=self.__class__.__name__, reason=get_error_message(error)))
+        log.exception(
+            'Failed to create environment for %s: %s',
+            self.__class__.__name__, get_error_message(error)
+        )
         self.shutdown(error)
 
 
@@ -290,11 +294,7 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
 
         self.setup_logfile_logger()
         verify_log(self.config)
-        log.info(
-            'Setting up the Salt Minion "{0}"'.format(
-                self.config['id']
-            )
-        )
+        log.info('Setting up the Salt Minion "%s"', self.config['id'])
         migrations.migrate_paths(self.config)
 
         # Bail out if we find a process running and it matches out pidfile
@@ -324,10 +324,8 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
             self.minion = salt.daemons.flo.IofloMinion(self.config)
         else:
             log.error(
-                'The transport \'{0}\' is not supported. Please use one of the following: '
-                'tcp, '
-                'raet, '
-                'or zeromq.'.format(transport)
+                'The transport \'%s\' is not supported. Please use one of '
+                'the following: tcp, raet, or zeromq.', transport
             )
             self.shutdown(1)
 
@@ -355,7 +353,7 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
-                log.error(str(error))
+                log.error(error)
                 self.shutdown(error.code)
 
     def call(self, cleanup_protecteds):
@@ -383,7 +381,7 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
-                log.error(str(exc))
+                log.error(exc)
                 self.shutdown(exc.code)
 
     def shutdown(self, exitcode=0, exitmsg=None):
@@ -531,7 +529,7 @@ class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # 
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
-                log.error(str(exc))
+                log.error(exc)
                 self.shutdown(exc.code)
 
     # def call(self, cleanup_protecteds):

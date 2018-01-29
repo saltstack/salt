@@ -47,7 +47,7 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import re
 import sys
 

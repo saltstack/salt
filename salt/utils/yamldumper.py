@@ -7,7 +7,7 @@
 # pylint: disable=W0232
 #         class has no __init__ method
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     from yaml import CDumper as Dumper
     from yaml import CSafeDumper as SafeDumper

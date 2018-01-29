@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import logging
@@ -11,7 +11,7 @@ import salt.utils.path
 import salt.utils.yaml
 
 # Import 3rd-party libs
-from salt.ext.six import iteritems
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -40,15 +40,20 @@ def get_class(_class, salt_data):
     l_files = []
     saltclass_path = salt_data['path']
 
-    straight = '{0}/classes/{1}.yml'.format(saltclass_path, _class)
-    sub_straight = '{0}/classes/{1}.yml'.format(saltclass_path,
-                                                _class.replace('.', '/'))
-    sub_init = '{0}/classes/{1}/init.yml'.format(saltclass_path,
-                                                 _class.replace('.', '/'))
+    straight = os.path.join(saltclass_path,
+                            'classes',
+                            '{0}.yml'.format(_class))
+    sub_straight = os.path.join(saltclass_path,
+                                'classes',
+                                '{0}.yml'.format(_class.replace('.', os.sep)))
+    sub_init = os.path.join(saltclass_path,
+                            'classes',
+                            _class.replace('.', os.sep),
+                            'init.yml')
 
-    for root, dirs, files in salt.utils.path.os_walk('{0}/classes'.format(saltclass_path)):
+    for root, dirs, files in salt.utils.path.os_walk(os.path.join(saltclass_path, 'classes'), followlinks=True):
         for l_file in files:
-            l_files.append('{0}/{1}'.format(root, l_file))
+            l_files.append(os.path.join(root, l_file))
 
     if straight in l_files:
         return render_yaml(straight, salt_data)
@@ -59,7 +64,7 @@ def get_class(_class, salt_data):
     if sub_init in l_files:
         return render_yaml(sub_init, salt_data)
 
-    log.warning('{0}: Class definition not found'.format(_class))
+    log.warning('%s: Class definition not found', _class)
     return {}
 
 
@@ -86,7 +91,7 @@ def dict_merge(a, b, path=None):
                 else:
                     a[key].extend(b[key])
             elif isinstance(a[key], dict) and isinstance(b[key], dict):
-                dict_merge(a[key], b[key], path + [str(key)])
+                dict_merge(a[key], b[key], path + [six.text_type(key)])
             elif a[key] == b[key]:
                 pass
             else:
@@ -98,7 +103,7 @@ def dict_merge(a, b, path=None):
 
 # Recursive search and replace in a dict
 def dict_search_and_replace(d, old, new, expanded):
-    for (k, v) in iteritems(d):
+    for (k, v) in six.iteritems(d):
         if isinstance(v, dict):
             dict_search_and_replace(d[k], old, new, expanded)
         if v == old:
@@ -125,9 +130,9 @@ def expand_variables(a, b, expanded, path=None):
         b = a.copy()
         path = []
 
-    for (k, v) in iteritems(a):
+    for (k, v) in six.iteritems(a):
         if isinstance(v, dict):
-            expand_variables(v, b, expanded, path + [str(k)])
+            expand_variables(v, b, expanded, path + [six.text_type(k)])
         else:
             if isinstance(v, str):
                 vre = re.search(r'(^|.)\$\{.*?\}', v)
@@ -154,7 +159,7 @@ def expand_classes_in_order(minion_dict,
                             seen_classes,
                             expanded_classes,
                             classes_to_expand):
-    # Get classes to expand from minion dictionnary
+    # Get classes to expand from minion dictionary
     if not classes_to_expand and 'classes' in minion_dict:
         classes_to_expand = minion_dict['classes']
 
@@ -220,17 +225,17 @@ def expanded_dict_from_minion(minion_id, salt_data):
     _file = ''
     saltclass_path = salt_data['path']
     # Start
-    for root, dirs, files in salt.utils.path.os_walk('{0}/nodes'.format(saltclass_path)):
+    for root, dirs, files in salt.utils.path.os_walk(os.path.join(saltclass_path, 'nodes'), followlinks=True):
         for minion_file in files:
             if minion_file == '{0}.yml'.format(minion_id):
                 _file = os.path.join(root, minion_file)
 
-    # Load the minion_id definition if existing, else an exmpty dict
+    # Load the minion_id definition if existing, else an empty dict
     node_dict = {}
     if _file:
         node_dict[minion_id] = render_yaml(_file, salt_data)
     else:
-        log.warning('{0}: Node definition not found'.format(minion_id))
+        log.warning('%s: Node definition not found', minion_id)
         node_dict[minion_id] = {}
 
     # Get 2 ordered lists:

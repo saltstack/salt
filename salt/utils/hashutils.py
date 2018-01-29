@@ -2,7 +2,7 @@
 '''
 A collection of hashing and encoding utils.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import base64
@@ -117,7 +117,7 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     Verify a challenging hmac signature against a string / shared-secret
     Returns a boolean if the verification succeeded or failed.
     '''
-    if six.PY3:
+    if six.text_type:
         msg = salt.utils.stringutils.to_bytes(string)
         key = salt.utils.stringutils.to_bytes(shared_secret)
         challenge = salt.utils.stringutils.to_bytes(challenge_hmac)
@@ -139,7 +139,7 @@ def random_hash(size=9999999999, hash_type=None):
     if not hash_type:
         hash_type = 'md5'
     hasher = getattr(hashlib, hash_type)
-    return hasher(salt.utils.stringutils.to_bytes(str(random.SystemRandom().randint(0, size)))).hexdigest()
+    return hasher(salt.utils.stringutils.to_bytes(six.text_type(random.SystemRandom().randint(0, size)))).hexdigest()
 
 
 @jinja_filter('file_hashsum')

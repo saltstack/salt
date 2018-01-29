@@ -3,12 +3,11 @@
 The generic libcloud template used to create the connections and deploy the
 cloud virtual machines
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 import logging
-from salt.ext.six import string_types
 from salt.ext import six
 from salt.ext.six.moves import zip
 
@@ -80,7 +79,7 @@ def node_state(id_):
         'paused': 'PAUSED',
         'reconfiguring': 'RECONFIGURING'
     }
-    return states_str[id_] if isinstance(id_, string_types) else states_int[id_]
+    return states_str[id_] if isinstance(id_, six.string_types) else states_int[id_]
 
 
 def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
@@ -99,7 +98,7 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
     except ImportError:
         raise ImportError(
             'salt-cloud requires >= libcloud {0} which is not installed'.format(
-                '.'.join([str(num) for num in reqver])
+                '.'.join([six.text_type(num) for num in reqver])
             )
         )
 
@@ -108,7 +107,7 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
 
     errormsg = 'Your version of libcloud is {0}. '.format(libcloud.__version__)
     errormsg += 'salt-cloud requires >= libcloud {0}'.format(
-        '.'.join([str(num) for num in reqver])
+        '.'.join([six.text_type(num) for num in reqver])
     )
     if why:
         errormsg += ' for {0}'.format(why)
@@ -144,10 +143,10 @@ def avail_locations(conn=None, call=None):
     locations = conn.list_locations()
     ret = {}
     for img in locations:
-        if isinstance(img.name, string_types) and not six.PY3:
+        if isinstance(img.name, six.string_types) and not six.PY3:
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
-            img_name = str(img.name)
+            img_name = str(img.name)  # future lint: disable=blacklisted-function
 
         ret[img_name] = {}
         for attr in dir(img):
@@ -155,7 +154,7 @@ def avail_locations(conn=None, call=None):
                 continue
 
             attr_value = getattr(img, attr)
-            if isinstance(attr_value, string_types) and not six.PY3:
+            if isinstance(attr_value, six.string_types) and not six.PY3:
                 attr_value = attr_value.encode(
                     'ascii', 'salt-cloud-force-ascii'
                 )
@@ -181,17 +180,17 @@ def avail_images(conn=None, call=None):
     images = conn.list_images()
     ret = {}
     for img in images:
-        if isinstance(img.name, string_types) and not six.PY3:
+        if isinstance(img.name, six.string_types) and not six.PY3:
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
-            img_name = str(img.name)
+            img_name = str(img.name)  # future lint: disable=blacklisted-function
 
         ret[img_name] = {}
         for attr in dir(img):
             if attr.startswith('_') or attr in ('driver', 'get_uuid'):
                 continue
             attr_value = getattr(img, attr)
-            if isinstance(attr_value, string_types) and not six.PY3:
+            if isinstance(attr_value, six.string_types) and not six.PY3:
                 attr_value = attr_value.encode(
                     'ascii', 'salt-cloud-force-ascii'
                 )
@@ -216,10 +215,10 @@ def avail_sizes(conn=None, call=None):
     sizes = conn.list_sizes()
     ret = {}
     for size in sizes:
-        if isinstance(size.name, string_types) and not six.PY3:
+        if isinstance(size.name, six.string_types) and not six.PY3:
             size_name = size.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
-            size_name = str(size.name)
+            size_name = str(size.name)  # future lint: disable=blacklisted-function
 
         ret[size_name] = {}
         for attr in dir(size):
@@ -231,7 +230,7 @@ def avail_sizes(conn=None, call=None):
             except Exception:
                 pass
 
-            if isinstance(attr_value, string_types) and not six.PY3:
+            if isinstance(attr_value, six.string_types) and not six.PY3:
                 attr_value = attr_value.encode(
                     'ascii', 'salt-cloud-force-ascii'
                 )
@@ -251,15 +250,15 @@ def get_location(conn, vm_):
         )
 
     for img in locations:
-        if isinstance(img.id, string_types) and not six.PY3:
+        if isinstance(img.id, six.string_types) and not six.PY3:
             img_id = img.id.encode('ascii', 'salt-cloud-force-ascii')
         else:
-            img_id = str(img.id)
+            img_id = str(img.id)  # future lint: disable=blacklisted-function
 
-        if isinstance(img.name, string_types) and not six.PY3:
+        if isinstance(img.name, six.string_types) and not six.PY3:
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
-            img_name = str(img.name)
+            img_name = str(img.name)  # future lint: disable=blacklisted-function
 
         if vm_location and vm_location in (img_id, img_name):
             return img
@@ -282,15 +281,15 @@ def get_image(conn, vm_):
         vm_image = vm_image.encode('ascii', 'salt-cloud-force-ascii')
 
     for img in images:
-        if isinstance(img.id, string_types) and not six.PY3:
+        if isinstance(img.id, six.string_types) and not six.PY3:
             img_id = img.id.encode('ascii', 'salt-cloud-force-ascii')
         else:
-            img_id = str(img.id)
+            img_id = str(img.id)  # future lint: disable=blacklisted-function
 
-        if isinstance(img.name, string_types) and not six.PY3:
+        if isinstance(img.name, six.string_types) and not six.PY3:
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
-            img_name = str(img.name)
+            img_name = str(img.name)  # future lint: disable=blacklisted-function
 
         if vm_image and vm_image in (img_id, img_name):
             return img
@@ -310,7 +309,7 @@ def get_size(conn, vm_):
         return sizes[0]
 
     for size in sizes:
-        if vm_size and str(vm_size) in (str(size.id), str(size.name)):
+        if vm_size and str(vm_size) in (str(size.id), str(size.name)):  # pylint: disable=blacklisted-function
             return size
     raise SaltCloudNotFound(
         'The specified size, \'{0}\', could not be found.'.format(vm_size)
@@ -358,7 +357,7 @@ def destroy(name, conn=None, call=None):
     node = get_node(conn, name)
     profiles = get_configured_provider()['profiles']  # pylint: disable=E0602
     if node is None:
-        log.error('Unable to find the VM {0}'.format(name))
+        log.error('Unable to find the VM %s', name)
     profile = None
     if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
         profile = node.extra['metadata']['profile']
@@ -368,7 +367,7 @@ def destroy(name, conn=None, call=None):
         flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
 
     if flush_mine_on_destroy:
-        log.info('Clearing Salt Mine: {0}'.format(name))
+        log.info('Clearing Salt Mine: %s', name)
 
         mopts_ = salt.config.DEFAULT_MINION_OPTS
         conf_path = '/'.join(__opts__['conf_file'].split('/')[:-1])
@@ -378,11 +377,11 @@ def destroy(name, conn=None, call=None):
         client = salt.client.get_local_client(mopts_)
         minions = client.cmd(name, 'mine.flush')
 
-    log.info('Clearing Salt Mine: {0}, {1}'.format(name, flush_mine_on_destroy))
-    log.info('Destroying VM: {0}'.format(name))
+    log.info('Clearing Salt Mine: %s, %s', name, flush_mine_on_destroy)
+    log.info('Destroying VM: %s', name)
     ret = conn.destroy_node(node)
     if ret:
-        log.info('Destroyed VM: {0}'.format(name))
+        log.info('Destroyed VM: %s', name)
         # Fire destroy action
         __utils__['cloud.fire_event'](
             'event',
@@ -406,7 +405,7 @@ def destroy(name, conn=None, call=None):
 
         return True
 
-    log.error('Failed to Destroy VM: {0}'.format(name))
+    log.error('Failed to Destroy VM: %s', name)
     return False
 
 
@@ -419,11 +418,11 @@ def reboot(name, conn=None):
 
     node = get_node(conn, name)
     if node is None:
-        log.error('Unable to find the VM {0}'.format(name))
-    log.info('Rebooting VM: {0}'.format(name))
+        log.error('Unable to find the VM %s', name)
+    log.info('Rebooting VM: %s', name)
     ret = conn.reboot_node(node)
     if ret:
-        log.info('Rebooted VM: {0}'.format(name))
+        log.info('Rebooted VM: %s', name)
         # Fire reboot action
         __utils__['cloud.fire_event'](
             'event',
@@ -435,7 +434,7 @@ def reboot(name, conn=None):
         )
         return True
 
-    log.error('Failed to reboot VM: {0}'.format(name))
+    log.error('Failed to reboot VM: %s', name)
     return False
 
 
@@ -524,9 +523,5 @@ def conn_has_method(conn, method_name):
     if method_name in dir(conn):
         return True
 
-    log.error(
-        'Method \'{0}\' not yet supported!'.format(
-            method_name
-        )
-    )
+    log.error('Method \'%s\' not yet supported!', method_name)
     return False
