@@ -84,7 +84,6 @@ def __virtual__():
                     'as virtual \'service\''
                 )
             return __virtualname__
-
         if __grains__['os'] == 'Fedora':
             if osrelease_major >= 15:
                 return (
@@ -97,6 +96,15 @@ def __virtual__():
                 return (
                     False,
                     'RedHat-based distros >= version 7 use systemd, will not '
+                    'load rh_service.py as virtual \'service\''
+                )
+        if __grains__['os'] == 'Amazon':
+            if int(osrelease_major) in (2016, 2017):
+                return __virtualname__
+            else:
+                return (
+                    False,
+                    'Amazon Linux >= version 2 use systemd, will not '
                     'load rh_service.py as virtual \'service\''
                 )
         return __virtualname__
