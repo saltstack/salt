@@ -104,7 +104,7 @@ def dump(obj, fp, **kwargs):
         kwargs['ensure_ascii'] = False
     if six.PY2:
         obj = salt.utils.data.encode(obj)
-    return json.dump(obj, fp, **kwargs)  # future lint: blacklisted-function
+    return json_module.dump(obj, fp, **kwargs)  # future lint: blacklisted-function
 
 
 def dumps(obj, **kwargs):
