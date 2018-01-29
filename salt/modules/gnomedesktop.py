@@ -13,14 +13,15 @@ try:
 except ImportError:
     HAS_PWD = False
 
+# Import Salt libs
+import salt.utils.path
+
 # Import 3rd-party libs
 try:
     from gi.repository import Gio, GLib  # pylint: disable=W0611
     HAS_GLIB = True
 except ImportError:
     HAS_GLIB = False
-
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class _GSettings(object):
         '''
         return the command to run the gesttings binary
         '''
-        if salt.utils.which_bin(['dbus-run-session']):
+        if salt.utils.path.which_bin(['dbus-run-session']):
             cmd = ['dbus-run-session', '--', 'gsettings']
         else:
             cmd = ['dbus-launch', '--exit-with-session', 'gsettings']
