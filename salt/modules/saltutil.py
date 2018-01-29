@@ -1305,7 +1305,7 @@ def revoke_auth(preserve_minion_cache=False):
 
     for master in masters:
         channel = salt.transport.Channel.factory(__opts__, master_uri=master)
-        tok = channel.auth.gen_token('salt')
+        tok = channel.auth.gen_token(b'salt')
         load = {'cmd': 'revoke_auth',
                 'id': __opts__['id'],
                 'tok': tok,

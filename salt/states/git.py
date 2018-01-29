@@ -2312,6 +2312,7 @@ def detached(name,
     else:
         # Clone repository
         if os.path.isdir(target):
+            target_contents = os.listdir(target)
             if force_clone:
                 # Clone is required, and target directory exists, but the
                 # ``force`` option is enabled, so we need to clear out its
@@ -2328,20 +2329,26 @@ def detached(name,
                     'place (force_clone=True set in git.detached state)',
                     target, name
                 )
-                try:
-                    if os.path.islink(target):
-                        os.unlink(target)
-                    else:
-                        salt.utils.files.rm_rf(target)
-                except OSError as exc:
+                removal_errors = {}
+                for target_object in target_contents:
+                    target_path = os.path.join(target, target_object)
+                    try:
+                        salt.utils.files.rm_rf(target_path)
+                    except OSError as exc:
+                        if exc.errno != errno.ENOENT:
+                            removal_errors[target_path] = exc
+                if removal_errors:
+                    err_strings = [
+                        '  {0}\n    {1}'.format(k, v)
+                        for k, v in six.iteritems(removal_errors)
+                    ]
                     return _fail(
                         ret,
-                        'Unable to remove {0}: {1}'.format(target, exc),
+                        'Unable to remove\n{0}'.format('\n'.join(err_strings)),
                         comments
                     )
-                else:
-                    ret['changes']['forced clone'] = True
-            elif os.listdir(target):
+                ret['changes']['forced clone'] = True
+            elif target_contents:
                 # Clone is required, but target dir exists and is non-empty. We
                 # can't proceed.
                 return _fail(

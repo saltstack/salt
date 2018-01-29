@@ -2,7 +2,7 @@
 '''
 Publish a command from a minion to a target
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import time
@@ -96,18 +96,19 @@ def _publish(
             if len(matching_master_uris) > 1:
                 # If we have multiple matches, consider this a non-fatal error
                 # and continue with whatever we found first.
-                log.warning('The `via_master` flag found \
-                        more than one possible match found for {0} when evaluating \
-                        list {1}'.format(via_master, __opts__['master_uri_list']))
+                log.warning('The `via_master` flag found '
+                            'more than one possible match found for %s when '
+                            'evaluating list %s',
+                            via_master, __opts__['master_uri_list'])
             master_uri = matching_master_uris.pop()
     else:
         # If no preference is expressed by the user, just publish to the first master
         # in the list.
         master_uri = __opts__['master_uri']
 
-    log.info('Publishing \'{0}\' to {1}'.format(fun, master_uri))
+    log.info('Publishing \'%s\' to %s', fun, master_uri)
     auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token('salt')
+    tok = auth.gen_token(b'salt')
     load = {'cmd': 'minion_pub',
             'fun': fun,
             'arg': arg,
@@ -336,9 +337,9 @@ def runner(fun, arg=None, timeout=5):
 
     if 'master_uri' not in __opts__:
         return 'No access to master. If using salt-call with --local, please remove.'
-    log.info('Publishing runner \'{0}\' to {master_uri}'.format(fun, **__opts__))
+    log.info('Publishing runner \'%s\' to %s', fun, __opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token('salt')
+    tok = auth.gen_token(b'salt')
     load = {'cmd': 'minion_runner',
             'fun': fun,
             'arg': arg,

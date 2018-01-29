@@ -173,7 +173,7 @@ def set_host(ip, alias):
         if tmpline.startswith(b'#'):
             continue
         comps = tmpline.split()
-        if comps[0] == ip:
+        if comps[0] == salt.utils.stringutils.to_bytes(ip):
             if not ovr:
                 lines[ind] = line_to_add
                 ovr = True
