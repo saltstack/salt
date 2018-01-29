@@ -609,7 +609,7 @@ def _run(cmd,
             out = ''
         except UnicodeDecodeError:
             log.error('UnicodeDecodeError while decoding output of cmd {0}'.format(cmd))
-            out = proc.stdout.decode(__salt_system_encoding__, 'replace')
+            out = proc.stdout.decode(__salt_system_encoding__, 'ignore')
 
         try:
             err = proc.stderr.decode(__salt_system_encoding__)
@@ -617,7 +617,7 @@ def _run(cmd,
             err = ''
         except UnicodeDecodeError:
             log.error('UnicodeDecodeError while decoding error of cmd {0}'.format(cmd))
-            err = proc.stderr.decode(__salt_system_encoding__, 'replace')
+            err = proc.stderr.decode(__salt_system_encoding__, 'ignore')
 
         if rstrip:
             if out is not None:
