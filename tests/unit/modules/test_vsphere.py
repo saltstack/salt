@@ -10,7 +10,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
-from six import text_type
+from salt.ext.six import text_type
 import salt.modules.vsphere as vsphere
 from salt.exceptions import (
     CommandExecutionError,
