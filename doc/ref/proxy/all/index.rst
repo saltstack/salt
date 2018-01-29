@@ -11,6 +11,7 @@ proxy modules
     :template: autosummary.rst.tmpl
 
     cimc
+    citrixns
     chronos
     cisconso
     dummy

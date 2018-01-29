@@ -11,6 +11,7 @@ grains modules
     :template: autosummary.rst.tmpl
 
     cimc
+    citrixns
     chronos
     core
     disks
