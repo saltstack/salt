@@ -38,6 +38,7 @@ import subprocess
 
 import salt.utils.json
 from salt.exceptions import LoaderError, CommandExecutionError
+import salt.utils.platform
 import salt.utils.timed_subprocess
 import salt.utils.yaml
 from salt.ext import six
@@ -216,6 +217,8 @@ def __virtual__():
     Ansible module caller.
     :return:
     '''
+    if salt.utils.platform.is_windows():
+        return False, "The ansiblegate module isn't supported on Windows"
     ret = ansible is not None
     msg = not ret and "Ansible is not installed on this system" or None
     if ret:

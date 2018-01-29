@@ -40,15 +40,20 @@ def get_class(_class, salt_data):
     l_files = []
     saltclass_path = salt_data['path']
 
-    straight = '{0}/classes/{1}.yml'.format(saltclass_path, _class)
-    sub_straight = '{0}/classes/{1}.yml'.format(saltclass_path,
-                                                _class.replace('.', '/'))
-    sub_init = '{0}/classes/{1}/init.yml'.format(saltclass_path,
-                                                 _class.replace('.', '/'))
+    straight = os.path.join(saltclass_path,
+                            'classes',
+                            '{0}.yml'.format(_class))
+    sub_straight = os.path.join(saltclass_path,
+                                'classes',
+                                '{0}.yml'.format(_class.replace('.', os.sep)))
+    sub_init = os.path.join(saltclass_path,
+                            'classes',
+                            _class.replace('.', os.sep),
+                            'init.yml')
 
-    for root, dirs, files in salt.utils.path.os_walk('{0}/classes'.format(saltclass_path), followlinks=True):
+    for root, dirs, files in salt.utils.path.os_walk(os.path.join(saltclass_path, 'classes'), followlinks=True):
         for l_file in files:
-            l_files.append('{0}/{1}'.format(root, l_file))
+            l_files.append(os.path.join(root, l_file))
 
     if straight in l_files:
         return render_yaml(straight, salt_data)
@@ -154,7 +159,7 @@ def expand_classes_in_order(minion_dict,
                             seen_classes,
                             expanded_classes,
                             classes_to_expand):
-    # Get classes to expand from minion dictionnary
+    # Get classes to expand from minion dictionary
     if not classes_to_expand and 'classes' in minion_dict:
         classes_to_expand = minion_dict['classes']
 
@@ -220,12 +225,12 @@ def expanded_dict_from_minion(minion_id, salt_data):
     _file = ''
     saltclass_path = salt_data['path']
     # Start
-    for root, dirs, files in salt.utils.path.os_walk('{0}/nodes'.format(saltclass_path), followlinks=True):
+    for root, dirs, files in salt.utils.path.os_walk(os.path.join(saltclass_path, 'nodes'), followlinks=True):
         for minion_file in files:
             if minion_file == '{0}.yml'.format(minion_id):
                 _file = os.path.join(root, minion_file)
 
-    # Load the minion_id definition if existing, else an exmpty dict
+    # Load the minion_id definition if existing, else an empty dict
     node_dict = {}
     if _file:
         node_dict[minion_id] = render_yaml(_file, salt_data)

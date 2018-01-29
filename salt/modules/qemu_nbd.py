@@ -7,7 +7,7 @@ are used here to build up kvm images.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import glob
 import tempfile
@@ -45,8 +45,7 @@ def connect(image):
         salt '*' qemu_nbd.connect /tmp/image.raw
     '''
     if not os.path.isfile(image):
-        log.warning('Could not connect image: '
-                    '{0} does not exist'.format(image))
+        log.warning('Could not connect image: %s does not exist', image)
         return ''
 
     if salt.utils.path.which('sfdisk'):
@@ -65,8 +64,7 @@ def connect(image):
                 if not __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
                     break
             return nbd
-    log.warning('Could not connect image: '
-                '{0}'.format(image))
+    log.warning('Could not connect image: %s', image)
     return ''
 
 

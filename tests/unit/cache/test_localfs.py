@@ -4,7 +4,7 @@ unit tests for the localfs cache
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import shutil
 import tempfile
 
@@ -24,9 +24,6 @@ import salt.payload
 import salt.utils.files
 import salt.cache.localfs as localfs
 from salt.exceptions import SaltCacheError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -95,7 +92,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         # Read in the contents of the key.p file and assert "payload data" was written
         with salt.utils.files.fopen(tmp_dir + '/bank/key.p', 'rb') as fh_:
             for line in fh_:
-                self.assertIn(six.b('payload data'), line)
+                self.assertIn(b'payload data', line)
 
     # 'fetch' function tests: 3
 

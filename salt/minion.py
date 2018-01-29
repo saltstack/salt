@@ -660,7 +660,7 @@ class MinionBase(object):
                         # should already be set.
                         raise last_exc  # pylint: disable=E0702
                 else:
-                    self.tok = pub_channel.auth.gen_token('salt')
+                    self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
 
@@ -702,7 +702,7 @@ class MinionBase(object):
                     else:
                         pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
                         yield pub_channel.connect()
-                    self.tok = pub_channel.auth.gen_token('salt')
+                    self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
                 except SaltClientError as exc:
@@ -734,7 +734,7 @@ class MinionBase(object):
                     break
 
             if masters:
-                policy = self.opts.get('discovery', {}).get('match', DEFAULT_MINION_OPTS['discovery']['match'])
+                policy = self.opts.get('discovery', {}).get('match', 'any')
                 if policy not in ['any', 'all']:
                     log.error('SSDP configuration matcher failure: unknown value "{0}". '
                               'Should be "any" or "all"'.format(policy))
