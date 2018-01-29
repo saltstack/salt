@@ -20,6 +20,7 @@ class ServiceModuleTest(ModuleCase):
         self.service_name = 'cron'
         cmd_name = 'crontab'
         os_family = self.run_function('grains.get', ['os_family'])
+        os_release = self.run_function('grains.get', ['osrelease'])
         if os_family == 'RedHat':
             self.service_name = 'crond'
         elif os_family == 'Arch':
@@ -30,6 +31,8 @@ class ServiceModuleTest(ModuleCase):
             cmd_name = 'syslog-ng'
         elif os_family == 'MacOS':
             self.service_name = 'org.ntp.ntpd'
+            if int(os_release.split('.')[1]) >= 13:
+                self.service_name = 'com.apple.AirPlayXPCHelper'
 
         if salt.utils.path.which(cmd_name) is None:
             self.skipTest('{0} is not installed'.format(cmd_name))

@@ -30,6 +30,7 @@ import salt.fileclient
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
+import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.yaml
 from salt.utils.decorators.jinja import jinja_filter, jinja_test, jinja_global
@@ -396,7 +397,7 @@ def uuid_(val):
     return six.text_type(
         uuid.uuid5(
             GLOBAL_UUID,
-            salt.utils.data.encode(val)
+            salt.utils.stringutils.to_str(val)
         )
     )
 
