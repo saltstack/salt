@@ -158,6 +158,7 @@ MOCK_MODULES = [
     'jnpr.junos.utils.sw',
     'dns',
     'dns.resolver',
+    'keyring',
     'netaddr',
     'netaddr.IPAddress',
     'netaddr.core',
@@ -199,6 +200,8 @@ def mock_decorator_with_params(*oargs, **okwargs):
 
 # Define a fake version attribute for the following libs.
 sys.modules['libcloud'].__version__ = '0.0.0'
+sys.modules['msgpack'].version = (1, 0, 0)
+sys.modules['psutil'].version_info = (3, 0, 0)
 sys.modules['pymongo'].version = '0.0.0'
 sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
 sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
