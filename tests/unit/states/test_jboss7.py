@@ -12,7 +12,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 # Import Salt libs
 import salt.states.jboss7 as jboss7
 from salt.exceptions import CommandExecutionError
-from six import text_type
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -235,7 +235,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                 jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV2'}, profile=None)
                 self.fail('An exception should be thrown')
             except CommandExecutionError as e:
-                self.assertEqual(text_type(e), 'Incorrect binding name.')
+                self.assertEqual(six.text_type(e), 'Incorrect binding name.')
 
     def test_should_raise_exception_if_cannot_update_binding(self):
         def read_func(jboss_config, binding_name, profile):
@@ -259,4 +259,4 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                                       profile=None)
                 self.fail('An exception should be thrown')
             except CommandExecutionError as e:
-                self.assertEqual(text_type(e), 'Incorrect binding name.')
+                self.assertEqual(six.text_type(e), 'Incorrect binding name.')
