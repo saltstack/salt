@@ -67,6 +67,20 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         assert localemod.get_locale() == 'en_US.utf8'
 
+    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'Suse', 'osmajorrelease': 12})
+    @patch('salt.modules.localemod.HAS_DBUS', True)
+    @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
+    @patch('salt.modules.localemod._localectl_status', MagicMock(return_value={'system_locale': {'LANG': 'de_DE.utf8'}}))
+    @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock('en_IE.utf8')})
+    def test_get_locale_with_systemd_and_dbus_sle12(self):
+        '''
+        Test getting current system locale with systemd and dbus available on SLE12.
+        :return:
+        '''
+        localemod.get_locale()
+        assert localemod.__salt__['cmd.run'].call_args[0][0] == 'grep "^RC_LANG" /etc/sysconfig/language'
+
 
     def test_get_locale(self):
         '''
