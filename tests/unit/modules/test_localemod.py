@@ -69,6 +69,16 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert out['x11_layout'] == 'us'
         assert out['x11_model'] == 'pc105'
 
+    @patch('salt.utils.which', MagicMock(return_value=None))
+    def test_localectl_status_parser_no_systemd(self):
+        '''
+        Test localectl status parser raises an exception if no systemd installed.
+        :return:
+        '''
+        with pytest.raises(CommandExecutionError) as err:
+            localemod._localectl_status()
+        assert 'Unable to find "localectl"' in six.text_type(err)
+
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.HAS_DBUS', False)
