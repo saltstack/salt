@@ -43,6 +43,14 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     locale_ctl_out_broken = '''
     System error:Recursive traversal of loopback mount points
     '''
+    locale_ctl_out_structure = '''
+       Main: printers=We're upgrading /dev/null
+             racks=hardware stress fractures
+             failure=Ionisation from the air-conditioning
+    Cow say: errors=We're out of slots on the server
+             hardware=high pressure system failure
+     Reason: The vendor put the bug there.
+    '''
     def setup_loader_modules(self):
         return {localemod: {}}
 
@@ -98,6 +106,17 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         with pytest.raises(CommandExecutionError) as err:
             localemod._localectl_status()
         assert 'Unable to parse result of "localectl"' in six.text_type(err)
+
+    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_out_structure)})
+    def test_localectl_status_parser_structure(self):
+        out = localemod._localectl_status()
+        assert isinstance(out, dict)
+        for key in ['main', 'cow_say']:
+            assert isinstance(out[key], dict)
+            for in_key in out[key]:
+                assert isinstance(out[key][in_key], unicode)
+        assert isinstance(out['reason'], unicode)
 
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
