@@ -216,6 +216,25 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
+    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'Debian', 'osmajorrelease': 42})
+    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.__salt__', MagicMock())
+    @patch('salt.modules.localemod._localectl_set', MagicMock())
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
+    def test_set_locale_with_no_systemd_debian(self):
+        '''
+        Test setting current system locale with systemd and dbus available on Debian.
+        :return:
+        '''
+        loc = 'de_DE.utf8'
+        localemod.set_locale(loc)
+        assert not localemod._localectl_set.called
+        assert localemod.__salt__['file.replace'].called
+        assert localemod.__salt__['file.replace'].call_args[0][0] == '/etc/default/locale'
+        assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
+        assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
+
     def _test_set_locale(self):
     def test_set_locale(self):
         '''
