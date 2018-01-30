@@ -251,6 +251,27 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert not localemod._localectl_set.called
         assert localemod.__salt__['cmd.retcode'].call_args[0][0] == 'eselect --brief locale set de_DE.utf8'
 
+    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'Solaris', 'osmajorrelease': 42})
+    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['de_DE.utf8']),
+                                               'file.replace': MagicMock()})
+    @patch('salt.modules.localemod._localectl_set', MagicMock())
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
+    def test_set_locale_with_no_systemd_slowlaris_with_list_avail(self):
+        '''
+        Test setting current system locale with systemd and dbus available on Slowlaris.
+        The list_avail returns the proper locale.
+        :return:
+        '''
+        loc = 'de_DE.utf8'
+        localemod.set_locale(loc)
+        assert not localemod._localectl_set.called
+        assert localemod.__salt__['file.replace'].called
+        assert localemod.__salt__['file.replace'].call_args[0][0] == '/etc/default/init'
+        assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
+        assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
+
     def _test_set_locale(self):
     def test_set_locale(self):
         '''
