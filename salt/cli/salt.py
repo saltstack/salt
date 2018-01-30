@@ -423,7 +423,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         for host in ret:
             if isinstance(ret[host], six.string_types) \
                     and (ret[host].startswith("Minion did not return")
-                         or ret[host] == 'VALUE TRIMMED'):
+                         or ret[host] == 'VALUE_TRIMMED'):
                 continue
             for fun in ret[host]:
                 if fun not in docs and ret[host][fun]:
