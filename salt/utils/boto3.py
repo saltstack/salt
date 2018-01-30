@@ -56,7 +56,7 @@ try:
     import boto3
     import boto.exception
     import boto3.session
-    import botocore
+    import botocore  # pylint: disable=W0611
 
     # pylint: enable=import-error
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
