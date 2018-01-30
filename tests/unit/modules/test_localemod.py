@@ -290,6 +290,21 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert not localemod._localectl_set.called
         assert not localemod.__salt__['file.replace'].called
 
+    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'BSD', 'osmajorrelease': 42})
+    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['en_GB.utf8']),
+                                               'file.replace': MagicMock()})
+    @patch('salt.modules.localemod._localectl_set', MagicMock())
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
+    def test_set_locale_with_no_systemd_unknown(self):
+        '''
+        Test setting current system locale without systemd on unknown system.
+        :return:
+        '''
+        with pytest.raises(CommandExecutionError) as err:
+            localemod.set_locale('de_DE.utf8')
+        assert 'Unsupported platform' in six.text_type(err)
 
     def test_avail(self):
         '''
