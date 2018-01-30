@@ -144,9 +144,7 @@ def list_avail():
 
         salt '*' locale.list_avail
     '''
-    cmd = 'locale -a'
-    out = __salt__['cmd.run'](cmd).split('\n')
-    return out
+    return __salt__['cmd.run']('locale -a').split('\n')
 
 
 def get_locale():
