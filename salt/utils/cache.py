@@ -9,7 +9,7 @@ import re
 import time
 import logging
 try:
-    import msgpack
+    import salt.utils.msgpack
     HAS_MSGPACK = True
 except ImportError:
     HAS_MSGPACK = False
@@ -139,7 +139,9 @@ class CacheDisk(CacheDict):
         if not HAS_MSGPACK or not os.path.exists(self._path):
             return
         with salt.utils.files.fopen(self._path, 'rb') as fp_:
-            cache = salt.utils.data.decode(msgpack.load(fp_, encoding=__salt_system_encoding__))
+            cache = salt.utils.data.decode(
+                salt.utils.msgpack.load(
+                    fp_, encoding=__salt_system_encoding__))
         if "CacheDisk_cachetime" in cache:  # new format
             self._dict = cache["CacheDisk_data"]
             self._key_cache_time = cache["CacheDisk_cachetime"]
@@ -164,7 +166,7 @@ class CacheDisk(CacheDict):
                 "CacheDisk_data": self._dict,
                 "CacheDisk_cachetime": self._key_cache_time
             }
-            msgpack.dump(cache, fp_, use_bin_type=True)
+            salt.utils.msgpack.dump(cache, fp_, use_bin_type=True)
 
 
 class CacheCli(object):

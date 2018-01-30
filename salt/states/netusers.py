@@ -25,9 +25,9 @@ log = logging.getLogger(__name__)
 
 # Python std lib
 from copy import deepcopy
-from json import loads, dumps
 
 # salt lib
+from salt.utils.json import loads, dumps
 from salt.ext import six
 # import NAPALM utils
 import salt.utils.napalm

@@ -38,6 +38,7 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
@@ -1746,7 +1747,7 @@ class State(object):
                 # and the attempt, we are safe to pass
                 pass
         with salt.utils.files.fopen(tfile, 'wb+') as fp_:
-            fp_.write(msgpack.dumps(ret))
+            fp_.write(salt.utils.msgpack.dumps(ret, _msgpack_module=msgpack))
 
     def call_parallel(self, cdata, low):
         '''
@@ -2147,7 +2148,8 @@ class State(object):
                     tries = 0
                     with salt.utils.files.fopen(pause_path, 'rb') as fp_:
                         try:
-                            pdat = msgpack.loads(fp_.read())
+                            pdat = salt.utils.msgpack.loads(
+                                fp_.read(), _msgpack_module=msgpack)
                         except msgpack.UnpackValueError:
                             # Reading race condition
                             if tries > 10:
@@ -2194,7 +2196,8 @@ class State(object):
                                'changes': {}}
                     try:
                         with salt.utils.files.fopen(ret_cache, 'rb') as fp_:
-                            ret = msgpack.loads(fp_.read())
+                            ret = salt.utils.msgpack.loads(
+                                fp_.read(), _msgpack_module=msgpack)
                     except (OSError, IOError):
                         ret = {'result': False,
                                'comment': 'Parallel cache failure',
