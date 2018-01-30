@@ -154,6 +154,7 @@ Optional small program to encrypt data without needing salt modules.
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import os
+import sys
 
 # Import Salt libs
 from salt.ext import six
@@ -183,12 +184,13 @@ def _get_config(**kwargs):
     '''
     Return configuration
     '''
+     cert_path = "C:\salt\conf\pki\master" if sys.platform == "win32" else "/etc/salt/pki/master/"
     config = {
         'box_type': 'sealedbox',
         'sk': None,
-        'sk_file': '/etc/salt/pki/master/nacl',
+        'sk_file': os.path.join(cert_path, 'nacl'),
         'pk': None,
-        'pk_file': '/etc/salt/pki/master/nacl.pub',
+        'pk_file': os.path.join(cert_path, 'nacl.pub'),
     }
     config_key = '{0}.config'.format(__virtualname__)
     try:
