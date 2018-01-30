@@ -32,6 +32,13 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.localemod
     '''
+    locale_ctl_out = '''
+   System Locale: LANG=de_DE.utf8
+                  LANGUAGE=de_DE.utf8
+       VC Keymap: n/a
+      X11 Layout: us
+       X11 Model: pc105
+    '''
     def setup_loader_modules(self):
         return {localemod: {}}
 
@@ -42,6 +49,25 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(localemod.__salt__,
                         {'cmd.run': MagicMock(return_value='A\nB')}):
             self.assertEqual(localemod.list_avail(), ['A', 'B'])
+
+    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_out)})
+    def test_localectl_status_parser(self):
+        '''
+        Test localectl status parser.
+        :return:
+        '''
+        out = localemod._localectl_status()
+        assert isinstance(out, dict)
+        for key in ['system_locale', 'vc_keymap', 'x11_layout', 'x11_model']:
+            assert key in out
+        assert isinstance(out['system_locale'], dict)
+        assert 'LANG' in out['system_locale']
+        assert 'LANGUAGE' in out['system_locale']
+        assert out['system_locale']['LANG'] == out['system_locale']['LANGUAGE'] == 'de_DE.utf8'
+        assert out['vc_keymap'] == 'n/a'
+        assert out['x11_layout'] == 'us'
+        assert out['x11_model'] == 'pc105'
 
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
