@@ -159,7 +159,9 @@ def get_locale():
     '''
     ret = ''
     lc_ctl = salt.utils.systemd.booted(__context__)
-    # localectl on SLE12 is installed but the integration is broken -- config is rewritten by YaST2
+    # localectl on SLE12 is installed but the integration is still broken in latest SP3 due to
+    # config is rewritten by by many %post installation hooks in the older packages.
+    # If you use it -- you will break your config. This is not the case in SLE15 anymore.
     if lc_ctl and not (__grains__['os_family'] in ['Suse'] and __grains__['osmajorrelease'] in [12]):
         ret = (_parse_dbus_locale() if HAS_DBUS else _localectl_status()['system_locale']).get('LANG', '')
     else:
