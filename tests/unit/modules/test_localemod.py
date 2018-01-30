@@ -91,7 +91,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
     def test_get_locale_with_no_systemd_redhat(self):
         '''
-        Test getting current system locale with systemd and dbus available on SLE12.
+        Test getting current system locale with systemd and dbus available on RedHat.
         :return:
         '''
         localemod.get_locale()
