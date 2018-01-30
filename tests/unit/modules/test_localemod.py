@@ -392,15 +392,19 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                              MagicMock(return_value=['A', 'B'])}):
                 self.assertTrue(localemod.avail('locale'))
 
+    @patch('salt.modules.localemod.log', MagicMock())
+    @patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path'))
+    @patch('salt.modules.localemod.__grains__', {'os': 'Debian'})
+    @patch('salt.modules.localemod.__salt__', {'file.search': MagicMock(return_value=False)})
     def test_gen_locale_not_valid(self):
         '''
         Tests the return of gen_locale when the provided locale is not found
         '''
-        with patch.dict(localemod.__grains__, {'os': 'Debian'}), \
-                 patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
-                 patch.dict(localemod.__salt__,
-                            {'file.search': MagicMock(return_value=False)}):
-            self.assertFalse(localemod.gen_locale('foo'))
+        assert not localemod.gen_locale('foo')
+        assert localemod.log.error.called
+        msg = localemod.log.error.call_args[0][0] % (localemod.log.error.call_args[0][1],
+                                                     localemod.log.error.call_args[0][2])
+        assert msg == 'The provided locale "foo" is not found in /usr/share/i18n/SUPPORTED'
 
     def test_gen_locale_debian(self):
         '''
