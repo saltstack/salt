@@ -16,12 +16,17 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
+try:
+    import pytest
+except ImportError as import_error:
+    pytest = None
 
 # Import Salt Libs
 import salt.modules.localemod as localemod
 from salt.exceptions import CommandExecutionError
 
 
+@skipIf(not pytest, False)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     '''
