@@ -275,10 +275,15 @@ def put(path=None, payload=None):
         return True
 
 
-def build_filter(filter_pairs=[]):
+def build_filter(filter_pairs):
     '''
     Receives a list of filter options, URL encodes, and builds the filter string.
+
+    filter_pairs(list(str)): Key and value pairs to build the filter string.
     '''
+    if not isinstance(filter_pairs, list):
+        return ""
+
     try:
         if len(filter_pairs) == 0:
             return ""
