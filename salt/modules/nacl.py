@@ -184,7 +184,7 @@ def _get_config(**kwargs):
     '''
     Return configuration
     '''
-     cert_path = "C:\salt\conf\pki\master" if sys.platform == "win32" else "/etc/salt/pki/master/"
+    cert_path = "C:\salt\conf\pki\master" if sys.platform == "win32" else "/etc/salt/pki/master/"
     config = {
         'box_type': 'sealedbox',
         'sk': None,
