@@ -95,32 +95,6 @@ def _localectl_status():
     return ret
 
 
-def _parse_localectl():
-    '''
-    Get the 'System Locale' parameters from localectl
-    '''
-    ret = {}
-    localectl_out = __salt__['cmd.run']('localectl')
-    reading_locale = False
-    for line in localectl_out.splitlines():
-        if 'System Locale:' in line:
-            line = line.replace('System Locale:', '')
-            reading_locale = True
-
-        if not reading_locale:
-            continue
-
-        match = re.match('^([A-Z_]+)=(.*)$', line.strip())
-        if not match:
-            break
-        ret[match.group(1)] = match.group(2).replace('"', '')
-    else:
-        raise CommandExecutionError('Could not find system locale - could not '
-            'parse localectl output\n{0}'.format(localectl_out))
-
-    return ret
-
-
 def _localectl_set(locale=''):
     '''
     Use systemd's localectl command to set the LANG locale parameter, making
