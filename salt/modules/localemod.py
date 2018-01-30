@@ -8,12 +8,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
 import os
-HAS_DBUS = False
+
 try:
     import dbus
-    HAS_DBUS = True
 except ImportError:
-    pass
+    dbus = None
 
 # Import Salt libs
 import salt.utils.locales
@@ -100,7 +99,7 @@ def _localectl_set(locale=''):
     Use systemd's localectl command to set the LANG locale parameter, making
     sure not to trample on other params that have been set.
     '''
-    locale_params = _parse_dbus_locale() if HAS_DBUS else _localectl_status().get('system_locale', {})
+    locale_params = _parse_dbus_locale() if dbus is not None else _localectl_status().get('system_locale', {})
     locale_params['LANG'] = six.text_type(locale)
     args = ' '.join(['{0}="{1}"'.format(k, v) for k, v in six.iteritems(locale_params)])
     return not __salt__['cmd.retcode']('localectl set-locale {0}'.format(args), python_shell=False)
@@ -135,7 +134,7 @@ def get_locale():
     # config is rewritten by by many %post installation hooks in the older packages.
     # If you use it -- you will break your config. This is not the case in SLE15 anymore.
     if lc_ctl and not (__grains__['os_family'] in ['Suse'] and __grains__['osmajorrelease'] in [12]):
-        ret = (_parse_dbus_locale() if HAS_DBUS else _localectl_status()['system_locale']).get('LANG', '')
+        ret = (_parse_dbus_locale() if dbus is not None else _localectl_status()['system_locale']).get('LANG', '')
     else:
         if 'Suse' in __grains__['os_family'] and __grains__['osmajorrelease'] == 12:
             cmd = 'grep "^RC_LANG" /etc/sysconfig/language'
