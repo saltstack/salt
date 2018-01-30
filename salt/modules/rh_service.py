@@ -105,7 +105,7 @@ def __virtual__():
             else:
                 return (
                     False,
-                    'Amazon Linux >= version 2 use systemd, will not '
+                    'Amazon Linux >= version 2 uses systemd. Will not '
                     'load rh_service.py as virtual \'service\''
                 )
         return __virtualname__
