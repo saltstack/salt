@@ -310,5 +310,5 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                          '       VC Keymap: n/a')
         mock_cmd = Mock(return_value=localectl_out)
         with patch.dict(localemod.__salt__, {'cmd.run': mock_cmd}):
-            ret = localemod._parse_localectl()
+            ret = localemod._localectl_status()['system_locale']
             self.assertEqual({'LANG': 'en_US.UTF-8', 'LANGUAGE': 'en_US:en'}, ret)
