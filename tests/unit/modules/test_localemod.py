@@ -48,6 +48,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.modules.localemod.HAS_DBUS', False)
     @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
     @patch('salt.modules.localemod._localectl_status', MagicMock(return_value={'system_locale': {'LANG': 'de_DE.utf8'}}))
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
     def test_get_locale_with_systemd_nodbus(self):
         '''
         Test getting current system locale with systemd but no dbus available.
@@ -60,6 +61,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.modules.localemod.HAS_DBUS', True)
     @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
     @patch('salt.modules.localemod._localectl_status', MagicMock(return_value={'system_locale': {'LANG': 'de_DE.utf8'}}))
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
     def test_get_locale_with_systemd_and_dbus(self):
         '''
         Test getting current system locale with systemd and dbus available.
@@ -72,7 +74,8 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.modules.localemod.HAS_DBUS', True)
     @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
     @patch('salt.modules.localemod._localectl_status', MagicMock(return_value={'system_locale': {'LANG': 'de_DE.utf8'}}))
-    @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock('en_IE.utf8')})
+    @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
     def test_get_locale_with_systemd_and_dbus_sle12(self):
         '''
         Test getting current system locale with systemd and dbus available on SLE12.
