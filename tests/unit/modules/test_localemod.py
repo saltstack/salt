@@ -197,7 +197,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^RC_LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'RC_LANG="{}"'.format(loc)
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'RedHat', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.HAS_DBUS', False)
     @patch('salt.modules.localemod.__salt__', MagicMock())
@@ -216,7 +216,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Debian', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.HAS_DBUS', False)
     @patch('salt.modules.localemod.__salt__', MagicMock())
@@ -235,7 +235,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Gentoo', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.HAS_DBUS', False)
     @patch('salt.modules.localemod.__salt__', MagicMock())
@@ -251,7 +251,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert not localemod._localectl_set.called
         assert localemod.__salt__['cmd.retcode'].call_args[0][0] == 'eselect --brief locale set de_DE.utf8'
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Solaris', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.HAS_DBUS', False)
     @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['de_DE.utf8']),
@@ -272,7 +272,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
-    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Solaris', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.HAS_DBUS', False)
     @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['en_GB.utf8']),
