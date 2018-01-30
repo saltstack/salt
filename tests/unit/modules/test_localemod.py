@@ -290,28 +290,6 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert not localemod._localectl_set.called
         assert not localemod.__salt__['file.replace'].called
 
-    def _test_set_locale(self):
-    def test_set_locale(self):
-        '''
-        Test for Sets the current system locale
-        '''
-        with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': True}):
-            with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
-                with patch.object(localemod, '_localectl_set', return_value=True):
-                    self.assertTrue(localemod.set_locale('l'))
-
-        with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': False}):
-            with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
-                with patch.dict(localemod.__salt__, {'cmd.retcode': MagicMock(return_value='A')}):
-                    with patch.object(localemod,
-                                      '_parse_localectl',
-                                      return_value={'LANG': 'B'}):
-                        self.assertFalse(localemod.set_locale('l'))
-
-            with patch.dict(localemod.__grains__, {'os_family': ['A']}):
-                with patch.dict(localemod.__salt__, {'cmd.retcode': MagicMock(return_value=0)}):
-                    with patch('salt.utils.systemd.booted', return_value=False):
-                        self.assertRaises(CommandExecutionError, localemod.set_locale, 'A')
 
     def test_avail(self):
         '''
