@@ -40,6 +40,9 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
        X11 Model: pc105
     '''
     locale_ctl_out_empty = ''
+    locale_ctl_out_broken = '''
+    System error:Recursive traversal of loopback mount points
+    '''
     def setup_loader_modules(self):
         return {localemod: {}}
 
@@ -85,6 +88,13 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_out_empty)})
     def test_localectl_status_parser_empty(self):
+        with pytest.raises(CommandExecutionError) as err:
+            localemod._localectl_status()
+        assert 'Unable to parse result of "localectl"' in six.text_type(err)
+
+    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_out_broken)})
+    def test_localectl_status_parser_broken(self):
         with pytest.raises(CommandExecutionError) as err:
             localemod._localectl_status()
         assert 'Unable to parse result of "localectl"' in six.text_type(err)
