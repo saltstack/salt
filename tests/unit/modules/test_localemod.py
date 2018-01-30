@@ -43,6 +43,18 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                         {'cmd.run': MagicMock(return_value='A\nB')}):
             self.assertEqual(localemod.list_avail(), ['A', 'B'])
 
+    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
+    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
+    @patch('salt.modules.localemod._localectl_status', MagicMock(return_value={'system_locale': {'LANG': 'de_DE.utf8'}}))
+    def test_get_locale_with_systemd_nodbus(self):
+        '''
+        Test getting current system locale.
+        :return:
+        '''
+        assert localemod.get_locale() == 'de_DE.utf8'
+
     def test_get_locale(self):
         '''
         Test for Get the current system locale
