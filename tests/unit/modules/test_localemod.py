@@ -50,7 +50,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.modules.localemod._localectl_status', MagicMock(return_value={'system_locale': {'LANG': 'de_DE.utf8'}}))
     def test_get_locale_with_systemd_nodbus(self):
         '''
-        Test getting current system locale.
+        Test getting current system locale with systemd but no dbus available.
         :return:
         '''
         assert localemod.get_locale() == 'de_DE.utf8'
