@@ -164,6 +164,20 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         localemod.set_locale(loc)
         assert localemod._localectl_set.call_args[0][0] == 'de_DE.utf8'
 
+    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
+    @patch('salt.modules.localemod.HAS_DBUS', True)
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
+    @patch('salt.modules.localemod._localectl_set', MagicMock())
+    def test_set_locale_with_systemd_and_dbus(self):
+        '''
+        Test setting current system locale with systemd and dbus available.
+        :return:
+        '''
+        loc = 'de_DE.utf8'
+        localemod.set_locale(loc)
+        assert localemod._localectl_set.call_args[0][0] == 'de_DE.utf8'
+
     def _test_set_locale(self):
     def test_set_locale(self):
         '''
