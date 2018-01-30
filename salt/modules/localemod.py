@@ -62,6 +62,39 @@ def _parse_dbus_locale():
     return ret
 
 
+def _localectl_status():
+    '''
+    Parse localectl status into a dict.
+    :return: dict
+    '''
+    if salt.utils.which('localectl') is None:
+        raise CommandExecutionError('Unable to find "localectl"')
+
+    ret = {}
+    locale_ctl_out = (__salt__['cmd.run']('localectl status') or '').strip()
+    ctl_key = None
+    for line in locale_ctl_out.splitlines():
+        if ': ' in line:  # Keys are separate with ":" and a space (!).
+            ctl_key, ctl_data = line.split(': ')
+            ctl_key = ctl_key.strip().lower().replace(' ', '_')
+        else:
+            ctl_data = line.strip()
+        if ctl_key:
+            if '=' in ctl_data:
+                loc_set = ctl_data.split('=')
+                if len(loc_set) == 2:
+                    if ctl_key not in ret:
+                        ret[ctl_key] = {}
+                    ret[ctl_key][loc_set[0]] = loc_set[1]
+            else:
+                ret[ctl_key] = ctl_data
+    if not ret:
+        log.debug("Unable to find any locale information inside the following data:\n%s", locale_ctl_out)
+        raise CommandExecutionError('Unable to parse result of "localectl"')
+
+    return ret
+
+
 def _parse_localectl():
     '''
     Get the 'System Locale' parameters from localectl
