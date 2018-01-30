@@ -272,6 +272,24 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
+    @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'Solaris', 'osmajorrelease': 42})
+    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['en_GB.utf8']),
+                                               'file.replace': MagicMock()})
+    @patch('salt.modules.localemod._localectl_set', MagicMock())
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
+    def test_set_locale_with_no_systemd_slowlaris_without_list_avail(self):
+        '''
+        Test setting current system locale with systemd and dbus is not available on Slowlaris.
+        The list_avail does not return the proper locale.
+        :return:
+        '''
+        loc = 'de_DE.utf8'
+        assert not localemod.set_locale(loc)
+        assert not localemod._localectl_set.called
+        assert not localemod.__salt__['file.replace'].called
+
     def _test_set_locale(self):
     def test_set_locale(self):
         '''
