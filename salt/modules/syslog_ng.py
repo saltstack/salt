@@ -792,22 +792,18 @@ def _run_command_in_extended_path(syslog_ng_sbin_dir, command, params):
     orig_path = os.environ.get('PATH', '')
     env = None
     if syslog_ng_sbin_dir:
-        if not os.path.isdir(syslog_ng_sbin_dir):
-            log.error('syslog_ng_sbin_dir path %s is not a directory',
-                      syslog_ng_sbin_dir)
-        else:
-            # Custom environment variables should be str types. This code
-            # normalizes the paths to unicode to join them together, and then
-            # converts back to a str type.
-            env = {
-                str('PATH'): salt.utils.stringutils.to_str(  # future lint: disable=blacklisted-function
-                    os.pathsep.join(
-                        salt.utils.data.decode(
-                            (orig_path, syslog_ng_sbin_dir)
-                        )
+        # Custom environment variables should be str types. This code
+        # normalizes the paths to unicode to join them together, and then
+        # converts back to a str type.
+        env = {
+            str('PATH'): salt.utils.stringutils.to_str(  # future lint: disable=blacklisted-function
+                os.pathsep.join(
+                    salt.utils.data.decode(
+                        (orig_path, syslog_ng_sbin_dir)
                     )
                 )
-            }
+            )
+        }
     return _run_command(command, options=params, env=env)
 
 
