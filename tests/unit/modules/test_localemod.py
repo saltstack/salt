@@ -120,7 +120,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
     @patch('salt.modules.localemod._localectl_status', MagicMock(return_value={'system_locale': {'LANG': 'de_DE.utf8'}}))
     @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
@@ -133,7 +133,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
-    @patch('salt.modules.localemod.HAS_DBUS', True)
+    @patch('salt.modules.localemod.dbus', True)
     @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
     @patch('salt.modules.localemod._localectl_status', MagicMock(return_value={'system_locale': {'LANG': 'de_DE.utf8'}}))
     @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
@@ -146,7 +146,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Suse', 'osmajorrelease': 12})
-    @patch('salt.modules.localemod.HAS_DBUS', True)
+    @patch('salt.modules.localemod.dbus', True)
     @patch('salt.modules.localemod._parse_dbus_locale', MagicMock(return_value={'LANG': 'en_US.utf8'}))
     @patch('salt.modules.localemod._localectl_status', MagicMock(return_value={'system_locale': {'LANG': 'de_DE.utf8'}}))
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
@@ -161,7 +161,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'RedHat', 'osmajorrelease': 12})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
     def test_get_locale_with_no_systemd_redhat(self):
@@ -174,7 +174,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Debian', 'osmajorrelease': 12})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
     def test_get_locale_with_no_systemd_debian(self):
@@ -187,7 +187,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Gentoo', 'osmajorrelease': 12})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
     def test_get_locale_with_no_systemd_gentoo(self):
@@ -200,7 +200,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Solaris', 'osmajorrelease': 12})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
     def test_get_locale_with_no_systemd_slowlaris(self):
@@ -213,7 +213,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'BSD', 'osmajorrelease': 8, 'oscodename': 'DrunkDragon'})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
     def test_get_locale_with_no_systemd_unknown(self):
@@ -227,7 +227,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     def test_set_locale_with_systemd_nodbus(self):
@@ -241,7 +241,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
-    @patch('salt.modules.localemod.HAS_DBUS', True)
+    @patch('salt.modules.localemod.dbus', True)
     @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     def test_set_locale_with_systemd_and_dbus(self):
@@ -255,7 +255,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Suse', 'osmajorrelease': 12})
-    @patch('salt.modules.localemod.HAS_DBUS', True)
+    @patch('salt.modules.localemod.dbus', True)
     @patch('salt.modules.localemod.__salt__', MagicMock())
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     @patch('salt.utils.systemd.booted', MagicMock(return_value=True))
@@ -274,7 +274,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'RedHat', 'osmajorrelease': 42})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', MagicMock())
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
@@ -293,7 +293,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Debian', 'osmajorrelease': 42})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', MagicMock())
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
@@ -312,7 +312,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Gentoo', 'osmajorrelease': 42})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', MagicMock())
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
@@ -328,7 +328,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Solaris', 'osmajorrelease': 42})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['de_DE.utf8']),
                                                'file.replace': MagicMock()})
     @patch('salt.modules.localemod._localectl_set', MagicMock())
@@ -349,7 +349,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Solaris', 'osmajorrelease': 42})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['en_GB.utf8']),
                                                'file.replace': MagicMock()})
     @patch('salt.modules.localemod._localectl_set', MagicMock())
@@ -367,7 +367,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'BSD', 'osmajorrelease': 42})
-    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['en_GB.utf8']),
                                                'file.replace': MagicMock()})
     @patch('salt.modules.localemod._localectl_set', MagicMock())
