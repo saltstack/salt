@@ -225,8 +225,6 @@ def set_locale(locale):
             raise CommandExecutionError(
                 'Cannot set locale: "update-locale" was not found.')
         __salt__['cmd.run'](update_locale)  # (re)generate /etc/default/locale
-
-        # FIXME: why are we writing to a file that is dynamically generated?
         __salt__['file.replace'](
             '/etc/default/locale',
             '^LANG=.*',
