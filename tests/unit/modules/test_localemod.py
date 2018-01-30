@@ -84,6 +84,19 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         localemod.get_locale()
         assert localemod.__salt__['cmd.run'].call_args[0][0] == 'grep "^RC_LANG" /etc/sysconfig/language'
 
+    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'RedHat', 'osmajorrelease': 12})
+    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
+    def test_get_locale_with_no_systemd_redhat(self):
+        '''
+        Test getting current system locale with systemd and dbus available on SLE12.
+        :return:
+        '''
+        localemod.get_locale()
+        assert localemod.__salt__['cmd.run'].call_args[0][0] == 'grep "^LANG=" /etc/sysconfig/i18n'
+
 
     def test_get_locale(self):
         '''
