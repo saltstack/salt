@@ -128,10 +128,8 @@ def _localectl_set(locale=''):
     '''
     locale_params = _parse_dbus_locale() if HAS_DBUS else _localectl_status().get('system_locale', {})
     locale_params['LANG'] = six.text_type(locale)
-    args = ' '.join(['{0}="{1}"'.format(k, v)
-                     for k, v in six.iteritems(locale_params)])
-    cmd = 'localectl set-locale {0}'.format(args)
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    args = ' '.join(['{0}="{1}"'.format(k, v) for k, v in six.iteritems(locale_params)])
+    return not __salt__['cmd.retcode']('localectl set-locale {0}'.format(args), python_shell=False)
 
 
 def list_avail():
