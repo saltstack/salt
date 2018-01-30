@@ -24,7 +24,7 @@ except ImportError as import_error:
 # Import Salt Libs
 import salt.modules.localemod as localemod
 from salt.exceptions import CommandExecutionError
-
+from salt.ext import six
 
 @skipIf(not pytest, False)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -136,43 +136,19 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         localemod.get_locale()
         assert localemod.__salt__['cmd.run'].call_args[0][0] == 'grep "^LANG=" /etc/default/init'
 
-
-    def test_get_locale(self):
+    @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'BSD', 'osmajorrelease': 8, 'oscodename': 'DrunkDragon'})
+    @patch('salt.modules.localemod.HAS_DBUS', False)
+    @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
+    def test_get_locale_with_no_systemd_unknown(self):
         '''
-        Test for Get the current system locale
+        Test getting current system locale with systemd and dbus available on Gentoo.
+        :return:
         '''
-        with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': True}):
-            with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
-                with patch.multiple(localemod,
-                                   _parse_dbus_locale=MagicMock(return_value={'LANG': 'A'}),
-                                   HAS_DBUS=True):
-                    self.assertEqual('A', localemod.get_locale())
-                    localemod._parse_dbus_locale.assert_called_once_with()
-
-                with patch.multiple(localemod,
-                                   _parse_localectl=MagicMock(return_value={'LANG': 'A'}),
-                                   HAS_DBUS=False):
-                    self.assertEqual('A', localemod.get_locale())
-                    localemod._parse_localectl.assert_called_once_with()
-
-        with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': False}):
-            with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
-                with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value='A')}):
-                    with patch.object(localemod,
-                                      '_parse_localectl',
-                                      return_value={'LANG': 'A'}):
-                        self.assertEqual(localemod.get_locale(), 'A')
-
-            with patch.dict(localemod.__grains__, {'os_family': ['RedHat']}):
-                with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value='A=B')}):
-                    with patch.object(localemod,
-                                      '_parse_localectl',
-                                      return_value={'LANG': 'B'}):
-                        self.assertEqual(localemod.get_locale(), 'B')
-
-            with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
-                with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value='A=B')}):
-                    self.assertRaises(CommandExecutionError, localemod.get_locale)
+        with pytest.raises(CommandExecutionError) as err:
+            localemod.get_locale()
+        assert '"DrunkDragon" is unsupported' in six.text_type(err)
 
     def test_set_locale(self):
         '''
