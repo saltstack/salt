@@ -197,6 +197,11 @@ def set_locale(locale):
 
         salt '*' locale.set_locale 'en_US.UTF-8'
     '''
+    lc_ctl = salt.utils.systemd.booted(__context__)
+    # localectl on SLE12 is installed but the integration is broken -- config is rewritten by YaST2
+    if lc_ctl and not (__grains__['os_family'] in ['Suse'] and __grains__['osmajorrelease'] in [12]):
+        return _localectl_set(locale)
+
     if 'Suse' in __grains__['os_family']:
         # this block applies to all SUSE systems - also with systemd
         if not __salt__['file.file_exists']('/etc/sysconfig/language'):
@@ -207,8 +212,6 @@ def set_locale(locale):
             'RC_LANG="{0}"'.format(locale),
             append_if_not_found=True
         )
-    elif salt.utils.systemd.booted(__context__):
-        return _localectl_set(locale)
     elif 'RedHat' in __grains__['os_family']:
         if not __salt__['file.file_exists']('/etc/sysconfig/i18n'):
             __salt__['file.touch']('/etc/sysconfig/i18n')
