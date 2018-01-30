@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Management of APT/YUM package repos
-===================================
+Management of APT/DNF/YUM/Zypper package repos
+==============================================
 
-Package repositories for APT-based and YUM-based distros can be managed with
-these states. Here is some example SLS:
+States for managing software package repositories on Linux distros. Supported
+package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
 .. code-block:: yaml
 
@@ -132,7 +132,7 @@ def managed(name, ppa=None, **kwargs):
 
     disabled : False
         Included to reduce confusion due to APT's use of the ``disabled``
-        argument. If this is passed for a yum/dnf/zypper-based distro, then the
+        argument. If this is passed for a YUM/DNF/Zypper-based distro, then the
         reverse will be passed as ``enabled``. For example passing
         ``disabled=True`` will assume ``enabled=False``.
 
@@ -151,8 +151,14 @@ def managed(name, ppa=None, **kwargs):
         enabled configuration. Anything supplied for this list will be saved
         in the repo configuration with a comment marker (#) in front.
 
-    Additional configuration values seen in yum repo files, such as ``gpgkey`` or
-    ``gpgcheck``, will be used directly as key-value pairs. For example:
+    gpgautoimport
+        Only valid for Zypper package manager. If set to True, automatically
+        trust and import public GPG key for the repository. The key should be
+        specified with ``gpgkey`` parameter. See details below.
+
+    Additional configuration values seen in YUM/DNF/Zypper repo files, such as
+    ``gpgkey`` or ``gpgcheck``, will be used directly as key-value pairs.
+    For example:
 
     .. code-block:: yaml
 
@@ -218,7 +224,7 @@ def managed(name, ppa=None, **kwargs):
         and/or installing packages.
 
     enabled : True
-        Included to reduce confusion due to yum/dnf/zypper's use of the
+        Included to reduce confusion due to YUM/DNF/Zypper's use of the
         ``enabled`` argument. If this is passed for an APT-based distro, then
         the reverse will be passed as ``disabled``. For example, passing
         ``enabled=False`` will assume ``disabled=False``.
