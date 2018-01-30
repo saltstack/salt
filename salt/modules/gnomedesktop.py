@@ -53,9 +53,9 @@ class _GSettings(object):
         self.HOME = None
 
     @property
-    def gestting_command(self):
+    def gsetting_command(self):
         '''
-        return the command to run the gesttings binary
+        return the command to run the gsettings binary
         '''
         if salt.utils.path.which_bin(['dbus-run-session']):
             cmd = ['dbus-run-session', '--', 'gsettings']
@@ -75,7 +75,7 @@ class _GSettings(object):
             log.info('User does not exist')
             return False
 
-        cmd = self.gestting_command + ['get', str(self.SCHEMA), str(self.KEY)]
+        cmd = self.gsetting_command + ['get', str(self.SCHEMA), str(self.KEY)]
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
         result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)
@@ -103,7 +103,7 @@ class _GSettings(object):
             result['stdout'] = 'User {0} does not exist'.format(user)
             return result
 
-        cmd = self.gestting_command + ['set', self.SCHEMA, self.KEY, value]
+        cmd = self.gsetting_command + ['set', self.SCHEMA, self.KEY, value]
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
         result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)
