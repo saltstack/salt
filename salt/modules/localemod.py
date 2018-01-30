@@ -126,7 +126,7 @@ def _localectl_set(locale=''):
     Use systemd's localectl command to set the LANG locale parameter, making
     sure not to trample on other params that have been set.
     '''
-    locale_params = _parse_dbus_locale() if HAS_DBUS else _parse_localectl()
+    locale_params = _parse_dbus_locale() if HAS_DBUS else _localectl_status().get('system_locale', {})
     locale_params['LANG'] = six.text_type(locale)
     args = ' '.join(['{0}="{1}"'.format(k, v)
                      for k, v in six.iteritems(locale_params)])
