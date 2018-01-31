@@ -117,8 +117,8 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         for key in ['main', 'cow_say']:
             assert isinstance(out[key], dict)
             for in_key in out[key]:
-                assert isinstance(out[key][in_key], unicode)
-        assert isinstance(out['reason'], unicode)
+                assert isinstance(out[key][in_key], six.text_type)
+        assert isinstance(out['reason'], six.text_type)
 
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
