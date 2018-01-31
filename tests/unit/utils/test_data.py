@@ -225,7 +225,8 @@ class DataTestCase(TestCase):
         ]
 
         ret = salt.utils.data.decode(
-            self.test_data, preserve_dict_class=True, preserve_tuples=True)
+            self.test_data, encoding='utf-8', preserve_dict_class=True,
+            preserve_tuples=True)
         self.assertEqual(ret, expected)
 
         # Now munge the expected data so that we get what we would expect if we
@@ -234,7 +235,8 @@ class DataTestCase(TestCase):
         expected[9]['subdict']['tuple'] = [123, 'hello', 'world', True]
         expected[10] = {'foo': 'bar', 123: 456}
         ret = salt.utils.data.decode(
-            self.test_data, preserve_dict_class=False, preserve_tuples=False)
+            self.test_data, encoding='utf-8', preserve_dict_class=False,
+            preserve_tuples=False)
         self.assertEqual(ret, expected)
 
         # Now test single non-string, non-data-structure items, these should
