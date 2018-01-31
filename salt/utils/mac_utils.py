@@ -274,7 +274,7 @@ def launchctl(sub_cmd, *args, **kwargs):
         out = 'Failed to {0} service:\n'.format(sub_cmd)
         out += 'stdout: {0}\n'.format(ret['stdout'])
         out += 'stderr: {0}\n'.format(ret['stderr'])
-        out += 'retcode: {0}\n'.format(ret['retcode'])
+        out += 'retcode: {0}'.format(ret['retcode'])
         raise CommandExecutionError(out)
     else:
         return ret['stdout'] if return_stdout else True
@@ -321,8 +321,7 @@ def available_services():
                 try:
                     # This assumes most of the plist files
                     # will be already in XML format
-                    with salt.utils.files.fopen(file_path):
-                        plist = plistlib.readPlist(true_path)
+                    plist = plistlib.readPlist(true_path)
 
                 except Exception:
                     # If plistlib is unable to read the file we'll need to use
