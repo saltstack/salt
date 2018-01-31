@@ -352,6 +352,24 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
     @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'Debian', 'osmajorrelease': 42})
+    @patch('salt.modules.localemod.dbus', None)
+    @patch('salt.modules.localemod.__salt__', MagicMock())
+    @patch('salt.modules.localemod._localectl_set', MagicMock())
+    @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
+    def test_set_locale_with_no_systemd_debian_no_update_locale(self):
+        '''
+        Test setting current system locale with systemd and dbus available on Debian but update-locale is not installed.
+        :return:
+        '''
+        loc = 'de_DE.utf8'
+        with pytest.raises(CommandExecutionError) as err:
+            localemod.set_locale(loc)
+        assert not localemod._localectl_set.called
+        assert 'Cannot set locale: "update-locale" was not found.' in six.text_type(err)
+
+    @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Gentoo', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', MagicMock())
