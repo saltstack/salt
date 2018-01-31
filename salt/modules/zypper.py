@@ -13,7 +13,7 @@ Package support for openSUSE via the zypper package manager
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import logging
 import re
@@ -38,6 +38,7 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
+import salt.utils.stringutils
 import salt.utils.systemd
 from salt.utils.versions import LooseVersion
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
@@ -295,7 +296,7 @@ class _Zypper(object):
                 log.debug("Collected data about blocking process.")
 
             __salt__['event.fire_master'](data, self.TAG_BLOCKED)
-            log.debug("Fired a Zypper blocked event to the master with the data: {0}".format(str(data)))
+            log.debug("Fired a Zypper blocked event to the master with the data: %s", data)
             log.debug("Waiting 5 seconds for Zypper gets released...")
             time.sleep(5)
             if not was_blocked:
@@ -430,7 +431,7 @@ def list_upgrades(refresh=True, **kwargs):
     if 'fromrepo' in kwargs:
         repo_name = kwargs['fromrepo']
         if not isinstance(repo_name, six.string_types):
-            repo_name = str(repo_name)
+            repo_name = six.text_type(repo_name)
         cmd.extend(['--repo', repo_name])
     for update_node in __zypper__.nolock.xml.call(*cmd).getElementsByTagName('update'):
         if update_node.getAttribute('kind') == 'package':
@@ -480,7 +481,7 @@ def info_installed(*names, **kwargs):
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
-        for key, value in pkg_nfo.items():
+        for key, value in six.iteritems(pkg_nfo):
             if isinstance(value, six.string_types):
                 # Check, if string is encoded in a proper UTF-8
                 if six.PY3:
@@ -489,7 +490,7 @@ def info_installed(*names, **kwargs):
                     value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
                 if value != value_:
                     value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (invalid UTF-8)'
-                    log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
+                    log.error('Package %s has bad UTF-8 code in %s: %s', pkg_name, key, value)
             if key == 'source_rpm':
                 t_nfo['source'] = value
             else:
@@ -1180,7 +1181,7 @@ def install(name=None,
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
-        log.info('Targeting repo \'{0}\''.format(fromrepo))
+        log.info('Targeting repo \'%s\'', fromrepo)
     else:
         fromrepoopt = ''
     cmd_install = ['install', '--auto-agree-with-licenses']
@@ -1315,7 +1316,7 @@ def upgrade(refresh=True,
         if fromrepo:
             for repo in fromrepo:
                 cmd_update.extend(['--from', repo])
-            log.info('Targeting repos: {0}'.format(fromrepo))
+            log.info('Targeting repos: %s', fromrepo)
 
         if novendorchange:
             # TODO: Grains validation should be moved to Zypper class
@@ -1502,7 +1503,8 @@ def list_locks():
     locks = {}
     if os.path.exists(LOCKS):
         with salt.utils.files.fopen(LOCKS) as fhr:
-            for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
+            items = salt.utils.stringutils.to_unicode(fhr.read()).split('\n\n')
+            for meta in [item.split('\n') for item in items]:
                 lock = {}
                 for element in [el for el in meta if el]:
                     if ':' in element:
@@ -1946,7 +1948,7 @@ def list_products(all=False, refresh=False):
             oem_file = os.path.join(OEM_PATH, p_nfo['productline'])
             if os.path.isfile(oem_file):
                 with salt.utils.files.fopen(oem_file, 'r') as rfile:
-                    oem_release = rfile.readline().strip()
+                    oem_release = salt.utils.stringutils.to_unicode(rfile.readline()).strip()
                     if oem_release:
                         p_nfo['release'] = oem_release
         ret.append(p_nfo)
@@ -2207,10 +2209,10 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
                     if len(result) == 1:
                         name = result.keys()[0]
                     elif len(result) > 1:
-                        log.warn("Found ambiguous match for capability '{0}'.".format(pkg))
+                        log.warn("Found ambiguous match for capability '%s'.", pkg)
                 except CommandExecutionError as exc:
                     # when search throws an exception stay with original name and version
-                    log.debug("Search failed with: {0}".format(exc))
+                    log.debug("Search failed with: %s", exc)
 
         if version:
             ret.append({name: version})

@@ -22,6 +22,7 @@ from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
 import salt.utils.kinds as kinds
+import salt.utils.stringutils
 
 # Import ioflo libs
 import ioflo.base.deeding
@@ -33,14 +34,14 @@ INHIBIT_RETURN = []  # ['_return']  # cmd for which we should not send return
 
 
 @ioflo.base.deeding.deedify(
-    'SaltRaetWorkerFork',
+    salt.utils.stringutils.to_str('SaltRaetWorkerFork'),
     ioinits={
-        'opts': '.salt.opts',
-        'proc_mgr': '.salt.usr.proc_mgr',
-        'worker_verify': '.salt.var.worker_verify',
-        'access_keys': '.salt.access_keys',
-        'mkey': '.salt.var.zmq.master_key',
-        'aes': '.salt.var.zmq.aes'})
+        'opts': salt.utils.stringutils.to_str('.salt.opts'),
+        'proc_mgr': salt.utils.stringutils.to_str('.salt.usr.proc_mgr'),
+        'worker_verify': salt.utils.stringutils.to_str('.salt.var.worker_verify'),
+        'access_keys': salt.utils.stringutils.to_str('.salt.access_keys'),
+        'mkey': salt.utils.stringutils.to_str('.salt.var.zmq.master_key'),
+        'aes': salt.utils.stringutils.to_str('.salt.var.zmq.aes')})
 def worker_fork(self):
     '''
     Fork off the worker procs
@@ -83,13 +84,16 @@ class Worker(multiprocessing.Process):
         '''
         self.opts['__worker'] = True
         behaviors = ['salt.daemons.flo']
-        preloads = [('.salt.opts', dict(value=self.opts)),
-                    ('.salt.var.worker_verify', dict(value=self.worker_verify))]
-        preloads.append(('.salt.var.fork.worker.windex', dict(value=self.windex)))
-        preloads.append(('.salt.var.zmq.master_key', dict(value=self.mkey)))
-        preloads.append(('.salt.var.zmq.aes', dict(value=self.aes)))
-        preloads.append(
-                ('.salt.access_keys', dict(value=self.access_keys)))
+        preloads = [(salt.utils.stringutils.to_str('.salt.opts'), dict(value=self.opts)),
+                    (salt.utils.stringutils.to_str('.salt.var.worker_verify'),
+                     dict(value=self.worker_verify))]
+        preloads.append((salt.utils.stringutils.to_str('.salt.var.fork.worker.windex'),
+                         dict(value=self.windex)))
+        preloads.append((salt.utils.stringutils.to_str('.salt.var.zmq.master_key'),
+                         dict(value=self.mkey)))
+        preloads.append((salt.utils.stringutils.to_str('.salt.var.zmq.aes'), dict(value=self.aes)))
+        preloads.append((salt.utils.stringutils.to_str('.salt.access_keys'),
+                         dict(value=self.access_keys)))
         preloads.extend(salt.daemons.flo.explode_opts(self.opts))
 
         console_logdir = self.opts.get('ioflo_console_logdir', '')
@@ -124,14 +128,14 @@ class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-            'opts': '.salt.opts',
-            'windex': '.salt.var.fork.worker.windex',
-            'access_keys': '.salt.access_keys',
-            'remote_loader': '.salt.loader.remote',
-            'local_loader': '.salt.loader.local',
-            'inode': '.salt.lane.manor.',
-            'stack': 'stack',
-            'local': {'ipath': 'local',
+            'opts': salt.utils.stringutils.to_str('.salt.opts'),
+            'windex': salt.utils.stringutils.to_str('.salt.var.fork.worker.windex'),
+            'access_keys': salt.utils.stringutils.to_str('.salt.access_keys'),
+            'remote_loader': salt.utils.stringutils.to_str('.salt.loader.remote'),
+            'local_loader': salt.utils.stringutils.to_str('.salt.loader.local'),
+            'inode': salt.utils.stringutils.to_str('.salt.lane.manor.'),
+            'stack': salt.utils.stringutils.to_str('stack'),
+            'local': {'ipath': salt.utils.stringutils.to_str('local'),
                        'ival': {'lanename': 'master'}}
             }
 
@@ -190,12 +194,12 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-            'lane_stack': '.salt.lane.manor.stack',
-            'road_stack': '.salt.road.manor.stack',
-            'opts': '.salt.opts',
-            'worker_verify': '.salt.var.worker_verify',
-            'remote_loader': '.salt.loader.remote',
-            'local_loader': '.salt.loader.local',
+            'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+            'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+            'opts': salt.utils.stringutils.to_str('.salt.opts'),
+            'worker_verify': salt.utils.stringutils.to_str('.salt.var.worker_verify'),
+            'remote_loader': salt.utils.stringutils.to_str('.salt.loader.remote'),
+            'local_loader': salt.utils.stringutils.to_str('.salt.loader.local'),
             }
 
     def action(self):

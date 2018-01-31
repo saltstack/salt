@@ -8,7 +8,7 @@ Beacon to monitor disk usage.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import re
 
@@ -95,12 +95,12 @@ def beacon(config):
                 try:
                     _current_usage = psutil.disk_usage(mount)
                 except OSError:
-                    log.warning('{0} is not a valid mount point.'.format(mount))
+                    log.warning('%s is not a valid mount point.', mount)
                     continue
 
                 current_usage = _current_usage.percent
                 monitor_usage = mounts[mount]
-                log.info('current_usage {}'.format(current_usage))
+                log.info('current_usage %s', current_usage)
                 if '%' in monitor_usage:
                     monitor_usage = re.sub('%', '', monitor_usage)
                 monitor_usage = float(monitor_usage)

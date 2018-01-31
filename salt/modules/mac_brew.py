@@ -8,7 +8,7 @@ Homebrew for macOS
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -64,7 +64,7 @@ def _tap(tap, runas=None):
     try:
         _call_brew(cmd)
     except CommandExecutionError:
-        log.error('Failed to tap "{0}"'.format(tap))
+        log.error('Failed to tap "%s"', tap)
         return False
 
     return True
@@ -312,7 +312,8 @@ def _info(*pkgs):
     cmd = 'brew info --json=v1 {0}'.format(' '.join(pkgs))
     brew_result = _call_brew(cmd)
     if brew_result['retcode']:
-        log.error('Failed to get info about packages: {0}'.format(' '.join(pkgs)))
+        log.error('Failed to get info about packages: %s',
+                  ' '.join(pkgs))
         return {}
     output = salt.utils.json.loads(brew_result['stdout'])
     return dict(zip(pkgs, output))

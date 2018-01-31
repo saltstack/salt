@@ -15,14 +15,12 @@ Kapacitor state module.
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
 
+from __future__ import absolute_import, print_function, unicode_literals
 import difflib
-import logging
 
 import salt.utils.files
-
-LOG = logging.getLogger(__name__)
+import salt.utils.stringutils
 
 
 def __virtual__():
@@ -70,7 +68,7 @@ def task_present(name,
         script_path = tick_script
 
     with salt.utils.files.fopen(script_path, 'r') as file:
-        new_script = file.read().replace('\t', '    ')
+        new_script = salt.utils.stringutils.to_unicode(file.read()).replace('\t', '    ')
 
     is_up_to_date = task and (
         old_script == new_script and

@@ -11,7 +11,7 @@ A module to wrap pacman calls, since Arch is the best
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import fnmatch
 import logging
@@ -229,7 +229,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             name, version_num = line.split()[0:2]
         except ValueError:
             log.error('Problem parsing pacman -Q: Unexpected formatting in '
-                      'line: \'{0}\''.format(line))
+                      'line: \'%s\'', line)
         else:
             __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
@@ -271,7 +271,7 @@ def group_list():
             group, pkg = line.split()[0:2]
         except ValueError:
             log.error('Problem parsing pacman -Sgg: Unexpected formatting in '
-                      'line: \'{0}\''.format(line))
+                      'line: \'%s\'', line)
         else:
             available.setdefault(group, []).append(pkg)
 
@@ -287,7 +287,7 @@ def group_list():
             group, pkg = line.split()[0:2]
         except ValueError:
             log.error('Problem parsing pacman -Qg: Unexpected formatting in '
-                      'line: \'{0}\''.format(line))
+                      'line: \'%s\'', line)
         else:
             installed.setdefault(group, []).append(pkg)
 
@@ -295,7 +295,10 @@ def group_list():
 
     for group in installed:
         if group not in available:
-            log.error('Pacman reports group {0} installed, but it is not in the available list ({1})!'.format(group, available))
+            log.error(
+                'Pacman reports group %s installed, but it is not in the '
+                'available list (%s)!', group, available
+            )
             continue
         if len(installed[group]) == len(available[group]):
             ret['installed'].append(group)
@@ -342,7 +345,7 @@ def group_info(name):
             pkg = line.split()[1]
         except ValueError:
             log.error('Problem parsing pacman -Sgg: Unexpected formatting in '
-                      'line: \'{0}\''.format(line))
+                      'line: \'%s\'', line)
         else:
             ret['default'].add(pkg)
 
@@ -439,7 +442,7 @@ def refresh_db(root=None):
 
 def install(name=None,
             refresh=False,
-            sysupgrade=False,
+            sysupgrade=None,
             pkgs=None,
             sources=None,
             **kwargs):
@@ -479,7 +482,8 @@ def install(name=None,
 
     sysupgrade
         Whether or not to upgrade the system packages before installing.
-
+        If refresh is set to ``True`` but sysupgrade is not specified, ``-u`` will be
+        applied
 
     Multiple Package Installation Options:
 
@@ -517,9 +521,6 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    refresh = salt.utils.data.is_true(refresh)
-    sysupgrade = salt.utils.data.is_true(sysupgrade)
-
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs
@@ -539,6 +540,7 @@ def install(name=None,
         cmd.extend(['systemd-run', '--scope'])
     cmd.append('pacman')
 
+    targets = []
     errors = []
     targets = []
     if pkg_type == 'file':
@@ -546,9 +548,9 @@ def install(name=None,
         cmd.extend(pkg_params)
     elif pkg_type == 'repository':
         cmd.append('-S')
-        if refresh:
+        if refresh is True:
             cmd.append('-y')
-        if sysupgrade:
+        if sysupgrade is True or (sysupgrade is None and refresh is True):
             cmd.append('-u')
         cmd.extend(['--noprogressbar', '--noconfirm', '--needed'])
         wildcards = []
@@ -1004,7 +1006,7 @@ def list_repo_pkgs(*args, **kwargs):
         try:
             repos = [x.strip() for x in fromrepo.split(',')]
         except AttributeError:
-            repos = [x.strip() for x in str(fromrepo).split(',')]
+            repos = [x.strip() for x in six.text_type(fromrepo).split(',')]
     else:
         repos = []
 

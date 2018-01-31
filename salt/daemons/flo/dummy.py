@@ -20,6 +20,7 @@ import logging
 
 # Import salt libs
 import ioflo.base.deeding
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -30,10 +31,10 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
     a translation system to have them mocked up and sent back into a router
     '''
     Ioinits = {
-            'opts': '.salt.opts',
-            'publish': '.salt.var.publish',
-            'lane_stack': '.salt.lane.manor.stack',
-            'workers': '.salt.track.workers',
+            'opts': salt.utils.stringutils.to_str('.salt.opts'),
+            'publish': salt.utils.stringutils.to_str('.salt.var.publish'),
+            'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+            'workers': salt.utils.stringutils.to_str('.salt.track.workers'),
             }
 
     def action(self):

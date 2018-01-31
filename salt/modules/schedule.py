@@ -7,7 +7,7 @@ Module for managing the Salt schedule on a minion
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy as pycopy
 import difflib
 import logging

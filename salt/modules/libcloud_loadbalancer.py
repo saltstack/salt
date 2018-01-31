@@ -30,7 +30,7 @@ Clouds include Amazon ELB, ALB, Google, Aliyun, CloudStack, Softlayer
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging

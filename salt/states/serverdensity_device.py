@@ -48,7 +48,7 @@ Example:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt libs
@@ -85,8 +85,8 @@ def _get_salt_params():
             sd_os = {'code': all_grains['kernel'].lower(), 'name': all_grains['kernel']}
         params['os'] = salt.utils.json.dumps(sd_os)
         params['cpuCores'] = all_stats['cpuinfo']['cpu cores']
-        params['installedRAM'] = str(int(all_stats['meminfo']['MemTotal']['value']) / 1024)
-        params['swapSpace'] = str(int(all_stats['meminfo']['SwapTotal']['value']) / 1024)
+        params['installedRAM'] = six.text_type(int(all_stats['meminfo']['MemTotal']['value']) / 1024)
+        params['swapSpace'] = six.text_type(int(all_stats['meminfo']['SwapTotal']['value']) / 1024)
         params['privateIPs'] = salt.utils.json.dumps(all_grains['fqdn_ip4'])
         params['privateDNS'] = salt.utils.json.dumps(all_grains['fqdn'])
     except KeyError:

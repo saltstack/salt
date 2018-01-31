@@ -5,9 +5,11 @@ Manage and query udev info
 .. versionadded:: 2015.8.0
 
 '''
-from __future__ import absolute_import
-
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
+# Import Salt libs
 import salt.utils.path
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
