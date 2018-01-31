@@ -99,6 +99,28 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             assert 'LANG' in out
             assert out['LANG'] == 'de_DE.utf8'
 
+    @patch('salt.modules.localemod.dbus', MagicMock())
+    @patch('salt.modules.localemod.log', MagicMock())
+    def test_dbus_locale_parser_doesnot_matches(self):
+        '''
+        Test dbus locale status parser does not matching the results.
+        :return:
+        '''
+        i_dbus = MagicMock()
+        i_dbus.Get = MagicMock(return_value=['Fatal error right in front of screen'])
+        dbus = MagicMock(return_value=i_dbus)
+
+        with patch('salt.modules.localemod.dbus.Interface', dbus):
+            out = localemod._parse_dbus_locale()
+            assert isinstance(out, dict)
+            assert 'LANG' not in out
+            assert localemod.log.error.called
+            msg = localemod.log.error.call_args[0][0] % localemod.log.error.call_args[0][1]
+            assert msg == ('Odd locale parameter "Fatal error right in front of screen" detected in dbus locale output.'
+                           ' This should not happen. You should probably investigate what caused this.')
+
+
+
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.log', MagicMock())
     def test_localectl_status_parser_no_systemd(self):
