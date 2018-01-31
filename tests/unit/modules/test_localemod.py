@@ -383,16 +383,13 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             localemod.set_locale('de_DE.utf8')
         assert 'Unsupported platform' in six.text_type(err)
 
+    @patch('salt.utils.locales.normalize_locale', MagicMock(return_value='en_US.UTF-8 UTF-8'))
+    @patch('salt.modules.localemod.__salt__', {'locale.list_avail': MagicMock(return_value=['A', 'B'])})
     def test_avail(self):
         '''
         Test for Check if a locale is available
         '''
-        with patch('salt.utils.locales.normalize_locale',
-                   MagicMock(return_value='en_US.UTF-8 UTF-8')):
-            with patch.dict(localemod.__salt__,
-                            {'locale.list_avail':
-                             MagicMock(return_value=['A', 'B'])}):
-                self.assertTrue(localemod.avail('locale'))
+        assert localemod.avail('locale')
 
     @patch('salt.modules.localemod.log', MagicMock())
     @patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path'))
