@@ -332,6 +332,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
     @patch('salt.utils.which', MagicMock(return_value=None))
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/sbin/update-locale'))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Debian', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', MagicMock())
