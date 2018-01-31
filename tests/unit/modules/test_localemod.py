@@ -421,6 +421,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.log.error.called
         msg = localemod.log.error.call_args[0][0] % (localemod.log.error.call_args[0][1],
                                                      localemod.log.error.call_args[0][2])
+        assert localemod.os.listdir.call_args[0][0] == '/usr/share/locale'
         assert msg == 'The provided locale "en_GB.utf8" is not found in /usr/share/locale'
 
     def test_gen_locale_debian(self):
