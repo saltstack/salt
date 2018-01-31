@@ -62,7 +62,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(localemod.__salt__,
                         {'cmd.run': MagicMock(return_value='A\nB')}):
-            self.assertEqual(localemod.list_avail(), ['A', 'B'])
+            assert localemod.list_avail() == ['A', 'B']
 
     @patch('salt.utils.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock(return_value=locale_ctl_out)})
@@ -464,7 +464,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                            {'file.search': MagicMock(return_value=True),
                             'file.replace': MagicMock(return_value=True),
                             'cmd.run_all': MagicMock(return_value=ret)}):
-            self.assertTrue(localemod.gen_locale('en_US.UTF-8 UTF-8'))
+            assert localemod.gen_locale('en_US.UTF-8 UTF-8')
 
     def test_gen_locale_debian_no_charmap(self):
         '''
@@ -486,7 +486,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                            {'file.search': file_search,
                             'file.replace': MagicMock(return_value=True),
                             'cmd.run_all': MagicMock(return_value=ret)}):
-            self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
+            assert localemod.gen_locale('en_US.UTF-8')
 
     def test_gen_locale_ubuntu(self):
         '''
@@ -501,7 +501,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch('os.listdir', MagicMock(return_value=['en_US'])), \
                 patch.dict(localemod.__grains__, {'os': 'Ubuntu'}):
-            self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
+            assert localemod.gen_locale('en_US.UTF-8')
 
     def test_gen_locale_gentoo(self):
         '''
@@ -515,7 +515,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                            {'file.search': MagicMock(return_value=True),
                             'file.replace': MagicMock(return_value=True),
                             'cmd.run_all': MagicMock(return_value=ret)}):
-            self.assertTrue(localemod.gen_locale('en_US.UTF-8 UTF-8'))
+            assert localemod.gen_locale('en_US.UTF-8 UTF-8')
 
     def test_gen_locale_gentoo_no_charmap(self):
         '''
@@ -538,7 +538,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                            {'file.search': file_search,
                             'file.replace': MagicMock(return_value=True),
                             'cmd.run_all': MagicMock(return_value=ret)}):
-            self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
+            assert localemod.gen_locale('en_US.UTF-8')
 
     def test_gen_locale(self):
         '''
@@ -550,7 +550,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                          'file.replace': MagicMock()}), \
                 patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch('os.listdir', MagicMock(return_value=['en_US'])):
-            self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
+            assert localemod.gen_locale('en_US.UTF-8')
 
     def test_gen_locale_verbose(self):
         '''
@@ -562,7 +562,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                          'file.replace': MagicMock()}), \
                 patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch('os.listdir', MagicMock(return_value=['en_US'])):
-            self.assertEqual(localemod.gen_locale('en_US.UTF-8', verbose=True), ret)
+            assert localemod.gen_locale('en_US.UTF-8', verbose=True) == ret
 
     def test_parse_localectl(self):
         localectl_out = ('   System Locale: LANG=en_US.UTF-8\n'
@@ -571,4 +571,4 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = Mock(return_value=localectl_out)
         with patch.dict(localemod.__salt__, {'cmd.run': mock_cmd}):
             ret = localemod._localectl_status()['system_locale']
-            self.assertEqual({'LANG': 'en_US.UTF-8', 'LANGUAGE': 'en_US:en'}, ret)
+            assert {'LANG': 'en_US.UTF-8', 'LANGUAGE': 'en_US:en'} == ret
