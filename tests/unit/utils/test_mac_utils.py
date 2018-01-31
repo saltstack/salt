@@ -312,3 +312,110 @@ class MacUtilsTestCase(TestCase):
             ret['com.apple.slld2']['file_path'],
             os.path.realpath(
                 os.path.join('/System/Library/LaunchDaemons', 'com.apple.slld2.plist')))
+
+    @patch('salt.utils.path.os_walk')
+    @patch('os.path.exists')
+    @patch('plistlib.readPlist')
+    @patch('salt.modules.cmdmod.run')
+    @patch('plistlib.readPlistFromString')
+    def test_available_services_non_xml(self,
+                                        mock_read_plist_from_string,
+                                        mock_run,
+                                        mock_read_plist,
+                                        mock_exists,
+                                        mock_os_walk):
+        '''
+        test available_services
+        '''
+        mock_os_walk.side_effect = [
+            [('/Library/LaunchAgents', [], ['com.apple.lla1.plist', 'com.apple.lla2.plist'])],
+            [('/Library/LaunchDaemons', [], ['com.apple.lld1.plist', 'com.apple.lld2.plist'])],
+            [('/System/Library/LaunchAgents', [], ['com.apple.slla1.plist', 'com.apple.slla2.plist'])],
+            [('/System/Library/LaunchDaemons', [], ['com.apple.slld1.plist', 'com.apple.slld2.plist'])],
+        ]
+        mock_exists.return_value = True
+        mock_read_plist.side_effect = Exception()
+        mock_run.return_value = '<some xml>'
+        mock_read_plist_from_string.side_effect = [
+            MagicMock(Label='com.apple.lla1'),
+            MagicMock(Label='com.apple.lla2'),
+            MagicMock(Label='com.apple.lld1'),
+            MagicMock(Label='com.apple.lld2'),
+            MagicMock(Label='com.apple.slla1'),
+            MagicMock(Label='com.apple.slla2'),
+            MagicMock(Label='com.apple.slld1'),
+            MagicMock(Label='com.apple.slld2'),
+        ]
+
+        ret = mac_utils.available_services()
+
+        # Make sure it's a dict with 8 items
+        self.assertTrue(isinstance(ret, dict))
+        self.assertEqual(len(ret), 8)
+
+        self.assertEqual(
+            ret['com.apple.lla1']['file_name'],
+            'com.apple.lla1.plist')
+
+        self.assertEqual(
+            ret['com.apple.lla1']['file_path'],
+            os.path.realpath(
+                os.path.join('/Library/LaunchAgents', 'com.apple.lla1.plist')))
+
+        self.assertEqual(
+            ret['com.apple.slld2']['file_name'],
+            'com.apple.slld2.plist')
+
+        self.assertEqual(
+            ret['com.apple.slld2']['file_path'],
+            os.path.realpath(
+                os.path.join('/System/Library/LaunchDaemons', 'com.apple.slld2.plist')))
+
+    @patch('salt.utils.path.os_walk')
+    @patch('os.path.exists')
+    @patch('plistlib.readPlist')
+    @patch('salt.modules.cmdmod.run')
+    @patch('plistlib.readPlistFromString')
+    def test_available_services_non_xml_malformed_plist(self,
+                                        mock_read_plist_from_string,
+                                        mock_run,
+                                        mock_read_plist,
+                                        mock_exists,
+                                        mock_os_walk):
+        '''
+        test available_services
+        '''
+        mock_os_walk.side_effect = [
+            [('/Library/LaunchAgents', [], ['com.apple.lla1.plist', 'com.apple.lla2.plist'])],
+            [('/Library/LaunchDaemons', [], ['com.apple.lld1.plist', 'com.apple.lld2.plist'])],
+            [('/System/Library/LaunchAgents', [], ['com.apple.slla1.plist', 'com.apple.slla2.plist'])],
+            [('/System/Library/LaunchDaemons', [], ['com.apple.slld1.plist', 'com.apple.slld2.plist'])],
+        ]
+        mock_exists.return_value = True
+        mock_read_plist.side_effect = Exception()
+        mock_run.return_value = '<some xml>'
+        mock_read_plist_from_string.return_value = 'malformedness'
+
+        ret = mac_utils.available_services()
+
+        # Make sure it's a dict with 8 items
+        self.assertTrue(isinstance(ret, dict))
+        self.assertEqual(len(ret), 8)
+
+        self.assertEqual(
+            ret['com.apple.lla1.plist']['file_name'],
+            'com.apple.lla1.plist')
+
+        self.assertEqual(
+            ret['com.apple.lla1.plist']['file_path'],
+            os.path.realpath(
+                os.path.join('/Library/LaunchAgents', 'com.apple.lla1.plist')))
+
+        self.assertEqual(
+            ret['com.apple.slld2.plist']['file_name'],
+            'com.apple.slld2.plist')
+
+        self.assertEqual(
+            ret['com.apple.slld2.plist']['file_path'],
+            os.path.realpath(
+                os.path.join('/System/Library/LaunchDaemons', 'com.apple.slld2.plist')))
