@@ -112,6 +112,7 @@ import binascii
 from datetime import datetime
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -227,11 +228,10 @@ def _new_serial(ca_name):
     '''
     hashnum = int(
         binascii.hexlify(
-            salt.utils.stringutils.to_bytes(
-                '{0}_{1}'.format(
-                    _microtime(),
-                    os.urandom(5).encode('hex'))
-            )
+            b'_'.join((
+                salt.utils.stringutils.to_bytes(_microtime()),
+                os.urandom(5) if six.PY3 else os.urandom(5).encode('hex')
+            ))
         ),
         16
     )
@@ -1019,15 +1019,15 @@ def create_csr(ca_name,
         extension_adds = []
 
         for ext, value in extensions.items():
-            if six.PY3:
-                ext = salt.utils.stringutils.to_bytes(ext)
-                if isinstance(value, six.string_types):
-                    value = salt.utils.stringutils.to_bytes(value)
+            if isinstance(value, six.string_types):
+                value = salt.utils.stringutils.to_bytes(value)
             extension_adds.append(
                 OpenSSL.crypto.X509Extension(
-                    salt.utils.stringutils.to_str(ext),
+                    salt.utils.stringutils.to_bytes(ext),
                     False,
-                    salt.utils.stringutils.to_str(value)))
+                    value
+                )
+            )
     except AssertionError as err:
         log.error(err)
         extensions = []
@@ -1041,7 +1041,7 @@ def create_csr(ca_name,
                 OpenSSL.crypto.X509Extension(
                     b'subjectAltName',
                     False,
-                    salt.utils.stringutils.to_str(b', '.join(subjectAltName))
+                    b', '.join(salt.utils.data.encode(subjectAltName))
                 )
             )
         else:
@@ -1560,8 +1560,8 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
                                                          ca_name,
                                                          CN), 'wb') as ofile:
         ofile.write(
-            salt.utils.stringutils.to_bytes(
-                pkcs12.export(passphrase=passphrase)
+            pkcs12.export(
+                passphrase=salt.utils.stringutils.to_bytes(passphrase)
             )
         )
 

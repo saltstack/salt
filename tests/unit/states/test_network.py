@@ -118,13 +118,6 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                                                                          False),
                                                          ret)
 
-                    ret.update({'changes': {'interface':
-                                            '--- \n+++ \n@@ -1 +1 @@\n-A\n+B'},
-                                'result': False,
-                                'comment': u"u'ip.down'"})
-                    log.debug('=== ret %s ===', ret)
-                    self.assertDictEqual(network.managed('salt', 'stack'), ret)
-
     def test_routes(self):
         '''
             Test to manage network interface static routes.

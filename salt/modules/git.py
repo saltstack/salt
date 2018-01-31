@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
+import glob
 import logging
 import os
 import re
@@ -245,13 +246,17 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             )
             tmp_ssh_wrapper = None
             if salt.utils.platform.is_windows():
-                for suffix in ('', ' (x86)'):
-                    ssh_exe = (
-                        'C:\\Program Files{0}\\Git\\bin\\ssh.exe'
-                        .format(suffix)
-                    )
-                    if os.path.isfile(ssh_exe):
-                        env['GIT_SSH_EXE'] = ssh_exe
+                # Known locations for Git's ssh.exe in Windows
+                globmasks = [os.path.join(os.getenv('SystemDrive'), os.sep,
+                                          'Program Files*', 'Git', 'usr', 'bin',
+                                          'ssh.exe'),
+                             os.path.join(os.getenv('SystemDrive'), os.sep,
+                                          'Program Files*', 'Git', 'bin',
+                                          'ssh.exe')]
+                for globmask in globmasks:
+                    ssh_exe = glob.glob(globmask)
+                    if ssh_exe and os.path.isfile(ssh_exe[0]):
+                        env['GIT_SSH_EXE'] = ssh_exe[0]
                         break
                 else:
                     raise CommandExecutionError(
