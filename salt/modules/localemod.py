@@ -33,7 +33,7 @@ def __virtual__():
     Exclude Windows OS.
     '''
     if salt.utils.platform.is_windows():
-        return (False, 'Cannot load locale module: windows platforms are unsupported')
+        return False, 'Cannot load locale module: windows platforms are unsupported'
 
     return __virtualname__
 
