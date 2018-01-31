@@ -21,6 +21,7 @@ PROVIDER_NAME = 'ec2'
 
 EC2_TIMEOUT = 1000
 
+
 class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
