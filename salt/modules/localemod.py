@@ -50,7 +50,8 @@ def _parse_dbus_locale():
 
     ret = {}
     for env_var in system_locale:
-        match = re.match('^([A-Z_]+)=(.*)$', env_var)
+        env_var = six.text_type(env_var)
+        match = re.match(r'^([A-Z_]+)=(.*)$', env_var)
         if match:
             ret[match.group(1)] = match.group(2).replace('"', '')
         else:
