@@ -30,7 +30,7 @@ __virtualname__ = 'locale'
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Exclude Windows OS.
     '''
     if salt.utils.platform.is_windows():
         return (False, 'Cannot load locale module: windows platforms are unsupported')
