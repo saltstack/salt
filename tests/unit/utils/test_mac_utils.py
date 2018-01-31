@@ -9,7 +9,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON, call
 
 # Import Salt libs
 import salt.utils.mac_utils as mac_utils
@@ -349,6 +349,35 @@ class MacUtilsTestCase(TestCase):
 
         ret = mac_utils.available_services()
 
+        cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'
+        calls = [
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/Library/LaunchAgents', 'com.apple.lla1.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/Library/LaunchAgents', 'com.apple.lla2.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/Library/LaunchDaemons', 'com.apple.lld1.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/Library/LaunchDaemons', 'com.apple.lld2.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/System/Library/LaunchAgents', 'com.apple.slla1.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/System/Library/LaunchAgents', 'com.apple.slla2.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/System/Library/LaunchDaemons', 'com.apple.slld1.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/System/Library/LaunchDaemons', 'com.apple.slld2.plist'))),
+                output_loglevel='quiet'),
+        ]
+        mock_run.assert_has_calls(calls)
+
         # Make sure it's a dict with 8 items
         self.assertTrue(isinstance(ret, dict))
         self.assertEqual(len(ret), 8)
@@ -397,6 +426,35 @@ class MacUtilsTestCase(TestCase):
         mock_read_plist_from_string.return_value = 'malformedness'
 
         ret = mac_utils.available_services()
+
+        cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'
+        calls = [
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/Library/LaunchAgents', 'com.apple.lla1.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/Library/LaunchAgents', 'com.apple.lla2.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/Library/LaunchDaemons', 'com.apple.lld1.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/Library/LaunchDaemons', 'com.apple.lld2.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/System/Library/LaunchAgents', 'com.apple.slla1.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/System/Library/LaunchAgents', 'com.apple.slla2.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/System/Library/LaunchDaemons', 'com.apple.slld1.plist'))),
+                output_loglevel='quiet'),
+            call(cmd.format(os.path.realpath(os.path.join(
+                '/System/Library/LaunchDaemons', 'com.apple.slld2.plist'))),
+                output_loglevel='quiet'),
+        ]
+        mock_run.assert_has_calls(calls)
 
         # Make sure it's a dict with 8 items
         self.assertTrue(isinstance(ret, dict))
