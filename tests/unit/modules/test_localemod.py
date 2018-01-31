@@ -424,6 +424,22 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.os.listdir.call_args[0][0] == '/usr/share/locale'
         assert msg == 'The provided locale "en_GB.utf8" is not found in /usr/share/locale'
 
+    @patch('salt.modules.localemod.log', MagicMock())
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'Suse'})
+    @patch('salt.modules.localemod.__salt__', {'cmd.run_all': MagicMock(return_value={'retcode': 0})})
+    @patch('os.listdir', MagicMock(return_value=['de_DE']))
+    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch('salt.utils.locales.join_locale', MagicMock(return_value='de_DE.utf8'))
+    @patch('salt.utils.path.which', MagicMock(side_effect=[None, '/usr/bin/localedef']))
+    def test_gen_locale_suse_valid(self):
+        '''
+        Tests the location where gen_locale is calling localedef on Suse os-family.
+        :return:
+        '''
+        localemod.gen_locale('de_DE.utf8')
+        assert localemod.__salt__['cmd.run_all'].call_args[0][0] == ['localedef', '--force', '-i', 'de_DE',
+                                                                     '-f', 'utf8', 'de_DE.utf8', '--quiet']
+
     def test_gen_locale_debian(self):
         '''
         Tests the return of successful gen_locale on Debian system
