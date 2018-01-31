@@ -245,7 +245,7 @@ def avail(locale):
         return False
     avail_locales = __salt__['locale.list_avail']()
     locale_exists = next((True for x in avail_locales
-       if salt.utils.locales.normalize_locale(x.strip()) == normalized_locale), False)
+                          if salt.utils.locales.normalize_locale(x.strip()) == normalized_locale), False)
     return locale_exists
 
 
