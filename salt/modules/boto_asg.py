@@ -500,7 +500,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
 def get_cloud_init_mime(cloud_init):
     '''
     Get a mime multipart encoded string from a cloud-init dict. Currently
-    supports scripts and cloud-config.
+    supports boothooks, scripts and cloud-config.
 
     CLI Example:
 
