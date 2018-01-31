@@ -447,9 +447,10 @@ def _run(cmd,
             # Encode unicode kwargs to filesystem encoding to avoid a
             # UnicodeEncodeError when the subprocess is invoked.
             fse = sys.getfilesystemencoding()
+            encoded_env = {}
             for key, val in six.iteritems(env):
-                if isinstance(val, six.text_type):
-                    env[key] = val.encode(fse)
+                encoded_env[key.encode(fse)] = val.encode(fse)
+            env = encoded_env
         except ValueError:
             raise CommandExecutionError(
                 'Environment could not be retrieved for User \'{0}\''.format(
