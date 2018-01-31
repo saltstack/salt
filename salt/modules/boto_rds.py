@@ -56,8 +56,8 @@ import time
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.odict as odict
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -128,15 +128,9 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto3_version = '1.3.1'
-    if not HAS_BOTO:
-        return (False, 'The boto_rds module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_rds module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto3_ver='1.3.1'
+    )
 
 
 def __init__(opts):
