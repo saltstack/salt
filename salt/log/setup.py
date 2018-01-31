@@ -961,7 +961,6 @@ def shutdown_multiprocessing_logging_listener(daemonizing=False):
     global __MP_LOGGING_QUEUE
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
-    global __MP_MAINPROCESS_ID
 
     if daemonizing is False and __MP_IN_MAINPROCESS is True:
         # We're in the MainProcess and we're not daemonizing, return!
