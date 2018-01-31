@@ -12,18 +12,17 @@ from __future__ import absolute_import
 import logging
 import re
 import os
-import ctypes
 from salt.ext.six.moves import map
 
 # Third party libs
 try:
-    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE, SMTO_ABORTIFHUNG
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
 
 # Import salt libs
 import salt.utils
+import salt.utils.win_functions
 
 # Settings
 log = logging.getLogger(__name__)
@@ -63,12 +62,7 @@ def rehash():
 
         salt '*' win_path.rehash
     '''
-    broadcast_message = ctypes.create_unicode_buffer('Environment')
-    user32 = ctypes.windll('user32', use_last_error=True)
-    result = user32.SendMessageTimeoutW(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
-                                        broadcast_message, SMTO_ABORTIFHUNG,
-                                        5000, 0)
-    return result == 1
+    return salt.utils.win_functions.refresh_environment()
 
 
 def get_path():

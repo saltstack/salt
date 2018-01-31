@@ -6,6 +6,7 @@ missing functions in other modules
 from __future__ import absolute_import
 import platform
 import re
+import ctypes
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -17,6 +18,7 @@ try:
     import win32api
     import win32net
     import win32security
+    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE, SMTO_ABORTIFHUNG
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
@@ -210,3 +212,30 @@ def escape_for_cmd_exe(arg):
         return meta_map[char]
 
     return meta_re.sub(escape_meta_chars, arg)
+
+
+def refresh_environment():
+    '''
+    Send a WM_SETTINGCHANGE Broadcast to Windows to refresh the Environment
+    variables for new processes.
+
+    .. note::
+        This will only affect new processes that aren't launched by services. To
+        apply changes to the path or registry to services, the host must be
+        restarted. The ``salt-minion``, if running as a service, will not see
+        changes to the environment until the system is restarted. See
+        `MSDN Documentation <https://support.microsoft.com/en-us/help/821761/changes-that-you-make-to-environment-variables-do-not-affect-services>`
+
+    CLI Example:
+
+    ... code-block:: python
+
+        import salt.utils.win_functions
+        salt.utils.win_functions.refresh_environment()
+    '''
+    broadcast_message = ctypes.create_unicode_buffer('Environment')
+    user32 = ctypes.windll('user32', use_last_error=True)
+    result = user32.SendMessageTimeoutW(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
+                                        broadcast_message, SMTO_ABORTIFHUNG,
+                                        5000, 0)
+    return result == 1
