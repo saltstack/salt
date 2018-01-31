@@ -12,6 +12,8 @@ from salt.ext import six
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.stringutils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 # Import third party libs
@@ -339,7 +341,7 @@ def groups(username, **kwargs):
                 search_results = bind.search_s(_config('basedn'),
                                                ldap.SCOPE_SUBTREE,
                                                ldap_search_string,
-                                               [str(_config('accountattributename')), str('cn')])
+                                               [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])
             except Exception as e:
                 log.error('Exception thrown while retrieving group membership in AD: %s', e)
                 return group_list
@@ -355,11 +357,11 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [str(_config('accountattributename')), str('cn')])
+                                           [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])
 
             for entry, result in search_results:
                 for user in result[_config('accountattributename')]:
-                    if username == user.split(',')[0].split('=')[-1]:
+                    if username == salt.utils.data.decode(user).split(',')[0].split('=')[-1]:
                         group_list.append(entry.split(',')[0].split('=')[-1])
 
             log.debug('User %s is a member of groups: %s', username, group_list)
@@ -377,12 +379,14 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [str(_config('accountattributename')), str('cn'), str(_config('groupattribute'))])
+                                           [salt.utils.stringutils.to_str(_config('accountattributename')),
+                                            str('cn'),
+                                            salt.utils.stringutils.to_str(_config('groupattribute'))])
             for _, entry in search_results:
                 if username in entry[_config('accountattributename')]:
                     group_list.append(entry['cn'][0])
             for user, entry in search_results:
-                if username == user.split(',')[0].split('=')[-1]:
+                if username == salt.utils.data.decode(user).split(',')[0].split('=')[-1]:
                     for group in entry[_config('groupattribute')]:
                         group_list.append(group.split(',')[0].split('=')[-1])
             log.debug('User %s is a member of groups: %s', username, group_list)
