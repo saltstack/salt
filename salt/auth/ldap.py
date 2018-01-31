@@ -290,10 +290,10 @@ def auth(username, password):
 
     if bind:
         log.debug('LDAP authentication successful')
-        return True
-    else:
-        log.error('LDAP _bind authentication FAILED')
-        return False
+        return bind
+
+    log.error('LDAP _bind authentication FAILED')
+    return False
 
 
 def groups(username, **kwargs):
@@ -312,14 +312,7 @@ def groups(username, **kwargs):
 
     '''
     group_list = []
-
-    # If bind credentials are configured, use them instead of user's
-    if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
-        bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
-    else:
-        bind = _bind(username, kwargs.get('password', ''),
-                     anonymous=_config('auth_by_group_membership_only', mandatory=False)
-                     and _config('anonymous', mandatory=False))
+    bind = auth(username, kwargs.get('password', None))
 
     if bind:
         log.debug('ldap bind to determine group membership succeeded!')
@@ -331,7 +324,7 @@ def groups(username, **kwargs):
                                                                             _config('persontype'))
                 user_dn_results = bind.search_s(_config('basedn'),
                                                 ldap.SCOPE_SUBTREE,
-                                                get_user_dn_search, ['distinguishedName'])
+                                                get_user_dn_search, [str('distinguishedName')])
             except Exception as e:
                 log.error('Exception thrown while looking up user DN in AD: %s', e)
                 return group_list
@@ -346,7 +339,7 @@ def groups(username, **kwargs):
                 search_results = bind.search_s(_config('basedn'),
                                                ldap.SCOPE_SUBTREE,
                                                ldap_search_string,
-                                               [_config('accountattributename'), 'cn'])
+                                               [str(_config('accountattributename')), str('cn')])
             except Exception as e:
                 log.error('Exception thrown while retrieving group membership in AD: %s', e)
                 return group_list
@@ -362,7 +355,7 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [_config('accountattributename'), 'cn'])
+                                           [str(_config('accountattributename')), str('cn')])
 
             for entry, result in search_results:
                 for user in result[_config('accountattributename')]:
@@ -384,7 +377,7 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [_config('accountattributename'), 'cn', _config('groupattribute')])
+                                           [str(_config('accountattributename')), str('cn'), str(_config('groupattribute'))])
             for _, entry in search_results:
                 if username in entry[_config('accountattributename')]:
                     group_list.append(entry['cn'][0])
@@ -445,7 +438,7 @@ def __expand_ldap_entries(entries, opts=None):
                     search_results = bind.search_s(search_base,
                                                    ldap.SCOPE_SUBTREE,
                                                    search_string,
-                                                   ['cn'])
+                                                   [str('cn')])
                     for ldap_match in search_results:
                         try:
                             minion_id = ldap_match[1]['cn'][0].lower()
