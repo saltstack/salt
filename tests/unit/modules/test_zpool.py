@@ -7,7 +7,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -45,7 +45,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         Tests successful return of exists function
         '''
         ret = {}
-        ret['stdout'] = "NAME      SIZE  ALLOC   FREE    CAP  DEDUP  HEALTH  ALTROOT\nmyzpool   149G   128K   149G     0%  1.00x  ONLINE  -"
+        ret['stdout'] = "NAME      SIZE  ALLOC   FREE    CAP  DEDUP  HEALTH  ALTROOT\n" \
+                        "myzpool   149G   128K   149G     0%  1.00x  ONLINE  -"
         ret['stderr'] = ""
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
@@ -137,7 +138,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.zpool._check_features',
                       MagicMock(return_value=False)):
             ret = zpool.list_()
-            res = OrderedDict([('mypool', {'alloc': '714G', 'cap': '38%', 'free': '1.11T', 'health': 'ONLINE', 'size': '1.81T'})])
+            res = OrderedDict([('mypool', {'alloc': '714G', 'cap': '38%', 'free': '1.11T',
+                                           'health': 'ONLINE', 'size': '1.81T'})])
             self.assertEqual(res, ret)
 
     def test_list_parsable(self):
@@ -153,7 +155,9 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.zpool._check_features',
                       MagicMock(return_value=False)):
             ret = zpool.list_()
-            res = OrderedDict([('mypool', {'alloc': 767076794368, 'cap': 38, 'free': 1225788030976, 'health': 'ONLINE', 'size': 1992864825344})])
+            res = OrderedDict([('mypool', {'alloc': 767076794368, 'cap': 38,
+                                           'free': 1225788030976, 'health': 'ONLINE',
+                                           'size': 1992864825344})])
             self.assertEqual(res, ret)
 
     def test_get(self):
@@ -318,7 +322,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}):
             with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
                 ret = zpool.split('datapool', 'backuppool')
-                res = OrderedDict([('backuppool', 'Unable to split datapool: Source pool must be composed only of mirrors')])
+                res = OrderedDict([('backuppool', 'Unable to split datapool: '
+                                                  'Source pool must be composed only of mirrors')])
                 self.assertEqual(res, ret)
 
     def test_labelclear_success(self):
