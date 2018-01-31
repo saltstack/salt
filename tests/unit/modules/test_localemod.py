@@ -52,6 +52,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
              hardware=high pressure system failure
      Reason: The vendor put the bug there.
     '''
+
     def setup_loader_modules(self):
         return {localemod: {}}
 
