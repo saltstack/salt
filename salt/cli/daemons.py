@@ -119,11 +119,12 @@ class Master(salt.utils.parsers.MasterOptionParser, DaemonsMixin):  # pylint: di
     Creates a master server
     '''
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
-        # escalate signal to the process manager processes
-        self.master.process_manager.stop_restarting()
-        self.master.process_manager.send_signal_to_processes(signum)
-        # kill any remaining processes
-        self.master.process_manager.kill_children()
+        if hasattr(self.master, 'process_manager'):  # IofloMaster has no process manager
+            # escalate signal to the process manager processes
+            self.master.process_manager.stop_restarting()
+            self.master.process_manager.send_signal_to_processes(signum)
+            # kill any remaining processes
+            self.master.process_manager.kill_children()
         super(Master, self)._handle_signals(signum, sigframe)
 
     def prepare(self):
@@ -234,7 +235,8 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         # escalate signal to the process manager processes
-        self.minion.stop(signum)
+        if hasattr(self.minion, 'stop'):
+            self.minion.stop(signum)
         super(Minion, self)._handle_signals(signum, sigframe)
 
     # pylint: disable=no-member
@@ -392,7 +394,7 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
         :param exitmsg
         '''
         self.action_log_info('Shutting down')
-        if hasattr(self, 'minion'):
+        if hasattr(self, 'minion') and hasattr(self.minion, 'destroy'):
             self.minion.destroy()
         super(Minion, self).shutdown(
             exitcode, ('The Salt {0} is shutdown. {1}'.format(
