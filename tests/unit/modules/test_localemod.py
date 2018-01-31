@@ -26,6 +26,7 @@ import salt.modules.localemod as localemod
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
+
 @skipIf(not pytest, False)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
