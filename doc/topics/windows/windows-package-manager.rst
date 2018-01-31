@@ -422,8 +422,8 @@ Available parameters are as follows:
         If storing software in the same location as the winrepo it is best
         practice to place each installer in its own directory rather than the
         root of winrepo. Then you can place your package definition file in the
-        same directory with a name of ``init.sls``. This will be picked up
-        by ``pkg.refresh_db`` and processed properly.
+        same directory. It is best practice to name the file ``init.sls``. This
+        will be picked up by ``pkg.refresh_db`` and processed properly.
 
 :param str install_flags:
     Any flags that need to be passed to the installer to make it perform a
@@ -512,10 +512,12 @@ Available parameters are as follows:
     installation.
 
     .. warning::
-        Do not place installer files in the root of winrepo
-        (``/srv/salt/win/repo-ng``). If the installer is in the root of winrepo
-        and the package definition for that installer has ``cache_dir: True``
-        then the entire contents of winrepo will be cached to the minion.
+        Be aware that all files and directories in the same location as the
+        installer file will be copied down to the minion. If you place your
+        installer file in the root of winrepo (``/srv/salt/win/repo-ng``) and
+        ``cache_dir: True`` the entire contents of winrepo will be cached to
+        the minion. Therefore, it is best practice to place your installer files
+        in a subdirectory if they are to be stored in winrepo.
 
 :param str cache_file:
     When the installer URL begins with ``salt://``, this indicates a single file

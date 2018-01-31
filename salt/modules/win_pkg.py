@@ -614,7 +614,8 @@ def refresh_db(**kwargs):
         configuration settings:
             - `winrepo_cache_expire_min`
             - `winrepo_cache_expire_max`
-        However, if the package definition files have changed, this function
+        However, if the package definition files have changed, as would be the
+        case if you are developing a new package definition, this function
         should be called to ensure the minion has the latest information about
         packages available to it.
 
