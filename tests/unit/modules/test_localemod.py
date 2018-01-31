@@ -470,20 +470,11 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests the return of successful gen_locale on Debian system without a charmap
         '''
-        def file_search(search, pattern, flags):
-            '''
-            mock file.search
-            '''
-            if len(pattern.split()) == 1:
-                return False
-            else:  # charmap was supplied
-                return True
-
         ret = {'stdout': 'saltines', 'stderr': 'biscuits', 'retcode': 0, 'pid': 1337}
         with patch.dict(localemod.__grains__, {'os': 'Debian'}), \
                 patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch.dict(localemod.__salt__,
-                           {'file.search': file_search,
+                           {'file.search': lambda s, p, flags: not len(p.split()) == 1,
                             'file.replace': MagicMock(return_value=True),
                             'cmd.run_all': MagicMock(return_value=ret)}):
             assert localemod.gen_locale('en_US.UTF-8')
