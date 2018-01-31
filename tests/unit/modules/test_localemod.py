@@ -83,6 +83,22 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert out['x11_layout'] == 'us'
         assert out['x11_model'] == 'pc105'
 
+    @patch('salt.modules.localemod.dbus', MagicMock())
+    def test_dbus_locale_parser_matches(self):
+        '''
+        Test dbus locale status parser matching the results.
+        :return:
+        '''
+        i_dbus = MagicMock()
+        i_dbus.Get = MagicMock(return_value=['LANG=de_DE.utf8'])
+        dbus = MagicMock(return_value=i_dbus)
+
+        with patch('salt.modules.localemod.dbus.Interface', dbus):
+            out = localemod._parse_dbus_locale()
+            assert isinstance(out, dict)
+            assert 'LANG' in out
+            assert out['LANG'] == 'de_DE.utf8'
+
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.log', MagicMock())
     def test_localectl_status_parser_no_systemd(self):
