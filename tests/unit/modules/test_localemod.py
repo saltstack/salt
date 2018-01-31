@@ -440,6 +440,22 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['cmd.run_all'].call_args[0][0] == ['localedef', '--force', '-i', 'de_DE',
                                                                      '-f', 'utf8', 'de_DE.utf8', '--quiet']
 
+    @patch('salt.modules.localemod.log', MagicMock())
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'Suse'})
+    @patch('salt.modules.localemod.__salt__', {'cmd.run_all': MagicMock(return_value={'retcode': 0})})
+    @patch('os.listdir', MagicMock(return_value=['de_DE']))
+    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch('salt.utils.locales.join_locale', MagicMock(return_value='de_DE.utf8'))
+    @patch('salt.utils.path.which', MagicMock(return_value=None))
+    def test_gen_locale_suse_localedef_error_handling(self):
+        '''
+        Tests the location where gen_locale is handling error while calling not installed localedef on Suse os-family.
+        :return:
+        '''
+        with pytest.raises(CommandExecutionError) as err:
+            localemod.gen_locale('de_DE.utf8')
+        assert 'Command "locale-gen" or "localedef" was not found on this system.' in six.text_type(err)
+
     def test_gen_locale_debian(self):
         '''
         Tests the return of successful gen_locale on Debian system
