@@ -408,6 +408,21 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                                                      localemod.log.error.call_args[0][2])
         assert msg == 'The provided locale "foo" is not found in /usr/share/i18n/SUPPORTED'
 
+    @patch('salt.modules.localemod.log', MagicMock())
+    @patch('salt.modules.localemod.__grains__', {'os_family': 'Suse'})
+    @patch('os.listdir', MagicMock(return_value=[]))
+    @patch('salt.utils.locales.join_locale', MagicMock(return_value='en_GB.utf8'))
+    def test_gen_locale_suse_invalid(self):
+        '''
+        Tests the location where gen_locale is searching for generated paths.
+        :return:
+        '''
+        assert not localemod.gen_locale('de_DE.utf8')
+        assert localemod.log.error.called
+        msg = localemod.log.error.call_args[0][0] % (localemod.log.error.call_args[0][1],
+                                                     localemod.log.error.call_args[0][2])
+        assert msg == 'The provided locale "en_GB.utf8" is not found in /usr/share/locale'
+
     def test_gen_locale_debian(self):
         '''
         Tests the return of successful gen_locale on Debian system
