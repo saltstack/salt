@@ -13,7 +13,6 @@ from salt.ext import six
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.stringutils
-import salt.utils.data
 
 log = logging.getLogger(__name__)
 # Import third party libs
@@ -326,7 +325,7 @@ def groups(username, **kwargs):
                                                                             _config('persontype'))
                 user_dn_results = bind.search_s(_config('basedn'),
                                                 ldap.SCOPE_SUBTREE,
-                                                get_user_dn_search, [str('distinguishedName')])
+                                                get_user_dn_search, [str('distinguishedName')])  # future lint: disable=blacklisted-function
             except Exception as e:
                 log.error('Exception thrown while looking up user DN in AD: %s', e)
                 return group_list
@@ -341,7 +340,7 @@ def groups(username, **kwargs):
                 search_results = bind.search_s(_config('basedn'),
                                                ldap.SCOPE_SUBTREE,
                                                ldap_search_string,
-                                               [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])
+                                               [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
             except Exception as e:
                 log.error('Exception thrown while retrieving group membership in AD: %s', e)
                 return group_list
@@ -357,11 +356,11 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])
+                                           [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
 
             for entry, result in search_results:
                 for user in result[_config('accountattributename')]:
-                    if username == salt.utils.data.decode(user).split(',')[0].split('=')[-1]:
+                    if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
                         group_list.append(entry.split(',')[0].split('=')[-1])
 
             log.debug('User %s is a member of groups: %s', username, group_list)
@@ -380,13 +379,13 @@ def groups(username, **kwargs):
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
                                            [salt.utils.stringutils.to_str(_config('accountattributename')),
-                                            str('cn'),
+                                            str('cn'),  # future lint: disable=blacklisted-function
                                             salt.utils.stringutils.to_str(_config('groupattribute'))])
             for _, entry in search_results:
                 if username in entry[_config('accountattributename')]:
                     group_list.append(entry['cn'][0])
             for user, entry in search_results:
-                if username == salt.utils.data.decode(user).split(',')[0].split('=')[-1]:
+                if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
                     for group in entry[_config('groupattribute')]:
                         group_list.append(group.split(',')[0].split('=')[-1])
             log.debug('User %s is a member of groups: %s', username, group_list)
@@ -442,7 +441,7 @@ def __expand_ldap_entries(entries, opts=None):
                     search_results = bind.search_s(search_base,
                                                    ldap.SCOPE_SUBTREE,
                                                    search_string,
-                                                   [str('cn')])
+                                                   [str('cn')])  # future lint: disable=blacklisted-function
                     for ldap_match in search_results:
                         try:
                             minion_id = ldap_match[1]['cn'][0].lower()
