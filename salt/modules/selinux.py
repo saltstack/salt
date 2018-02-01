@@ -517,7 +517,9 @@ def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, se
     if action not in ['add', 'delete']:
         raise SaltInvocationError('Actions supported are "add" and "delete", not "{0}".'.format(action))
     cmd = 'semanage fcontext --{0}'.format(action)
-    if filetype is not None:
+    # "semanage --ftype a" isn't valid on Centos 6,
+    # don't pass --ftype since "a" is the default filetype.
+    if filetype is not None and filetype != 'a':
         _validate_filetype(filetype)
         cmd += ' --ftype {0}'.format(filetype)
     if sel_type is not None:
