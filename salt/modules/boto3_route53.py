@@ -862,7 +862,7 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
         args.update({'PrivateZone': PrivateZone}) if PrivateZone is not None else None
         zone = find_hosted_zone(**args)
         if not zone:
-            log.error("Couldn't resolve domain name {0} to a hosted zone ID.".format(Name))
+            log.error("Couldn't resolve domain name %s to a hosted zone ID.", Name)
             return []
         HostedZoneId = zone[0]['HostedZone']['Id']
 
@@ -879,6 +879,7 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
                 time.sleep(3)
                 retries -= 1
                 continue
-            log.error('Failed to apply requested changes to the hosted zone {0}: {1}'.format(
-                    Name or HostedZoneId, str(e)))
+            log.error('Failed to apply requested changes to the hosted zone {%s}: {%s}',
+                    (Name or HostedZoneId), str(e)))
+            raise e
     return False
