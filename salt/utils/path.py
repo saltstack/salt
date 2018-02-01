@@ -14,7 +14,6 @@ import posixpath
 import re
 import string
 import struct
-import sys
 
 # Import Salt libs
 import salt.utils.args
@@ -296,27 +295,12 @@ def join(*parts, **kwargs):
         # No args passed to func
         return ''
 
+    root = salt.utils.stringutils.to_unicode(root)
     if not parts:
         ret = root
     else:
         stripped = [p.lstrip(os.sep) for p in parts]
-        try:
-            ret = pathlib.join(root, *stripped)
-        except UnicodeDecodeError:
-            # This is probably Python 2 and one of the parts contains unicode
-            # characters in a bytestring. First try to decode to the system
-            # encoding.
-            try:
-                enc = __salt_system_encoding__
-            except NameError:
-                enc = sys.stdin.encoding or sys.getdefaultencoding()
-            try:
-                ret = pathlib.join(root.decode(enc),
-                                   *[x.decode(enc) for x in stripped])
-            except UnicodeDecodeError:
-                # Last resort, try UTF-8
-                ret = pathlib.join(root.decode('UTF-8'),
-                                   *[x.decode('UTF-8') for x in stripped])
+        ret = pathlib.join(root, *salt.utils.data.decode(stripped))
     return pathlib.normpath(ret)
 
 
