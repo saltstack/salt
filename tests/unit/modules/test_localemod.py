@@ -119,8 +119,6 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             assert msg == ('Odd locale parameter "Fatal error right in front of screen" detected in dbus locale output.'
                            ' This should not happen. You should probably investigate what caused this.')
 
-
-
     @patch('salt.utils.which', MagicMock(return_value=None))
     @patch('salt.modules.localemod.log', MagicMock())
     def test_localectl_status_parser_no_systemd(self):
