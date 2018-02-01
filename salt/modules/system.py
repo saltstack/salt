@@ -25,9 +25,6 @@ import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-# Import 3rd-party libs
-from salt.ext import six
-
 __virtualname__ = 'system'
 
 
