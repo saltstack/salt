@@ -880,6 +880,6 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
                 retries -= 1
                 continue
             log.error('Failed to apply requested changes to the hosted zone {%s}: {%s}',
-                    (Name or HostedZoneId), str(e)))
+                    (Name or HostedZoneId), str(e))
             raise e
     return False
