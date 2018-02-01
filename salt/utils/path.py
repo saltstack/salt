@@ -201,7 +201,9 @@ def which(exe=None):
             # executable in cwd or fullpath
             return exe
 
-        ext_list = os.environ.get('PATHEXT', '.EXE').split(';')
+        ext_list = salt.utils.stringutils.to_str(
+            os.environ.get('PATHEXT', str('.EXE'))
+        ).split(str(';'))
 
         @real_memoize
         def _exe_has_ext():
@@ -211,8 +213,13 @@ def which(exe=None):
             '''
             for ext in ext_list:
                 try:
-                    pattern = r'.*\.' + ext.lstrip('.') + r'$'
-                    re.match(pattern, exe, re.I).groups()
+                    pattern = r'.*\.{0}$'.format(
+                        salt.utils.stringutils.to_unicode(ext).lstrip('.')
+                    )
+                    re.match(
+                        pattern,
+                        salt.utils.stringutils.to_unicode(exe),
+                        re.I).groups()
                     return True
                 except AttributeError:
                     continue
@@ -220,13 +227,17 @@ def which(exe=None):
 
         # Enhance POSIX path for the reliability at some environments, when $PATH is changing
         # This also keeps order, where 'first came, first win' for cases to find optional alternatives
-        search_path = os.environ.get('PATH') and os.environ['PATH'].split(os.pathsep) or list()
-        for default_path in ['/bin', '/sbin', '/usr/bin', '/usr/sbin', '/usr/local/bin']:
-            if default_path not in search_path:
-                search_path.append(default_path)
-        os.environ['PATH'] = os.pathsep.join(search_path)
+        system_path = salt.utils.stringutils.to_unicode(os.environ.get('PATH', ''))
+        search_path = system_path.split(os.pathsep)
+        if not salt.utils.platform.is_windows():
+            search_path.extend([
+                x for x in ('/bin', '/sbin', '/usr/bin',
+                            '/usr/sbin', '/usr/local/bin')
+                if x not in search_path
+            ])
+
         for path in search_path:
-            full_path = os.path.join(path, exe)
+            full_path = join(path, exe)
             if _is_executable_file_or_link(full_path):
                 return full_path
             elif salt.utils.platform.is_windows() and not _exe_has_ext():
