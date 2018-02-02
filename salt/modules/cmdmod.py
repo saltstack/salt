@@ -36,7 +36,6 @@ from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range, zip
-from salt.ext.six.moves import shlex_quote as _cmd_quote
 from salt.utils.locales import sdecode
 
 # Only available on POSIX systems, nonfatal on windows
@@ -47,8 +46,10 @@ except ImportError:
 
 if salt.utils.is_windows():
     from salt.utils.win_runas import runas as win_runas
+    from salt.utils.win_functions import escape_argument as _cmd_quote
     HAS_WIN_RUNAS = True
 else:
+    from salt.ext.six.moves import shlex_quote as _cmd_quote
     HAS_WIN_RUNAS = False
 
 __proxyenabled__ = ['*']
@@ -2780,9 +2781,8 @@ def shell_info(shell, list_modules=False):
                 'HKEY_LOCAL_MACHINE',
                 'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
                 'Install')
-            if 'vtype' in install_data and \
-                    install_data['vtype'] == 'REG_DWORD' and \
-                    install_data['vdata'] == 1:
+            if install_data.get('vtype') == 'REG_DWORD' and \
+                    install_data.get('vdata') == 1:
                 details = __salt__['reg.list_values'](
                     'HKEY_LOCAL_MACHINE',
                     'Software\\Microsoft\\PowerShell\\{0}\\'

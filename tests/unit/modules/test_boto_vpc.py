@@ -132,8 +132,9 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {}. Installed: {}'
-        .format(required_boto_version, _get_boto_version()))
-@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {}. Installed: {}'.format(required_moto_version, _get_moto_version()))
+        .format(required_boto_version, _get_boto_version() if HAS_BOTO else 'None'))
+@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {}. Installed: {}'
+        .format(required_moto_version, _get_moto_version() if HAS_MOTO else 'None'))
 class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn3 = None
 

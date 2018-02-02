@@ -512,6 +512,9 @@ def __discover_version(saltstack_version):
             process = subprocess.Popen(
                 ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
             out, err = process.communicate()
+        if six.PY3:
+            out = out.decode()
+            err = err.decode()
         out = out.strip()
         err = err.strip()
 
