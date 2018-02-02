@@ -339,22 +339,16 @@ class IPCClient(object):
                 yield tornado.gen.sleep(1)
 
     def __del__(self):
-        try:
-            self.close()
-        except socket.error as exc:
-            if exc.errno != errno.EBADF:
-                # If its not a bad file descriptor error, raise
-                raise
-        except TypeError:
-            # This is raised when Python's GC has collected objects which
-            # would be needed when calling self.close()
-            pass
+        self._close()
 
-    def close(self):
+    def _close(self):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
+
+        This class is a singleton so close have to be called only once during
+        garbage collection when nobody uses this instance.
         '''
         if self._closing:
             return
@@ -707,12 +701,16 @@ class IPCMessageSubscriber(IPCClient):
                 yield tornado.gen.sleep(1)
         yield self._read(None, callback)
 
-    def close(self):
+    def _close(self):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
+
+        This class is a singleton so close have to be called only once during
+        garbage collection when nobody uses this instance.
         '''
+<<<<<<< HEAD
         if self._closing:
             return
         super(IPCMessageSubscriber, self).close()
@@ -723,7 +721,18 @@ class IPCMessageSubscriber(IPCClient):
             exc = self._read_stream_future.exception()
             if exc and not isinstance(exc, StreamClosedError):
                 log.error("Read future returned exception %r", exc)
+=======
+        if not self._closing:
+            IPCClient._close(self)
+            # This will prevent this message from showing up:
+            # '[ERROR   ] Future exception was never retrieved:
+            # StreamClosedError'
+            if self._read_sync_future is not None and self._read_sync_future.done():
+                self._read_sync_future.exception()
+            if self._read_stream_future is not None and self._read_stream_future.done():
+                self._read_stream_future.exception()
+>>>>>>> 8fb42cc38a... Do not close singleton instances.
 
     def __del__(self):
         if IPCMessageSubscriber in globals():
-            self.close()
+            self._close()

@@ -55,12 +55,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     def tearDown(self):
         super(BaseIPCReqCase, self).tearDown()
         #failures = []
-        try:
-            self.server_channel.close()
-        except socket.error as exc:
-            if exc.errno != errno.EBADF:
-                # If its not a bad file descriptor error, raise
-                raise
+        del self.channel
         os.unlink(self.socket_path)
         #for k, v in six.iteritems(self.io_loop._handlers):
         #    if self._start_handlers.get(k) != v:
@@ -100,28 +95,13 @@ class IPCMessageClient(BaseIPCReqCase):
         self.channel = self._get_channel()
 
     def tearDown(self):
-        super(IPCMessageClient, self).tearDown()
         try:
-            # Make sure we close no matter what we've done in the tests
-            del self.channel
+            self.channel._close()
         except socket.error as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
-        finally:
-            self.channel = None
-
-    def test_singleton(self):
-        channel = self._get_channel()
-        assert self.channel is channel
-        # Delete the local channel. Since there's still one more refefence
-        # __del__ wasn't called
-        del channel
-        assert self.channel
-        msg = {'foo': 'bar', 'stop': True}
-        self.channel.send(msg)
-        self.wait()
-        self.assertEqual(self.payloads[0], msg)
+        super(IPCMessageClient, self).tearDown()
 
     def test_basic_send(self):
         msg = {'foo': 'bar', 'stop': True}
