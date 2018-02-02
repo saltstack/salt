@@ -2,7 +2,7 @@
 '''
 Manage Linux kernel packages on APT-based systems
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import logging
 import re
@@ -222,7 +222,7 @@ def remove(release):
         raise CommandExecutionError('Active kernel cannot be removed')
 
     target = '{0}-{1}'.format(_package_prefix(), release)
-    log.info('Removing kernel package {0}'.format(target))
+    log.info('Removing kernel package %s', target)
 
     __salt__['pkg.purge'](target)
 

@@ -18,12 +18,12 @@ Module for retrieving random information from Random.org
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six
+from salt.ext import six
 import salt.ext.six.moves.http_client
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
@@ -75,7 +75,7 @@ def _numeric(n):
     '''
     Tell whether an argument is numeric
     '''
-    return isinstance(n, salt.ext.six.integer_types + (float, ))
+    return isinstance(n, six.integer_types + (float, ))
 
 
 def _query(api_version=None, data=None):
@@ -94,7 +94,7 @@ def _query(api_version=None, data=None):
     ret = {'res': True}
 
     api_url = 'https://api.random.org/'
-    base_url = _urljoin(api_url, 'json-rpc/' + str(api_version) + '/invoke')
+    base_url = _urljoin(api_url, 'json-rpc/' + six.text_type(api_version) + '/invoke')
 
     data = salt.utils.json.dumps(data)
 
@@ -155,7 +155,7 @@ def getUsage(api_key=None, api_version=None):
             return ret
 
     if isinstance(api_version, int):
-        api_version = str(api_version)
+        api_version = six.text_type(api_version)
 
     _function = RANDOM_ORG_FUNCTIONS.get(api_version).get('getUsage').get('method')
     data = {}
@@ -264,7 +264,7 @@ def generateIntegers(api_key=None,
         replacement = kwargs['replacement']
 
     if isinstance(api_version, int):
-        api_version = str(api_version)
+        api_version = six.text_type(api_version)
 
     _function = RANDOM_ORG_FUNCTIONS.get(api_version).get('generateIntegers').get('method')
     data = {}
@@ -280,7 +280,7 @@ def generateIntegers(api_key=None,
                       }
 
     result = _query(api_version=api_version, data=data)
-    log.debug('result {0}'.format(result))
+    log.debug('result %s', result)
     if result:
         if 'random' in result:
             random_data = result.get('random').get('data')
@@ -365,7 +365,7 @@ def generateStrings(api_key=None,
         return ret
 
     if isinstance(api_version, int):
-        api_version = str(api_version)
+        api_version = six.text_type(api_version)
 
     if 'replacement' not in kwargs:
         replacement = True
@@ -439,7 +439,7 @@ def generateUUIDs(api_key=None,
             return ret
 
     if isinstance(api_version, int):
-        api_version = str(api_version)
+        api_version = six.text_type(api_version)
 
     if not _numeric(kwargs['number']) or not 1 <= kwargs['number'] <= 1000:
         ret['res'] = False
@@ -536,9 +536,8 @@ def generateDecimalFractions(api_key=None,
         replacement = kwargs['replacement']
 
     if isinstance(api_version, int):
-        api_version = str(api_version)
+        api_version = six.text_type(api_version)
 
-    log.debug('foo {0}'.format(RANDOM_ORG_FUNCTIONS.get(api_version)))
     _function = RANDOM_ORG_FUNCTIONS.get(api_version).get('generateDecimalFractions').get('method')
     data = {}
     data['id'] = 1911220
@@ -633,7 +632,7 @@ def generateGaussians(api_key=None,
         return ret
 
     if isinstance(api_version, int):
-        api_version = str(api_version)
+        api_version = six.text_type(api_version)
 
     _function = RANDOM_ORG_FUNCTIONS.get(api_version).get('generateGaussians').get('method')
     data = {}
@@ -724,7 +723,7 @@ def generateBlobs(api_key=None,
         _format = 'base64'
 
     if isinstance(api_version, int):
-        api_version = str(api_version)
+        api_version = six.text_type(api_version)
 
     _function = RANDOM_ORG_FUNCTIONS.get(api_version).get('generateBlobs').get('method')
     data = {}

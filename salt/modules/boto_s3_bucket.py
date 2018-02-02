@@ -52,7 +52,7 @@ The dependencies listed above can be installed via package or pip.
 # pylint: disable=W0106
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -166,14 +166,14 @@ def create(Bucket,
                     'GrantRead', 'GrantReadACP',
                     'GrantWrite', 'GrantWriteACP'):
             if locals()[arg] is not None:
-                kwargs[arg] = str(locals()[arg])
+                kwargs[arg] = str(locals()[arg])  # future lint: disable=blacklisted-function
         if LocationConstraint:
             kwargs['CreateBucketConfiguration'] = {'LocationConstraint': LocationConstraint}
         location = conn.create_bucket(Bucket=Bucket,
                                   **kwargs)
         conn.get_waiter("bucket_exists").wait(Bucket=Bucket)
         if location:
-            log.info('The newly created bucket name is located at {0}'.format(location['Location']))
+            log.info('The newly created bucket name is located at %s', location['Location'])
 
             return {'created': True, 'name': Bucket, 'Location': location['Location']}
         else:
@@ -490,7 +490,7 @@ def put_acl(Bucket,
                     'GrantRead', 'GrantReadACP',
                     'GrantWrite', 'GrantWriteACP'):
             if locals()[arg] is not None:
-                kwargs[arg] = str(locals()[arg])
+                kwargs[arg] = str(locals()[arg])  # future lint: disable=blacklisted-function
         conn.put_bucket_acl(Bucket=Bucket, **kwargs)
         return {'updated': True, 'name': Bucket}
     except ClientError as e:
@@ -770,9 +770,9 @@ def put_tagging(Bucket,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         conn.put_bucket_tagging(Bucket=Bucket, Tagging={
                 'TagSet': tagslist,
         })

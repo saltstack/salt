@@ -211,7 +211,7 @@ try:
     if 'vim25/6.0' in VmomiSupport.versionMap and \
         sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
 
-        log.error('pyVmomi not loaded: Incompatible versions '
+        log.debug('pyVmomi not loaded: Incompatible versions '
                   'of Python. See Issue #29537.')
         raise ImportError()
     HAS_PYVMOMI = True

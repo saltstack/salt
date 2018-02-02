@@ -7,7 +7,7 @@ https://www.consul.io
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import logging
 
@@ -16,11 +16,8 @@ import salt.utils.http
 import salt.utils.json
 
 # Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-import salt.ext.six
-import salt.ext.six.moves.http_client
-# pylint: enable=import-error,no-name-in-module
+from salt.ext import six
+from salt.ext.six.moves import http_client, urllib
 
 log = logging.getLogger(__name__)
 
@@ -78,8 +75,8 @@ def _query(function,
         token = _get_token()
 
     headers = {"X-Consul-Token": token, "Content-Type": "application/json"}
-    base_url = _urljoin(consul_url, '{0}/'.format(api_version))
-    url = _urljoin(base_url, function, False)
+    base_url = urllib.parse.urljoin(consul_url, '{0}/'.format(api_version))
+    url = urllib.parse.urljoin(base_url, function, False)
 
     if data is None:
         data = {}
@@ -96,12 +93,12 @@ def _query(function,
         opts=__opts__,
     )
 
-    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
+    if result.get('status', None) == http_client.OK:
         ret['data'] = result.get('dict', result)
         ret['res'] = True
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
+    elif result.get('status', None) == http_client.NO_CONTENT:
         ret['res'] = False
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NOT_FOUND:
+    elif result.get('status', None) == http_client.NOT_FOUND:
         ret['data'] = 'Key not found.'
         ret['res'] = False
     else:
@@ -1015,7 +1012,7 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
             return ret
 
     lc_kwargs = dict()
-    for k, v in salt.ext.six.iteritems(kwargs):
+    for k, v in six.iteritems(kwargs):
         lc_kwargs[k.lower()] = v
 
     if 'name' in lc_kwargs:
@@ -1043,7 +1040,7 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
 
     if 'check' in lc_kwargs:
         dd = dict()
-        for k, v in salt.ext.six.iteritems(lc_kwargs['check']):
+        for k, v in six.iteritems(lc_kwargs['check']):
             dd[k.lower()] = v
         interval_required = False
         check_dd = dict()
@@ -1068,7 +1065,7 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
             if 'Interval' in check_dd:
                 del check_dd['Interval']  # not required, so ignore it
 
-        if len(check_dd) > 0:
+        if check_dd > 0:
             data['Check'] = check_dd  # if empty, ignore it
 
     function = 'agent/service/register'
@@ -1254,7 +1251,7 @@ def session_create(consul_url=None, token=None, **kwargs):
 
     if 'ttl' in kwargs:
         _ttl = kwargs['ttl']
-        if str(_ttl).endswith('s'):
+        if six.text_type(_ttl).endswith('s'):
             _ttl = _ttl[:-1]
 
         if int(_ttl) < 0 or int(_ttl) > 3600:

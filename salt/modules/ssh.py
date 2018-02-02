@@ -10,7 +10,7 @@ Manage client ssh components
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import binascii
 import hashlib
 import logging
@@ -337,15 +337,14 @@ def host_keys(keydir=None, private=True, certs=True):
         m = fnre.match(fn_)
         if m:
             if not m.group('pub') and private is False:
-                log.info(
-                    'Skipping private key file {0} as private is set to False'
-                    .format(fn_)
-                )
+                log.info('Skipping private key file %s as '
+                         'private is set to False',
+                         fn_)
                 continue
             if m.group('cert') and certs is False:
                 log.info(
-                    'Skipping key file {0} as certs is set to False'
-                    .format(fn_)
+                    'Skipping key file %s as certs is set to False',
+                    fn_
                 )
                 continue
 
@@ -621,9 +620,11 @@ def rm_auth_key(user,
             # Let the context manager do the right thing here and then
             # re-open the file in write mode to save the changes out.
             with salt.utils.files.fopen(full, 'w') as _fh:
+                lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
                 _fh.writelines(lines)
         except (IOError, OSError) as exc:
-            log.warning('Could not read/write key file: {0}'.format(str(exc)))
+            log.warning('Could not read/write key file: %s',
+                        exc)
             return 'Key not removed'
         return 'Key removed'
     # TODO: Should this function return a simple boolean?
@@ -774,14 +775,12 @@ def set_auth_key(
                         # File isn't empty, check if last byte is a newline
                         # If not, add one
                         _fh.seek(-1, 2)
-                        if _fh.read(1) != six.b('\n'):
-                            _fh.write(six.b('\n'))
-                if six.PY3:
-                    auth_line = auth_line.encode(__salt_system_encoding__)
-                _fh.write(auth_line)
+                        if _fh.read(1) != b'\n':
+                            _fh.write(b'\n')
+                _fh.write(salt.utils.stringutils.to_bytes(auth_line))
         except (IOError, OSError) as exc:
             msg = 'Could not write to key file: {0}'
-            raise CommandExecutionError(msg.format(str(exc)))
+            raise CommandExecutionError(msg.format(exc))
 
         if new_file:
             if os.geteuid() == 0:
@@ -1015,7 +1014,7 @@ def recv_known_host_entries(hostname,
         cmd.extend(['-t', 'rsa'])
     if hash_known_hosts:
         cmd.append('-H')
-    cmd.extend(['-T', str(timeout)])
+    cmd.extend(['-T', six.text_type(timeout)])
     cmd.append(hostname)
     lines = None
     attempts = 5
@@ -1253,7 +1252,8 @@ def set_known_host(user=None,
         if remove_lines:
             try:
                 with salt.utils.files.fopen(full, 'r+') as ofile:
-                    known_hosts_lines = list(ofile)
+                    known_hosts_lines = [salt.utils.stringutils.to_unicode(_l)
+                                         for _l in list(ofile)]
                     # Delete from last line to first to avoid invalidating earlier indexes
                     for line_no in sorted(remove_lines, reverse=True):
                         del known_hosts_lines[line_no - 1]
@@ -1261,7 +1261,7 @@ def set_known_host(user=None,
                     ofile.seek(0)
                     ofile.truncate()
                     for line in known_hosts_lines:
-                        ofile.write(line)
+                        ofile.write(salt.utils.stringutils.to_str(line))
             except (IOError, OSError) as exception:
                 raise CommandExecutionError(
                     "Couldn't remove old entry(ies) from known hosts file: '{0}'".format(exception)
@@ -1288,15 +1288,15 @@ def set_known_host(user=None,
         uinfo = __salt__['user.info'](user)
 
     try:
-        log.debug('Ensuring ssh config dir "{0}" exists'.format(ssh_dir))
+        log.debug('Ensuring ssh config dir "%s" exists', ssh_dir)
         os.makedirs(ssh_dir)
     except OSError as exc:
         if exc.args[1] == 'Permission denied':
-            log.error('Unable to create directory {0}: '
-                      '{1}'.format(ssh_dir, exc.args[1]))
+            log.error('Unable to create directory %s: '
+                      '%s', ssh_dir, exc.args[1])
         elif exc.args[1] == 'File exists':
-            log.debug('{0} already exists, no need to create '
-                      'it'.format(ssh_dir))
+            log.debug('%s already exists, no need to create '
+                      'it', ssh_dir)
     else:
         # set proper ownership/permissions
         if user:
@@ -1307,7 +1307,7 @@ def set_known_host(user=None,
     try:
         with salt.utils.files.fopen(full, 'a') as ofile:
             for line in lines:
-                ofile.write(line)
+                ofile.write(salt.utils.stringutils.to_str(line))
     except (IOError, OSError) as exception:
         raise CommandExecutionError(
             "Couldn't append to known hosts file: '{0}'".format(exception)
@@ -1392,7 +1392,11 @@ def user_keys(user=None, pubfile=None, prvfile=None):
             if os.path.exists(fn_):
                 try:
                     with salt.utils.files.fopen(fn_, 'r') as _fh:
-                        keys[u][keyname] = ''.join(_fh.readlines()).strip()
+                        keys[u][keyname] = ''.join(
+                            salt.utils.data.decode(
+                                _fh.readlines()
+                            )
+                        ).strip()
                 except (IOError, OSError):
                     pass
 
@@ -1470,7 +1474,7 @@ def key_is_encrypted(key):
     '''
     try:
         with salt.utils.files.fopen(key, 'r') as fp_:
-            key_data = fp_.read()
+            key_data = salt.utils.stringutils.to_unicode(fp_.read())
     except (IOError, OSError) as exc:
         # Raise a CommandExecutionError
         salt.utils.files.process_read_exception(exc, key)

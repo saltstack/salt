@@ -442,21 +442,25 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         Execute salt
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt',
-                               arg_str,
-                               with_retcode=with_retcode,
-                               catch_stderr=catch_stderr,
-                               timeout=timeout)
+        ret = self.run_script('salt',
+                              arg_str,
+                              with_retcode=with_retcode,
+                              catch_stderr=catch_stderr,
+                              timeout=timeout)
+        log.debug('Result of run_salt for command \'%s\': %s', arg_str, ret)
+        return ret
 
     def run_spm(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
         '''
         Execute spm
         '''
-        return self.run_script('spm',
-                               arg_str,
-                               with_retcode=with_retcode,
-                               catch_stderr=catch_stderr,
-                               timeout=timeout)
+        ret = self.run_script('spm',
+                              arg_str,
+                              with_retcode=with_retcode,
+                              catch_stderr=catch_stderr,
+                              timeout=timeout)
+        log.debug('Result of run_spm for command \'%s\': %s', arg_str, ret)
+        return ret
 
     def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,
                 timeout=60, wipe=True, raw=False):  # pylint: disable=W0221
@@ -470,12 +474,14 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
             arg_str)
-        return self.run_script('salt-ssh',
-                               arg_str,
-                               with_retcode=with_retcode,
-                               catch_stderr=catch_stderr,
-                               timeout=timeout,
-                               raw=True)
+        ret = self.run_script('salt-ssh',
+                              arg_str,
+                              with_retcode=with_retcode,
+                              catch_stderr=catch_stderr,
+                              timeout=timeout,
+                              raw=True)
+        log.debug('Result of run_ssh for command \'%s\': %s', arg_str, ret)
+        return ret
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
         '''
@@ -485,11 +491,13 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                                                arg_str,
                                                                timeout=timeout,
                                                                async_flag=' --async' if async else '')
-        return self.run_script('salt-run',
-                               arg_str,
-                               with_retcode=with_retcode,
-                               catch_stderr=catch_stderr,
-                               timeout=60)
+        ret = self.run_script('salt-run',
+                              arg_str,
+                              with_retcode=with_retcode,
+                              catch_stderr=catch_stderr,
+                              timeout=60)
+        log.debug('Result of run_run for command \'%s\': %s', arg_str, ret)
+        return ret
 
     def run_run_plus(self, fun, *arg, **kwargs):
         '''
@@ -527,6 +535,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         finally:
             opts['output_file'].close()
 
+        log.debug('Result of run_run_plus for fun \'%s\' with arg \'%s\': %s',
+                  fun, opts_arg, ret)
         return ret
 
     def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
@@ -534,16 +544,20 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         Execute salt-key
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-key',
-                               arg_str,
-                               catch_stderr=catch_stderr,
-                               with_retcode=with_retcode,
-                               timeout=60)
+        ret = self.run_script('salt-key',
+                              arg_str,
+                              catch_stderr=catch_stderr,
+                              with_retcode=with_retcode,
+                              timeout=60)
+        log.debug('Result of run_key for command \'%s\': %s', arg_str, ret)
+        return ret
 
     def run_cp(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt-cp
         '''
+        # Note: not logging result of run_cp because it will log a bunch of
+        # bytes which will not be very helpful.
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-cp',
                                arg_str,
@@ -557,21 +571,25 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
                                                     self.get_config_dir(), arg_str)
-        return self.run_script('salt-call',
-                               arg_str,
-                               with_retcode=with_retcode,
-                               catch_stderr=catch_stderr,
-                               timeout=60)
+        ret = self.run_script('salt-call',
+                              arg_str,
+                              with_retcode=with_retcode,
+                              catch_stderr=catch_stderr,
+                              timeout=60)
+        log.debug('Result of run_call for command \'%s\': %s', arg_str, ret)
+        return ret
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=30):
         '''
         Execute salt-cloud
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cloud',
-                               arg_str,
-                               catch_stderr,
-                               timeout=timeout)
+        ret = self.run_script('salt-cloud',
+                              arg_str,
+                              catch_stderr,
+                              timeout=timeout)
+        log.debug('Result of run_cloud for command \'%s\': %s', arg_str, ret)
+        return ret
 
 
 class SPMTestUserInterface(object):

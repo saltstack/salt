@@ -47,7 +47,7 @@ Example States
         - ip_version: 6
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = 'neutron_subnet'
 

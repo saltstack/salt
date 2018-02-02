@@ -57,8 +57,10 @@ class StringutilsTestCase(TestCase):
             self.assertEqual(salt.utils.stringutils.to_str(bytearray(BYTES), 'utf-8'), UNICODE)
             # Test situation when a minion returns incorrect utf-8 string because of... million reasons
             ut2 = b'\x9c'
-            self.assertEqual(salt.utils.stringutils.to_str(ut2, 'utf-8'), u'\ufffd')
-            self.assertEqual(salt.utils.stringutils.to_str(bytearray(ut2), 'utf-8'), u'\ufffd')
+            self.assertRaises(UnicodeDecodeError, salt.utils.stringutils.to_str, ut2, 'utf-8')
+            self.assertEqual(salt.utils.stringutils.to_str(ut2, 'utf-8', 'replace'), u'\ufffd')
+            self.assertRaises(UnicodeDecodeError, salt.utils.stringutils.to_str, bytearray(ut2), 'utf-8')
+            self.assertEqual(salt.utils.stringutils.to_str(bytearray(ut2), 'utf-8', 'replace'), u'\ufffd')
         else:
             self.assertEqual(salt.utils.stringutils.to_str('plugh'), str('plugh'))  # future lint: disable=blacklisted-function
             self.assertEqual(salt.utils.stringutils.to_str('áéíóúý', 'utf-8'), 'áéíóúý'.encode('utf-8'))
