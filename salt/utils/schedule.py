@@ -922,6 +922,8 @@ class Schedule(object):
                     if interval < self.loop_interval:
                         self.loop_interval = interval
 
+                data['_next_scheduled_fire_time'] = now + data['_seconds']
+
             elif 'once' in data:
                 if data['_next_fire_time'] and \
                         data['_next_fire_time'] < now - self.opts['loop_interval'] and \
@@ -936,6 +938,8 @@ class Schedule(object):
                         once = datetime.datetime.strptime(data['once'],
                                                           once_fmt)
                         data['_next_fire_time'] = int(
+                            time.mktime(once.timetuple()))
+                        data['_next_scheduled_fire_time'] = int(
                             time.mktime(once.timetuple()))
                     except (TypeError, ValueError):
                         log.error('Date string could not be parsed: %s, %s',
@@ -1018,6 +1022,8 @@ class Schedule(object):
                         if not data['_next_fire_time']:
                             data['_next_fire_time'] = when
 
+                        data['_next_scheduled_fire_time'] = when
+
                         if data['_next_fire_time'] < when and \
                                 not run and \
                                 not data['_run']:
@@ -1073,6 +1079,8 @@ class Schedule(object):
                     if not data['_next_fire_time']:
                         data['_next_fire_time'] = when
 
+                    data['_next_scheduled_fire_time'] = when
+
                     if data['_next_fire_time'] < when and \
                             not data['_run']:
                         data['_next_fire_time'] = when
@@ -1088,6 +1096,8 @@ class Schedule(object):
                     # executed before or already executed in the past.
                     try:
                         data['_next_fire_time'] = int(
+                            croniter.croniter(data['cron'], now).get_next())
+                        data['_next_scheduled_fire_time'] = int(
                             croniter.croniter(data['cron'], now).get_next())
                     except (ValueError, KeyError):
                         log.error('Invalid cron string. Ignoring')
@@ -1247,6 +1257,8 @@ class Schedule(object):
                                         func = self.skip_function
                                     else:
                                         run = False
+                                    data['_skipped_time'] = now
+                                    data['_skipped'] = True
                                 else:
                                     run = True
                             else:
@@ -1282,6 +1294,8 @@ class Schedule(object):
                                 func = self.skip_function
                             else:
                                 run = False
+                            data['_skipped_time'] = now
+                            data['_skipped'] = True
                         else:
                             run = True
 
