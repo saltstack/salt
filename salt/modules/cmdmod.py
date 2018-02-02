@@ -281,8 +281,9 @@ def _run(cmd,
     if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
-            'Check to ensure that the shell <{0}> is valid for this user.'
-            .format(shell))
+            'Check to ensure that the shell <%s> is valid for this user.',
+            shell
+        )
 
     log_callback = _check_cb(log_callback)
 
@@ -347,14 +348,15 @@ def _run(cmd,
     # checked if blacklisted
     if '__pub_jid' in kwargs:
         if not _check_avail(cmd):
-            msg = 'This shell command is not permitted: "{0}"'.format(cmd)
-            raise CommandExecutionError(msg)
+            raise CommandExecutionError(
+                'The shell command "{0}" is not permitted'.format(cmd)
+            )
 
     env = _parse_env(env)
 
     for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
-        log.error('Environment variable \'{0}\' passed without a value. '
-                  'Setting value to an empty string'.format(bad_env_key))
+        log.error('Environment variable \'%s\' passed without a value. '
+                  'Setting value to an empty string', bad_env_key)
         env[bad_env_key] = ''
 
     def _get_stripped(cmd):
@@ -504,8 +506,7 @@ def _run(cmd,
         try:
             _umask = int(_umask, 8)
         except ValueError:
-            msg = 'Invalid umask: \'{0}\''.format(umask)
-            raise CommandExecutionError(msg)
+            raise CommandExecutionError("Invalid umask: '{0}'".format(umask))
     else:
         _umask = None
 
@@ -570,20 +571,28 @@ def _run(cmd,
             return ret
 
         try:
-            out = proc.stdout.decode(__salt_system_encoding__)
-        except AttributeError:
+            out = salt.utils.stringutils.to_unicode(proc.stdout)
+        except TypeError:
+            # stdout is None
             out = ''
         except UnicodeDecodeError:
-            log.error('UnicodeDecodeError while decoding output of cmd {0}'.format(cmd))
-            out = proc.stdout.decode(__salt_system_encoding__, 'replace')
+            log.error(
+                'Failed to decode stdout from command %s, non-decodable '
+                'characters have been replaced', cmd
+            )
+            out = salt.utils.stringutils.to_unicode(proc.stdout, errors='replace')
 
         try:
-            err = proc.stderr.decode(__salt_system_encoding__)
-        except AttributeError:
+            err = salt.utils.stringutils.to_unicode(proc.stderr)
+        except TypeError:
+            # stderr is None
             err = ''
         except UnicodeDecodeError:
-            log.error('UnicodeDecodeError while decoding error of cmd {0}'.format(cmd))
-            err = proc.stderr.decode(__salt_system_encoding__, 'replace')
+            log.error(
+                'Failed to decode stderr from command %s, non-decodable '
+                'characters have been replaced', cmd
+            )
+            err = salt.utils.stringutils.to_unicode(proc.stderr, errors='replace')
 
         if rstrip:
             if out is not None:
@@ -648,9 +657,8 @@ def _run(cmd,
                         ret['retcode'] = 1
                         break
                 except salt.utils.vt.TerminalException as exc:
-                    log.error(
-                        'VT: {0}'.format(exc),
-                        exc_info_on_loglevel=logging.DEBUG)
+                    log.error('VT: %s', exc,
+                              exc_info_on_loglevel=logging.DEBUG)
                     ret = {'retcode': 1, 'pid': '2'}
                     break
                 # only set stdout on success as we already mangled in other
@@ -1401,11 +1409,11 @@ def run_stdout(cmd,
             )
             log.error(log_callback(msg))
         if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
+            log.log(lvl, 'stdout: %s', log_callback(ret['stdout']))
         if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
+            log.log(lvl, 'stderr: %s', log_callback(ret['stderr']))
         if ret['retcode']:
-            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
+            log.log(lvl, 'retcode: %s', ret['retcode'])
     return ret['stdout'] if not hide_output else ''
 
 
@@ -1603,11 +1611,11 @@ def run_stderr(cmd,
             )
             log.error(log_callback(msg))
         if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
+            log.log(lvl, 'stdout: %s', log_callback(ret['stdout']))
         if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
+            log.log(lvl, 'stderr: %s', log_callback(ret['stderr']))
         if ret['retcode']:
-            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
+            log.log(lvl, 'retcode: %s', ret['retcode'])
     return ret['stderr'] if not hide_output else ''
 
 
@@ -1832,11 +1840,11 @@ def run_all(cmd,
             )
             log.error(log_callback(msg))
         if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
+            log.log(lvl, 'stdout: %s', log_callback(ret['stdout']))
         if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
+            log.log(lvl, 'stderr: %s', log_callback(ret['stderr']))
         if ret['retcode']:
-            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
+            log.log(lvl, 'retcode: %s', ret['retcode'])
 
     if hide_output:
         ret['stdout'] = ret['stderr'] = ''
@@ -2017,7 +2025,7 @@ def retcode(cmd,
                 )
             )
             log.error(log_callback(msg))
-        log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
+        log.log(lvl, 'output: %s', log_callback(ret['stdout']))
     return ret['retcode']
 
 
@@ -2217,10 +2225,8 @@ def script(source,
             __salt__['file.remove'](path)
         except (SaltInvocationError, CommandExecutionError) as exc:
             log.error(
-                'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
-                    path,
-                    exc
-                )
+                'cmd.script: Unable to clean tempfile \'%s\': %s',
+                path, exc, exc_info_on_loglevel=logging.DEBUG
             )
 
     if '__env__' in kwargs:
@@ -2853,7 +2859,7 @@ def shells():
                 else:
                     ret.append(line)
         except OSError:
-            log.error("File '{0}' was not found".format(shells_fn))
+            log.error("File '%s' was not found", shells_fn)
     return ret
 
 
@@ -2980,7 +2986,7 @@ def shell_info(shell, list_modules=False):
         newenv = os.environ
         if ('HOME' not in newenv) and (not salt.utils.platform.is_windows()):
             newenv['HOME'] = os.path.expanduser('~')
-            log.debug('HOME environment set to {0}'.format(newenv['HOME']))
+            log.debug('HOME environment set to %s', newenv['HOME'])
         try:
             proc = salt.utils.timed_subprocess.TimedProc(
                 shell_data,
@@ -3231,7 +3237,7 @@ def powershell(cmd,
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
         # Just base64 encoding UTF-8 or including a BOM is not valid.
-        log.debug('Encoding PowerShell command \'{0}\''.format(cmd))
+        log.debug('Encoding PowerShell command \'%s\'', cmd)
         cmd_utf16 = cmd.decode('utf-8').encode('utf-16le')
         cmd = base64.standard_b64encode(cmd_utf16)
         encoded_cmd = True
@@ -3534,7 +3540,7 @@ def powershell_all(cmd,
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
         # Just base64 encoding UTF-8 or including a BOM is not valid.
-        log.debug('Encoding PowerShell command \'{0}\''.format(cmd))
+        log.debug('Encoding PowerShell command \'%s\'', cmd)
         cmd_utf16 = cmd.decode('utf-8').encode('utf-16le')
         cmd = base64.standard_b64encode(cmd_utf16)
         encoded_cmd = True
