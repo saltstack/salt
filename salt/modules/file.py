@@ -1554,7 +1554,7 @@ def _regex_to_static(src, regex):
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
-    return src and src[0].group() or regex
+    return src and src[0] or regex
 
 
 def _assert_occurrence(src, probe, target, amount=1):
@@ -1594,7 +1594,7 @@ def _get_line_ending(src, line):
     '''
     Add line ending
     '''
-    regex = re.compile('((?<!\r)\n|\r(?!\n)|\r\n)$', src)
+    regex = re.compile('((?<!\r)\n|\r(?!\n)|\r\n)$')
     line_ending = regex.search(src).group()
     return line + line_ending
 
@@ -1753,12 +1753,12 @@ def line(path, content=None, match=None, mode=None, location=None,
                 out = []
                 for idx in range(len(body)):
                     _line = body[idx]
-                    if _line.find(before) > -1 and idx <= len(lines) and lines[idx - 1].find(after) > -1:
+                    if _line.find(before) > -1 and idx <= len(body) and body[idx - 1].find(after) > -1:
                         out.append(_get_line_indent(_line, _get_line_ending(_line, content), indent))
                         out.append(_line)
                     else:
                         out.append(_line)
-                body = os.linesep.join(out)
+                body = out
 
             if before and not after:
                 _assert_occurrence(body, before, 'before')
@@ -1768,10 +1768,10 @@ def line(path, content=None, match=None, mode=None, location=None,
                     if _line.find(before) > -1:
                         cnd = _get_line_ending(_line, content)
                         cnd = _get_line_indent(_line, cnd, indent)
-                        if not idx or (idx and _starts_till(lines[idx - 1], cnd) < 0):  # Job for replace instead
+                        if not idx or (idx and _starts_till(body[idx - 1], cnd) < 0):  # Job for replace instead
                             out.append(cnd)
                     out.append(_line)
-                body = os.linesep.join(out)
+                body = out
 
             elif after and not before:
                 _assert_occurrence(body, after, 'after')
@@ -1779,13 +1779,12 @@ def line(path, content=None, match=None, mode=None, location=None,
                 for idx in range(len(body)):
                     _line = body[idx]
                     out.append(_line)
-                    cnd = _get_line_ending(_line, content)
-                    cnd = _get_line_indent(_line, cnd, indent)
+                    cnd = _get_line_indent(_line, _get_line_ending(_line, content), indent)
                     if _line.find(after) > -1:
                         # No dupes or append, if "after" is the last line
-                        if (idx < len(lines) and _starts_till(lines[idx + 1], cnd) < 0) or idx + 1 == len(lines):
+                        if (idx < len(body) and _starts_till(body[idx + 1], cnd) < 0) or idx + 1 == len(body):
                             out.append(cnd)
-                body = os.linesep.join(out)
+                body = out
 
         else:
             if location == 'start':

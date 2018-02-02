@@ -58,7 +58,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
         comment, uncomment, _add_flags, comment_line, _regex_to_static,
         _get_line_indent, apply_template_on_contents, dirname, basename,
-        list_backups_dir, _assert_occurrence, _starts_till)
+        list_backups_dir, _assert_occurrence, _starts_till, _get_line_ending)
 from salt.modules.file import normpath as normpath_
 
 from salt.utils import namespaced_function as _namespaced_function
