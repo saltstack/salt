@@ -1915,7 +1915,7 @@ class Minion(MinionBase):
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
             if ret['jid'] == 'req':
-                ret['jid'] = salt.utils.jid.gen_jid()
+                ret['jid'] = salt.utils.jid.gen_jid(self.opts)
             salt.utils.minion.cache_jobs(self.opts, ret['jid'], ret)
 
         if not self.opts['pub_ret']:
