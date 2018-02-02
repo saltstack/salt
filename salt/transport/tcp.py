@@ -273,14 +273,18 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
                                                     args=(self.opts, host, int(port),),
                                                     kwargs={'io_loop': self.io_loop, 'resolver': resolver})
 
-    def close(self):
+    def _close(self):
+        '''
+        This class is a singleton so close have to be called only once during
+        garbage collection when nobody uses this instance.
+        '''
         if self._closing:
             return
         self._closing = True
         self.message_client.close()
 
     def __del__(self):
-        self.close()
+        self._close()
 
     def _package_load(self, load):
         return {

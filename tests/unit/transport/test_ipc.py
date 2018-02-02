@@ -98,12 +98,7 @@ class IPCMessageClient(BaseIPCReqCase):
 
     def tearDown(self):
         super(IPCMessageClient, self).tearDown()
-        try:
-            self.channel.close()
-        except socket.error as exc:
-            if exc.errno != errno.EBADF:
-                # If its not a bad file descriptor error, raise
-                raise
+        del self.channel
 
     def test_basic_send(self):
         msg = {'foo': 'bar', 'stop': True}
