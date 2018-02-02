@@ -2531,13 +2531,17 @@ class GitFS(GitBase):
                 return fnd
 
             salt.fileserver.wait_lock(lk_fn, dest)
-            if os.path.isfile(blobshadest) and os.path.isfile(dest):
+            try:
                 with salt.utils.fopen(blobshadest, 'r') as fp_:
                     sha = fp_.read()
                     if sha == blob_hexsha:
                         fnd['rel'] = path
                         fnd['path'] = dest
                         return _add_file_stat(fnd, blob_mode)
+            except IOError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise exc
+
             with salt.utils.fopen(lk_fn, 'w+') as fp_:
                 fp_.write('')
             for filename in glob.glob(hashes_glob):
@@ -2623,17 +2627,25 @@ class GitFS(GitBase):
                                         load['saltenv'],
                                         '{0}.hash.{1}'.format(relpath,
                                                               self.opts['hash_type']))
-        if not os.path.isfile(hashdest):
-            if not os.path.exists(os.path.dirname(hashdest)):
-                os.makedirs(os.path.dirname(hashdest))
-            ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
-            with salt.utils.fopen(hashdest, 'w+') as fp_:
-                fp_.write(ret['hsum'])
-            return ret
-        else:
+
+        try:
             with salt.utils.fopen(hashdest, 'rb') as fp_:
                 ret['hsum'] = fp_.read()
             return ret
+        except IOError as exc:
+            if exc.errno != errno.ENOENT:
+                raise exc
+
+        try:
+            os.makedirs(os.path.dirname(hashdest))
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise exc
+
+        ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
+        with salt.utils.fopen(hashdest, 'w+') as fp_:
+            fp_.write(ret['hsum'])
+        return ret
 
     def _file_lists(self, load, form):
         '''
