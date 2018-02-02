@@ -406,3 +406,18 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret['stdout'], stdout_unicode)
         self.assertEqual(ret['stderr'], stderr_unicode)
+
+    def test_run_all_output_encoding(self):
+        '''
+        Test that specifying the output encoding works as expected
+        '''
+        stdout = 'Æ'
+        stdout_latin1_enc = stdout.encode('latin1')
+
+        proc = MagicMock(return_value=MockTimedProc(stdout=stdout_latin1_enc))
+
+        with patch('salt.utils.timed_subprocess.TimedProc', proc), \
+                patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
+            ret = cmdmod.run_all('some command', output_encoding='latin1')
+
+        self.assertEqual(ret['stdout'], stdout)
