@@ -1549,11 +1549,12 @@ def _regex_to_static(src, regex):
         return None
 
     try:
-        src = re.search(regex, src)
+        compiled = re.compile(regex, re.DOTALL)
+        src = [ res.group() for res in map(compiled.search, src) if res ]
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
-    return src and src.group() or regex
+    return src and src[0].group() or regex
 
 
 def _assert_occurrence(src, probe, target, amount=1):
@@ -1589,6 +1590,13 @@ def _get_line_indent(src, line, indent):
 
     return ''.join(idt) + line.strip()
 
+def _get_line_ending(src, line):
+    '''
+    Add line ending
+    '''
+    regex = re.compile('((?<!\r)\n|\r(?!\n)|\r\n)$', src)
+    line_ending = regex.search(src).group()
+    return line + line_ending
 
 def line(path, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
@@ -1693,12 +1701,6 @@ def line(path, content=None, match=None, mode=None, location=None,
 
             salt '*' file.line /path/to/file content="CREATEMAIL_SPOOL=no" match="CREATE_MAIL_SPOOL=yes" mode="replace"
     '''
-    def _split(content):
-        split_content = []
-        for linesep_line in content.split(os.linesep):
-            for content_line in linesep_line.split('\n'):
-                split_content.append(content_line)
-        return split_content
 
     path = os.path.realpath(os.path.expanduser(path))
     if not os.path.isfile(path):
@@ -1725,8 +1727,8 @@ def line(path, content=None, match=None, mode=None, location=None,
         match = content
 
     with salt.utils.fopen(path, mode='r') as fp_:
-        body = fp_.read()
-    body_before = hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
+        body = fp_.readlines()
+    body_before = hashlib.sha256(salt.utils.to_bytes(''.join(body))).hexdigest()
     after = _regex_to_static(body, after)
     before = _regex_to_static(body, before)
     match = _regex_to_static(body, match)
@@ -1735,11 +1737,11 @@ def line(path, content=None, match=None, mode=None, location=None,
         log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
         body = ''
     elif mode == 'delete':
-        body = os.linesep.join([line for line in _split(body) if line.find(match) < 0])
+        body = [line for line in body if line.find(match) < 0]
     elif mode == 'replace':
-        body = os.linesep.join([(_get_line_indent(file_line, content, indent)
-                                if (file_line.find(match) > -1 and not file_line == content) else file_line)
-                                for file_line in _split(body)])
+        body = [(_get_line_indent(file_line, content, indent)
+                if (file_line.find(match) > -1 and not file_line == content) else file_line)
+                for file_line in body]
     elif mode == 'insert':
         if not location and not before and not after:
             raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
@@ -1749,11 +1751,10 @@ def line(path, content=None, match=None, mode=None, location=None,
                 _assert_occurrence(body, before, 'before')
                 _assert_occurrence(body, after, 'after')
                 out = []
-                lines = _split(body)
-                for idx in range(len(lines)):
-                    _line = lines[idx]
+                for idx in range(len(body)):
+                    _line = body[idx]
                     if _line.find(before) > -1 and idx <= len(lines) and lines[idx - 1].find(after) > -1:
-                        out.append(_get_line_indent(_line, content, indent))
+                        out.append(_get_line_indent(_line, _get_line_ending(_line, content), indent))
                         out.append(_line)
                     else:
                         out.append(_line)
@@ -1762,11 +1763,11 @@ def line(path, content=None, match=None, mode=None, location=None,
             if before and not after:
                 _assert_occurrence(body, before, 'before')
                 out = []
-                lines = _split(body)
-                for idx in range(len(lines)):
-                    _line = lines[idx]
+                for idx in range(len(body)):
+                    _line = body[idx]
                     if _line.find(before) > -1:
-                        cnd = _get_line_indent(_line, content, indent)
+                        cnd = _get_line_ending(_line, content)
+                        cnd = _get_line_indent(_line, cnd, indent)
                         if not idx or (idx and _starts_till(lines[idx - 1], cnd) < 0):  # Job for replace instead
                             out.append(cnd)
                     out.append(_line)
@@ -1775,11 +1776,11 @@ def line(path, content=None, match=None, mode=None, location=None,
             elif after and not before:
                 _assert_occurrence(body, after, 'after')
                 out = []
-                lines = _split(body)
-                for idx in range(len(lines)):
-                    _line = lines[idx]
+                for idx in range(len(body)):
+                    _line = body[idx]
                     out.append(_line)
-                    cnd = _get_line_indent(_line, content, indent)
+                    cnd = _get_line_ending(_line, content)
+                    cnd = _get_line_indent(_line, cnd, indent)
                     if _line.find(after) > -1:
                         # No dupes or append, if "after" is the last line
                         if (idx < len(lines) and _starts_till(lines[idx + 1], cnd) < 0) or idx + 1 == len(lines):
@@ -1788,13 +1789,13 @@ def line(path, content=None, match=None, mode=None, location=None,
 
         else:
             if location == 'start':
-                body = ''.join([content, body])
+                body.insert(0, _get_line_ending(body[0], content))
             elif location == 'end':
-                body = ''.join([body, _get_line_indent(body[-1], content, indent) if body else content])
+                body.append(_get_line_ending(body[-1] if body else os.linesep, content))
 
     elif mode == 'ensure':
-        after = after and after.strip()
-        before = before and before.strip()
+        #after = after and after.strip()
+        #before = before and before.strip()
 
         if before and after:
             _assert_occurrence(body, before, 'before')
@@ -1802,7 +1803,6 @@ def line(path, content=None, match=None, mode=None, location=None,
 
             a_idx = b_idx = -1
             idx = 0
-            body = _split(body)
             for _line in body:
                 idx += 1
                 if _line.find(before) > -1 and b_idx < 0:
@@ -1818,24 +1818,20 @@ def line(path, content=None, match=None, mode=None, location=None,
                     body[a_idx] = _get_line_indent(body[a_idx - 1], content, indent)
             else:
                 raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
-            body = os.linesep.join(body)
 
         elif before and not after:
             _assert_occurrence(body, before, 'before')
-            body = _split(body)
             out = []
             for idx in range(len(body)):
                 if body[idx].find(before) > -1:
                     prev = (idx > 0 and idx or 1) - 1
-                    out.append(_get_line_indent(body[prev], content, indent))
+                    out.append(_get_line_indent(body[prev], _get_line_ending(body[prev], content), indent))
                     if _starts_till(out[prev], content) > -1:
                         del out[prev]
                 out.append(body[idx])
-            body = os.linesep.join(out)
 
         elif not before and after:
             _assert_occurrence(body, after, 'after')
-            body = _split(body)
             skip = None
             out = []
             for idx in range(len(body)):
@@ -1846,15 +1842,14 @@ def line(path, content=None, match=None, mode=None, location=None,
                     next_line = idx + 1 < len(body) and body[idx + 1] or None
                     if next_line is not None and _starts_till(next_line, content) > -1:
                         skip = next_line
-                    out.append(_get_line_indent(body[idx], content, indent))
-            body = os.linesep.join(out)
+                    out.append(_get_line_indent(body[idx], _get_line_ending(body[idx], content), indent))
 
         else:
             raise CommandExecutionError("Wrong conditions? "
                                         "Unable to ensure line without knowing "
                                         "where to put it before and/or after.")
 
-    changed = body_before != hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
+    changed = body_before != hashlib.sha256(salt.utils.to_bytes(''.join(body))).hexdigest()
 
     if backup and changed and __opts__['test'] is False:
         try:
@@ -1869,14 +1864,14 @@ def line(path, content=None, match=None, mode=None, location=None,
         if show_changes:
             with salt.utils.fopen(path, 'r') as fp_:
                 path_content = fp_.read().splitlines(True)
-            changes_diff = ''.join(difflib.unified_diff(path_content, body.splitlines(True)))
+            changes_diff = ''.join(difflib.unified_diff(path_content, body))
         if __opts__['test'] is False:
             fh_ = None
             try:
                 # Make sure we match the file mode from salt.utils.fopen
                 mode = 'wb' if six.PY2 and salt.utils.is_windows() else 'w'
                 fh_ = salt.utils.atomicfile.atomic_open(path, mode)
-                fh_.write(body)
+                fh_.write(''.join(body))
             finally:
                 if fh_:
                     fh_.close()
