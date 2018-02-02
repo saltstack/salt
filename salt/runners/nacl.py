@@ -84,7 +84,7 @@ without extra parameters:
     salt-run nacl.enc 'asecretpass'
     salt-run nacl.dec 'tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
 
-.. code-block:: yam
+.. code-block:: yaml
 
     # a salt developers minion could have pillar data that includes a nacl public key
     nacl.config:
