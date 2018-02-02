@@ -2470,8 +2470,9 @@ on a large number of minions.
 
 .. note::
     Rather than altering this configuration parameter, it may be advisable to
-    use the :mod:`fileserver.clear_list_cache
-    <salt.runners.fileserver.clear_list_cache>` runner to clear these caches.
+    use the :mod:`fileserver.clear_file_list_cache
+    <salt.runners.fileserver.clear_file_list_cache>` runner to clear these
+    caches.
 
 .. code-block:: yaml
 
