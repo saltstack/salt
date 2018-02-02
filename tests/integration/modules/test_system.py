@@ -7,6 +7,7 @@ import logging
 import os
 import signal
 import subprocess
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -318,12 +319,34 @@ class SystemModuleTest(ModuleCase):
     @skip_if_not_root
     def test_set_computer_desc(self):
         '''
-        Test setting the system hostname
+        Test setting the computer description
         '''
         self._save_machine_info()
         desc = "test"
         ret = self.run_function('system.set_computer_desc', [desc])
         computer_desc = self.run_function('system.get_computer_desc')
+
+        self.assertTrue(ret)
+        self.assertIn(desc, computer_desc)
+
+    @destructiveTest
+    @skip_if_not_root
+    def test_set_computer_desc_multiline(self):
+        '''
+        Test setting the computer description with a multiline string with tabs
+        and double-quotes.
+        '''
+        self._save_machine_info()
+        desc = textwrap.dedent('''\
+            'First Line
+            \tSecond Line: 'single-quoted string'
+            \t\tThird Line: "double-quoted string with unicode: питон"''')
+        ret = self.run_function('system.set_computer_desc', [desc])
+        # self.run_function returns the serialized return, we need to convert
+        # back to unicode to compare to desc. in the assertIn below.
+        computer_desc = salt.utils.stringutils.to_unicode(
+            self.run_function('system.get_computer_desc')
+        )
 
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)
