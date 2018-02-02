@@ -1241,7 +1241,7 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
-        self.channel.send(load)
+        return self.channel.send(load)
 
     def dir_list(self, saltenv='base', prefix=''):
         '''
