@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 def overview():
     '''
-    Show status of the DRBD devices
+    Show status of the DRBD devices, support two nodes only.
 
     CLI Example:
 
@@ -32,9 +32,9 @@ def overview():
         diskstate = fields[3].split('/')
         localdiskstate = diskstate[0]
         partnerdiskstate = diskstate[1]
-        if localdiskstate == "UpToDate":
-            if partnerdiskstate == "UpToDate":
-                if fields[4]:
+        if localdiskstate.startswith("UpTo"):
+            if partnerdiskstate.startswith("UpTo"):
+                if len(fields) >= 5:
                     mountpoint = fields[4]
                     fs_mounted = fields[5]
                     totalsize = fields[6]
