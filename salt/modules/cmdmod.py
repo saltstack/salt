@@ -877,6 +877,10 @@ def run(cmd,
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
 
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
+
         .. versionadded:: Oxygen
 
     :param str output_loglevel: Control the loglevel at which the output from
@@ -1104,6 +1108,10 @@ def shell(cmd,
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
 
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
+
         .. versionadded:: Oxygen
 
     :param str output_loglevel: Control the loglevel at which the output from
@@ -1299,6 +1307,10 @@ def run_stdout(cmd,
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
 
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
+
         .. versionadded:: Oxygen
 
     :param str output_loglevel: Control the loglevel at which the output from
@@ -1490,6 +1502,10 @@ def run_stderr(cmd,
             will fall back to UTF-8 if this fails. This should only need to be
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
+
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
 
         .. versionadded:: Oxygen
 
@@ -1684,6 +1700,10 @@ def run_all(cmd,
             will fall back to UTF-8 if this fails. This should only need to be
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
+
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
 
         .. versionadded:: Oxygen
 
@@ -1896,6 +1916,10 @@ def retcode(cmd,
             will fall back to UTF-8 if this fails. This should only need to be
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
+
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
 
         .. versionadded:: Oxygen
 
@@ -2124,6 +2148,10 @@ def script(source,
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
 
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
+
         .. versionadded:: Oxygen
 
     :param str output_loglevel: Control the loglevel at which the output from
@@ -2349,6 +2377,10 @@ def script_retcode(source,
             will fall back to UTF-8 if this fails. This should only need to be
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
+
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
 
         .. versionadded:: Oxygen
 
@@ -2627,6 +2659,10 @@ def run_chroot(root,
             will fall back to UTF-8 if this fails. This should only need to be
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
+
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
 
         .. versionadded:: Oxygen
 
@@ -3085,6 +3121,10 @@ def powershell(cmd,
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
 
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
+
         .. versionadded:: Oxygen
 
     :param str output_loglevel: Control the loglevel at which the output from
@@ -3365,6 +3405,10 @@ def powershell_all(cmd,
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
 
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
+
         .. versionadded:: Oxygen
 
     :param str output_loglevel: Control the loglevel at which the output from
@@ -3566,6 +3610,10 @@ def run_bg(cmd,
             will fall back to UTF-8 if this fails. This should only need to be
             used in cases where the output of the command is encoded in
             something other than the system locale or UTF-8.
+
+            To see the encoding Salt has detected from the system locale, check
+            the `locale` line in the output of :py:func:`test.versions_report
+            <salt.modules.test.versions_report>`.
 
         .. versionadded:: Oxygen
 
