@@ -119,6 +119,7 @@ import salt.utils.http
 import salt.utils.json
 import salt.utils.slack
 import salt.utils.yaml
+import salt.output.highstate
 from salt.ext import six
 
 __virtualname__ = 'slack'
