@@ -1550,7 +1550,7 @@ def _regex_to_static(src, regex):
 
     try:
         compiled = re.compile(regex, re.DOTALL)
-        src = [ res.group() for res in map(compiled.search, src) if res ]
+        src = [res.group() for res in map(compiled.search, src) if res]
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
@@ -1561,7 +1561,7 @@ def _assert_occurrence(src, probe, target, amount=1):
     '''
     Raise an exception, if there are different amount of specified occurrences in src.
     '''
-    occ = src.count(probe)
+    occ = len([l for l in src if l.count(probe)])
     if occ > amount:
         msg = 'more than'
     elif occ < amount:
@@ -1588,7 +1588,7 @@ def _get_line_indent(src, line, indent):
             break
         idt.append(c)
 
-    return ''.join(idt) + line.strip()
+    return ''.join(idt) + line
 
 def _get_line_ending(src, line):
     '''
@@ -1793,8 +1793,8 @@ def line(path, content=None, match=None, mode=None, location=None,
                 body.append(_get_line_ending(body[-1] if body else os.linesep, content))
 
     elif mode == 'ensure':
-        #after = after and after.strip()
-        #before = before and before.strip()
+        after = after and after.strip()
+        before = before and before.strip()
 
         if before and after:
             _assert_occurrence(body, before, 'before')
@@ -1811,10 +1811,10 @@ def line(path, content=None, match=None, mode=None, location=None,
 
             # Add
             if not b_idx - a_idx - 1:
-                body = body[:a_idx] + [content] + body[b_idx - 1:]
+                body = body[:a_idx] + [_get_line_ending(body[a_idx], content)] + body[b_idx - 1:]
             elif b_idx - a_idx - 1 == 1:
                 if _starts_till(body[a_idx:b_idx - 1][0], content) > -1:
-                    body[a_idx] = _get_line_indent(body[a_idx - 1], content, indent)
+                    body[a_idx] = _get_line_indent(body[a_idx - 1], _get_line_ending(body[a_idx - 1], content), indent)
             else:
                 raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
 
@@ -1828,6 +1828,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                     if _starts_till(out[prev], content) > -1:
                         del out[prev]
                 out.append(body[idx])
+            body = out
 
         elif not before and after:
             _assert_occurrence(body, after, 'after')
@@ -1842,6 +1843,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                     if next_line is not None and _starts_till(next_line, content) > -1:
                         skip = next_line
                     out.append(_get_line_indent(body[idx], _get_line_ending(body[idx], content), indent))
+            body = out
 
         else:
             raise CommandExecutionError("Wrong conditions? "
