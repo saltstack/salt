@@ -1588,7 +1588,7 @@ def _get_line_indent(src, line, indent):
             break
         idt.append(c)
 
-    return ''.join(idt) + line
+    return ''.join(idt) + line.lstrip()
 
 def _get_line_ending(src, line):
     '''
@@ -1596,7 +1596,7 @@ def _get_line_ending(src, line):
     '''
     regex = re.compile('((?<!\r)\n|\r(?!\n)|\r\n)$')
     line_ending = regex.search(src).group()
-    return line + line_ending
+    return line.rstrip() + line_ending
 
 def line(path, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
