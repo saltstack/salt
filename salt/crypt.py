@@ -176,7 +176,7 @@ def sign_message(privkey_path, message):
     key = _get_rsa_key(privkey_path)
     log.debug('salt.crypt.sign_message: Signing message.')
     signer = PKCS1_v1_5.new(key)
-    return signer.sign(SHA.new(message))
+    return signer.sign(SHA.new(salt.utils.to_bytes(message)))
 
 
 def verify_signature(pubkey_path, message, signature):
@@ -189,7 +189,7 @@ def verify_signature(pubkey_path, message, signature):
         pubkey = RSA.importKey(f.read())
     log.debug('salt.crypt.verify_signature: Verifying signature')
     verifier = PKCS1_v1_5.new(pubkey)
-    return verifier.verify(SHA.new(message), signature)
+    return verifier.verify(SHA.new(salt.utils.to_bytes(message)), signature)
 
 
 def gen_signature(priv_path, pub_path, sign_path):

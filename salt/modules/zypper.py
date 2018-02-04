@@ -795,10 +795,10 @@ def mod_repo(repo, **kwargs):
     be created, so long as the following values are specified:
 
     repo or alias
-        alias by which the zypper refers to the repo
+        alias by which Zypper refers to the repo
 
     url, mirrorlist or baseurl
-        the URL for zypper to reference
+        the URL for Zypper to reference
 
     enabled
         Enable or disable (True or False) repository,
@@ -813,12 +813,13 @@ def mod_repo(repo, **kwargs):
     gpgcheck
         Enable or disable (True or False) GPG check for this repository.
 
-    gpgautoimport
-        Automatically trust and import new repository.
+    gpgautoimport : False
+        If set to True, automatically trust and import public GPG key for
+        the repository.
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
-    url can only be deleted if a mirrorlist is specified (or vice versa).
+    URL can only be deleted if a ``mirrorlist`` is specified (or vice versa).
 
     CLI Examples:
 
