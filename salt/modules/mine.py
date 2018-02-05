@@ -69,7 +69,7 @@ def _mine_send(load, opts):
 def _mine_get(load, opts):
     if opts.get('transport', '') in ('zeromq', 'tcp'):
         try:
-            load['tok'] = _auth().gen_token('salt')
+            load['tok'] = _auth().gen_token(b'salt')
         except AttributeError:
             log.error('Mine could not authenticate with master. '
                       'Mine could not be retrieved.'

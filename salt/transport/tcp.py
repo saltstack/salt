@@ -52,9 +52,14 @@ else:
 
 # Import third party libs
 try:
-    from Cryptodome.Cipher import PKCS1_OAEP
+    from M2Crypto import RSA
+    HAS_M2 = True
 except ImportError:
-    from Crypto.Cipher import PKCS1_OAEP
+    HAS_M2 = False
+    try:
+        from Cryptodome.Cipher import PKCS1_OAEP
+    except ImportError:
+        from Crypto.Cipher import PKCS1_OAEP
 
 if six.PY3 and salt.utils.platform.is_windows():
     USE_LOAD_BALANCER = True
@@ -296,8 +301,11 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             yield self.auth.authenticate()
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
-        cipher = PKCS1_OAEP.new(key)
-        aes = cipher.decrypt(ret['key'])
+        if HAS_M2:
+            aes = key.private_decrypt(six.b(ret['key']), RSA.pkcs1_oaep_padding)
+        else:
+            cipher = PKCS1_OAEP.new(key)
+            aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         data = pcrypt.loads(ret[dictkey])
         if six.PY3:
@@ -492,7 +500,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
     def connect(self):
         try:
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
-            self.tok = self.auth.gen_token('salt')
+            self.tok = self.auth.gen_token(b'salt')
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
             if self.auth.authenticated:
@@ -1328,6 +1336,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+        self.ckminions = salt.utils.minions.CkMinions(opts)
         self.io_loop = None
 
     def __setstate__(self, state):
@@ -1432,6 +1441,16 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
 
         # add some targeting stuff for lists only (for now)
         if load['tgt_type'] == 'list':
-            int_payload['topic_lst'] = load['tgt']
+            if isinstance(load['tgt'], six.string_types):
+                # Fetch a list of minions that match
+                _res = self.ckminions.check_minions(load['tgt'],
+                                                    tgt_type=load['tgt_type'])
+                match_ids = _res['minions']
+
+                log.debug("Publish Side Match: %s", match_ids)
+                # Send list of miions thru so zmq can target them
+                int_payload['topic_lst'] = match_ids
+            else:
+                int_payload['topic_lst'] = load['tgt']
         # Send it over IPC!
         pub_sock.send(int_payload)

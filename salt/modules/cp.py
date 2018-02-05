@@ -812,7 +812,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
             'path': load_path_list,
-            'tok': auth.gen_token('salt')}
+            'tok': auth.gen_token(b'salt')}
     channel = salt.transport.Channel.factory(__opts__)
     with salt.utils.files.fopen(path, 'rb') as fp_:
         init_send = False

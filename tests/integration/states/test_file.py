@@ -2472,6 +2472,46 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', mods=state_file)
         self.assertSaltTrueReturn(ret)
 
+    @skip_if_not_root
+    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
+    @skipIf(not HAS_GRP, "grp not available. Skipping test")
+    @with_system_user_and_group('test_setuid_user', 'test_setuid_group',
+                                on_existing='delete', delete=True)
+    def test_owner_after_setuid(self, user, group):
+
+        '''
+        Test to check file user/group after setting setuid or setgid.
+        Because Python os.chown() does reset the setuid/setgid to 0.
+        https://github.com/saltstack/salt/pull/45257
+        '''
+
+        # Desired configuration.
+        desired = {
+            'file': os.path.join(TMP, 'file_with_setuid'),
+            'user': user,
+            'group': group,
+            'mode': '4750'
+        }
+
+        # Run the state.
+        ret = self.run_state(
+            'file.managed', name=desired['file'],
+            user=desired['user'], group=desired['group'], mode=desired['mode']
+        )
+
+        # Check result.
+        file_stat = os.stat(desired['file'])
+        result = {
+            'user': pwd.getpwuid(file_stat.st_uid).pw_name,
+            'group': grp.getgrgid(file_stat.st_gid).gr_name,
+            'mode': oct(stat.S_IMODE(file_stat.st_mode))
+        }
+
+        self.assertSaltTrueReturn(ret)
+        self.assertEqual(desired['user'], result['user'])
+        self.assertEqual(desired['group'], result['group'])
+        self.assertEqual(desired['mode'], result['mode'].lstrip('0Oo'))
+
     def tearDown(self):
         '''
         remove files created in previous tests

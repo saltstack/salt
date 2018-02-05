@@ -2,7 +2,7 @@
 '''
 Manage and query NPM packages.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -18,6 +18,7 @@ import salt.utils.user
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ def __virtual__():
             return (False, 'npm execution module could not be loaded '
                            'because the npm binary could not be located')
     except CommandExecutionError as exc:
-        return (False, str(exc))
+        return (False, six.text_type(exc))
 
 
 def _check_valid_version():
