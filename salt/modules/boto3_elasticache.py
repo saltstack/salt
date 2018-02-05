@@ -52,9 +52,11 @@ import logging
 import time
 
 # Import Salt libs
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 import salt.utils.boto3
 import salt.utils.compat
-from salt.exceptions import SaltInvocationError, CommandExecutionError
+import salt.utils.versions
+
 
 log = logging.getLogger(__name__)
 
@@ -75,9 +77,7 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    if not HAS_BOTO3:
-        return (False, 'The boto3_elasticache module could not be loaded: boto3 libraries not found')
-    return True
+    return salt.utils.versions.check_boto_reqs()
 
 
 def __init__(opts):

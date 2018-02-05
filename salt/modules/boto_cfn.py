@@ -37,6 +37,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import logging
 
+# Import Salt libs
+import salt.utils.versions
+
 log = logging.getLogger(__name__)
 
 # Import third party libs
@@ -57,9 +60,7 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The module boto_cfs could not be loaded: boto libraries not found')
-    return True
+    return salt.utils.versions.check_boto_reqs(check_boto3=False)
 
 
 def __init__(opts):
