@@ -62,7 +62,7 @@ def rehash():
 
         salt '*' win_path.rehash
     '''
-    return salt.utils.win_functions.refresh_environment()
+    return salt.utils.win_functions.broadcast_setting_change('Environment')
 
 
 def get_path():

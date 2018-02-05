@@ -3,7 +3,7 @@
 Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import platform
 import re
 import ctypes
@@ -214,10 +214,24 @@ def escape_for_cmd_exe(arg):
     return meta_re.sub(escape_meta_chars, arg)
 
 
-def refresh_environment():
+def broadcast_setting_change(setting='Environment'):
     '''
-    Send a WM_SETTINGCHANGE Broadcast to Windows to refresh the Environment
-    variables for new processes.
+    Send a WM_SETTINGCHANGE Broadcast to all Windows
+
+    Args:
+
+        setting (str):
+            A string value representing the portion of the system that has been
+            updated and needs to be refreshed. Default is ``Environment``. These
+            are some common values:
+
+            - "Environment" : to effect a change in the environment variables
+            - "intl" : to effect a change in locale settings
+            - "Policy" : to effect a change in Group Policy Settings
+            - a leaf node in the registry
+            - the name of a section in the ``Win.ini`` file
+
+            `See here <https://msdn.microsoft.com/en-us/library/ms725497%28VS.85%29.aspx>`
 
     .. note::
         This will only affect new processes that aren't launched by services. To
@@ -233,8 +247,8 @@ def refresh_environment():
         import salt.utils.win_functions
         salt.utils.win_functions.refresh_environment()
     '''
-    broadcast_message = ctypes.create_unicode_buffer('Environment')
-    user32 = ctypes.windll('user32', use_last_error=True)
+    broadcast_message = ctypes.create_unicode_buffer(setting)
+    user32 = ctypes.WinDLL('user32', use_last_error=True)
     result = user32.SendMessageTimeoutW(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
                                         broadcast_message, SMTO_ABORTIFHUNG,
                                         5000, 0)
