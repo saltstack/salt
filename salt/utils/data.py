@@ -83,7 +83,9 @@ def decode(data, encoding=None, errors='strict', preserve_dict_class=False, pres
         try:
             return salt.utils.stringutils.to_unicode(data, encoding, errors)
         except TypeError:
-            return data
+            return data \
+                if not isinstance(data, collections.Iterable) \
+                else decode_list(list(data), encoding, errors, preserve_dict_class, preserve_tuples)
 
 
 def decode_dict(data, encoding=None, errors='strict', preserve_dict_class=False, preserve_tuples=False):
@@ -101,7 +103,8 @@ def decode_dict(data, encoding=None, errors='strict', preserve_dict_class=False,
             try:
                 key = salt.utils.stringutils.to_unicode(key, encoding, errors)
             except TypeError:
-                pass
+                if isinstance(key, collections.Iterable):
+                    key = decode_list(list(key), encoding, errors, preserve_dict_class, preserve_tuples)
 
         if isinstance(value, list):
             value = decode_list(value, encoding, errors, preserve_dict_class, preserve_tuples)
@@ -115,7 +118,8 @@ def decode_dict(data, encoding=None, errors='strict', preserve_dict_class=False,
             try:
                 value = salt.utils.stringutils.to_unicode(value, encoding, errors)
             except TypeError:
-                pass
+                if isinstance(value, collections.Iterable):
+                    value = decode_list(list(value), encoding, errors, preserve_dict_class, preserve_tuples)
 
         rv[key] = value
     return rv
@@ -139,7 +143,8 @@ def decode_list(data, encoding=None, errors='strict', preserve_dict_class=False,
             try:
                 item = salt.utils.stringutils.to_unicode(item, encoding, errors)
             except TypeError:
-                pass
+                if isinstance(item, collections.Iterable):
+                    item = decode_list(list(item), encoding, errors, preserve_dict_class, preserve_tuples)
 
         rv.append(item)
     return rv
@@ -168,7 +173,9 @@ def encode(data, encoding=None, errors='strict', preserve_dict_class=False, pres
         try:
             return salt.utils.stringutils.to_bytes(data, encoding, errors)
         except TypeError:
-            return data
+            return data \
+                if not isinstance(data, collections.Iterable) \
+                else encode_list(list(data), encoding, errors, preserve_dict_class, preserve_tuples)
 
 
 @jinja_filter('json_decode_dict')  # Remove this for Neon
@@ -187,7 +194,8 @@ def encode_dict(data, encoding=None, errors='strict', preserve_dict_class=False,
             try:
                 key = salt.utils.stringutils.to_bytes(key, encoding, errors)
             except TypeError:
-                pass
+                if isinstance(key, collections.Iterable):
+                    key = encode_list(list(key), encoding, errors, preserve_dict_class, preserve_tuples)
 
         if isinstance(value, list):
             value = encode_list(value, encoding, errors, preserve_dict_class, preserve_tuples)
@@ -201,7 +209,8 @@ def encode_dict(data, encoding=None, errors='strict', preserve_dict_class=False,
             try:
                 value = salt.utils.stringutils.to_bytes(value, encoding, errors)
             except TypeError:
-                pass
+                if isinstance(value, collections.Iterable):
+                    value = encode_list(list(value), encoding, errors, preserve_dict_class, preserve_tuples)
 
         rv[key] = value
     return rv
@@ -227,7 +236,8 @@ def encode_list(data, encoding=None, errors='strict', preserve_dict_class=False,
             try:
                 item = salt.utils.stringutils.to_bytes(item, encoding, errors)
             except TypeError:
-                pass
+                if isinstance(item, collections.Iterable):
+                    item = encode_list(list(item), encoding, errors, preserve_dict_class, preserve_tuples)
 
         rv.append(item)
     return rv
