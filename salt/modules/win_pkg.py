@@ -838,6 +838,10 @@ def genrepo(**kwargs):
             to process. If ``False``, no error will be raised, and a dictionary
             containing the full results will be returned.
 
+    .. note::
+        - Hidden directories (directories beginning with '`.`', such as
+          '`.git`') will be ignored.
+
     Returns:
         dict: A dictionary of the results of the command
 
@@ -864,6 +868,10 @@ def genrepo(**kwargs):
         short_path = os.path.relpath(root, repo_details.local_dest)
         if short_path == '.':
             short_path = ''
+        if re.search(r'[\\/]\..*', root):
+            log.debug('Skipping files in directory: {0}'.format(root))
+            continue
+
         for name in files:
             if name.endswith('.sls'):
                 total_files_processed += 1
