@@ -795,7 +795,7 @@ class Schedule(object):
         for job, data in six.iteritems(schedule):
             run = False
 
-            if job in _hidden and not data:
+            if job in _hidden:
                 continue
 
             if not isinstance(data, dict):
