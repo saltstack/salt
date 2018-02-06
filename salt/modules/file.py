@@ -1784,7 +1784,8 @@ def line(path, content=None, match=None, mode=None, location=None,
                     cnd = _set_line_indent(_line, _set_line_eol(_line, content), indent)
                     if _line.find(after) > -1:
                         # No dupes or append, if "after" is the last line
-                        if (idx < len(body) and _starts_till(body[idx + 1], cnd) < 0) or idx + 1 == len(body):
+                        next_line = idx + 1 < len(body) or None
+                        if (next_line is not None and _starts_till(body[idx + 1], cnd) < 0) or idx + 1 == len(body):
                             out.append(cnd)
                 body = out
 
