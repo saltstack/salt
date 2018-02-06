@@ -3,7 +3,7 @@
     :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import sys
 
 # Import Salt Testing Libs
@@ -169,17 +169,14 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                'comment': '',
                'changes': {}}
 
-        mock = MagicMock(side_effect=[{name: {acl_type: [{acl_name:
-                                                          {'octal': 'A'}}]}},
+        mock = MagicMock(side_effect=[{name: {acl_type: [{acl_name: {'octal': 'A'}}]}},
                                       {name: {acl_type: ''}}])
         with patch.dict(linux_acl.__salt__, {'acl.getfacl': mock}):
             with patch.dict(linux_acl.__opts__, {'test': True}):
                 comt = ('Removing permissions')
                 ret.update({'comment': comt})
-                self.assertDictEqual(linux_acl.absent(name, acl_type, acl_name,
-                                                      perms), ret)
+                self.assertDictEqual(linux_acl.absent(name, acl_type, acl_name, perms), ret)
 
             comt = ('ACL Type does not exist')
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(linux_acl.absent(name, acl_type, acl_name,
-                                                  perms), ret)
+            self.assertDictEqual(linux_acl.absent(name, acl_type, acl_name, perms), ret)
