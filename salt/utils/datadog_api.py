@@ -59,7 +59,7 @@ def find_monitors_with_name(api_key=None,
     Find all monitors with a given name
     '''
 
-    monitors = get_all_monitors(
+    res = get_all_monitors(
         api_key=api_key,
         app_key=app_key,
         group_states='all',
@@ -67,7 +67,7 @@ def find_monitors_with_name(api_key=None,
     )
 
     try:
-        monitor_ids = [str(m['id']) for m in monitors]
+        monitor_ids = [str(m['id']) for m in res['response']]
     except KeyError:
         monitor_ids = []
     return monitor_ids

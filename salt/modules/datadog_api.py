@@ -262,17 +262,14 @@ def post_event(api_key=None,
     return ret
 
 
-# The monitor functions simply pass tags and options along to the datadog
-# library. No modifications are made.
-# pylint: disable=dangerous-default-value
 def create_monitor(api_key=None,
                    app_key=None,
                    type=None,
                    query=None,
                    name=None,
                    message=None,
-                   tags=[],
-                   options={}):
+                   tags=None,
+                   options=None):
     '''
     Create a datadog monitor
 
@@ -323,6 +320,11 @@ def create_monitor(api_key=None,
         ret['comment'] = message
         return ret
 
+    if tags is None:
+        tags = []
+    if options is None:
+        options = {}
+
     if type == 'composite':
         success, query = _generate_composite_query(query)
         if not success:
@@ -347,17 +349,15 @@ def create_monitor(api_key=None,
     ret['comment'] = 'Successfully created monitor {}'.format(res['name'])
 
     return ret
-# pylint: enable=dangerous-default-value
 
 
-# pylint: disable=dangerous-default-value
 def read_monitor(api_key=None,
                  app_key=None,
                  id=None,
                  name=None,
                  group_states=None,
-                 tags=[],
-                 monitor_tags=[],
+                 tags=None,
+                 monitor_tags=None,
                  with_downtimes=True):
     '''
     Get monitor details by name and filters or by id
@@ -417,6 +417,11 @@ def read_monitor(api_key=None,
         )
         return ret
 
+    if tags is None:
+        tags = []
+    if monitor_tags is None:
+        monitor_tags = []
+
     response = []
     if id is not None:
         ids = []
@@ -466,18 +471,16 @@ def read_monitor(api_key=None,
     ret['result'] = True
     ret['response'] = response
     return ret
-# pylint: enable=dangerous-default-value
 
 
-# pylint: disable=dangerous-default-value
 def update_monitor(api_key=None,
                    app_key=None,
                    id=None,
                    name=None,
                    query=None,
                    message='',
-                   options={},
-                   tags=[]):
+                   options=None,
+                   tags=None):
     '''
     Modify a monitor by id or, if none is specified, then by name. If multiple
     monitors match the name given, this function will take action on the first.
@@ -525,6 +528,11 @@ def update_monitor(api_key=None,
         ret['comment'] = 'A datadog monitor create call would be called.'
         return ret
 
+    if options is None:
+        options = {}
+    if tags is None:
+        tags = []
+
     if id:  # Update the monitor with given ID
         _id = id
     elif name:  # Find ID of monitor with given name
@@ -558,7 +566,6 @@ def update_monitor(api_key=None,
     ret['result'] = True
     ret['comment'] = 'Update call returned successfully.'
     return ret
-# pylint: enable=dangerous-default-value
 
 
 def delete_monitor(api_key=None,
@@ -674,7 +681,7 @@ def _generate_composite_query(query):
 
     replaced_tokens = []
     for token in tokens:
-        if re.match(patterns['name'], token):
+        if not re.match(patterns['id'], token) and re.match(patterns['name'], token):
             _id = __utils__['datadog.find_monitors_with_name'](name=token)
             if not _id:
                 return False, 'Could not find monitor {}.'.format(token)
