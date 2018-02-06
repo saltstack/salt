@@ -2,7 +2,7 @@
 '''
 Functions to view the minion's public key information
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os

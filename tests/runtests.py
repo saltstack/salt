@@ -16,17 +16,6 @@ if os.name == 'nt':
     TESTS_DIR = TESTS_DIR.replace('\\', '\\\\')
 CODE_DIR = os.path.dirname(TESTS_DIR)
 
-if sys.version_info.major == 3:
-    # Clean up any Python 2 byte-compiled files, as they will cause problems
-    # when Python 3 tries to import modules.
-    for root, _, files in os.walk(os.path.dirname(TESTS_DIR)):
-        if os.path.basename(root) == '__pycache__':
-            # Ignore byte-compiled files in Python 3 __pycache__ dirs
-            continue
-        for filename in files:
-            if filename.endswith('.pyc'):
-                os.remove(os.path.join(root, filename))
-
 # Let's inject CODE_DIR so salt is importable if not there already
 if '' in sys.path:
     sys.path.remove('')
@@ -822,7 +811,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         return status
 
 
-def main():
+def main(**kwargs):
     '''
     Parse command line options for running specific tests
     '''
@@ -833,6 +822,12 @@ def main():
             tests_logfile=os.path.join(SYS_TMP_DIR, 'salt-runtests.log')
         )
         parser.parse_args()
+
+        # Override parser options (helpful when importing runtests.py and
+        # running from within a REPL). Using kwargs.items() to avoid importing
+        # six, as this feature will rarely be used.
+        for key, val in kwargs.items():
+            setattr(parser.options, key, val)
 
         overall_status = []
         if parser.options.interactive:

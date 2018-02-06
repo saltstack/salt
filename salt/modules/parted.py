@@ -15,7 +15,7 @@ In light of parted not directly supporting partition IDs, some of this module
 has been written to utilize sfdisk instead. For further information, please
 reference the man page for ``sfdisk(8)``.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -27,6 +27,7 @@ import logging
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +93,7 @@ def _validate_partition_boundary(boundary):
     '''
     try:
         for unit in VALID_UNITS:
-            if str(boundary).endswith(unit):
+            if six.text_type(boundary).endswith(unit):
                 return
         int(boundary)
     except Exception:

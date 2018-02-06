@@ -21,7 +21,7 @@ modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
     * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
     * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import fnmatch
@@ -322,7 +322,7 @@ def state(name,
         return state_ret
 
     if batch is not None:
-        cmd_kw['batch'] = str(batch)
+        cmd_kw['batch'] = six.text_type(batch)
     if subset is not None:
         cmd_kw['subset'] = subset
 
@@ -520,7 +520,7 @@ def function(
         tgt_type = expr_form
 
     if batch is not None:
-        cmd_kw['batch'] = str(batch)
+        cmd_kw['batch'] = six.text_type(batch)
     if subset is not None:
         cmd_kw['subset'] = subset
 
@@ -539,7 +539,7 @@ def function(
     if __opts__['test'] is True:
         func_ret['comment'] = (
                 'Function {0} will be executed on target {1} as test={2}'
-                ).format(fun, tgt, str(False))
+                ).format(fun, tgt, six.text_type(False))
         func_ret['result'] = None
         return func_ret
     try:
@@ -547,7 +547,7 @@ def function(
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     except Exception as exc:
         func_ret['result'] = False
-        func_ret['comment'] = str(exc)
+        func_ret['comment'] = six.text_type(exc)
         return func_ret
 
     try:
@@ -584,8 +584,6 @@ def function(
         if not m_func:
             if minion not in fail_minions:
                 fail.add(minion)
-            changes[minion] = m_ret
-            continue
         changes[minion] = m_ret
     if not cmd_ret:
         func_ret['result'] = False
@@ -689,23 +687,23 @@ def wait_for_event(
                 try:
                     val_idx = id_list.index(val)
                 except ValueError:
-                    log.trace("wait_for_event: Event identifier '{0}' not in "
-                            "id_list; skipping.".format(event_id))
+                    log.trace("wait_for_event: Event identifier '%s' not in "
+                              "id_list; skipping.", event_id)
                 else:
                     del id_list[val_idx]
                     del_counter += 1
                     minions_seen = ret['changes'].setdefault('minions_seen', [])
                     minions_seen.append(val)
 
-                    log.debug("wait_for_event: Event identifier '{0}' removed "
-                            "from id_list; {1} items remaining."
-                            .format(val, len(id_list)))
+                    log.debug("wait_for_event: Event identifier '%s' removed "
+                              "from id_list; %s items remaining.",
+                              val, len(id_list))
             else:
-                log.trace("wait_for_event: Event identifier '{0}' not in event "
-                        "'{1}'; skipping.".format(event_id, event['tag']))
+                log.trace("wait_for_event: Event identifier '%s' not in event "
+                          "'%s'; skipping.", event_id, event['tag'])
         else:
-            log.debug("wait_for_event: Skipping unmatched event '{0}'"
-                    .format(event['tag']))
+            log.debug("wait_for_event: Skipping unmatched event '%s'",
+                      event['tag'])
 
         if len(id_list) == 0:
             ret['result'] = True

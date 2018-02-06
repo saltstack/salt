@@ -2,7 +2,7 @@
 '''
 The networking module for Windows based systems
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -62,7 +62,7 @@ def _interface_configs():
             if current_ip_list:
                 current_ip_list.append(line)
             else:
-                log.warning('Cannot parse "{0}"'.format(line))
+                log.warning('Cannot parse "%s"', line)
             continue
 
         key, val = line.split(':', 1)

@@ -4,11 +4,12 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Libs
 from salt.config import cloud_providers_config, cloud_config
+from salt.ext import six
 
 # Import Salt Testing LIbs
 from tests.support.case import ShellCase
@@ -105,7 +106,7 @@ class VMWareTest(ShellCase):
         ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
 
         # check if deletion was performed appropriately
-        self.assertIn(ret_str, str(delete))
+        self.assertIn(ret_str, six.text_type(delete))
 
     def test_snapshot(self):
         '''
@@ -129,13 +130,13 @@ class VMWareTest(ShellCase):
                                          timeout=TIMEOUT)
         s_ret_str = 'Snapshot created successfully'
 
-        self.assertIn(s_ret_str, str(create_snapshot))
+        self.assertIn(s_ret_str, six.text_type(create_snapshot))
 
         # delete the instance
         delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
 
-        self.assertIn(ret_str, str(delete))
+        self.assertIn(ret_str, six.text_type(delete))
 
     def tearDown(self):
         '''

@@ -8,11 +8,12 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import shutil
 import tempfile
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -25,6 +26,7 @@ import salt.minion
 import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.yaml
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
@@ -32,9 +34,6 @@ from salt.exceptions import (
     SaltConfigurationError,
     SaltCloudConfigError
 )
-
-# Import Third-Party Libs
-import yaml
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +77,7 @@ def _salt_configuration_error(filename):
 class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_sha256_is_default_for_master(self):
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp(dir=TMP)
         try:
             with salt.utils.files.fopen(fpath, 'w') as wfh:
                 wfh.write(
@@ -92,7 +91,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 os.unlink(fpath)
 
     def test_sha256_is_default_for_minion(self):
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp(dir=TMP)
         try:
             with salt.utils.files.fopen(fpath, 'w') as wfh:
                 wfh.write(
@@ -106,7 +105,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 os.unlink(fpath)
 
     def test_proper_path_joining(self):
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp(dir=TMP)
         temp_config = 'root_dir: /\n'\
                       'key_logfile: key\n'
         if salt.utils.platform.is_windows():
@@ -390,7 +389,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_master_file_roots_glob(self):
         # Config file and stub file_roots.
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp()
         tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
@@ -420,7 +419,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_master_pillar_roots_glob(self):
         # Config file and stub pillar_roots.
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp()
         tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
@@ -474,7 +473,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_minion_file_roots_glob(self):
         # Config file and stub file_roots.
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp()
         tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
@@ -504,7 +503,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_minion_pillar_roots_glob(self):
         # Config file and stub pillar_roots.
-        fpath = tempfile.mktemp()
+        fpath = salt.utils.files.mkstemp()
         tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
@@ -554,6 +553,31 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
+
+    def test_backend_rename(self):
+        '''
+        This tests that we successfully rename git, hg, svn, and minion to
+        gitfs, hgfs, svnfs, and minionfs in the master and minion opts.
+        '''
+        tempdir = tempfile.mkdtemp(dir=TMP)
+        fpath = salt.utils.files.mkstemp(dir=tempdir)
+        self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
+        with salt.utils.files.fopen(fpath, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                fileserver_backend:
+                  - roots
+                  - git
+                  - hg
+                  - svn
+                  - minion
+                '''))
+
+        master_config = sconfig.master_config(fpath)
+        minion_config = sconfig.minion_config(fpath)
+        expected = ['roots', 'gitfs', 'hgfs', 'svnfs', 'minionfs']
+
+        self.assertEqual(master_config['fileserver_backend'], expected)
+        self.assertEqual(minion_config['fileserver_backend'], expected)
 
     def test_syndic_config(self):
         syndic_conf_path = self.get_config_file_path('syndic')
@@ -1133,7 +1157,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             default_config = sconfig.cloud_config(config_file_path)
             default_config['deploy_scripts_search_path'] = deploy_dir_path
             with salt.utils.files.fopen(config_file_path, 'w') as cfd:
-                cfd.write(yaml.dump(default_config, default_flow_style=False))
+                salt.utils.yaml.safe_dump(default_config, cfd, default_flow_style=False)
 
             default_config = sconfig.cloud_config(config_file_path)
 

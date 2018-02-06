@@ -660,7 +660,7 @@ class MinionBase(object):
                         # should already be set.
                         raise last_exc  # pylint: disable=E0702
                 else:
-                    self.tok = pub_channel.auth.gen_token('salt')
+                    self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
 
@@ -702,7 +702,7 @@ class MinionBase(object):
                     else:
                         pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
                         yield pub_channel.connect()
-                    self.tok = pub_channel.auth.gen_token('salt')
+                    self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
                 except SaltClientError as exc:
@@ -734,12 +734,12 @@ class MinionBase(object):
                     break
 
             if masters:
-                policy = self.opts.get(u'discovery', {}).get(u'match', DEFAULT_MINION_OPTS[u'discovery'][u'match'])
+                policy = self.opts.get('discovery', {}).get('match', 'any')
                 if policy not in ['any', 'all']:
                     log.error('SSDP configuration matcher failure: unknown value "{0}". '
                               'Should be "any" or "all"'.format(policy))
                 else:
-                    mapping = self.opts[u'discovery'].get(u'mapping', {})
+                    mapping = self.opts['discovery'].get('mapping', {})
                     for addr, mappings in masters.items():
                         for proto_data in mappings:
                             cnt = len([key for key, value in mapping.items()
@@ -786,6 +786,7 @@ class SMinion(MinionBase):
     '''
     def __init__(self, opts):
         # Late setup of the opts grains, so we can log from the grains module
+        import salt.loader
         opts['grains'] = salt.loader.grains(opts)
         super(SMinion, self).__init__(opts)
 
@@ -803,8 +804,7 @@ class SMinion(MinionBase):
 
         # If configured, cache pillar data on the minion
         if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
-            import yaml
-            from salt.utils.yamldumper import SafeOrderedDumper
+            import salt.utils.yaml
             pdir = os.path.join(self.opts['cachedir'], 'pillar')
             if not os.path.isdir(pdir):
                 os.makedirs(pdir, 0o700)
@@ -815,21 +815,11 @@ class SMinion(MinionBase):
                 penv = 'base'
             cache_top = {penv: {self.opts['id']: ['cache']}}
             with salt.utils.files.fopen(ptop, 'wb') as fp_:
-                fp_.write(
-                    yaml.dump(
-                        cache_top,
-                        Dumper=SafeOrderedDumper
-                    )
-                )
+                salt.utils.yaml.safe_dump(cache_top, fp_)
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
             with salt.utils.files.fopen(cache_sls, 'wb') as fp_:
-                fp_.write(
-                    yaml.dump(
-                        self.opts['pillar'],
-                        Dumper=SafeOrderedDumper
-                    )
-                )
+                salt.utils.yaml.safe_dump(self.opts['pillar'], fp_)
                 os.chmod(cache_sls, 0o600)
 
     def gen_modules(self, initial_load=False):
@@ -882,7 +872,11 @@ class MasterMinion(object):
             matcher=True,
             whitelist=None,
             ignore_config_errors=True):
-        self.opts = salt.config.minion_config(opts['conf_file'], ignore_config_errors=ignore_config_errors)
+        self.opts = salt.config.minion_config(
+            opts['conf_file'],
+            ignore_config_errors=ignore_config_errors,
+            role='master'
+        )
         self.opts.update(opts)
         self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
@@ -1594,7 +1588,8 @@ class Minion(MinionBase):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True
-                elif minion_instance.opts['grains'].get('minion_blackout', False):
+                # use minion_blackout_whitelist from grains if it exists
+                if minion_instance.opts['grains'].get('minion_blackout', False):
                     whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True
@@ -2009,7 +2004,7 @@ class Minion(MinionBase):
                 salt.utils.minion.cache_jobs(self.opts, load['jid'], ret)
 
         load = {'cmd': ret_cmd,
-                'load': jids.values()}
+                'load': list(six.itervalues(jids))}
 
         def timeout_handler(*_):
             log.warning(
@@ -3181,7 +3176,7 @@ class SyndicManager(MinionBase):
             if res:
                 self.delayed = []
         for master in list(six.iterkeys(self.job_rets)):
-            values = self.job_rets[master].values()
+            values = list(six.itervalues(self.job_rets[master]))
             res = self._return_pub_syndic(values, master_id=master)
             if res:
                 del self.job_rets[master]

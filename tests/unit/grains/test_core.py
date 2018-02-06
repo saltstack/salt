@@ -4,9 +4,10 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-import socket
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
+import socket
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -30,6 +31,8 @@ if six.PY3:
     import ipaddress
 else:
     import salt.ext.ipaddress as ipaddress
+
+log = logging.getLogger(__name__)
 
 # Globals
 IPv4Address = ipaddress.IPv4Address
@@ -498,6 +501,7 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.1991-05.com.microsoft:simon-x1'])
 
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_aix_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
             return_value='initiator_name iqn.localhost.hostid.7f000001'
@@ -513,6 +517,8 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.localhost.hostid.7f000001'])
 
+    @skipIf(salt.utils.platform.is_darwin(), 'MacOSX iscsi grains not supported')
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_linux_iscsi_iqn_grains(self):
         _iscsi_file = '## DO NOT EDIT OR REMOVE THIS FILE!\n' \
                       '## If you remove this file, the iSCSI daemon will not start.\n' \
@@ -616,6 +622,7 @@ SwapTotal:       4789244 kB'''
         self.assertEqual(os_grains.get('mem_total'), 15895)
         self.assertEqual(os_grains.get('swap_total'), 4676)
 
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_bsd_memdata(self):
         '''
         Test to memdata on *BSD systems
@@ -684,6 +691,28 @@ SwapTotal:       4789244 kB'''
 
         self.assertEqual(os_grains.get('mem_total'), 2023)
         self.assertEqual(os_grains.get('swap_total'), 400)
+
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
+    def test_docker_virtual(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        '''
+        with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
+            with patch.object(os.path,
+                              'isfile',
+                              MagicMock(side_effect=lambda x: True if x == '/proc/1/cgroup' else False)):
+                for cgroup_substr in (':/system.slice/docker', ':/docker/',
+                                       ':/docker-ce/'):
+                    cgroup_data = \
+                        '10:memory{0}a_long_sha256sum'.format(cgroup_substr)
+                    log.debug(
+                        'Testing Docker cgroup substring \'%s\'', cgroup_substr)
+                    with patch('salt.utils.files.fopen', mock_open(read_data=cgroup_data)):
+                        with patch.dict(core.__salt__, {'cmd.run_all': MagicMock()}):
+                            self.assertEqual(
+                                core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                                'Docker'
+                            )
 
     def _check_ipaddress(self, value, ip_v):
         '''
@@ -788,11 +817,11 @@ SwapTotal:       4789244 kB'''
         https://github.com/saltstack/salt/issues/41230
         '''
         resolv_mock = {'domain': '', 'sortlist': [], 'nameservers':
-                   [IPv4Address(IP4_ADD1),
-                    IPv6Address(IP6_ADD1)], 'ip4_nameservers':
-                   [IPv4Address(IP4_ADD1)],
+                   [ipaddress.IPv4Address(IP4_ADD1),
+                    ipaddress.IPv6Address(IP6_ADD1)], 'ip4_nameservers':
+                   [ipaddress.IPv4Address(IP4_ADD1)],
                    'search': ['test.saltstack.com'], 'ip6_nameservers':
-                   [IPv6Address(IP6_ADD1)], 'options': []}
+                   [ipaddress.IPv6Address(IP6_ADD1)], 'options': []}
         ret = {'dns': {'domain': '', 'sortlist': [], 'nameservers':
                        [IP4_ADD1, IP6_ADD1], 'ip4_nameservers':
                        [IP4_ADD1], 'search': ['test.saltstack.com'],

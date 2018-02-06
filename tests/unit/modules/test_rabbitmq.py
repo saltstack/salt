@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -120,7 +120,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         Test whether a given rabbitmq-internal user exists based
         on rabbitmqctl list_users.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\nsaltstack\t[administrator]\n...done', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\n'
+                                                                   'saltstack\t[administrator]\n...done', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertTrue(rabbitmq.user_exists('saltstack'))
 
@@ -129,7 +130,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         Negative test of whether rabbitmq-internal user exists based
         on rabbitmqctl list_users.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\nsaltstack\t[administrator]\n...done', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\n'
+                                                                   'saltstack\t[administrator]\n...done', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertFalse(rabbitmq.user_exists('salt'))
 
@@ -359,7 +361,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it returns queue details of the / virtual host
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10',
+                                           'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertDictEqual(rabbitmq.list_queues(), {'saltstack': ['0'], 'celeryev.234-234': ['10']})
 
@@ -369,9 +372,11 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it returns queue details of specified virtual host.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10',
+                                           'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_queues_vhost('consumers'), {'saltstack': ['0'], 'celeryev.234-234': ['10']})
+            self.assertDictEqual(rabbitmq.list_queues_vhost('consumers'), {'saltstack': ['0'],
+                                                                           'celeryev.234-234': ['10']})
 
     # 'list_policies' function tests: 1
 

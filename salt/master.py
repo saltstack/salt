@@ -18,14 +18,9 @@ import stat
 import logging
 import collections
 import multiprocessing
+import threading
 import salt.serializers.msgpack
 
-# Import third party libs
-try:
-    from Cryptodome.PublicKey import RSA
-except ImportError:
-    # Fall back to pycrypto
-    from Crypto.PublicKey import RSA
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
@@ -49,6 +44,8 @@ import tornado.gen  # pylint: disable=F0401
 # Import salt libs
 import salt.crypt
 import salt.client
+import salt.client.ssh.client
+import salt.exceptions
 import salt.payload
 import salt.pillar
 import salt.state
@@ -77,18 +74,19 @@ import salt.utils.minions
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
+import salt.utils.ssdp
+import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
-import salt.utils.ssdp
+from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.config import DEFAULT_MASTER_OPTS
-from salt.exceptions import FileserverConfigError
 from salt.transport import iter_transport_opts
 from salt.utils.debug import (
     enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 )
 from salt.utils.event import tagify
+from salt.utils.odict import OrderedDict
 
 try:
     import resource
@@ -186,9 +184,6 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         in the parent process, then once the fork happens you'll start getting
         errors like "WARNING: Mixing fork() and threads detected; memory leaked."
         '''
-        # Avoid circular import
-        import salt.fileserver
-        self.fileserver = salt.fileserver.Fileserver(self.opts)
         # Load Runners
         ropts = dict(self.opts)
         ropts['quiet'] = True
@@ -225,15 +220,13 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         This is where any data that needs to be cleanly maintained from the
         master is maintained.
         '''
-        salt.utils.process.appendproctitle('Maintenance')
+        salt.utils.process.appendproctitle(self.__class__.__name__)
 
         # init things that need to be done after the process is forked
         self._post_fork_init()
 
         # Make Start Times
         last = int(time.time())
-        # Clean out the fileserver backend cache
-        salt.daemons.masterapi.clean_fsbackend(self.opts)
 
         old_present = set()
         while True:
@@ -247,7 +240,6 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.handle_key_cache()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
-            salt.daemons.masterapi.fileserver_update(self.fileserver)
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
             time.sleep(self.loop_interval)
@@ -304,7 +296,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
             for secret_key, secret_map in six.iteritems(SMaster.secrets):
                 # should be unnecessary-- since no one else should be modifying
                 with secret_map['secret'].get_lock():
-                    secret_map['secret'].value = six.b(secret_map['reload']())
+                    secret_map['secret'].value = salt.utils.stringutils.to_bytes(secret_map['reload']())
                 self.event.fire_event({'rotate_{0}_key'.format(secret_key): True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
@@ -356,6 +348,144 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.event.fire_event(data, tagify('present', 'presence'), timeout=3)
             old_present.clear()
             old_present.update(present)
+
+
+class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
+    '''
+    A process from which to update any dynamic fileserver backends
+    '''
+    def __init__(self, opts, log_queue=None):
+        super(FileserverUpdate, self).__init__(log_queue=log_queue)
+        self.opts = opts
+        self.update_threads = {}
+        # Avoid circular import
+        import salt.fileserver
+        self.fileserver = salt.fileserver.Fileserver(self.opts)
+        self.fill_buckets()
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['opts'], log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'log_queue': self.log_queue}
+
+    def fill_buckets(self):
+        '''
+        Get the configured backends and the intervals for any backend which
+        supports them, and set up the update "buckets". There will be one
+        bucket for each thing being updated at a given interval.
+        '''
+        update_intervals = self.fileserver.update_intervals()
+        self.buckets = {}
+        for backend in self.fileserver.backends():
+            fstr = '{0}.update'.format(backend)
+            try:
+                update_func = self.fileserver.servers[fstr]
+            except KeyError:
+                log.debug(
+                    'No update function for the %s filserver backend',
+                    backend
+                )
+                continue
+            if backend in update_intervals:
+                # Variable intervals are supported for this backend
+                for id_, interval in six.iteritems(update_intervals[backend]):
+                    if not interval:
+                        # Don't allow an interval of 0
+                        interval = DEFAULT_INTERVAL
+                        log.debug(
+                            'An update_interval of 0 is not supported, '
+                            'falling back to %s', interval
+                        )
+                    i_ptr = self.buckets.setdefault(interval, OrderedDict())
+                    # Backend doesn't technically need to be present in the
+                    # key, all we *really* need is the function reference, but
+                    # having it there makes it easier to provide meaningful
+                    # debug logging in the update threads.
+                    i_ptr.setdefault((backend, update_func), []).append(id_)
+            else:
+                # Variable intervals are not supported for this backend, so
+                # fall back to the global interval for that fileserver. Since
+                # this backend doesn't support variable updates, we have
+                # nothing to pass to the backend's update func, so we'll just
+                # set the value to None.
+                try:
+                    interval_key = '{0}_update_interval'.format(backend)
+                    interval = self.opts[interval_key]
+                except KeyError:
+                    interval = DEFAULT_INTERVAL
+                    log.error(
+                        '%s key missing from master configuration. This is '
+                        'a bug, please report it. Falling back to default '
+                        'interval of %d seconds', interval_key, interval
+                    )
+                self.buckets.setdefault(
+                    interval, OrderedDict())[(backend, update_func)] = None
+
+    def update_fileserver(self, interval, backends):
+        '''
+        Threading target which handles all updates for a given wait interval
+        '''
+        def _do_update():
+            log.debug(
+                'Performing fileserver updates for items with an update '
+                'interval of %d', interval
+            )
+            for backend, update_args in six.iteritems(backends):
+                backend_name, update_func = backend
+                try:
+                    if update_args:
+                        log.debug(
+                            'Updating %s fileserver cache for the following '
+                            'targets: %s', backend_name, update_args
+                        )
+                        args = (update_args,)
+                    else:
+                        log.debug('Updating %s fileserver cache', backend_name)
+                        args = ()
+
+                    update_func(*args)
+                except Exception as exc:
+                    log.exception(
+                        'Uncaught exception while updating %s fileserver '
+                        'cache', backend_name
+                    )
+
+            log.debug(
+                'Completed fileserver updates for items with an update '
+                'interval of %d, waiting %d seconds', interval, interval
+            )
+
+        condition = threading.Condition()
+        _do_update()
+        while True:
+            with condition:
+                condition.wait(interval)
+            _do_update()
+
+    def run(self):
+        '''
+        Start the update threads
+        '''
+        salt.utils.process.appendproctitle(self.__class__.__name__)
+        # Clean out the fileserver backend cache
+        salt.daemons.masterapi.clean_fsbackend(self.opts)
+
+        for interval in self.buckets:
+            self.update_threads[interval] = threading.Thread(
+                target=self.update_fileserver,
+                args=(interval, self.buckets[interval]),
+            )
+            self.update_threads[interval].start()
+
+        # Keep the process alive
+        while True:
+            time.sleep(60)
 
 
 class Master(SMaster):
@@ -461,7 +591,7 @@ class Master(SMaster):
                 # double-check configuration
                 try:
                     fileserver.init()
-                except FileserverConfigError as exc:
+                except salt.exceptions.FileserverConfigError as exc:
                     critical_errors.append('{0}'.format(exc))
 
         if not self.opts['fileserver_backend']:
@@ -494,7 +624,7 @@ class Master(SMaster):
                                 repo['git'],
                                 per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
                                 per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
-                        except FileserverConfigError as exc:
+                        except salt.exceptions.FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
                     del new_opts
@@ -529,7 +659,9 @@ class Master(SMaster):
             SMaster.secrets['aes'] = {
                 'secret': multiprocessing.Array(
                     ctypes.c_char,
-                    six.b(salt.crypt.Crypticle.generate_key_string())
+                    salt.utils.stringutils.to_bytes(
+                        salt.crypt.Crypticle.generate_key_string()
+                    )
                 ),
                 'reload': salt.crypt.Crypticle.generate_key_string
             }
@@ -606,17 +738,21 @@ class Master(SMaster):
                 kwargs=kwargs,
                 name='ReqServer')
 
+            self.process_manager.add_process(
+                FileserverUpdate,
+                args=(self.opts,))
+
             # Fire up SSDP discovery publisher
-            if self.opts[u'discovery']:
+            if self.opts['discovery']:
                 if salt.utils.ssdp.SSDPDiscoveryServer.is_available():
                     self.process_manager.add_process(salt.utils.ssdp.SSDPDiscoveryServer(
-                        port=self.opts[u'discovery'].get(u'port', DEFAULT_MASTER_OPTS[u'discovery'][u'port']),
-                        listen_ip=self.opts[u'interface'],
-                        answer={u'mapping': self.opts[u'discovery'].get(u'mapping', {})}).run)
+                        port=self.opts['discovery']['port'],
+                        listen_ip=self.opts['interface'],
+                        answer={'mapping': self.opts['discovery'].get('mapping', {})}).run)
                 else:
-                    log.error(u'Unable to load SSDP: asynchronous IO is not available.')
+                    log.error('Unable to load SSDP: asynchronous IO is not available.')
                     if sys.version_info.major == 2:
-                        log.error(u'You are using Python 2, please install "trollius" module to enable SSDP discovery.')
+                        log.error('You are using Python 2, please install "trollius" module to enable SSDP discovery.')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -1032,9 +1168,7 @@ class AESFuncs(object):
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
 
         try:
-            with salt.utils.files.fopen(pub_path, 'r') as fp_:
-                minion_pub = fp_.read()
-                pub = RSA.importKey(minion_pub)
+            pub = salt.crypt.get_rsa_pub_key(pub_path)
         except (IOError, OSError):
             log.warning(
                 'Salt minion claiming to be %s attempted to communicate with '
@@ -1374,7 +1508,8 @@ class AESFuncs(object):
                                        'data',
                                        {'grains': load['grains'],
                                         'pillar': data})
-            self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
+            if self.opts.get('minion_data_cache_events') is True:
+                self.event.fire_event({'Minion data cache refresh': load['id']}, tagify(load['id'], 'refresh', 'minion'))
         return data
 
     def _minion_event(self, load):
@@ -1822,7 +1957,7 @@ class ClearFuncs(object):
             jid = salt.utils.jid.gen_jid(self.opts)
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
-            data = {'fun': u"wheel.{0}".format(fun),
+            data = {'fun': "wheel.{0}".format(fun),
                     'jid': jid,
                     'tag': tag,
                     'user': username}
@@ -1881,7 +2016,8 @@ class ClearFuncs(object):
                 'your local administrator if you believe this is in '
                 'error.\n', clear_load['user'], clear_load['fun']
             )
-            return ''
+            return {'error': {'name': 'AuthorizationError',
+                              'message': 'Authorization error occurred.'}}
 
         # Retrieve the minions list
         delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
@@ -1907,7 +2043,8 @@ class ClearFuncs(object):
         if auth_check.get('error'):
             # Authentication error occurred: do not continue.
             log.warning(err_msg)
-            return ''
+            return {'error': {'name': 'AuthenticationError',
+                              'message': 'Authentication error occurred.'}}
 
         # All Token, Eauth, and non-root users must pass the authorization check
         if auth_type != 'user' or (auth_type == 'user' and auth_list):
@@ -1926,7 +2063,8 @@ class ClearFuncs(object):
             if not authorized:
                 # Authorization error occurred. Do not continue.
                 log.warning(err_msg)
-                return ''
+                return {'error': {'name': 'AuthorizationError',
+                                  'message': 'Authorization error occurred.'}}
 
             # Perform some specific auth_type tasks after the authorization check
             if auth_type == 'token':
@@ -1957,6 +2095,7 @@ class ClearFuncs(object):
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         # Send it!
+        minions.extend(self._send_ssh_pub(payload))
         self._send_pub(payload)
 
         return {
@@ -2018,6 +2157,21 @@ class ClearFuncs(object):
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.PubServerChannel.factory(opts)
             chan.publish(load)
+
+    def _send_ssh_pub(self, load):
+        '''
+        Take a load and send it across the network to connected minions
+        '''
+        minions = []
+        if self.opts['enable_ssh_minions'] is True and isinstance(load['tgt'], six.string_types):
+            # The isinstances makes sure that syndics work
+            log.debug('Use SSHClient for rostered minions')
+            ssh = salt.client.ssh.client.SSHClient()
+            ssh_minions = ssh._prep_ssh(**load).targets.keys()
+            if ssh_minions:
+                minions.extend(ssh_minions)
+                threading.Thread(target=ssh.cmd, kwargs=load).start()
+        return minions
 
     def _prep_pub(self, minions, jid, clear_load, extra, missing):
         '''

@@ -53,7 +53,6 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import json
 import logging
 import requests
 
@@ -155,9 +154,9 @@ def returner(ret):
     serv = _get_serv(ret)
 
     # strip the 'return' key to avoid data duplication in the database
-    json_return = json.dumps(ret['return'])
+    json_return = salt.utils.json.dumps(ret['return'])
     del ret['return']
-    json_full_ret = json.dumps(ret)
+    json_full_ret = salt.utils.json.dumps(ret)
 
     # create legacy request in case an InfluxDB 0.8.x version is used
     if "influxdb08" in serv.__module__:
@@ -206,7 +205,7 @@ def save_load(jid, load, minions=None):
                 'name': 'jids',
                 'columns': ['jid', 'load'],
                 'points': [
-                    [jid, json.dumps(load)]
+                    [jid, salt.utils.json.dumps(load)]
                 ],
             }
         ]
@@ -219,7 +218,7 @@ def save_load(jid, load, minions=None):
                     'jid': jid
                 },
                 'fields': {
-                    'load': json.dumps(load)
+                    'load': salt.utils.json.dumps(load)
                 }
             }
         ]
@@ -265,7 +264,7 @@ def get_jid(jid):
     if data:
         points = data[0]['points']
         for point in points:
-            ret[point[3]] = json.loads(point[2])
+            ret[point[3]] = salt.utils.json.loads(point[2])
 
     return ret
 
@@ -287,7 +286,7 @@ def get_fun(fun):
     if data:
         points = data[0]['points']
         for point in points:
-            ret[point[1]] = json.loads(point[2])
+            ret[point[1]] = salt.utils.json.loads(point[2])
 
     return ret
 
@@ -307,7 +306,7 @@ def get_jids():
     ret = {}
     if data:
         for _, jid, load in data[0]['points']:
-            ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, salt.utils.json.loads(load))
     return ret
 
 
