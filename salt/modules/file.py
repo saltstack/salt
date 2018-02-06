@@ -1590,6 +1590,7 @@ def _set_line_indent(src, line, indent):
 
     return ''.join(idt) + line.lstrip()
 
+
 def _set_line_eol(src, line):
     '''
     Add line ending
@@ -1597,6 +1598,7 @@ def _set_line_eol(src, line):
     regex = re.compile('((?<!\r)\n|\r(?!\n)|\r\n)$')
     line_ending = regex.search(src).group()
     return line.rstrip() + line_ending
+
 
 def line(path, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
