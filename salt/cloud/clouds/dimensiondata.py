@@ -32,7 +32,7 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 # Import libcloud
 try:
     import libcloud
-    from libcloud.compute.base import NodeState
+    from libcloud.compute.base import NodeDriver, NodeState
     from libcloud.compute.base import NodeAuthPassword
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
@@ -258,7 +258,7 @@ def create(vm_):
         'ex_is_started': vm_['is_started']
     }
 
-    event_data = kwargs.copy()
+    event_data = _to_event_data(kwargs)
     del event_data['auth']
 
     __utils__['cloud.fire_event'](
@@ -418,11 +418,13 @@ def create_lb(kwargs=None, call=None):
     log.debug('Network Domain: %s', network_domain.id)
     lb_conn.ex_set_current_network_domain(network_domain.id)
 
+    event_data = _to_event_data(kwargs)
+
     __utils__['cloud.fire_event'](
         'event',
         'create load_balancer',
         'salt/cloud/loadbalancer/creating',
-        args=kwargs,
+        args=event_data,
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -431,11 +433,13 @@ def create_lb(kwargs=None, call=None):
         name, port, protocol, algorithm, members
     )
 
+    event_data = _to_event_data(kwargs)
+
     __utils__['cloud.fire_event'](
         'event',
         'created load_balancer',
         'salt/cloud/loadbalancer/created',
-        args=kwargs,
+        args=event_data,
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -577,3 +581,45 @@ def get_lb_conn(dd_driver=None):
             'Missing dimensiondata_driver for get_lb_conn method.'
         )
     return get_driver_lb(Provider_lb.DIMENSIONDATA)(user_id, key, region=region)
+
+def _to_event_data(obj):
+    '''
+    Convert the specified object into a form that can be serialised by msgpack as event data.
+
+    :param obj: The object to convert.
+    '''
+
+    if obj is None:
+        return None
+    if isinstance(obj, bool):
+        return obj
+    if isinstance(obj, int):
+        return obj
+    if isinstance(obj, float):
+        return obj
+    if isinstance(obj, str):
+        return obj
+    if isinstance(obj, bytes):
+        return obj
+    if isinstance(obj, dict):
+        return obj
+
+    if isinstance(obj, NodeDriver): # Special case for NodeDriver (cyclic references)
+        return obj.name
+
+    if isinstance(obj, list):
+        return [_to_event_data(item) for item in obj]
+
+    event_data = {}
+    for attribute_name in dir(obj):
+        if attribute_name.startswith('_'):
+            continue
+
+        attribute_value = getattr(obj, attribute_name)
+
+        if callable(attribute_value): # Strip out methods
+            continue
+
+        event_data[attribute_name] = _to_event_data(attribute_value)
+
+    return event_data
