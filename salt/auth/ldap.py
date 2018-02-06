@@ -362,10 +362,10 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [_config('accountattributename'), 'cn'])
+                                           [_config('accountattributename'), 'cn', _config('groupattribute'), 'cn'])
 
             for entry, result in search_results:
-                for user in result[_config('accountattributename')]:
+                for user in result[_config('accountattributename'), _config('groupattribute')]:
                     if username == user.split(',')[0].split('=')[-1]:
                         group_list.append(entry.split(',')[0].split('=')[-1])
 
