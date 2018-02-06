@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Hjson Renderer for Salt
-http://laktak.github.io/hjson/
+Hjson_ renderer for Salt
+
+.. _Hjson: http://laktak.github.io/hjson/
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals

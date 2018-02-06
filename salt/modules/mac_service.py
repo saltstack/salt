@@ -3,7 +3,7 @@
 The service module for macOS
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -424,7 +424,7 @@ def status(name, sig=None, runas=None):
     for line in output.splitlines():
         if 'PID' in line:
             continue
-        if re.search(name, line):
+        if re.search(name, line.split()[-1]):
             if line.split()[0].isdigit():
                 if pids:
                     pids += '\n'

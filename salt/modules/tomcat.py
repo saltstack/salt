@@ -60,7 +60,7 @@ Also configure a user in the conf/tomcat-users.xml file:
      Tomcat Version:
          Apache Tomcat/7.0.37
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os

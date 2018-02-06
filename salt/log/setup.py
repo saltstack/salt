@@ -14,7 +14,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import sys
@@ -656,9 +656,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             handler = SysLogHandler(**syslog_opts)
         except socket.error as err:
             logging.getLogger(__name__).error(
-                'Failed to setup the Syslog logging handler: {0}'.format(
-                    err
-                )
+                'Failed to setup the Syslog logging handler: %s', err
             )
             shutdown_multiprocessing_logging_listener()
             sys.exit(2)
@@ -667,13 +665,13 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         log_dir = os.path.dirname(log_path)
         if not os.path.exists(log_dir):
             logging.getLogger(__name__).info(
-                'Log directory not found, trying to create it: {0}'.format(log_dir)
+                'Log directory not found, trying to create it: %s', log_dir
             )
             try:
                 os.makedirs(log_dir, mode=0o700)
             except OSError as ose:
                 logging.getLogger(__name__).warning(
-                    'Failed to create directory for log file: {0} ({1})'.format(log_dir, ose)
+                    'Failed to create directory for log file: %s (%s)', log_dir, ose
                 )
                 return
         try:
@@ -692,8 +690,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                 handler = WatchedFileHandler(log_path, mode='a', encoding='utf-8', delay=0)
         except (IOError, OSError):
             logging.getLogger(__name__).warning(
-                'Failed to open log file, do you have permission to write to '
-                '{0}?'.format(log_path)
+                'Failed to open log file, do you have permission to write to %s?', log_path
             )
             # Do not proceed with any more configuration since it will fail, we
             # have the console logging already setup and the user should see
@@ -741,9 +738,7 @@ def setup_extended_logging(opts):
     additional_handlers = []
 
     for name, get_handlers_func in six.iteritems(providers):
-        logging.getLogger(__name__).info(
-            'Processing `log_handlers.{0}`'.format(name)
-        )
+        logging.getLogger(__name__).info('Processing `log_handlers.%s`', name)
         # Keep a reference to the logging handlers count before getting the
         # possible additional ones.
         initial_handlers_count = len(logging.root.handlers)
@@ -755,9 +750,9 @@ def setup_extended_logging(opts):
             # A false return value means not configuring any logging handler on
             # purpose
             logging.getLogger(__name__).info(
-                'The `log_handlers.{0}.setup_handlers()` function returned '
+                'The `log_handlers.%s.setup_handlers()` function returned '
                 '`False` which means no logging handler was configured on '
-                'purpose. Continuing...'.format(name)
+                'purpose. Continuing...', name
             )
             continue
         else:
@@ -768,17 +763,16 @@ def setup_extended_logging(opts):
             if not handler and \
                     len(logging.root.handlers) == initial_handlers_count:
                 logging.getLogger(__name__).info(
-                    'The `log_handlers.{0}`, did not return any handlers '
+                    'The `log_handlers.%s`, did not return any handlers '
                     'and the global handlers count did not increase. This '
-                    'could be a sign of `log_handlers.{0}` not working as '
-                    'supposed'.format(name)
+                    'could be a sign of `log_handlers.%s` not working as '
+                    'supposed', name, name
                 )
                 continue
 
             logging.getLogger(__name__).debug(
-                'Adding the \'{0}\' provided logging handler: \'{1}\''.format(
-                    name, handler
-                )
+                'Adding the \'%s\' provided logging handler: \'%s\'',
+                name, handler
             )
             additional_handlers.append(handler)
             logging.root.addHandler(handler)
@@ -886,7 +880,7 @@ def setup_multiprocessing_logging(queue=None):
         logging.root.setLevel(logging.GARBAGE)
         logging.getLogger(__name__).debug(
             'Multiprocessing queue logging configured for the process running '
-            'under PID: {0}'.format(os.getpid())
+            'under PID: %s', os.getpid()
         )
         # The above logging call will create, in some situations, a futex wait
         # lock condition, probably due to the multiprocessing Queue's internal
@@ -946,6 +940,12 @@ def shutdown_multiprocessing_logging():
         logging.root.removeHandler(__MP_LOGGING_QUEUE_HANDLER)
         __MP_LOGGING_QUEUE_HANDLER = None
         __MP_LOGGING_CONFIGURED = False
+        if not logging.root.handlers:
+            # Ensure we have at least one logging root handler so
+            # something can handle logging messages. This case should
+            # only occur on Windows since on Windows we log to console
+            # and file through the Multiprocessing Logging Listener.
+            setup_console_logger()
     finally:
         logging._releaseLock()
 
@@ -959,6 +959,12 @@ def shutdown_multiprocessing_logging_listener(daemonizing=False):
         # We're in the MainProcess and we're not daemonizing, return!
         # No multiprocessing logging listener shutdown shall happen
         return
+
+    if not daemonizing:
+        # Need to remove the queue handler so that it doesn't try to send
+        # data over a queue that was shut down on the listener end.
+        shutdown_multiprocessing_logging()
+
     if __MP_LOGGING_QUEUE_PROCESS is None:
         return
     if __MP_LOGGING_QUEUE_PROCESS.is_alive():
@@ -1055,8 +1061,7 @@ def __process_multiprocessing_logging_queue(opts, queue):
         except Exception as exc:  # pylint: disable=broad-except
             logging.getLogger(__name__).warning(
                 'An exception occurred in the multiprocessing logging '
-                'queue thread: {0}'.format(exc),
-                exc_info_on_loglevel=logging.DEBUG
+                'queue thread: %s', exc, exc_info_on_loglevel=logging.DEBUG
             )
 
 
@@ -1141,13 +1146,12 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
         # Log the exception
         logging.getLogger(__name__).error(
             'An un-handled exception was caught by salt\'s global exception '
-            'handler:\n{0}: {1}\n{2}'.format(
-                exc_type.__name__,
-                exc_value,
-                ''.join(traceback.format_exception(
-                    exc_type, exc_value, exc_traceback
-                )).strip()
-            )
+            'handler:\n%s: %s\n%s',
+            exc_type.__name__,
+            exc_value,
+            ''.join(traceback.format_exception(
+                exc_type, exc_value, exc_traceback
+            )).strip()
         )
         # Call the original sys.excepthook
         sys.__excepthook__(exc_type, exc_value, exc_traceback)

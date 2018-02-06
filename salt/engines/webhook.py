@@ -2,7 +2,7 @@
 '''
 Send events from webhook api
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # import tornado library
 import tornado.httpserver
@@ -70,7 +70,10 @@ def start(address=None, port=5000, ssl_crt=None, ssl_key=None):
         def post(self, tag):  # pylint: disable=arguments-differ
             body = self.request.body
             headers = self.request.headers
-            payload = {'headers': headers, 'body': body}
+            payload = {
+                'headers': headers if isinstance(headers, dict) else dict(headers),
+                'body': body,
+            }
             fire('salt/engines/hook/' + tag, payload)
 
     application = tornado.web.Application([(r"/(.*)", WebHook), ])

@@ -4,7 +4,7 @@ Module for running ZFS zpool command
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import os

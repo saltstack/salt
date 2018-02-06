@@ -2,7 +2,7 @@
 '''
 This module contains routines shared by the virt system.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -49,8 +49,10 @@ class VirtKey(object):
         # Limit acceptance window to 10 minutes
         # TODO: Move this value to the master config file
         if (time.time() - expiry) > 600:
-            log.warning('Request to sign key for minion "{0}" on hyper "{1}" denied: '
-                        'authorization expired'.format(self.id, self.hyper))
+            log.warning(
+                'Request to sign key for minion "%s" on hyper "%s" denied: '
+                'authorization expired', self.id, self.hyper
+            )
             return False
 
         pubfn = os.path.join(self.opts['pki_dir'],
@@ -66,7 +68,7 @@ class VirtKey(object):
         Prepare the master to expect a signing request
         '''
         with salt.utils.files.fopen(self.path, 'w+') as fp_:
-            fp_.write(str(int(time.time())))
+            fp_.write(str(int(time.time())))  # future lint: disable=blacklisted-function
         return True
 
     def void(self):
