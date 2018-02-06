@@ -412,6 +412,11 @@ Available parameters are as follows:
         match. However, this can make troubleshooting issues difficult, so be
         careful.
 
+    .. tip::
+        To force salt to display the full name when there's already an existing
+        package definition file on the system, you can pass a bogus ``saltenv``
+        parameter to the command like so: ``pkg.list_pkgs saltenv=NotARealEnv``
+
 :param str installer:
     The path to the ``.exe`` or ``.msi`` to use to install the package. This can
     be a path or a URL. If it is a URL or a salt path (``salt://``), the package
