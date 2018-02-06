@@ -214,13 +214,13 @@ def escape_for_cmd_exe(arg):
     return meta_re.sub(escape_meta_chars, arg)
 
 
-def broadcast_setting_change(setting='Environment'):
+def broadcast_setting_change(message='Environment'):
     '''
     Send a WM_SETTINGCHANGE Broadcast to all Windows
 
     Args:
 
-        setting (str):
+        message (str):
             A string value representing the portion of the system that has been
             updated and needs to be refreshed. Default is ``Environment``. These
             are some common values:
@@ -247,7 +247,7 @@ def broadcast_setting_change(setting='Environment'):
         import salt.utils.win_functions
         salt.utils.win_functions.refresh_environment()
     '''
-    broadcast_message = ctypes.create_unicode_buffer(setting)
+    broadcast_message = ctypes.create_unicode_buffer(message)
     user32 = ctypes.WinDLL('user32', use_last_error=True)
     result = user32.SendMessageTimeoutW(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
                                         broadcast_message, SMTO_ABORTIFHUNG,
