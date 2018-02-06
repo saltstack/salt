@@ -382,16 +382,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         template = jinja_env.from_string(tmplstr)
         template.globals.update(decoded_context)
         output = template.render(**decoded_context)
-    except (jinja2.exceptions.TemplateRuntimeError,
-            jinja2.exceptions.TemplateSyntaxError) as exc:
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=decoded_context)
-        if not line:
-            tmplstr = ''
-        raise SaltRenderError(
-            'Jinja syntax error: {0}{1}'.format(exc, out),
-            line,
-            tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         out = _get_jinja_error(trace, context=decoded_context)[1]
@@ -402,6 +392,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             'Jinja variable {0}{1}'.format(
                 exc, out),
             buf=tmplstr)
+    except (jinja2.exceptions.TemplateRuntimeError,
+            jinja2.exceptions.TemplateSyntaxError) as exc:
+        trace = traceback.extract_tb(sys.exc_info()[2])
+        line, out = _get_jinja_error(trace, context=decoded_context)
+        if not line:
+            tmplstr = ''
+        raise SaltRenderError(
+            'Jinja syntax error: {0}{1}'.format(exc, out),
+            line,
+            tmplstr)
     except (SaltInvocationError, CommandExecutionError) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=decoded_context)
