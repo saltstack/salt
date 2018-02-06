@@ -45,20 +45,20 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils
 import salt.utils.path
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
-        directory_exists, get_managed,
-        check_managed, check_managed_changes, source_list,
-        touch, append, contains, contains_regex, get_source_sum,
-        contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
-        get_hash, manage_file, file_exists, get_diff, line, list_backups,
-        __clean_tmp, check_file_meta, _binary_replace,
-        _splitlines_preserving_trailing_newline, restore_backup,
-        access, copy, readdir, rmdir, truncate, replace, delete_backup,
-        search, _get_flags, extract_hash, _error, _sed_esc, _psed,
-        RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
-        lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
-        comment, uncomment, _add_flags, comment_line, _regex_to_static,
-        _get_line_indent, apply_template_on_contents, dirname, basename,
-        list_backups_dir, _assert_occurrence, _starts_till, _get_line_ending)
+                               directory_exists, get_managed,
+                               check_managed, check_managed_changes, source_list,
+                               touch, append, contains, contains_regex, get_source_sum,
+                               contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
+                               get_hash, manage_file, file_exists, get_diff, line, list_backups,
+                               __clean_tmp, check_file_meta, _binary_replace,
+                               _splitlines_preserving_trailing_newline, restore_backup,
+                               access, copy, readdir, rmdir, truncate, replace, delete_backup,
+                               search, _get_flags, extract_hash, _error, _sed_esc, _psed,
+                               RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
+                               lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
+                               comment, uncomment, _add_flags, comment_line, _regex_to_static,
+                               _set_line_indent, apply_template_on_contents, dirname, basename,
+                               list_backups_dir, _assert_occurrence, _starts_till, _set_line_eol)
 from salt.modules.file import normpath as normpath_
 
 from salt.utils import namespaced_function as _namespaced_function

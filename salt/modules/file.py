@@ -1575,7 +1575,7 @@ def _assert_occurrence(src, probe, target, amount=1):
         raise CommandExecutionError('Found {0} expected occurrences in "{1}" expression'.format(msg, target))
 
 
-def _get_line_indent(src, line, indent):
+def _set_line_indent(src, line, indent):
     '''
     Indent the line with the source line.
     '''
@@ -1590,7 +1590,7 @@ def _get_line_indent(src, line, indent):
 
     return ''.join(idt) + line.lstrip()
 
-def _get_line_ending(src, line):
+def _set_line_eol(src, line):
     '''
     Add line ending
     '''
@@ -1739,7 +1739,7 @@ def line(path, content=None, match=None, mode=None, location=None,
     elif mode == 'delete':
         body = [line for line in body if line.find(match) < 0]
     elif mode == 'replace':
-        body = [(_get_line_indent(file_line, content, indent)
+        body = [(_set_line_indent(file_line, content, indent)
                 if (file_line.find(match) > -1 and not file_line == content) else file_line)
                 for file_line in body]
     elif mode == 'insert':
@@ -1754,7 +1754,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                 for idx in range(len(body)):
                     _line = body[idx]
                     if _line.find(before) > -1 and idx <= len(body) and body[idx - 1].find(after) > -1:
-                        out.append(_get_line_indent(_line, _get_line_ending(_line, content), indent))
+                        out.append(_set_line_indent(_line, _set_line_eol(_line, content), indent))
                         out.append(_line)
                     else:
                         out.append(_line)
@@ -1766,8 +1766,8 @@ def line(path, content=None, match=None, mode=None, location=None,
                 for idx in range(len(body)):
                     _line = body[idx]
                     if _line.find(before) > -1:
-                        cnd = _get_line_ending(_line, content)
-                        cnd = _get_line_indent(_line, cnd, indent)
+                        cnd = _set_line_eol(_line, content)
+                        cnd = _set_line_indent(_line, cnd, indent)
                         if not idx or (idx and _starts_till(body[idx - 1], cnd) < 0):  # Job for replace instead
                             out.append(cnd)
                     out.append(_line)
@@ -1779,7 +1779,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                 for idx in range(len(body)):
                     _line = body[idx]
                     out.append(_line)
-                    cnd = _get_line_indent(_line, _get_line_ending(_line, content), indent)
+                    cnd = _set_line_indent(_line, _set_line_eol(_line, content), indent)
                     if _line.find(after) > -1:
                         # No dupes or append, if "after" is the last line
                         if (idx < len(body) and _starts_till(body[idx + 1], cnd) < 0) or idx + 1 == len(body):
@@ -1788,9 +1788,9 @@ def line(path, content=None, match=None, mode=None, location=None,
 
         else:
             if location == 'start':
-                body.insert(0, _get_line_ending(body[0], content))
+                body.insert(0, _set_line_eol(body[0], content))
             elif location == 'end':
-                body.append(_get_line_ending(body[-1] if body else os.linesep, content))
+                body.append(_set_line_eol(body[-1] if body else os.linesep, content))
 
     elif mode == 'ensure':
         after = after and after.strip()
@@ -1811,10 +1811,10 @@ def line(path, content=None, match=None, mode=None, location=None,
 
             # Add
             if not b_idx - a_idx - 1:
-                body = body[:a_idx] + [_get_line_ending(body[a_idx], content)] + body[b_idx - 1:]
+                body = body[:a_idx] + [_set_line_eol(body[a_idx], content)] + body[b_idx - 1:]
             elif b_idx - a_idx - 1 == 1:
                 if _starts_till(body[a_idx:b_idx - 1][0], content) > -1:
-                    body[a_idx] = _get_line_indent(body[a_idx - 1], _get_line_ending(body[a_idx - 1], content), indent)
+                    body[a_idx] = _set_line_indent(body[a_idx - 1], _set_line_eol(body[a_idx - 1], content), indent)
             else:
                 raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
 
@@ -1824,7 +1824,7 @@ def line(path, content=None, match=None, mode=None, location=None,
             for idx in range(len(body)):
                 if body[idx].find(before) > -1:
                     prev = (idx > 0 and idx or 1) - 1
-                    out.append(_get_line_indent(body[prev], _get_line_ending(body[prev], content), indent))
+                    out.append(_set_line_indent(body[prev], _set_line_eol(body[prev], content), indent))
                     if _starts_till(out[prev], content) > -1:
                         del out[prev]
                 out.append(body[idx])
@@ -1842,7 +1842,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                     next_line = idx + 1 < len(body) and body[idx + 1] or None
                     if next_line is not None and _starts_till(next_line, content) > -1:
                         skip = next_line
-                    out.append(_get_line_indent(body[idx], _get_line_ending(body[idx], content), indent))
+                    out.append(_set_line_indent(body[idx], _set_line_eol(body[idx], content), indent))
             body = out
 
         else:
