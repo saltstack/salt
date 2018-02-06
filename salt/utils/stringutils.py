@@ -5,6 +5,7 @@ Functions for manipulating or otherwise processing strings
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import base64
 import errno
 import fnmatch
 import logging
@@ -203,7 +204,7 @@ def is_binary(data):
 @jinja_filter('random_str')
 def random(size=32):
     key = os.urandom(size)
-    return key.encode('base64').replace('\n', '')[:size]
+    return to_unicode(base64.b64encode(key).replace(b'\n', b'')[:size])
 
 
 @jinja_filter('contains_whitespace')
