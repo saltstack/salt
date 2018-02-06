@@ -19,7 +19,7 @@ Dependencies
 .. versionchanged:: 2017.7.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python lib
 import logging
@@ -101,7 +101,7 @@ def _filter_dict(input_dict, search_key, search_value):
 
 def _explicit_close(napalm_device):
     '''
-    Will explicitely close the config session with the network device,
+    Will explicily close the config session with the network device,
     when running in a now-always-alive proxy minion or regular minion.
     This helper must be used in configuration-related functions,
     as the session is preserved and not closed before making any changes.
@@ -139,7 +139,7 @@ def _config_logic(napalm_device,
     # then the decorator will make sure that
     # if not proxy (when the connection is always alive)
     # and the `inherit_napalm_device` is set,
-    # `napalm_device` will be overriden.
+    # `napalm_device` will be overridden.
     # See `salt.utils.napalm.proxy_napalm_wrap` decorator.
 
     loaded_result['already_configured'] = False
@@ -573,22 +573,22 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         log.error(raw_cli_outputs['comment'])
         return raw_cli_outputs
     textfsm_template = kwargs.get('textfsm_template')
-    log.debug('textfsm_template: {}'.format(textfsm_template))
+    log.debug('textfsm_template: %s', textfsm_template)
     textfsm_path = kwargs.get('textfsm_path') or __opts__.get('textfsm_path') or\
                    __pillar__.get('textfsm_path')
-    log.debug('textfsm_path: {}'.format(textfsm_path))
+    log.debug('textfsm_path: %s', textfsm_path)
     textfsm_template_dict = kwargs.get('textfsm_template_dict') or __opts__.get('napalm_cli_textfsm_template_dict') or\
                             __pillar__.get('napalm_cli_textfsm_template_dict', {})
-    log.debug('TextFSM command-template mapping: {}'.format(textfsm_template_dict))
+    log.debug('TextFSM command-template mapping: %s', textfsm_template_dict)
     index_file = kwargs.get('index_file') or __opts__.get('textfsm_index_file') or\
                  __pillar__.get('textfsm_index_file')
-    log.debug('index_file: {}'.format(index_file))
+    log.debug('index_file: %s', index_file)
     platform_grain_name = kwargs.get('platform_grain_name') or __opts__.get('textfsm_platform_grain') or\
                           __pillar__.get('textfsm_platform_grain', 'os')
-    log.debug('platform_grain_name: {}'.format(platform_grain_name))
+    log.debug('platform_grain_name: %s', platform_grain_name)
     platform_column_name = kwargs.get('platform_column_name') or __opts__.get('textfsm_platform_column_name') or\
                            __pillar__.get('textfsm_platform_column_name', 'Platform')
-    log.debug('platform_column_name: {}'.format(platform_column_name))
+    log.debug('platform_column_name: %s', platform_column_name)
     saltenv = kwargs.get('saltenv', 'base')
     include_empty = kwargs.get('include_empty', False)
     include_pat = kwargs.get('include_pat')
@@ -601,11 +601,11 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     log.debug('Starting to analyse the raw outputs')
     for command in list(commands):
         command_output = raw_cli_outputs['out'][command]
-        log.debug('Output from command: {}'.format(command))
+        log.debug('Output from command: %s', command)
         log.debug(command_output)
         processed_command_output = None
         if textfsm_path:
-            log.debug('Using the templates under {}'.format(textfsm_path))
+            log.debug('Using the templates under %s', textfsm_path)
             processed_cli_output = __salt__['textfsm.index'](command,
                                                              platform_grain_name=platform_grain_name,
                                                              platform_column_name=platform_column_name,
@@ -624,7 +624,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                     processed_cli_output['comment'])
                 log.error(processed_cli_outputs['comment'])
             elif processed_cli_output['out']:
-                log.debug('All good, {} has a nice output!'.format(command))
+                log.debug('All good, %s has a nice output!', command)
                 processed_command_output = processed_cli_output['out']
             else:
                 comment = '''\nProcessing "{}" didn't fail, but didn't return anything either. Dumping raw.'''.format(
@@ -635,23 +635,25 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         elif textfsm_template or command in textfsm_template_dict:
             if command in textfsm_template_dict:
                 textfsm_template = textfsm_template_dict[command]
-            log.debug('Using {0} to process the command: {1}'.format(textfsm_template, command))
+            log.debug('Using %s to process the command: %s', textfsm_template, command)
             processed_cli_output = __salt__['textfsm.extract'](textfsm_template,
                                                                raw_text=command_output,
                                                                saltenv=saltenv)
             log.debug('Processed CLI output:')
             log.debug(processed_cli_output)
             if not processed_cli_output['result']:
-                log.debug('Apparently this didnt work, returnin the raw output')
+                log.debug('Apparently this didnt work, returning '
+                          'the raw output')
                 processed_command_output = command_output
                 processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}'.format(command,
                     processed_cli_output['comment'])
                 log.error(processed_cli_outputs['comment'])
             elif processed_cli_output['out']:
-                log.debug('All good, {} has a nice output!'.format(command))
+                log.debug('All good, %s has a nice output!', command)
                 processed_command_output = processed_cli_output['out']
             else:
-                log.debug('Processing {} didnt fail, but didnt return anything either. Dumping raw.'.format(command))
+                log.debug('Processing %s didnt fail, but didnt return'
+                          ' anything either. Dumping raw.', command)
                 processed_command_output = command_output
         else:
             log.error('No TextFSM template specified, or no TextFSM path defined')
@@ -1299,7 +1301,7 @@ def load_config(filename=None,
     if debug:
         if filename:
             with salt.utils.files.fopen(filename) as rfh:
-                loaded_config = rfh.read()
+                loaded_config = salt.utils.stringutils.to_unicode(rfh.read())
         else:
             loaded_config = text
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
@@ -1662,7 +1664,7 @@ def load_template(template_name,
                     _loaded['comment'] = 'Error while rendering the template.'
                     return _loaded
                 with salt.utils.files.fopen(_temp_tpl_file) as rfh:
-                    _rendered = rfh.read()
+                    _rendered = salt.utils.stringutils.to_unicode(rfh.read())
                 __salt__['file.remove'](_temp_tpl_file)
             else:
                 return _loaded  # exit

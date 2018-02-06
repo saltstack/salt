@@ -1005,10 +1005,10 @@ The :py:func:`file.serialize <salt.states.file.serialize>` state can provide a
 shorthand for creating some files from data structures. There are also many
 examples within Salt Formulas of creating one-off "serializers" (often as Jinja
 macros) that reformat a data structure to a specific config file format. For
-example, `Nginx vhosts`__ or the `php.ini`__
+example, look at the`Nginx vhosts`_ states or the `php.ini`_ file template.
 
-__: https://github.com/saltstack-formulas/nginx-formula/blob/5cad4512/nginx/ng/vhosts_config.sls
-__: https://github.com/saltstack-formulas/php-formula/blob/82e2cd3a/php/ng/files/php.ini
+.. _`Nginx vhosts`: https://github.com/saltstack-formulas/nginx-formula/blob/5cad4512/nginx/ng/vhosts_config.sls
+.. _`php.ini`: https://github.com/saltstack-formulas/php-formula/blob/82e2cd3a/php/ng/files/php.ini
 
 Environment specific information
 ................................

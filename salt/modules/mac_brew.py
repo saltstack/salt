@@ -312,7 +312,8 @@ def _info(*pkgs):
     cmd = 'brew info --json=v1 {0}'.format(' '.join(pkgs))
     brew_result = _call_brew(cmd)
     if brew_result['retcode']:
-        log.error('Failed to get info about packages: %s', ' '.join(pkgs))
+        log.error('Failed to get info about packages: %s',
+                  ' '.join(pkgs))
         return {}
     output = salt.utils.json.loads(brew_result['stdout'])
     return dict(zip(pkgs, output))

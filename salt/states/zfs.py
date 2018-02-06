@@ -40,7 +40,7 @@ Management zfs datasets
       zfs.snapshot_absent
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -90,8 +90,10 @@ def _absent(name, dataset_type, force=False, recursive=False):
            'result': True,
            'comment': ''}
 
-    log.debug('zfs.{0}_absent::{1}::config::force = {2}'.format(dataset_type, name, force))
-    log.debug('zfs.{0}_absent::{1}::config::recursive = {2}'.format(dataset_type, name, recursive))
+    log.debug('zfs.%s_absent::%s::config::force = %s',
+              dataset_type, name, force)
+    log.debug('zfs.%s_absent::%s::config::recursive = %s',
+              dataset_type, name, recursive)
 
     # check name and type
     if dataset_type not in ['filesystem', 'volume', 'snapshot', 'bookmark']:
@@ -222,8 +224,10 @@ def hold_absent(name, snapshot, recursive=False):
            'result': True,
            'comment': ''}
 
-    log.debug('zfs.hold_absent::{0}::config::snapshot = {1}'.format(name, snapshot))
-    log.debug('zfs.hold_absent::{0}::config::recursive = {1}'.format(name, recursive))
+    log.debug('zfs.hold_absent::%s::config::snapshot = %s',
+              name, snapshot)
+    log.debug('zfs.hold_absent::%s::config::recursive = %s',
+              name, recursive)
 
     # check name and type
     if '@' not in snapshot:
@@ -279,8 +283,10 @@ def hold_present(name, snapshot, recursive=False):
            'result': True,
            'comment': ''}
 
-    log.debug('zfs.hold_present::{0}::config::snapshot = {1}'.format(name, snapshot))
-    log.debug('zfs.hold_present::{0}::config::recursive = {1}'.format(name, recursive))
+    log.debug('zfs.hold_present::%s::config::snapshot = %s',
+              name, snapshot)
+    log.debug('zfs.hold_present::%s::config::recursive = %s',
+              name, recursive)
 
     # check name and type
     if '@' not in snapshot:
@@ -352,9 +358,12 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
     if not properties:
         properties = {}
 
-    log.debug('zfs.filesystem_present::{0}::config::create_parent = {1}'.format(name, create_parent))
-    log.debug('zfs.filesystem_present::{0}::config::cloned_from = {1}'.format(name, cloned_from))
-    log.debug('zfs.filesystem_present::{0}::config::properties = {1}'.format(name, properties))
+    log.debug('zfs.filesystem_present::%s::config::create_parent = %s',
+              name, create_parent)
+    log.debug('zfs.filesystem_present::%s::config::cloned_from = %s',
+              name, cloned_from)
+    log.debug('zfs.filesystem_present::%s::config::properties = %s',
+              name, properties)
 
     for prop in properties:
         properties[prop] = _conform_value(properties[prop], True)
@@ -472,11 +481,16 @@ def volume_present(name, volume_size, sparse=False, create_parent=False, propert
     if not properties:
         properties = {}
 
-    log.debug('zfs.volume_present::{0}::config::volume_size = {1}'.format(name, volume_size))
-    log.debug('zfs.volume_present::{0}::config::sparse = {1}'.format(name, sparse))
-    log.debug('zfs.volume_present::{0}::config::create_parent = {1}'.format(name, create_parent))
-    log.debug('zfs.volume_present::{0}::config::cloned_from = {1}'.format(name, cloned_from))
-    log.debug('zfs.volume_present::{0}::config::properties = {1}'.format(name, properties))
+    log.debug('zfs.volume_present::%s::config::volume_size = %s',
+              name, volume_size)
+    log.debug('zfs.volume_present::%s::config::sparse = %s',
+              name, sparse)
+    log.debug('zfs.volume_present::%s::config::create_parent = %s',
+              name, create_parent)
+    log.debug('zfs.volume_present::%s::config::cloned_from = %s',
+              name, cloned_from)
+    log.debug('zfs.volume_present::%s::config::properties = %s',
+              name, properties)
 
     volume_size = _conform_value(volume_size, True)
     for prop in properties:
@@ -572,7 +586,8 @@ def bookmark_present(name, snapshot):
            'result': True,
            'comment': ''}
 
-    log.debug('zfs.bookmark_present::{0}::config::snapshot = {1}'.format(name, snapshot))
+    log.debug('zfs.bookmark_present::%s::config::snapshot = %s',
+              name, snapshot)
 
     if '@' not in snapshot:
         ret['result'] = False
@@ -627,8 +642,10 @@ def snapshot_present(name, recursive=False, properties=None):
     if not properties:
         properties = {}
 
-    log.debug('zfs.snapshot_present::{0}::config::recursive = {1}'.format(name, recursive))
-    log.debug('zfs.snapshot_present::{0}::config::properties = {1}'.format(name, properties))
+    log.debug('zfs.snapshot_present::%s::config::recursive = %s',
+              name, recursive)
+    log.debug('zfs.snapshot_present::%s::config::properties = %s',
+              name, properties)
 
     for prop in properties:
         properties[prop] = _conform_value(properties[prop], True)
@@ -775,9 +792,12 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
         ret['result'] = False
 
     # print debug info
-    log.debug('zfs.scheduled_snapshot::{0}::config::recursive = {1}'.format(name, recursive))
-    log.debug('zfs.scheduled_snapshot::{0}::config::prefix = {1}'.format(name, prefix))
-    log.debug('zfs.scheduled_snapshot::{0}::config::schedule = {1}'.format(name, schedule))
+    log.debug('zfs.scheduled_snapshot::%s::config::recursive = %s',
+              name, recursive)
+    log.debug('zfs.scheduled_snapshot::%s::config::prefix = %s',
+              name, prefix)
+    log.debug('zfs.scheduled_snapshot::%s::config::schedule = %s',
+              name, schedule)
 
     ## manage snapshots
     if ret['result']:
@@ -802,7 +822,8 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
                     if hold not in snapshots.keys():
                         continue
                     snapshots[hold].append(snap)
-        log.debug('zfs.scheduled_snapshot::{0}::snapshots = {1}'.format(name, snapshots))
+        log.debug('zfs.scheduled_snapshot::%s::snapshots = %s',
+                  name, snapshots)
 
         # create snapshot
         needed_holds = []
@@ -842,7 +863,8 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
                     if current_timestamp.tm_year <= timestamp.tm_year:
                         continue
                 else:
-                    log.debug('zfs.scheduled_snapshot::{0}::hold_unknown = {1}'.format(name, hold))
+                    log.debug('zfs.scheduled_snapshot::%s::hold_unknown = %s',
+                              name, hold)
 
             # mark snapshot for hold as needed
             needed_holds.append(hold)
@@ -851,7 +873,8 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
             prefix=prefix,
             timestamp=strftime('%Y%m%d_%H%M%S')
         )
-        log.debug('zfs.scheduled_snapshot::{0}::needed_holds = {1}'.format(name, needed_holds))
+        log.debug('zfs.scheduled_snapshot::%s::needed_holds = %s',
+                  name, needed_holds)
         if len(needed_holds) > 0:
             snap = '{dataset}@{snapshot}'.format(dataset=name, snapshot=snap_name)
             res = __salt__['zfs.snapshot'](snap, **{'recursive': recursive})

@@ -811,7 +811,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         return status
 
 
-def main():
+def main(**kwargs):
     '''
     Parse command line options for running specific tests
     '''
@@ -822,6 +822,12 @@ def main():
             tests_logfile=os.path.join(SYS_TMP_DIR, 'salt-runtests.log')
         )
         parser.parse_args()
+
+        # Override parser options (helpful when importing runtests.py and
+        # running from within a REPL). Using kwargs.items() to avoid importing
+        # six, as this feature will rarely be used.
+        for key, val in kwargs.items():
+            setattr(parser.options, key, val)
 
         overall_status = []
         if parser.options.interactive:

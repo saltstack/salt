@@ -26,7 +26,8 @@ configuration file.
 '''
 
 # Import Python libs
-from __future__ import absolute_import, generators, with_statement
+from __future__ import absolute_import, generators, with_statement, \
+    unicode_literals, print_function
 import time
 import logging
 import salt
@@ -864,7 +865,7 @@ def config_test(syslog_ng_sbin_dir=None, cfgfile=None):
                                             'syslog-ng',
                                             params)
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=-1, stderr=six.text_type(err))
 
     retcode = ret.get('retcode', -1)
     stderr = ret.get('stderr', None)
@@ -890,7 +891,7 @@ def version(syslog_ng_sbin_dir=None):
                                             'syslog-ng',
                                             ('-V',))
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=-1, stderr=six.text_type(err))
 
     if ret['retcode'] != 0:
         return _format_return_data(ret['retcode'],
@@ -923,7 +924,7 @@ def modules(syslog_ng_sbin_dir=None):
                                             'syslog-ng',
                                             ('-V',))
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=-1, stderr=six.text_type(err))
 
     if ret['retcode'] != 0:
         return _format_return_data(ret['retcode'],
@@ -957,7 +958,7 @@ def stats(syslog_ng_sbin_dir=None):
                                             'syslog-ng-ctl',
                                             ('stats',))
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=-1, stderr=six.text_type(err))
 
     return _format_return_data(ret['retcode'],
                                ret.get('stdout'),
@@ -1176,13 +1177,13 @@ def _write_config(config, newlines=2):
 
     try:
         with salt.utils.files.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as fha:
-            fha.write(text)
+            fha.write(salt.utils.stringutils.to_str(text))
 
             for _ in range(0, newlines):
-                fha.write(os.linesep)
+                fha.write(salt.utils.stringutils.to_str(os.linesep))
         return True
     except Exception as err:
-        log.error(str(err))
+        log.error(six.text_type(err))
         return False
 
 
@@ -1206,9 +1207,8 @@ def write_version(name):
     try:
         if os.path.exists(__SYSLOG_NG_CONFIG_FILE):
             log.debug(
-                'Removing previous configuration file: {0}'.format(
-                    __SYSLOG_NG_CONFIG_FILE
-                )
+                'Removing previous configuration file: %s',
+                __SYSLOG_NG_CONFIG_FILE
             )
             os.remove(__SYSLOG_NG_CONFIG_FILE)
             log.debug('Configuration file successfully removed')
@@ -1220,7 +1220,7 @@ def write_version(name):
         return _format_state_result(name, result=True)
     except OSError as err:
         log.error(
-            'Failed to remove previous configuration file \'{0}\': {1}'
-            .format(__SYSLOG_NG_CONFIG_FILE, str(err))
+            'Failed to remove previous configuration file \'%s\': %s',
+            __SYSLOG_NG_CONFIG_FILE, err
         )
         return _format_state_result(name, result=False)
