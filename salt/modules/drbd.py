@@ -8,6 +8,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 def _analyse_overview_field(content):
     if "(" in content:
         # Output like "Connected(2*)" or "UpToDate(2*)"
@@ -17,6 +18,7 @@ def _analyse_overview_field(content):
         return content.split("/")[0], content.split("/")[1]
 
     return content, ""
+
 
 def overview():
     '''
