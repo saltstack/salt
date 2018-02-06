@@ -865,12 +865,15 @@ def genrepo(**kwargs):
     repo_details = _get_repo_details(saltenv)
 
     for root, _, files in os.walk(repo_details.local_dest, followlinks=False):
-        short_path = os.path.relpath(root, repo_details.local_dest)
-        if short_path == '.':
-            short_path = ''
+
+        # Skip hidden directories (.git)
         if re.search(r'[\\/]\..*', root):
             log.debug('Skipping files in directory: {0}'.format(root))
             continue
+
+        short_path = os.path.relpath(root, repo_details.local_dest)
+        if short_path == '.':
+            short_path = ''
 
         for name in files:
             if name.endswith('.sls'):
