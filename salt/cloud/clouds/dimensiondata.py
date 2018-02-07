@@ -220,7 +220,6 @@ def create(vm_):
 
     log.info('Creating Cloud VM %s', vm_['name'])
     conn = get_conn()
-    rootPw = NodeAuthPassword(vm_['auth'])
 
     location = conn.ex_get_location_by_id(vm_['location'])
     images = conn.list_images(location=location)
@@ -251,7 +250,6 @@ def create(vm_):
     kwargs = {
         'name': vm_['name'],
         'image': image,
-        'auth': rootPw,
         'ex_description': vm_['description'],
         'ex_network_domain': network_domain,
         'ex_vlan': vlan,
@@ -259,7 +257,6 @@ def create(vm_):
     }
 
     event_data = _to_event_data(kwargs)
-    del event_data['auth']
 
     __utils__['cloud.fire_event'](
         'event',
@@ -269,6 +266,10 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
+
+    # Initial password (excluded from event payload)
+    rootPw = NodeAuthPassword(vm_['auth'])
+    kwargs['auth'] = rootPw
 
     try:
         data = conn.create_node(**kwargs)
