@@ -151,6 +151,44 @@ class Schedule(object):
             schedule.update(opts_schedule)
         return schedule
 
+    def _check_max_running(self, func, data, opts):
+        '''
+        Return the schedule data structure
+        '''
+        # Check to see if there are other jobs with this
+        # signature running.  If there are more than maxrunning
+        # jobs present then don't start another.
+        # If jid_include is False for this job we can ignore all this
+        # NOTE--jid_include defaults to True, thus if it is missing from the data
+        # dict we treat it like it was there and is True
+        data['run'] = True
+        if 'jid_include' not in data or data['jid_include']:
+            jobcount = 0
+            for job in salt.utils.minion.running(self.opts):
+                if 'schedule' in job:
+                    log.debug(
+                        'schedule.handle_func: Checking job against fun '
+                        '%s: %s', func, job
+                    )
+                    if data['name'] == job['schedule'] \
+                            and salt.utils.process.os_is_running(job['pid']):
+                        jobcount += 1
+                        log.debug(
+                            'schedule.handle_func: Incrementing jobcount, '
+                            'now %s, maxrunning is %s',
+                            jobcount, data['maxrunning']
+                        )
+                        if jobcount >= data['maxrunning']:
+                            log.debug(
+                                'schedule.handle_func: The scheduled job '
+                                '%s was not started, %s already running',
+                                data['name'], data['maxrunning']
+                            )
+                            data['_skip_reason'] = 'maxrunning'
+                            data['run'] = False
+                            return data
+        return data
+
     def persist(self):
         '''
         Persist the modified schedule into <<configdir>>/<<default_include>>/_schedule.conf
@@ -350,22 +388,27 @@ class Schedule(object):
             data['name'] = name
         log.info('Running Job: %s', name)
 
-        multiprocessing_enabled = self.opts.get('multiprocessing', True)
-        if multiprocessing_enabled:
-            thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
-        else:
-            thread_cls = threading.Thread
+        if not self.standalone:
+            data = self._check_max_running(func, data, self.opts)
 
-        if multiprocessing_enabled:
-            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+        run = data['run']
+        if run:
+            multiprocessing_enabled = self.opts.get('multiprocessing', True)
+            if multiprocessing_enabled:
+                thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+            else:
+                thread_cls = threading.Thread
+
+            if multiprocessing_enabled:
+                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                    # Reset current signals before starting the process in
+                    # order not to inherit the current signal handlers
+                    proc.start()
+                proc.join()
+            else:
                 proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                # Reset current signals before starting the process in
-                # order not to inherit the current signal handlers
                 proc.start()
-            proc.join()
-        else:
-            proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-            proc.start()
 
     def enable_schedule(self):
         '''
@@ -537,36 +580,6 @@ class Schedule(object):
                 salt.minion.get_proc_dir(self.opts['cachedir']),
                 ret['jid']
             )
-
-            # Check to see if there are other jobs with this
-            # signature running.  If there are more than maxrunning
-            # jobs present then don't start another.
-            # If jid_include is False for this job we can ignore all this
-            # NOTE--jid_include defaults to True, thus if it is missing from the data
-            # dict we treat it like it was there and is True
-            if 'jid_include' not in data or data['jid_include']:
-                jobcount = 0
-                for job in salt.utils.minion.running(self.opts):
-                    if 'schedule' in job:
-                        log.debug(
-                            'schedule.handle_func: Checking job against fun '
-                            '%s: %s', ret['fun'], job
-                        )
-                        if ret['schedule'] == job['schedule'] \
-                                and salt.utils.process.os_is_running(job['pid']):
-                            jobcount += 1
-                            log.debug(
-                                'schedule.handle_func: Incrementing jobcount, '
-                                'now %s, maxrunning is %s',
-                                jobcount, data['maxrunning']
-                            )
-                            if jobcount >= data['maxrunning']:
-                                log.debug(
-                                    'schedule.handle_func: The scheduled job '
-                                    '%s was not started, %s already running',
-                                    ret['schedule'], data['maxrunning']
-                                )
-                                return False
 
         if multiprocessing_enabled and not salt.utils.platform.is_windows():
             # Reconfigure multiprocessing logging after daemonizing
@@ -786,6 +799,11 @@ class Schedule(object):
                    'skip_function',
                    'skip_during_range']
         for job, data in six.iteritems(schedule):
+
+            # Clear out _skip_reason from previous runs
+            if '_skip_reason' in data:
+                del data['_skip_reason']
+
             run = False
 
             if job in _hidden and not data:
@@ -796,9 +814,6 @@ class Schedule(object):
                     'Scheduled job "%s" should have a dict value, not %s',
                     job, type(data)
                 )
-                continue
-            # Job is disabled, continue
-            if 'enabled' in data and not data['enabled']:
                 continue
             if 'function' in data:
                 func = data['function']
@@ -1182,6 +1197,7 @@ class Schedule(object):
                                     if now <= start or now >= end:
                                         run = True
                                     else:
+                                        data['_skip_reason'] = 'in_skip_range'
                                         run = False
                                 else:
                                     if start <= now <= end:
@@ -1191,6 +1207,7 @@ class Schedule(object):
                                             run = True
                                             func = self.skip_function
                                         else:
+                                            data['_skip_reason'] = 'not_in_range'
                                             run = False
                             else:
                                 log.error(
@@ -1257,6 +1274,7 @@ class Schedule(object):
                                         func = self.skip_function
                                     else:
                                         run = False
+                                    data['_skip_reason'] = 'in_skip_range'
                                     data['_skipped_time'] = now
                                     data['_skipped'] = True
                                 else:
@@ -1294,6 +1312,7 @@ class Schedule(object):
                                 func = self.skip_function
                             else:
                                 run = False
+                            data['_skip_reason'] = 'skip_explicit'
                             data['_skipped_time'] = now
                             data['_skipped'] = True
                         else:
