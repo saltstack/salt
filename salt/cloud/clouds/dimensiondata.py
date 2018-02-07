@@ -262,8 +262,8 @@ def create(vm_):
     )
 
     # Initial password (excluded from event payload)
-    rootPw = NodeAuthPassword(vm_['auth'])
-    kwargs['auth'] = rootPw
+    initial_password = NodeAuthPassword(vm_['auth'])
+    kwargs['auth'] = initial_password
 
     try:
         data = conn.create_node(**kwargs)
@@ -577,6 +577,7 @@ def get_lb_conn(dd_driver=None):
         )
     return get_driver_lb(Provider_lb.DIMENSIONDATA)(user_id, key, region=region)
 
+
 def _to_event_data(obj):
     '''
     Convert the specified object into a form that can be serialised by msgpack as event data.
@@ -599,7 +600,7 @@ def _to_event_data(obj):
     if isinstance(obj, dict):
         return obj
 
-    if isinstance(obj, NodeDriver): # Special case for NodeDriver (cyclic references)
+    if isinstance(obj, NodeDriver):  # Special case for NodeDriver (cyclic references)
         return obj.name
 
     if isinstance(obj, list):
@@ -612,7 +613,7 @@ def _to_event_data(obj):
 
         attribute_value = getattr(obj, attribute_name)
 
-        if callable(attribute_value): # Strip out methods
+        if callable(attribute_value):  # Strip out methods
             continue
 
         event_data[attribute_name] = _to_event_data(attribute_value)
