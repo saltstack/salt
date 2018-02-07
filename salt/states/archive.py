@@ -966,7 +966,7 @@ def extracted(name,
 
         if result['result']:
             # Get the path of the file in the minion cache
-            cached = __salt__['cp.is_cached'](source_match)
+            cached = __salt__['cp.is_cached'](source_match, saltenv=__env__)
         else:
             log.debug(
                 'failed to download %s',
