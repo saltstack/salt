@@ -56,6 +56,7 @@ import time
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
@@ -76,9 +77,7 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    if not HAS_BOTO3:
-        return (False, 'The boto3_route53 module could not be loaded: boto3 libraries not found')
-    return True
+    return salt.utils.versions.check_boto_reqs()
 
 
 def __init__(opts):

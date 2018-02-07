@@ -54,6 +54,7 @@ import time
 from salt.ext import six
 from salt.exceptions import SaltInvocationError
 import salt.utils.odict as odict
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -74,10 +75,13 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The model boto_elasticache could not be loaded: boto libraries not found')
-    __utils__['boto.assign_funcs'](__name__, 'elasticache', pack=__salt__)
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(
+        check_boto3=False
+    )
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'elasticache', pack=__salt__)
+
+    return has_boto_reqs
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):

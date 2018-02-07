@@ -830,17 +830,17 @@ def mod_repo(repo, **kwargs):
         the URL for zypper to reference
 
     enabled
-        enable or disable (True or False) repository,
+        Enable or disable (True or False) repository,
         but do not remove if disabled.
 
     refresh
-        enable or disable (True or False) auto-refresh of the repository.
+        Enable or disable (True or False) auto-refresh of the repository.
 
     cache
         Enable or disable (True or False) RPM files caching.
 
     gpgcheck
-        Enable or disable (True or False) GOG check for this repository.
+        Enable or disable (True or False) GPG check for this repository.
 
     gpgautoimport
         Automatically trust and import new repository.

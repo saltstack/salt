@@ -46,8 +46,8 @@ from salt.loader import minion_mods
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.utils.stringutils
+import salt.utils.versions
 
 # Import third party libs
 # pylint: disable=import-error
@@ -73,17 +73,12 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    # TODO: Determine minimal version we want to support. VPC requires > 2.8.0.
-    required_boto_version = '2.0.0'
-    if not HAS_BOTO:
-        return False
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return False
-    else:
+    has_boto_requirements = salt.utils.versions.check_boto_reqs(check_boto3=False)
+    if has_boto_requirements is True:
         global __salt__
         if not __salt__:
             __salt__ = minion_mods(__opts__)
-        return True
+    return has_boto_requirements
 
 
 def _get_profile(service, region, key, keyid, profile):
