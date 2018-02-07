@@ -1,17 +1,26 @@
 #-*- coding: utf-8 -*-
 '''
-Retrieve EC2 instance data for minions.
+Retrieve EC2 instance data for minions for ec2_tags and ec2_tags_list
 
-The minion id must be the AWS instance-id or value in tag_key (default Name).
-To use tag_key, need to set what standard is used for setting the tag.
-The value of tag_value can be 'uqdn' or 'asis'. if uqdn strips any domain before
-comparision.
+The minion id must be the AWS instance-id or value in 'tag_key'.
+For example set 'tag_key' to 'Name', to have the minion-id matched against the
+tag 'Name'. The tag contents must be unique.  The value of tag_value can
+be 'uqdn' or 'asis'. if 'uqdn' strips any domain before comparision.
+
 The option use_grain can be set to True.  This allows the use of an
 instance-id grain instead of the minion-id.  Since this is a potential
 security risk, the configuration can be further expanded to include
 a list of minions that are trusted to only allow the alternate id
 of the instances to specific hosts.  There is no glob matching at
-this time.  Note: restart the salt-master for changes to take effect.
+this time.
+
+The optional 'tag_list_key' indicates which keys should be added to
+'ec2_tags_list' and be split by tag_list_sep (default `;`). If a tag key is
+included in 'tag_list_key' it is removed from ec2_tags. If a tag does not
+exist it is still included as an empty list.
+
+
+  Note: restart the salt-master for changes to take effect.
 
 
 .. code-block:: yaml
@@ -20,6 +29,9 @@ this time.  Note: restart the salt-master for changes to take effect.
       - ec2_pillar:
           tag_key: 'Name'
           tag_value: 'asis'
+          tag_list_key:
+            - Role
+          tag_list_sep: ';'
           use_grain: True
           minion_ids:
             - trusted-minion-1
@@ -87,7 +99,9 @@ def ext_pillar(minion_id,
                use_grain=False,
                minion_ids=None,
                tag_key=None,
-               tag_value='asis'):
+               tag_value='asis',
+               tag_list_key=None,
+               tag_list_sep=';'):
     '''
     Execute a command and read the output as YAML
     '''
@@ -201,6 +215,16 @@ def ext_pillar(minion_id,
         return {}
 
     if instance.tags:
+        ec2_tags = instance.tags
+        ec2_tags_list = {}
         log.debug('External pillar {0}, for minion id \'{1}\', tags: {2}'.format(__name__, minion_id, instance.tags))
-        return {'ec2_tags': instance.tags}
+        if tag_list_key and isinstance(tag_list_key, list):
+            for item in tag_list_key:
+                if item in ec2_tags:
+                    ec2_tags_list[item] = ec2_tags[item].split(tag_list_sep)
+                    del ec2_tags[item]  # make sure its only in ec2_tags_list
+                else:
+                    ec2_tags_list[item] = []  # always return a result
+
+        return {'ec2_tags': ec2_tags, 'ec2_tags_list': ec2_tags_list}
     return {}
