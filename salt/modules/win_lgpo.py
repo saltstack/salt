@@ -2442,7 +2442,7 @@ class _policy_info(object):
                 elif ord(val) == 1:
                     return 'Enabled'
                 else:
-                    return 'Invalid Value'
+                    return 'Invalid Value: %s' % repr(val)
             else:
                 return 'Not Defined'
         except TypeError:
@@ -5047,7 +5047,10 @@ def get(policy_class=None, return_full_policy_names=True,
                     class_vals[policy_name] = __salt__['reg.read_value'](_pol['Registry']['Hive'],
                                                                          _pol['Registry']['Path'],
                                                                          _pol['Registry']['Value'])['vdata']
-                    log.debug('Value {0} found for reg policy {1}'.format(class_vals[policy_name], policy_name))
+                    log.debug(
+                        'Value {0} found for reg policy {1}'.format(
+                            salt.utils.to_unicode(class_vals[policy_name]),
+                            policy_name))
                 elif 'Secedit' in _pol:
                     # get value from secedit
                     _ret, _val = _findOptionValueInSeceditFile(_pol['Secedit']['Option'])
