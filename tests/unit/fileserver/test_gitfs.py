@@ -31,7 +31,6 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 import salt.utils.gitfs
 from salt.utils.gitfs import (
