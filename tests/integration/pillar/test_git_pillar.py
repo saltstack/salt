@@ -87,7 +87,6 @@ from tests.support.unit import skipIf
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
-from salt.utils.versions import LooseVersion
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.utils.gitfs import (
