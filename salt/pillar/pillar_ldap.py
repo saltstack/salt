@@ -153,21 +153,21 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
 
     salt-users:
         cn=johndoe,ou=users,dc=company,dc=tld:
-            cn: cn=johndoe,ou=users,dc=company,dc=tld
-            displayName: John Doe
-            givenName:   John
-            sn:          Doe
-            memberOf:
-                - cn=it-admins,ou=groups,dc=company,dc=tld
-                - cn=team01,ou=groups,dc=company
+            - cn: cn=johndoe,ou=users,dc=company,dc=tld
+              displayName: John Doe
+              givenName:   John
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team01,ou=groups,dc=company
         cn=janedoe,ou=users,dc=company,dc=tld:
-            cn: cn=janedoe,ou=users,dc=company,dc=tld
-            displayName: Jane Doe
-            givenName:   Jane
-            sn:          Doe
-            memberOf:
-                - cn=it-admins,ou=groups,dc=company,dc=tld
-                - cn=team02,ou=groups,dc=company
+            - cn: cn=janedoe,ou=users,dc=company,dc=tld
+              displayName: Jane Doe
+              givenName:   Jane
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team02,ou=groups,dc=company
 
 
   **Configuration:**
@@ -202,21 +202,21 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
 
     salt-users:
         John Doe:
-            dn: cn=johndoe,ou=users,dc=company,dc=tld
-            cn: cn=johndoe,ou=users,dc=company,dc=tld
-            givenName:   John
-            sn:          Doe
-            memberOf:
-                - cn=it-admins,ou=groups,dc=company,dc=tld
-                - cn=team01,ou=groups,dc=company
+            - dn: cn=johndoe,ou=users,dc=company,dc=tld
+              cn: cn=johndoe,ou=users,dc=company,dc=tld
+              givenName:   John
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team01,ou=groups,dc=company
         Jane Doe:
-            dn: cn=janedoe,ou=users,dc=company,dc=tld
-            cn: cn=janedoe,ou=users,dc=company,dc=tld
-            givenName:   Jane
-            sn:          Doe
-            memberOf:
-                - cn=it-admins,ou=groups,dc=company,dc=tld
-                - cn=team02,ou=groups,dc=company
+            - dn: cn=janedoe,ou=users,dc=company,dc=tld
+              cn: cn=janedoe,ou=users,dc=company,dc=tld
+              givenName:   Jane
+              sn:          Doe
+              memberOf:
+                  - cn=it-admins,ou=groups,dc=company,dc=tld
+                  - cn=team02,ou=groups,dc=company
 
 
 List Mode
@@ -343,16 +343,11 @@ def _result_to_dict(data, result, conf, source):
             if dict_key_attr in ['dn', 'distinguishedName']:
                 dict_key = distinguished_name
             else:
-                try:
-                    dict_key = record[dict_key_attr][-1]
-                except (KeyError, IndexError):
-                    log.warning('Key attribute %s not set in LDAP entry %s. Skipping it.',
-                                dict_key_attr, distinguished_name)
-                    continue
-            if dict_key not in data[source]:
-                data[source][dict_key] = ret
-            else:
-                log.warning('Pillar with key %s already defined.', record[dict_key_attr])
+                dict_key = ','.join(sorted(record.get(dict_key_attr, [])))
+            try:
+                data[source][dict_key].append(ret)
+            except KeyError:
+                data[source][dict_key] = [ret]
     elif mode == 'split':
         for key in result[0][1]:
             if key in attrs:
