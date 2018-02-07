@@ -806,7 +806,7 @@ class Schedule(object):
 
             run = False
 
-            if job in _hidden and not data:
+            if job in _hidden:
                 continue
 
             if not isinstance(data, dict):
@@ -1355,22 +1355,33 @@ class Schedule(object):
                 returners = self.returners
                 self.returners = {}
             try:
-                if multiprocessing_enabled:
-                    thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                # Job is disabled, continue
+                if 'enabled' in data and not data['enabled']:
+                    log.debug('Job: %s is disabled', job)
+                    data['_skip_reason'] = 'disabled'
+                    continue
                 else:
-                    thread_cls = threading.Thread
-                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                    if not self.standalone:
+                        data = self._check_max_running(func, data, self.opts)
 
-                if multiprocessing_enabled:
-                    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                        # Reset current signals before starting the process in
-                        # order not to inherit the current signal handlers
-                        proc.start()
-                else:
-                    proc.start()
+                    run = data['run']
+                    if run:
+                        if multiprocessing_enabled:
+                            thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                        else:
+                            thread_cls = threading.Thread
+                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
 
-                if multiprocessing_enabled:
-                    proc.join()
+                        if multiprocessing_enabled:
+                            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                                # Reset current signals before starting the process in
+                                # order not to inherit the current signal handlers
+                                proc.start()
+                        else:
+                            proc.start()
+
+                        if multiprocessing_enabled:
+                            proc.join()
             finally:
                 if '_seconds' in data:
                     data['_next_fire_time'] = now + data['_seconds']
