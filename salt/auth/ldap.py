@@ -13,6 +13,7 @@ from salt.ext import six
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.stringutils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 # Import third party libs
@@ -40,6 +41,7 @@ __defopts__ = {'auth.ldap.basedn': '',
                'auth.ldap.persontype': 'person',
                'auth.ldap.groupclass': 'posixGroup',
                'auth.ldap.activedirectory': False,
+               'auth.ldap.freeipa': False,
                'auth.ldap.minion_stripdomains': [],
                }
 
@@ -346,7 +348,7 @@ def groups(username, **kwargs):
                 return group_list
             for _, entry in search_results:
                 if 'cn' in entry:
-                    group_list.append(entry['cn'][0])
+                    group_list.append(salt.utils.stringutils.to_unicode(entry['cn'][0]))
             log.debug('User %s is a member of groups: %s', username, group_list)
 
         elif _config('freeipa'):
@@ -382,12 +384,12 @@ def groups(username, **kwargs):
                                             str('cn'),  # future lint: disable=blacklisted-function
                                             salt.utils.stringutils.to_str(_config('groupattribute'))])
             for _, entry in search_results:
-                if username in entry[_config('accountattributename')]:
-                    group_list.append(entry['cn'][0])
+                if username in salt.utils.data.decode(entry[_config('accountattributename')]):
+                    group_list.append(salt.utils.stringutils.to_unicode(entry['cn'][0]))
             for user, entry in search_results:
                 if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
-                    for group in entry[_config('groupattribute')]:
-                        group_list.append(group.split(',')[0].split('=')[-1])
+                    for group in salt.utils.data.decode(entry[_config('groupattribute')]):
+                        group_list.append(salt.utils.stringutils.to_unicode(group).split(',')[0].split('=')[-1])
             log.debug('User %s is a member of groups: %s', username, group_list)
 
             # Only test user auth on first call for job.
