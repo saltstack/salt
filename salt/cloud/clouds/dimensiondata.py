@@ -52,12 +52,6 @@ try:
 except ImportError:
     HAS_LIBCLOUD = False
 
-# Import generic libcloud functions
-# from salt.cloud.libcloudfuncs import *
-
-# Import salt libs
-import salt.utils
-
 # Import salt.cloud libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.utils import namespaced_function
@@ -170,7 +164,7 @@ def _query_node_data(vm_, data):
             private_ip = preferred_ip(vm_, [private_ip])
             if private_ip is False:
                 continue
-            if salt.utils.cloud.is_public_ip(private_ip):
+            if __utils__['cloud.is_public_ip'](private_ip):
                 log.warning('%s is a public IP', private_ip)
                 data.public_ips.append(private_ip)
             else:
@@ -284,7 +278,7 @@ def create(vm_):
         return False
 
     try:
-        data = salt.utils.cloud.wait_for_ip(
+        data = __utils__['cloud.wait_for_ip'](
             _query_node_data,
             update_args=(vm_, data),
             timeout=config.get_cloud_config_value(
@@ -310,7 +304,7 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address %s', ip_address)
 
-    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
+    if __utils__['cloud.get_salt_interface'](vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info('Salt interface set to: %s', salt_ip_address)
     else:
@@ -326,7 +320,7 @@ def create(vm_):
     vm_['ssh_host'] = ip_address
     vm_['password'] = vm_['auth']
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     ret.update(data.__dict__)
 
