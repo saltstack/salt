@@ -99,6 +99,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'in_skip_range')
 
         # eval at 3:30pm, will run.
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 3:30pm').timetuple()))
@@ -131,6 +132,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'in_skip_range')
 
         # eval at 3:30pm, will run.
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 3:30pm').timetuple()))
@@ -164,6 +166,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'in_skip_range')
 
         # eval at 3:00:01pm, will run.
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 3:00:01pm').timetuple()))
