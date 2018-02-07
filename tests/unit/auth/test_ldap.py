@@ -11,6 +11,16 @@ import salt.auth.ldap
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import skipIf, TestCase
 
+class Bind(object):
+    @classmethod
+    def search_s(*args, **kwargs):
+        return [
+            (
+                'cn=saltusers,cn=groups,cn=compat,dc=saltstack,dc=com',
+                {'memberUid': [b'saltuser'], 'cn': [b'saltusers']},
+            ),
+        ]
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.auth.ldap.HAS_LDAP, 'Install python-ldap for this test')
@@ -42,41 +52,14 @@ class LDAPAuthTestCase(TestCase):
 
     def test_groups_freeipa(self):
         salt.auth.ldap.__opts__['auth.ldap.freeipa'] = True
-        class Bind(object):
-            @classmethod
-            def search_s(*args, **kwargs):
-                return [
-                    (
-                        'cn=saltusers,cn=groups,cn=compat,dc=saltstack,dc=com',
-                        {'memberUid': [b'saltuser'], 'cn': [b'saltusers']},
-                    ),
-                ]
         with patch('salt.auth.ldap.auth', return_value=Bind):
             self.assertIn('saltusers', salt.auth.ldap.groups('saltuser', password='password'))
 
     def test_groups(self):
-        class Bind(object):
-            @classmethod
-            def search_s(*args, **kwargs):
-                return [
-                    (
-                        'cn=saltusers,cn=users,cn=compat,dc=saltstack,dc=com',
-                        {'memberUid': [b'saltuser'], 'cn': [b'saltusers']},
-                    ),
-                ]
         with patch('salt.auth.ldap.auth', return_value=Bind):
             self.assertIn('saltusers', salt.auth.ldap.groups('saltuser', password='password'))
 
     def test_groups_activedirectory(self):
         salt.auth.ldap.__opts__['auth.ldap.activedirectory'] = True
-        class Bind(object):
-            @classmethod
-            def search_s(*args, **kwargs):
-                return [
-                    (
-                        'cn=saltusers,cn=users,cn=compat,dc=saltstack,dc=com',
-                        {'memberUid': [b'saltuser'], 'cn': [b'saltusers']},
-                    ),
-                ]
         with patch('salt.auth.ldap.auth', return_value=Bind):
             self.assertIn('saltusers', salt.auth.ldap.groups('saltuser', password='password'))
