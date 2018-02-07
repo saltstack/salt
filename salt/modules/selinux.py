@@ -469,10 +469,10 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
 
     parts = re.match(r'^({filespec}) +([a-z ]+) (.*)$'.format(**{'filespec': re.escape(name)}), current_entry_text)
     ret = {
-        'filespec': parts.group(1),
-        'filetype': parts.group(2),
+        'filespec': parts.group(1).strip(),
+        'filetype': parts.group(2).strip(),
     }
-    ret.update(_context_string_to_dict(parts.group(3)))
+    ret.update(_context_string_to_dict(parts.group(3).strip()))
 
     return ret
 
