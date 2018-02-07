@@ -76,18 +76,25 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
 
         self.flatten_mapping(node)
 
+        context = 'while constructing a mapping'
         mapping = self.dictclass()
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)
             try:
                 hash(key)
             except TypeError:
-                err = ('While constructing a mapping {0} found unacceptable '
-                       'key {1}').format(node.start_mark, key_node.start_mark)
-                raise ConstructorError(err)
+                raise ConstructorError(
+                    context,
+                    node.start_mark,
+                    "found unacceptable key {0}".format(key_node.value),
+                    key_node.start_mark)
             value = self.construct_object(value_node, deep=deep)
             if key in mapping:
-                raise ConstructorError('Conflicting ID \'{0}\''.format(key))
+                raise ConstructorError(
+                    context,
+                    node.start_mark,
+                    "found conflicting ID '{0}'".format(key),
+                    key_node.start_mark)
             mapping[key] = value
         return mapping
 

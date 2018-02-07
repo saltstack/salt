@@ -95,41 +95,6 @@ class AliasedModule(object):
         return getattr(self.wrapped, name)
 
 
-def get_context(template, line, num_lines=5, marker=None):
-    '''
-    Returns debugging context around a line in a given string
-
-    Returns:: string
-    '''
-    template_lines = template.splitlines()
-    num_template_lines = len(template_lines)
-
-    # in test, a single line template would return a crazy line number like,
-    # 357.  do this sanity check and if the given line is obviously wrong, just
-    # return the entire template
-    if line > num_template_lines:
-        return template
-
-    context_start = max(0, line - num_lines - 1)  # subt 1 for 0-based indexing
-    context_end = min(num_template_lines, line + num_lines)
-    error_line_in_context = line - context_start - 1  # subtr 1 for 0-based idx
-
-    buf = []
-    if context_start > 0:
-        buf.append('[...]')
-        error_line_in_context += 1
-
-    buf.extend(template_lines[context_start:context_end])
-
-    if context_end < num_template_lines:
-        buf.append('[...]')
-
-    if marker:
-        buf[error_line_in_context] += marker
-
-    return '---\n{0}\n---'.format('\n'.join(buf))
-
-
 def wrap_tmpl_func(render_str):
 
     def render_tmpl(tmplsrc,
@@ -315,7 +280,7 @@ def _get_jinja_error(trace, context=None):
             out = '\n{0}\n'.format(msg.splitlines()[0])
             with salt.utils.files.fopen(template_path) as fp_:
                 template_contents = salt.utils.stringutils.to_unicode(fp_.read())
-            out += get_context(
+            out += salt.utils.stringutils.get_context(
                 template_contents,
                 line,
                 marker='    <======================')
@@ -417,15 +382,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         template = jinja_env.from_string(tmplstr)
         template.globals.update(decoded_context)
         output = template.render(**decoded_context)
-    except jinja2.exceptions.TemplateSyntaxError as exc:
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=decoded_context)
-        if not line:
-            tmplstr = ''
-        raise SaltRenderError(
-            'Jinja syntax error: {0}{1}'.format(exc, out),
-            line,
-            tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         out = _get_jinja_error(trace, context=decoded_context)[1]
@@ -436,6 +392,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             'Jinja variable {0}{1}'.format(
                 exc, out),
             buf=tmplstr)
+    except (jinja2.exceptions.TemplateRuntimeError,
+            jinja2.exceptions.TemplateSyntaxError) as exc:
+        trace = traceback.extract_tb(sys.exc_info()[2])
+        line, out = _get_jinja_error(trace, context=decoded_context)
+        if not line:
+            tmplstr = ''
+        raise SaltRenderError(
+            'Jinja syntax error: {0}{1}'.format(exc, out),
+            line,
+            tmplstr)
     except (SaltInvocationError, CommandExecutionError) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=decoded_context)
