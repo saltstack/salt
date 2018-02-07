@@ -231,8 +231,6 @@ def broadcast_setting_change(message='Environment'):
             - a leaf node in the registry
             - the name of a section in the ``Win.ini`` file
 
-            `See here <https://msdn.microsoft.com/en-us/library/ms725497%28VS.85%29.aspx>`
-
             See lParam within msdn docs for
             `WM_SETTINGCHANGE <https://msdn.microsoft.com/en-us/library/ms725497%28VS.85%29.aspx>`
             for more information on Broadcasting Messages.
