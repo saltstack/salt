@@ -258,6 +258,25 @@ def broadcast_setting_change(message='Environment'):
         import salt.utils.win_functions
         salt.utils.win_functions.refresh_environment()
     '''
+    # Listen for messages sent by this would involve working with the
+    # SetWindowLong function. This can be accessed via the win32gui or through
+    # ctypes. You can find examples on how to do this by searching for
+    # `Accessing WGL_WNDPROC` on the internet. Here are some examples of how
+    # this might work:
+    #
+    # # using win32gui
+    # import win32con
+    # import win32gui
+    # old_function = win32gui.SetWindowLong(window_handle, win32con.GWL_WNDPROC, new_function)
+    #
+    # # using ctypes
+    # import ctypes
+    # import win32con
+    # from ctypes import c_long, c_int
+    # user32 = ctypes.WinDLL('user32', use_last_error=True)
+    # WndProcType = ctypes.WINFUNCTYPE(c_int, c_long, c_int, c_int)
+    # new_function = WndProcType
+    # old_function = user32.SetWindowLongW(window_handle, win32con.GWL_WNDPROC, new_function)
     broadcast_message = ctypes.create_unicode_buffer(message)
     user32 = ctypes.WinDLL('user32', use_last_error=True)
     result = user32.SendMessageTimeoutW(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
