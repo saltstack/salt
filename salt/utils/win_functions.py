@@ -233,12 +233,23 @@ def broadcast_setting_change(message='Environment'):
 
             `See here <https://msdn.microsoft.com/en-us/library/ms725497%28VS.85%29.aspx>`
 
+            See lParam within msdn docs for
+            `WM_SETTINGCHANGE <https://msdn.microsoft.com/en-us/library/ms725497%28VS.85%29.aspx>`
+            for more information on Broadcasting Messages.
+
+            See GWL_WNDPROC within msdn docs for
+            `SetWindowLong <https://msdn.microsoft.com/en-us/library/windows/desktop/ms633591(v=vs.85).aspx>`
+            for information on how to retrieve those messages.
+
     .. note::
         This will only affect new processes that aren't launched by services. To
         apply changes to the path or registry to services, the host must be
         restarted. The ``salt-minion``, if running as a service, will not see
-        changes to the environment until the system is restarted. See
+        changes to the environment until the system is restarted. Services
+        inherit their environment from ``services.exe`` which does not respond
+        to messaging events. See
         `MSDN Documentation <https://support.microsoft.com/en-us/help/821761/changes-that-you-make-to-environment-variables-do-not-affect-services>`
+        for more information.
 
     CLI Example:
 
