@@ -56,7 +56,7 @@ class DimensionDataTest(ShellCase):
         key = config[profile_str][PROVIDER_NAME]['key']
         region = config[profile_str][PROVIDER_NAME]['region']
 
-        if personal_token == '' or ssh_file == '' or ssh_name == '':
+        if user_id == '' or key == '' or region == '':
             self.skipTest(
                 'A user Id, password, and a region '
                 'must be provided to run these tests. Check '
