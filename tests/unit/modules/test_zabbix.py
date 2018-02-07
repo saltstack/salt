@@ -196,6 +196,120 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(zabbix, '_login', return_value={**conn_args}):
                 self.assertEqual(zabbix.user_list(**conn_args), module_return)
 
+    def test_usergroup_create(self):
+        #query_submitted = {"params": {"name": "testgroup"}, "jsonrpc": "2.0", "id": 0, "auth": "7f3ac5e90201e5de4eb19e5322606575", "method": "usergroup.create"}
+
+        module_return = ["13"]
+        query_return = {"jsonrpc":"2.0","result":{"usrgrpids":["13"]},"id":0}
+
+        with patch.object(zabbix, '_query', return_value=query_return):
+            with patch.object(zabbix, '_login', return_value={**conn_args}):
+                self.assertEqual(zabbix.usergroup_create('testgroup', **conn_args), module_return)
+
+    def test_usergroup_delete(self):
+        #query_submitted = {"params": [13], "jsonrpc": "2.0", "id": 0, "auth": "9bad39de2a5a9211da588dd06dad8773", "method": "usergroup.delete"}
+
+        module_return = ['13']
+        query_return = {"jsonrpc":"2.0","result":{"usrgrpids":["13"]},"id":0}
+
+        with patch.object(zabbix, '_query', return_value=query_return):
+            with patch.object(zabbix, '_login', return_value={**conn_args}):
+                self.assertEqual(zabbix.usergroup_delete('13', **conn_args), module_return)
+
+    def test_usergroup_exists(self):
+        #query_submitted = {"params": {"filter": {"name": "testgroup"}, "output": "extend", "selectRights": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "e62424cd7aa71f6748e1d69c190ac852", "method": "usergroup.get"}
+
+        module_return = True
+        query_return = {"jsonrpc":"2.0","result":[{"usrgrpid":"13","name":"testgroup","gui_access":"0","users_status":"0","debug_mode":"0","rights":[]}],"id":0}
+
+        with patch.object(zabbix, 'apiinfo_version', return_value='3.2'):
+            with patch.object(zabbix, '_query', return_value=query_return):
+                with patch.object(zabbix, '_login', return_value={**conn_args}):
+                    self.assertEqual(zabbix.usergroup_exists('testgroup', **conn_args), module_return)
+
+    def test_usergroup_get(self):
+        #query_submitted = {"params": {"filter": {"name": "testgroup"}, "output": "extend", "selectRights": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "739cf358050f2a2d33162fdcfa714a3c", "method": "usergroup.get"}
+
+        module_return = [
+            {
+                "name": "testgroup",
+                "rights": [],
+                "users_status": "0",
+                "gui_access": "0",
+                "debug_mode": "0",
+                "usrgrpid": "13"
+            }
+        ]
+        query_return = {"jsonrpc":"2.0","result":[{"usrgrpid":"13","name":"testgroup","gui_access":"0","users_status":"0","debug_mode":"0","rights":[]}],"id":0}
+
+        with patch.object(zabbix, 'apiinfo_version', return_value='3.2'):
+            with patch.object(zabbix, '_query', return_value=query_return):
+                with patch.object(zabbix, '_login', return_value={**conn_args}):
+                    self.assertEqual(zabbix.usergroup_get('testgroup', **conn_args), module_return)
+
+    def test_usergroup_update(self):
+        #query_submitted = {"params": {"usrgrpid": 13, "users_status": 1}, "jsonrpc": "2.0", "id": 0, "auth": "ef772237245f59f655871bc8fbbcd67c", "method": "usergroup.update"}
+
+        module_return = ["13"]
+        query_return = {"jsonrpc":"2.0","result":{"usrgrpids":["13"]},"id":0}
+
+        with patch.object(zabbix, '_query', return_value=query_return):
+            with patch.object(zabbix, '_login', return_value={**conn_args}):
+                self.assertEqual(zabbix.usergroup_update('13', users_status='1', **conn_args), module_return)
+
+    def test_usergroup_list(self):
+        #query_submitted = {"params": {"output": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "4bc366bc7803c07e80f15b1bc14dc61f", "method": "usergroup.get"}
+
+        module_return = [
+            {
+                "usrgrpid": "7",
+                "gui_access": "0",
+                "debug_mode": "0",
+                "name": "Zabbix administrators",
+                "users_status": "0"
+            },
+            {
+                "usrgrpid": "8",
+                "gui_access": "0",
+                "debug_mode": "0",
+                "name": "Guests",
+                "users_status": "0"
+            },
+            {
+                "usrgrpid": "9",
+                "gui_access": "0",
+                "debug_mode": "0",
+                "name": "Disabled",
+                "users_status": "1"
+            },
+            {
+                "usrgrpid": "11",
+                "gui_access": "0",
+                "debug_mode": "1",
+                "name": "Enabled debug mode",
+                "users_status": "0"
+            },
+            {
+                "usrgrpid": "12",
+                "gui_access": "2",
+                "debug_mode": "0",
+                "name": "No access to the frontend",
+                "users_status": "0"
+            },
+            {
+                "usrgrpid": "13",
+                "gui_access": "0",
+                "debug_mode": "0",
+                "name": "testgroup",
+                "users_status": "0"
+            }
+        ]
+        query_return = {"jsonrpc":"2.0","result":[{"usrgrpid":"7","name":"Zabbix administrators","gui_access":"0","users_status":"0","debug_mode":"0"},{"usrgrpid":"8","name":"Guests","gui_access":"0","users_status":"0","debug_mode":"0"},{"usrgrpid":"9","name":"Disabled","gui_access":"0","users_status":"1","debug_mode":"0"},{"usrgrpid":"11","name":"Enabled debug mode","gui_access":"0","users_status":"0","debug_mode":"1"},{"usrgrpid":"12","name":"No access to the frontend","gui_access":"2","users_status":"0","debug_mode":"0"},{"usrgrpid":"13","name":"testgroup","gui_access":"0","users_status":"0","debug_mode":"0"}],"id":0}
+
+        with patch.object(zabbix, '_query', return_value=query_return):
+            with patch.object(zabbix, '_login', return_value={**conn_args}):
+                self.assertEqual(zabbix.usergroup_list(**conn_args), module_return)
+
     def test_host_inventory_get(self):
         module_return = {
             "poc_2_email": "",
