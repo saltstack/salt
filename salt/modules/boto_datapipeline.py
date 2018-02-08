@@ -6,11 +6,14 @@ Connection module for Amazon Data Pipeline
 
 :depends: boto3
 '''
-from __future__ import absolute_import, print_function, unicode_literals
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
+# Import Salt libs
 from salt.ext import six
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -28,10 +31,7 @@ def __virtual__():
     '''
     Only load if boto3 libraries exists.
     '''
-    if not HAS_BOTO3:
-        return (False, 'The boto_datapipeline module could not be loaded: '
-                'boto libraries not found')
-    return True
+    return salt.utils.versions.check_boto_reqs(check_boto=False)
 
 
 def activate_pipeline(pipeline_id, region=None, key=None, keyid=None, profile=None):

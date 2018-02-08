@@ -95,7 +95,7 @@ echoinfo() {
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  echowarn
-#   DESCRIPTION:  Echo warning informations to stdout.
+#   DESCRIPTION:  Echo warning information to stdout.
 #----------------------------------------------------------------------------------------------------------------------
 echowarn() {
     printf "${YC} *  WARN${EC}: %s\n" "$@";
@@ -338,7 +338,7 @@ __usage() {
     -U  If set, fully upgrade the system prior to bootstrapping Salt
     -I  If set, allow insecure connections while downloading any files. For
         example, pass '--no-check-certificate' to 'wget' or '--insecure' to
-        'curl'. On Debian and Ubuntu, using this option with -U allows to obtain
+        'curl'. On Debian and Ubuntu, using this option with -U allows obtaining
         GnuPG archive keys insecurely if distro has changed release signatures.
     -F  Allow copied files to overwrite existing (config, init.d, etc)
     -K  If set, keep the temporary files in the temporary directories specified
