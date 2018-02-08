@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+    :codeauthor: :email:`Christian McHugh <christian.mchugh@gmail.com>`
+'''
 
 # Import python libs
 from __future__ import absolute_import
@@ -7,57 +10,87 @@ import salt.modules.zabbix as zabbix
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
-conn_args = {}
-conn_args['url'] = 'http://test.url'
-conn_args['auth'] = '1234'
+CONN_ARGS = {}
+CONN_ARGS['url'] = 'http://test.url'
+CONN_ARGS['auth'] = '1234'
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
+    '''
+    Test cases for salt.modules.zabbix
+    '''
+
     def setup_loader_modules(self):
         return {zabbix: {'__salt__': {'cmd.which_bin': lambda _: 'zabbix_server'}}}
 
-    def test_apiiinfo_version(self): 
+    def test_apiiinfo_version(self):
+        '''
+        Test apiinfo_version
+        '''
         module_return = "3.4.5"
-        query_return = {"jsonrpc":"2.0","result":"3.4.5","id":1}
+        query_return = {"jsonrpc": "2.0", "result": "3.4.5", "id": 1}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.apiinfo_version(**conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.apiinfo_version(**CONN_ARGS), module_return)
 
     def test_user_create(self):
-        #query_submitted = {"params": {"passwd": "password007", "alias": "james", "name": "James Bond", "usrgrps": [{"usrgrpid": 7}, {"usrgrpid": 12}]}, "jsonrpc": "2.0", "id": 0, "auth": "f016981c4f0d3f8b9682e34588fe8a33", "method": "user.create"}
+        '''
+        query_submitted = {"params": {"passwd": "password007", "alias": "james",
+        "name": "James Bond", "usrgrps": [{"usrgrpid": 7}, {"usrgrpid": 12}]},
+        "jsonrpc": "2.0", "id": 0, "auth": "f016981c4f0d3f8b9682e34588fe8a33",
+        "method": "user.create"}
+        '''
 
         module_return = ['3']
-        query_return = {"jsonrpc":"2.0","result":{"userids":["3"]},"id":0}
+        query_return = {"jsonrpc": "2.0", "result": {"userids": ["3"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.user_create('james', 'password007', '[7, 12]', firstname='James Bond', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.user_create('james', 'password007', '[7, 12]',
+                                 firstname='James Bond', **CONN_ARGS), module_return)
 
     def test_user_delete(self):
-        #query_submitted = {"params": [3], "jsonrpc": "2.0", "id": 0, "auth": "68d38eace8e42a35c8d0c6a2ab0245a6", "method": "user.delete"}
+        '''
+        query_submitted = {"params": [3], "jsonrpc": "2.0", "id": 0,
+        "auth": "68d38eace8e42a35c8d0c6a2ab0245a6", "method": "user.delete"}
+        '''
 
         module_return = ['3']
-        query_return = {"jsonrpc":"2.0","result":{"userids":["3"]},"id":0}
+        query_return = {"jsonrpc": "2.0", "result": {"userids": ["3"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.user_delete(3, **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.user_delete(3, **CONN_ARGS), module_return)
 
     def test_user_exists(self):
-        #query_submitted = {"params": {"filter": {"alias": "Admin"}, "output": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "72435c7f754cb2adb4ecddc98216057f", "method": "user.get"}
+        '''
+        query_submitted = {"params": {"filter": {"alias": "Admin"}, "output": "extend"},
+        "jsonrpc": "2.0", "id": 0, "auth": "72435c7f754cb2adb4ecddc98216057f",
+        "method": "user.get"}
+        '''
 
         module_return = True
-        query_return = {"jsonrpc":"2.0","result":[{"userid":"1","alias":"Admin","name":"Zabbix","surname":"Administrator","url":"","autologin":"1","autologout":"0","lang":"en_GB","refresh":"30s","type":"3","theme":"default","attempt_failed":"0","attempt_ip":"10.0.2.2","attempt_clock":"1515922072","rows_per_page":"50"}],"id":0}
+        # pylint: disable=E8128
+        query_return = {"jsonrpc": "2.0", "result": [{"userid": "1", "alias": "Admin",
+                        "name": "Zabbix", "surname": "Administrator", "url": "", "autologin": "1",
+                        "autologout": "0", "lang": "en_GB", "refresh": "30s", "type": "3", "theme": "default",
+                        "attempt_failed": "0", "attempt_ip": "10.0.2.2", "attempt_clock": "1515922072",
+                        "rows_per_page": "50"}], "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.user_exists('Admin', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.user_exists('Admin', **CONN_ARGS), module_return)
 
     def test_user_get(self):
-        #query_submitted = {"params": {"filter": {"alias": "Admin"}, "output": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "49ef327f205d9e9150d4651cb6adc2d5", "method": "user.get"}
+        '''
+        query_submitted = {"params": {"filter": {"alias": "Admin"}, "output": "extend"},
+        "jsonrpc": "2.0", "id": 0, "auth": "49ef327f205d9e9150d4651cb6adc2d5",
+        "method": "user.get"}
+        '''
 
         module_return = [{
             "lang": "en_GB",
@@ -76,26 +109,37 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             "attempt_ip": "10.0.2.2",
             "type": "3"
         }]
-        query_return = {"jsonrpc":"2.0","result":[{"userid":"1","alias":"Admin","name":"Zabbix","surname":"Administrator","url":"","autologin":"1","autologout":"0","lang":"en_GB","refresh":"30s","type":"3","theme":"default","attempt_failed":"0","attempt_ip":"10.0.2.2","attempt_clock":"1515922072","rows_per_page":"50"}],"id":0}
+        # pylint: disable=E8128
+        query_return = {"jsonrpc": "2.0", "result": [{"userid": "1", "alias": "Admin",
+                        "name": "Zabbix", "surname": "Administrator", "url": "", "autologin": "1",
+                        "autologout": "0", "lang": "en_GB", "refresh": "30s", "type": "3", "theme": "default",
+                        "attempt_failed": "0", "attempt_ip": "10.0.2.2", "attempt_clock": "1515922072",
+                        "rows_per_page": "50"}], "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.user_get('Admin', **conn_args), module_return)
-                self.assertEqual(zabbix.user_get(userids='1', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.user_get('Admin', **CONN_ARGS), module_return)
+                self.assertEqual(zabbix.user_get(userids='1', **CONN_ARGS), module_return)
 
     def test_user_update(self):
-        #query_submitted = {"params": {"userid": 3, "name": "James Brown"}, "jsonrpc": "2.0", "id": 0, "auth": "cdf2ee35e3bc47560585e9c457cbc398", "method": "user.update"}
+        '''
+        query_submitted = {"params": {"userid": 3, "name": "James Brown"}, "jsonrpc": "2.0",
+        "id": 0, "auth": "cdf2ee35e3bc47560585e9c457cbc398", "method": "user.update"}
+        '''
 
         module_return = ['3']
-        query_return = {"jsonrpc":"2.0","result":{"userids":["3"]},"id":0}
+        query_return = {"jsonrpc": "2.0", "result": {"userids": ["3"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.user_update('3', visible_name='James Brown', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.user_update('3', visible_name='James Brown', **CONN_ARGS), module_return)
 
     def test_user_getmedia(self):
-        #query_submitted = {"params": {"userids": 3}, "jsonrpc": "2.0", "id": 0, "auth": "d4de741ea7cdd434b3ba7b56efa4efaf", "method": "usermedia.get"}
-        
+        '''
+        query_submitted = {"params": {"userids": 3}, "jsonrpc": "2.0", "id": 0,
+        "auth": "d4de741ea7cdd434b3ba7b56efa4efaf", "method": "usermedia.get"}
+        '''
+
         module_return = [
             {
                 "mediatypeid": "1",
@@ -107,35 +151,50 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                 "active": "0"
             }
         ]
-        query_return = {"jsonrpc":"2.0","result":[{"mediaid":"1","userid":"3","mediatypeid":"1","sendto":"email@example.com","active":"0","severity":"63","period":"1-7,00:00-24:00"}],"id":0}
-
+        # pylint: disable=E8128
+        query_return = {"jsonrpc": "2.0", "result": [{"mediaid": "1", "userid": "3",
+                        "mediatypeid": "1", "sendto": "email@example.com", "active": "0", "severity": "63",
+                        "period": "1-7,00:00-24:00"}], "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.user_getmedia('3', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.user_getmedia('3', **CONN_ARGS), module_return)
 
     def test_user_addmedia(self):
-        #query_submitted = {"params": {"medias": [{"active": 0, "mediatypeid": 1, "period": "1-7,00:00-24:00", "severity": 63, "sendto": "support2@example.com"}], "users": [{"userid": 1}]}, "jsonrpc": "2.0", "id": 0, "auth": "b347fc1bf1f5617b93755619a037c19e", "method": "user.addmedia"}
-        
-        module_return = ['2'] 
-        query_return = {"jsonrpc":"2.0","result":{"mediaids":["2"]},"id":0}
+        '''
+        query_submitted = {"params": {"medias": [{"active": 0, "mediatypeid": 1,
+        "period": "1-7,00:00-24:00", "severity": 63, "sendto": "support2@example.com"}],
+        "users": [{"userid": 1}]}, "jsonrpc": "2.0", "id": 0, "auth": "b347fc1bf1f5617b93755619a037c19e",
+        "method": "user.addmedia"}
+        '''
+
+        module_return = ['2']
+        query_return = {"jsonrpc": "2.0", "result": {"mediaids": ["2"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.user_addmedia('1', active='0', mediatypeid='1', period='1-7,00:00-24:00', sendto='support2@example.com', severity='63', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.user_addmedia('1', active='0', mediatypeid='1',
+                                 period='1-7,00:00-24:00', sendto='support2@example.com',
+                                 severity='63', **CONN_ARGS), module_return)
 
     def test_user_deletemedia(self):
-        #query_submitted = {"params": [1], "jsonrpc": "2.0", "id": 0, "auth": "9fb226c759a320de0de3b7a141404506", "method": "user.deletemedia"}
+        '''
+        query_submitted = {"params": [1], "jsonrpc": "2.0", "id": 0, "auth": "9fb226c759a320de0de3b7a141404506",
+        "method": "user.deletemedia"}
+        '''
 
-        module_return = [1] 
-        query_return = {"jsonrpc":"2.0","result":{"mediaids":[1]},"id":0}
+        module_return = [1]
+        query_return = {"jsonrpc": "2.0", "result": {"mediaids": [1]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.user_deletemedia('1', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.user_deletemedia('1', **CONN_ARGS), module_return)
 
     def test_user_list(self):
-        #query_submitted = {"params": {"output": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "54d67b63c37e690cf06972678f1e9720", "method": "user.get"}
+        '''
+        query_submitted = {"params": {"output": "extend"}, "jsonrpc": "2.0", "id": 0,
+        "auth": "54d67b63c37e690cf06972678f1e9720", "method": "user.get"}
+        '''
 
         module_return = [
             {
@@ -190,45 +249,71 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                 "type": "1"
             }
         ]
-        query_return = {"jsonrpc":"2.0","result":[{"userid":"1","alias":"Admin","name":"Zabbix","surname":"Administrator","url":"","autologin":"1","autologout":"0","lang":"en_GB","refresh":"30s","type":"3","theme":"default","attempt_failed":"0","attempt_ip":"10.0.2.2","attempt_clock":"1515922072","rows_per_page":"50"},{"userid":"2","alias":"guest","name":"","surname":"","url":"","autologin":"0","autologout":"15m","lang":"en_GB","refresh":"30s","type":"1","theme":"default","attempt_failed":"0","attempt_ip":"","attempt_clock":"0","rows_per_page":"50"},{"userid":"5","alias":"james","name":"James Brown","surname":"","url":"","autologin":"0","autologout":"15m","lang":"en_GB","refresh":"30s","type":"1","theme":"default","attempt_failed":"0","attempt_ip":"","attempt_clock":"0","rows_per_page":"50"}],"id":0}
+        # pylint: disable=E8128
+        query_return = {"jsonrpc": "2.0", "result": [{"userid": "1", "alias": "Admin",
+                        "name": "Zabbix", "surname": "Administrator", "url": "", "autologin": "1",
+                        "autologout": "0", "lang": "en_GB", "refresh": "30s", "type": "3", "theme": "default",
+                        "attempt_failed": "0", "attempt_ip": "10.0.2.2", "attempt_clock": "1515922072",
+                        "rows_per_page": "50"}, {"userid": "2", "alias": "guest", "name": "", "surname": "",
+                        "url": "", "autologin": "0", "autologout": "15m", "lang": "en_GB", "refresh": "30s",
+                        "type": "1", "theme": "default", "attempt_failed": "0", "attempt_ip": "", "attempt_clock": "0",
+                        "rows_per_page": "50"}, {"userid": "5", "alias": "james", "name": "James Brown", "surname": "",
+                        "url": "", "autologin": "0", "autologout": "15m", "lang": "en_GB", "refresh": "30s",
+                        "type": "1", "theme": "default", "attempt_failed": "0", "attempt_ip": "", "attempt_clock": "0",
+                        "rows_per_page": "50"}], "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.user_list(**conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.user_list(**CONN_ARGS), module_return)
 
     def test_usergroup_create(self):
-        #query_submitted = {"params": {"name": "testgroup"}, "jsonrpc": "2.0", "id": 0, "auth": "7f3ac5e90201e5de4eb19e5322606575", "method": "usergroup.create"}
+        '''
+        query_submitted = {"params": {"name": "testgroup"}, "jsonrpc": "2.0", "id": 0,
+        "auth": "7f3ac5e90201e5de4eb19e5322606575", "method": "usergroup.create"}
+        '''
 
         module_return = ["13"]
-        query_return = {"jsonrpc":"2.0","result":{"usrgrpids":["13"]},"id":0}
+        query_return = {"jsonrpc": "2.0", "result": {"usrgrpids": ["13"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.usergroup_create('testgroup', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.usergroup_create('testgroup', **CONN_ARGS), module_return)
 
     def test_usergroup_delete(self):
-        #query_submitted = {"params": [13], "jsonrpc": "2.0", "id": 0, "auth": "9bad39de2a5a9211da588dd06dad8773", "method": "usergroup.delete"}
+        '''
+        query_submitted = {"params": [13], "jsonrpc": "2.0", "id": 0,
+        "auth": "9bad39de2a5a9211da588dd06dad8773", "method": "usergroup.delete"}
+        '''
 
         module_return = ['13']
-        query_return = {"jsonrpc":"2.0","result":{"usrgrpids":["13"]},"id":0}
+        query_return = {"jsonrpc": "2.0", "result": {"usrgrpids": ["13"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.usergroup_delete('13', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.usergroup_delete('13', **CONN_ARGS), module_return)
 
     def test_usergroup_exists(self):
-        #query_submitted = {"params": {"filter": {"name": "testgroup"}, "output": "extend", "selectRights": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "e62424cd7aa71f6748e1d69c190ac852", "method": "usergroup.get"}
+        '''
+        query_submitted = {"params": {"filter": {"name": "testgroup"}, "output": "extend",
+        "selectRights": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "e62424cd7aa71f6748e1d69c190ac852",
+        "method": "usergroup.get"}
+        '''
 
         module_return = True
-        query_return = {"jsonrpc":"2.0","result":[{"usrgrpid":"13","name":"testgroup","gui_access":"0","users_status":"0","debug_mode":"0","rights":[]}],"id":0}
+        query_return = {"jsonrpc": "2.0", "result": [{"usrgrpid": "13", "name": "testgroup",
+                        "gui_access": "0", "users_status": "0", "debug_mode": "0", "rights": []}], "id": 0}
 
         with patch.object(zabbix, 'apiinfo_version', return_value='3.2'):
             with patch.object(zabbix, '_query', return_value=query_return):
-                with patch.object(zabbix, '_login', return_value={**conn_args}):
-                    self.assertEqual(zabbix.usergroup_exists('testgroup', **conn_args), module_return)
+                with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                    self.assertEqual(zabbix.usergroup_exists('testgroup', **CONN_ARGS), module_return)
 
     def test_usergroup_get(self):
-        #query_submitted = {"params": {"filter": {"name": "testgroup"}, "output": "extend", "selectRights": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "739cf358050f2a2d33162fdcfa714a3c", "method": "usergroup.get"}
+        '''
+        query_submitted = {"params": {"filter": {"name": "testgroup"}, "output": "extend",
+        "selectRights": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "739cf358050f2a2d33162fdcfa714a3c",
+        "method": "usergroup.get"}
+        '''
 
         module_return = [
             {
@@ -240,25 +325,32 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                 "usrgrpid": "13"
             }
         ]
-        query_return = {"jsonrpc":"2.0","result":[{"usrgrpid":"13","name":"testgroup","gui_access":"0","users_status":"0","debug_mode":"0","rights":[]}],"id":0}
+        query_return = {"jsonrpc": "2.0", "result": [{"usrgrpid": "13", "name": "testgroup",
+                        "gui_access": "0", "users_status": "0", "debug_mode": "0", "rights": []}], "id": 0}
 
         with patch.object(zabbix, 'apiinfo_version', return_value='3.2'):
             with patch.object(zabbix, '_query', return_value=query_return):
-                with patch.object(zabbix, '_login', return_value={**conn_args}):
-                    self.assertEqual(zabbix.usergroup_get('testgroup', **conn_args), module_return)
+                with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                    self.assertEqual(zabbix.usergroup_get('testgroup', **CONN_ARGS), module_return)
 
     def test_usergroup_update(self):
-        #query_submitted = {"params": {"usrgrpid": 13, "users_status": 1}, "jsonrpc": "2.0", "id": 0, "auth": "ef772237245f59f655871bc8fbbcd67c", "method": "usergroup.update"}
+        '''
+        query_submitted = {"params": {"usrgrpid": 13, "users_status": 1}, "jsonrpc": "2.0",
+        "id": 0, "auth": "ef772237245f59f655871bc8fbbcd67c", "method": "usergroup.update"}
+        '''
 
         module_return = ["13"]
-        query_return = {"jsonrpc":"2.0","result":{"usrgrpids":["13"]},"id":0}
+        query_return = {"jsonrpc": "2.0", "result": {"usrgrpids": ["13"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.usergroup_update('13', users_status='1', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.usergroup_update('13', users_status='1', **CONN_ARGS), module_return)
 
     def test_usergroup_list(self):
-        #query_submitted = {"params": {"output": "extend"}, "jsonrpc": "2.0", "id": 0, "auth": "4bc366bc7803c07e80f15b1bc14dc61f", "method": "usergroup.get"}
+        '''
+        query_submitted = {"params": {"output": "extend"}, "jsonrpc": "2.0", "id": 0,
+        "auth": "4bc366bc7803c07e80f15b1bc14dc61f", "method": "usergroup.get"}
+        '''
 
         module_return = [
             {
@@ -304,13 +396,24 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                 "users_status": "0"
             }
         ]
-        query_return = {"jsonrpc":"2.0","result":[{"usrgrpid":"7","name":"Zabbix administrators","gui_access":"0","users_status":"0","debug_mode":"0"},{"usrgrpid":"8","name":"Guests","gui_access":"0","users_status":"0","debug_mode":"0"},{"usrgrpid":"9","name":"Disabled","gui_access":"0","users_status":"1","debug_mode":"0"},{"usrgrpid":"11","name":"Enabled debug mode","gui_access":"0","users_status":"0","debug_mode":"1"},{"usrgrpid":"12","name":"No access to the frontend","gui_access":"2","users_status":"0","debug_mode":"0"},{"usrgrpid":"13","name":"testgroup","gui_access":"0","users_status":"0","debug_mode":"0"}],"id":0}
+        # pylint: disable=E8128
+        query_return = {"jsonrpc": "2.0", "result": [{"usrgrpid": "7", "name": "Zabbix administrators",
+                        "gui_access": "0", "users_status": "0", "debug_mode": "0"}, {"usrgrpid": "8", "name": "Guests",
+                        "gui_access": "0", "users_status": "0", "debug_mode": "0"}, {"usrgrpid": "9",
+                        "name": "Disabled", "gui_access": "0", "users_status": "1", "debug_mode": "0"},
+                        {"usrgrpid": "11", "name": "Enabled debug mode", "gui_access": "0", "users_status": "0",
+                        "debug_mode": "1"}, {"usrgrpid": "12", "name": "No access to the frontend", "gui_access": "2",
+                        "users_status": "0", "debug_mode": "0"}, {"usrgrpid": "13", "name": "testgroup",
+                        "gui_access": "0", "users_status": "0", "debug_mode": "0"}], "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.usergroup_list(**conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.usergroup_list(**CONN_ARGS), module_return)
 
     def test_host_inventory_get(self):
+        '''
+        test host_inventory_get
+        '''
         module_return = {
             "poc_2_email": "",
             "poc_2_phone_b": "",
@@ -504,15 +607,20 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.host_inventory_get('12345', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.host_inventory_get('12345', **CONN_ARGS), module_return)
 
     def test_host_inventory_set(self):
-        #query_submitted = {"params": {"hostid": 10258, "inventory_mode": "0", "inventory": {"asset_tag": "jml3322", "type": "Xen"}}, "jsonrpc": "2.0", "id": 0, "auth": "a50d2c3030b9b73d7c28b5ebd89c044c", "method": "host.update"}
+        '''
+        query_submitted = {"params": {"hostid": 10258, "inventory_mode": "0", "inventory":
+        {"asset_tag": "jml3322", "type": "Xen"}}, "jsonrpc": "2.0", "id": 0,
+        "auth": "a50d2c3030b9b73d7c28b5ebd89c044c", "method": "host.update"}
+        '''
 
         module_return = {"hostids": [10258]}
-        query_return = {"jsonrpc":"2.0","result":{"hostids":[10258]},"id":0}
+        query_return = {"jsonrpc": "2.0", "result": {"hostids": [10258]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**conn_args}):
-                self.assertEqual(zabbix.host_inventory_set(10258, asset_tag='jml3322', type='Xen', **conn_args), module_return)
+            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                self.assertEqual(zabbix.host_inventory_set(10258, asset_tag='jml3322',
+                                 type='Xen', **CONN_ARGS), module_return)
