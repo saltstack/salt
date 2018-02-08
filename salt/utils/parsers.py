@@ -266,6 +266,8 @@ class OptionParser(optparse.OptionParser, object):
                     mixin_before_exit_func, traceback.format_exc(err)
                 )
         if self._setup_mp_logging_listener_ is True:
+            # Stop logging through the queue
+            log.shutdown_multiprocessing_logging()
             # Stop the logging queue listener process
             log.shutdown_multiprocessing_logging_listener(daemonizing=True)
         if isinstance(msg, six.string_types) and msg and msg[-1] != '\n':
