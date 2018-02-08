@@ -152,7 +152,6 @@ class Master(salt.utils.parsers.MasterOptionParser, DaemonsMixin):  # pylint: di
                         os.path.join(self.config['cachedir'], 'jobs'),
                         os.path.join(self.config['cachedir'], 'proc'),
                         self.config['sock_dir'],
-                        self.config['key_dir'],
                         self.config['token_dir'],
                         self.config['syndic_dir'],
                         self.config['sqlite_queue_dir'],
@@ -167,7 +166,7 @@ class Master(salt.utils.parsers.MasterOptionParser, DaemonsMixin):  # pylint: di
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     root_dir=self.config['root_dir'],
-                    sensitive_dirs=[self.config['pki_dir'], self.config['key_dir']],
+                    pki_dir=self.config['pki_dir'],
                 )
                 # Clear out syndics from cachedir
                 for syndic_file in os.listdir(self.config['syndic_dir']):
@@ -289,7 +288,7 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     root_dir=self.config['root_dir'],
-                    sensitive_dirs=[self.config['pki_dir']],
+                    pki_dir=self.config['pki_dir'],
                 )
         except OSError as error:
             self.environment_failure(error)
@@ -471,7 +470,7 @@ class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # 
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     root_dir=self.config['root_dir'],
-                    sensitive_dirs=[self.config['pki_dir']],
+                    pki_dir=self.config['pki_dir'],
                 )
         except OSError as error:
             self.environment_failure(error)
@@ -580,7 +579,7 @@ class Syndic(salt.utils.parsers.SyndicOptionParser, DaemonsMixin):  # pylint: di
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     root_dir=self.config['root_dir'],
-                    sensitive_dirs=[self.config['pki_dir']],
+                    pki_dir=self.config['pki_dir'],
                 )
         except OSError as error:
             self.environment_failure(error)
