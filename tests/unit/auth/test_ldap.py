@@ -11,8 +11,10 @@ import salt.auth.ldap
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import skipIf, TestCase
 
+
 class Bind(object):
-    @classmethod
+
+    @staticmethod
     def search_s(*args, **kwargs):
         return [
             (
@@ -39,11 +41,11 @@ class LDAPAuthTestCase(TestCase):
             'auth.ldap.group_basedn': 'cn=groups,cn=compat,dc=saltstack,dc=com',
             'auth.ldap.basedn': 'dc=saltstack,dc=com',
             'auth.ldap.group_filter': '(&(memberUid={{ username }})(objectClass=posixgroup))'}
-    
+
     def tearDown(self):
         salt.auth.ldap.__opts__['auth.ldap.freeipa'] = False
         salt.auth.ldap.__opts__['auth.ldap.activedirectory'] = False
-    
+
     def test_config(self):
         self.assertEqual(salt.auth.ldap._config('basedn'), 'dc=saltstack,dc=com')
         self.assertEqual(salt.auth.ldap._config('group_filter'), '(&(memberUid={{ username }})(objectClass=posixgroup))')
