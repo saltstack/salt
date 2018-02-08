@@ -6,9 +6,8 @@ An execution module which can manipulate an f5 bigip via iControl REST
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import salt.utils.json
-import logging as logger
 
 # Import third party libs
 try:
@@ -23,9 +22,6 @@ from salt.ext import six
 
 # Import salt libs
 import salt.exceptions
-
-# Setup the logger
-log = logger.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'bigip'
@@ -168,8 +164,6 @@ def _set_value(value):
     A function to detect if user is trying to pass a dictionary or list.  parse it and return a
     dictionary list or a string
     '''
-
-    logger.error(value)
     #don't continue if already an acceptable data-type
     if isinstance(value, bool) or isinstance(value, dict) or isinstance(value, list):
         return value

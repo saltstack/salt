@@ -7,7 +7,7 @@ Wrapper for rsync
 This data can also be passed into :ref:`pillar <pillar-walk-through>`.
 Options passed into opts will overwrite options passed into pillar.
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import errno
@@ -206,7 +206,7 @@ def rsync(src,
         option = option + additional_opts
 
     cmd = ['rsync'] + option + [src, dst]
-    log.debug('Running rsync command: {0}'.format(cmd))
+    log.debug('Running rsync command: %s', cmd)
     try:
         return __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
@@ -265,7 +265,7 @@ def config(conf_path='/etc/rsyncd.conf'):
     try:
         with salt.utils.files.fopen(conf_path, 'r') as fp_:
             for line in fp_:
-                ret += line
+                ret += salt.utils.stringutils.to_unicode(line)
     except IOError as exc:
         if exc.errno == errno.ENOENT:
             raise CommandExecutionError('{0} does not exist'.format(conf_path))

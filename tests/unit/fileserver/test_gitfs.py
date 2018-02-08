@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import os
 import shutil
@@ -35,6 +35,7 @@ from tests.support.paths import TMP, FILES
 
 # Import salt libs
 import salt.fileserver.gitfs as gitfs
+import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.platform
 import salt.utils.win_functions
@@ -45,6 +46,8 @@ log = logging.getLogger(__name__)
 TMP_SOCK_DIR = tempfile.mkdtemp(dir=TMP)
 TMP_REPO_DIR = os.path.join(TMP, 'gitfs_root')
 INTEGRATION_BASE_FILES = os.path.join(FILES, 'file', 'base')
+UNICODE_FILENAME = 'питон.txt'
+UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
 
 
 def _rmtree_error(func, path, excinfo):
@@ -261,6 +264,9 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
                         if x != '.git'])
         repo.index.commit('Test')
 
+        # Add another branch with unicode characters in the name
+        repo.create_head(UNICODE_ENVNAME, 'HEAD')
+
     def setUp(self):
         '''
         We don't want to check in another .git dir into GH because that just
@@ -286,11 +292,17 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
     def test_file_list(self):
         ret = gitfs.file_list(LOAD)
         self.assertIn('testfile', ret)
+        self.assertIn(UNICODE_FILENAME, ret)
+        # This function does not use os.sep, the Salt fileserver uses the
+        # forward slash, hence it being explicitly used to join here.
+        self.assertIn('/'.join((UNICODE_DIRNAME, 'foo.txt')), ret)
 
     def test_dir_list(self):
         ret = gitfs.dir_list(LOAD)
         self.assertIn('grail', ret)
+        self.assertIn(UNICODE_DIRNAME, ret)
 
     def test_envs(self):
-        ret = gitfs.envs()
+        ret = gitfs.envs(ignore_cache=True)
         self.assertIn('base', ret)
+        self.assertIn(UNICODE_ENVNAME, ret)

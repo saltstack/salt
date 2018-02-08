@@ -90,6 +90,10 @@ try:
 except ImportError:
     HAS_GETPASS = False
 
+# This is required to support international characters in AWS EC2 tags or any
+# other kind of metadata provided by particular Cloud vendor.
+MSGPACK_ENCODING = 'utf-8'
+
 NSTATES = {
     0: 'running',
     1: 'rebooting',
@@ -2506,7 +2510,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.files.fopen(index_file, mode) as fh_:
-            index = salt.utils.data.decode(msgpack.load(fh_))
+            index = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
     else:
         index = {}
 
@@ -2523,7 +2527,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
 
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(index_file, mode) as fh_:
-        msgpack.dump(index, fh_)
+        msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
 
@@ -2540,7 +2544,7 @@ def cachedir_index_del(minion_id, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.files.fopen(index_file, mode) as fh_:
-            index = salt.utils.data.decode(msgpack.load(fh_))
+            index = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
     else:
         return
 
@@ -2549,7 +2553,7 @@ def cachedir_index_del(minion_id, base=None):
 
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(index_file, mode) as fh_:
-        msgpack.dump(index, fh_)
+        msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
 
@@ -2605,8 +2609,9 @@ def request_minion_cachedir(
 
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, 'requested', fname)
-    with salt.utils.files.fopen(path, 'w') as fh_:
-        msgpack.dump(data, fh_)
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.files.fopen(path, mode) as fh_:
+        msgpack.dump(data, fh_, encoding=MSGPACK_ENCODING)
 
 
 def change_minion_cachedir(
@@ -2638,12 +2643,12 @@ def change_minion_cachedir(
     path = os.path.join(base, cachedir, fname)
 
     with salt.utils.files.fopen(path, 'r') as fh_:
-        cache_data = salt.utils.data.decode(msgpack.load(fh_))
+        cache_data = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
 
     cache_data.update(data)
 
     with salt.utils.files.fopen(path, 'w') as fh_:
-        msgpack.dump(cache_data, fh_)
+        msgpack.dump(cache_data, fh_, encoding=MSGPACK_ENCODING)
 
 
 def activate_minion_cachedir(minion_id, base=None):
@@ -2715,8 +2720,9 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 # Finally, get a list of full minion data
                 fpath = os.path.join(min_dir, fname)
                 minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
-                with salt.utils.files.fopen(fpath, 'r') as fh_:
-                    minions[driver][prov][minion_id] = salt.utils.data.decode(msgpack.load(fh_))
+                mode = 'rb' if six.PY3 else 'r'
+                with salt.utils.files.fopen(fpath, mode) as fh_:
+                    minions[driver][prov][minion_id] = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
 
     return minions
 
@@ -2891,8 +2897,9 @@ def cache_node_list(nodes, provider, opts):
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
         path = os.path.join(prov_dir, '{0}.p'.format(node))
-        with salt.utils.files.fopen(path, 'w') as fh_:
-            msgpack.dump(nodes[node], fh_)
+        mode = 'wb' if six.PY3 else 'w'
+        with salt.utils.files.fopen(path, mode) as fh_:
+            msgpack.dump(nodes[node], fh_, encoding=MSGPACK_ENCODING)
 
 
 def cache_node(node, provider, opts):
@@ -2916,8 +2923,9 @@ def cache_node(node, provider, opts):
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
     path = os.path.join(prov_dir, '{0}.p'.format(node['name']))
-    with salt.utils.files.fopen(path, 'w') as fh_:
-        msgpack.dump(node, fh_)
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.files.fopen(path, mode) as fh_:
+        msgpack.dump(node, fh_, encoding=MSGPACK_ENCODING)
 
 
 def missing_node_cache(prov_dir, node_list, provider, opts):
@@ -2992,7 +3000,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     with salt.utils.files.fopen(path, 'r') as fh_:
         try:
-            cache_data = salt.utils.data.decode(msgpack.load(fh_))
+            cache_data = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
         except ValueError:
             log.warning('Cache for %s was corrupt: Deleting', node)
             cache_data = {}

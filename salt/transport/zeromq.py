@@ -16,6 +16,8 @@ import weakref
 from random import randint
 
 # Import Salt Libs
+from salt.ext import six
+from salt.ext.six.moves import map
 import salt.auth
 import salt.crypt
 import salt.utils.event
@@ -45,17 +47,24 @@ try:
 except ImportError:
     HAS_ZMQ_MONITOR = False
 
+LIBZMQ_VERSION = tuple(map(int, zmq.zmq_version().split('.')))
+PYZMQ_VERSION = tuple(map(int, zmq.pyzmq_version().split('.')))
+
 # Import Tornado Libs
 import tornado
 import tornado.gen
 import tornado.concurrent
 
 # Import third party libs
-from salt.ext import six
 try:
-    from Cryptodome.Cipher import PKCS1_OAEP
+    from M2Crypto import RSA
+    HAS_M2 = True
 except ImportError:
-    from Crypto.Cipher import PKCS1_OAEP
+    HAS_M2 = False
+    try:
+        from Cryptodome.Cipher import PKCS1_OAEP
+    except ImportError:
+        from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
 
@@ -73,9 +82,7 @@ def _get_master_uri(master_ip,
 
     Source: http://api.zeromq.org/4-1:zmq-tcp
     '''
-    libzmq_version_tup = tuple(map(int, zmq.zmq_version().split('.')))
-    pyzmq_version_tup = tuple(map(int, zmq.pyzmq_version().split('.')))
-    if libzmq_version_tup >= (4, 1, 6) and pyzmq_version_tup >= (16, 0, 1):
+    if LIBZMQ_VERSION >= (4, 1, 6) and PYZMQ_VERSION >= (16, 0, 1):
         # The source:port syntax for ZeroMQ has been added in libzmq 4.1.6
         # which is included in the pyzmq wheels starting with 16.0.1.
         if source_ip or source_port:
@@ -232,7 +239,6 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             tries=tries,
         )
         key = self.auth.get_keys()
-        cipher = PKCS1_OAEP.new(key)
         if 'key' not in ret:
             # Reauth in the case our key is deleted on the master side.
             yield self.auth.authenticate()
@@ -241,7 +247,11 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                 timeout=timeout,
                 tries=tries,
             )
-        aes = cipher.decrypt(ret['key'])
+        if HAS_M2:
+            aes = key.private_decrypt(six.b(ret['key']), RSA.pkcs1_oaep_padding)
+        else:
+            cipher = PKCS1_OAEP.new(key)
+            aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         data = pcrypt.loads(ret[dictkey])
         if six.PY3:
@@ -337,7 +347,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             zmq.eventloop.ioloop.install()
             self.io_loop = tornado.ioloop.IOLoop.current()
 
-        self.hexid = hashlib.sha1(six.b(self.opts['id'])).hexdigest()
+        self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()
 
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
 
@@ -410,7 +420,12 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._monitor.stop()
             self._monitor = None
         if hasattr(self, '_stream'):
-            self._stream.close(0)
+            if PYZMQ_VERSION < (14, 3, 0):
+                # stream.close() doesn't work properly on pyzmq < 14.3.0
+                self._stream.io_loop.remove_handler(self._stream.socket)
+                self._stream.socket.close(0)
+            else:
+                self._stream.close(0)
         elif hasattr(self, '_socket'):
             self._socket.close(0)
         if hasattr(self, 'context') and self.context.closed is False:
@@ -966,8 +981,17 @@ class AsyncReqMessageClient(object):
     # TODO: timeout all in-flight sessions, or error
     def destroy(self):
         if hasattr(self, 'stream') and self.stream is not None:
-            self.stream.close()
-            self.socket = None
+            if PYZMQ_VERSION < (14, 3, 0):
+                # stream.close() doesn't work properly on pyzmq < 14.3.0
+                if self.stream.socket:
+                    self.stream.socket.close()
+                self.stream.io_loop.remove_handler(self.stream.socket)
+                # set this to None, more hacks for messed up pyzmq
+                self.stream.socket = None
+                self.socket.close()
+            else:
+                self.stream.close()
+                self.socket = None
             self.stream = None
         if self.context.closed is False:
             self.context.term()

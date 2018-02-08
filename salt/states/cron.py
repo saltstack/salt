@@ -137,7 +137,7 @@ The script will be executed every reboot if cron daemon support this option.
 This counter part definition will ensure than a job with a special keyword
 is not set.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -148,6 +148,7 @@ from salt.modules.cron import (
     _needs_change,
     _cron_matched
 )
+from salt.ext import six
 
 
 def __virtual__():
@@ -172,21 +173,21 @@ def _check_cron(user,
     Return the changes
     '''
     if minute is not None:
-        minute = str(minute).lower()
+        minute = six.text_type(minute).lower()
     if hour is not None:
-        hour = str(hour).lower()
+        hour = six.text_type(hour).lower()
     if daymonth is not None:
-        daymonth = str(daymonth).lower()
+        daymonth = six.text_type(daymonth).lower()
     if month is not None:
-        month = str(month).lower()
+        month = six.text_type(month).lower()
     if dayweek is not None:
-        dayweek = str(dayweek).lower()
+        dayweek = six.text_type(dayweek).lower()
     if identifier is not None:
-        identifier = str(identifier)
+        identifier = six.text_type(identifier)
     if commented is not None:
         commented = commented is True
     if cmd is not None:
-        cmd = str(cmd)
+        cmd = six.text_type(cmd)
     lst = __salt__['cron.list_tab'](user)
     if special is None:
         for cron in lst['crons']:
@@ -553,7 +554,7 @@ def file(name,
         raw_cron = __salt__['cron.raw_cron'](user)
         if not raw_cron.endswith('\n'):
             raw_cron = "{0}\n".format(raw_cron)
-        fp_.write(raw_cron)
+        fp_.write(salt.utils.stringutils.to_str(raw_cron))
 
     ret = {'changes': {},
            'comment': '',

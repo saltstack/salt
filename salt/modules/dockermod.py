@@ -5805,7 +5805,7 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
         Container name or ID
 
     ignore_already_stopped
-        Boolean flag that prevent execution to fail, if a container
+        Boolean flag that prevents execution to fail, if a container
         is already stopped.
 
     fail_on_exit_status
