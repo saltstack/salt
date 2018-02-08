@@ -72,6 +72,7 @@ import json
 
 # Import Salt Libs
 import salt.exceptions
+from salt.ext.six.moves import range
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['citrixns']
