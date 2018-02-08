@@ -527,8 +527,8 @@ def _run(cmd,
                   'bg': bg,
                   }
 
-    if 'stdin_binary' in kwargs:
-        new_kwargs['stdin_binary'] = kwargs['stdin_binary']
+    if 'stdin_fix_newlines' in kwargs:
+        new_kwargs['stdin_fix_newlines'] = kwargs['stdin_fix_newlines']
 
     if umask is not None:
         _umask = six.text_type(umask).lstrip('0')
