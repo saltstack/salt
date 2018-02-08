@@ -42,7 +42,6 @@ from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range, zip
-from salt.ext.six.moves import shlex_quote as _cmd_quote
 
 # Only available on POSIX systems, nonfatal on windows
 try:
