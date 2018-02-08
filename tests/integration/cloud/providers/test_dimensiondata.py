@@ -6,18 +6,31 @@ Integration tests for the Dimension Data cloud provider
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import random
+import string
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
+INSTANCE_NAME = _random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'dimensiondata'
+
+
+def _random_name(size=6):
+    '''
+    Generates a random cloud instance name
+    '''
+    return 'cloud-test-' + ''.join(
+        random.choice(string.ascii_lowercase + string.digits)
+        for x in range(size)
+    )
 
 
 class DimensionDataTest(ShellCase):
