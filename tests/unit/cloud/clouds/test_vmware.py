@@ -1271,6 +1271,7 @@ class VMwareTestCase(ExtendedTestCase):
                     )
                 vmware.salt.utils.vmware.get_mor_using_container_view.assert_called_with(None, vim.StoragePod, 'whatever')
 
+
 class CloneFromSnapshotTest(TestCase):
     '''
     Test functionality to clone from snapshot
