@@ -508,7 +508,7 @@ def get_pem_entries(glob_path):
 
     .. code-block:: bash
 
-        salt '*' x509.read_pem_entries "/etc/pki/*.crt"
+        salt '*' x509.get_pem_entries "/etc/pki/*.crt"
     '''
     ret = {}
 
