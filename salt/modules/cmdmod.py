@@ -290,6 +290,7 @@ def _run(cmd,
             'Check to ensure that the shell <{0}> is valid for this user.'
             .format(shell))
 
+    output_loglevel = _check_loglevel(output_loglevel)
     log_callback = _check_cb(log_callback)
 
     if runas is None and '__context__' in globals():
@@ -319,6 +320,7 @@ def _run(cmd,
 
     if bg:
         ignore_retcode = True
+        use_vt = False
 
     if not salt.utils.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
@@ -375,7 +377,7 @@ def _run(cmd,
         else:
             return cmd
 
-    if _check_loglevel(output_loglevel) is not None:
+    if output_loglevel is not None:
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
@@ -551,7 +553,7 @@ def _run(cmd,
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
                 'reason: '.format(
-                    cmd if _check_loglevel(output_loglevel) is not None
+                    cmd if output_loglevel is not None
                         else 'REDACTED',
                     kwargs
                 )
@@ -598,7 +600,7 @@ def _run(cmd,
         to = ''
         if timeout:
             to = ' (timeout: {0}s)'.format(timeout)
-        if _check_loglevel(output_loglevel) is not None:
+        if output_loglevel is not None:
             msg = 'Running {0} in VT{1}'.format(cmd, to)
             log.debug(log_callback(msg))
         stdout, stderr = '', ''
@@ -672,6 +674,26 @@ def _run(cmd,
     except NameError:
         # Ignore the context error during grain generation
         pass
+
+    # Log the output
+    if output_loglevel is not None:
+        if not ignore_retcode and ret['retcode'] != 0:
+            if output_loglevel < LOG_LEVELS['error']:
+                output_loglevel = LOG_LEVELS['error']
+            msg = (
+                'Command \'{0}\' failed with return code: {1}'.format(
+                    cmd,
+                    ret['retcode']
+                )
+            )
+            log.error(log_callback(msg))
+        if ret['stdout']:
+            log.log(output_loglevel, 'stdout: {0}'.format(log_callback(ret['stdout'])))
+        if ret['stderr']:
+            log.log(output_loglevel, 'stderr: {0}'.format(log_callback(ret['stderr'])))
+        if ret['retcode']:
+            log.log(output_loglevel, 'retcode: {0}'.format(ret['retcode']))
+
     return ret
 
 
@@ -953,21 +975,6 @@ def run(cmd,
                encoded_cmd=encoded_cmd,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
     return ret['stdout']
 
 
@@ -1319,26 +1326,6 @@ def run_stdout(cmd,
                password=password,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stdout']
 
 
@@ -1501,26 +1488,6 @@ def run_stderr(cmd,
                password=password,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stderr']
 
 
@@ -1703,26 +1670,6 @@ def run_all(cmd,
                password=password,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret
 
 
@@ -1886,21 +1833,6 @@ def retcode(cmd,
                password=password,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
     return ret['retcode']
 
 
