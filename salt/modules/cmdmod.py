@@ -317,6 +317,9 @@ def _run(cmd,
         # yaml-ified into non-string types
         cwd = str(cwd)
 
+    if bg:
+        ignore_retcode = True
+
     if not salt.utils.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
@@ -3118,7 +3121,6 @@ def run_bg(cmd,
         output_loglevel='debug',
         log_callback=None,
         reset_system_locale=True,
-        ignore_retcode=False,
         saltenv='base',
         password=None,
         **kwargs):
@@ -3278,7 +3280,6 @@ def run_bg(cmd,
                log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                password=password,
                **kwargs
