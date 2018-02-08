@@ -23,7 +23,7 @@ from numbers import Number
 # Import salt libs
 from salt.utils.decorators import memoize as real_memoize
 from salt.utils.odict import OrderedDict
-import salt.utils.stringutils
+from salt.utils.stringutils import to_num as str_to_num
 import salt.modules.cmdmod
 
 # Import 3rd-party libs
@@ -415,7 +415,7 @@ def from_numeric(value):
     if value == 'none':
         value = None
     elif value:
-        value = salt.utils.stringutils.to_num(value)
+        value = str_to_num(value)
     return value
 
 

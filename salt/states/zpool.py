@@ -266,8 +266,12 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
     ## ensure properties are zfs values
     if properties:
         properties = __utils__['zfs.from_auto_dict'](properties)
+    elif properties is None:
+        properties = {}
     if filesystem_properties:
         filesystem_properties = __utils__['zfs.from_auto_dict'](filesystem_properties)
+    elif filesystem_properties is None:
+        filesystem_properties = {}
 
     ## parse layout
     vdevs = _layout_to_vdev(layout, config['device_dir'])
@@ -296,8 +300,44 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
             ret['changes'][name] = 'imported' if config['import'] else 'created'
         ret['comment'] = 'storage pool {0} was {1}'.format(name, ret['changes'][name])
 
+    ## NOTE: update pool
+    elif __salt__['zpool.exists'](name):
+        ret['result'] = True
+
+        ## NOTE: fetch current pool properties
+        properties_current = __salt__['zpool.get'](name, parsable=True)
+
+        ## NOTE: build list of properties to update
+        properties_update = []
+        for prop in properties:
+            ## NOTE: skip unexisting properties
+            if prop not in properties_current:
+                log.warning('zpool.present::%s::update - unknown property: %s', name, prop)
+                continue
+
+            ## NOTE: compare current and wanted value
+            if properties_current[prop] != properties[prop]:
+                properties_update.append(prop)
+
+        ## NOTE: update pool properties
+        for prop in properties_update:
+            res = __salt__['zpool.set'](name, prop, properties[prop])
+
+            if res['set']:
+                if name not in ret['changes']:
+                    ret['changes'][name] = {}
+                ret['changes'][name][prop] = properties[prop]
+            else:
+                ret['result'] = False
+                if ret['comment'] == '':
+                    ret['comment'] = 'The following properties were not updated:'
+                ret['comment'] = '{0} {1}'.format(ret['comment'], prop)
+
+        if ret['result']:
+            ret['comment'] = 'properties updated' if len(ret['changes']) > 0 else 'no update needed'
+
     ## NOTE: import or create the pool (at least try to anyway)
-    elif not __salt__['zpool.exists'](name):
+    else:
         ## NOTE: import pool
         if config['import']:
             mod_res = __salt__['zpool.import'](
@@ -335,42 +375,6 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
         ## NOTE: give up, we cannot import the pool and we do not have a layout to create it
         if not ret['result'] and not vdevs:
             ret['comment'] = 'storage pool {0} was not imported, no (valid) layout specified for creation'.format(name)
-
-    ## NOTE: update pool
-    else:
-        ret['result'] = True
-
-        ## NOTE: fetch current pool properties
-        properties_current = __salt__['zpool.get'](name, parsable=True)
-
-        ## NOTE: build list of properties to update
-        properties_update = []
-        for prop in properties:
-            ## NOTE: skip unexisting properties
-            if prop not in properties_current:
-                log.warning('zpool.present::%s::update - unknown property: %s', name, prop)
-                continue
-
-            ## NOTE: compare current and wanted value
-            if properties_current[prop] != properties[prop]:
-                properties_update.append(prop)
-
-        ## NOTE: update pool properties
-        for prop in properties_update:
-            res = __salt__['zpool.set'](name, prop, properties[prop])
-
-            if res['set']:
-                if name not in ret['changes']:
-                    ret['changes'][name] = {}
-                ret['changes'][name][prop] = properties[prop]
-            else:
-                ret['result'] = False
-                if ret['comment'] == '':
-                    ret['comment'] = 'The following properties were not updated:'
-                ret['comment'] = '{0} {1}'.format(ret['comment'], prop)
-
-        if ret['result']:
-            ret['comment'] = 'properties updated' if len(ret['changes']) > 0 else 'no update needed'
 
     return ret
 
