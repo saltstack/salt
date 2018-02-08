@@ -31,7 +31,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
-import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -209,16 +208,6 @@ def verify_env(
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
-    if pki_dir:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'Use of \'pki_dir\' was detected: \'pki_dir\' has been deprecated '
-            'in favor of \'sensitive_dirs\'. Support for \'pki_dir\' will be '
-            'removed in Salt Neon.'
-        )
-        sensitive_dirs = sensitive_dirs or []
-        sensitive_dirs.append(list(pki_dir))
-
     if salt.utils.platform.is_windows():
         return win_verify_env(root_dir,
                               dirs,
@@ -557,16 +546,6 @@ def win_verify_env(
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
-    if pki_dir:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'Use of \'pki_dir\' was detected: \'pki_dir\' has been deprecated '
-            'in favor of \'sensitive_dirs\'. Support for \'pki_dir\' will be '
-            'removed in Salt Neon.'
-        )
-        sensitive_dirs = sensitive_dirs or []
-        sensitive_dirs.append(list(pki_dir))
-
     import salt.utils.win_functions
     import salt.utils.win_dacl
     import salt.utils.path
