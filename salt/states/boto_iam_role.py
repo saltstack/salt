@@ -268,23 +268,14 @@ def _role_present(
             ret['comment'] = 'Failed to create {0} IAM role.'.format(name)
     else:
         ret['comment'] = '{0} role present.'.format(name)
-        update_needed = False
-        _policy_document = None
         if not policy_document:
-            policy = __salt__['boto_iam.build_policy'](region, key, keyid,
-                                                       profile)
-            if salt.utils.dictdiffer.deep_diff(
-                    _sort_policy(role['assume_role_policy_document']),
-                    _sort_policy(policy)):
-                update_needed = True
-                _policy_document = policy
+            _policy_document = __salt__['boto_iam.build_policy'](
+                    region, key, keyid, profile)
         else:
-            if salt.utils.dictdiffer.deep_diff(
+            _policy_document = policy_document
+        if salt.utils.dictdiffer.deep_diff(
                     _sort_policy(role['assume_role_policy_document']),
-                    _sort_policy(policy_document)):
-                update_needed = True
-                _policy_document = policy_document
-        if update_needed:
+                    _sort_policy(_policy_document)):
             if __opts__['test']:
                 msg = 'Assume role policy document to be updated.'
                 ret['comment'] = '{0} {1}'.format(ret['comment'], msg)
