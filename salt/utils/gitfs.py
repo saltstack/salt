@@ -2848,8 +2848,8 @@ class GitFS(GitBase):
             if exc.errno != errno.EEXIST:
                 raise exc
 
-        ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
-        with salt.utils.fopen(hashdest, 'w+') as fp_:
+        ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
+        with salt.utils.files.fopen(hashdest, 'w+') as fp_:
             fp_.write(ret['hsum'])
         return ret
 
