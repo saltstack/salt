@@ -138,7 +138,7 @@ def managed(name,
     To replace the config, set ``replace`` to ``True``. This option is recommended to be used with caution!
 
     .. warning::
-        The spport for NAPALM native templates will be dropped beginning with Salt Fluorine.
+        The support for NAPALM native templates will be dropped beginning with Salt Fluorine.
         Implicitly, the ``template_path`` argument will be depreacted and removed.
 
     template_name
