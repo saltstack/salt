@@ -139,7 +139,7 @@ def managed(name,
 
     .. warning::
         The support for NAPALM native templates will be dropped beginning with Salt Fluorine.
-        Implicitly, the ``template_path`` argument will be depreacted and removed.
+        Implicitly, the ``template_path`` argument will be deprecated and removed.
 
     template_name
         Identifies path to the template source. The template can be either stored on the local machine,
