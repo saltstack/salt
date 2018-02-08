@@ -167,6 +167,23 @@ def _l_tag(name, id_):
     return _gen_tag(low)
 
 
+def _calculate_fake_duration():
+    '''
+    Generate a NULL duration for when states do not run
+    but we want the results to be consistent.
+    '''
+    utc_start_time = datetime.datetime.utcnow()
+    local_start_time = utc_start_time - \
+        (datetime.datetime.utcnow() - datetime.datetime.now())
+    utc_finish_time = datetime.datetime.utcnow()
+    start_time = local_start_time.time().isoformat()
+    delta = (utc_finish_time - utc_start_time)
+    # duration in milliseconds.microseconds
+    duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+
+    return start_time, duration
+
+
 def get_accumulator_dir(cachedir):
     '''
     Return the directory that accumulator data is stored in, creating it if it
@@ -2475,8 +2492,11 @@ class State(object):
                     run_dict = self.pre
                 else:
                     run_dict = running
+                start_time, duration = _calculate_fake_duration()
                 run_dict[tag] = {'changes': {},
                                  'result': False,
+                                 'duration': duration,
+                                 'start_time': start_time,
                                  'comment': comment,
                                  '__run_num__': self.__run_num,
                                  '__sls__': low['__sls__']}
@@ -2559,9 +2579,12 @@ class State(object):
                 _cmt = 'One or more requisite failed: {0}'.format(
                     ', '.join(six.text_type(i) for i in failed_requisites)
                 )
+                start_time, duration = _calculate_fake_duration()
                 running[tag] = {
                     'changes': {},
                     'result': False,
+                    'duration': duration,
+                    'start_time': start_time,
                     'comment': _cmt,
                     '__run_num__': self.__run_num,
                     '__sls__': low['__sls__']
@@ -2577,8 +2600,11 @@ class State(object):
                 ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == 'pre':
+            start_time, duration = _calculate_fake_duration()
             pre_ret = {'changes': {},
                        'result': True,
+                       'duration': duration,
+                       'start_time': start_time,
                        'comment': 'No changes detected',
                        '__run_num__': self.__run_num,
                        '__sls__': low['__sls__']}
@@ -2586,15 +2612,21 @@ class State(object):
             self.pre[tag] = pre_ret
             self.__run_num += 1
         elif status == 'onfail':
+            start_time, duration = _calculate_fake_duration()
             running[tag] = {'changes': {},
                             'result': True,
+                            'duration': duration,
+                            'start_time': start_time,
                             'comment': 'State was not run because onfail req did not change',
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
             self.__run_num += 1
         elif status == 'onchanges':
+            start_time, duration = _calculate_fake_duration()
             running[tag] = {'changes': {},
                             'result': True,
+                            'duration': duration,
+                            'start_time': start_time,
                             'comment': 'State was not run because none of the onchanges reqs changed',
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}

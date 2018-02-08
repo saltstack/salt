@@ -2,7 +2,7 @@
 Salt 2016.11.9 Release Notes
 ============================
 
-Version 2016.11.9 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.]
+Version 2016.11.9 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.
 
 Changes for v2016.11.8..v2016.11.9
 ----------------------------------------------------------------

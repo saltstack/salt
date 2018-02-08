@@ -52,8 +52,10 @@ except ImportError:
 
 if salt.utils.platform.is_windows():
     from salt.utils.win_runas import runas as win_runas
+    from salt.utils.win_functions import escape_argument as _cmd_quote
     HAS_WIN_RUNAS = True
 else:
+    from salt.ext.six.moves import shlex_quote as _cmd_quote
     HAS_WIN_RUNAS = False
 
 __proxyenabled__ = ['*']
