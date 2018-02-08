@@ -54,6 +54,9 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.schedule.opts['grains']['whens'] = {'tea time': '11/29/2017 12:00pm'}
 
+    def tearDown(self):
+        del self.schedule
+
     def test_eval(self):
         '''
         verify that scheduled job runs
