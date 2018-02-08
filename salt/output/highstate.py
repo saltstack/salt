@@ -109,9 +109,9 @@ import textwrap
 
 # Import salt libs
 import salt.utils.color
+import salt.utils.data
 import salt.utils.stringutils
 import salt.output
-from salt.utils.locales import sdecode
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -156,7 +156,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
 
 
 def _format_host(host, data):
-    host = sdecode(host)
+    host = salt.utils.data.decode(host)
 
     colors = salt.utils.color.get_colors(
             __opts__.get('color'),
@@ -183,7 +183,9 @@ def _format_host(host, data):
                       .format(hcolor, colors)))
         for err in data:
             if strip_colors:
-                err = salt.output.strip_esc_sequence(sdecode(err))
+                err = salt.output.strip_esc_sequence(
+                    salt.utils.data.decode(err)
+                )
             hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
                           .format(hcolor, err, colors)))
     if isinstance(data, dict):
@@ -246,7 +248,7 @@ def _format_host(host, data):
                 tcolor = colors['LIGHT_YELLOW']
 
             state_output = __opts__.get('state_output', 'full').lower()
-            comps = [sdecode(comp) for comp in tname.split('_|-')]
+            comps = tname.split('_|-')
 
             if state_output.endswith('_id'):
                 # Swap in the ID for the name. Refs #35137
@@ -315,15 +317,13 @@ def _format_host(host, data):
             # be sure that ret['comment'] is utf-8 friendly
             try:
                 if not isinstance(ret['comment'], six.text_type):
-                    if six.PY2:
-                        ret['comment'] = six.text_type(ret['comment']).decode('utf-8')
-                    else:
-                        ret['comment'] = salt.utils.stringutils.to_str(ret['comment'])
+                    ret['comment'] = six.text_type(ret['comment'])
             except UnicodeDecodeError:
-                # but try to continue on errors
-                pass
+                # If we got here, we're on Python 2 and ret['comment'] somehow
+                # contained a str type with unicode content.
+                ret['comment'] = salt.utils.stringutils.to_unicode(ret['comment'])
             try:
-                comment = sdecode(ret['comment'])
+                comment = salt.utils.data.decode(ret['comment'])
                 comment = comment.strip().replace(
                         '\n',
                         '\n' + ' ' * 14)
@@ -356,7 +356,7 @@ def _format_host(host, data):
                 'tcolor': tcolor,
                 'comps': comps,
                 'ret': ret,
-                'comment': sdecode(comment),
+                'comment': salt.utils.data.decode(comment),
                 # This nukes any trailing \n and indents the others.
                 'colors': colors
             }
@@ -481,20 +481,12 @@ def _nested_changes(changes):
     '''
     Print the changes data using the nested outputter
     '''
-    global __opts__  # pylint: disable=W0601
-
-    opts = __opts__.copy()
-    # Pass the __opts__ dict. The loader will splat this modules __opts__ dict
-    # anyway so have to restore it after the other outputter is done
-    if __opts__['color']:
-        __opts__['color'] = 'CYAN'
     ret = '\n'
     ret += salt.output.out_format(
             changes,
             'nested',
             __opts__,
             nested_indent=14)
-    __opts__ = opts
     return ret
 
 

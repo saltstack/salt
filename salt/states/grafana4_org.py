@@ -40,7 +40,7 @@ Basic auth setup
         - state: ""
         - country: ""
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.dictupdate as dictupdate
 from salt.utils.dictdiffer import deep_diff

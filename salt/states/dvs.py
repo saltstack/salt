@@ -202,13 +202,14 @@ Module was developed against.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import traceback
 import sys
 
 # Import Salt Libs
 import salt.exceptions
+from salt.ext import six
 from salt.ext.six.moves import range
 
 # Import Third Party Libs
@@ -390,7 +391,7 @@ def dvs_configured(name, dvs):
             __salt__['vsphere.disconnect'](si)
         if not __opts__['test']:
             ret['result'] = False
-        ret.update({'comment': str(exc),
+        ret.update({'comment': six.text_type(exc),
                     'result': False if not __opts__['test'] else None})
         return ret
     if not comments:
@@ -475,12 +476,12 @@ def _get_changes_from_diff_dict(diff_dict):
         if sorted(diff_dict[p].keys()) == ['val1', 'val2']:
             # Some string formatting
             from_str = diff_dict[p]['val1']
-            if isinstance(diff_dict[p]['val1'], str):
+            if isinstance(diff_dict[p]['val1'], six.string_types):
                 from_str = '\'{0}\''.format(diff_dict[p]['val1'])
             elif isinstance(diff_dict[p]['val1'], list):
                 from_str = '\'{0}\''.format(', '.join(diff_dict[p]['val1']))
             to_str = diff_dict[p]['val2']
-            if isinstance(diff_dict[p]['val2'], str):
+            if isinstance(diff_dict[p]['val2'], six.string_types):
                 to_str = '\'{0}\''.format(diff_dict[p]['val2'])
             elif isinstance(diff_dict[p]['val2'], list):
                 to_str = '\'{0}\''.format(', '.join(diff_dict[p]['val2']))

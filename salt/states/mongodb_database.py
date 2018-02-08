@@ -6,7 +6,7 @@ Only deletion is supported, creation doesn't make sense
 and can be done using mongodb_user.present
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.versions
 

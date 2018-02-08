@@ -2,16 +2,27 @@
 '''
 DRBD administration module
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 log = logging.getLogger(__name__)
 
 
+def _analyse_overview_field(content):
+    if "(" in content:
+        # Output like "Connected(2*)" or "UpToDate(2*)"
+        return content.split("(")[0], content.split("(")[0]
+    elif "/" in content:
+        # Output like "Primar/Second" or "UpToDa/UpToDa"
+        return content.split("/")[0], content.split("/")[1]
+
+    return content, ""
+
+
 def overview():
     '''
-    Show status of the DRBD devices
+    Show status of the DRBD devices, support two nodes only.
 
     CLI Example:
 
@@ -25,16 +36,12 @@ def overview():
         fields = line.strip().split()
         minnum = fields[0].split(':')[0]
         device = fields[0].split(':')[1]
-        connstate = fields[1]
-        role = fields[2].split('/')
-        localrole = role[0]
-        partnerrole = role[1]
-        diskstate = fields[3].split('/')
-        localdiskstate = diskstate[0]
-        partnerdiskstate = diskstate[1]
-        if localdiskstate == "UpToDate":
-            if partnerdiskstate == "UpToDate":
-                if fields[4]:
+        connstate, _ = _analyse_overview_field(fields[1])
+        localrole, partnerrole = _analyse_overview_field(fields[2])
+        localdiskstate, partnerdiskstate = _analyse_overview_field(fields[3])
+        if localdiskstate.startswith("UpTo"):
+            if partnerdiskstate.startswith("UpTo"):
+                if len(fields) >= 5:
                     mountpoint = fields[4]
                     fs_mounted = fields[5]
                     totalsize = fields[6]
