@@ -5,7 +5,7 @@ Retrieve EC2 instance data for minions for ec2_tags and ec2_tags_list
 The minion id must be the AWS instance-id or value in 'tag_key'.
 For example set 'tag_key' to 'Name', to have the minion-id matched against the
 tag 'Name'. The tag contents must be unique.  The value of tag_value can
-be 'uqdn' or 'asis'. if 'uqdn' strips any domain before comparision.
+be 'uqdn' or 'asis'. if 'uqdn' strips any domain before comparison.
 
 The option use_grain can be set to True.  This allows the use of an
 instance-id grain instead of the minion-id.  Since this is a potential
@@ -201,19 +201,30 @@ def ext_pillar(minion_id,
             # filters and max_results can not be used togther.
             instance_data = conn.get_only_instances(filters=find_filter, dry_run=False)
 
-        if instance_data:
-            if len(instance_data) == 1:
-                instance = instance_data[0]
-            else:
-                log.error('%s multiple matches using \'%s\'', base_msg, find_id if find_id else find_filter)
-                return {}
-        else:
-            log.debug('%s no match using \'%s\'', base_msg, find_id if find_id else find_filter)
-            return {}
     except boto.exception.EC2ResponseError as exc:
         log.error('{0} failed with \'{1}\''.format(base_msg, exc))
         return {}
 
+    if not instance_data:
+        log.debug('%s no match using \'%s\'', base_msg, find_id if find_id else find_filter)
+        return {}
+
+    # Find a active instance, i.e. ignore terminated and stopped instances
+    active_inst = []
+    for inst in range(0, len(instance_data)):
+        if instance_data[inst].state not in ['terminated', 'stopped']:
+            active_inst.append(inst)
+
+    valid_inst = len(active_inst)
+    if not valid_inst:
+        log.debug('%s match found but not active \'%s\'', base_msg, find_id if find_id else find_filter)
+        return {}
+
+    if valid_inst > 1:
+        log.error('%s multiple matches, ignored, using \'%s\'', base_msg, find_id if find_id else find_filter)
+        return {}
+
+    instance = instance_data[active_inst[0]]
     if instance.tags:
         ec2_tags = instance.tags
         ec2_tags_list = {}
