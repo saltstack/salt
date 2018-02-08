@@ -1820,7 +1820,7 @@ def get_repo_data(saltenv='base'):
         serial = salt.payload.Serial(__opts__)
         with salt.utils.files.fopen(repo_details.winrepo_file, 'rb') as repofile:
             try:
-                repodata = salt.utils.data.decode(serial.loads(repofile.read()) or {})
+                repodata = salt.utils.data.decode(serial.loads(repofile.read(), encoding='utf-8') or {})
                 __context__['winrepo.data'] = repodata
                 return repodata
             except Exception as exc:
@@ -1843,7 +1843,7 @@ def _get_name_map(saltenv='base'):
         return name_map
 
     for k in name_map:
-        u_name_map[k.decode('utf-8')] = name_map[k]
+        u_name_map[k] = name_map[k]
     return u_name_map
 
 
