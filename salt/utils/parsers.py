@@ -717,7 +717,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # Remove it from config so it inherits from log_file
             self.config.pop(self._logfile_config_setting_name_)
 
-        if self.config['verify_env']:
+        if self.config['verify_env'] and self.config['log_level'] not in ('quiet', ):
             # Verify the logfile if it was explicitly set but do not try to
             # verify the default
             if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
