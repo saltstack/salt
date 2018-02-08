@@ -34,7 +34,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         query_return = {"jsonrpc": "2.0", "result": "3.4.5", "id": 1}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.apiinfo_version(**CONN_ARGS), module_return)
 
     def test_user_create(self):
@@ -49,7 +49,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         query_return = {"jsonrpc": "2.0", "result": {"userids": ["3"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_create('james', 'password007', '[7, 12]',
                                  firstname='James Bond', **CONN_ARGS), module_return)
 
@@ -63,7 +63,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         query_return = {"jsonrpc": "2.0", "result": {"userids": ["3"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_delete(3, **CONN_ARGS), module_return)
 
     def test_user_exists(self):
@@ -82,7 +82,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                         "rows_per_page": "50"}], "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_exists('Admin', **CONN_ARGS), module_return)
 
     def test_user_get(self):
@@ -117,7 +117,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                         "rows_per_page": "50"}], "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_get('Admin', **CONN_ARGS), module_return)
                 self.assertEqual(zabbix.user_get(userids='1', **CONN_ARGS), module_return)
 
@@ -131,7 +131,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         query_return = {"jsonrpc": "2.0", "result": {"userids": ["3"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_update('3', visible_name='James Brown', **CONN_ARGS), module_return)
 
     def test_user_getmedia(self):
@@ -157,7 +157,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                         "period": "1-7,00:00-24:00"}], "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_getmedia('3', **CONN_ARGS), module_return)
 
     def test_user_addmedia(self):
@@ -172,7 +172,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         query_return = {"jsonrpc": "2.0", "result": {"mediaids": ["2"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_addmedia('1', active='0', mediatypeid='1',
                                  period='1-7,00:00-24:00', sendto='support2@example.com',
                                  severity='63', **CONN_ARGS), module_return)
@@ -187,7 +187,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         query_return = {"jsonrpc": "2.0", "result": {"mediaids": [1]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_deletemedia('1', **CONN_ARGS), module_return)
 
     def test_user_list(self):
@@ -263,7 +263,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                         "rows_per_page": "50"}], "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_list(**CONN_ARGS), module_return)
 
     def test_usergroup_create(self):
@@ -276,7 +276,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         query_return = {"jsonrpc": "2.0", "result": {"usrgrpids": ["13"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.usergroup_create('testgroup', **CONN_ARGS), module_return)
 
     def test_usergroup_delete(self):
@@ -289,7 +289,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         query_return = {"jsonrpc": "2.0", "result": {"usrgrpids": ["13"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.usergroup_delete('13', **CONN_ARGS), module_return)
 
     def test_usergroup_exists(self):
@@ -305,7 +305,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, 'apiinfo_version', return_value='3.2'):
             with patch.object(zabbix, '_query', return_value=query_return):
-                with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                     self.assertEqual(zabbix.usergroup_exists('testgroup', **CONN_ARGS), module_return)
 
     def test_usergroup_get(self):
@@ -330,7 +330,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, 'apiinfo_version', return_value='3.2'):
             with patch.object(zabbix, '_query', return_value=query_return):
-                with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+                with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                     self.assertEqual(zabbix.usergroup_get('testgroup', **CONN_ARGS), module_return)
 
     def test_usergroup_update(self):
@@ -343,7 +343,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         query_return = {"jsonrpc": "2.0", "result": {"usrgrpids": ["13"]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.usergroup_update('13', users_status='1', **CONN_ARGS), module_return)
 
     def test_usergroup_list(self):
@@ -407,7 +407,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                         "gui_access": "0", "users_status": "0", "debug_mode": "0"}], "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.usergroup_list(**CONN_ARGS), module_return)
 
     def test_host_inventory_get(self):
@@ -607,7 +607,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.host_inventory_get('12345', **CONN_ARGS), module_return)
 
     def test_host_inventory_set(self):
@@ -621,6 +621,6 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         query_return = {"jsonrpc": "2.0", "result": {"hostids": [10258]}, "id": 0}
 
         with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value={**CONN_ARGS}):
+            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
                 self.assertEqual(zabbix.host_inventory_set(10258, asset_tag='jml3322',
                                  type='Xen', **CONN_ARGS), module_return)
