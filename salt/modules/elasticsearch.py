@@ -49,11 +49,13 @@ Module to provide Elasticsearch compatibility to Salt
     Some functionality might be limited by elasticsearch-py and Elasticsearch server versions.
 '''
 
-from __future__ import absolute_import
-from salt.exceptions import CommandExecutionError, SaltInvocationError
-
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
+# Import Salt Libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -65,8 +67,6 @@ try:
     HAS_ELASTICSEARCH = True
 except ImportError:
     HAS_ELASTICSEARCH = False
-
-from salt.ext.six import string_types
 
 
 def __virtual__():
@@ -93,7 +93,7 @@ def _get_instance(hosts=None, profile=None):
     if profile is None:
         profile = 'elasticsearch'
 
-    if isinstance(profile, string_types):
+    if isinstance(profile, six.string_types):
         _profile = __salt__['config.option'](profile, None)
     elif isinstance(profile, dict):
         _profile = profile
@@ -114,7 +114,7 @@ def _get_instance(hosts=None, profile=None):
 
     if not hosts:
         hosts = ['127.0.0.1:9200']
-    if isinstance(hosts, string_types):
+    if isinstance(hosts, six.string_types):
         hosts = [hosts]
     try:
         if proxies:
@@ -147,8 +147,9 @@ def _get_instance(hosts=None, profile=None):
 
         # Try the connection
         es.info()
-    except elasticsearch.exceptions.TransportError as e:
-        raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0} due to {1}'.format(hosts, str(e)))
+    except elasticsearch.exceptions.TransportError as err:
+        raise CommandExecutionError(
+            'Could not connect to Elasticsearch host/ cluster {0} due to {1}'.format(hosts, err))
     return es
 
 
@@ -232,7 +233,7 @@ def cluster_health(index=None, level='cluster', local=False, hosts=None, profile
 
     CLI example::
 
-        salt myminion elasticsearch.health
+        salt myminion elasticsearch.cluster_health
     '''
     es = _get_instance(hosts, profile)
 
@@ -253,7 +254,7 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
 
     CLI example::
 
-        salt myminion elasticsearch.stats
+        salt myminion elasticsearch.cluster_stats
     '''
     es = _get_instance(hosts, profile)
 

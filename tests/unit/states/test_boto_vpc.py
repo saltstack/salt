@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
+import os.path
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.paths import TESTS_DIR
+
 
 # Import Salt libs
 import salt.utils.boto
@@ -23,6 +26,7 @@ from tests.unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     import boto
+    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
 

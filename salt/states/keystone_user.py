@@ -30,7 +30,7 @@ Example States
         - description: 'my user'
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 __virtualname__ = 'keystone_user'
 

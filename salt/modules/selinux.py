@@ -12,13 +12,14 @@ Execute calls on selinux
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import re
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -96,7 +97,7 @@ def getenforce():
     try:
         enforce = os.path.join(_selinux_fs_path, 'enforce')
         with salt.utils.files.fopen(enforce, 'r') as _fp:
-            if _fp.readline().strip() == '0':
+            if salt.utils.stringutils.to_unicode(_fp.readline()).strip() == '0':
                 return 'Permissive'
             else:
                 return 'Enforcing'
@@ -118,6 +119,7 @@ def getconfig():
         config = '/etc/selinux/config'
         with salt.utils.files.fopen(config, 'r') as _fp:
             for line in _fp:
+                line = salt.utils.stringutils.to_unicode(line)
                 if line.strip().startswith('SELINUX='):
                     return line.split('=')[1].capitalize().strip()
     except (IOError, OSError, AttributeError):
@@ -160,10 +162,10 @@ def setenforce(mode):
         enforce = os.path.join(selinux_fs_path(), 'enforce')
         try:
             with salt.utils.files.fopen(enforce, 'w') as _fp:
-                _fp.write(mode)
+                _fp.write(salt.utils.stringutils.to_str(mode))
         except (IOError, OSError) as exc:
             msg = 'Could not write SELinux enforce file: {0}'
-            raise CommandExecutionError(msg.format(str(exc)))
+            raise CommandExecutionError(msg.format(exc))
 
     config = '/etc/selinux/config'
     try:
@@ -172,13 +174,13 @@ def setenforce(mode):
         try:
             with salt.utils.files.fopen(config, 'w') as _cf:
                 conf = re.sub(r"\nSELINUX=.*\n", "\nSELINUX=" + modestring + "\n", conf)
-                _cf.write(conf)
+                _cf.write(salt.utils.stringutils.to_str(conf))
         except (IOError, OSError) as exc:
             msg = 'Could not write SELinux config file: {0}'
-            raise CommandExecutionError(msg.format(str(exc)))
+            raise CommandExecutionError(msg.format(exc))
     except (IOError, OSError) as exc:
         msg = 'Could not read SELinux config file: {0}'
-        raise CommandExecutionError(msg.format(str(exc)))
+        raise CommandExecutionError(msg.format(exc))
 
     return getenforce()
 

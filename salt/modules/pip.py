@@ -74,16 +74,16 @@ of the 2015.5 branch:
    back slash is an escape character.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import logging
 import os
+import pkg_resources
 import re
 import shutil
-import logging
 import sys
 import tempfile
-from pkg_resources import parse_version
 
 # Import Salt libs
 import salt.utils.data
@@ -91,12 +91,13 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.locales
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
-
+# This needs to be named logger so we don't shadow it in pip.install
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 # Don't shadow built-in's.
@@ -207,10 +208,12 @@ def _get_env_activate(bin_env):
 
 def _find_req(link):
 
-    logger.info('_find_req -- link = %s', str(link))
+    logger.info('_find_req -- link = %s', link)
 
     with salt.utils.files.fopen(link) as fh_link:
-        child_links = rex_pip_chain_read.findall(fh_link.read())
+        child_links = rex_pip_chain_read.findall(
+            salt.utils.stringutils.to_unicode(fh_link.read())
+        )
 
     base_path = os.path.dirname(link)
     child_links = [os.path.join(base_path, d) for d in child_links]
@@ -251,7 +254,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
         treq = None
 
         for requirement in requirements:
-            logger.debug('TREQ IS: %s', str(treq))
+            logger.debug('TREQ IS: %s', treq)
             if requirement.startswith('salt://'):
                 cached_requirements = _get_cached_requirements(
                     requirement, saltenv
@@ -299,13 +302,13 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
 
                 os.chdir(current_directory)
 
-                logger.info('request files: {0}'.format(str(reqs)))
+                logger.info('request files: %s', reqs)
 
                 for req_file in reqs:
                     if not os.path.isabs(req_file):
                         req_file = os.path.join(cwd, req_file)
 
-                    logger.debug('TREQ N CWD: %s -- %s -- for %s', str(treq), str(cwd), str(req_file))
+                    logger.debug('TREQ N CWD: %s -- %s -- for %s', treq, cwd, req_file)
                     target_path = os.path.join(treq, os.path.basename(req_file))
 
                     logger.debug('S: %s', req_file)
@@ -324,8 +327,8 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                         __salt__['file.copy'](req_file, target_path)
 
                     logger.debug(
-                        'Changing ownership of requirements file \'{0}\' to '
-                        'user \'{1}\''.format(target_path, user)
+                        'Changing ownership of requirements file \'%s\' to '
+                        'user \'%s\'', target_path, user
                     )
 
                     __salt__['file.chown'](target_path, user, None)
@@ -335,7 +338,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
 
         cleanup_requirements.append(treq)
 
-    logger.debug('CLEANUP_REQUIREMENTS: %s', str(cleanup_requirements))
+    logger.debug('CLEANUP_REQUIREMENTS: %s', cleanup_requirements)
     return cleanup_requirements, None
 
 
@@ -583,9 +586,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             logger.error(
-                ('The --use-wheel option is only supported in pip {0} and '
-                 'newer. The version of pip detected is {1}. This option '
-                 'will be ignored.'.format(min_version, cur_version))
+                'The --use-wheel option is only supported in pip %s and '
+                'newer. The version of pip detected is %s. This option '
+                'will be ignored.', min_version, cur_version
             )
         else:
             cmd.append('--use-wheel')
@@ -596,9 +599,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             logger.error(
-                ('The --no-use-wheel option is only supported in pip {0} and '
-                 'newer. The version of pip detected is {1}. This option '
-                 'will be ignored.'.format(min_version, cur_version))
+                'The --no-use-wheel option is only supported in pip %s and '
+                'newer. The version of pip detected is %s. This option '
+                'will be ignored.', min_version, cur_version
             )
         else:
             cmd.append('--no-use-wheel')
@@ -755,14 +758,18 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             cmd.extend(['--install-option', opt])
 
     if pkgs:
-        if isinstance(pkgs, six.string_types):
-            pkgs = [p.strip() for p in pkgs.split(',')]
+        if not isinstance(pkgs, list):
+            try:
+                pkgs = [p.strip() for p in pkgs.split(',')]
+            except AttributeError:
+                pkgs = [p.strip() for p in six.text_type(pkgs).split(',')]
+        pkgs = salt.utils.data.stringify(salt.utils.data.decode_list(pkgs))
 
         # It's possible we replaced version-range commas with semicolons so
         # they would survive the previous line (in the pip.installed state).
         # Put the commas back in while making sure the names are contained in
         # quotes, this allows for proper version spec passing salt>=0.17.0
-        cmd.extend(['{0}'.format(p.replace(';', ',')) for p in pkgs])
+        cmd.extend([p.replace(';', ',') for p in pkgs])
 
     if editable:
         egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
@@ -810,8 +817,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if env_vars:
         if isinstance(env_vars, dict):
             for key, val in six.iteritems(env_vars):
+                if not isinstance(key, six.string_types):
+                    key = str(key)  # future lint: disable=blacklisted-function
                 if not isinstance(val, six.string_types):
-                    val = str(val)
+                    val = str(val)  # future lint: disable=blacklisted-function
                 cmd_kwargs.setdefault('env', {})[key] = val
         else:
             raise CommandExecutionError(
@@ -826,12 +835,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
         logger.debug(
             'TRY BLOCK: end of pip.install -- cmd: %s, cmd_kwargs: %s',
-            str(cmd), str(cmd_kwargs)
+            cmd, cmd_kwargs
         )
 
-        return __salt__['cmd.run_all'](cmd,
-                                       python_shell=False,
-                                       **cmd_kwargs)
+        return __salt__['cmd.run_all'](cmd, python_shell=False, **cmd_kwargs)
     finally:
         for tempdir in [cr for cr in cleanup_requirements if cr is not None]:
             if os.path.isdir(tempdir):
@@ -943,6 +950,7 @@ def uninstall(pkgs=None,
             for requirement in requirements:
                 with salt.utils.files.fopen(requirement) as rq_:
                     for req in rq_:
+                        req = salt.utils.stringutils.to_unicode(req)
                         try:
                             req_pkg, _ = req.split('==')
                             if req_pkg in pkgs:
@@ -1013,10 +1021,10 @@ def freeze(bin_env=None,
     if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                        ver2=min_version):
         logger.warning(
-            ('The version of pip installed is {0}, which is older than {1}. '
-             'The packages pip, wheel, setuptools, and distribute will not be '
-             'included in the output of pip.freeze').format(cur_version,
-                                                            min_version))
+            'The version of pip installed is %s, which is older than %s. '
+            'The packages pip, wheel, setuptools, and distribute will not be '
+            'included in the output of pip.freeze', cur_version, min_version
+        )
     else:
         cmd.append('--all')
 
@@ -1081,7 +1089,7 @@ def list_(prefix=None,
             name = line.split('==')[0]
             version_ = line.split('==')[1]
         else:
-            logger.error('Can\'t parse line \'{0}\''.format(line))
+            logger.error('Can\'t parse line \'%s\'', line)
             continue
 
         if prefix:
@@ -1161,7 +1169,7 @@ def list_upgrades(bin_env=None,
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error('Can\'t parse line \'{0}\''.format(line))
+                logger.error('Can\'t parse line \'%s\'', line)
                 continue
             packages[name] = version_
 
@@ -1213,7 +1221,7 @@ def is_installed(pkgname=None,
             name = line.split('==')[0]
             version_ = line.split('==')[1]
         else:
-            logger.error('Can\'t parse line \'{0}\''.format(line))
+            logger.error('Can\'t parse line \'%s\'', line)
             continue
 
         if pkgname:
@@ -1359,7 +1367,7 @@ def list_all_versions(pkg,
         match = re.search(r'\s*Could not find a version.* \(from versions: (.*)\)', line)
         if match:
             versions = [v for v in match.group(1).split(', ') if v and excludes.match(v)]
-            versions.sort(key=parse_version)
+            versions.sort(key=pkg_resources.parse_version)
             break
     if not versions:
         return None

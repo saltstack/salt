@@ -16,7 +16,9 @@ import salt.pillar.saltclass as saltclass
 base_path = os.path.dirname(os.path.realpath(__file__))
 fake_minion_id = 'fake_id'
 fake_pillar = {}
-fake_args = ({'path': '{0}/../../integration/files/saltclass/examples'.format(base_path)})
+fake_args = ({'path': os.path.abspath(
+                        os.path.join(base_path, '..', '..', 'integration',
+                                     'files', 'saltclass', 'examples'))})
 fake_opts = {}
 fake_salt = {}
 fake_grains = {}

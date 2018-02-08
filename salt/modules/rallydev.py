@@ -14,7 +14,7 @@ Requires a ``username`` and a ``password`` in ``/etc/salt/minion``:
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -81,7 +81,7 @@ def _query(action=None,
     if command:
         path += '/{0}'.format(command)
 
-    log.debug('RallyDev URL: {0}'.format(path))
+    log.debug('RallyDev URL: %s', path)
 
     if not isinstance(args, dict):
         args = {}
@@ -115,7 +115,7 @@ def _query(action=None,
         persist_session=True,
         opts=__opts__,
     )
-    log.debug('RallyDev Response Status Code: {0}'.format(result['status']))
+    log.debug('RallyDev Response Status Code: %s', result['status'])
     if 'error' in result:
         log.error(result['error'])
         return [result['status'], result['error']]

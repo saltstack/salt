@@ -4,7 +4,7 @@ Module for managing SNMP service settings on Windows servers.
 The Windows feature 'SNMP-Service' must be installed.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt libs
@@ -307,7 +307,7 @@ def get_community_names():
             if not isinstance(current_value, dict):
                 continue
 
-            permissions = str()
+            permissions = six.text_type()
             for permission_name in _PERMISSION_TYPES:
                 if current_value['vdata'] == _PERMISSION_TYPES[permission_name]:
                     permissions = permission_name

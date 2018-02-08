@@ -77,13 +77,13 @@ Connection module for Amazon CognitoIdentity
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -109,22 +109,13 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.8.0'
-    required_boto3_version = '1.2.1'
     # the boto_cognitoidentity execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_cognitoidentity module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_cognitoidentity module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto_version))
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_cognitoidentity module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto_ver='2.8.0',
+        boto3_ver='1.2.1'
+    )
 
 
 def __init__(opts):

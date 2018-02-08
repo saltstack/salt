@@ -25,10 +25,8 @@ Values/Entries are name/data pairs. There can be many values in a key. The
 :depends:   - PyWin32
 '''
 # When production windows installer is using Python 3, Python 2 code can be removed
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import _future_ python libs first & before any other code
-from __future__ import absolute_import
-from __future__ import unicode_literals
 # Import python libs
 import sys
 import logging
@@ -94,9 +92,13 @@ class Registry(object):  # pylint: disable=R0903
     '''
     def __init__(self):
         self.hkeys = {
+            'HKEY_CURRENT_CONFIG': win32con.HKEY_CURRENT_CONFIG,
+            'HKEY_CLASSES_ROOT': win32con.HKEY_CLASSES_ROOT,
             'HKEY_CURRENT_USER':  win32con.HKEY_CURRENT_USER,
             'HKEY_LOCAL_MACHINE': win32con.HKEY_LOCAL_MACHINE,
             'HKEY_USERS': win32con.HKEY_USERS,
+            'HKCC': win32con.HKEY_CURRENT_CONFIG,
+            'HKCR': win32con.HKEY_CLASSES_ROOT,
             'HKCU': win32con.HKEY_CURRENT_USER,
             'HKLM': win32con.HKEY_LOCAL_MACHINE,
             'HKU':  win32con.HKEY_USERS,
@@ -129,9 +131,11 @@ class Registry(object):  # pylint: disable=R0903
         # delete_key_recursive uses this to check the subkey contains enough \
         # as we do not want to remove all or most of the registry
         self.subkey_slash_check = {
-            win32con.HKEY_CURRENT_USER:  0,
-            win32con.HKEY_LOCAL_MACHINE: 1,
-            win32con.HKEY_USERS:         1
+            win32con.HKEY_CURRENT_USER:   0,
+            win32con.HKEY_LOCAL_MACHINE:  1,
+            win32con.HKEY_USERS:          1,
+            win32con.HKEY_CURRENT_CONFIG: 1,
+            win32con.HKEY_CLASSES_ROOT:   1
         }
 
         self.registry_32 = {
@@ -202,6 +206,8 @@ def list_keys(hive, key=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name. If a key is
         not passed, the keys under the hive will be returned.
@@ -239,10 +245,9 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
         handle.Close()
 
-    except pywintypes.error as exc:  # pylint: disable=E0602
-        log.debug(exc)
-        log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
-        return False, 'Cannot find key: {0}\\{1}'.format(hive, key)
+    except pywintypes.error:  # pylint: disable=E0602
+        log.debug(r'Cannot find key: %s\%s', hive, key, exc_info=True)
+        return False, r'Cannot find key: {0}\{1}'.format(hive, key)
 
     return subkeys
 
@@ -256,6 +261,8 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name. If a key is
         not passed, the values under the hive will be returned.
@@ -295,13 +302,18 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
             value = {'hive':   local_hive,
                      'key':    local_key,
                      'vname':  _to_mbcs(vname),
-                     'vdata':  _to_mbcs(vdata),
                      'vtype':  registry.vtype_reverse[vtype],
                      'success': True}
+            # Only convert text types to unicode
+            if vtype == win32con.REG_MULTI_SZ:
+                value['vdata'] = [_to_mbcs(i) for i in vdata]
+            elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
+                value['vdata'] = _to_mbcs(vdata)
+            else:
+                value['vdata'] = vdata
             values.append(value)
     except pywintypes.error as exc:  # pylint: disable=E0602
-        log.debug(exc)
-        log.debug(r'Cannot find key: {0}\{1}'.format(hive, key))
+        log.debug(r'Cannot find key: %s\%s', hive, key, exc_info=True)
         return False, r'Cannot find key: {0}\{1}'.format(hive, key)
     finally:
         if handle:
@@ -318,6 +330,8 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -371,20 +385,31 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
             # RegQueryValueEx returns and accepts unicode data
             vdata, vtype = win32api.RegQueryValueEx(handle, local_vname)
             if vdata or vdata in [0, '']:
+                # Only convert text types to unicode
                 ret['vtype'] = registry.vtype_reverse[vtype]
-                if vtype == 7:
+                if vtype == win32con.REG_MULTI_SZ:
                     ret['vdata'] = [_to_mbcs(i) for i in vdata]
-                else:
+                elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
                     ret['vdata'] = _to_mbcs(vdata)
+                else:
+                    ret['vdata'] = vdata
             else:
                 ret['comment'] = 'Empty Value'
         except WindowsError:  # pylint: disable=E0602
             ret['vdata'] = ('(value not set)')
             ret['vtype'] = 'REG_SZ'
+        except pywintypes.error as exc:  # pylint: disable=E0602
+            msg = 'Cannot find {0} in {1}\\{2}' \
+                  ''.format(local_vname, local_hive, local_key)
+            log.trace(exc)
+            log.trace(msg)
+            ret['comment'] = msg
+            ret['success'] = False
     except pywintypes.error as exc:  # pylint: disable=E0602
-        log.debug(exc)
-        log.debug('Cannot find key: {0}\\{1}'.format(local_hive, local_key))
-        ret['comment'] = 'Cannot find key: {0}\\{1}'.format(local_hive, local_key)
+        msg = 'Cannot find key: {0}\\{1}'.format(local_hive, local_key)
+        log.trace(exc)
+        log.trace(msg)
+        ret['comment'] = msg
         ret['success'] = False
     return ret
 
@@ -404,6 +429,8 @@ def set_value(hive,
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -528,8 +555,8 @@ def set_value(hive,
         win32api.RegCloseKey(handle)
         broadcast_change()
         return True
-    except (win32api.error, SystemError, ValueError, TypeError) as exc:  # pylint: disable=E0602
-        log.error(exc, exc_info=True)
+    except (win32api.error, SystemError, ValueError, TypeError):  # pylint: disable=E0602
+        log.exception('Encountered error setting registry value')
         return False
 
 
@@ -544,6 +571,8 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param key: The key to remove (looks like a path)
 
@@ -577,7 +606,10 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
         return False
 
     if (len(key) > 1) and (key.count('\\', 1) < registry.subkey_slash_check[hkey]):
-        log.error('Hive:{0} Key:{1}; key is too close to root, not safe to remove'.format(hive, key))
+        log.error(
+            'Hive:%s Key:%s; key is too close to root, not safe to remove',
+            hive, key
+        )
         return False
 
     # Functions for traversing the registry tree
@@ -602,14 +634,14 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
         for subkeyname in _subkeys(_key):
             subkeypath = r'{0}\{1}'.format(_keypath, subkeyname)
             _ret = _traverse_registry_tree(_hkey, subkeypath, _ret, access_mask)
-            _ret.append('{0}'.format(subkeypath))
+            _ret.append(subkeypath)
         return _ret
 
     # Get a reverse list of registry keys to be deleted
     key_list = []
     key_list = _traverse_registry_tree(hkey, key_path, key_list, access_mask)
     # Add the top level key last, all subkeys must be deleted first
-    key_list.append(r'{0}'.format(key_path))
+    key_list.append(key_path)
 
     ret = {'Deleted': [],
            'Failed': []}
@@ -638,6 +670,8 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -673,10 +707,10 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         return True
     except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc, exc_info=True)
-        log.error('Hive: {0}'.format(local_hive))
-        log.error('Key: {0}'.format(local_key))
-        log.error('ValueName: {0}'.format(local_vname))
-        log.error('32bit Reg: {0}'.format(use_32bit_registry))
+        log.error('Hive: %s', local_hive)
+        log.error('Key: %s', local_key)
+        log.error('ValueName: %s', local_vname)
+        log.error('32bit Reg: %s', use_32bit_registry)
         return False
 
 
