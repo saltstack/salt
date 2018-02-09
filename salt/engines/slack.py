@@ -119,6 +119,7 @@ import salt.utils.http
 import salt.utils.json
 import salt.utils.slack
 import salt.utils.yaml
+import salt.output.highstate
 from salt.ext import six
 
 __virtualname__ = 'slack'
@@ -563,20 +564,11 @@ class SlackClient(object):
         '''
         Print out YAML using the block mode
         '''
-        params = {}
-        if 'output_indent' not in __opts__:
-            # default indentation
-            params.update(default_flow_style=False)
-        elif __opts__['output_indent'] >= 0:
-            # custom indent
-            params.update(default_flow_style=False,
-                          indent=__opts__['output_indent'])
-        else:  # no indentation
-            params.update(default_flow_style=True,
-                          indent=0)
         try:
-            #return salt.utils.yaml.safe_dump(data, **params).replace("\n\n", "\n")
-            return salt.utils.json.dumps(data, sort_keys=True, indent=1)
+            salt.output.highstate.__opts__ = __opts__
+            if 'color' not in salt.output.highstate.__opts__:
+                salt.output.highstate.__opts__.update({"color": ""})
+            return salt.output.highstate.output(data)
         # pylint: disable=broad-except
         except Exception as exc:
             import pprint

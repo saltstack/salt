@@ -23,12 +23,13 @@ Support for Zabbix
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import socket
 
 # Import salt libs
+from salt.ext import six
 import salt.utils.http
 import salt.utils.json
 import salt.utils.path
@@ -65,7 +66,7 @@ def _frontend_url():
             response = salt.utils.http.query(frontend_url)
             error = response['error']
         except HTTPError as http_e:
-            error = str(http_e)
+            error = six.text_type(http_e)
         if error.find('412: Precondition Failed'):
             return frontend_url
         else:
@@ -1617,7 +1618,7 @@ def usermacro_get(macro=None, hostids=None, templateids=None, hostmacroids=None,
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + str(macro.keys()[0]) +"}"
+                    macro = "{" + six.text_type(macro.keys()[0]) +"}"
                 if not macro.startswith('{') and not macro.endswith('}'):
                     macro = "{" + macro + "}"
                 params['filter'].setdefault('macro', macro)
@@ -1669,7 +1670,7 @@ def usermacro_create(macro, value, hostid, **connection_args):
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + str(macro.keys()[0]) +"}"
+                    macro = "{" + six.text_type(macro.keys()[0]) +"}"
                 if not macro.startswith('{') and not macro.endswith('}'):
                     macro = "{" + macro + "}"
                 params['macro'] = macro
@@ -1711,7 +1712,7 @@ def usermacro_createglobal(macro, value, **connection_args):
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + str(macro.keys()[0]) +"}"
+                    macro = "{" + six.text_type(macro.keys()[0]) +"}"
                 if not macro.startswith('{') and not macro.endswith('}'):
                     macro = "{" + macro + "}"
                 params['macro'] = macro
