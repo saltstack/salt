@@ -274,7 +274,7 @@ def _run(cmd,
          password=None,
          bg=False,
          encoded_cmd=False,
-         success_exit_codes=None,
+         success_retcodes=None,
          **kwargs):
     '''
     Do the DRY thing and only call subprocess.Popen() once
@@ -568,6 +568,18 @@ def _run(cmd,
             and not isinstance(cmd, list):
         cmd = salt.utils.args.shlex_split(cmd)
 
+    if success_retcodes is None:
+        success_retcodes = [0]
+    else:
+        try:
+            success_retcodes = [int(i) for i in
+                                salt.utils.args.split_input(
+                                    success_retcodes
+                                )]
+        except ValueError:
+            raise SaltInvocationError(
+                'success_retcodes must be a list of integers'
+            )
     if not use_vt:
         # This is where the magic happens
         try:
@@ -626,15 +638,9 @@ def _run(cmd,
             if err is not None:
                 err = err.rstrip()
         ret['pid'] = proc.process.pid
-        _returncode = proc.process.returncode
-        ret['retcode'] = _returncode
-        if success_exit_codes:
-            if not isinstance(success_exit_codes, list):
-                success_exit_codes = list(success_exit_codes)
-            # Ensure all our retcodes are ints
-            success_exit_codes = [int(i) for i in success_exit_codes]
-            if _returncode in success_exit_codes:
-                ret['retcode'] = 0
+        ret['retcode'] = proc.process.returncode
+        if ret['retcode'] in success_retcodes:
+            ret['retcode'] = 0
         ret['stdout'] = out
         ret['stderr'] = err
     else:
@@ -703,13 +709,9 @@ def _run(cmd,
                     # Process terminated, i.e., not canceled by the user or by
                     # the timeout
                     ret['stderr'] = stderr
-                    _returncode = proc.exitstatus
-                    ret['retcode'] = _returncode
-                    if success_exit_codes:
-                        if not isinstance(success_exit_codes, list):
-                            success_exit_codes = list(success_exit_codes)
-                        if _returncode in success_exit_codes:
-                            ret['retcode'] = 0
+                    ret['retcode'] = proc.exitstatus
+                    if ret['retcode'] in success_retcodes:
+                        ret['retcode'] = 0
                 ret['pid'] = proc.pid
         finally:
             proc.close(terminate=True, kill=True)
@@ -738,7 +740,7 @@ def _run_quiet(cmd,
                saltenv='base',
                pillarenv=None,
                pillar_override=None,
-               success_exit_codes=None):
+               success_retcodes=None):
     '''
     Helper for running commands quietly for minion startup
     '''
@@ -759,7 +761,7 @@ def _run_quiet(cmd,
                 saltenv=saltenv,
                 pillarenv=pillarenv,
                 pillar_override=pillar_override,
-                success_exit_codes=success_exit_codes)['stdout']
+                success_retcodes=success_retcodes)['stdout']
 
 
 def _run_all_quiet(cmd,
@@ -777,7 +779,7 @@ def _run_all_quiet(cmd,
                    pillarenv=None,
                    pillar_override=None,
                    output_loglevel=None,
-                   success_exit_codes=None):
+                   success_retcodes=None):
 
     '''
     Helper for running commands quietly for minion startup.
@@ -804,7 +806,7 @@ def _run_all_quiet(cmd,
                 saltenv=saltenv,
                 pillarenv=pillarenv,
                 pillar_override=pillar_override,
-                success_exit_codes=success_exit_codes)
+                success_retcodes=success_retcodes)
 
 
 def run(cmd,
@@ -832,7 +834,7 @@ def run(cmd,
         encoded_cmd=False,
         raise_err=False,
         prepend_path=None,
-        success_exit_codes=None,
+        success_retcodes=None,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -971,9 +973,9 @@ def run(cmd,
         Be absolutely certain that you have sanitized your input prior to using
         python_shell=True
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -1041,7 +1043,7 @@ def run(cmd,
                bg=bg,
                password=password,
                encoded_cmd=encoded_cmd,
-               success_exit_codes=success_exit_codes,
+               success_retcodes=success_retcodes,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1088,7 +1090,7 @@ def shell(cmd,
           bg=False,
           password=None,
           prepend_path=None,
-          success_exit_codes=None,
+          success_retcodes=None,
           **kwargs):
     '''
     Execute the passed command and return the output as a string.
@@ -1214,9 +1216,9 @@ def shell(cmd,
         ``env`` represents the environment variables for the command, and
         should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -1284,7 +1286,7 @@ def shell(cmd,
                python_shell=python_shell,
                bg=bg,
                password=password,
-               success_exit_codes=success_exit_codes,
+               success_retcodes=success_retcodes,
                **kwargs)
 
 
@@ -1310,7 +1312,7 @@ def run_stdout(cmd,
                use_vt=False,
                password=None,
                prepend_path=None,
-               success_exit_codes=None,
+               success_retcodes=None,
                **kwargs):
     '''
     Execute a command, and only return the standard out
@@ -1425,9 +1427,9 @@ def run_stdout(cmd,
       ``env`` represents the environment variables for the command, and
       should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -1476,7 +1478,7 @@ def run_stdout(cmd,
                saltenv=saltenv,
                use_vt=use_vt,
                password=password,
-               success_exit_codes=success_exit_codes,
+               success_retcodes=success_retcodes,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1524,7 +1526,7 @@ def run_stderr(cmd,
                use_vt=False,
                password=None,
                prepend_path=None,
-               success_exit_codes=None,
+               success_retcodes=None,
                **kwargs):
     '''
     Execute a command and only return the standard error
@@ -1640,9 +1642,9 @@ def run_stderr(cmd,
       ``env`` represents the environment variables for the command, and
       should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -1691,7 +1693,7 @@ def run_stderr(cmd,
                use_vt=use_vt,
                saltenv=saltenv,
                password=password,
-               success_exit_codes=success_exit_codes,
+               success_retcodes=success_retcodes,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1741,7 +1743,7 @@ def run_all(cmd,
             password=None,
             encoded_cmd=False,
             prepend_path=None,
-            success_exit_codes=None,
+            success_retcodes=None,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -1879,9 +1881,9 @@ def run_all(cmd,
 
       .. versionadded:: 2016.3.6
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -1933,7 +1935,7 @@ def run_all(cmd,
                use_vt=use_vt,
                password=password,
                encoded_cmd=encoded_cmd,
-               success_exit_codes=success_exit_codes,
+               success_retcodes=success_retcodes,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1981,7 +1983,7 @@ def retcode(cmd,
             saltenv='base',
             use_vt=False,
             password=None,
-            success_exit_codes=None,
+            success_retcodes=None,
             **kwargs):
     '''
     Execute a shell command and return the command's return code.
@@ -2084,9 +2086,9 @@ def retcode(cmd,
     :rtype: None
     :returns: Return Code as an int or None if there was an exception.
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -2132,7 +2134,7 @@ def retcode(cmd,
                saltenv=saltenv,
                use_vt=use_vt,
                password=password,
-               success_exit_codes=success_exit_codes,
+               success_retcodes=success_retcodes,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -2172,7 +2174,7 @@ def _retcode_quiet(cmd,
                    saltenv='base',
                    use_vt=False,
                    password=None,
-                   success_exit_codes=None,
+                   success_retcodes=None,
                    **kwargs):
     '''
     Helper for running commands quietly for minion startup.
@@ -2197,7 +2199,7 @@ def _retcode_quiet(cmd,
                    saltenv=saltenv,
                    use_vt=use_vt,
                    password=password,
-                   success_exit_codes=success_exit_codes,
+                   success_retcodes=success_retcodes,
                    **kwargs)
 
 
@@ -2221,7 +2223,7 @@ def script(source,
            use_vt=False,
            bg=False,
            password=None,
-           success_exit_codes=None,
+           success_retcodes=None,
            **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -2337,9 +2339,9 @@ def script(source,
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
       more interactively to the console and the logs. This is experimental.
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -2437,7 +2439,7 @@ def script(source,
                use_vt=use_vt,
                bg=bg,
                password=password,
-               success_exit_codes=success_exit_codes,
+               success_retcodes=success_retcodes,
                **kwargs)
     if salt.utils.platform.is_windows() and runas:
         _cleanup_tempfile(cwd)
@@ -2467,7 +2469,7 @@ def script_retcode(source,
                    log_callback=None,
                    use_vt=False,
                    password=None,
-                   success_exit_codes=None,
+                   success_retcodes=None,
                    **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -2581,9 +2583,9 @@ def script_retcode(source,
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
       more interactively to the console and the logs. This is experimental.
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -2625,7 +2627,7 @@ def script_retcode(source,
                   log_callback=log_callback,
                   use_vt=use_vt,
                   password=password,
-                  success_exit_codes=success_exit_codes,
+                  success_retcodes=success_retcodes,
                   **kwargs)['retcode']
 
 
@@ -2778,7 +2780,7 @@ def run_chroot(root,
                saltenv='base',
                use_vt=False,
                bg=False,
-               success_exit_codes=None,
+               success_retcodes=None,
                **kwargs):
     '''
     .. versionadded:: 2014.7.0
@@ -2895,9 +2897,9 @@ def run_chroot(root,
         This is experimental.
 
 
-    success_exit_codes: This parameter will be allow a list of
+    success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -2948,7 +2950,7 @@ CLI Example:
                    pillarenv=kwargs.get('pillarenv'),
                    pillar=kwargs.get('pillar'),
                    use_vt=use_vt,
-                   success_exit_codes=success_exit_codes,
+                   success_retcodes=success_retcodes,
                    bg=bg)
 
     # Kill processes running in the chroot
@@ -3229,7 +3231,7 @@ def powershell(cmd,
                password=None,
                depth=None,
                encode_cmd=False,
-               success_exit_codes=None,
+               success_retcodes=None,
                **kwargs):
     '''
     Execute the passed PowerShell command and return the output as a dictionary.
@@ -3385,9 +3387,9 @@ def powershell(cmd,
       where characters may be dropped or incorrectly converted when executed.
       Default is False.
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -3449,7 +3451,7 @@ def powershell(cmd,
                    python_shell=python_shell,
                    password=password,
                    encoded_cmd=encoded_cmd,
-                   success_exit_codes=success_exit_codes,
+                   success_retcodes=success_retcodes,
                    **kwargs)
 
     try:
@@ -3480,7 +3482,7 @@ def powershell_all(cmd,
                    depth=None,
                    encode_cmd=False,
                    force_list=False,
-                   success_exit_codes=None,
+                   success_retcodes=None,
                    **kwargs):
     '''
     Execute the passed PowerShell command and return a dictionary with a result field
@@ -3674,9 +3676,9 @@ def powershell_all(cmd,
     :param bool force_list: The purpose of this paramater is described in the preamble
       of this function's documentation. Default value is False.
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -3754,7 +3756,7 @@ def powershell_all(cmd,
                        python_shell=python_shell,
                        password=password,
                        encoded_cmd=encoded_cmd,
-                       success_exit_codes=success_exit_codes,
+                       success_retcodes=success_retcodes,
                        **kwargs)
     stdoutput = response['stdout']
 
@@ -3809,7 +3811,7 @@ def run_bg(cmd,
            saltenv='base',
            password=None,
            prepend_path=None,
-           success_exit_codes=None,
+           success_retcodes=None,
            **kwargs):
     r'''
     .. versionadded: 2016.3.0
@@ -3923,9 +3925,9 @@ def run_bg(cmd,
         Be absolutely certain that you have sanitized your input prior to using
         python_shell=True
 
-    :param list success_exit_codes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
-        return code  returned from the run matches any in the provided list,
+        return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
@@ -3987,7 +3989,7 @@ def run_bg(cmd,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                password=password,
-               success_exit_codes=success_exit_codes,
+               success_retcodes=success_retcodes,
                **kwargs
                )
 
