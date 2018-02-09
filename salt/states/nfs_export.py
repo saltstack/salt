@@ -57,7 +57,7 @@ To ensure an NFS export is absent:
         - name: '/srv/nfs'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import salt.utils.path
 
 

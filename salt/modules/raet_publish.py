@@ -2,7 +2,7 @@
 '''
 Publish a command from a minion to a target
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import time
@@ -14,6 +14,9 @@ import salt.transport
 import salt.utils.args
 import salt.utils.versions
 from salt.exceptions import SaltReqTimeoutError
+
+# Import 3rd party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +95,7 @@ def _publish(
     time.sleep(float(timeout))
     load = {'cmd': 'pub_ret',
             'id': __opts__['id'],
-            'jid': str(peer_data['jid'])}
+            'jid': six.text_type(peer_data['jid'])}
     ret = channel.send(load)
     if form == 'clean':
         cret = {}

@@ -8,7 +8,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import os
 import pwd
@@ -296,7 +296,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
         with salt.utils.files.fopen(req_filename, 'wb') as reqf:
-            reqf.write(six.b('pep8'))
+            reqf.write(b'pep8\n')
 
         try:
             ret = self.run_state(
@@ -363,7 +363,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
         with salt.utils.files.fopen(req_filename, 'wb') as reqf:
-            reqf.write(six.b('pep8'))
+            reqf.write(b'pep8\n')
 
         try:
             ret = self.run_state(
@@ -458,7 +458,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             RUNTIME_VARS.TMP_PRODENV_STATE_TREE, 'prod-env-requirements.txt'
         )
         with salt.utils.files.fopen(requirements_file, 'wb') as reqf:
-            reqf.write(six.b('pep8\n'))
+            reqf.write(b'pep8\n')
 
         try:
             self.run_function('virtualenv.create', [venv_dir])

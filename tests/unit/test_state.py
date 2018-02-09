@@ -12,14 +12,23 @@ import tempfile
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
+    MagicMock,
+    patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
 import salt.exceptions
-from salt.ext import six
 import salt.state
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
+from salt.utils.decorators import state as statedecorators
+
+try:
+    import pytest
+except ImportError as err:
+    pytest = None
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -475,26 +484,191 @@ class TopFileMergeTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(merged_tops, expected_merge)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(pytest is None, 'PyTest is missing')
 class StateReturnsTestCase(TestCase):
     '''
     TestCase for code handling state returns.
     '''
 
-    def test_comment_lists_are_converted_to_string(self):
+    def test_state_output_check_changes_is_dict(self):
         '''
-        Tests that states returning a list of comments
-        have that converted to a single string
+        Test that changes key contains a dictionary.
+        :return:
         '''
-        ret = {
-            'name': 'myresource',
-            'result': True,
-            'comment': ['comment 1', 'comment 2'],
-            'changes': {},
+        data = {'changes': []}
+        out = statedecorators.OutputUnifier('content_check')(lambda: data)()
+        assert "'Changes' should be a dictionary" in out['comment']
+        assert not out['result']
+
+    def test_state_output_check_return_is_dict(self):
+        '''
+        Test for the entire return is a dictionary
+        :return:
+        '''
+        data = ['whatever']
+        out = statedecorators.OutputUnifier('content_check')(lambda: data)()
+        assert 'Malformed state return. Data must be a dictionary type' in out['comment']
+        assert not out['result']
+
+    def test_state_output_check_return_has_nrc(self):
+        '''
+        Test for name/result/comment keys are inside the return.
+        :return:
+        '''
+        data = {'arbitrary': 'data', 'changes': {}}
+        out = statedecorators.OutputUnifier('content_check')(lambda: data)()
+        assert ' The following keys were not present in the state return: name, result, comment' in out['comment']
+        assert not out['result']
+
+    def test_state_output_unifier_comment_is_not_list(self):
+        '''
+        Test for output is unified so the comment is converted to a multi-line string
+        :return:
+        '''
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'fantastic!'}
+        expected = {'comment': 'data\nin\nthe\nlist', 'changes': {}, 'name': None, 'result': True}
+        assert statedecorators.OutputUnifier('unify')(lambda: data)() == expected
+
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': None}
+        expected = 'data\nin\nthe\nlist'
+        assert statedecorators.OutputUnifier('unify')(lambda: data)()['comment'] == expected
+
+    def test_state_output_unifier_result_converted_to_true(self):
+        '''
+        Test for output is unified so the result is converted to True
+        :return:
+        '''
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': 'Fantastic'}
+        assert statedecorators.OutputUnifier('unify')(lambda: data)()['result'] is True
+
+    def test_state_output_unifier_result_converted_to_false(self):
+        '''
+        Test for output is unified so the result is converted to False
+        :return:
+        '''
+        data = {'comment': ['data', 'in', 'the', 'list'], 'changes': {}, 'name': None, 'result': ''}
+        assert statedecorators.OutputUnifier('unify')(lambda: data)()['result'] is False
+
+
+class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    '''
+    TestCase for code handling slots
+    '''
+    def setUp(self):
+        with patch('salt.state.State._gather_pillar'):
+            minion_opts = self.get_temp_config('minion')
+            self.state_obj = salt.state.State(minion_opts)
+
+    def test_format_slots_no_slots(self):
+        '''
+        Test the format slots keeps data without slots untouched.
+        '''
+        cdata = {
+                'args': [
+                    'arg',
+                ],
+                'kwargs': {
+                    'key': 'val',
+                }
         }
-        salt.state.State.verify_ret(ret)  # sanity check
-        with self.assertRaises(salt.exceptions.SaltException):
-            # Not suitable for export as is
-            salt.state.State.verify_ret_for_export(ret)
-        salt.state.State.munge_ret_for_export(ret)
-        self.assertIsInstance(ret['comment'], six.string_types)
-        salt.state.State.verify_ret_for_export(ret)
+        self.state_obj.format_slots(cdata)
+        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'val'}})
+
+    def test_format_slots_arg(self):
+        '''
+        Test the format slots is calling a slot specified in args with corresponding arguments.
+        '''
+        cdata = {
+                'args': [
+                    '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val)',
+                ],
+                'kwargs': {
+                    'key': 'val',
+                }
+        }
+        mock = MagicMock(return_value='fun_return')
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': ['fun_return'], 'kwargs': {'key': 'val'}})
+
+    def test_format_slots_kwarg(self):
+        '''
+        Test the format slots is calling a slot specified in kwargs with corresponding arguments.
+        '''
+        cdata = {
+            'args': [
+                'arg',
+            ],
+            'kwargs': {
+                'key': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val)',
+            }
+        }
+        mock = MagicMock(return_value='fun_return')
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'fun_return'}})
+
+    def test_format_slots_multi(self):
+        '''
+        Test the format slots is calling all slots with corresponding arguments when multiple slots
+        specified.
+        '''
+        cdata = {
+            'args': [
+                '__slot__:salt:test_mod.fun_a(a_arg, a_key=a_kwarg)',
+                '__slot__:salt:test_mod.fun_b(b_arg, b_key=b_kwarg)',
+            ],
+            'kwargs': {
+                'kw_key_1': '__slot__:salt:test_mod.fun_c(c_arg, c_key=c_kwarg)',
+                'kw_key_2': '__slot__:salt:test_mod.fun_d(d_arg, d_key=d_kwarg)',
+            }
+        }
+        mock_a = MagicMock(return_value='fun_a_return')
+        mock_b = MagicMock(return_value='fun_b_return')
+        mock_c = MagicMock(return_value='fun_c_return')
+        mock_d = MagicMock(return_value='fun_d_return')
+        with patch.dict(self.state_obj.functions, {'test_mod.fun_a': mock_a,
+                                                   'test_mod.fun_b': mock_b,
+                                                   'test_mod.fun_c': mock_c,
+                                                   'test_mod.fun_d': mock_d}):
+            self.state_obj.format_slots(cdata)
+        mock_a.assert_called_once_with('a_arg', a_key='a_kwarg')
+        mock_b.assert_called_once_with('b_arg', b_key='b_kwarg')
+        mock_c.assert_called_once_with('c_arg', c_key='c_kwarg')
+        mock_d.assert_called_once_with('d_arg', d_key='d_kwarg')
+        self.assertEqual(cdata, {'args': ['fun_a_return',
+                                          'fun_b_return'],
+                                 'kwargs': {'kw_key_1': 'fun_c_return',
+                                            'kw_key_2': 'fun_d_return'}})
+
+    def test_format_slots_malformed(self):
+        '''
+        Test the format slots keeps malformed slots untouched.
+        '''
+        sls_data = {
+            'args': [
+                '__slot__:NOT_SUPPORTED:not.called()',
+                '__slot__:salt:not.called(',
+                '__slot__:salt:',
+                '__slot__:salt',
+                '__slot__:',
+                '__slot__',
+            ],
+            'kwargs': {
+                'key3': '__slot__:NOT_SUPPORTED:not.called()',
+                'key4': '__slot__:salt:not.called(',
+                'key5': '__slot__:salt:',
+                'key6': '__slot__:salt',
+                'key7': '__slot__:',
+                'key8': '__slot__',
+            }
+        }
+        cdata = sls_data.copy()
+        mock = MagicMock(return_value='return')
+        with patch.dict(self.state_obj.functions, {'not.called': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_not_called()
+        self.assertEqual(cdata, sls_data)

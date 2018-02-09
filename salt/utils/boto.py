@@ -35,7 +35,7 @@ Example Usage:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 import logging
 import sys
@@ -46,8 +46,8 @@ from salt.loader import minion_mods
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.utils.stringutils
+import salt.utils.versions
 
 # Import third party libs
 # pylint: disable=import-error
@@ -73,17 +73,12 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    # TODO: Determine minimal version we want to support. VPC requires > 2.8.0.
-    required_boto_version = '2.0.0'
-    if not HAS_BOTO:
-        return False
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return False
-    else:
+    has_boto_requirements = salt.utils.versions.check_boto_reqs(check_boto3=False)
+    if has_boto_requirements is True:
         global __salt__
         if not __salt__:
             __salt__ = minion_mods(__opts__)
-        return True
+    return has_boto_requirements
 
 
 def _get_profile(service, region, key, keyid, profile):
@@ -178,8 +173,10 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
         conn = __utils__['boto.get_connection']('ec2', profile='custom_profile')
     '''
 
-    module = module or service
-    module, submodule = ('boto.' + module).rsplit('.', 1)
+    # future lint: disable=blacklisted-function
+    module = str(module or service)
+    module, submodule = (str('boto.') + module).rsplit(str('.'), 1)
+    # future lint: enable=blacklisted-function
 
     svc_mod = getattr(__import__(module, fromlist=[submodule]), submodule)
 

@@ -75,7 +75,7 @@ Connection module for Amazon Elasticsearch Service
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -83,8 +83,8 @@ from salt.ext import six
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.json
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -110,22 +110,13 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.8.0'
-    required_boto3_version = '1.4.0'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto_version))
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto_ver='2.8.0',
+        boto3_ver='1.4.0'
+    )
 
 
 def __init__(opts):
@@ -263,7 +254,7 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
         if 'AccessPolicies' in kwargs:
             kwargs['AccessPolicies'] = salt.utils.json.dumps(kwargs['AccessPolicies'])
         if 'ElasticsearchVersion' in kwargs:
-            kwargs['ElasticsearchVersion'] = str(kwargs['ElasticsearchVersion'])
+            kwargs['ElasticsearchVersion'] = six.text_type(kwargs['ElasticsearchVersion'])
         domain = conn.create_elasticsearch_domain(DomainName=DomainName, **kwargs)
         if domain and 'DomainStatus' in domain:
             return {'created': True}
@@ -367,9 +358,9 @@ def add_tags(DomainName=None, ARN=None,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         if ARN is None:
             if DomainName is None:
                 raise SaltInvocationError('One (but not both) of ARN or '

@@ -27,13 +27,15 @@ There are a few things to keep in mind:
   gpg public key matching the address the mail is sent to. If left unset, no
   encryption will be used.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 import logging
 import smtplib
 from email.utils import formatdate
+
+from salt.ext import six
 
 try:
     import gnupg
@@ -71,8 +73,8 @@ def send(kwargs, opts):
     if not config['smtp.port']:
         config['smtp.port'] = 25
 
-    log.debug('SMTP port has been set to {0}'.format(config['smtp.port']))
-    log.debug("smtp_return: Subject is '{0}'".format(config['smtp.subject']))
+    log.debug('SMTP port has been set to %s', config['smtp.port'])
+    log.debug("smtp_return: Subject is '%s'", config['smtp.subject'])
 
     if HAS_GNUPG and config['smtp.gpgowner']:
         gpg = gnupg.GPG(
@@ -84,7 +86,7 @@ def send(kwargs, opts):
         encrypted_data = gpg.encrypt(config['smtp.content'], config['smtp.to'])
         if encrypted_data.ok:
             log.debug('smtp_return: Encryption successful')
-            config['smtp.content'] = str(encrypted_data)
+            config['smtp.content'] = six.text_type(encrypted_data)
         else:
             log.error(
                 'SMTP: Encryption failed, only an error message will be sent'

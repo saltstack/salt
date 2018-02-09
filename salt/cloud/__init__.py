@@ -38,6 +38,7 @@ import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.verify
 import salt.utils.yaml
+import salt.utils.user
 import salt.syspaths
 from salt.template import compile_template
 
@@ -188,7 +189,7 @@ class CloudClient(object):
 
         # Check the cache-dir exists. If not, create it.
         v_dirs = [self.opts['cachedir']]
-        salt.utils.verify.verify_env(v_dirs, salt.utils.get_user())
+        salt.utils.verify.verify_env(v_dirs, salt.utils.user.get_user())
 
         if pillars:
             for name, provider in six.iteritems(pillars.pop('providers', {})):
@@ -239,7 +240,7 @@ class CloudClient(object):
                          if a.get('provider', '')]
             if providers:
                 _providers = opts.get('providers', {})
-                for provider in list(_providers).copy():
+                for provider in _providers.copy():
                     if provider not in providers:
                         _providers.pop(provider)
         return opts
@@ -324,22 +325,22 @@ class CloudClient(object):
 
             >>> client= salt.cloud.CloudClient(path='/etc/salt/cloud')
             >>> client.profile('do_512_git', names=['minion01',])
-            {'minion01': {u'backups_active': 'False',
-                    u'created_at': '2014-09-04T18:10:15Z',
-                    u'droplet': {u'event_id': 31000502,
-                                 u'id': 2530006,
-                                 u'image_id': 5140006,
-                                 u'name': u'minion01',
-                                 u'size_id': 66},
-                    u'id': '2530006',
-                    u'image_id': '5140006',
-                    u'ip_address': '107.XXX.XXX.XXX',
-                    u'locked': 'True',
-                    u'name': 'minion01',
-                    u'private_ip_address': None,
-                    u'region_id': '4',
-                    u'size_id': '66',
-                    u'status': 'new'}}
+            {'minion01': {'backups_active': 'False',
+                    'created_at': '2014-09-04T18:10:15Z',
+                    'droplet': {'event_id': 31000502,
+                                 'id': 2530006,
+                                 'image_id': 5140006,
+                                 'name': 'minion01',
+                                 'size_id': 66},
+                    'id': '2530006',
+                    'image_id': '5140006',
+                    'ip_address': '107.XXX.XXX.XXX',
+                    'locked': 'True',
+                    'name': 'minion01',
+                    'private_ip_address': None,
+                    'region_id': '4',
+                    'size_id': '66',
+                    'status': 'new'}}
 
 
         '''

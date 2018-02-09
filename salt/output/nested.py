@@ -30,8 +30,8 @@ from numbers import Number
 # Import salt libs
 import salt.output
 import salt.utils.color
-import salt.utils.locales
 import salt.utils.odict
+import salt.utils.stringutils
 from salt.ext import six
 
 
@@ -63,9 +63,21 @@ class NestDisplay(object):
         fmt = '{0}{1}{2}{3}{4}{5}'
 
         try:
-            return fmt.format(indent, color, prefix, msg, endc, suffix)
+            return fmt.format(
+                indent,
+                color,
+                prefix,
+                msg,
+                endc,
+                suffix)
         except UnicodeDecodeError:
-            return fmt.format(indent, color, prefix, salt.utils.locales.sdecode(msg), endc, suffix)
+            return fmt.format(
+                indent,
+                color,
+                prefix,
+                salt.utils.stringutils.to_unicode(msg),
+                endc,
+                suffix)
 
     def display(self, ret, indent, prefix, out):
         '''

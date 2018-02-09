@@ -219,7 +219,11 @@ from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
-from salt.exceptions import EauthAuthenticationError
+from salt.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    EauthAuthenticationError
+)
 
 json = salt.utils.json.import_json()
 log = logging.getLogger(__name__)
@@ -899,7 +903,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
             try:
                 chunk_ret = yield getattr(self, '_disbatch_{0}'.format(low['client']))(low)
                 ret.append(chunk_ret)
-            except EauthAuthenticationError as exc:
+            except (AuthenticationError, AuthorizationError, EauthAuthenticationError):
                 ret.append('Failed to authenticate')
                 break
             except Exception as ex:

@@ -23,7 +23,7 @@ Support for RFC 2136 dynamic DNS updates.
 
         {"keyname.": "keycontent"}
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 
@@ -40,6 +40,7 @@ except ImportError as e:
 
 import salt.utils.files
 import salt.utils.json
+from salt.ext import six
 
 
 def __virtual__():
@@ -164,7 +165,7 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
 
         salt ns1 ddns.update example.com host1 60 A 10.0.0.1
     '''
-    name = str(name)
+    name = six.text_type(name)
 
     if name[-1:] == '.':
         fqdn = name
@@ -215,7 +216,7 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
 
         salt ns1 ddns.delete example.com host1 A
     '''
-    name = str(name)
+    name = six.text_type(name)
 
     if name[-1:] == '.':
         fqdn = name
