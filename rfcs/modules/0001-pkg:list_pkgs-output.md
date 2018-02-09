@@ -165,14 +165,72 @@ of the called system:
 
 ### Proposed Design
 
-This is the bulk of the RFC. Explain the design in enough detail for somebody familiar
-with the product to understand, and for somebody familiar with the internals to implement. It should include:
+Proposed change is to follow _any_ Package Manager spirit: just return
+a list of packages. The new approach seeing the current re-mixing such
+list into a map only as a (custom/app)-level format and actually
+avoids this.
 
-- Definition of any new terminology
-- Examples of how the feature is used.
-- Corner-cases
-- A basic code example in case the proposal involves a new or changed API
-- Outline of a test plan for this feature. How do you plan to test it? Can it be automated?
+Structural example would be as follows:
+
+```
+[
+	{
+		"name": "package-name",
+		"key": "value",
+	}
+]
+```
+
+That is, it would be just a list of dictionaries with the standard
+keys inside. Reworked output from the examples above would be like
+this:
+
+```
+[
+	{
+		"name": "xz-libs",
+		"release": "1.el7",
+		"install_date": "2017-06-24T10:51:34Z",
+		"version": "5.2.2",
+		"arch": "i686",
+		"install_date_time_t": 1498301494
+	},
+	{
+		"name": "xz-libs",
+		"release": "1.el7",
+		"install_date": "2017-06-24T10:51:34Z",
+		"version": "5.2.2",
+		"arch": "x86_64",
+		"install_date_time_t": 1498302356
+	}
+],
+
+```
+
+In case with the less attributes as follows:
+
+```
+[
+	{
+		"name": "kernel-default",
+		"release": "92.56.1",
+		"version": "4.4.103"
+	},
+	{
+		"name": "kernel-default",
+		"release": "69.1",
+		"version": "4.4.21"
+	}
+], 
+
+```
+
+This would by design invalidate all the issues with the naming,
+architecture and parsing all that accordingly. API consumer do not
+need anymore what exactly system it works with, as there would be a
+standard format across everywhere.
+
+The rest of the functinality would stay the same.
 
 ## Alternatives
 [alternatives]: #alternatives
