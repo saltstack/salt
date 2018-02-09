@@ -274,12 +274,14 @@ N/A
 # Drawbacks
 [drawbacks]: #drawbacks
 
-Why should we *not* do this? Please consider:
+- This change should not go to the prepared Oxygen release, but only in
+`develop` branch.
 
-- Implementation cost, both in term of code size and complexity
-- Integration of this feature with other existing and planned features
-- Cost of migrating existing Salt setups (is it a breaking change?)
-- Documentation (would Salt documentation need to be re-organized or altered?)
+- Implementation should be done using deprecation model system
+  (decorators we already have in Salt core).
 
+- The old version should stay for two releases (standard retention time)
 
-There are tradeoffs to choosing any path. Attempt to identify them here.
+- Systems that want new version should turn it on in the Minion
+  config: `use_superceded: modules.pkg.list_pkgs`
+
