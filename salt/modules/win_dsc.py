@@ -15,7 +15,7 @@ the Minion.
 :depends:
     - PowerShell 5.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -64,7 +64,7 @@ def _pshell(cmd, cwd=None, json_depth=2):
     '''
     if 'convertto-json' not in cmd.lower():
         cmd = '{0} | ConvertTo-Json -Depth {1}'.format(cmd, json_depth)
-    log.debug('DSC: {0}'.format(cmd))
+    log.debug('DSC: %s', cmd)
     results = __salt__['cmd.run_all'](
         cmd, shell='powershell', cwd=cwd, python_shell=True)
 
@@ -241,7 +241,7 @@ def compile_config(path,
         salt '*' dsc.compile_config C:\\DSC\\WebsiteConfig.ps1 salt://dsc/configs/WebsiteConfig.ps1
     '''
     if source:
-        log.info('Caching {0}'.format(source))
+        log.info('Caching %s', source)
         cached_files = __salt__['cp.get_file'](path=source,
                                                dest=path,
                                                saltenv=salt_env,
@@ -252,7 +252,7 @@ def compile_config(path,
             raise CommandExecutionError(error)
 
     if config_data_source:
-        log.info('Caching {0}'.format(config_data_source))
+        log.info('Caching %s', config_data_source)
         cached_files = __salt__['cp.get_file'](path=config_data_source,
                                                dest=config_data,
                                                saltenv=salt_env,
@@ -291,7 +291,7 @@ def compile_config(path,
     if ret:
         # Script compiled, return results
         if ret.get('Exists'):
-            log.info('DSC Compile Config: {0}'.format(ret))
+            log.info('DSC Compile Config: %s', ret)
             return ret
 
     # Run the script and run the compile command
@@ -312,12 +312,12 @@ def compile_config(path,
     if ret:
         # Script compiled, return results
         if ret.get('Exists'):
-            log.info('DSC Compile Config: {0}'.format(ret))
+            log.info('DSC Compile Config: %s', ret)
             return ret
 
     error = 'Failed to compile config: {0}'.format(path)
     error += '\nReturned: {0}'.format(ret)
-    log.error('DSC Compile Config: {0}'.format(error))
+    log.error('DSC Compile Config: %s', error)
     raise CommandExecutionError(error)
 
 
@@ -369,11 +369,11 @@ def apply_config(path, source=None, salt_env='base'):
         if path_name.lower() != source_name.lower():
             # Append the Source name to the Path
             path = '{0}\\{1}'.format(path, source_name)
-            log.debug('{0} appended to the path.'.format(source_name))
+            log.debug('%s appended to the path.', source_name)
 
         # Destination path minus the basename
         dest_path = os.path.dirname(os.path.normpath(path))
-        log.info('Caching {0}'.format(source))
+        log.info('Caching %s', source)
         cached_files = __salt__['cp.get_dir'](source, dest_path, salt_env)
         if not cached_files:
             error = 'Failed to copy {0}'.format(source)
@@ -398,7 +398,7 @@ def apply_config(path, source=None, salt_env='base'):
 
     cmd = '$status = Get-DscConfigurationStatus; $status.Status'
     ret = _pshell(cmd)
-    log.info('DSC Apply Config: {0}'.format(ret))
+    log.info('DSC Apply Config: %s', ret)
 
     return ret == 'Success'
 
@@ -642,5 +642,5 @@ def set_lcm_config(config_mode=None,
         log.info('LCM config applied successfully')
         return True
     else:
-        log.error('Failed to apply LCM config. Error {0}'.format(ret))
+        log.error('Failed to apply LCM config. Error %s', ret)
         return False

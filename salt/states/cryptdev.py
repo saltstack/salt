@@ -28,7 +28,7 @@ Ensure that an encrypted device is mapped with the `mapped` function:
 
 .. versionadded:: Oxygen
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)

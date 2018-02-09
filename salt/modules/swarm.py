@@ -23,7 +23,7 @@ pip install -U docker
 More information: https://docker-py.readthedocs.io/en/stable/
 """
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import salt.utils.json
 
 try:
@@ -47,7 +47,7 @@ def __virtual__():
 def __init__(self):
     if HAS_DOCKER:
         __context__['client'] = docker.from_env()
-        __context__['server_name'] = __grains__['id']
+    __context__['server_name'] = __grains__['id']
 
 
 def swarm_tokens():

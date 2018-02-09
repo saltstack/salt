@@ -66,7 +66,8 @@ def _get_binding_info(host_header='', ip_address='*', port=80):
         str: A properly formatted bindingInformation string (IP:port:hostheader)
             eg: 192.168.0.12:80:www.contoso.com
     '''
-    return r':'.join([ip_address, str(port), host_header.replace(' ', '')])
+    return ':'.join([ip_address, six.text_type(port),
+                    host_header.replace(' ', '')])
 
 
 def _list_certs(certificate_store='My'):
@@ -213,7 +214,7 @@ def list_sites():
                              'sourcepath': item['physicalPath']}
 
     if not ret:
-        log.warning('No sites found in output: {0}'.format(cmd_ret['stdout']))
+        log.warning('No sites found in output: %s', cmd_ret['stdout'])
 
     return ret
 
@@ -254,13 +255,13 @@ def create_site(name, sourcepath, apppool='', hostheader='',
 
         salt '*' win_iis.create_site name='My Test Site' sourcepath='c:\\stage' apppool='TestPool'
     '''
-    protocol = str(protocol).lower()
+    protocol = six.text_type(protocol).lower()
     site_path = r'IIS:\Sites\{0}'.format(name)
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_sites = list_sites()
 
     if name in current_sites:
-        log.debug("Site '{0}' already present.".format(name))
+        log.debug("Site '%s' already present.", name)
         return True
 
     if protocol not in _VALID_PROTOCOLS:
@@ -276,10 +277,10 @@ def create_site(name, sourcepath, apppool='', hostheader='',
 
     if apppool:
         if apppool in list_apppools():
-            log.debug('Utilizing pre-existing application pool: {0}'
-                      ''.format(apppool))
+            log.debug('Utilizing pre-existing application pool: %s',
+                      apppool)
         else:
-            log.debug('Application pool will be created: {0}'.format(apppool))
+            log.debug('Application pool will be created: %s', apppool)
             create_apppool(apppool)
 
         ps_cmd.extend(['Set-ItemProperty',
@@ -294,7 +295,7 @@ def create_site(name, sourcepath, apppool='', hostheader='',
               ''.format(name, cmd_ret['stderr'])
         raise CommandExecutionError(msg)
 
-    log.debug('Site created successfully: {0}'.format(name))
+    log.debug('Site created successfully: %s', name)
     return True
 
 
@@ -363,7 +364,7 @@ def modify_site(name, sourcepath=None, apppool=None):
               ''.format(name, cmd_ret['stderr'])
         raise CommandExecutionError(msg)
 
-    log.debug('Site modified successfully: {0}'.format(name))
+    log.debug('Site modified successfully: %s', name)
     return True
 
 
@@ -391,7 +392,7 @@ def remove_site(name):
     current_sites = list_sites()
 
     if name not in current_sites:
-        log.debug('Site already absent: {0}'.format(name))
+        log.debug('Site already absent: %s', name)
         return True
 
     ps_cmd = ['Remove-WebSite', '-Name', r"'{0}'".format(name)]
@@ -403,7 +404,7 @@ def remove_site(name):
               ''.format(name, cmd_ret['stderr'])
         raise CommandExecutionError(msg)
 
-    log.debug('Site removed successfully: {0}'.format(name))
+    log.debug('Site removed successfully: %s', name)
     return True
 
 
@@ -498,13 +499,13 @@ def list_bindings(site):
     sites = list_sites()
 
     if site not in sites:
-        log.warning('Site not found: {0}'.format(site))
+        log.warning('Site not found: %s', site)
         return ret
 
     ret = sites[site]['bindings']
 
     if not ret:
-        log.warning('No bindings found for site: {0}'.format(site))
+        log.warning('No bindings found for site: %s', site)
 
     return ret
 
@@ -539,7 +540,7 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
 
         salt '*' win_iis.create_binding site='site0' hostheader='example.com' ipaddress='*' port='80'
     '''
-    protocol = str(protocol).lower()
+    protocol = six.text_type(protocol).lower()
     name = _get_binding_info(hostheader, ipaddress, port)
 
     if protocol not in _VALID_PROTOCOLS:
@@ -557,7 +558,7 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
     current_bindings = list_bindings(site)
 
     if name in current_bindings:
-        log.debug('Binding already present: {0}'.format(name))
+        log.debug('Binding already present: %s', name)
         return True
 
     if sslflags:
@@ -565,7 +566,7 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
                   '-Name', "'{0}'".format(site),
                   '-HostHeader', "'{0}'".format(hostheader),
                   '-IpAddress', "'{0}'".format(ipaddress),
-                  '-Port', "'{0}'".format(str(port)),
+                  '-Port', "'{0}'".format(port),
                   '-Protocol', "'{0}'".format(protocol),
                   '-SslFlags', '{0}'.format(sslflags)]
     else:
@@ -573,7 +574,7 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
                   '-Name', "'{0}'".format(site),
                   '-HostHeader', "'{0}'".format(hostheader),
                   '-IpAddress', "'{0}'".format(ipaddress),
-                  '-Port', "'{0}'".format(str(port)),
+                  '-Port', "'{0}'".format(port),
                   '-Protocol', "'{0}'".format(protocol)]
 
     cmd_ret = _srvmgr(ps_cmd)
@@ -584,10 +585,10 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
         raise CommandExecutionError(msg)
 
     if name in list_bindings(site):
-        log.debug('Binding created successfully: {0}'.format(site))
+        log.debug('Binding created successfully: %s', site)
         return True
 
-    log.error('Unable to create binding: {0}'.format(site))
+    log.error('Unable to create binding: %s', site)
     return False
 
 
@@ -631,20 +632,20 @@ def modify_binding(site, binding, hostheader=None, ipaddress=None, port=None,
     current_sites = list_sites()
 
     if site not in current_sites:
-        log.debug("Site '{0}' not defined.".format(site))
+        log.debug("Site '%s' not defined.", site)
         return False
 
     current_bindings = list_bindings(site)
 
     if binding not in current_bindings:
-        log.debug("Binding '{0}' not defined.".format(binding))
+        log.debug("Binding '%s' not defined.", binding)
         return False
 
     # Split out the binding so we can insert new ones
     # Use the existing value if not passed
     i, p, h = binding.split(':')
     new_binding = ':'.join([ipaddress if ipaddress is not None else i,
-                            str(port) if port is not None else str(p),
+                            six.text_type(port) if port is not None else six.text_type(p),
                             hostheader if hostheader is not None else h])
 
     if new_binding != binding:
@@ -676,7 +677,7 @@ def modify_binding(site, binding, hostheader=None, ipaddress=None, port=None,
                   ''.format(sslflags, cmd_ret['stderr'])
             raise CommandExecutionError(msg)
 
-    log.debug('Binding modified successfully: {0}'.format(binding))
+    log.debug('Binding modified successfully: %s', binding)
     return True
 
 
@@ -703,7 +704,7 @@ def remove_binding(site, hostheader='', ipaddress='*', port=80):
     current_bindings = list_bindings(site)
 
     if name not in current_bindings:
-        log.debug('Binding already absent: {0}'.format(name))
+        log.debug('Binding already absent: %s', name)
         return True
     ps_cmd = ['Remove-WebBinding',
               '-HostHeader', "'{0}'".format(hostheader),
@@ -718,10 +719,10 @@ def remove_binding(site, hostheader='', ipaddress='*', port=80):
         raise CommandExecutionError(msg)
 
     if name not in list_bindings(site):
-        log.debug('Binding removed successfully: {0}'.format(site))
+        log.debug('Binding removed successfully: %s', site)
         return True
 
-    log.error('Unable to remove binding: {0}'.format(site))
+    log.error('Unable to remove binding: %s', site)
     return False
 
 
@@ -747,7 +748,7 @@ def list_cert_bindings(site):
     sites = list_sites()
 
     if site not in sites:
-        log.warning('Site not found: {0}'.format(site))
+        log.warning('Site not found: %s', site)
         return ret
 
     for binding in sites[site]['bindings']:
@@ -755,7 +756,7 @@ def list_cert_bindings(site):
             ret[binding] = sites[site]['bindings'][binding]
 
     if not ret:
-        log.warning('No certificate bindings found for site: {0}'.format(site))
+        log.warning('No certificate bindings found for site: %s', site)
 
     return ret
 
@@ -789,7 +790,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
 
         salt '*' win_iis.create_cert_binding name='AAA000' site='site0' hostheader='example.com' ipaddress='*' port='443'
     '''
-    name = str(name).upper()
+    name = six.text_type(name).upper()
     binding_info = _get_binding_info(hostheader, ipaddress, port)
 
     if _iisVersion() < 8:
@@ -808,7 +809,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
     current_bindings = list_bindings(site)
 
     if binding_info not in current_bindings:
-        log.error('Binding not present: {0}'.format(binding_info))
+        log.error('Binding not present: %s', binding_info)
         return False
 
     # Check to see if the certificate is already assigned.
@@ -818,18 +819,18 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
         if binding_info == current_binding:
             current_name = current_bindings[current_binding]['certificatehash']
 
-    log.debug('Current certificate thumbprint: {0}'.format(current_name))
-    log.debug('New certificate thumbprint: {0}'.format(name))
+    log.debug('Current certificate thumbprint: %s', current_name)
+    log.debug('New certificate thumbprint: %s', name)
 
     if name == current_name:
-        log.debug('Certificate already present for binding: {0}'.format(name))
+        log.debug('Certificate already present for binding: %s', name)
         return True
 
     # Verify that the certificate exists.
     certs = _list_certs()
 
     if name not in certs:
-        log.error('Certificate not present: {0}'.format(name))
+        log.error('Certificate not present: %s', name)
         return False
 
     if _iisVersion() < 8:
@@ -859,14 +860,14 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
     new_cert_bindings = list_cert_bindings(site)
 
     if binding_info not in new_cert_bindings:
-        log.error('Binding not present: {0}'.format(binding_info))
+        log.error('Binding not present: %s', binding_info)
         return False
 
     if name == new_cert_bindings[binding_info]['certificatehash']:
-        log.debug('Certificate binding created successfully: {0}'.format(name))
+        log.debug('Certificate binding created successfully: %s', name)
         return True
 
-    log.error('Unable to create certificate binding: {0}'.format(name))
+    log.error('Unable to create certificate binding: %s', name)
 
     return False
 
@@ -898,7 +899,7 @@ def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
 
         salt '*' win_iis.remove_cert_binding name='AAA000' site='site0' hostheader='example.com' ipaddress='*' port='443'
     '''
-    name = str(name).upper()
+    name = six.text_type(name).upper()
     binding_info = _get_binding_info(hostheader, ipaddress, port)
 
     # Child items of IIS:\SslBindings do not return populated host header info
@@ -915,11 +916,11 @@ def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
     current_cert_bindings = list_cert_bindings(site)
 
     if binding_info not in current_cert_bindings:
-        log.warning('Binding not found: {0}'.format(binding_info))
+        log.warning('Binding not found: %s', binding_info)
         return True
 
     if name != current_cert_bindings[binding_info]['certificatehash']:
-        log.debug('Certificate binding already absent: {0}'.format(name))
+        log.debug('Certificate binding already absent: %s', name)
         return True
 
     cmd_ret = _srvmgr(ps_cmd)
@@ -932,14 +933,14 @@ def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
     new_cert_bindings = list_cert_bindings(site)
 
     if binding_info not in new_cert_bindings:
-        log.warning('Binding not found: {0}'.format(binding_info))
+        log.warning('Binding not found: %s', binding_info)
         return True
 
     if name != new_cert_bindings[binding_info]['certificatehash']:
-        log.debug('Certificate binding removed successfully: {0}'.format(name))
+        log.debug('Certificate binding removed successfully: %s', name)
         return True
 
-    log.error('Unable to remove certificate binding: {0}'.format(name))
+    log.error('Unable to remove certificate binding: %s', name)
     return False
 
 
@@ -998,8 +999,8 @@ def list_apppools():
         ret[item['name']] = {'state': item['state'], 'applications': applications}
 
     if not ret:
-        log.warning('No application pools found in output: {0}'
-                    ''.format(cmd_ret['stdout']))
+        log.warning('No application pools found in output: %s',
+                    cmd_ret['stdout'])
 
     return ret
 
@@ -1031,7 +1032,7 @@ def create_apppool(name):
     apppool_path = r'IIS:\AppPools\{0}'.format(name)
 
     if name in current_apppools:
-        log.debug("Application pool '{0}' already present.".format(name))
+        log.debug("Application pool '%s' already present.", name)
         return True
 
     ps_cmd = ['New-Item', '-Path', r"'{0}'".format(apppool_path)]
@@ -1043,7 +1044,7 @@ def create_apppool(name):
               ''.format(name, cmd_ret['stderr'])
         raise CommandExecutionError(msg)
 
-    log.debug('Application pool created successfully: {0}'.format(name))
+    log.debug('Application pool created successfully: %s', name)
     return True
 
 
@@ -1067,7 +1068,7 @@ def remove_apppool(name):
     apppool_path = r'IIS:\AppPools\{0}'.format(name)
 
     if name not in current_apppools:
-        log.debug('Application pool already absent: {0}'.format(name))
+        log.debug('Application pool already absent: %s', name)
         return True
 
     ps_cmd = ['Remove-Item', '-Path', r"'{0}'".format(apppool_path), '-Recurse']
@@ -1079,7 +1080,7 @@ def remove_apppool(name):
               ''.format(name, cmd_ret['stderr'])
         raise CommandExecutionError(msg)
 
-    log.debug('Application pool removed successfully: {0}'.format(name))
+    log.debug('Application pool removed successfully: %s', name)
     return True
 
 
@@ -1269,7 +1270,7 @@ def set_container_setting(name, container, settings):
 
     # Treat all values as strings for the purpose of comparing them to existing values.
     for setting in settings:
-        settings[setting] = str(settings[setting])
+        settings[setting] = six.text_type(settings[setting])
 
     current_settings = get_container_setting(
         name=name, container=container, settings=settings.keys())
@@ -1313,14 +1314,14 @@ def set_container_setting(name, container, settings):
         if setting == 'processModel.identityType' and settings[setting] in identityType_map2string.keys():
             settings[setting] = identityType_map2string[settings[setting]]
 
-        if str(settings[setting]) != str(new_settings[setting]):
+        if six.text_type(settings[setting]) != six.text_type(new_settings[setting]):
             failed_settings[setting] = settings[setting]
 
     if failed_settings:
-        log.error('Failed to change settings: {0}'.format(failed_settings))
+        log.error('Failed to change settings: %s', failed_settings)
         return False
 
-    log.debug('Settings configured successfully: {0}'.format(settings.keys()))
+    log.debug('Settings configured successfully: %s', settings.keys())
     return True
 
 
@@ -1374,7 +1375,7 @@ def list_apps(site):
                              'sourcepath': item['PhysicalPath']}
 
     if not ret:
-        log.warning('No apps found in output: {0}'.format(cmd_ret))
+        log.warning('No apps found in output: %s', cmd_ret)
 
     return ret
 
@@ -1408,12 +1409,12 @@ def create_app(name, site, sourcepath, apppool=None):
     current_apps = list_apps(site)
 
     if name in current_apps:
-        log.debug('Application already present: {0}'.format(name))
+        log.debug('Application already present: %s', name)
         return True
 
     # The target physical path must exist.
     if not os.path.isdir(sourcepath):
-        log.error('Path is not present: {0}'.format(sourcepath))
+        log.error('Path is not present: %s', sourcepath)
         return False
 
     ps_cmd = ['New-WebApplication',
@@ -1434,10 +1435,10 @@ def create_app(name, site, sourcepath, apppool=None):
     new_apps = list_apps(site)
 
     if name in new_apps:
-        log.debug('Application created successfully: {0}'.format(name))
+        log.debug('Application created successfully: %s', name)
         return True
 
-    log.error('Unable to create application: {0}'.format(name))
+    log.error('Unable to create application: %s', name)
     return False
 
 
@@ -1461,7 +1462,7 @@ def remove_app(name, site):
     current_apps = list_apps(site)
 
     if name not in current_apps:
-        log.debug('Application already absent: {0}'.format(name))
+        log.debug('Application already absent: %s', name)
         return True
 
     ps_cmd = ['Remove-WebApplication',
@@ -1478,10 +1479,10 @@ def remove_app(name, site):
     new_apps = list_apps(site)
 
     if name not in new_apps:
-        log.debug('Application removed successfully: {0}'.format(name))
+        log.debug('Application removed successfully: %s', name)
         return True
 
-    log.error('Unable to remove application: {0}'.format(name))
+    log.error('Unable to remove application: %s', name)
     return False
 
 
@@ -1522,7 +1523,7 @@ def list_vdirs(site, app=_DEFAULT_APP):
         ret[item['name']] = {'sourcepath': item['physicalPath']}
 
     if not ret:
-        log.warning('No vdirs found in output: {0}'.format(cmd_ret))
+        log.warning('No vdirs found in output: %s', cmd_ret)
 
     return ret
 
@@ -1556,12 +1557,12 @@ def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
     current_vdirs = list_vdirs(site, app)
 
     if name in current_vdirs:
-        log.debug('Virtual directory already present: {0}'.format(name))
+        log.debug('Virtual directory already present: %s', name)
         return True
 
     # The target physical path must exist.
     if not os.path.isdir(sourcepath):
-        log.error('Path is not present: {0}'.format(sourcepath))
+        log.error('Path is not present: %s', sourcepath)
         return False
 
     ps_cmd = ['New-WebVirtualDirectory',
@@ -1582,10 +1583,10 @@ def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
     new_vdirs = list_vdirs(site, app)
 
     if name in new_vdirs:
-        log.debug('Virtual directory created successfully: {0}'.format(name))
+        log.debug('Virtual directory created successfully: %s', name)
         return True
 
-    log.error('Unable to create virtual directory: {0}'.format(name))
+    log.error('Unable to create virtual directory: %s', name)
     return False
 
 
@@ -1615,7 +1616,7 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
     vdir_path = r'IIS:\Sites\{0}\{1}{2}'.format(site, app_path, name)
 
     if name not in current_vdirs:
-        log.debug('Virtual directory already absent: {0}'.format(name))
+        log.debug('Virtual directory already absent: %s', name)
         return True
 
     # We use Remove-Item here instead of Remove-WebVirtualDirectory, since the
@@ -1635,10 +1636,10 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
     new_vdirs = list_vdirs(site, app)
 
     if name not in new_vdirs:
-        log.debug('Virtual directory removed successfully: {0}'.format(name))
+        log.debug('Virtual directory removed successfully: %s', name)
         return True
 
-    log.error('Unable to remove virtual directory: {0}'.format(name))
+    log.error('Unable to remove virtual directory: %s', name)
     return False
 
 
@@ -1682,7 +1683,7 @@ def list_backups():
             ret[item['Name']] = item['CreationDate']
 
     if not ret:
-        log.warning('No backups found in output: {0}'.format(cmd_ret))
+        log.warning('No backups found in output: %s', cmd_ret)
 
     return ret
 
@@ -1744,7 +1745,7 @@ def remove_backup(name):
         salt '*' win_iis.remove_backup backup_20170209
     '''
     if name not in list_backups():
-        log.debug('Backup already removed: {0}'.format(name))
+        log.debug('Backup already removed: %s', name)
         return True
 
     ps_cmd = ['Remove-WebConfigurationBackup',
@@ -1794,7 +1795,7 @@ def list_worker_processes(apppool):
         ret[item['processId']] = item['appPoolName']
 
     if not ret:
-        log.warning('No backups found in output: {0}'.format(cmd_ret))
+        log.warning('No backups found in output: %s', cmd_ret)
 
     return ret
 
@@ -1849,7 +1850,7 @@ def get_webapp_settings(name, site, settings):
 
     pscmd.append(' $Settings')
     # Run commands and return data as json
-    cmd_ret = _srvmgr(cmd=str().join(pscmd), return_json=True)
+    cmd_ret = _srvmgr(cmd=six.text_type().join(pscmd), return_json=True)
 
     # Update dict var to return data
     try:
@@ -1910,7 +1911,7 @@ def set_webapp_settings(name, site, settings):
     # Treat all values as strings for the purpose of comparing them to existing values & validate settings exists in predefined settings list
     for setting in settings.keys():
         if setting in availableSettings:
-            settings[setting] = str(settings[setting])
+            settings[setting] = six.text_type(settings[setting])
         else:
             availSetStr = ', '.join(availableSettings)
             log.error("Unexpected setting: %s ", setting)
@@ -1960,11 +1961,11 @@ def set_webapp_settings(name, site, settings):
     failed_settings = dict()
 
     for setting in settings:
-        if str(settings[setting]) != str(new_settings[setting]):
+        if six.text_type(settings[setting]) != six.text_type(new_settings[setting]):
             failed_settings[setting] = settings[setting]
 
     if failed_settings:
-        log.error('Failed to change settings: {0}'.format(failed_settings))
+        log.error('Failed to change settings: %s', failed_settings)
         return False
 
     log.debug('Settings configured successfully: {0}'.format(settings.keys()))

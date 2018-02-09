@@ -380,7 +380,7 @@ class Key(object):
                 io_loop=io_loop
                 )
 
-        self.passphrase = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
+        self.passphrase = salt.utils.sdb.sdb_get(self.opts.get('signing_key_pass'), self.opts)
 
     def _check_minions_directories(self):
         '''

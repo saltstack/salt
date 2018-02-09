@@ -2,7 +2,7 @@
 '''
 Support for the softwareupdate command on MacOS.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 # Import python libs
@@ -344,7 +344,7 @@ def list_downloads():
     for update in _get_available():
         for f in dist_files:
             with salt.utils.files.fopen(f) as fhr:
-                if update.rsplit('-', 1)[0] in fhr.read():
+                if update.rsplit('-', 1)[0] in salt.utils.stringutils.to_unicode(fhr.read()):
                     ret.append(update)
 
     return ret

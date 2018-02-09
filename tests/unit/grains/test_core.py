@@ -708,10 +708,11 @@ SwapTotal:       4789244 kB'''
                     log.debug(
                         'Testing Docker cgroup substring \'%s\'', cgroup_substr)
                     with patch('salt.utils.files.fopen', mock_open(read_data=cgroup_data)):
-                        self.assertEqual(
-                            core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
-                            'Docker'
-                        )
+                        with patch.dict(core.__salt__, {'cmd.run_all': MagicMock()}):
+                            self.assertEqual(
+                                core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                                'Docker'
+                            )
 
     def _check_ipaddress(self, value, ip_v):
         '''
@@ -816,11 +817,11 @@ SwapTotal:       4789244 kB'''
         https://github.com/saltstack/salt/issues/41230
         '''
         resolv_mock = {'domain': '', 'sortlist': [], 'nameservers':
-                   [IPv4Address(IP4_ADD1),
-                    IPv6Address(IP6_ADD1)], 'ip4_nameservers':
-                   [IPv4Address(IP4_ADD1)],
+                   [ipaddress.IPv4Address(IP4_ADD1),
+                    ipaddress.IPv6Address(IP6_ADD1)], 'ip4_nameservers':
+                   [ipaddress.IPv4Address(IP4_ADD1)],
                    'search': ['test.saltstack.com'], 'ip6_nameservers':
-                   [IPv6Address(IP6_ADD1)], 'options': []}
+                   [ipaddress.IPv6Address(IP6_ADD1)], 'options': []}
         ret = {'dns': {'domain': '', 'sortlist': [], 'nameservers':
                        [IP4_ADD1, IP6_ADD1], 'ip4_nameservers':
                        [IP4_ADD1], 'search': ['test.saltstack.com'],

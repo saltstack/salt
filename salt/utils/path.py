@@ -5,7 +5,7 @@ lack of support for reading NTFS links.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import errno
 import logging
@@ -238,7 +238,10 @@ def which(exe=None):
                     # safely rely on that behavior
                     if _is_executable_file_or_link(full_path + ext):
                         return full_path + ext
-        log.trace('\'{0}\' could not be found in the following search path: \'{1}\''.format(exe, search_path))
+        log.trace(
+            '\'%s\' could not be found in the following search path: \'%s\'',
+            exe, search_path
+        )
     else:
         log.error('No executable was passed to be searched by salt.utils.path.which()')
 
@@ -405,11 +408,8 @@ def safe_path(path, allow_path=None):
 
 def os_walk(top, *args, **kwargs):
     '''
-    This is a helper to ensure that we get unicode paths when walking a
-    filesystem. The reason for this is that when using os.walk, the paths in
-    the generator which is returned are all the same type as the top directory
-    passed in. This can cause problems when a str path is passed and the
-    filesystem underneath that path contains files with unicode characters in
-    the filename.
+    This is a helper than ensures that all paths returned from os.walk are
+    unicode.
     '''
-    return os.walk(salt.utils.stringutils.to_unicode(top), *args, **kwargs)
+    for item in os.walk(top, *args, **kwargs):
+        yield salt.utils.data.decode(item, preserve_tuples=True)

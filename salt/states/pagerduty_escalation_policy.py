@@ -35,6 +35,9 @@ For example:
                   escalation_delay_in_minutes: 15
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def __virtual__():
     '''
@@ -91,7 +94,7 @@ def present(profile='pagerduty', subdomain=None, api_key=None, **kwargs):
                 if schedule:
                     target_id = schedule['schedule']['id']
             if target_id is None:
-                raise Exception('unidentified target: {0}'.format(str(target)))
+                raise Exception('unidentified target: {0}'.format(target))
             target['id'] = target_id
 
     r = __salt__['pagerduty_util.resource_present']('escalation_policies',

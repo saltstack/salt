@@ -7,7 +7,7 @@ Module for managing the Salt beacons on a minion
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import difflib
 import logging
 import os
@@ -62,7 +62,7 @@ def list_(return_yaml=True,
                                      'manage_beacons')
         if res:
             event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_list_complete', wait=30)
-            log.debug('event_ret {0}'.format(event_ret))
+            log.debug('event_ret %s', event_ret)
             if event_ret and event_ret['complete']:
                 beacons = event_ret['beacons']
     except KeyError:
@@ -435,7 +435,7 @@ def disable(**kwargs):
             res = __salt__['event.fire']({'func': 'disable'}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_disabled_complete', wait=30)
-                log.debug('event_ret {0}'.format(event_ret))
+                log.debug('event_ret %s', event_ret)
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if 'enabled' in beacons and not beacons['enabled']:

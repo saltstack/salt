@@ -44,7 +44,7 @@ Connection module for Amazon CloudWatch
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -95,7 +95,7 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
     if len(alarms) == 0:
         return None
     if len(alarms) > 1:
-        log.error("multiple alarms matched name '{0}'".format(name))
+        log.error("multiple alarms matched name '%s'", name)
     return _metric_alarm_to_dict(alarms[0])
 
 
@@ -219,7 +219,7 @@ def create_or_update_alarm(
     if isinstance(dimensions, six.string_types):
         dimensions = salt.utils.json.loads(dimensions)
         if not isinstance(dimensions, dict):
-            log.error("could not parse dimensions argument: must be json encoding of a dict: '{0}'".format(dimensions))
+            log.error("could not parse dimensions argument: must be json encoding of a dict: '%s'", dimensions)
             return False
     if isinstance(alarm_actions, six.string_types):
         alarm_actions = alarm_actions.split(",")
@@ -268,7 +268,7 @@ def create_or_update_alarm(
         ok_actions=ok_actions
     )
     conn.create_alarm(alarm)
-    log.info('Created/updated alarm {0}'.format(name))
+    log.info('Created/updated alarm %s', name)
     return True
 
 
@@ -291,7 +291,7 @@ def convert_to_arn(arns, region=None, key=None, keyid=None, profile=None):
             if policy_arn:
                 results.append(policy_arn)
             else:
-                log.error('Could not convert: {0}'.format(arn))
+                log.error('Could not convert: %s', arn)
         else:
             results.append(arn)
     return results
@@ -308,7 +308,7 @@ def delete_alarm(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     conn.delete_alarms([name])
-    log.info('Deleted alarm {0}'.format(name))
+    log.info('Deleted alarm %s', name)
     return True
 
 

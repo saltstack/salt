@@ -10,7 +10,7 @@ from Microsoft IIS.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 # Define the module's virtual name
@@ -777,7 +777,8 @@ def remove_vdir(name, site, app='/'):
 
 
 def set_app(name, site, settings=None):
-    r'''
+    # pylint: disable=anomalous-backslash-in-string
+    '''
     Set the value of the setting for an IIS web application.
     .. note::
         This function only configures existing app.
@@ -800,11 +801,12 @@ def set_app(name, site, settings=None):
                 - name: app0
                 - site: Default Web Site
                 - settings:
-                    userName: domain\user
+                    userName: domain\\user
                     password: pass
                     physicalPath: c:\inetpub\wwwroot
                     applicationPool: appPool0
     '''
+    # pylint: enable=anomalous-backslash-in-string
     ret = {'name': name,
            'changes': {},
            'comment': str(),
