@@ -1753,7 +1753,7 @@ def upgrade(name=None,
     cmd.append('upgrade')
     cmd.extend(targets)
 
-    # Convert list to a string so we all arguments work
+    # Convert list to a string so all arguments work
     cmd = ' '.join(cmd)
 
     result = __salt__['cmd.run_all'](cmd,
