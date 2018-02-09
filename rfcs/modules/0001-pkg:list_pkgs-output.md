@@ -269,7 +269,7 @@ solving it.
 ## Unresolved questions
 [unresolved]: #unresolved-questions
 
-What parts of the design are still TBD?
+N/A
 
 # Drawbacks
 [drawbacks]: #drawbacks
