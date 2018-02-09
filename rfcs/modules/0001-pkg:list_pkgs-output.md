@@ -235,7 +235,31 @@ The rest of the functinality would stay the same.
 ## Alternatives
 [alternatives]: #alternatives
 
-What other designs have been considered? What is the impact of not doing this?
+Alternatively it would be possible to just add parameter `delimeter`
+to the existing code and so the API consumer would not need to know
+which system it is talking to, in order to separate prepended part
+(architecture). For example, add a `/` (slash), so the return is like:
+
+```
+"xz-libs/i686": ....
+"xz-libs": ....
+```
+
+However, this does not solve two issues:
+
+1. There is no mention in the name what is the default architecture,
+   unless explicitly requested, since prepended architecture is only
+   different from the default. We only _assume_ that _most of the
+   time_ it is `x86_64` architecture which is capable running `i686`
+   or older.
+
+2. It is still needs to know there were no slashes introduced in the
+   naming of the packages to that particular operating system flavour.
+
+3. It will likely lead to a funny random delimeters.
+
+All this more like a workaround of the problem, instead of actally
+solving it.
 
 ## Unresolved questions
 [unresolved]: #unresolved-questions
