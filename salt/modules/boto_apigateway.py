@@ -4,6 +4,11 @@ Connection module for Amazon APIGateway
 
 .. versionadded:: 2016.11.0
 
+:depends:
+  - boto >= 2.8.0
+  - boto3 >= 1.2.1
+  - botocore >= 1.4.49
+
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
@@ -54,7 +59,7 @@ Connection module for Amazon APIGateway
         error:
           message: error message
 
-    Request methods (e.g., `describe_apigateway`) return:
+    Request methods (e.g., ``describe_apigateway``) return:
 
     .. code-block:: yaml
 
@@ -68,8 +73,6 @@ Connection module for Amazon APIGateway
 
         error:
           message: error message
-
-:depends: boto3
 
 '''
 # keep lint from choking on _get_conn and _cache_id
@@ -168,7 +171,6 @@ def _multi_call(function, contentkey, *args, **kwargs):
 
 def _find_apis_by_name(name, description=None,
                        region=None, key=None, keyid=None, profile=None):
-
     '''
     get and return list of matching rest api information by the given name and desc.
     If rest api name evaluates to False, return all apis w/o filtering the name.
@@ -186,7 +188,6 @@ def _find_apis_by_name(name, description=None,
 
 
 def describe_apis(name=None, description=None, region=None, key=None, keyid=None, profile=None):
-
     '''
     Returns all rest apis in the defined region.  If optional parameter name is included,
     returns all rest apis matching the name in the defined region.
@@ -213,7 +214,7 @@ def describe_apis(name=None, description=None, region=None, key=None, keyid=None
 
 def api_exists(name, description=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Check to see if the given Rest API Name and optionlly description exists.
+    Check to see if the given Rest API Name and optionally description exists.
 
     CLI Example:
 
@@ -371,8 +372,8 @@ def delete_api_resources(restApiId, path,
                          region=None, key=None, keyid=None, profile=None):
     '''
     Given restApiId and an absolute resource path, delete the resources starting
-    from the absoluate resource path.  If resourcepath is the root resource '/',
-    the function will return False.  Returns False on failure.
+    from the absolute resource path. If resourcepath is the root resource '/',
+    the function will return False. Returns False on failure.
 
     CLI Example:
 
