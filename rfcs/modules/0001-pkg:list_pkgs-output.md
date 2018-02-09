@@ -77,7 +77,30 @@ Take a look at this snippet of output:
 
 Package `xz-libs` is installed twice with the same exact version,
 except the difference is that it has a different architecture
-available on the same hardware.
+available on the same hardware. Since all the fields in the nested
+dictionary except the version are optional as well as the structure
+requires a unique key for mapping, the architecture is prepended to
+the name with the `.` (dot) delimeter. Such output is only valid on
+RPM-based systems (SUSE, RedHat, CentOS etc). On systems, based on
+dpkg/deb (Debian, Ubuntu, Mint etc) the delimeter is a `:` (colon),
+since dot can be in the name.
+
+Once this API is used programmatically against the mixed environments,
+this leads to the following problems:
+
+- API caller should already know what system it is targeting (is this
+  RPM based or not). Unless this information is already known, another
+  additional call for grains is required.
+
+- The format is not the same across all the distributions and
+  operating systems, while it should be.
+
+- The fact that it is built on top of the mapping on top of keys as
+  the name already brings by-design limitaions for the packages with
+  the same name. To overcome it -- an architecture prepending.
+
+- No guarantee that there will not be any dots or colons in the names
+  in a future in _any possible_ distribution.
 
 ### Proposed Design
 
