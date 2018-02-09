@@ -285,3 +285,13 @@ N/A
 - Systems that want new version should turn it on in the Minion
   config: `use_superceded: modules.pkg.list_pkgs`
 
+# Trade-offs
+
+The following tradeoffs are introduced:
+
+- The new format returns _more_ data and does not trying to "normalise"
+it like SQL database.
+
+- There will be no more key/value way to access the package metadata
+  content, so the scripts and consumers will need to overcome it on
+  their own.
