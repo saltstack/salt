@@ -417,6 +417,9 @@ def managed(name, ppa=None, **kwargs):
         repo = salt.utils.pkg.deb.strip_uri(repo)
 
     if pre:
+        #22412: Remove file attribute in case same repo is set up multiple times but with different files
+        pre.pop('file', None)
+        sanitizedkwargs.pop('file', None)
         for kwarg in sanitizedkwargs:
             if kwarg not in pre:
                 if kwarg == 'enabled':
