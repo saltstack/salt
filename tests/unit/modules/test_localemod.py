@@ -241,7 +241,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
-    def test_get_locale_with_no_systemd_slowlaris(self):
+    def test_get_locale_with_no_systemd_solaris(self):
         '''
         Test getting current system locale with systemd and dbus available on Solaris.
         :return:
@@ -329,7 +329,6 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert localemod.__salt__['file.replace'].call_args[0][1] == '^LANG=.*'
         assert localemod.__salt__['file.replace'].call_args[0][2] == 'LANG="{}"'.format(loc)
 
-    @patch('salt.utils.path.which', MagicMock(return_value=None))
     @patch('salt.utils.path.which', MagicMock(return_value='/usr/sbin/update-locale'))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Debian', 'osmajorrelease': 42})
     @patch('salt.modules.localemod.dbus', None)
@@ -390,9 +389,9 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                                                'file.replace': MagicMock()})
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
-    def test_set_locale_with_no_systemd_slowlaris_with_list_avail(self):
+    def test_set_locale_with_no_systemd_solaris_with_list_avail(self):
         '''
-        Test setting current system locale with systemd and dbus available on Slowlaris.
+        Test setting current system locale with systemd and dbus available on Solaris.
         The list_avail returns the proper locale.
         :return:
         '''
@@ -411,9 +410,9 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                                                'file.replace': MagicMock()})
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
-    def test_set_locale_with_no_systemd_slowlaris_without_list_avail(self):
+    def test_set_locale_with_no_systemd_solaris_without_list_avail(self):
         '''
-        Test setting current system locale with systemd and dbus is not available on Slowlaris.
+        Test setting current system locale with systemd and dbus is not available on Solaris.
         The list_avail does not return the proper locale.
         :return:
         '''
