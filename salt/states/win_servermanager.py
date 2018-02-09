@@ -8,7 +8,7 @@ remove roles/features.
 :depends:       win_servermanager.install
 :depends:       win_servermanager.remove
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt modules
 import salt.utils.data

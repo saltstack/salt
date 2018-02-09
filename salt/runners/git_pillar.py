@@ -2,7 +2,7 @@
 '''
 Runner module to directly manage the git external pillar
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -83,8 +83,8 @@ def update(branch=None, repo=None):
                 result = remote.fetch()
             except Exception as exc:
                 log.error(
-                    'Exception \'{0}\' caught while fetching git_pillar '
-                    'remote \'{1}\''.format(exc, remote.id),
+                    'Exception \'%s\' caught while fetching git_pillar '
+                    'remote \'%s\'', exc, remote.id,
                     exc_info_on_loglevel=logging.DEBUG
                 )
                 result = False

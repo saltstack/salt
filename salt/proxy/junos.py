@@ -35,7 +35,7 @@ Run the salt proxy via the following command:
 
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -191,7 +191,7 @@ def shutdown(opts):
     This is called when the proxy-minion is exiting to make sure the
     connection to the device is closed cleanly.
     '''
-    log.debug('Proxy module {0} shutting down!!'.format(opts['id']))
+    log.debug('Proxy module %s shutting down!!', opts['id'])
     try:
         thisproxy['conn'].close()
 

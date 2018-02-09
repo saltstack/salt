@@ -8,7 +8,7 @@ Manage the shadow file on Linux systems
     *'shadow.info' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -23,6 +23,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 try:
     import salt.utils.pycrypto
     HAS_CRYPT = True
@@ -210,7 +211,7 @@ def lock_password(name):
     '''
     .. versionadded:: 2016.11.0
 
-    Lock the password from name user
+    Lock the password from specified user
 
     CLI Example:
 
@@ -221,7 +222,7 @@ def lock_password(name):
     pre_info = info(name)
     if pre_info['name'] == '':
         return False
-    if pre_info['passwd'][0] == '!':
+    if pre_info['passwd'].startswith('!'):
         return True
 
     cmd = 'passwd -l {0}'.format(name)
@@ -229,7 +230,7 @@ def lock_password(name):
 
     post_info = info(name)
 
-    return post_info['passwd'][0] == '!'
+    return post_info['passwd'].startswith('!')
 
 
 def unlock_password(name):
@@ -292,17 +293,18 @@ def set_password(name, password, use_usermod=False):
         lines = []
         with salt.utils.files.fopen(s_file, 'rb') as fp_:
             for line in fp_:
-                line = salt.utils.stringutils.to_str(line)
+                line = salt.utils.stringutils.to_unicode(line)
                 comps = line.strip().split(':')
                 if comps[0] != name:
                     lines.append(line)
                     continue
                 changed_date = datetime.datetime.today() - datetime.datetime(1970, 1, 1)
                 comps[1] = password
-                comps[2] = str(changed_date.days)
+                comps[2] = six.text_type(changed_date.days)
                 line = ':'.join(comps)
                 lines.append('{0}\n'.format(line))
         with salt.utils.files.fopen(s_file, 'w+') as fp_:
+            lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
             fp_.writelines(lines)
         uinfo = info(name)
         return uinfo['passwd'] == password

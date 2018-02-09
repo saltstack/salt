@@ -84,7 +84,7 @@ without extra parameters:
     salt-run nacl.enc 'asecretpass'
     salt-run nacl.dec 'tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
 
-.. code-block:: yam
+.. code-block:: yaml
 
     # a salt developers minion could have pillar data that includes a nacl public key
     nacl.config:
@@ -150,14 +150,19 @@ Optional small program to encrypt data without needing salt modules.
 
 '''
 
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import os
+
+# Import Salt libs
+from salt.ext import six
+import salt.syspaths
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.win_functions
 import salt.utils.win_dacl
-import salt.syspaths
 
 
 REQ_ERROR = None
@@ -206,7 +211,7 @@ def _get_sk(**kwargs):
     sk_file = config['sk_file']
     if not key and sk_file:
         with salt.utils.files.fopen(sk_file, 'rb') as keyf:
-            key = str(keyf.read()).rstrip('\n')
+            key = salt.utils.stringutils.to_unicode(keyf.read()).rstrip('\n')
     if key is None:
         raise Exception('no key or sk_file found')
     return base64.b64decode(key)
@@ -221,10 +226,10 @@ def _get_pk(**kwargs):
     pk_file = config['pk_file']
     if not pubkey and pk_file:
         with salt.utils.files.fopen(pk_file, 'rb') as keyf:
-            pubkey = str(keyf.read()).rstrip('\n')
+            pubkey = salt.utils.stringutils.to_unicode(keyf.read()).rstrip('\n')
     if pubkey is None:
         raise Exception('no pubkey or pk_file found')
-    pubkey = str(pubkey)
+    pubkey = six.text_type(pubkey)
     return base64.b64decode(pubkey)
 
 
@@ -258,7 +263,7 @@ def keygen(sk_file=None, pk_file=None):
     if sk_file and pk_file is None:
         if not os.path.isfile(sk_file):
             kp = libnacl.public.SecretKey()
-            with salt.utils.files.fopen(sk_file, 'w') as keyf:
+            with salt.utils.files.fopen(sk_file, 'wb') as keyf:
                 keyf.write(base64.b64encode(kp.sk))
             if salt.utils.platform.is_windows():
                 cur_user = salt.utils.win_functions.get_current_user()
@@ -280,15 +285,15 @@ def keygen(sk_file=None, pk_file=None):
     if os.path.isfile(sk_file) and not os.path.isfile(pk_file):
         # generate pk using the sk
         with salt.utils.files.fopen(sk_file, 'rb') as keyf:
-            sk = str(keyf.read()).rstrip('\n')
+            sk = salt.utils.stringutils.to_unicode(keyf.read()).rstrip('\n')
             sk = base64.b64decode(sk)
         kp = libnacl.public.SecretKey(sk)
-        with salt.utils.files.fopen(pk_file, 'w') as keyf:
+        with salt.utils.files.fopen(pk_file, 'wb') as keyf:
             keyf.write(base64.b64encode(kp.pk))
         return 'saved pk_file: {0}'.format(pk_file)
 
     kp = libnacl.public.SecretKey()
-    with salt.utils.files.fopen(sk_file, 'w') as keyf:
+    with salt.utils.files.fopen(sk_file, 'wb') as keyf:
         keyf.write(base64.b64encode(kp.sk))
     if salt.utils.platform.is_windows():
         cur_user = salt.utils.win_functions.get_current_user()
@@ -297,7 +302,7 @@ def keygen(sk_file=None, pk_file=None):
     else:
         # chmod 0600 file
         os.chmod(sk_file, 1536)
-    with salt.utils.files.fopen(pk_file, 'w') as keyf:
+    with salt.utils.files.fopen(pk_file, 'wb') as keyf:
         keyf.write(base64.b64encode(kp.pk))
     return 'saved sk_file:{0}  pk_file: {1}'.format(sk_file, pk_file)
 
@@ -338,13 +343,13 @@ def enc_file(name, out=None, **kwargs):
     except Exception as e:
         # likly using salt-run so fallback to local filesystem
         with salt.utils.files.fopen(name, 'rb') as f:
-            data = f.read()
+            data = salt.utils.stringutils.to_unicode(f.read())
     d = enc(data, **kwargs)
     if out:
         if os.path.isfile(out):
             raise Exception('file:{0} already exist.'.format(out))
         with salt.utils.files.fopen(out, 'wb') as f:
-            f.write(d)
+            f.write(salt.utils.stringutils.to_bytes(d))
         return 'Wrote: {0}'.format(out)
     return d
 
@@ -385,13 +390,13 @@ def dec_file(name, out=None, **kwargs):
     except Exception as e:
         # likly using salt-run so fallback to local filesystem
         with salt.utils.files.fopen(name, 'rb') as f:
-            data = f.read()
+            data = salt.utils.stringutils.to_unicode(f.read())
     d = dec(data, **kwargs)
     if out:
         if os.path.isfile(out):
             raise Exception('file:{0} already exist.'.format(out))
         with salt.utils.files.fopen(out, 'wb') as f:
-            f.write(d)
+            f.write(salt.utils.stringutils.to_bytes(d))
         return 'Wrote: {0}'.format(out)
     return d
 

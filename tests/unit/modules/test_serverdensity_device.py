@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,31 +17,9 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.json
 import salt.modules.serverdensity_device as serverdensity_device
 from salt.exceptions import CommandExecutionError
-
-
-class MockJson(Exception):
-    '''
-    Mock SMTP_SSL class
-    '''
-    flag = None
-
-    def loads(self, content):
-        '''
-        Mock loads method.
-        '''
-        if self.flag == 1:
-            raise ValueError
-        return content
-
-    def dumps(self, dumps):
-        '''
-        Mock dumps method.
-        '''
-        if self.flag == 1:
-            return None
-        return dumps
 
 
 class MockRequests(object):
@@ -49,8 +27,7 @@ class MockRequests(object):
     Mock smtplib class
     '''
     flag = None
-    content = {"message": "Invalid token",
-               "errors": [{"type": "invalid_token", "subject": "token"}]}
+    content = '''{"message": "Invalid token", "errors": [{"type": "invalid_token", "subject": "token"}]}'''
     status_code = None
 
     def __init__(self):
@@ -105,10 +82,12 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             serverdensity_device: {
-                'json': MockJson(),
                 'requests': MockRequests()
             }
         }
+
+    def setUp(self):
+        self.mock_json_loads = MagicMock(side_effect=ValueError())
 
     # 'get_sd_auth' function tests: 1
 
@@ -140,10 +119,10 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(serverdensity_device.create('rich_lama',
                                                         group='lama_band'))
 
-            MockJson.flag = 1
-            self.assertRaises(CommandExecutionError,
-                              serverdensity_device.create, 'rich_lama',
-                              group='lama_band')
+            with patch.object(salt.utils.json, 'loads', self.mock_json_loads):
+                self.assertRaises(CommandExecutionError,
+                                  serverdensity_device.create, 'rich_lama',
+                                  group='lama_band')
 
             MockRequests.flag = 1
             self.assertIsNone(serverdensity_device.create('rich_lama',
@@ -158,12 +137,11 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(serverdensity_device.__pillar__,
                         {'serverdensity': {'api_token': 'salt'}}):
             MockRequests.flag = 0
-            MockJson.flag = 0
             self.assertTrue(serverdensity_device.delete('51f7eaf'))
 
-            MockJson.flag = 1
-            self.assertRaises(CommandExecutionError,
-                              serverdensity_device.delete, '51f7eaf')
+            with patch.object(salt.utils.json, 'loads', self.mock_json_loads):
+                self.assertRaises(CommandExecutionError,
+                                  serverdensity_device.delete, '51f7eaf')
 
             MockRequests.flag = 1
             self.assertIsNone(serverdensity_device.delete('51f7eaf'))
@@ -177,12 +155,11 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(serverdensity_device.__pillar__,
                         {'serverdensity': {'api_token': 'salt'}}):
             MockRequests.flag = 0
-            MockJson.flag = 0
             self.assertTrue(serverdensity_device.ls(name='lama'))
 
-            MockJson.flag = 1
-            self.assertRaises(CommandExecutionError,
-                              serverdensity_device.ls, name='lama')
+            with patch.object(salt.utils.json, 'loads', self.mock_json_loads):
+                self.assertRaises(CommandExecutionError,
+                                  serverdensity_device.ls, name='lama')
 
             MockRequests.flag = 1
             self.assertIsNone(serverdensity_device.ls(name='lama'))
@@ -196,13 +173,12 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(serverdensity_device.__pillar__,
                         {'serverdensity': {'api_token': 'salt'}}):
             MockRequests.flag = 0
-            MockJson.flag = 0
             self.assertTrue(serverdensity_device.update('51f7eaf', name='lama'))
 
-            MockJson.flag = 1
-            self.assertRaises(CommandExecutionError,
-                              serverdensity_device.update, '51f7eaf',
-                              name='lama')
+            with patch.object(salt.utils.json, 'loads', self.mock_json_loads):
+                self.assertRaises(CommandExecutionError,
+                                  serverdensity_device.update, '51f7eaf',
+                                  name='lama')
 
             MockRequests.flag = 1
             self.assertIsNone(serverdensity_device.update('51f7eaf',

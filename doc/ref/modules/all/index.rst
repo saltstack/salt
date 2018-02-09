@@ -83,6 +83,7 @@ execution modules
     chef
     chocolatey
     chronos
+    cimc
     cisconso
     cloud
     cmdmod
@@ -308,6 +309,7 @@ execution modules
     pagerduty
     pagerduty_util
     pam
+    panos
     parallels
     parted
     pcs
@@ -444,6 +446,7 @@ execution modules
     victorops
     virt
     virtualenv_mod
+    vmctl
     vsphere
     win_autoruns
     win_certutil

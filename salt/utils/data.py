@@ -4,7 +4,7 @@ Functions for manipulating, inspecting, or otherwise working with data types
 and data structures.
 '''
 
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import collections
@@ -12,11 +12,11 @@ import copy
 import fnmatch
 import logging
 import re
-import yaml
 
 # Import Salt libs
 import salt.utils.dictupdate
 import salt.utils.stringutils
+import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
@@ -67,76 +67,245 @@ def compare_lists(old=None, new=None):
     return ret
 
 
-def decode_dict(data):
+def decode(data, encoding=None, errors='strict', keep=False,
+           preserve_dict_class=False, preserve_tuples=False):
     '''
-    Decode all values to Unicode
+    Generic function which will decode whichever type is passed, if necessary
+
+    If `strict` is True, and `keep` is False, and we fail to decode, a
+    UnicodeDecodeError will be raised. Passing `keep` as True allows for the
+    original value to silently be returned in cases where decoding fails. This
+    can be useful for cases where the data passed to this function is likely to
+    contain binary blobs, such as in the case of cp.recv.
     '''
-    rv = {}
+    if isinstance(data, collections.Mapping):
+        return decode_dict(data, encoding, errors, keep,
+                           preserve_dict_class, preserve_tuples)
+    elif isinstance(data, list):
+        return decode_list(data, encoding, errors, keep,
+                           preserve_dict_class, preserve_tuples)
+    elif isinstance(data, tuple):
+        return decode_tuple(data, encoding, errors, keep, preserve_dict_class) \
+            if preserve_tuples \
+            else decode_list(data, encoding, errors, keep,
+                             preserve_dict_class, preserve_tuples)
+    else:
+        try:
+            return salt.utils.stringutils.to_unicode(data, encoding, errors)
+        except TypeError:
+            pass
+        except UnicodeDecodeError:
+            if not keep:
+                raise
+        return data
+
+
+def decode_dict(data, encoding=None, errors='strict', keep=False,
+                preserve_dict_class=False, preserve_tuples=False):
+    '''
+    Decode all string values to Unicode
+    '''
+    # Make sure we preserve OrderedDicts
+    rv = data.__class__() if preserve_dict_class else {}
     for key, value in six.iteritems(data):
-        if six.PY2 and isinstance(key, str):
-            key = key.decode(__salt_system_encoding__)
-        if six.PY2 and isinstance(value, str):
-            value = value.decode(__salt_system_encoding__)
-        elif isinstance(value, list):
-            value = decode_list(value)
-        elif isinstance(value, dict):
-            value = decode_dict(value)
+        if isinstance(key, tuple):
+            key = decode_tuple(key, encoding, errors, keep, preserve_dict_class) \
+                if preserve_tuples \
+                else decode_list(key, encoding, errors, keep,
+                                 preserve_dict_class, preserve_tuples)
+        else:
+            try:
+                key = salt.utils.stringutils.to_unicode(key, encoding, errors)
+            except TypeError:
+                pass
+            except UnicodeDecodeError:
+                if not keep:
+                    raise
+
+        if isinstance(value, list):
+            value = decode_list(value, encoding, errors, keep,
+                                preserve_dict_class, preserve_tuples)
+        elif isinstance(value, tuple):
+            value = decode_tuple(value, encoding, errors, keep, preserve_dict_class) \
+                if preserve_tuples \
+                else decode_list(value, encoding, errors, keep,
+                                 preserve_dict_class, preserve_tuples)
+        elif isinstance(value, collections.Mapping):
+            value = decode_dict(value, encoding, errors, keep,
+                                preserve_dict_class, preserve_tuples)
+        else:
+            try:
+                value = salt.utils.stringutils.to_unicode(value, encoding, errors)
+            except TypeError:
+                pass
+            except UnicodeDecodeError:
+                if not keep:
+                    raise
+
         rv[key] = value
     return rv
 
 
-def decode_list(data):
+def decode_list(data, encoding=None, errors='strict', keep=False,
+                preserve_dict_class=False, preserve_tuples=False):
     '''
-    Decode all values to Unicode
+    Decode all string values to Unicode
     '''
     rv = []
     for item in data:
-        if six.PY2 and isinstance(item, six.text_type):
-            item = item.decode(__salt_system_encoding__)
-        elif isinstance(item, list):
-            item = decode_list(item)
-        elif isinstance(item, dict):
-            item = decode_dict(item)
+        if isinstance(item, list):
+            item = decode_list(item, encoding, errors, keep,
+                               preserve_dict_class, preserve_tuples)
+        elif isinstance(item, tuple):
+            item = decode_tuple(item, encoding, errors, keep, preserve_dict_class) \
+                if preserve_tuples \
+                else decode_list(item, encoding, errors, keep,
+                                 preserve_dict_class, preserve_tuples)
+        elif isinstance(item, collections.Mapping):
+            item = decode_dict(item, encoding, errors, keep,
+                               preserve_dict_class, preserve_tuples)
+        else:
+            try:
+                item = salt.utils.stringutils.to_unicode(item, encoding, errors)
+            except TypeError:
+                pass
+            except UnicodeDecodeError:
+                if not keep:
+                    raise
+
         rv.append(item)
     return rv
 
 
+def decode_tuple(data, encoding=None, errors='strict', keep=False,
+                 preserve_dict_class=False):
+    '''
+    Decode all string values to Unicode
+    '''
+    return tuple(
+        decode_list(data, encoding, errors, keep, preserve_dict_class, True))
+
+
+def encode(data, encoding=None, errors='strict', keep=False,
+           preserve_dict_class=False, preserve_tuples=False):
+    '''
+    Generic function which will encode whichever type is passed, if necessary
+
+    If `strict` is True, and `keep` is False, and we fail to encode, a
+    UnicodeEncodeError will be raised. Passing `keep` as True allows for the
+    original value to silently be returned in cases where encoding fails. This
+    can be useful for cases where the data passed to this function is likely to
+    contain binary blobs.
+    '''
+    if isinstance(data, collections.Mapping):
+        return encode_dict(data, encoding, errors, keep,
+                           preserve_dict_class, preserve_tuples)
+    elif isinstance(data, list):
+        return encode_list(data, encoding, errors, keep,
+                           preserve_dict_class, preserve_tuples)
+    elif isinstance(data, tuple):
+        return encode_tuple(data, encoding, errors, keep, preserve_dict_class) \
+            if preserve_tuples \
+            else encode_list(data, encoding, errors, keep,
+                             preserve_dict_class, preserve_tuples)
+    else:
+        try:
+            return salt.utils.stringutils.to_bytes(data, encoding, errors)
+        except TypeError:
+            pass
+        except UnicodeEncodeError:
+            if not keep:
+                raise
+        return data
+
+
 @jinja_filter('json_decode_dict')  # Remove this for Neon
 @jinja_filter('json_encode_dict')
-def encode_dict(data):
+def encode_dict(data, encoding=None, errors='strict', keep=False,
+                preserve_dict_class=False, preserve_tuples=False):
     '''
-    Encode all values to bytes
+    Encode all string values to bytes
     '''
-    rv = {}
+    rv = data.__class__() if preserve_dict_class else {}
     for key, value in six.iteritems(data):
-        if six.PY2 and isinstance(key, six.text_type):
-            key = key.encode(__salt_system_encoding__)
-        if six.PY2 and isinstance(value, six.text_type):
-            value = value.encode(__salt_system_encoding__)
-        elif isinstance(value, list):
-            value = encode_list(value)
-        elif isinstance(value, dict):
-            value = encode_dict(value)
+        if isinstance(key, tuple):
+            key = encode_tuple(key, encoding, errors, keep, preserve_dict_class) \
+                if preserve_tuples \
+                else encode_list(key, encoding, errors, keep,
+                                 preserve_dict_class, preserve_tuples)
+        else:
+            try:
+                key = salt.utils.stringutils.to_bytes(key, encoding, errors)
+            except TypeError:
+                pass
+            except UnicodeEncodeError:
+                if not keep:
+                    raise
+
+        if isinstance(value, list):
+            value = encode_list(value, encoding, errors, keep,
+                                preserve_dict_class, preserve_tuples)
+        elif isinstance(value, tuple):
+            value = encode_tuple(value, encoding, errors, keep, preserve_dict_class) \
+                if preserve_tuples \
+                else encode_list(value, encoding, errors, keep,
+                                 preserve_dict_class, preserve_tuples)
+        elif isinstance(value, collections.Mapping):
+            value = encode_dict(value, encoding, errors, keep,
+                                preserve_dict_class, preserve_tuples)
+        else:
+            try:
+                value = salt.utils.stringutils.to_bytes(value, encoding, errors)
+            except TypeError:
+                pass
+            except UnicodeEncodeError:
+                if not keep:
+                    raise
+
         rv[key] = value
     return rv
 
 
 @jinja_filter('json_decode_list')  # Remove this for Neon
 @jinja_filter('json_encode_list')
-def encode_list(data):
+def encode_list(data, encoding=None, errors='strict', keep=False,
+                preserve_dict_class=False, preserve_tuples=False):
     '''
-    Encode all values to bytes
+    Encode all string values to bytes
     '''
     rv = []
     for item in data:
-        if isinstance(item, six.text_type) and six.PY2:
-            item = item.encode(__salt_system_encoding__)
-        elif isinstance(item, list):
-            item = encode_list(item)
-        elif isinstance(item, dict):
-            item = encode_dict(item)
+        if isinstance(item, list):
+            item = encode_list(item, encoding, errors, keep,
+                               preserve_dict_class, preserve_tuples)
+        elif isinstance(item, tuple):
+            item = encode_tuple(item, encoding, errors, keep, preserve_dict_class) \
+                if preserve_tuples \
+                else encode_list(item, encoding, errors, keep,
+                                 preserve_dict_class, preserve_tuples)
+        elif isinstance(item, collections.Mapping):
+            item = encode_dict(item, encoding, errors, keep,
+                               preserve_dict_class, preserve_tuples)
+        else:
+            try:
+                item = salt.utils.stringutils.to_bytes(item, encoding, errors)
+            except TypeError:
+                pass
+            except UnicodeEncodeError:
+                if not keep:
+                    raise
+
         rv.append(item)
     return rv
+
+
+def encode_tuple(data, encoding=None, errors='strict', keep=False,
+                 preserve_dict_class=False):
+    '''
+    Encode all string values to Unicode
+    '''
+    return tuple(
+        encode_list(data, encoding, errors, keep, preserve_dict_class, True))
 
 
 @jinja_filter('exactly_n_true')
@@ -286,7 +455,7 @@ def subdict_match(data,
             try:
                 return re.match(pattern.lower(), six.text_type(target).lower())
             except Exception:
-                log.error('Invalid regex \'{0}\' in match'.format(pattern))
+                log.error('Invalid regex \'%s\' in match', pattern)
                 return False
         elif exact_match:
             return six.text_type(target).lower() == pattern.lower()
@@ -335,8 +504,8 @@ def subdict_match(data,
         splits = expr.split(delimiter)
         key = delimiter.join(splits[:idx])
         matchstr = delimiter.join(splits[idx:])
-        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
-                  '\'{2}\''.format(matchstr, key, delimiter))
+        log.debug("Attempting to match '%s' in '%s' using delimiter '%s'",
+                  matchstr, key, delimiter)
         match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
@@ -406,8 +575,8 @@ def repack_dictlist(data,
     '''
     if isinstance(data, six.string_types):
         try:
-            data = yaml.safe_load(data)
-        except yaml.parser.ParserError as err:
+            data = salt.utils.yaml.safe_load(data)
+        except salt.utils.yaml.parser.ParserError as err:
             log.error(err)
             return {}
 
@@ -604,3 +773,18 @@ def simple_types_filter(data):
         return simpledict
 
     return data
+
+
+def stringify(data):
+    '''
+    Given an iterable, returns its items as a list, with any non-string items
+    converted to unicode strings.
+    '''
+    ret = []
+    for item in data:
+        if six.PY2 and isinstance(item, str):
+            item = salt.utils.stringutils.to_unicode(item)
+        elif not isinstance(item, six.string_types):
+            item = six.text_type(item)
+        ret.append(item)
+    return ret

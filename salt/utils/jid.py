@@ -2,15 +2,13 @@
 '''
 Functions for creating and working with job IDs
 '''
-
-from __future__ import absolute_import
-from __future__ import print_function
-
+from __future__ import absolute_import, print_function, unicode_literals
 from calendar import month_abbr as months
 import datetime
 import hashlib
 import os
 
+import salt.utils.stringutils
 from salt.ext import six
 
 LAST_JID_DATETIME = None
@@ -50,7 +48,7 @@ def jid_to_time(jid):
     '''
     Convert a salt job id into the time when the job was invoked
     '''
-    jid = str(jid)
+    jid = six.text_type(jid)
     if len(jid) != 20 and (len(jid) <= 21 or jid[20] != '_'):
         return ''
     year = jid[:4]
@@ -116,10 +114,9 @@ def jid_dir(jid, job_dir=None, hash_type='sha256'):
     Return the jid_dir for the given job id
     '''
     if not isinstance(jid, six.string_types):
-        jid = str(jid)
-    if six.PY3:
-        jid = jid.encode('utf-8')
-    jhash = getattr(hashlib, hash_type)(jid).hexdigest()
+        jid = six.text_type(jid)
+    jhash = getattr(hashlib, hash_type)(
+        salt.utils.stringutils.to_bytes(jid)).hexdigest()
 
     parts = []
     if job_dir is not None:

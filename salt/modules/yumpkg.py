@@ -15,7 +15,7 @@ Support for YUM/DNF
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import contextlib
 import datetime
 import fnmatch
@@ -560,7 +560,7 @@ def latest_version(*names, **kwargs):
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -570,7 +570,7 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return latest_version(name) != ''
+    return latest_version(name, **kwargs) != ''
 
 
 def version(*names, **kwargs):
@@ -642,6 +642,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs attr=version,arch
         salt '*' pkg.list_pkgs attr='["version", "arch"]'
     '''
     versions_as_list = salt.utils.data.is_true(versions_as_list)
@@ -650,42 +651,52 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
-    attr = kwargs.get("attr")
-    if 'pkg.list_pkgs' in __context__:
-        cached = __context__['pkg.list_pkgs']
-        return __salt__['pkg_resource.format_pkg_list'](cached, versions_as_list, attr)
+    attr = kwargs.get('attr')
+    if attr is not None:
+        attr = salt.utils.args.split_input(attr)
 
-    ret = {}
-    cmd = ['rpm', '-qa', '--queryformat',
-           salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', '(none)') + '\n']
-    output = __salt__['cmd.run'](cmd,
-                                 python_shell=False,
-                                 output_loglevel='trace')
-    for line in output.splitlines():
-        pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
-            line,
-            osarch=__grains__['osarch']
-        )
-        if pkginfo is not None:
-            # see rpm version string rules available at https://goo.gl/UGKPNd
-            pkgver = pkginfo.version
-            epoch = ''
-            release = ''
-            if ':' in pkgver:
-                epoch, pkgver = pkgver.split(":", 1)
-            if '-' in pkgver:
-                pkgver, release = pkgver.split("-", 1)
-            all_attr = {'epoch': epoch, 'version': pkgver, 'release': release,
-                        'arch': pkginfo.arch, 'install_date': pkginfo.install_date,
-                        'install_date_time_t': pkginfo.install_date_time_t}
-            __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, all_attr)
+    contextkey = 'pkg.list_pkgs'
 
-    for pkgname in ret:
-        ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+    if contextkey not in __context__:
+        ret = {}
+        cmd = ['rpm', '-qa', '--queryformat',
+               salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', '(none)') + '\n']
+        output = __salt__['cmd.run'](cmd,
+                                     python_shell=False,
+                                     output_loglevel='trace')
+        for line in output.splitlines():
+            pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
+                line,
+                osarch=__grains__['osarch']
+            )
+            if pkginfo is not None:
+                # see rpm version string rules available at https://goo.gl/UGKPNd
+                pkgver = pkginfo.version
+                epoch = ''
+                release = ''
+                if ':' in pkgver:
+                    epoch, pkgver = pkgver.split(":", 1)
+                if '-' in pkgver:
+                    pkgver, release = pkgver.split("-", 1)
+                all_attr = {
+                    'epoch': epoch,
+                    'version': pkgver,
+                    'release': release,
+                    'arch': pkginfo.arch,
+                    'install_date': pkginfo.install_date,
+                    'install_date_time_t': pkginfo.install_date_time_t
+                }
+                __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, all_attr)
 
-    __context__['pkg.list_pkgs'] = ret
+        for pkgname in ret:
+            ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
 
-    return __salt__['pkg_resource.format_pkg_list'](ret, versions_as_list, attr)
+        __context__[contextkey] = ret
+
+    return __salt__['pkg_resource.format_pkg_list'](
+        __context__[contextkey],
+        versions_as_list,
+        attr)
 
 
 def list_repo_pkgs(*args, **kwargs):
@@ -813,14 +824,14 @@ def list_repo_pkgs(*args, **kwargs):
         try:
             fromrepo = [x.strip() for x in fromrepo.split(',')]
         except AttributeError:
-            fromrepo = [x.strip() for x in str(fromrepo).split(',')]
+            fromrepo = [x.strip() for x in six.text_type(fromrepo).split(',')]
 
     if disablerepo and not isinstance(disablerepo, list):
         try:
             disablerepo = [x.strip() for x in disablerepo.split(',')
                            if x != '*']
         except AttributeError:
-            disablerepo = [x.strip() for x in str(disablerepo).split(',')
+            disablerepo = [x.strip() for x in six.text_type(disablerepo).split(',')
                            if x != '*']
 
     if enablerepo and not isinstance(enablerepo, list):
@@ -828,7 +839,7 @@ def list_repo_pkgs(*args, **kwargs):
             enablerepo = [x.strip() for x in enablerepo.split(',')
                           if x != '*']
         except AttributeError:
-            enablerepo = [x.strip() for x in str(enablerepo).split(',')
+            enablerepo = [x.strip() for x in six.text_type(enablerepo).split(',')
                           if x != '*']
 
     if fromrepo:
@@ -838,7 +849,7 @@ def list_repo_pkgs(*args, **kwargs):
             repo_name for repo_name, repo_info in six.iteritems(list_repos())
             if repo_name in enablerepo
             or (repo_name not in disablerepo
-                and str(repo_info.get('enabled', '1')) == '1')
+                and six.text_type(repo_info.get('enabled', '1')) == '1')
         ]
 
     ret = {}
@@ -1352,11 +1363,11 @@ def install(name=None,
 
     version_num = kwargs.get('version')
 
-    diff_attr = kwargs.get("diff_attr")
+    diff_attr = kwargs.get('diff_attr')
     old = list_pkgs(versions_as_list=False, attr=diff_attr) if not downloadonly else list_downloaded()
     # Use of __context__ means no duplicate work here, just accessing
     # information already in __context__ from the previous call to list_pkgs()
-    old_as_list = list_pkgs(versions_as_list=True, attr=diff_attr) if not downloadonly else list_downloaded()
+    old_as_list = list_pkgs(versions_as_list=True) if not downloadonly else list_downloaded()
 
     to_install = []
     to_downgrade = []
@@ -1607,7 +1618,7 @@ def install(name=None,
         if not to_unhold:
             yield
         else:
-            log.debug('Unholding packages: {0}'.format(', '.join(to_unhold)))
+            log.debug('Unholding packages: %s', ', '.join(to_unhold))
             try:
                 # Using list() here for python3 compatibility, dict.keys() no
                 # longer returns a list in python3.
@@ -2694,7 +2705,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         content += '\n{0}\n'.format(comments)
 
     with salt.utils.files.fopen(repofile, 'w') as fileout:
-        fileout.write(content)
+        fileout.write(salt.utils.stringutils.to_str(content))
 
     return 'Repo {0} has been removed from {1}'.format(repo, repofile)
 
@@ -2835,7 +2846,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         content += '\n{0}\n'.format(comments)
 
     with salt.utils.files.fopen(repofile, 'w') as fileout:
-        fileout.write(content)
+        fileout.write(salt.utils.stringutils.to_str(content))
 
     return {repofile: filerepos}
 
@@ -2851,7 +2862,8 @@ def _parse_repo_file(filename):
         parsed.read(filename)
     except configparser.MissingSectionHeaderError as err:
         log.error(
-            'Failed to parse file {0}, error: {1}'.format(filename, err.message)
+            'Failed to parse file %s, error: %s',
+            filename, err.message
         )
         return ('', {})
 
@@ -2864,12 +2876,13 @@ def _parse_repo_file(filename):
     headers = ''
     with salt.utils.files.fopen(filename, 'r') as rawfile:
         for line in rawfile:
+            line = salt.utils.stringutils.to_unicode(line)
             if line.strip().startswith('#'):
                 headers += '{0}\n'.format(line.strip())
             else:
                 break
 
-    return (headers, config)
+    return (headers, salt.utils.data.decode(config))
 
 
 def file_list(*packages):

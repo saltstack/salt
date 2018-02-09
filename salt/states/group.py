@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+'''
 Management of user groups
 =========================
 
@@ -8,8 +8,8 @@ either present or absent. User/Group names can be passed to the ``adduser``,
 ``deluser``, and ``members`` parameters. ``adduser`` and ``deluser`` can be used
 together but not with ``members``.
 
-In Windows, if no domain is specified in the user or group name (ie:
-`DOMAIN\username``) the module will assume a local user or group.
+In Windows, if no domain is specified in the user or group name (i.e.
+``DOMAIN\\username``) the module will assume a local user or group.
 
 .. code-block:: yaml
 
@@ -35,7 +35,7 @@ In Windows, if no domain is specified in the user or group name (ie:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 
 # Import 3rd-party libs

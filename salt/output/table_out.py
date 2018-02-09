@@ -35,7 +35,7 @@ Example output::
 '''
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 import operator
 from functools import reduce  # pylint: disable=redefined-builtin

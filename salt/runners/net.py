@@ -68,10 +68,7 @@ Configuration
               - fxp0
             outputter: yaml
 '''
-
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt lib
 import salt.output
@@ -340,7 +337,7 @@ def interfaces(device=None,
         if device:
             title += ' on device {0}'.format(device)
         if ipnet:
-            title += ' that include network {net}'.format(net=str(ipnet))
+            title += ' that include network {net}'.format(net=six.text_type(ipnet))
             if best:
                 title += ' - only best match returned'
 
@@ -403,7 +400,7 @@ def interfaces(device=None,
                         interf_entry['ips'] = '\n'.join(interf_entry['ips'])
                     if ipnet:
                         inet_ips = [
-                            str(ip) for ip in ips if _ipnet_belongs(ip)
+                            six.text_type(ip) for ip in ips if _ipnet_belongs(ip)
                         ]  # filter and get only IP include ipnet
                         if inet_ips:  # if any
                             if best:
@@ -600,7 +597,7 @@ def findmac(device=None, mac=None, interface=None, vlan=None, display=_DEFAULT_D
                 napalm_helpers.convert(napalm_helpers.mac, mac_entry.get('mac', '')) ==
                 napalm_helpers.convert(napalm_helpers.mac, mac)) or
                 (interface and interface in mac_entry.get('interface', '')) or
-               (vlan and str(mac_entry.get('vlan', '')) == str(vlan))):
+               (vlan and six.text_type(mac_entry.get('vlan', '')) == six.text_type(vlan))):
                 rows.append({
                     'device': device,
                     'interface': mac_entry.get('interface'),

@@ -4,9 +4,10 @@
 #       module functions.
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
+import os.path
 # pylint: disable=3rd-party-module-not-gated
 import pkg_resources
 from pkg_resources import DistributionNotFound
@@ -16,6 +17,7 @@ from pkg_resources import DistributionNotFound
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.paths import TESTS_DIR
 
 # Import Salt libs
 import salt.config
@@ -32,6 +34,7 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # pylint: disable=no-name-in-module,unused-import
 try:
     import boto
+    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
     HAS_BOTO = True
@@ -103,7 +106,7 @@ def _get_moto_version():
     Returns the moto version
     '''
     try:
-        return LooseVersion(moto.__version__)
+        return LooseVersion(six.text_type(moto.__version__))
     except AttributeError:
         try:
             return LooseVersion(pkg_resources.get_distribution('moto').version)
@@ -129,8 +132,9 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {}. Installed: {}'
-        .format(required_boto_version, _get_boto_version()))
-@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {}. Installed: {}'.format(required_moto_version, _get_moto_version()))
+        .format(required_boto_version, _get_boto_version() if HAS_BOTO else 'None'))
+@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {}. Installed: {}'
+        .format(required_moto_version, _get_moto_version() if HAS_MOTO else 'None'))
 class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn3 = None
 

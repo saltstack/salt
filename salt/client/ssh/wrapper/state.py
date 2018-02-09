@@ -2,13 +2,10 @@
 '''
 Create ssh executor system
 '''
-
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 # Import python libs
 import os
 import time
-import copy
-import json
 import logging
 
 # Import salt libs
@@ -20,6 +17,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.jid
+import salt.utils.json
 import salt.utils.platform
 import salt.utils.state
 import salt.utils.thin
@@ -94,6 +92,28 @@ def _merge_extra_filerefs(*args):
     return ','.join(ret)
 
 
+def _cleanup_slsmod_low_data(low_data):
+    '''
+    Set "slsmod" keys to None to make
+    low_data JSON serializable
+    '''
+    for i in low_data:
+        if 'slsmod' in i:
+            i['slsmod'] = None
+
+
+def _cleanup_slsmod_high_data(high_data):
+    '''
+    Set "slsmod" keys to None to make
+    high_data JSON serializable
+    '''
+    for i in six.itervalues(high_data):
+        if 'stateconf' in i:
+            stateconf_data = i['stateconf'][1]
+            if 'slsmod' in stateconf_data:
+                stateconf_data['slsmod'] = None
+
+
 def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     '''
     Create the seed file for a state.sls run
@@ -101,11 +121,13 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
     __pillar__.update(kwargs.get('pillar', {}))
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     st_ = salt.client.ssh.state.SSHHighState(
-            __opts__,
+            opts,
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    st_.push_active()
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
     high_data, errors = st_.render_highstate({saltenv: mods})
@@ -133,37 +155,38 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
             chunks,
             _merge_extra_filerefs(
                 kwargs.get('extra_filerefs', ''),
-                __opts__.get('extra_filerefs', '')
+                opts.get('extra_filerefs', '')
                 )
             )
 
-    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster = salt.roster.Roster(opts, opts.get('roster', 'flat'))
     roster_grains = roster.opts['grains']
 
     # Create the tar containing the state pkg and relevant files.
+    _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
+            opts,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
             st_kwargs['id_'],
             roster_grains)
-    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__['hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, opts['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            __opts__['thin_dir'],
+            opts['thin_dir'],
             test,
             trans_tar_sum,
-            __opts__['hash_type'])
+            opts['hash_type'])
     single = salt.client.ssh.Single(
-            __opts__,
+            opts,
             cmd,
             fsclient=__context__['fileclient'],
             minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
+            '{0}/salt_state.tgz'.format(opts['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
 
     # Clean up our tar
@@ -174,10 +197,10 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -243,32 +266,6 @@ def _check_queue(queue, kwargs):
         if conflict:
             __context__['retcode'] = 1
             return conflict
-
-
-def _get_opts(**kwargs):
-    '''
-    Return a copy of the opts for use, optionally load a local config on top
-    '''
-    opts = copy.deepcopy(__opts__)
-
-    if 'localconfig' in kwargs:
-        return salt.config.minion_config(kwargs['localconfig'], defaults=opts)
-
-    if 'saltenv' in kwargs:
-        saltenv = kwargs['saltenv']
-        if saltenv is not None and not isinstance(saltenv, six.string_types):
-            opts['environment'] = str(kwargs['saltenv'])
-        else:
-            opts['environment'] = kwargs['saltenv']
-
-    if 'pillarenv' in kwargs:
-        pillarenv = kwargs['pillarenv']
-        if pillarenv is not None and not isinstance(pillarenv, six.string_types):
-            opts['pillarenv'] = str(kwargs['pillarenv'])
-        else:
-            opts['pillarenv'] = kwargs['pillarenv']
-
-    return opts
 
 
 def _get_initial_pillar(opts):
@@ -344,10 +341,10 @@ def low(data, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -382,46 +379,49 @@ def high(data, **kwargs):
     __pillar__.update(kwargs.get('pillar', {}))
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     st_ = salt.client.ssh.state.SSHHighState(
-            __opts__,
+            opts,
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    st_.push_active()
     chunks = st_.state.compile_high_data(data)
     file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
                 kwargs.get('extra_filerefs', ''),
-                __opts__.get('extra_filerefs', '')
+                opts.get('extra_filerefs', '')
                 )
             )
 
-    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster = salt.roster.Roster(opts, opts.get('roster', 'flat'))
     roster_grains = roster.opts['grains']
 
     # Create the tar containing the state pkg and relevant files.
+    _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
+            opts,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
             st_kwargs['id_'],
             roster_grains)
-    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__['hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, opts['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
-            __opts__['thin_dir'],
+            opts['thin_dir'],
             trans_tar_sum,
-            __opts__['hash_type'])
+            opts['hash_type'])
     single = salt.client.ssh.Single(
-            __opts__,
+            opts,
             cmd,
             fsclient=__context__['fileclient'],
             minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
+            '{0}/salt_state.tgz'.format(opts['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
 
     # Clean up our tar
@@ -432,10 +432,10 @@ def high(data, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -521,6 +521,8 @@ def check_request(name=None):
     serial = salt.payload.Serial(__opts__)
     if os.path.isfile(notify_path):
         with salt.utils.files.fopen(notify_path, 'rb') as fp_:
+            # Not sure if this needs to be decoded since it is being returned,
+            # and msgpack serialization will encode it to bytes anyway.
             req = serial.load(fp_)
         if name:
             return req[name]
@@ -616,18 +618,19 @@ def highstate(test=None, **kwargs):
     __pillar__.update(kwargs.get('pillar', {}))
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
-
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     st_ = salt.client.ssh.state.SSHHighState(
-            __opts__,
+            opts,
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    st_.push_active()
     chunks = st_.compile_low_chunks()
     file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
                 kwargs.get('extra_filerefs', ''),
-                __opts__.get('extra_filerefs', '')
+                opts.get('extra_filerefs', '')
                 )
             )
     # Check for errors
@@ -636,33 +639,34 @@ def highstate(test=None, **kwargs):
             __context__['retcode'] = 1
             return chunks
 
-    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster = salt.roster.Roster(opts, opts.get('roster', 'flat'))
     roster_grains = roster.opts['grains']
 
     # Create the tar containing the state pkg and relevant files.
+    _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
+            opts,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
             st_kwargs['id_'],
             roster_grains)
-    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__['hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, opts['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            __opts__['thin_dir'],
+            opts['thin_dir'],
             test,
             trans_tar_sum,
-            __opts__['hash_type'])
+            opts['hash_type'])
     single = salt.client.ssh.Single(
-            __opts__,
+            opts,
             cmd,
             fsclient=__context__['fileclient'],
             minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
+            '{0}/salt_state.tgz'.format(opts['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
 
     # Clean up our tar
@@ -673,10 +677,10 @@ def highstate(test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
@@ -697,52 +701,55 @@ def top(topfn, test=None, **kwargs):
     __pillar__.update(kwargs.get('pillar', {}))
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     if salt.utils.args.test_mode(test=test, **kwargs):
-        __opts__['test'] = True
+        opts['test'] = True
     else:
-        __opts__['test'] = __opts__.get('test', None)
+        opts['test'] = __opts__.get('test', None)
     st_ = salt.client.ssh.state.SSHHighState(
-            __opts__,
+            opts,
             __pillar__,
             __salt__,
             __context__['fileclient'])
     st_.opts['state_top'] = os.path.join('salt://', topfn)
+    st_.push_active()
     chunks = st_.compile_low_chunks()
     file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
                 kwargs.get('extra_filerefs', ''),
-                __opts__.get('extra_filerefs', '')
+                opts.get('extra_filerefs', '')
                 )
             )
 
-    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster = salt.roster.Roster(opts, opts.get('roster', 'flat'))
     roster_grains = roster.opts['grains']
 
     # Create the tar containing the state pkg and relevant files.
+    _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
+            opts,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
             st_kwargs['id_'],
             roster_grains)
-    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__['hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, opts['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            __opts__['thin_dir'],
+            opts['thin_dir'],
             test,
             trans_tar_sum,
-            __opts__['hash_type'])
+            opts['hash_type'])
     single = salt.client.ssh.Single(
-            __opts__,
+            opts,
             cmd,
             fsclient=__context__['fileclient'],
             minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
+            '{0}/salt_state.tgz'.format(opts['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
 
     # Clean up our tar
@@ -753,16 +760,16 @@ def top(topfn, test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
 
 
-def show_highstate():
+def show_highstate(**kwargs):
     '''
     Retrieve the highstate data from the salt master and display it
 
@@ -773,15 +780,19 @@ def show_highstate():
         salt '*' state.show_highstate
     '''
     __opts__['grains'] = __grains__
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     st_ = salt.client.ssh.state.SSHHighState(
-            __opts__,
+            opts,
             __pillar__,
             __salt__,
             __context__['fileclient'])
-    return st_.compile_highstate()
+    st_.push_active()
+    chunks = st_.compile_highstate()
+    _cleanup_slsmod_high_data(chunks)
+    return chunks
 
 
-def show_lowstate():
+def show_lowstate(**kwargs):
     '''
     List out the low data that will be applied to this minion
 
@@ -792,12 +803,16 @@ def show_lowstate():
         salt '*' state.show_lowstate
     '''
     __opts__['grains'] = __grains__
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     st_ = salt.client.ssh.state.SSHHighState(
-            __opts__,
+            opts,
             __pillar__,
             __salt__,
             __context__['fileclient'])
-    return st_.compile_low_chunks()
+    st_.push_active()
+    chunks = st_.compile_low_chunks()
+    _cleanup_slsmod_low_data(chunks)
+    return chunks
 
 
 def sls_id(id_, mods, test=None, queue=False, **kwargs):
@@ -836,13 +851,13 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(**kwargs)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
     # Since this is running a specific ID within a specific SLS file, fall back
     # to the 'base' saltenv if none is configured and none was passed.
-    if opts['environment'] is None:
-        opts['environment'] = 'base'
+    if opts['saltenv'] is None:
+        opts['saltenv'] = 'base'
 
     try:
         st_ = salt.state.HighState(opts,
@@ -862,7 +877,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         split_mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({opts['environment']: split_mods})
+        high_, errors = st_.render_highstate({opts['saltenv']: split_mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -882,13 +897,10 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
             ret.update(st_.state.call_chunk(chunk, {}, chunks))
 
     _set_retcode(ret, highstate=highstate)
-    # Work around Windows multiprocessing bug, set __opts__['test'] back to
-    # value from before this function was run.
-    __opts__['test'] = orig_test
     if not ret:
         raise SaltInvocationError(
             'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
-            '\'{2}\''.format(id_, mods, opts['environment'])
+            '\'{2}\''.format(id_, mods, opts['saltenv'])
         )
     return ret
 
@@ -906,16 +918,17 @@ def show_sls(mods, saltenv='base', test=None, **kwargs):
     '''
     __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
-    opts = copy.copy(__opts__)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     if salt.utils.args.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
     st_ = salt.client.ssh.state.SSHHighState(
-            __opts__,
+            opts,
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    st_.push_active()
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
     high_data, errors = st_.render_highstate({saltenv: mods})
@@ -930,6 +943,7 @@ def show_sls(mods, saltenv='base', test=None, **kwargs):
     # Verify that the high data is structurally sound
     if errors:
         return errors
+    _cleanup_slsmod_high_data(high_data)
     return high_data
 
 
@@ -949,16 +963,17 @@ def show_low_sls(mods, saltenv='base', test=None, **kwargs):
     __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
 
-    opts = copy.copy(__opts__)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     if salt.utils.args.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
     st_ = salt.client.ssh.state.SSHHighState(
-            __opts__,
+            opts,
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    st_.push_active()
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
     high_data, errors = st_.render_highstate({saltenv: mods})
@@ -974,10 +989,11 @@ def show_low_sls(mods, saltenv='base', test=None, **kwargs):
     if errors:
         return errors
     ret = st_.state.compile_high_data(high_data)
+    _cleanup_slsmod_low_data(ret)
     return ret
 
 
-def show_top():
+def show_top(**kwargs):
     '''
     Return the top data that the minion will use for a highstate
 
@@ -988,8 +1004,9 @@ def show_top():
         salt '*' state.show_top
     '''
     __opts__['grains'] = __grains__
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     st_ = salt.client.ssh.state.SSHHighState(
-            __opts__,
+            opts,
             __pillar__,
             __salt__,
             __context__['fileclient'])
@@ -1036,7 +1053,7 @@ def single(fun, name, test=None, **kwargs):
                    '__id__': name,
                    'name': name})
 
-    opts = copy.deepcopy(__opts__)
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
 
     # Set test mode
     if salt.utils.args.test_mode(test=test, **kwargs):
@@ -1048,7 +1065,7 @@ def single(fun, name, test=None, **kwargs):
     __pillar__.update(kwargs.get('pillar', {}))
 
     # Create the State environment
-    st_ = salt.client.ssh.state.SSHState(__opts__, __pillar__)
+    st_ = salt.client.ssh.state.SSHState(opts, __pillar__)
 
     # Verify the low chunk
     err = st_.verify_data(kwargs)
@@ -1065,16 +1082,16 @@ def single(fun, name, test=None, **kwargs):
             chunks,
             _merge_extra_filerefs(
                 kwargs.get('extra_filerefs', ''),
-                __opts__.get('extra_filerefs', '')
+                opts.get('extra_filerefs', '')
                 )
             )
 
-    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster = salt.roster.Roster(opts, opts.get('roster', 'flat'))
     roster_grains = roster.opts['grains']
 
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
+            opts,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -1083,18 +1100,18 @@ def single(fun, name, test=None, **kwargs):
             roster_grains)
 
     # Create a hash so we can verify the tar on the target system
-    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__['hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, opts['hash_type'])
 
     # We use state.pkg to execute the "state package"
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            __opts__['thin_dir'],
+            opts['thin_dir'],
             test,
             trans_tar_sum,
-            __opts__['hash_type'])
+            opts['hash_type'])
 
     # Create a salt-ssh Single object to actually do the ssh work
     single = salt.client.ssh.Single(
-            __opts__,
+            opts,
             cmd,
             fsclient=__context__['fileclient'],
             minion_opts=__salt__.minion_opts,
@@ -1103,7 +1120,7 @@ def single(fun, name, test=None, **kwargs):
     # Copy the tar down
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
+            '{0}/salt_state.tgz'.format(opts['thin_dir']))
 
     # Run the state.pkg command on the target
     stdout, stderr, _ = single.cmd_block()
@@ -1116,10 +1133,10 @@ def single(fun, name, test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     # If for some reason the json load fails, return the stdout
     return stdout
