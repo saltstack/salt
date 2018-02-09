@@ -1753,6 +1753,9 @@ def upgrade(name=None,
     cmd.append('upgrade')
     cmd.extend(targets)
 
+    # Convert list to a string so all arguments work
+    cmd = ' '.join(cmd)
+
     result = __salt__['cmd.run_all'](cmd,
                                      output_loglevel='trace',
                                      python_shell=False)
