@@ -102,6 +102,67 @@ this leads to the following problems:
 - No guarantee that there will not be any dots or colons in the names
   in a future in _any possible_ distribution.
 
+Additionally, the format is a "moving target" and is transforming from
+one to another way. Some values can be a string, but sometimes a
+list. In some cases list is not really a list, but a comma-separated
+string... Example:
+
+```
+"kernel-default": "4.4.103-92.56.1,4.4.21-69.1",
+```
+
+This is equal to the following output with just `attr=version,release`
+parameters:
+
+```
+"kernel-default": [
+	{
+		"release": "92.56.1",
+		"version": "4.4.103"
+	},
+	{
+		"release": "69.1",
+		"version": "4.4.21"
+	}
+], 
+```
+
+Expanded example:
+
+```
+"kernel": [
+	{
+		"release": "693.2.2.el7",
+		"install_date": "2017-10-03T14:23:59Z",
+		"version": "3.10.0",
+		"arch": "x86_64",
+		"install_date_time_t": 1507040639
+	},
+	{
+		"release": "693.11.6.el7",
+		"install_date": "2018-01-15T14:13:44Z",
+		"version": "3.10.0",
+		"arch": "x86_64",
+		"install_date_time_t": 1516025624
+	},
+	{
+		"release": "693.1.1.el7",
+		"install_date": "2017-10-03T14:21:47Z",
+		"version": "3.10.0",
+		"arch": "x86_64",
+		"install_date_time_t": 1507040507
+	}
+],
+...	
+```
+
+So obviously API consumer should _know ahead_ the following properties
+of the called system:
+
+- Distribution
+- Version format
+- Parsing options on the client side
+
 ### Proposed Design
 
 This is the bulk of the RFC. Explain the design in enough detail for somebody familiar
