@@ -2442,7 +2442,7 @@ class _policy_info(object):
                 elif ord(val) == 1:
                     return 'Enabled'
                 else:
-                    return 'Invalid Value: %s' % repr(val)
+                    return 'Invalid Value: {0!r}'.format(val)  # pylint: disable=repr-flag-used-in-string
             else:
                 return 'Not Defined'
         except TypeError:
