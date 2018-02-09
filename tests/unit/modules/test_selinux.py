@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Salt Testing Libs
+from __future__ import absolute_import
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
@@ -12,6 +13,7 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.modules.selinux as selinux
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
