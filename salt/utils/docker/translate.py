@@ -705,7 +705,7 @@ def ports(val, **kwargs):  # pylint: disable=unused-argument
             raise SaltInvocationError(exc.__str__())
         new_ports.update([_get_port_def(x, proto)
                           for x in range(range_start, range_end + 1)])
-    return sorted(new_ports)
+    return list(new_ports)
 
 
 def privileged(val, **kwargs):  # pylint: disable=unused-argument

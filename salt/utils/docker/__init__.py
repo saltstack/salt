@@ -300,7 +300,7 @@ def translate_input(**kwargs):
                 else:
                     port_num, proto = port_def.split('/')
                     ports_to_open.add((int(port_num), proto))
-            kwargs['ports'] = sorted(ports_to_open)
+            kwargs['ports'] = list(ports_to_open)
 
     if 'ports' in kwargs \
             and all(x not in skip_translate for x in ('expose', 'ports')):
