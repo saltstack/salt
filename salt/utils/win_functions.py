@@ -254,7 +254,7 @@ def broadcast_setting_change(message='Environment'):
     ... code-block:: python
 
         import salt.utils.win_functions
-        salt.utils.win_functions.refresh_environment()
+        salt.utils.win_functions.broadcast_setting_change('Environment')
     '''
     # Listen for messages sent by this would involve working with the
     # SetWindowLong function. This can be accessed via the win32gui or through
