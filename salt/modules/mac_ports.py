@@ -31,7 +31,7 @@ In other words `salt mac-machine pkg.refresh_db` is more like
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import re

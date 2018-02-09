@@ -3,7 +3,7 @@
 Tests for the fileserver runner
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import contextlib
 
 # Import Salt Testing libs

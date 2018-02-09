@@ -4,17 +4,38 @@ Manage Grafana v4.0 Dashboards
 
 .. versionadded:: 2017.7.0
 
-.. code-block:: yaml
+:configuration: This state requires a configuration profile to be configured
+    in the minion config, minion pillar, or master config. The module will use
+    the 'grafana' key by default, if defined.
 
-    grafana:
-      grafana_timeout: 3
-      grafana_token: qwertyuiop
-      grafana_url: 'https://url.com'
+    Example configuration using basic authentication:
+
+    .. code-block:: yaml
+
+        grafana:
+          grafana_url: http://grafana.localhost
+          grafana_user: admin
+          grafana_password: admin
+          grafana_timeout: 3
+
+    Example configuration using token based authentication:
+
+    .. code-block:: yaml
+
+        grafana:
+          grafana_url: http://grafana.localhost
+          grafana_token: token
+          grafana_timeout: 3
+
+The behavior of this module is to create dashboards if they do not exist, to
+add rows if they do not exist in existing dashboards, and to update rows if
+they exist in dashboards. The module will not manage rows that are not defined,
+allowing users to manage their own custom rows.
 
 .. code-block:: yaml
 
     Ensure minimum dashboard is managed:
-      grafana_dashboard.present:
+      grafana4_dashboard.present:
         - name: insightful-dashboard
         - base_dashboards_from_pillar:
           - default_dashboard
@@ -30,20 +51,14 @@ Manage Grafana v4.0 Dashboards
                       - target: alias(constantLine(50), 'max')
                     title: Imaginary
                     type: graph
-
-
-The behavior of this module is to create dashboards if they do not exist, to
-add rows if they do not exist in existing dashboards, and to update rows if
-they exist in dashboards. The module will not manage rows that are not defined,
-allowing users to manage their own custom rows.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
-import json
 
 # Import Salt libs
+import salt.utils.json
 from salt.ext import six
 from salt.utils.dictdiffer import DictDiffer
 
@@ -160,16 +175,18 @@ def present(name,
     if updated_needed:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('Dashboard {0} is set to be updated, '
-                              'changes={1}').format(
-                                  name,
-                                  json.dumps(
-                                      _dashboard_diff(
-                                          _cleaned(new_dashboard),
-                                          _cleaned(old_dashboard)
-                                      ),
-                                      indent=4
-                                  ))
+            ret['comment'] = (
+                str('Dashboard {0} is set to be updated, changes={1}').format(  # future lint: blacklisted-function
+                    name,
+                    salt.utils.json.dumps(
+                        _dashboard_diff(
+                            _cleaned(new_dashboard),
+                            _cleaned(old_dashboard)
+                        ),
+                        indent=4
+                    )
+                )
+            )
             return ret
 
         response = __salt__['grafana4.create_update_dashboard'](

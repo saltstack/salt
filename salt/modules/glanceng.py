@@ -24,7 +24,7 @@ Example configuration
       identity_api_version: 3
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 HAS_SHADE = False
 try:

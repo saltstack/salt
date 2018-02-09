@@ -16,7 +16,7 @@ This state is used to ensure presence of users in the Organization.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import time
 import datetime
 import logging
@@ -341,7 +341,7 @@ def team_present(
     current_members = __salt__['github.list_team_members'](name, profile=profile)
 
     for member, member_info in six.iteritems(members or {}):
-        log.info('Checking member {0} in team {1}'.format(member, name))
+        log.info('Checking member %s in team %s', member, name)
 
         if member.lower() not in current_members:
             if (enforce_mfa and _member_violates_mfa(member, member_info,
@@ -631,8 +631,9 @@ def repo_present(
                         name, profile=profile, **kwargs)
                     break
                 except CommandExecutionError as e:
-                    log.info("Attempt {0} to fetch new repo {1} failed".format(
-                        attempt, name))
+                    log.info("Attempt %s to fetch new repo %s failed",
+                             attempt,
+                             name)
 
             if current_teams is None:
                 ret['result'] = False

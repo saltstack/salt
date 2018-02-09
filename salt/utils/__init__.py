@@ -9,7 +9,7 @@ consult the dev team if you are unsure where a new function should go.
 '''
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 from salt.defaults import DEFAULT_TARGET_DELIM

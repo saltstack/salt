@@ -1,5 +1,5 @@
 # encoding: utf-8
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import cherrypy
@@ -54,6 +54,6 @@ class SynchronizingWebsocket(WebSocket):
         This ensures completion of the underlying websocket connection
         and can be used to synchronize parallel senders.
         '''
-        if message.data == 'websocket client ready':
+        if message.data.decode('utf-8') == 'websocket client ready':
             self.pipe.send(message)
         self.send('server received message', False)

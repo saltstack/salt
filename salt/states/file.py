@@ -265,7 +265,7 @@ For example:
 '''
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import difflib
 import itertools
 import logging
@@ -2391,14 +2391,18 @@ def managed(name,
                 )
 
                 if salt.utils.platform.is_windows():
-                    ret = __salt__['file.check_perms'](
-                        path=name,
-                        ret=ret,
-                        owner=win_owner,
-                        grant_perms=win_perms,
-                        deny_perms=win_deny_perms,
-                        inheritance=win_inheritance,
-                        reset=win_perms_reset)
+                    try:
+                        ret = __salt__['file.check_perms'](
+                            path=name,
+                            ret=ret,
+                            owner=win_owner,
+                            grant_perms=win_perms,
+                            deny_perms=win_deny_perms,
+                            inheritance=win_inheritance,
+                            reset=win_perms_reset)
+                    except CommandExecutionError as exc:
+                        if exc.strerror.startswith('Path not found'):
+                            ret['pchanges'] = '{0} will be created'.format(name)
 
             if isinstance(ret['pchanges'], tuple):
                 ret['result'], ret['comment'] = ret['pchanges']
@@ -3619,7 +3623,9 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
         This is only used when datetime is pulled from ``os.path.getmtime()``.
         Defaults to ``None`` which uses the timezone from the locale.
 
-    .. code-block: yaml
+    Usage example:
+
+    .. code-block:: yaml
 
         /var/backups/example_directory:
           file.retention_schedule:
@@ -3873,7 +3879,7 @@ def line(name, content=None, match=None, mode=None, location=None,
     processing can be bypassed in order to pass an equal sign through to the
     remote shell command by manually specifying the kwarg:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
        update_config:
          file.line:

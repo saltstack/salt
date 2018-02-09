@@ -8,7 +8,7 @@ Service support for Debian systems (uses update-rc.d and /sbin/service)
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -41,7 +41,7 @@ def __virtual__():
     '''
     Only work on Debian and when systemd isn't running
     '''
-    if __grains__['os'] in ('Debian', 'Raspbian', 'Devuan') and not salt.utils.systemd.booted(__context__):
+    if __grains__['os'] in ('Debian', 'Raspbian', 'Devuan', 'NILinuxRT') and not salt.utils.systemd.booted(__context__):
         return __virtualname__
     else:
         return (False, 'The debian_service module could not be loaded: '

@@ -9,8 +9,7 @@ available and installed roles/features. Can install and remove roles/features.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 try:
@@ -19,6 +18,7 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import Salt libs
+import salt.utils.json
 import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.versions
@@ -56,10 +56,10 @@ def _pshell_json(cmd, cwd=None):
     cmd = 'Import-Module ServerManager; {0}'.format(cmd)
     if 'convertto-json' not in cmd.lower():
         cmd = '{0} | ConvertTo-Json'.format(cmd)
-    log.debug('PowerShell: {0}'.format(cmd))
+    log.debug('PowerShell: %s', cmd)
     ret = __salt__['cmd.shell'](cmd, shell='powershell', cwd=cwd)
     try:
-        ret = json.loads(ret, strict=False)
+        ret = salt.utils.json.loads(ret, strict=False)
     except ValueError:
         log.debug('Json not returned')
     return ret

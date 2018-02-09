@@ -4,7 +4,7 @@
 Stores eauth tokens in the filesystem of the master. Location is configured by the master config option 'token_dir'
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import os
@@ -13,6 +13,8 @@ import logging
 import salt.utils.files
 import salt.utils.path
 import salt.payload
+
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -30,10 +32,10 @@ def mk_token(opts, tdata):
     :returns: tdata with token if successful. Empty dict if failed.
     '''
     hash_type = getattr(hashlib, opts.get('hash_type', 'md5'))
-    tok = str(hash_type(os.urandom(512)).hexdigest())
+    tok = six.text_type(hash_type(os.urandom(512)).hexdigest())
     t_path = os.path.join(opts['token_dir'], tok)
     while os.path.isfile(t_path):
-        tok = str(hash_type(os.urandom(512)).hexdigest())
+        tok = six.text_type(hash_type(os.urandom(512)).hexdigest())
         t_path = os.path.join(opts['token_dir'], tok)
     tdata['token'] = tok
     serial = salt.payload.Serial(opts)
@@ -42,7 +44,8 @@ def mk_token(opts, tdata):
             with salt.utils.files.fopen(t_path, 'w+b') as fp_:
                 fp_.write(serial.dumps(tdata))
     except (IOError, OSError):
-        log.warning('Authentication failure: can not write token file "{0}".'.format(t_path))
+        log.warning(
+            'Authentication failure: can not write token file "%s".', t_path)
         return {}
     return tdata
 
@@ -64,7 +67,8 @@ def get_token(opts, tok):
             tdata = serial.loads(fp_.read())
             return tdata
     except (IOError, OSError):
-        log.warning('Authentication failure: can not read token file "{0}".'.format(t_path))
+        log.warning(
+            'Authentication failure: can not read token file "%s".', t_path)
         return {}
 
 
@@ -81,7 +85,7 @@ def rm_token(opts, tok):
         os.remove(t_path)
         return {}
     except (IOError, OSError):
-        log.warning('Could not remove token {0}'.format(tok))
+        log.warning('Could not remove token %s', tok)
 
 
 def list_tokens(opts):

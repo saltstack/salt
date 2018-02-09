@@ -5,7 +5,7 @@ directories on the master server.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import salt libs
@@ -89,7 +89,9 @@ def read(path, saltenv='base'):
         form = fn_[full]
         if form == 'txt':
             with salt.utils.files.fopen(full, 'rb') as fp_:
-                ret.append({full: fp_.read()})
+                ret.append(
+                    {full: salt.utils.stringutils.to_unicode(fp_.read())}
+                )
     return ret
 
 
@@ -111,5 +113,5 @@ def write(data, path, saltenv='base', index=0):
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
     with salt.utils.files.fopen(dest, 'w+') as fp_:
-        fp_.write(data)
+        fp_.write(salt.utils.stringutils.to_str(data))
     return 'Wrote data to file {0}'.format(dest)

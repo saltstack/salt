@@ -41,7 +41,7 @@ tags, allowing tagging of events in the sentry ui.
 
 To report only errors to sentry, set report_errors_only: true.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -58,7 +58,7 @@ try:
 except ImportError:
     has_raven = False
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'sentry'
@@ -81,10 +81,7 @@ def returner(ret):
     try:
         _connect_sentry(_get_message(ret), ret)
     except Exception as err:
-        logger.error(
-            'Can\'t run connect_sentry: {0}'.format(err),
-            exc_info=True
-        )
+        log.error('Can\'t run connect_sentry: %s', err, exc_info=True)
 
 
 def _ret_is_not_error(result):
@@ -164,7 +161,7 @@ def _connect_sentry(message, result):
                 transport=HTTPTransport
             )
         except KeyError as missing_key:
-            logger.error(
+            log.error(
                 'Sentry returner needs key \'%s\' in pillar',
                 missing_key
             )
@@ -178,12 +175,9 @@ def _connect_sentry(message, result):
             extra=sentry_data,
             tags=tags
         )
-        logger.info('Message id {} written to sentry'.format(msgid))
+        log.info('Message id %s written to sentry', msgid)
     except Exception as exc:
-        logger.error(
-            'Can\'t send message to sentry: {0}'.format(exc),
-            exc_info=True
-        )
+        log.error('Can\'t send message to sentry: %s', exc, exc_info=True)
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument

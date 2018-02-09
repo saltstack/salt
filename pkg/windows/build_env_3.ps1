@@ -246,11 +246,14 @@ DownloadFileWithProgress $url $file
 Start_Process_and_test_exitcode "$($ini['Settings']['Scripts3Dir'])\pip.exe" "install $file " "pip install PyWin32"
 
 # Move DLL's to Python Root
+# The dlls have to be in Python directory and the site-packages\win32 directory
 Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
+Copy-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['Python3Dir'])" -Force
 Move-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['SitePkgs3Dir'])\win32" -Force
 
 # Create gen_py directory
-New-Item -Path "$($ini['Settings']['SitePkgs3Dir'])\win32com\gen_py" -ItemType Directory -Force
+Write-Output " - $script_name :: Creating gen_py Directory . . ."
+New-Item -Path "$($ini['Settings']['SitePkgs3Dir'])\win32com\gen_py" -ItemType Directory -Force | Out-Null
 
 # Remove pywin32_system32 directory
 Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."

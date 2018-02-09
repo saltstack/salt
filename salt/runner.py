@@ -4,7 +4,7 @@ Execute salt convenience routines
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 
@@ -206,7 +206,7 @@ class Runner(RunnerClient):
                     if 'token' in self.opts:
                         try:
                             with salt.utils.files.fopen(os.path.join(self.opts['key_dir'], '.root_key'), 'r') as fp_:
-                                low['key'] = fp_.readline()
+                                low['key'] = salt.utils.stringutils.to_unicode(fp_.readline())
                         except IOError:
                             low['token'] = self.opts['token']
 

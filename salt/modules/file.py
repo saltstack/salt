@@ -1501,8 +1501,9 @@ def comment_line(path,
 
     try:
         # Open the file in write mode
+        mode = 'wb' if six.PY2 and salt.utils.platform.is_windows() else 'w'
         with salt.utils.files.fopen(path,
-                              mode='wb',
+                              mode=mode,
                               buffering=bufsize) as w_file:
             try:
                 # Open the temp file in read mode
@@ -1523,7 +1524,10 @@ def comment_line(path,
                             else:
                                 # Write the existing line (no change)
                                 wline = line
-                            w_file.write(salt.utils.stringutils.to_str(wline))
+                            wline = salt.utils.stringutils.to_bytes(wline) \
+                                if six.PY2 and salt.utils.platform.is_windows() \
+                                else salt.utils.stringutils.to_str(wline)
+                            w_file.write(wline)
                         except (OSError, IOError) as exc:
                             raise CommandExecutionError(
                                 "Unable to write file '{0}'. Contents may "
@@ -1710,7 +1714,7 @@ def _regex_to_static(src, regex):
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
-    return src and src.group() or regex
+    return src and src.group().rstrip('\r') or regex
 
 
 def _assert_occurrence(src, probe, target, amount=1):
@@ -3665,7 +3669,7 @@ def path_exists_glob(path):
     Expansion allows usage of ? * and character ranges []. Tilde expansion
     is not supported. Returns True/False.
 
-    .. versionadded:: Hellium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -4449,6 +4453,9 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
                 group = perms['lgroup']
             try:
                 chown_func(name, user, group)
+                # Python os.chown() does reset the suid and sgid,
+                # that's why setting the right mode again is needed here.
+                set_mode(name, mode)
             except OSError:
                 ret['result'] = False
 

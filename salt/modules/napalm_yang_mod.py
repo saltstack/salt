@@ -7,7 +7,7 @@ NAPALM YANG basic operations.
 
 .. versionadded:: 2017.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python stdlib
 import logging

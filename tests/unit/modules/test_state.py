@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -24,6 +24,7 @@ import salt.loader
 import salt.utils.hashutils
 import salt.utils.odict
 import salt.utils.platform
+import salt.utils.state
 import salt.modules.state as state
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.modules.config as config
@@ -225,7 +226,7 @@ class MockState(object):
             '''
                 Mock compile_low_chunks method
             '''
-            return True
+            return [{"__id__": "ABC", "__sls__": "abc"}]
 
         def render_highstate(self, data):
             '''
@@ -324,27 +325,6 @@ class MockTarFile(object):
         return True
 
 
-class MockJson(object):
-    '''
-        Mock json class
-    '''
-    flag = None
-
-    def __init__(self):
-        pass
-
-    def load(self, data, object_hook=None):
-        '''
-            Mock load method
-        '''
-        data = data
-        object_hook = object_hook
-        if self.flag:
-            return [True]
-        else:
-            return [{"test": ""}]
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class StateTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -356,6 +336,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             salt.config.DEFAULT_MINION_OPTS,
             whitelist=['state']
         )
+        utils.keys()
         patcher = patch('salt.modules.state.salt.state', MockState())
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -423,7 +404,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(state.high({"vim": {"pkg": ["installed"]}}))
 
             mock = MagicMock(return_value={"test": True})
-            with patch.object(state, '_get_opts', mock):
+            with patch.object(salt.utils.state, 'get_sls_opts', mock):
                 self.assertTrue(state.high({"vim": {"pkg": ["installed"]}}))
 
     def test_template(self):
@@ -539,7 +520,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(state.__opts__, {"test": "install"}):
                 mock = MagicMock(return_value={"test": ""})
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
@@ -629,6 +610,16 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(state.show_state_usage(), "A")
 
+    def test_show_states(self):
+        '''
+            Test to display the low data from a specific sls
+        '''
+        mock = MagicMock(side_effect=["A", None])
+        with patch.object(state, '_check_queue', mock):
+
+            self.assertEqual(state.show_low_sls("foo"), "A")
+            self.assertListEqual(state.show_states("foo"), ['abc'])
+
     def test_sls_id(self):
         '''
             Test to call a single ID from the
@@ -643,7 +634,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     return_value={'test': True,
                                   'saltenv': None}
                 )
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
                         MockState.State.flag = True
@@ -670,7 +661,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     return_value={'test': True,
                                   'saltenv': None}
                 )
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     MockState.State.flag = True
                     MockState.HighState.flag = True
                     self.assertEqual(state.show_low_sls("foo"), 2)
@@ -692,7 +683,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     return_value={'test': True,
                                   'saltenv': None}
                 )
-                with patch.object(state, '_get_opts', mock):
+                with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
@@ -723,7 +714,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(state.__opts__, {"test": "A"}):
                     mock = MagicMock(return_value={'test': True})
-                    with patch.object(state, '_get_opts', mock):
+                    with patch.object(salt.utils.state, 'get_sls_opts', mock):
                         mock = MagicMock(return_value=True)
                         with patch.object(salt.utils, 'test_mode', mock):
                             self.assertRaises(SaltInvocationError,
@@ -764,7 +755,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(state.__opts__, {"test": "A"}):
                     mock = MagicMock(return_value={'test': True})
-                    with patch.object(state, '_get_opts', mock):
+                    with patch.object(salt.utils.state, 'get_sls_opts', mock):
                         self.assertRaises(SaltInvocationError,
                                           state.highstate,
                                           "whitelist=sls1.sls",
@@ -887,7 +878,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(state.__opts__, {"test": None}):
                         mock = MagicMock(return_value={"test": "",
                                                        "saltenv": None})
-                        with patch.object(state, '_get_opts', mock):
+                        with patch.object(salt.utils.state, 'get_sls_opts', mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(salt.utils,
                                               'test_mode',
@@ -1030,10 +1021,13 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             Test to execute a packaged state run
         '''
         tar_file = os.sep + os.path.join('tmp', 'state_pkg.tgz')
-        mock = MagicMock(side_effect=[False, True, True, True, True, True, True, True])
+        mock = MagicMock(side_effect=[False, True, True, True, True, True,
+            True, True, True, True, True])
+        mock_json_loads_true = MagicMock(return_value=[True])
+        mock_json_loads_dictlist = MagicMock(return_value=[{"test": ""}])
         with patch.object(os.path, 'isfile', mock), \
                 patch('salt.modules.state.tarfile', MockTarFile), \
-                patch('salt.modules.state.json', MockJson()):
+                patch.object(salt.utils, 'json', mock_json_loads_dictlist):
             self.assertEqual(state.pkg(tar_file, "", "md5"), {})
 
             mock = MagicMock(side_effect=[False, 0, 0, 0, 0])
@@ -1045,12 +1039,11 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(state.pkg(tar_file, 0, "md5"), {})
 
                 MockTarFile.path = ""
-                MockJson.flag = True
-                with patch('salt.utils.files.fopen', mock_open()):
-                    self.assertListEqual(state.pkg(tar_file, 0, "md5"), [True])
+                with patch('salt.utils.files.fopen', mock_open()), \
+                        patch.object(salt.utils.json, 'loads', mock_json_loads_true):
+                    self.assertEqual(state.pkg(tar_file, 0, "md5"), True)
 
                 MockTarFile.path = ""
-                MockJson.flag = False
                 if six.PY2:
                     with patch('salt.utils.files.fopen', mock_open()), \
                             patch.dict(state.__utils__, {'state.check_result': MagicMock(return_value=True)}):
