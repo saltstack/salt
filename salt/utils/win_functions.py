@@ -232,11 +232,11 @@ def broadcast_setting_change(message='Environment'):
             - the name of a section in the ``Win.ini`` file
 
             See lParam within msdn docs for
-            `WM_SETTINGCHANGE <https://msdn.microsoft.com/en-us/library/ms725497%28VS.85%29.aspx>`
+            `WM_SETTINGCHANGE <https://msdn.microsoft.com/en-us/library/ms725497%28VS.85%29.aspx>`_
             for more information on Broadcasting Messages.
 
             See GWL_WNDPROC within msdn docs for
-            `SetWindowLong <https://msdn.microsoft.com/en-us/library/windows/desktop/ms633591(v=vs.85).aspx>`
+            `SetWindowLong <https://msdn.microsoft.com/en-us/library/windows/desktop/ms633591(v=vs.85).aspx>`_
             for information on how to retrieve those messages.
 
     .. note::
@@ -246,7 +246,7 @@ def broadcast_setting_change(message='Environment'):
         changes to the environment until the system is restarted. Services
         inherit their environment from ``services.exe`` which does not respond
         to messaging events. See
-        `MSDN Documentation <https://support.microsoft.com/en-us/help/821761/changes-that-you-make-to-environment-variables-do-not-affect-services>`
+        `MSDN Documentation <https://support.microsoft.com/en-us/help/821761/changes-that-you-make-to-environment-variables-do-not-affect-services>`_
         for more information.
 
     CLI Example:
@@ -257,7 +257,7 @@ def broadcast_setting_change(message='Environment'):
         salt.utils.win_functions.broadcast_setting_change('Environment')
     '''
     # Listen for messages sent by this would involve working with the
-    # SetWindowLong function. This can be accessed via the win32gui or through
+    # SetWindowLong function. This can be accessed via win32gui or through
     # ctypes. You can find examples on how to do this by searching for
     # `Accessing WGL_WNDPROC` on the internet. Here are some examples of how
     # this might work:

@@ -54,7 +54,7 @@ def rehash():
         apply changes to the path to services, the host must be restarted. The
         ``salt-minion``, if running as a service, will not see changes to the
         environment until the system is restarted. See
-        `MSDN Documentation <https://support.microsoft.com/en-us/help/821761/changes-that-you-make-to-environment-variables-do-not-affect-services>`
+        `MSDN Documentation <https://support.microsoft.com/en-us/help/821761/changes-that-you-make-to-environment-variables-do-not-affect-services>`_
 
     CLI Example:
 
