@@ -798,6 +798,29 @@ class TranslateContainerInputTestCase(TranslateBase):
     '''
     translator = salt.utils.docker.translate.container
 
+    @staticmethod
+    def normalize_ports(ret):
+        '''
+        When we translate exposed ports, we can end up with a mixture of ints
+        (representing TCP ports) and tuples (representing UDP ports). Python 2
+        will sort an iterable containing these mixed types, but Python 3 will
+        not. This helper is used to munge the ports in the return data so that
+        the resulting list is sorted in a way that can reliably be compared to
+        the expected results in the test.
+
+        This helper should only be needed for port_bindings and ports.
+        '''
+        if 'ports' in ret:
+            tcp_ports = []
+            udp_ports = []
+            for item in ret['ports']:
+                if isinstance(item, six.integer_types):
+                    tcp_ports.append(item)
+                else:
+                    udp_ports.append(item)
+            ret['ports'] = sorted(tcp_ports) + sorted(udp_ports)
+        return ret
+
     @assert_bool(salt.utils.docker.translate.container)
     def test_auto_remove(self):
         '''
@@ -1288,9 +1311,11 @@ class TranslateContainerInputTestCase(TranslateBase):
         )
         for val in (bindings, bindings.split(',')):
             self.assertEqual(
-                salt.utils.docker.translate_input(
-                    self.translator,
-                    port_bindings=val,
+                self.normalize_ports(
+                    salt.utils.docker.translate_input(
+                        self.translator,
+                        port_bindings=val,
+                    )
                 ),
                 {'port_bindings': {80: [('10.1.2.3', 8080),
                                         ('10.1.2.3', 8888)],
@@ -1316,9 +1341,11 @@ class TranslateContainerInputTestCase(TranslateBase):
         )
         for val in (bindings, bindings.split(',')):
             self.assertEqual(
-                salt.utils.docker.translate_input(
-                    self.translator,
-                    port_bindings=val,
+                self.normalize_ports(
+                    salt.utils.docker.translate_input(
+                        self.translator,
+                        port_bindings=val,
+                    )
                 ),
                 {'port_bindings': {80: [('10.1.2.3',), ('10.1.2.3',)],
                                    3333: ('10.4.5.6',),
@@ -1341,9 +1368,11 @@ class TranslateContainerInputTestCase(TranslateBase):
         )
         for val in (bindings, bindings.split(',')):
             self.assertEqual(
-                salt.utils.docker.translate_input(
-                    self.translator,
-                    port_bindings=val,
+                self.normalize_ports(
+                    salt.utils.docker.translate_input(
+                        self.translator,
+                        port_bindings=val,
+                    )
                 ),
                 {'port_bindings': {80: [8080, 8888],
                                    3333: 3333,
@@ -1363,9 +1392,11 @@ class TranslateContainerInputTestCase(TranslateBase):
         bindings = '80,3333,4505-4506,81/udp,3334/udp,5505-5506/udp'
         for val in (bindings, bindings.split(',')):
             self.assertEqual(
-                salt.utils.docker.translate_input(
-                    self.translator,
-                    port_bindings=val,
+                self.normalize_ports(
+                    salt.utils.docker.translate_input(
+                        self.translator,
+                        port_bindings=val,
+                    )
                 ),
                 {'port_bindings': {80: None,
                                    3333: None,
@@ -1388,9 +1419,11 @@ class TranslateContainerInputTestCase(TranslateBase):
         )
         for val in (bindings, bindings.split(',')):
             self.assertEqual(
-                salt.utils.docker.translate_input(
-                    self.translator,
-                    port_bindings=val,
+                self.normalize_ports(
+                    salt.utils.docker.translate_input(
+                        self.translator,
+                        port_bindings=val,
+                    )
                 ),
                 {'port_bindings': {80: ('10.1.2.3', 8080),
                                    3333: ('10.4.5.6',),
@@ -1510,9 +1543,11 @@ class TranslateContainerInputTestCase(TranslateBase):
                     [1111, '2222/tcp', '3333/udp', '4505-4506'],
                     ['1111', '2222/tcp', '3333/udp', '4505-4506']):
             self.assertEqual(
-                salt.utils.docker.translate_input(
-                    self.translator,
-                    ports=val,
+                self.normalize_ports(
+                    salt.utils.docker.translate_input(
+                        self.translator,
+                        ports=val,
+                    )
                 ),
                 {'ports': [1111, 2222, 4505, 4506, (3333, 'udp')]}
             )

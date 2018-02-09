@@ -121,13 +121,8 @@ def _post_processing(kwargs, skip_translate, invalid):
         ports_to_bind = list(kwargs['port_bindings'])
         if ports_to_bind:
             ports_to_open = set(kwargs.get('ports', []))
-            for port_def in ports_to_bind:
-                if isinstance(port_def, six.integer_types):
-                    ports_to_open.add(port_def)
-                else:
-                    port_num, proto = port_def.split('/')
-                    ports_to_open.add((int(port_num), proto))
-            kwargs['ports'] = sorted(ports_to_open)
+            ports_to_open.update([helpers.get_port_def(x) for x in ports_to_bind])
+            kwargs['ports'] = list(ports_to_open)
 
     if 'ports' in kwargs \
             and all(x not in skip_translate for x in ('expose', 'ports')):
@@ -556,7 +551,7 @@ def ports(val, **kwargs):  # pylint: disable=unused-argument
             raise SaltInvocationError(exc.__str__())
         new_ports.update([helpers.get_port_def(x, proto)
                           for x in range(range_start, range_end + 1)])
-    return sorted(new_ports)
+    return list(new_ports)
 
 
 def privileged(val, **kwargs):  # pylint: disable=unused-argument
