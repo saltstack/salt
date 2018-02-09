@@ -1302,8 +1302,9 @@ class TranslateContainerInputTestCase(TranslateBase):
                                    '3334/udp': ('10.4.5.6', 3334),
                                    '5505/udp': ('10.7.8.9', 15505),
                                    '5506/udp': ('10.7.8.9', 15506)},
-                 'ports': [80, '81/udp', 3333, '3334/udp',
-                           4505, 4506, '5505/udp', '5506/udp']}
+                 'ports': [80, 3333, 4505, 4506,
+                           (81, 'udp'), (3334, 'udp'),
+                           (5505, 'udp'), (5506, 'udp')]}
             )
 
         # ip::containerPort - Bind a specific IP and an ephemeral port to a
@@ -1327,8 +1328,9 @@ class TranslateContainerInputTestCase(TranslateBase):
                                    '3334/udp': ('10.4.5.6',),
                                    '5505/udp': ('10.7.8.9',),
                                    '5506/udp': ('10.7.8.9',)},
-                 'ports': [80, '81/udp', 3333, '3334/udp',
-                           4505, 4506, '5505/udp', '5506/udp']}
+                 'ports': [80, 3333, 4505, 4506,
+                           (81, 'udp'), (3334, 'udp'),
+                           (5505, 'udp'), (5506, 'udp')]}
             )
 
         # hostPort:containerPort - Bind a specific port on all of the host's
@@ -1351,8 +1353,9 @@ class TranslateContainerInputTestCase(TranslateBase):
                                    '3334/udp': 3334,
                                    '5505/udp': 15505,
                                    '5506/udp': 15506},
-                 'ports': [80, '81/udp', 3333, '3334/udp',
-                           4505, 4506, '5505/udp', '5506/udp']}
+                 'ports': [80, 3333, 4505, 4506,
+                           (81, 'udp'), (3334, 'udp'),
+                           (5505, 'udp'), (5506, 'udp')]}
             )
 
         # containerPort - Bind an ephemeral port on all of the host's
@@ -1372,8 +1375,9 @@ class TranslateContainerInputTestCase(TranslateBase):
                                    '3334/udp': None,
                                    '5505/udp': None,
                                    '5506/udp': None},
-                 'ports': [80, '81/udp', 3333, '3334/udp',
-                           4505, 4506, '5505/udp', '5506/udp']},
+                 'ports': [80, 3333, 4505, 4506,
+                           (81, 'udp'), (3334, 'udp'),
+                           (5505, 'udp'), (5506, 'udp')]}
             )
 
         # Test a mixture of different types of input
@@ -1402,10 +1406,10 @@ class TranslateContainerInputTestCase(TranslateBase):
                                    '19999/udp': None,
                                    '20000/udp': None,
                                    '20001/udp': None},
-                 'ports': [80, '81/udp', 3333, '3334/udp',
-                           4505, 4506, '5505/udp', '5506/udp',
-                           9999, 10000, 10001, '19999/udp',
-                           '20000/udp', '20001/udp']}
+                 'ports': [80, 3333, 4505, 4506, 9999, 10000, 10001,
+                           (81, 'udp'), (3334, 'udp'), (5505, 'udp'),
+                           (5506, 'udp'), (19999, 'udp'),
+                           (20000, 'udp'), (20001, 'udp')]}
             )
 
         # Error case: too many items (max 3)
@@ -1510,7 +1514,7 @@ class TranslateContainerInputTestCase(TranslateBase):
                     self.translator,
                     ports=val,
                 ),
-                {'ports': [1111, 2222, (3333, 'udp'), 4505, 4506]}
+                {'ports': [1111, 2222, 4505, 4506, (3333, 'udp')]}
             )
 
         # Error case: non-integer and non/string value
