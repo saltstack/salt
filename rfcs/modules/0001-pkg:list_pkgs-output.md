@@ -232,6 +232,11 @@ standard format across everywhere.
 
 The rest of the functinality would stay the same.
 
+### Notes
+
+Important to have a common validator decorator that would make sure
+_all the keys_ are always the same across all the operating systems.
+
 ## Alternatives
 [alternatives]: #alternatives
 
