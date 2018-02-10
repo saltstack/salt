@@ -7,7 +7,6 @@ Set up the version of Salt
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 import sys
-import locale
 import platform
 
 # linux_distribution depreacted in py3.7
@@ -674,7 +673,7 @@ def system_information():
         ('release', release),
         ('machine', platform.machine()),
         ('version', version),
-        ('locale', locale.getpreferredencoding()),
+        ('locale', __salt_system_encoding__),
     ]
 
     for name, attr in system:
