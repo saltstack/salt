@@ -1923,9 +1923,12 @@ def id_exists(ids, mods, test=None, queue=False, **kwargs):
     '''
     if isinstance(ids, six.string_types):
         ids = ids.split(',')
-    state_data = show_sls(mods, test=test, queue=queue, **kwargs)
+    try:
+        state_ids = show_sls(mods, test=test, queue=queue, **kwargs).keys()
+    except AttributeError:
+        return False
     for state_id in ids:
-        if state_id not in state_data:
+        if state_id not in state_ids:
             return False
     return True
 
