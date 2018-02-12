@@ -1012,20 +1012,16 @@ class DaemonMixInTestCase(TestCase):
         Setting up
         '''
         # Setup mixin
-        self.mixin = salt.utils.parsers.DaemonMixIn()
-        self.mixin.config = {}
-        self.mixin.config['pidfile'] = '/some/fake.pid'
-
-        # logger
-        self.logger = logging.getLogger('salt.utils.parsers')
+        self.daemon_mixin = salt.utils.parsers.DaemonMixIn()
+        self.daemon_mixin.config = {}
+        self.daemon_mixin.config['pidfile'] = '/some/fake.pid'
 
     def tearDown(self):
         '''
         Tear down test
         :return:
         '''
-        del self.logger
-        del self.mixin
+        del self.daemon_mixin
 
     @patch('os.unlink', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1034,7 +1030,7 @@ class DaemonMixInTestCase(TestCase):
         '''
         PIDfile deletion without exception.
         '''
-        self.mixin._mixin_before_exit()
+        self.daemon_mixin._mixin_before_exit()
         assert salt.utils.parsers.os.unlink.call_count == 1
         salt.utils.parsers.logger.info.assert_called
         salt.utils.parsers.logger.debug.assert_called
@@ -1047,10 +1043,10 @@ class DaemonMixInTestCase(TestCase):
         '''
         PIDfile deletion with exception, running as root.
         '''
-        self.mixin._mixin_before_exit()
+        self.daemon_mixin._mixin_before_exit()
         assert salt.utils.parsers.os.unlink.call_count == 1
         salt.utils.parsers.logger.info.assert_called_with('PIDfile could not be deleted: %s',
-                                                          format(self.mixin.config['pidfile']))
+                                                          format(self.daemon_mixin.config['pidfile']))
         salt.utils.parsers.logger.debug.assert_called
 
     @patch('os.unlink', MagicMock(side_effect=OSError()))
@@ -1061,7 +1057,7 @@ class DaemonMixInTestCase(TestCase):
         '''
         PIDfile deletion with exception, running as non-root.
         '''
-        self.mixin._mixin_before_exit()
+        self.daemon_mixin._mixin_before_exit()
         assert salt.utils.parsers.os.unlink.call_count == 1
         salt.utils.parsers.logger.info.assert_not_called
         salt.utils.parsers.logger.debug.assert_not_called
