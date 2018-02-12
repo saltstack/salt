@@ -2815,13 +2815,13 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
             '--async',
             default=False,
             action='store_true',
-            help=('Start the runner operation and immediately return control.')
+            help='Start the runner operation and immediately return control.'
         )
         self.add_option(
             '--skip-grains',
             default=False,
             action='store_true',
-            help=('Do not load grains.')
+            help='Do not load grains.'
         )
         group = self.output_options_group = optparse.OptionGroup(
             self, 'Output Options', 'Configure your preferred output format.'
@@ -2939,14 +2939,13 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             '-v', '--verbose',
             default=False,
             action='store_true',
-            help=('Turn on command verbosity, display jid.')
+            help='Turn on command verbosity, display jid.'
         )
         self.add_option(
             '-s', '--static',
             default=False,
             action='store_true',
-            help=('Return the data from minions as a group after they '
-                  'all return.')
+            help='Return the data from minions as a group after they all return.'
         )
         self.add_option(
             '-w', '--wipe',
