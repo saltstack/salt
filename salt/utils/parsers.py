@@ -2732,22 +2732,21 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
 
         role = opts.get('id')
         if not role:
-            emsg = ("Missing role required to setup RAET SaltCaller.")
-            logging.getLogger(__name__).error(emsg + "\n")
+            emsg = "Missing role required to setup RAET SaltCaller."
+            logger.error(emsg)
             raise ValueError(emsg)
 
         kind = opts.get('__role')  # application kind 'master', 'minion', etc
         if kind not in kinds.APPL_KINDS:
-            emsg = ("Invalid application kind = '{0}' for RAET SaltCaller.".format(kind))
-            logging.getLogger(__name__).error(emsg + "\n")
+            emsg = "Invalid application kind = '{0}' for RAET SaltCaller.".format(six.text_type(kind))
+            logger.error(emsg)
             raise ValueError(emsg)
 
-        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
-                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion], kinds.APPL_KIND_NAMES[kinds.applKinds.caller]]:
             lanename = "{0}_{1}".format(role, kind)
         else:
-            emsg = ("Unsupported application kind '{0}' for RAET SaltCaller.".format(kind))
-            logging.getLogger(__name__).error(emsg + '\n')
+            emsg = "Unsupported application kind '{0}' for RAET SaltCaller.".format(six.text_type(kind))
+            logger.error(emsg)
             raise ValueError(emsg)
 
         if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.minion]:  # minion check
