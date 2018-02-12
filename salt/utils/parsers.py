@@ -47,7 +47,7 @@ import salt.exceptions
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _sorted(mixins_or_funcs):
@@ -979,7 +979,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                     # Otherwise this can be ignored, since salt-master is able to
                     # overwrite the PIDfile on the next start.
                     if not os.getuid():
-                        log.info('PIDfile could not be deleted: %s', six.text_type(self.config['pidfile']))
+                        logger.info('PIDfile could not be deleted: %s', six.text_type(self.config['pidfile']))
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
