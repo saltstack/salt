@@ -2756,7 +2756,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                 if os.path.exists(ha) and not os.path.isfile(ha) and not os.path.isdir(ha):  # minion manor yard
                     return True
             except ImportError as ex:
-                logger.error("Error while importing Yard: %s", six.text_type(ex))
+                logger.error("Error while importing Yard: %s", ex)
         return False
 
     def process_module_dirs(self):
