@@ -2144,11 +2144,13 @@ def script(source,
                     'stderr': '',
                     'cache_error': True}
         shutil.copyfile(fn_, path)
+
     if not salt.utils.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
-
-    path = _cmd_quote(path)
+        path = _cmd_quote(path)
+    else:
+        path = '"{0}"'.format(path)
 
     ret = _run(path + ' ' + str(args) if args else path,
                cwd=cwd,
