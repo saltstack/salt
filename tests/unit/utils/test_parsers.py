@@ -1011,13 +1011,10 @@ class DaemonMixInTestCase(TestCase):
         '''
         Setting up
         '''
-        # Set PID
-        self.pid = '/some/fake.pid'
-
         # Setup mixin
         self.mixin = salt.utils.parsers.DaemonMixIn()
         self.mixin.config = {}
-        self.mixin.config['pidfile'] = self.pid
+        self.mixin.config['pidfile'] = '/some/fake.pid'
 
         # logger
         self.logger = logging.getLogger('salt.utils.parsers')
@@ -1029,7 +1026,6 @@ class DaemonMixInTestCase(TestCase):
         '''
         del self.logger
         del self.mixin
-        del self.pid
 
     def test_pid_file_deletion(self):
         '''
@@ -1052,7 +1048,8 @@ class DaemonMixInTestCase(TestCase):
         '''
         self.mixin._mixin_before_exit()
         assert salt.utils.parsers.os.unlink.call_count == 1
-        salt.utils.parsers.logger.info.assert_called_with('PIDfile could not be deleted: %s', format(self.pid))
+        salt.utils.parsers.logger.info.assert_called_with('PIDfile could not be deleted: %s',
+                                                          format(self.mixin.config['pidfile']))
 
     @patch('os.unlink', MagicMock(side_effect=OSError()))
     @patch('os.path.isfile', MagicMock(return_value=True))
