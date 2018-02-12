@@ -964,7 +964,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
             default=os.path.join(
                 syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
             ),
-            help=('Specify the location of the pidfile. Default: \'%default\'.')
+            help="Specify the location of the pidfile. Default: '%default'."
         )
 
     def _mixin_before_exit(self):
