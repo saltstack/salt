@@ -970,6 +970,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                     # overwrite the PIDfile on the next start.
                     if not os.getuid():
                         logger.info('PIDfile could not be deleted: %s', six.text_type(self.config['pidfile']))
+                        logger.debug(six.text_type(err))
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
