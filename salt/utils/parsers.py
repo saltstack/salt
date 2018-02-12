@@ -66,8 +66,8 @@ class MixInMeta(type):
         instance = super(MixInMeta, mcs).__new__(mcs, name, bases, attrs)
         if not hasattr(instance, '_mixin_setup'):
             raise RuntimeError(
-                'Don\'t subclass {0} in {1} if you\'re not going to use it '
-                'as a salt parser mix-in.'.format(mcs.__name__, name)
+                "Don't subclass {0} in {1} if you're not going "
+                "to use it as a salt parser mix-in.".format(mcs.__name__, name)
             )
         return instance
 
@@ -401,9 +401,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
             return
 
         if not os.path.isfile(self.options.saltfile):
-            self.error(
-                '\'{0}\' file does not exist.\n'.format(self.options.saltfile)
-            )
+            self.error("'{0}' file does not exist.\n".format(self.options.saltfile))
 
         # Make sure we have an absolute path
         self.options.saltfile = os.path.abspath(self.options.saltfile)
