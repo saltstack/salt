@@ -124,7 +124,7 @@ def _get_vault_connection():
 
     if 'vault' in __opts__ and __opts__.get('__role', 'minion') == 'master':
         return _use_local_config()
-    elif '_ssh_version' in __opts__:
+    elif any((__opts__['local'], __opts__['file_client'] == 'local', __opts__['master_type'] == 'disable')):
         return _use_local_config()
     else:
         log.debug('Contacting master for Vault connection details')
