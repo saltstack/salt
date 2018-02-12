@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-The module used to execute states in salt. A state is unlike a module
-execution in that instead of just executing a command it ensure that a
-certain state is present on the system.
+The State Compiler is used to execute states in Salt. A state is unlike
+an execution module in that instead of just executing a command, it
+ensures that a certain state is present on the system.
 
 The data sent to the state calls is as follows:
     { 'state': '<state module name>',
