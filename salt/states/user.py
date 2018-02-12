@@ -24,7 +24,7 @@ as either absent or present
       user.absent
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 
@@ -241,7 +241,8 @@ def present(name,
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
-        the same name as the user, Default is ``False``.
+        the same name as the user. If the group does not exist the state will
+        fail. Default is ``False``.
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -442,8 +443,10 @@ def present(name,
                              if __salt__['group.info'](x)]
         for missing_optgroup in [x for x in optional_groups
                                  if x not in present_optgroups]:
-            log.debug('Optional group "{0}" for user "{1}" is not '
-                      'present'.format(missing_optgroup, name))
+            log.debug(
+                'Optional group "%s" for user "%s" is not present',
+                missing_optgroup, name
+            )
     else:
         present_optgroups = None
 
@@ -451,11 +454,17 @@ def present(name,
     # "optional_groups" lists.
     if groups and optional_groups:
         for isected in set(groups).intersection(optional_groups):
-            log.warning('Group "{0}" specified in both groups and '
-                        'optional_groups for user {1}'.format(isected, name))
+            log.warning(
+                'Group "%s" specified in both groups and optional_groups '
+                'for user %s', isected, name
+            )
 
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
+        if gid == '':
+            ret['comment'] = 'Default group with name "{0}" is not present'.format(name)
+            ret['result'] = False
+            return ret
 
     changes = _changes(name,
                        uid,

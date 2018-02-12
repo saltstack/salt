@@ -446,7 +446,7 @@ class GitProvider(object):
         use_tags = 'tag' in self.ref_types
 
         ret = set()
-        for ref in refs:
+        for ref in salt.utils.data.decode(refs):
             if ref.startswith('refs/'):
                 ref = ref[5:]
             rtype, rname = ref.split('/', 1)
@@ -746,7 +746,7 @@ class GitProvider(object):
                           os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fh_, 'wb'):
                 # Write the lock file and close the filehandle
-                os.write(fh_, six.b(six.text_type(os.getpid())))
+                os.write(fh_, salt.utils.stringutils.to_bytes(six.text_type(os.getpid())))
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
                 with salt.utils.files.fopen(self._get_lock_file(lock_type), 'r') as fd_:

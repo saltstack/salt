@@ -35,7 +35,7 @@ In case both are provided the `file` entry is prefered.
 '''
 
 # Import Python Futures
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import sys
 import os.path
 import base64
@@ -47,6 +47,7 @@ from contextlib import contextmanager
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
+from salt.ext import six
 import salt.utils.files
 import salt.utils.templates
 import salt.utils.yaml
@@ -228,9 +229,7 @@ def nodes(**kwargs):
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(
-                'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
-            )
+            log.exception('Exception when calling CoreV1Api->list_node')
             raise CommandExecutionError(exc)
     finally:
         _cleanup()
@@ -252,9 +251,7 @@ def node(name, **kwargs):
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(
-                'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
-            )
+            log.exception('Exception when calling CoreV1Api->list_node')
             raise CommandExecutionError(exc)
     finally:
         _cleanup()
@@ -308,9 +305,7 @@ def node_add_label(node_name, label_name, label_value, **kwargs):
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(
-                'Exception when calling CoreV1Api->patch_node: {0}'.format(exc)
-            )
+            log.exception('Exception when calling CoreV1Api->patch_node')
             raise CommandExecutionError(exc)
     finally:
         _cleanup()
@@ -343,9 +338,7 @@ def node_remove_label(node_name, label_name, **kwargs):
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(
-                'Exception when calling CoreV1Api->patch_node: {0}'.format(exc)
-            )
+            log.exception('Exception when calling CoreV1Api->patch_node')
             raise CommandExecutionError(exc)
     finally:
         _cleanup()
@@ -372,10 +365,7 @@ def namespaces(**kwargs):
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(
-                'Exception when calling CoreV1Api->list_namespace: '
-                '{0}'.format(exc)
-            )
+            log.exception('Exception when calling CoreV1Api->list_namespace')
             raise CommandExecutionError(exc)
     finally:
         _cleanup()
@@ -402,8 +392,7 @@ def deployments(namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->list_namespaced_deployment: '
-                '{0}'.format(exc)
+                'ExtensionsV1beta1Api->list_namespaced_deployment'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -431,7 +420,7 @@ def services(namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->list_namespaced_service: {0}'.format(exc)
+                'CoreV1Api->list_namespaced_service'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -459,7 +448,7 @@ def pods(namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->list_namespaced_pod: {0}'.format(exc)
+                'CoreV1Api->list_namespaced_pod'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -487,7 +476,7 @@ def secrets(namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->list_namespaced_secret: {0}'.format(exc)
+                'CoreV1Api->list_namespaced_secret'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -515,7 +504,7 @@ def configmaps(namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->list_namespaced_config_map: {0}'.format(exc)
+                'CoreV1Api->list_namespaced_config_map'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -543,8 +532,7 @@ def show_deployment(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->read_namespaced_deployment: '
-                '{0}'.format(exc)
+                'ExtensionsV1beta1Api->read_namespaced_deployment'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -572,7 +560,7 @@ def show_service(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespaced_service: {0}'.format(exc)
+                'CoreV1Api->read_namespaced_service'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -600,7 +588,7 @@ def show_pod(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespaced_pod: {0}'.format(exc)
+                'CoreV1Api->read_namespaced_pod'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -627,7 +615,7 @@ def show_namespace(name, **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespace: {0}'.format(exc)
+                'CoreV1Api->read_namespace'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -663,8 +651,7 @@ def show_secret(name, namespace='default', decode=False, **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespaced_secret: '
-                '{0}'.format(exc)
+                'CoreV1Api->read_namespaced_secret'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -694,8 +681,7 @@ def show_configmap(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespaced_config_map: '
-                '{0}'.format(exc)
+                'CoreV1Api->read_namespaced_config_map'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -750,8 +736,7 @@ def delete_deployment(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->delete_namespaced_deployment: '
-                '{0}'.format(exc)
+                'ExtensionsV1beta1Api->delete_namespaced_deployment'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -781,8 +766,7 @@ def delete_service(name, namespace='default', **kwargs):
             return None
         else:
             log.exception(
-                'Exception when calling CoreV1Api->delete_namespaced_service: '
-                '{0}'.format(exc)
+                'Exception when calling CoreV1Api->delete_namespaced_service'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -815,7 +799,7 @@ def delete_pod(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->delete_namespaced_pod: {0}'.format(exc)
+                'CoreV1Api->delete_namespaced_pod'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -844,8 +828,7 @@ def delete_namespace(name, **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->delete_namespace: '
-                '{0}'.format(exc)
+                'CoreV1Api->delete_namespace'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -877,8 +860,7 @@ def delete_secret(name, namespace='default', **kwargs):
             return None
         else:
             log.exception(
-                'Exception when calling CoreV1Api->delete_namespaced_secret: '
-                '{0}'.format(exc)
+                'Exception when calling CoreV1Api->delete_namespaced_secret'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -911,8 +893,7 @@ def delete_configmap(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->delete_namespaced_config_map: '
-                '{0}'.format(exc)
+                'CoreV1Api->delete_namespaced_config_map'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -957,8 +938,7 @@ def create_deployment(
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->create_namespaced_deployment: '
-                '{0}'.format(exc)
+                'ExtensionsV1beta1Api->create_namespaced_deployment'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1003,8 +983,7 @@ def create_pod(
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->create_namespaced_pod: '
-                '{0}'.format(exc)
+                'CoreV1Api->create_namespaced_pod'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1049,7 +1028,7 @@ def create_service(
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->create_namespaced_service: {0}'.format(exc)
+                'CoreV1Api->create_namespaced_service'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1104,7 +1083,7 @@ def create_secret(
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->create_namespaced_secret: {0}'.format(exc)
+                'CoreV1Api->create_namespaced_secret'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1155,7 +1134,7 @@ def create_configmap(
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->create_namespaced_config_map: {0}'.format(exc)
+                'CoreV1Api->create_namespaced_config_map'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1190,8 +1169,7 @@ def create_namespace(
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->create_namespace: '
-                '{0}'.format(exc)
+                'CoreV1Api->create_namespace'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1236,8 +1214,7 @@ def replace_deployment(name,
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->replace_namespaced_deployment: '
-                '{0}'.format(exc)
+                'ExtensionsV1beta1Api->replace_namespaced_deployment'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1288,7 +1265,7 @@ def replace_service(name,
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->replace_namespaced_service: {0}'.format(exc)
+                'CoreV1Api->replace_namespaced_service'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1343,7 +1320,7 @@ def replace_secret(name,
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->replace_namespaced_secret: {0}'.format(exc)
+                'CoreV1Api->replace_namespaced_secret'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1392,7 +1369,7 @@ def replace_configmap(name,
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->replace_namespaced_configmap: {0}'.format(exc)
+                'CoreV1Api->replace_namespaced_configmap'
             )
             raise CommandExecutionError(exc)
     finally:
@@ -1558,6 +1535,6 @@ def __enforce_only_strings_dict(dictionary):
     ret = {}
 
     for key, value in iteritems(dictionary):
-        ret[str(key)] = str(value)
+        ret[six.text_type(key)] = six.text_type(value)
 
     return ret

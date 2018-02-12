@@ -27,6 +27,15 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         if salt.utils.platform.is_windows():
             self.run_function('pkg.refresh_db')
 
+        os_release = self.run_function('grains.get', ['osrelease'])
+
+        if salt.utils.platform.is_darwin() and int(os_release.split('.')[1]) >= 13:
+            self.pkg = 'wget'
+        elif salt.utils.platform.is_windows():
+            self.pkg = 'putty'
+        else:
+            self.pkg = 'htop'
+
     def test_list(self):
         '''
         verify that packages are installed
@@ -133,30 +142,18 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         successfully install and uninstall a package
         '''
-        os_grain = self.run_function('grains.item', ['os'])['os']
-        os_release = self.run_function('grains.item', ['osrelease'])['osrelease']
-
-        pkg = 'htop'
-        if os_grain == 'Windows':
-            pkg = 'putty'
-
-        version = self.run_function('pkg.version', [pkg])
-
-        if os_grain == 'Ubuntu':
-            if os_release.startswith('12.'):
-                self.skipTest('pkg.install and pkg.remove do not work on ubuntu '
-                              '12 when run from the test suite')
+        version = self.run_function('pkg.version', [self.pkg])
 
         def test_install():
-            install_ret = self.run_function('pkg.install', [pkg])
-            self.assertIn(pkg, install_ret)
+            install_ret = self.run_function('pkg.install', [self.pkg])
+            self.assertIn(self.pkg, install_ret)
 
         def test_remove():
-            remove_ret = self.run_function('pkg.remove', [pkg])
-            self.assertIn(pkg, remove_ret)
+            remove_ret = self.run_function('pkg.remove', [self.pkg])
+            self.assertIn(self.pkg, remove_ret)
 
         if version and isinstance(version, dict):
-            version = version[pkg]
+            version = version[self.pkg]
 
         if version:
             test_remove()
@@ -172,14 +169,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test holding and unholding a package
         '''
-        pkg = 'htop'
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
         os_major_release = self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease']
         available = self.run_function('sys.doc', ['pkg.hold'])
-
-        if os_family == 'RedHat':
-            if os_major_release == '5':
-                self.skipTest('`yum versionlock` does not seem to work on RHEL/CentOS 5')
 
         if available:
             if os_family == 'RedHat':
@@ -188,13 +180,13 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 if not versionlock:
                     self.run_function('pkg.install', [lock_pkg])
 
-            hold_ret = self.run_function('pkg.hold', [pkg])
-            self.assertIn(pkg, hold_ret)
-            self.assertTrue(hold_ret[pkg]['result'])
+            hold_ret = self.run_function('pkg.hold', [self.pkg])
+            self.assertIn(self.pkg, hold_ret)
+            self.assertTrue(hold_ret[self.pkg]['result'])
 
-            unhold_ret = self.run_function('pkg.unhold', [pkg])
-            self.assertIn(pkg, unhold_ret)
-            self.assertTrue(hold_ret[pkg]['result'])
+            unhold_ret = self.run_function('pkg.unhold', [self.pkg])
+            self.assertIn(self.pkg, unhold_ret)
+            self.assertTrue(hold_ret[self.pkg]['result'])
 
             if os_family == 'RedHat':
                 if not versionlock:
@@ -254,10 +246,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn('bash-completion', keys)
             self.assertIn('dpkg', keys)
         elif os_family == 'RedHat':
-            ret = self.run_function(func, ['rpm', 'yum'])
+            ret = self.run_function(func, ['rpm', 'bash'])
             keys = ret.keys()
             self.assertIn('rpm', keys)
-            self.assertIn('yum', keys)
+            self.assertIn('bash', keys)
         elif os_family == 'Suse':
             ret = self.run_function(func, ['less', 'zypper'])
             keys = ret.keys()
@@ -316,13 +308,26 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.skipTest('No updates available for this machine.  Skipping pkg.upgrade test.')
             else:
                 ret = self.run_function(func)
-
-                if 'Problem encountered' in ret:
-                    self.skipTest('A problem was encountered when running pkg.upgrade. This test is '
-                                  'meant to catch no-ops or problems with the salt function itself, '
-                                  'not problems with actual package installation. Skipping.')
-
-                # The changes dictionary should not be empty.
                 self.assertNotEqual(ret, {})
-                if 'changes' in ret:
-                    self.assertNotEqual(ret['changes'], {})
+
+    @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+    @skipIf(salt.utils.platform.is_darwin(), 'minion is mac')
+    def test_pkg_latest_version(self):
+        '''
+        check that pkg.latest_version returns the latest version of the uninstalled package (it does not install the package, just checking the version)
+        '''
+        grains = self.run_function('grains.items')
+        cmd_info = self.run_function('pkg.info_installed', ['htop'])
+        if cmd_info != 'ERROR: package htop is not installed':
+            cmd_remove = self.run_function('pkg.remove', ['htop'])
+        if grains['os_family'] == 'RedHat':
+            cmd_htop = self.run_function('cmd.run', ['yum list htop'])
+        elif grains['os_family'] == 'Debian':
+            cmd_htop = self.run_function('cmd.run', ['apt list htop'])
+        elif grains['os_family'] == 'Arch':
+            cmd_htop = self.run_function('cmd.run', ['pacman -Si htop'])
+        elif grains['os_family'] == 'Suse':
+            cmd_htop = self.run_function('cmd.run', ['zypper info htop'])
+        pkg_latest = self.run_function('pkg.latest_version', ['htop'])
+        self.assertIn(pkg_latest, cmd_htop)

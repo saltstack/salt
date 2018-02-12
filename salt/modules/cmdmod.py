@@ -43,7 +43,6 @@ from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range, zip
 from salt.ext.six.moves import shlex_quote as _cmd_quote
-from salt.utils.locales import sdecode
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -456,29 +455,25 @@ def _run(cmd,
                 env_cmd = ('su', runas, '-c', sys.executable)
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
-            log.debug(log_callback("env command: {0}".format(env_cmd)))
-            env_encoded = subprocess.Popen(
+            log.debug(log_callback('env command: %s', env_cmd))
+            env_bytes = salt.utils.stringutils.to_bytes(subprocess.Popen(
                 env_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
-            ).communicate(py_code.encode(__salt_system_encoding__))[0]
+            ).communicate(salt.utils.stringutils.to_bytes(py_code))[0])
             if six.PY2:
                 import itertools
-                env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
+                env_runas = dict(itertools.izip(*[iter(env_bytes.split(b'\0'))]*2))
             elif six.PY3:
-                if isinstance(env_encoded, str):  # future lint: disable=blacklisted-function
-                    env_encoded = env_encoded.encode(__salt_system_encoding__)
-                env_runas = dict(list(zip(*[iter(env_encoded.split(b'\0'))]*2)))
+                env_runas = dict(list(zip(*[iter(env_bytes.split(b'\0'))]*2)))
 
-            env_runas = dict((sdecode(k), sdecode(v)) for k, v in six.iteritems(env_runas))
+            env_runas = dict(
+                (salt.utils.stringutils.to_str(k),
+                 salt.utils.stringutils.to_str(v))
+                for k, v in six.iteritems(env_runas)
+            )
             env_runas.update(env)
             env = env_runas
-            # Encode unicode kwargs to filesystem encoding to avoid a
-            # UnicodeEncodeError when the subprocess is invoked.
-            fse = sys.getfilesystemencoding()
-            for key, val in six.iteritems(env):
-                if isinstance(val, six.text_type):
-                    env[key] = val.encode(fse)
         except ValueError:
             raise CommandExecutionError(
                 'Environment could not be retrieved for User \'{0}\''.format(
@@ -3017,9 +3012,8 @@ def shell_info(shell, list_modules=False):
                 'HKEY_LOCAL_MACHINE',
                 'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
                 'Install')
-            if 'vtype' in install_data and \
-                    install_data['vtype'] == 'REG_DWORD' and \
-                    install_data['vdata'] == 1:
+            if install_data.get('vtype') == 'REG_DWORD' and \
+                    install_data.get('vdata') == 1:
                 details = __salt__['reg.list_values'](
                     'HKEY_LOCAL_MACHINE',
                     'Software\\Microsoft\\PowerShell\\{0}\\'

@@ -187,9 +187,12 @@ class RootsLimitTraversalTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_limit_traversal(self):
         '''
         1) Set up a deep directory structure
-        2) Enable the configuration option for 'limit_directory_traversal'
-        3) Ensure that we can find SLS files in a directory so long as there is an SLS file in a directory above.
-        4) Ensure that we cannot find an SLS file in a directory that does not have an SLS file in a directory above.
+        2) Enable the configuration option 'fileserver_limit_traversal'
+        3) Ensure that we can find SLS files in a directory so long as there is
+           an SLS file in a directory above.
+        4) Ensure that we cannot find an SLS file in a directory that does not
+           have an SLS file in a directory above.
+
         '''
         file_client_opts = self.get_temp_config('master')
         file_client_opts['fileserver_limit_traversal'] = True

@@ -1454,7 +1454,7 @@ def os_data():
                             "Unable to fetch data from /proc/1/cmdline"
                         )
                     if init_bin is not None and init_bin.endswith('bin/init'):
-                        supported_inits = (six.b(str('upstart')), six.b(str('sysvinit')), six.b(str('systemd')))  # future lint: disable=blacklisted-function
+                        supported_inits = (b'upstart', b'sysvinit', b'systemd')
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
@@ -1464,7 +1464,7 @@ def os_data():
                         try:
                             with salt.utils.files.fopen(init_bin, 'rb') as fp_:
                                 buf = True
-                                edge = six.b(str())  # future lint: disable=blacklisted-function
+                                edge = b''
                                 buf = fp_.read(buf_size).lower()
                                 while buf:
                                     buf = edge + buf
@@ -1473,7 +1473,7 @@ def os_data():
                                             if six.PY3:
                                                 item = item.decode('utf-8')
                                             grains['init'] = item
-                                            buf = six.b(str())  # future lint: disable=blacklisted-function
+                                            buf = b''
                                             break
                                     edge = buf[-edge_len:]
                                     buf = fp_.read(buf_size).lower()
@@ -2456,27 +2456,29 @@ def default_gateway():
         ip_gw: True   # True if either of the above is True, False otherwise
     '''
     grains = {}
-    if not salt.utils.path.which('ip'):
+    ip_bin = salt.utils.path.which('ip')
+    if not ip_bin:
         return {}
     grains['ip_gw'] = False
     grains['ip4_gw'] = False
     grains['ip6_gw'] = False
-    if __salt__['cmd.run']('ip -4 route show | grep "^default"', python_shell=True):
-        grains['ip_gw'] = True
-        grains['ip4_gw'] = True
+    for ip_version in ('4', '6'):
         try:
-            gateway_ip = __salt__['cmd.run']('ip -4 route show | grep "^default via"', python_shell=True).split(' ')[2].strip()
-            grains['ip4_gw'] = gateway_ip if gateway_ip else True
-        except Exception as exc:
-            pass
-    if __salt__['cmd.run']('ip -6 route show | grep "^default"', python_shell=True):
-        grains['ip_gw'] = True
-        grains['ip6_gw'] = True
-        try:
-            gateway_ip = __salt__['cmd.run']('ip -6 route show | grep "^default via"', python_shell=True).split(' ')[2].strip()
-            grains['ip6_gw'] = gateway_ip if gateway_ip else True
-        except Exception as exc:
-            pass
+            out = __salt__['cmd.run']([ip_bin, '-' + ip_version, 'route', 'show'])
+            for line in out.splitlines():
+                if line.startswith('default'):
+                    grains['ip_gw'] = True
+                    grains['ip{0}_gw'.format(ip_version)] = True
+                    try:
+                        via, gw_ip = line.split()[1:3]
+                    except ValueError:
+                        pass
+                    else:
+                        if via == 'via':
+                            grains['ip{0}_gw'.format(ip_version)] = gw_ip
+                    break
+        except Exception:
+            continue
     return grains
 
 

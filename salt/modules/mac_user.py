@@ -10,7 +10,7 @@ Manage users on Mac OS 10.7+
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 try:
     import pwd
 except ImportError:
@@ -30,6 +30,7 @@ import salt.utils.stringutils
 import salt.utils.user
 from salt.utils.locales import sdecode as _sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -367,7 +368,7 @@ def chgroups(name, groups, append=False):
             'Invalid group name(s): {0}'.format(', '.join(bad_groups))
         )
     ugrps = set(list_groups(name))
-    desired = set(str(x) for x in groups if bool(str(x)))
+    desired = set(six.text_type(x) for x in groups if bool(six.text_type(x)))
     primary_group = __salt__['file.gid_to_group'](uinfo['gid'])
     if primary_group:
         desired.add(primary_group)

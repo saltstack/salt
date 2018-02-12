@@ -117,7 +117,7 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     Verify a challenging hmac signature against a string / shared-secret
     Returns a boolean if the verification succeeded or failed.
     '''
-    if six.PY3:
+    if six.text_type:
         msg = salt.utils.stringutils.to_bytes(string)
         key = salt.utils.stringutils.to_bytes(shared_secret)
         challenge = salt.utils.stringutils.to_bytes(challenge_hmac)

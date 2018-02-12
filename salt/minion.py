@@ -660,7 +660,7 @@ class MinionBase(object):
                         # should already be set.
                         raise last_exc  # pylint: disable=E0702
                 else:
-                    self.tok = pub_channel.auth.gen_token('salt')
+                    self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
 
@@ -702,7 +702,7 @@ class MinionBase(object):
                     else:
                         pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts, **factory_kwargs)
                         yield pub_channel.connect()
-                    self.tok = pub_channel.auth.gen_token('salt')
+                    self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
                 except SaltClientError as exc:
@@ -1437,6 +1437,9 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         '''
+        # Ensure payload is unicode. Disregard failure to decode binary blobs.
+        if six.PY2:
+            data = salt.utils.data.decode(data, keep=True)
         if 'user' in data:
             log.info(
                 'User %s Executing command %s with jid %s',
@@ -1915,7 +1918,9 @@ class Minion(MinionBase):
                     load['out'] = oput
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
-            salt.utils.minion.cache_jobs(self.opts, load['jid'], ret)
+            if ret['jid'] == 'req':
+                ret['jid'] = salt.utils.jid.gen_jid(self.opts)
+            salt.utils.minion.cache_jobs(self.opts, ret['jid'], ret)
 
         if not self.opts['pub_ret']:
             return ''

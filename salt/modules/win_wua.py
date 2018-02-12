@@ -51,8 +51,7 @@ Group Policy using the ``lgpo`` module.
         - salt.utils.win_update
 '''
 # Import Python libs
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt libs
@@ -305,7 +304,7 @@ def list_update(name, download=False, install=False):
     '''
     salt.utils.versions.warn_until(
         'Fluorine',
-        'This function is replaced by \'get\' as of Salt 2017.7.0. This'
+        'This function is replaced by \'get\' as of Salt 2017.7.0. This '
         'warning will be removed in Salt Fluorine.')
     return get(name, download, install)
 
@@ -532,7 +531,7 @@ def list_updates(software=True,
     '''
     salt.utils.versions.warn_until(
         'Fluorine',
-        'This function is replaced by \'list\' as of Salt 2017.7.0. This'
+        'This function is replaced by \'list\' as of Salt 2017.7.0. This '
         'warning will be removed in Salt Fluorine.')
     return list(software, drivers, summary, skip_installed, categories,
                 severities, download, install)
@@ -720,7 +719,7 @@ def download_update(name):
     '''
     salt.utils.versions.warn_until(
         'Fluorine',
-        'This function is replaced by \'download\' as of Salt 2017.7.0. This'
+        'This function is replaced by \'download\' as of Salt 2017.7.0. This '
         'warning will be removed in Salt Fluorine.')
     return download(name)
 
@@ -752,7 +751,7 @@ def download_updates(names):
     '''
     salt.utils.versions.warn_until(
         'Fluorine',
-        'This function is replaced by \'download\' as of Salt 2017.7.0. This'
+        'This function is replaced by \'download\' as of Salt 2017.7.0. This '
         'warning will be removed in Salt Fluorine.')
     return download(names)
 
@@ -800,7 +799,7 @@ def download(names):
         names = [names]
 
     if isinstance(names, six.integer_types):
-        names = [str(names)]
+        names = [six.text_type(names)]
 
     if updates.count() > len(names):
         raise CommandExecutionError('Multiple updates found, names need to be '
@@ -840,7 +839,7 @@ def install_update(name):
     '''
     salt.utils.versions.warn_until(
         'Fluorine',
-        'This function is replaced by \'install\' as of Salt 2017.7.0. This'
+        'This function is replaced by \'install\' as of Salt 2017.7.0. This '
         'warning will be removed in Salt Fluorine.')
     return install(name)
 
@@ -871,7 +870,7 @@ def install_updates(names):
     '''
     salt.utils.versions.warn_until(
         'Fluorine',
-        'This function is replaced by \'install\' as of Salt 2017.7.0. This'
+        'This function is replaced by \'install\' as of Salt 2017.7.0. This '
         'warning will be removed in Salt Fluorine.')
     return install(names)
 
@@ -919,7 +918,7 @@ def install(names):
         names = [names]
 
     if isinstance(names, six.integer_types):
-        names = [str(names)]
+        names = [six.text_type(names)]
 
     if updates.count() > len(names):
         raise CommandExecutionError('Multiple updates found, names need to be '

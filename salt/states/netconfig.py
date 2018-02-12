@@ -18,7 +18,7 @@ Dependencies
 .. versionadded:: 2017.7.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)
@@ -138,8 +138,8 @@ def managed(name,
     To replace the config, set ``replace`` to ``True``. This option is recommended to be used with caution!
 
     .. warning::
-        The spport for NAPALM native templates will be dropped beginning with Salt Fluorine.
-        Implicitly, the ``template_path`` argument will be depreacted and removed.
+        The support for NAPALM native templates will be dropped beginning with Salt Fluorine.
+        Implicitly, the ``template_path`` argument will be deprecated and removed.
 
     template_name
         Identifies path to the template source. The template can be either stored on the local machine,

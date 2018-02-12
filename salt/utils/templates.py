@@ -192,9 +192,8 @@ def wrap_tmpl_func(render_str):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
                     log.error(
-                        'Exception occurred while reading file '
-                        '{0}: {1}'.format(tmplsrc, exc),
-                        # Show full traceback if debug logging is enabled
+                        'Exception occurred while reading file %s: %s',
+                        tmplsrc, exc,
                         exc_info_on_loglevel=logging.DEBUG
                     )
                     raise exc
@@ -207,7 +206,7 @@ def wrap_tmpl_func(render_str):
                 output = output.encode(SLS_ENCODING)
             if salt.utils.platform.is_windows():
                 newline = False
-                if output.endswith(('\n', os.linesep)):
+                if salt.utils.stringutils.to_unicode(output).endswith(('\n', os.linesep)):
                     newline = True
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
@@ -215,8 +214,8 @@ def wrap_tmpl_func(render_str):
                     output += os.linesep
 
         except SaltRenderError as exc:
-            log.error("Rendering exception occurred: {0}".format(exc))
-            #return dict(result=False, data=str(exc))
+            log.exception('Rendering exception occurred')
+            #return dict(result=False, data=six.text_type(exc))
             raise
         except Exception:
             return dict(result=False, data=traceback.format_exc())
@@ -315,7 +314,7 @@ def _get_jinja_error(trace, context=None):
         if template_path:
             out = '\n{0}\n'.format(msg.splitlines()[0])
             with salt.utils.files.fopen(template_path) as fp_:
-                template_contents = fp_.read()
+                template_contents = salt.utils.stringutils.to_unicode(fp_.read())
             out += get_context(
                 template_contents,
                 line,
@@ -380,10 +379,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         for k, v in six.iteritems(opts):
             k = k.lower()
             if hasattr(jinja2.defaults, k.upper()):
-                log.debug('Jinja2 environment {0} was set to {1} by {2}'.format(k, v, optname))
+                log.debug('Jinja2 environment %s was set to %s by %s', k, v, optname)
                 env_args[k] = v
             else:
-                log.warning('Jinja2 environment {0} is not recognized'.format(k))
+                log.warning('Jinja2 environment %s is not recognized', k)
 
     if 'sls' in context and context['sls'] != '':
         opt_jinja_env_helper(opt_jinja_sls_env, 'jinja_sls_env')
@@ -455,12 +454,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             tmplstr = ''
         else:
             tmplstr += '\n{0}'.format(tracestr)
-        log.debug("Jinja Error")
-        log.debug("Exception: {0}".format(exc))
-        log.debug("Out: {0}".format(out))
-        log.debug("Line: {0}".format(line))
-        log.debug("TmplStr: {0}".format(tmplstr))
-        log.debug("TraceStr: {0}".format(tracestr))
+        log.debug('Jinja Error')
+        log.debug('Exception:', exc_info=True)
+        log.debug('Out: %s', out)
+        log.debug('Line: %s', line)
+        log.debug('TmplStr: %s', tmplstr)
+        log.debug('TraceStr: %s', tracestr)
 
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
@@ -545,7 +544,7 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     Render a Cheetah template.
     '''
     from Cheetah.Template import Template
-    return str(Template(tmplstr, searchList=[context]))
+    return salt.utils.data.decode(Template(tmplstr, searchList=[context]))
 # pylint: enable=3rd-party-module-not-gated
 
 
@@ -595,7 +594,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
                     'data': data}
         tgt = salt.utils.files.mkstemp()
         with salt.utils.files.fopen(tgt, 'w+') as target:
-            target.write(data)
+            target.write(salt.utils.stringutils.to_str(data))
         return {'result': True,
                 'data': tgt}
     except Exception:

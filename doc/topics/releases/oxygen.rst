@@ -284,6 +284,16 @@ master config file, the master will create a SaltSSH client process which
 connects to the minion and returns the output for the `salt` commandline to use
 like a regular minion. This can be used anywhere the LocalClient is used.
 
+Exceptions Raised for Authentication/Authorization Errors
+---------------------------------------------------------
+
+When sending ``publish`` commands via ``master.py`` and ``masterapi.py`` and an
+authorization or authentication problem is encountered, Salt will now raise the
+appropriate exceptions instead of returning an empty string: ``''``.
+
+The reasoning behind this change is to make it easier to debug various scenarios
+surrounding authentication and authorization issues more effectively.
+
 Comparison Operators in Package Installation
 --------------------------------------------
 
@@ -1538,6 +1548,15 @@ Slot syntax looks close to the simple python function call. Here is a simple exa
 
 Read more :ref:`here <slots-subsystem>`.
 
+Cryptographic layer changes
+---------------------------
+
+M2Crypto is coming back. We are making the crypto backend modular but in this
+release M2Crypto is enabled if it's importable by Python. If not Cryptodome or
+PyCrypto is used as it was in the previous releases. M2Crypto is used in the
+same way as PyCrypto so there would be no compatibility issues, different nodes
+could use different backends.
+
 Deprecations
 ------------
 
@@ -1681,3 +1700,11 @@ Sentry Log Handler
 Configuring sentry raven python client via ``project``, ``servers``, ``public_key
 and ``secret_key`` is deprecated and won't work with sentry clients > 3.0.
 Instead, the ``dsn`` config param must be used.
+
+RAET transport
+--------------
+
+We haven't been doing development on RAET for quite some time and decided that
+Oxygen is the time to announce the deprecation. RAET support will be removed in
+Neon. Please consider to move to ``zeromq`` or ``tcp`` transport instead of
+``raet``.

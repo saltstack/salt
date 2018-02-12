@@ -121,7 +121,7 @@ def __init__(opts):
     a few env variables to keep apt happy and
     non-interactive.
     '''
-    if __virtual__():
+    if __virtual__() == __virtualname__:
         # Export these puppies so they persist
         os.environ.update(DPKG_ENV_VARS)
 

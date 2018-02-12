@@ -13,6 +13,8 @@ import salt.utils.stringutils
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 from salt.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
     EauthAuthenticationError,
     LoaderError,
     SaltClientError,
@@ -210,7 +212,11 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
                 sys.exit(11)
 
-        except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
+        except (AuthenticationError,
+                AuthorizationError,
+                SaltInvocationError,
+                EauthAuthenticationError,
+                SaltClientError) as exc:
             ret = six.text_type(exc)
             self._output_ret(ret, '', retcode=1)
 
@@ -417,7 +423,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         for host in ret:
             if isinstance(ret[host], six.string_types) \
                     and (ret[host].startswith("Minion did not return")
-                         or ret[host] == 'VALUE TRIMMED'):
+                         or ret[host] == 'VALUE_TRIMMED'):
                 continue
             for fun in ret[host]:
                 if fun not in docs and ret[host][fun]:
