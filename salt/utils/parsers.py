@@ -261,12 +261,10 @@ class OptionParser(optparse.OptionParser, object):
             try:
                 mixin_before_exit_func(self)
             except Exception as err:  # pylint: disable=broad-except
-                logger = logging.getLogger(__name__)
                 logger.exception(err)
-                logger.error(
-                    'Error while processing %s: %s',
-                    mixin_before_exit_func, traceback.format_exc(err)
-                )
+                logger.error('Error while processing %s: %s',
+                             six.text_type(mixin_before_exit_func),
+                             traceback.format_exc(err))
         if self._setup_mp_logging_listener_ is True:
             # Stop logging through the queue
             log.shutdown_multiprocessing_logging()
