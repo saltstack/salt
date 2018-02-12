@@ -167,11 +167,9 @@ def wrap_tmpl_func(render_str):
             tmplsrc.close()
         try:
             output = render_str(tmplstr, context, tmplpath)
-            if six.PY2:
-                output = output.encode(SLS_ENCODING)
             if salt.utils.platform.is_windows():
                 newline = False
-                if salt.utils.stringutils.to_unicode(output).endswith(('\n', os.linesep)):
+                if salt.utils.stringutils.to_unicode(output, encoding=SLS_ENCODING).endswith(('\n', os.linesep)):
                     newline = True
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
@@ -188,9 +186,7 @@ def wrap_tmpl_func(render_str):
             if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False, prefix=salt.utils.files.TEMPFILE_PREFIX) as outf:
-                if six.PY3:
-                    output = output.encode(SLS_ENCODING)
-                outf.write(output)
+                outf.write(salt.utils.stringutils.to_bytes(output, encoding=SLS_ENCODING))
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
