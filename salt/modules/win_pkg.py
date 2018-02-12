@@ -701,7 +701,7 @@ def refresh_db(**kwargs):
         path=repo_details.winrepo_source_dir,
         saltenv=saltenv,
         include_pat='*.sls',
-        exclude_pat=r'E@\/\..*\/'  # Exclude all hidden directories (.git)
+        exclude_pat=r'E@\/\..*?\/'  # Exclude all hidden directories (.git)
     )
 
     return genrepo(saltenv=saltenv, verbose=verbose, failhard=failhard)
