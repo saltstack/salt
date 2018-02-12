@@ -1036,12 +1036,13 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         self._install_signal_handlers()
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
-        msg = self.__class__.__name__
+        msg = [six.text_type(self.__class__.__name__)]
         if signum == signal.SIGINT:
-            msg += ' received a SIGINT.'
+            msg.append('received a SIGINT.')
         elif signum == signal.SIGTERM:
-            msg += ' received a SIGTERM.'
-        logging.getLogger(__name__).warning('%s Exiting.', msg)
+            msg.append('received a SIGTERM.')
+        msg = ' '.join(msg)
+        logger.warning('%s Exiting.', msg)
         self.shutdown(exitmsg='{0} Exited.'.format(msg))
 
     def shutdown(self, exitcode=0, exitmsg=None):
