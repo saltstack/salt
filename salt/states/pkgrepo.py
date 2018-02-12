@@ -252,8 +252,8 @@ def managed(name, ppa=None, **kwargs):
        for.  (e.g. unstable). This option is rarely needed.
 
     keyid
-       The KeyID of the GPG key to install. This option also requires
-       the ``keyserver`` option to be set.
+       The KeyID or a list of KeyIDs of the GPG key to install.
+       This option also requires the ``keyserver`` option to be set.
 
     keyserver
        This is the name of the keyserver to retrieve gpg keys from.  The
@@ -417,6 +417,9 @@ def managed(name, ppa=None, **kwargs):
         repo = salt.utils.pkg.deb.strip_uri(repo)
 
     if pre:
+        #22412: Remove file attribute in case same repo is set up multiple times but with different files
+        pre.pop('file', None)
+        sanitizedkwargs.pop('file', None)
         for kwarg in sanitizedkwargs:
             if kwarg not in pre:
                 if kwarg == 'enabled':

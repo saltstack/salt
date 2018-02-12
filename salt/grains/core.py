@@ -997,6 +997,8 @@ def _ps(osdata):
         )
     elif osdata['os_family'] == 'AIX':
         grains['ps'] = '/usr/bin/ps auxww'
+    elif osdata['os_family'] == 'NILinuxRT':
+        grains['ps'] = 'ps -o user,pid,ppid,tty,time,comm'
     else:
         grains['ps'] = 'ps -efHww'
     return grains
@@ -1888,6 +1890,33 @@ def append_domain():
     if 'append_domain' in __opts__:
         grain['append_domain'] = __opts__['append_domain']
     return grain
+
+
+def fqdns():
+    '''
+    Return all known FQDNs for the system by enumerating all interfaces and
+    then trying to reverse resolve them (excluding 'lo' interface).
+    '''
+    # Provides:
+    # fqdns
+
+    grains = {}
+    fqdns = set()
+
+    addresses = salt.utils.network.ip_addrs(include_loopback=False,
+        interface_data=_INTERFACES)
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
+        interface_data=_INTERFACES))
+
+    for ip in addresses:
+        try:
+            fqdns.add(socket.gethostbyaddr(ip)[0])
+        except (socket.error, socket.herror,
+            socket.gaierror, socket.timeout) as e:
+            log.error("Exception during resolving address: " + str(e))
+
+    grains['fqdns'] = list(fqdns)
+    return grains
 
 
 def ip_fqdn():

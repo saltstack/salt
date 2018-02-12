@@ -41,6 +41,7 @@ import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.runners.state import orchestrate as _orchestrate
+from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -1529,6 +1530,54 @@ def show_state_usage(queue=False, **kwargs):
         st_.pop_active()
     _set_retcode(ret)
     return ret
+
+
+def show_states(queue=False, **kwargs):
+    '''
+    Returns the list of states that will be applied on highstate.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.show_states
+
+    .. versionadded:: Oxygen
+
+    '''
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        assert False
+        return conflict
+
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    try:
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   initial_pillar=_get_initial_pillar(opts))
+
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
+        __context__['retcode'] = 5
+        raise CommandExecutionError('Pillar failed to render', info=errors)
+
+    st_.push_active()
+    states = OrderedDict()
+    try:
+        result = st_.compile_low_chunks()
+
+        if not isinstance(result, list):
+            raise Exception(result)
+
+        for s in result:
+            states[s['__sls__']] = True
+    finally:
+        st_.pop_active()
+
+    return list(states.keys())
 
 
 def sls_id(id_, mods, test=None, queue=False, **kwargs):

@@ -233,7 +233,7 @@ def cluster_health(index=None, level='cluster', local=False, hosts=None, profile
 
     CLI example::
 
-        salt myminion elasticsearch.health
+        salt myminion elasticsearch.cluster_health
     '''
     es = _get_instance(hosts, profile)
 
@@ -254,7 +254,7 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
 
     CLI example::
 
-        salt myminion elasticsearch.stats
+        salt myminion elasticsearch.cluster_stats
     '''
     es = _get_instance(hosts, profile)
 

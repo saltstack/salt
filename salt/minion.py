@@ -1437,6 +1437,9 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         '''
+        # Ensure payload is unicode. Disregard failure to decode binary blobs.
+        if six.PY2:
+            data = salt.utils.data.decode(data, keep=True)
         if 'user' in data:
             log.info(
                 'User %s Executing command %s with jid %s',
@@ -1588,7 +1591,8 @@ class Minion(MinionBase):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True
-                elif minion_instance.opts['grains'].get('minion_blackout', False):
+                # use minion_blackout_whitelist from grains if it exists
+                if minion_instance.opts['grains'].get('minion_blackout', False):
                     whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True

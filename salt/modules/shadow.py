@@ -222,7 +222,7 @@ def lock_password(name):
     pre_info = info(name)
     if pre_info['name'] == '':
         return False
-    if pre_info['passwd'][0] == '!':
+    if pre_info['passwd'].startswith('!'):
         return True
 
     cmd = 'passwd -l {0}'.format(name)
@@ -230,7 +230,7 @@ def lock_password(name):
 
     post_info = info(name)
 
-    return post_info['passwd'][0] == '!'
+    return post_info['passwd'].startswith('!')
 
 
 def unlock_password(name):

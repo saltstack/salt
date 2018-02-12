@@ -584,8 +584,6 @@ def function(
         if not m_func:
             if minion not in fail_minions:
                 fail.add(minion)
-            changes[minion] = m_ret
-            continue
         changes[minion] = m_ret
     if not cmd_ret:
         func_ret['result'] = False

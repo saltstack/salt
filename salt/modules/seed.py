@@ -278,6 +278,8 @@ def _check_resolv(mpt):
             conts = salt.utils.stringutils.to_unicode(fp_.read())
             if 'nameserver' not in conts:
                 replace = True
+            if 'nameserver 127.0.0.1' in conts:
+                replace = True
     if replace:
         shutil.copy('/etc/resolv.conf', resolv)
 

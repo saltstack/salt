@@ -226,7 +226,7 @@ class MockState(object):
             '''
                 Mock compile_low_chunks method
             '''
-            return True
+            return [{"__id__": "ABC", "__sls__": "abc"}]
 
         def render_highstate(self, data):
             '''
@@ -609,6 +609,16 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                               pillar="A")
 
             self.assertEqual(state.show_state_usage(), "A")
+
+    def test_show_states(self):
+        '''
+            Test to display the low data from a specific sls
+        '''
+        mock = MagicMock(side_effect=["A", None])
+        with patch.object(state, '_check_queue', mock):
+
+            self.assertEqual(state.show_low_sls("foo"), "A")
+            self.assertListEqual(state.show_states("foo"), ['abc'])
 
     def test_sls_id(self):
         '''
