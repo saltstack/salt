@@ -1042,17 +1042,17 @@ class DaemonMixInTestCase(TestCase):
                     assert mock_logger.call_count == 0
                     assert os_unlink.call_count == 1
 
-    def test_pid_file_deletion_with_oserror(self):
+    @patch('os.unlink', MagicMock(side_effect=OSError()))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.getuid', MagicMock(return_value=0))
+    @patch('salt.utils.parsers.logger', MagicMock())
+    def test_pid_deleted_oserror_as_root(self):
         '''
-        PIDfile deletion with exception
+        PIDfile deletion with exception, running as root.
         '''
-        with patch('os.unlink', MagicMock(side_effect=OSError())) as os_unlink:
-            with patch('os.path.isfile', MagicMock(return_value=True)):
-                with patch.object(self.logger, 'info') as mock_logger:
-                    self.mixin._mixin_before_exit()
-                    assert os_unlink.call_count == 1
-                    mock_logger.assert_called_with(
-                        'PIDfile could not be deleted: {0}'.format(self.pid))
+        self.mixin._mixin_before_exit()
+        assert salt.utils.parsers.os.unlink.call_count == 1
+        salt.utils.parsers.logger.info.assert_called_with('PIDfile could not be deleted: %s', format(self.pid))
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module
 del LogSettingsParserTests
