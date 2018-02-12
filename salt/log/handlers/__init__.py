@@ -179,7 +179,7 @@ if sys.version_info < (3, 2):
                 self.queue.put_nowait(record)
             except queue.Full:
                 sys.stderr.write('[WARNING ] Message queue is full, '
-                                 'unable to write "{0}" to log', record
+                                 'unable to write "{0}" to log'.format(record)
                                  )
 
         def prepare(self, record):
