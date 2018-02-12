@@ -47,6 +47,8 @@ import salt.exceptions
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+log = logging.getLogger(__name__)
+
 
 def _sorted(mixins_or_funcs):
     return sorted(
