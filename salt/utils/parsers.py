@@ -975,11 +975,11 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                 try:
                     os.unlink(self.config['pidfile'])
                 except OSError as err:
-                    logging.getLogger(__name__).info(
-                        'PIDfile could not be deleted: {0}'.format(
-                            self.config['pidfile']
-                        )
-                    )
+                    # Log error only when running salt-master as a root user.
+                    # Otherwise this can be ignored, since salt-master is able to
+                    # overwrite the PIDfile on the next start.
+                    if not os.getuid():
+                        log.info('PIDfile could not be deleted: %s', six.text_type(self.config['pidfile']))
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
