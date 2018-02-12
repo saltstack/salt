@@ -787,12 +787,11 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                     logfile_basename = os.path.basename(
                         self._default_logging_logfile_
                     )
-                    logging.getLogger(__name__).debug(
-                        'The user \'%s\' is not allowed to write to \'%s\'. '
-                        'The log file will be stored in '
-                        '\'~/.salt/\'%s\'.log\'',
-                        current_user, logfile, logfile_basename
-                    )
+                    logger.debug("The user '%s' is not allowed to write to '%s'. "
+                                 "The log file will be stored in '~/.salt/'%s'.log'",
+                                 six.text_type(current_user),
+                                 six.text_type(logfile),
+                                 six.text_type(logfile_basename))
                     logfile = os.path.join(
                         user_salt_dir, '{0}.log'.format(logfile_basename)
                     )
