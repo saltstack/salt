@@ -1050,6 +1050,7 @@ class DaemonMixInTestCase(TestCase):
         assert salt.utils.parsers.os.unlink.call_count == 1
         salt.utils.parsers.logger.info.assert_called_with('PIDfile could not be deleted: %s',
                                                           format(self.mixin.config['pidfile']))
+        salt.utils.parsers.logger.debug.assert_called
 
     @patch('os.unlink', MagicMock(side_effect=OSError()))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1062,6 +1063,7 @@ class DaemonMixInTestCase(TestCase):
         self.mixin._mixin_before_exit()
         assert salt.utils.parsers.os.unlink.call_count == 1
         salt.utils.parsers.logger.info.assert_not_called
+        salt.utils.parsers.logger.debug.assert_not_called
 
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module
