@@ -1022,6 +1022,15 @@ class DaemonMixInTestCase(TestCase):
         # logger
         self.logger = logging.getLogger('salt.utils.parsers')
 
+    def tearDown(self):
+        '''
+        Tear down test
+        :return:
+        '''
+        del self.logger
+        del self.mixin
+        del self.pid
+
     def test_pid_file_deletion(self):
         '''
         PIDfile deletion without exception.
