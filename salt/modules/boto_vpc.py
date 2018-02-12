@@ -2576,6 +2576,7 @@ def describe_route_tables(route_table_id=None, route_table_name=None,
                       'instance_id': 'Instance',
                       'interface_id': 'NetworkInterfaceId',
                       'nat_gateway_id': 'NatGatewayId',
+                      'vpc_peering_connection_id': 'VpcPeeringConnectionId',
                       }
         assoc_keys = {'id': 'RouteTableAssociationId',
                       'main': 'Main',
