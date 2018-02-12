@@ -25,6 +25,11 @@ import salt.syspaths
 import salt.utils.parsers
 import salt.utils.platform
 
+try:
+    import pytest
+except ImportError:
+    pytest = None
+
 
 class ErrorMock(object):  # pylint: disable=too-few-public-methods
     '''
@@ -995,6 +1000,7 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
         self.addCleanup(delattr, self, 'parser')
 
 
+@skipIf(not pytest, False)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DaemonMixInTestCase(TestCase):
     '''
