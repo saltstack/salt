@@ -1027,16 +1027,17 @@ class DaemonMixInTestCase(TestCase):
         del self.logger
         del self.mixin
 
+    @patch('os.unlink', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('salt.utils.parsers.logger', MagicMock())
     def test_pid_file_deletion(self):
         '''
         PIDfile deletion without exception.
         '''
-        with patch('os.unlink', MagicMock()) as os_unlink:
-            with patch('os.path.isfile', MagicMock(return_value=True)):
-                with patch.object(self.logger, 'info') as mock_logger:
-                    self.mixin._mixin_before_exit()
-                    assert mock_logger.call_count == 0
-                    assert os_unlink.call_count == 1
+        self.mixin._mixin_before_exit()
+        assert salt.utils.parsers.os.unlink.call_count == 1
+        salt.utils.parsers.logger.info.assert_called
+        salt.utils.parsers.logger.debug.assert_called
 
     @patch('os.unlink', MagicMock(side_effect=OSError()))
     @patch('os.path.isfile', MagicMock(return_value=True))
