@@ -2750,12 +2750,13 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             raise ValueError(emsg)
 
         if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.minion]:  # minion check
-            from raet.lane.yarding import Yard  # pylint: disable=3rd-party-module-not-gated
-            ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)  # pylint: disable=invalid-name
-            if (os.path.exists(ha) and
-                    not os.path.isfile(ha) and
-                    not os.path.isdir(ha)):  # minion manor yard
-                return True
+            try:
+                from raet.lane.yarding import Yard  # pylint: disable=3rd-party-module-not-gated
+                ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)  # pylint: disable=invalid-name
+                if os.path.exists(ha) and not os.path.isfile(ha) and not os.path.isdir(ha):  # minion manor yard
+                    return True
+            except ImportError as ex:
+                logger.error("Error while importing Yard: %s", six.text_type(ex))
         return False
 
     def process_module_dirs(self):
