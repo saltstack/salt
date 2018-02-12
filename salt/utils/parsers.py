@@ -208,7 +208,7 @@ class OptionParser(optparse.OptionParser, object):
             try:
                 process_option_func()
             except Exception as err:  # pylint: disable=broad-except
-                logging.getLogger(__name__).exception(err)
+                logger.exception(err)
                 self.error(
                     'Error while processing {0}: {1}'.format(
                         process_option_func, traceback.format_exc(err)
@@ -220,7 +220,7 @@ class OptionParser(optparse.OptionParser, object):
             try:
                 mixin_after_parsed_func(self)
             except Exception as err:  # pylint: disable=broad-except
-                logging.getLogger(__name__).exception(err)
+                logger.exception(err)
                 self.error(
                     'Error while processing {0}: {1}'.format(
                         mixin_after_parsed_func, traceback.format_exc(err)
@@ -228,7 +228,7 @@ class OptionParser(optparse.OptionParser, object):
                 )
 
         if self.config.get('conf_file', None) is not None:  # pylint: disable=no-member
-            logging.getLogger(__name__).debug(
+            logger.debug(
                 'Configuration file path: %s',
                 self.config['conf_file']  # pylint: disable=no-member
             )
@@ -407,9 +407,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
         self.options.saltfile = os.path.abspath(self.options.saltfile)
 
         # Make sure we let the user know that we will be loading a Saltfile
-        logging.getLogger(__name__).info(
-            'Loading Saltfile from \'%s\'', self.options.saltfile
-        )
+        logger.info("Loading Saltfile from '%s'", six.text_type(self.options.saltfile))
 
         try:
             saltfile_config = config._read_conf_file(saltfile)
@@ -525,7 +523,7 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
         config_dir = os.environ.get(self._default_config_dir_env_var_, None)
         if not config_dir:
             config_dir = self._default_config_dir_
-            logging.getLogger(__name__).debug('SYSPATHS setup as: %s', syspaths.CONFIG_DIR)
+            logger.debug('SYSPATHS setup as: %s', six.text_type(syspaths.CONFIG_DIR))
         self.add_option(
             '-c', '--config-dir', default=config_dir,
             help="Pass in an alternative configuration directory. Default: '%default'."
@@ -811,10 +809,10 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # Not supported on platforms other than Windows.
             # Other platforms may use an external tool such as 'logrotate'
             if log_rotate_max_bytes != 0:
-                logging.getLogger(__name__).warning('\'log_rotate_max_bytes\' is only supported on Windows')
+                logger.warning("'log_rotate_max_bytes' is only supported on Windows")
                 log_rotate_max_bytes = 0
             if log_rotate_backup_count != 0:
-                logging.getLogger(__name__).warning('\'log_rotate_backup_count\' is only supported on Windows')
+                logger.warning("'log_rotate_backup_count' is only supported on Windows")
                 log_rotate_backup_count = 0
 
         # Save the settings back to the configuration
