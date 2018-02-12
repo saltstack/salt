@@ -490,8 +490,7 @@ class HardCrashMixin(six.with_metaclass(MixInMeta, object)):
         hard_crash = os.environ.get('SALT_HARD_CRASH', False)
         self.add_option(
             '--hard-crash', action='store_true', default=hard_crash,
-            help=('Raise any original exception rather than exiting gracefully. '
-                  'Default: %default.')
+            help='Raise any original exception rather than exiting gracefully. Default: %default.'
         )
 
 
@@ -502,9 +501,8 @@ class NoParseMixin(six.with_metaclass(MixInMeta, object)):
         no_parse = os.environ.get('SALT_NO_PARSE', '')
         self.add_option(
             '--no-parse', default=no_parse,
-            help=('Comma-separated list of named CLI arguments (i.e. '
-                  'argname=value) which should not be parsed as Python '
-                  'data types'),
+            help='Comma-separated list of named CLI arguments (i.e. argname=value) '
+                 'which should not be parsed as Python data types',
             metavar='argname1,argname2,...',
         )
 
@@ -532,8 +530,7 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
             logging.getLogger(__name__).debug('SYSPATHS setup as: %s', syspaths.CONFIG_DIR)
         self.add_option(
             '-c', '--config-dir', default=config_dir,
-            help=('Pass in an alternative configuration directory. Default: '
-                  '\'%default\'.')
+            help="Pass in an alternative configuration directory. Default: '%default'."
         )
 
     def process_config_dir(self):
@@ -541,7 +538,7 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
-                'WARNING: CONFIG \'{0}\' directory does not exist.\n'.format(
+                "WARNING: CONFIG '{0}' directory does not exist.\n".format(
                     self.options.config_dir
                 )
             )
