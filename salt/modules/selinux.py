@@ -456,7 +456,7 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
     '''
     if filetype:
         _validate_filetype(filetype)
-    re_spacer = '[ ]{2,}'
+    re_spacer = '[ ]+'
     cmd_kwargs = {'spacer': re_spacer,
                   'filespec': re.escape(name),
                   'sel_user': sel_user or '[^:]+',
@@ -469,11 +469,14 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
     current_entry_text = __salt__['cmd.shell'](cmd, ignore_retcode=True)
     if current_entry_text == '':
         return None
-    ret = {}
-    current_entry_list = re.split(re_spacer, current_entry_text)
-    ret['filespec'] = current_entry_list[0]
-    ret['filetype'] = current_entry_list[1]
-    ret.update(_context_string_to_dict(current_entry_list[2]))
+
+    parts = re.match(r'^({filespec}) +([a-z ]+) (.*)$'.format(**{'filespec': re.escape(name)}), current_entry_text)
+    ret = {
+        'filespec': parts.group(1).strip(),
+        'filetype': parts.group(2).strip(),
+    }
+    ret.update(_context_string_to_dict(parts.group(3).strip()))
+
     return ret
 
 
