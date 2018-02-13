@@ -32,8 +32,11 @@ if ZMQDefaultLoop is None:
         # Support for ZeroMQ 13.x
         if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
             zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-        ZMQDefaultLoop = zmq.eventloop.ioloop.ZMQIOLoop
+        if not tornado.version_info >= (5,):
+            ZMQDefaultLoop = zmq.eventloop.ioloop.ZMQIOLoop
     except ImportError:
+        ZMQDefaultLoop = None
+    if ZMQDefaultLoop is None:
         ZMQDefaultLoop = tornado.ioloop.IOLoop
 
 
