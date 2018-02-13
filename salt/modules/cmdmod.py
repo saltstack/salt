@@ -465,6 +465,10 @@ def _run(cmd,
     else:
         run_env = os.environ.copy()
         run_env.update(env)
+        # Fix platforms like Solaris that don't set a USER env var in the
+        # user's default environment as obtained above.
+        if runas is not None and run_env.get('USER') != runas:
+            run_env['USER'] = runas
 
     if python_shell is None:
         python_shell = False
