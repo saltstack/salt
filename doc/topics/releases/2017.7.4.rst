@@ -1,0 +1,80 @@
+===========================
+Salt 2017.7.4 Release Notes
+===========================
+
+Version 2017.7.4 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+
+Changes for v2017.7.3..v2017.7.4
+---------------------------------------------------------------
+
+Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
+
+*Generated at: 2018-02-13T16:29:07Z*
+
+Statistics:
+
+- Total Merges: **4**
+- Total Issue references: **3**
+- Total PR references: **7**
+
+Changes:
+
+
+- **PR** `#45981`_: (*gtmanfred*) use local config for vault when masterless
+  @ *2018-02-13T15:22:01Z*
+
+  - **ISSUE** `#45976`_: (*grobinson-blockchain*) 6a5e0f9 introduces regression that breaks Vault module for salt masterless
+    | refs: `#45981`_
+  * ca76a0b328 Merge pull request `#45981`_ from gtmanfred/2017.7.3
+  * 0d448457dc apparently local is not set by default
+
+  * 2a92f4bc16 use local config for vault when masterless
+
+- **PR** `#45953`_: (*rallytime*) Back-port `#45928`_ to 2017.7.3
+  @ *2018-02-09T22:29:10Z*
+
+  - **ISSUE** `#45915`_: (*MatthiasKuehneEllerhold*) 2017.7.3: Salt-SSH & Vault Pillar: Permission denied "minion.pem"
+    | refs: `#45928`_
+  - **PR** `#45928`_: (*garethgreenaway*) [2017.7] Fixing vault when used with pillar over salt-ssh
+    | refs: `#45953`_
+  * 6530649dbc Merge pull request `#45953`_ from rallytime/`bp-45928`_-2017.7.3
+  * 85363189d1 Fixing vault when used with pillar over salt-ssh
+
+- **PR** `#45934`_: (*rallytime*) Back-port `#45902`_ to 2017.7.3
+  @ *2018-02-09T16:31:08Z*
+
+  - **ISSUE** `#45893`_: (*CrackerJackMack*) archive.extracted ValueError "No path specified" in 2017.7.3
+    | refs: `#45902`_
+  - **PR** `#45902`_: (*terminalmage*) Check the effective saltenv for cached archive
+    | refs: `#45934`_
+  * fb378cebb0 Merge pull request `#45934`_ from rallytime/`bp-45902`_
+  * bb83e8b345 Add regression test for issue 45893
+
+  * cdda66d759 Remove duplicated section in docstring and fix example
+
+  * 4b6351cda6 Check the effective saltenv for cached archive
+
+- **PR** `#45935`_: (*rallytime*) Back-port `#45742`_ to 2017.7.3
+  @ *2018-02-09T14:02:26Z*
+
+  - **PR** `#45742`_: (*marccardinal*) list.copy() is not compatible with python 2.7
+    | refs: `#45935`_
+  * 0d74151c71 Merge pull request `#45935`_ from rallytime/`bp-45742`_
+  * 6a0b5f7af3 Removed the chained copy
+
+  * ad1150fad4 list.copy() is not compatible with python 2.7
+
+
+.. _`#45742`: https://github.com/saltstack/salt/pull/45742
+.. _`#45893`: https://github.com/saltstack/salt/issues/45893
+.. _`#45902`: https://github.com/saltstack/salt/pull/45902
+.. _`#45915`: https://github.com/saltstack/salt/issues/45915
+.. _`#45928`: https://github.com/saltstack/salt/pull/45928
+.. _`#45934`: https://github.com/saltstack/salt/pull/45934
+.. _`#45935`: https://github.com/saltstack/salt/pull/45935
+.. _`#45953`: https://github.com/saltstack/salt/pull/45953
+.. _`#45976`: https://github.com/saltstack/salt/issues/45976
+.. _`#45981`: https://github.com/saltstack/salt/pull/45981
+.. _`bp-45742`: https://github.com/saltstack/salt/pull/45742
+.. _`bp-45902`: https://github.com/saltstack/salt/pull/45902
+.. _`bp-45928`: https://github.com/saltstack/salt/pull/45928
