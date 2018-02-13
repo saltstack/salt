@@ -24,6 +24,7 @@ import salt.serializers.msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
+from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, zmq_version_info
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 try:
@@ -993,9 +994,8 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Bind to the local port
         '''
         # using ZMQIOLoop since we *might* need zmq in there
-        if HAS_ZMQ:
-            zmq.eventloop.ioloop.install()
-        self.io_loop = LOOP_CLASS()
+        install_zmq()
+        self.io_loop = ZMQDefaultLoop()
         self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
