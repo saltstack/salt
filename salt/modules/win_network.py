@@ -346,18 +346,33 @@ def in_subnet(cidr):
 
 def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
     '''
-    Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
-    ignored, unless 'include_loopback=True' is indicated. If 'interface' is
-    provided, then only IP addresses from that interface will be returned.
-    Providing a CIDR via 'cidr="10.0.0.0/8"' will return only the addresses
-    which are within that subnet. If 'type' is 'public', then only public
-    addresses will be returned. Ditto for 'type'='private'.
+    Returns a list of IPv4 addresses assigned to the host.
+
+    interface
+        Only IP addresses from that interface will be returned.
+
+    include_loopback : False
+        Include loopback 127.0.0.1 IPv4 address.
+
+    cidr
+        Describes subnet using CIDR notation and only IPv4 addresses that belong
+        to this subnet will be returned.
+
+      .. versionchanged:: Fluorine
+
+    type
+        If option set to 'public' then only public addresses will be returned.
+        Ditto for 'private'.
+
+        .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' network.ip_addrs
+        salt '*' network.ip_addrs cidr=10.0.0.0/8
+        salt '*' network.ip_addrs cidr=192.168.0.0/16 type=private
     '''
     addrs = salt.utils.network.ip_addrs(interface=interface,
                                         include_loopback=include_loopback)
@@ -376,17 +391,26 @@ ipaddrs = salt.utils.functools.alias_function(ip_addrs, 'ipaddrs')
 
 def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     '''
-    Returns a list of IPv6 addresses assigned to the host. ::1 is ignored,
-    unless 'include_loopback=True' is indicated. If 'interface' is provided,
-    then only IP addresses from that interface will be returned.
-    Providing a CIDR via 'cidr="2000::/3"' will return only the addresses
-    which are within that subnet.
+    Returns a list of IPv6 addresses assigned to the host.
+
+    interface
+        Only IP addresses from that interface will be returned.
+
+    include_loopback : False
+        Include loopback ::1 IPv6 address.
+
+    cidr
+        Describes subnet using CIDR notation and only IPv6 addresses that belong
+        to this subnet will be returned.
+
+        .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' network.ip_addrs6
+        salt '*' network.ip_addrs6 cidr=2000::/3
     '''
     addrs = salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
