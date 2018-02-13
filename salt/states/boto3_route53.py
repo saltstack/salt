@@ -137,7 +137,7 @@ def _from_aws_encoding(string):  # XXX TODO
 
 
 def hosted_zone_present(name, Name=None, PrivateZone=False,
-                        CallerReference=None, Comment='', VPCs=None,
+                        CallerReference=None, Comment=None, VPCs=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
     Ensure a hosted zone exists with the given attributes.
@@ -642,6 +642,11 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                     ret['result'] = False
                     return ret
             else:
+                # for TXT records the entry must be encapsulated in quotes as required by the API
+                # this appears to be incredibly difficult with the jinja templating engine
+                # so inject the quotations here to make a viable ChangeBatch
+                if Type == 'TXT':
+                    rr = '"%s"' % (rr)
                 fixed_rrs += [rr]
         ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
 
