@@ -2306,6 +2306,12 @@ def prepend_root_dir(opts, path_options):
                     path = tmp_path_root_dir
                 else:
                     path = tmp_path_def_root_dir
+            elif salt.utils.platform.is_windows() and not os.path.splitdrive(path)[0]:
+                # In windows, os.path.isabs resolves '/' to 'C:\\' or whatever
+                # the root drive is.  This elif prevents the next from being
+                # hit, so that the root_dir is prefixed in cases where the
+                # drive is not prefixed on a config option
+                pass
             elif os.path.isabs(path):
                 # Absolute path (not default or overriden root_dir)
                 # No prepending required
@@ -3641,7 +3647,7 @@ def _adjust_log_file_override(overrides, default_log_file):
     if overrides.get('log_dir'):
         # Adjust log_file if a log_dir override is introduced
         if overrides.get('log_file'):
-            if not os.path.abspath(overrides['log_file']):
+            if not os.path.isabs(overrides['log_file']):
                 # Prepend log_dir if log_file is relative
                 overrides['log_file'] = os.path.join(overrides['log_dir'],
                                                      overrides['log_file'])
