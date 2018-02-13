@@ -858,6 +858,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'pg_roles.rolcanlogin as "can login", '
         '{1} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
+        '(SELECT array_agg(pg_roles2.rolname)'
+        '    FROM pg_catalog.pg_auth_members'
+        '    JOIN pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)'
+        '    WHERE pg_auth_members.member = pg_roles.oid) as "groups",'
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
         'pg_roles.rolconfig  as "defaults variables", '
         'membership.membership as "membership" '
@@ -903,6 +907,8 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         retrow['defaults variables'] = row['defaults variables']
         if return_password:
             retrow['password'] = row['password']
+        # use csv reader to handle quoted roles correctly
+        retrow['groups'] = list(csv.reader([row['groups'].strip('{}')]))[0]
         ret[row['name']] = retrow
 
     return ret
