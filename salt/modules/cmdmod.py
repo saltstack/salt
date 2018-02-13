@@ -423,6 +423,10 @@ def _run(cmd,
                     env_encoded = env_encoded.encode(__salt_system_encoding__)
                 env_runas = dict(list(zip(*[iter(env_encoded.split(b'\0'))]*2)))
             env_runas.update(env)
+            # Fix platforms like Solaris that don't set a USER env var in the
+            # user's default environment as obtained above.
+            if env_runas.get('USER') != runas:
+                env_runas['USER'] = runas
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
             # UnicodeEncodeError when the subprocess is invoked.
@@ -465,10 +469,6 @@ def _run(cmd,
     else:
         run_env = os.environ.copy()
         run_env.update(env)
-        # Fix platforms like Solaris that don't set a USER env var in the
-        # user's default environment as obtained above.
-        if runas is not None and run_env.get('USER') != runas:
-            run_env['USER'] = runas
 
     if python_shell is None:
         python_shell = False
