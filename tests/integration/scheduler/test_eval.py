@@ -52,6 +52,9 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
 
+    def tearDown(self):
+        del self.schedule
+
     def test_eval(self):
         '''
         verify that scheduled job runs

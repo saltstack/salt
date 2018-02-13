@@ -125,7 +125,7 @@ class KeyCLI(object):
         if self.opts['eauth']:
             if 'token' in self.opts:
                 try:
-                    with salt.utils.files.fopen(os.path.join(self.opts['key_dir'], '.root_key'), 'r') as fp_:
+                    with salt.utils.files.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
                         low['key'] = \
                             salt.utils.stringutils.to_unicode(fp_.readline())
                 except IOError:
@@ -1082,6 +1082,8 @@ class RaetKey(Key):
         pre_path = os.path.join(pre, minion_id)
         rej_path = os.path.join(rej, minion_id)
         # open mode is turned on, force accept the key
+        pub = salt.utils.stringutils.to_str(pub)
+        verify = salt.utils.stringutils.to_str(verify)
         keydata = {
                 'minion_id': minion_id,
                 'pub': pub,
@@ -1148,7 +1150,7 @@ class RaetKey(Key):
         verify: <verify>
         '''
         path = os.path.join(self.opts['pki_dir'], status, minion_id)
-        with salt.utils.files.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
             keydata = self.serial.loads(fp_.read())
             return 'pub: {0}\nverify: {1}'.format(
                     keydata['pub'],
@@ -1158,7 +1160,7 @@ class RaetKey(Key):
         '''
         Return a sha256 kingerprint for the key
         '''
-        with salt.utils.files.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
             keydata = self.serial.loads(fp_.read())
             key = 'pub: {0}\nverify: {1}'.format(
                     keydata['pub'],
@@ -1442,7 +1444,7 @@ class RaetKey(Key):
         if os.path.exists(path):
             #mode = os.stat(path).st_mode
             os.chmod(path, stat.S_IWUSR | stat.S_IRUSR)
-        with salt.utils.files.fopen(path, 'w+') as fp_:
+        with salt.utils.files.fopen(path, 'w+b') as fp_:
             fp_.write(self.serial.dumps(keydata))
             os.chmod(path, stat.S_IRUSR)
         os.umask(c_umask)

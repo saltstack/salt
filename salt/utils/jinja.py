@@ -850,6 +850,24 @@ class SerializerExtension(Extension, object):
             value = six.text_type(value)
         try:
             return salt.utils.data.decode(salt.utils.yaml.safe_load(value))
+        except salt.utils.yaml.YAMLError as exc:
+            msg = 'Encountered error loading yaml: '
+            try:
+                # Reported line is off by one, add 1 to correct it
+                line = exc.problem_mark.line + 1
+                buf = exc.problem_mark.buffer
+                problem = exc.problem
+            except AttributeError:
+                # No context information available in the exception, fall back
+                # to the stringified version of the exception.
+                msg += six.text_type(exc)
+            else:
+                msg += '{0}\n'.format(problem)
+                msg += salt.utils.stringutils.get_context(
+                    buf,
+                    line,
+                    marker='    <======================')
+            raise TemplateRuntimeError(msg)
         except AttributeError:
             raise TemplateRuntimeError(
                 'Unable to load yaml from {0}'.format(value))
