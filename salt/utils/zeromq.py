@@ -37,12 +37,20 @@ if ZMQDefaultLoop is None:
         ZMQDefaultLoop = tornado.ioloop.IOLoop
 
 
+def install_zmq():
+    '''
+    While pyzmq 17 no longer needs any special integration for tornado,
+    older version still need one.
+    :return:
+    '''
+    if zmq and ZMQ_VERSION_INFO[0] < 17:
+        zmq.eventloop.ioloop.install()
 
 
 def check_ipc_path_max_len(uri):
     # The socket path is limited to 107 characters on Solaris and
     # Linux, and 103 characters on BSD-based systems.
-    if not HAS_ZMQ:
+    if zmq is None:
         return
     ipc_path_max_len = getattr(zmq, 'IPC_PATH_MAX_LEN', 103)
     if ipc_path_max_len and len(uri) > ipc_path_max_len:
