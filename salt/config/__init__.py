@@ -1809,7 +1809,6 @@ DEFAULT_MASTER_OPTS = {
     'schedule': {},
     'auth_events': True,
     'minion_data_cache_events': True,
-    'enable_ssh': False,
     'enable_ssh_minions': False,
 }
 
