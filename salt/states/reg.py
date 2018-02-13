@@ -194,7 +194,7 @@ def present(name,
 
     add_change = {'Key': r'{0}\{1}'.format(hive, key),
                   'Entry': u'{0}'.format(salt.utils.to_unicode(vname, 'utf-8') if vname else u'(Default)'),
-                  'Value': salt.utils.to_unicode(vdata, 'utf-8')}
+                  'Value': salt.utils.to_str(vdata, 'utf-8')}
 
     # Check for test option
     if __opts__['test']:
