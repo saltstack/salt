@@ -256,6 +256,7 @@ VALID_OPTS = {
 
     # Location of the files a minion should look for. Set to 'local' to never ask the master.
     'file_client': str,
+    'local': bool,
 
     # When using a local file_client, this parameter is used to allow the client to connect to
     # a master for remote execution.
@@ -1149,6 +1150,7 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
         },
     'file_client': 'remote',
+    'local': False,
     'use_master_when_local': False,
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
