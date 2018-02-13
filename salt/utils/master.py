@@ -29,12 +29,8 @@ from salt.utils.cache import CacheCli as cache_cli
 from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
-import salt.ext.six as six
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.ext import six
+from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
 
