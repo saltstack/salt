@@ -344,11 +344,14 @@ def in_subnet(cidr):
     return salt.utils.network.in_subnet(cidr)
 
 
-def ip_addrs(interface=None, include_loopback=False):
+def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
+    Providing a CIDR via 'cidr="10.0.0.0/8"' will return only the addresses
+    which are within that subnet. If 'type' is 'public', then only public
+    addresses will be returned. Ditto for 'type'='private'.
 
     CLI Example:
 
@@ -356,17 +359,28 @@ def ip_addrs(interface=None, include_loopback=False):
 
         salt '*' network.ip_addrs
     '''
-    return salt.utils.network.ip_addrs(interface=interface,
-                                       include_loopback=include_loopback)
+    addrs = salt.utils.network.ip_addrs(interface=interface,
+                                        include_loopback=include_loopback)
+    if cidr:
+        return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
+    else:
+        if type == 'public':
+            return [i for i in addrs if not is_private(i)]
+        elif type == 'private':
+            return [i for i in addrs if is_private(i)]
+        else:
+            return addrs
 
 ipaddrs = salt.utils.functools.alias_function(ip_addrs, 'ipaddrs')
 
 
-def ip_addrs6(interface=None, include_loopback=False):
+def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     '''
     Returns a list of IPv6 addresses assigned to the host. ::1 is ignored,
     unless 'include_loopback=True' is indicated. If 'interface' is provided,
     then only IP addresses from that interface will be returned.
+    Providing a CIDR via 'cidr="2000::/3"' will return only the addresses
+    which are within that subnet.
 
     CLI Example:
 
@@ -374,8 +388,12 @@ def ip_addrs6(interface=None, include_loopback=False):
 
         salt '*' network.ip_addrs6
     '''
-    return salt.utils.network.ip_addrs6(interface=interface,
+    addrs = salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
+    if cidr:
+        return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
+    else:
+        return addrs
 
 ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, 'ipaddrs6')
 
