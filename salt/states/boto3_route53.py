@@ -646,7 +646,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                 # this appears to be incredibly difficult with the jinja templating engine
                 # so inject the quotations here to make a viable ChangeBatch
                 if Type == 'TXT':
-                    rr = '"%s"' % (rr)
+                    rr = '"{}"'.format(rr)
                 fixed_rrs += [rr]
         ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
 
