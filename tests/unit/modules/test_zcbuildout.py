@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import tempfile
 import logging
@@ -73,14 +73,14 @@ class Base(TestCase, LoaderModuleMockMixin):
         cls.rdir = tempfile.mkdtemp(dir=TMP)
         cls.tdir = os.path.join(cls.rdir, 'test')
         for idx, url in six.iteritems(buildout._URL_VERSIONS):
-            log.debug('Downloading bootstrap from {0}'.format(url))
+            log.debug('Downloading bootstrap from %s', url)
             dest = os.path.join(
                 cls.rdir, '{0}_bootstrap.py'.format(idx)
             )
             try:
                 download_to(url, dest)
             except URLError:
-                log.debug('Failed to download {0}'.format(url))
+                log.debug('Failed to download %s', url)
         # creating a new setuptools install
         cls.ppy_st = os.path.join(cls.rdir, 'psetuptools')
         cls.py_st = os.path.join(cls.ppy_st, 'bin', 'python')
@@ -122,7 +122,7 @@ class Base(TestCase, LoaderModuleMockMixin):
 
 @skipIf(True, 'These tests are not running reliably')
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-        'The \'virtualenv\' packaged needs to be installed')
+        "The 'virtualenv' packaged needs to be installed")
 @skip_if_binaries_missing(['tar'])
 class BuildoutTestCase(Base):
 
@@ -471,6 +471,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue('buildout -c buildout.cfg -n install a' in comment)
 
 
+# TODO: Is this test even still needed?
 @skipIf(True, 'These tests are not running reliably')
 class BuildoutAPITestCase(TestCase):
 

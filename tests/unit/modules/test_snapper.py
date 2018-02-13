@@ -7,7 +7,7 @@ Unit tests for the Snapper module
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 
 # Import Salt Testing libs
@@ -239,7 +239,8 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.snapper.snapper.DeleteSnapshots', MagicMock()), \
                 patch('salt.modules.snapper.snapper.ListSnapshots', MagicMock(return_value=DBUS_RET['ListSnapshots'])):
             self.assertEqual(snapper.delete_snapshot(snapshots_ids=43), {"root": {"ids": [43], "status": "deleted"}})
-            self.assertEqual(snapper.delete_snapshot(snapshots_ids=[42, 43]), {"root": {"ids": [42, 43], "status": "deleted"}})
+            self.assertEqual(snapper.delete_snapshot(snapshots_ids=[42, 43]),
+                             {"root": {"ids": [42, 43], "status": "deleted"}})
 
     def test_delete_snapshot_id_fail(self):
         with patch('salt.modules.snapper.snapper.DeleteSnapshots', MagicMock()), \
@@ -332,7 +333,8 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_diff_text_file(self):
         with patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(42, 43))), \
-                patch('salt.modules.snapper.snapper.MountSnapshot', MagicMock(side_effect=["/.snapshots/55/snapshot", ""])), \
+                patch('salt.modules.snapper.snapper.MountSnapshot',
+                      MagicMock(side_effect=["/.snapshots/55/snapshot", ""])), \
                 patch('salt.modules.snapper.snapper.UmountSnapshot', MagicMock(return_value="")), \
                 patch('os.path.isdir', MagicMock(return_value=False)), \
                 patch('salt.modules.snapper.changed_files', MagicMock(return_value=["/tmp/foo2"])), \
