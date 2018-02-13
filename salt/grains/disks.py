@@ -128,7 +128,7 @@ def _linux_disks():
 
     for entry in glob.glob('/sys/block/*/queue/rotational'):
         try:
-            with salt.utils.files.fopen(entry) as entry_fp:
+            with salt.utils.fopen(entry) as entry_fp:
                 device = entry.split('/')[3]
                 flag = entry_fp.read(1)
                 if flag == '0':
