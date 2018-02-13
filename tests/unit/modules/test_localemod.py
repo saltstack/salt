@@ -241,7 +241,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.modules.localemod.dbus', None)
     @patch('salt.modules.localemod.__salt__', {'cmd.run': MagicMock()})
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
-    def test_get_locale_with_no_systemd_slowlaris(self):
+    def test_get_locale_with_no_systemd_solaris(self):
         '''
         Test getting current system locale with systemd and dbus available on Solaris.
         :return:
@@ -389,9 +389,9 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                                                'file.replace': MagicMock()})
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
-    def test_set_locale_with_no_systemd_slowlaris_with_list_avail(self):
+    def test_set_locale_with_no_systemd_solaris_with_list_avail(self):
         '''
-        Test setting current system locale with systemd and dbus available on Slowlaris.
+        Test setting current system locale with systemd and dbus available on Solaris.
         The list_avail returns the proper locale.
         :return:
         '''
@@ -410,9 +410,9 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                                                'file.replace': MagicMock()})
     @patch('salt.modules.localemod._localectl_set', MagicMock())
     @patch('salt.utils.systemd.booted', MagicMock(return_value=False))
-    def test_set_locale_with_no_systemd_slowlaris_without_list_avail(self):
+    def test_set_locale_with_no_systemd_solaris_without_list_avail(self):
         '''
-        Test setting current system locale with systemd and dbus is not available on Slowlaris.
+        Test setting current system locale with systemd and dbus is not available on Solaris.
         The list_avail does not return the proper locale.
         :return:
         '''

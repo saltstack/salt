@@ -200,8 +200,7 @@ def get_dependencies():
     '''
     deps = {
         'requests': HAS_REQUESTS,
-        'm2crypto': HAS_M2,
-        'pycrypto': HAS_PYCRYPTO
+        'pycrypto or m2crypto': HAS_M2 or HAS_PYCRYPTO
     }
     return config.check_driver_dependencies(
         __virtualname__,
