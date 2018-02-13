@@ -3,15 +3,40 @@
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt libs
+import logging
+import tornado.ioloop
 from salt.exceptions import SaltSystemExit
 
-# Import 3rd-party libs
+log = logging.getLogger(__name__)
+
 try:
     import zmq
-    HAS_ZMQ = True
 except ImportError:
-    HAS_ZMQ = False
+    zmq = None
+    log.debug('ZMQ module is not found')
+
+ZMQDefaultLoop = None
+ZMQ_VERSION_INFO = (-1, -1, -1)
+
+try:
+    if zmq:
+        ZMQ_VERSION_INFO = [int(v_el) for v_el in zmq.__version__.split('.')]
+        if ZMQ_VERSION_INFO[0] > 16:  # 17.0.x+ deprecates zmq's ioloops
+            ZMQDefaultLoop = tornado.ioloop.IOLoop
+except Exception as ex:
+    log.exception(ex)
+
+if ZMQDefaultLoop is None:
+    try:
+        import zmq.eventloop.ioloop
+        # Support for ZeroMQ 13.x
+        if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
+            zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
+        ZMQDefaultLoop = zmq.eventloop.ioloop.ZMQIOLoop
+    except ImportError:
+        ZMQDefaultLoop = tornado.ioloop.IOLoop
+
+
 
 
 def check_ipc_path_max_len(uri):
