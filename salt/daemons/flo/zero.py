@@ -15,15 +15,13 @@ import errno
 # Import ioflo libs
 import ioflo.base.deeding
 # Import third party libs
-try:
-    import zmq
-    import salt.master
-    import salt.crypt
-    import salt.daemons.masterapi
-    import salt.payload
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.utils.zeromq import zmq
+import salt.master
+import salt.crypt
+import salt.daemons.masterapi
+import salt.payload
+import salt.utils.stringutils
+
 
 log = logging.getLogger(__name__)
 
@@ -159,7 +157,7 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
         '''
         Set up tracking value(s)
         '''
-        if not HAS_ZMQ:
+        if not zmq:
             return
         self.created = False
         self.serial = salt.payload.Serial(self.opts.value)
