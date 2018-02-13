@@ -287,7 +287,7 @@ def snap_eradicate(name, suffix=None):
 
     Eradicate a deleted volume snapshot on a Pure Storage FlashArray.
 
-    Will retunr False is snapshot is not in a deleted state.
+    Will return False if snapshot is not in a deleted state.
 
     .. versionadded:: Oxygen
 
@@ -300,7 +300,7 @@ def snap_eradicate(name, suffix=None):
 
     .. code-block:: bash
 
-        salt '*' purefa.snap_delete foo suffix=snap eradicate=True
+        salt '*' purefa.snap_eradicate foo suffix=snap
 
     '''
     array = _get_system()
