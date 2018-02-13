@@ -31,21 +31,6 @@ from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, zmq_version_info
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
-try:
-    import zmq
-    import zmq.eventloop.ioloop
-    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
-
-import tornado
-TORNADO_50 = tornado.version_info >= (5,)
-
-from salt.utils.async import LOOP_CLASS
-
 import tornado.gen  # pylint: disable=F0401
 
 # Import salt libs
