@@ -19,6 +19,7 @@ import logging
 # Import Salt libs
 import salt.utils.args
 import salt.utils.data
+import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import SaltInvocationError
 
@@ -380,7 +381,15 @@ def do(cmdline, runas=None, env=None):
     if not env:
         env = {}
 
-    env['PATH'] = '{0}/shims:{1}'.format(path, os.environ['PATH'])
+    # NOTE: Env vars (and their values) need to be str type on both Python 2
+    # and 3. The code below first normalizes all path components to unicode to
+    # stitch them together, and then converts the result back to a str type.
+    env[str('PATH')] = salt.utils.stringutils.to_str(   # future lint: disable=blacklisted-function
+        os.pathsep.join((
+            salt.utils.path.join(path, 'shims'),
+            salt.utils.stringutils.to_unicode(os.environ['PATH'])
+        ))
+    )
 
     try:
         cmdline = salt.utils.args.shlex_split(cmdline)

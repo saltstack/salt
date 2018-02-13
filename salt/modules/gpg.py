@@ -71,14 +71,13 @@ VERIFY_TRUST_LEVELS = {
     '4': 'Ultimate'
 }
 
-HAS_LIBS = False
 GPG_1_3_1 = False
-
 try:
     import gnupg
-    HAS_LIBS = True
+    HAS_GPG_BINDINGS = True
+    GPG_1_3_1 = _LooseVersion(gnupg.__version__) >= _LooseVersion('1.3.1')
 except ImportError:
-    pass
+    HAS_GPG_BINDINGS = False
 
 
 def _gpg():
@@ -96,15 +95,10 @@ def __virtual__():
     if not _gpg():
         return (False, 'The gpg execution module cannot be loaded: '
                 'gpg binary is not in the path.')
-    if HAS_LIBS:
-        gnupg_version = _LooseVersion(gnupg.__version__)
-        if gnupg_version >= '1.3.1':
-            global GPG_1_3_1
-            GPG_1_3_1 = True
-        return __virtualname__
 
-    return (False, 'The gpg execution module cannot be loaded; the'
-       ' gnupg python module is not installed.')
+    return __virtualname__ if HAS_GPG_BINDINGS \
+        else (False, 'The gpg execution module cannot be loaded; the '
+                     'gnupg python module is not installed.')
 
 
 def _get_user_info(user=None):

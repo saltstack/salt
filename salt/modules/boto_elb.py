@@ -55,19 +55,13 @@ log = logging.getLogger(__name__)
 # Import Salt libs
 import salt.utils.json
 import salt.utils.odict as odict
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.versions
 
 # Import third party libs
 from salt.ext import six
 try:
     import boto
     import boto.ec2  # pylint: enable=unused-import
-    # connection settings were added in 2.33.0
-    required_boto_version = '2.33.0'
-    if (_LooseVersion(boto.__version__) <
-            _LooseVersion(required_boto_version)):
-        logging.debug('boto_elb requires boto %s.', required_boto_version)
-        raise ImportError()
     from boto.ec2.elb import HealthCheck
     from boto.ec2.elb.attributes import AccessLogAttribute
     from boto.ec2.elb.attributes import ConnectionDrainingAttribute
@@ -83,10 +77,14 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, "The boto_elb module cannot be loaded: boto library not found")
-    __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb', pack=__salt__)
-    return True
+    # connection settings were added in 2.33.0
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(
+        boto_ver='2.33.0',
+        check_boto3=False
+    )
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb', pack=__salt__)
+    return has_boto_reqs
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):

@@ -1437,6 +1437,9 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         '''
+        # Ensure payload is unicode. Disregard failure to decode binary blobs.
+        if six.PY2:
+            data = salt.utils.data.decode(data, keep=True)
         if 'user' in data:
             log.info(
                 'User %s Executing command %s with jid %s',
@@ -1915,7 +1918,9 @@ class Minion(MinionBase):
                     load['out'] = oput
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
-            salt.utils.minion.cache_jobs(self.opts, load['jid'], ret)
+            if ret['jid'] == 'req':
+                ret['jid'] = salt.utils.jid.gen_jid(self.opts)
+            salt.utils.minion.cache_jobs(self.opts, ret['jid'], ret)
 
         if not self.opts['pub_ret']:
             return ''
