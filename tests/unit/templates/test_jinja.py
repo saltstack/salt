@@ -294,13 +294,13 @@ class TestGetTemplate(TestCase):
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt))
-            self.assertEqual(out, salt.utils.to_unicode('Hey world !Hi Sàlt !' + os.linesep))
+            self.assertEqual(out, u'Hey world !Hi Sàlt !' + os.linesep)
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.fopen(filename, mode='rb') as fp_:
                 out = render_jinja_tmpl(
-                    fp_.read(),
+                    salt.utils.to_unicode(fp_.read(), 'utf-8'),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
@@ -337,11 +337,9 @@ class TestGetTemplate(TestCase):
     def test_non_ascii(self):
         fn = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
         out = JINJA(fn, opts=self.local_opts, saltenv='test')
-        with salt.utils.fopen(out['data']) as fp:
-            result = fp.read()
-            if six.PY2:
-                result = salt.utils.to_unicode(result)
-            self.assertEqual(salt.utils.to_unicode('Assunção' + os.linesep), result)
+        with salt.utils.fopen(out['data'], mode='rb') as fp:
+            result = salt.utils.to_unicode(fp.read(), 'utf-8')
+            self.assertEqual(u'Assunção' + os.linesep, result)
 
     def test_get_context_has_enough_context(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
