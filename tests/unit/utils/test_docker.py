@@ -773,6 +773,29 @@ class TranslateBase(TestCase):
                     ret[key] = val
         return ret
 
+    @staticmethod
+    def normalize_ports(ret):
+        '''
+        When we translate exposed ports, we can end up with a mixture of ints
+        (representing TCP ports) and tuples (representing UDP ports). Python 2
+        will sort an iterable containing these mixed types, but Python 3 will
+        not. This helper is used to munge the ports in the return data so that
+        the resulting list is sorted in a way that can reliably be compared to
+        the expected results in the test.
+
+        This helper should only be needed for port_bindings and ports.
+        '''
+        if 'ports' in ret[0]:
+            tcp_ports = []
+            udp_ports = []
+            for item in ret[0]['ports']:
+                if isinstance(item, six.integer_types):
+                    tcp_ports.append(item)
+                else:
+                    udp_ports.append(item)
+            ret[0]['ports'] = sorted(tcp_ports) + sorted(udp_ports)
+        return ret
+
     def tearDown(self):
         '''
         Test skip_translate kwarg
