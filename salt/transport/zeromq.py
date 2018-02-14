@@ -129,7 +129,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             obj = object.__new__(cls)
             obj.__singleton_init__(opts, **kwargs)
             loop_instance_map[key] = obj
-            log.trace('Inserted key into loop_instance_map id {0} for key {1} and process {2}'.format(id(loop_instance_map), key, os.getpid()))
+            log.trace('Inserted key into loop_instance_map id %s for key %s and process %s',
+                      id(loop_instance_map), key, os.getpid())
         else:
             log.debug('Re-using AsyncZeroMQReqChannel for {0}'.format(key))
         return obj
@@ -476,7 +477,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         return self.stream.on_recv(wrap_callback)
 
 
-class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.transport.server.ReqServerChannel):
+class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
+                             salt.transport.server.ReqServerChannel):
 
     def __init__(self, opts):
         salt.transport.server.ReqServerChannel.__init__(self, opts)
@@ -497,7 +499,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
         if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
-            # Socket monitor shall be used the only for debug  purposes so using threading doesn't look too bad here
+            # Socket monitor shall be used the only for debug
+            # purposes so using threading doesn't look too bad here
             import threading
             self._monitor = ZeroMQSocketMonitor(self.clients)
             t = threading.Thread(target=self._monitor.start_poll)
@@ -580,7 +583,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         self.context = zmq.Context(1)
         self._socket = self.context.socket(zmq.REP)
         if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
-            # Socket monitor shall be used the only for debug  purposes so using threading doesn't look too bad here
+            # Socket monitor shall be used the only for debug
+            # purposes so using threading doesn't look too bad here
             import threading
             self._w_monitor = ZeroMQSocketMonitor(self._socket)
             t = threading.Thread(target=self._w_monitor.start_poll)
