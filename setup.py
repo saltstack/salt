@@ -522,7 +522,7 @@ class Sdist(sdist):
             self.run_command('write_salt_ssh_packaging_file')
             self.filelist.files.append(os.path.basename(PACKAGED_FOR_SALT_SSH_FILE))
 
-        if not IS_PY3 and isinstance(base_dir, unicode):  # pylint: disable=incompatible-py3-code
+        if not IS_PY3 and not isinstance(base_dir, str):
             # Work around some bad code in distutils which logs unicode paths
             # against a str format string.
             base_dir = base_dir.encode('utf-8')
