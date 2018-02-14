@@ -408,7 +408,8 @@ def ext_pillar(minion_id,
 
     host_dir = os.path.join(root_dir, 'hosts', minion_id)
     if not os.path.exists(host_dir):
-        # No data for host with this ID
+        if debug is True:
+            log.debug('file_tree: no data for minion {}'.format(minion_id))
         return ngroup_pillar
 
     if not os.path.isdir(host_dir):
