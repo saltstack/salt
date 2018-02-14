@@ -518,7 +518,6 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
 
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
-
         self.workers.bind(self.w_uri)
 
         while True:
