@@ -42,9 +42,6 @@ try:
 except ImportError:
     HAS_ZMQ_MONITOR = False
 
-LIBZMQ_VERSION = tuple(map(int, zmq.zmq_version().split('.')))
-PYZMQ_VERSION = tuple(map(int, zmq.pyzmq_version().split('.')))
-
 # Import Tornado Libs
 import tornado
 import tornado.gen
@@ -77,7 +74,7 @@ def _get_master_uri(master_ip,
 
     Source: http://api.zeromq.org/4-1:zmq-tcp
     '''
-    if LIBZMQ_VERSION >= (4, 1, 6) and PYZMQ_VERSION >= (16, 0, 1):
+    if LIBZMQ_VERSION_INFO >= (4, 1, 6) and ZMQ_VERSION_INFO >= (16, 0, 1):
         # The source:port syntax for ZeroMQ has been added in libzmq 4.1.6
         # which is included in the pyzmq wheels starting with 16.0.1.
         if source_ip or source_port:
@@ -118,8 +115,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         # do we have any mapping for this io_loop
         io_loop = kwargs.get('io_loop')
         if io_loop is None:
-            zmq.eventloop.ioloop.install()
-            io_loop = tornado.ioloop.IOLoop.current()
+            install_zmq()
+            io_loop = ZMQDefaultLoop.current()
         if io_loop not in cls.instance_map:
             cls.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = cls.instance_map[io_loop]
@@ -186,8 +183,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
         self._io_loop = kwargs.get('io_loop')
         if self._io_loop is None:
-            zmq.eventloop.ioloop.install()
-            self._io_loop = tornado.ioloop.IOLoop.current()
+            install_zmq()
+            self._io_loop = ZMQDefaultLoop.current()
 
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
@@ -336,18 +333,15 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
                  **kwargs):
         self.opts = opts
         self.ttype = 'zeromq'
-
         self.io_loop = kwargs.get('io_loop')
+
         if self.io_loop is None:
-            zmq.eventloop.ioloop.install()
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            install_zmq()
+            self.io_loop = ZMQDefaultLoop.current()
 
         self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()
-
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
-
         self.serial = salt.payload.Serial(self.opts)
-
         self.context = zmq.Context()
         self._socket = self.context.socket(zmq.SUB)
 
@@ -415,7 +409,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._monitor.stop()
             self._monitor = None
         if hasattr(self, '_stream'):
-            if PYZMQ_VERSION < (14, 3, 0):
+            if ZMQ_VERSION_INFO < (14, 3, 0):
                 # stream.close() doesn't work properly on pyzmq < 14.3.0
                 self._stream.io_loop.remove_handler(self._stream.socket)
                 self._stream.socket.close(0)
@@ -955,13 +949,12 @@ class AsyncReqMessageClient(object):
         self.addr = addr
         self.linger = linger
         if io_loop is None:
-            zmq.eventloop.ioloop.install()
-            tornado.ioloop.IOLoop.current()
+            install_zmq()
+            ZMQDefaultLoop.current()
         else:
             self.io_loop = io_loop
 
         self.serial = salt.payload.Serial(self.opts)
-
         self.context = zmq.Context()
 
         # wire up sockets
@@ -976,7 +969,7 @@ class AsyncReqMessageClient(object):
     # TODO: timeout all in-flight sessions, or error
     def destroy(self):
         if hasattr(self, 'stream') and self.stream is not None:
-            if PYZMQ_VERSION < (14, 3, 0):
+            if ZMQ_VERSION_INFO < (14, 3, 0):
                 # stream.close() doesn't work properly on pyzmq < 14.3.0
                 if self.stream.socket:
                     self.stream.socket.close()
