@@ -25,7 +25,7 @@ try:
     )
     HAS_LIBCLOUD = True
     LIBCLOUD_VERSION_INFO = tuple([
-        int(part) for part in libcloud.__version__.replace('-', '.').replace('rc', '.').split('.')[:3]
+        int(part) for part in re.split(r'[^\d]+', libcloud.__version__)[:3]
     ])
 
 except ImportError:
