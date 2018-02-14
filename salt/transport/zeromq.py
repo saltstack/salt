@@ -1015,7 +1015,8 @@ class AsyncReqMessageClient(object):
 
             try:
                 ret = yield future
-            except:  # pylint: disable=W0702
+            except Exception as err:  # pylint: disable=W0702
+                log.debug('Re-init ZMQ socket: %s', err)
                 self._init_socket()  # re-init the zmq socket (no other way in zmq)
                 del self.send_queue[0]
                 continue
