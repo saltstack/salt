@@ -362,8 +362,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
 
         if self.opts['recon_randomize']:
             recon_delay = randint(self.opts['recon_default'],
-                                  self.opts['recon_default'] + self.opts['recon_max']
-                          )
+                                  self.opts['recon_default'] + self.opts['recon_max'])
 
             log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
                 self.opts['recon_default'],
