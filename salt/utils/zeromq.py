@@ -24,7 +24,7 @@ try:
         if ZMQ_VERSION_INFO[0] > 16:  # 17.0.x+ deprecates zmq's ioloops
             ZMQDefaultLoop = tornado.ioloop.IOLoop
 except Exception as ex:
-    log.exception(ex)
+    log.exception('Error while getting PyZMQ library version')
 
 if ZMQDefaultLoop is None:
     try:
