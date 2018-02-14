@@ -29,16 +29,13 @@ import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
 from salt.ext import six
-from salt.ext.six.moves import map
 from salt.exceptions import SaltReqTimeoutError
 
-import zmq
+from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO, LIBZMQ_VERSION_INFO
 import zmq.error
 import zmq.eventloop.ioloop
-# support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-    zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 import zmq.eventloop.zmqstream
+
 try:
     import zmq.utils.monitor
     HAS_ZMQ_MONITOR = True
