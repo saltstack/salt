@@ -171,9 +171,9 @@ def fire_args(opts, jid, tag_data, prefix=''):
     except NameError:
         pass
     else:
+        tag = tagify(tag_suffix, prefix)
         try:
             _event = get_master_event(opts, opts['sock_dir'], listen=False)
-            tag = tagify(tag_suffix, prefix)
             _event.fire_event(tag_data, tag=tag)
         except Exception as exc:
             # Don't let a problem here hold up the rest of the orchestration
