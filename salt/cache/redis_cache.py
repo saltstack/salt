@@ -2,15 +2,11 @@
 '''
 Redis
 =====
-
 Redis plugin for the Salt caching subsystem.
-
 .. versionadded:: 2017.7.0
-
 As Redis provides a simple mechanism for very fast key-value store,
 in order to privde the necessary features for the Salt
 caching subsystem, the following conventions are used:
-
 - a Redis key consists of the bank name and the cache key separated by ``/``, e.g.:
 ``$KEY_minions/alpha/stuff`` where ``minions/alpha`` is the bank name
 and ``stuff`` is the key name.
@@ -23,12 +19,9 @@ Instead, each bank hierarchy has a Redis SET associated
 which stores the list of sub-banks. By default, these keys begin with ``$BANK_``.
 - in addition, each key name is stored in a separate SET
 of all the keys within a bank. By default, these SETs begin with ``$BANKEYS_``.
-
 For example, to store the key ``my-key`` under the bank ``root-bank/sub-bank/leaf-bank``,
 the following hierarchy will be built:
-
 .. code-block:: text
-
     127.0.0.1:6379> SMEMBERS $BANK_root-bank
     1) "sub-bank"
     127.0.0.1:6379> SMEMBERS $BANK_root-bank/sub-bank
@@ -37,73 +30,60 @@ the following hierarchy will be built:
     1) "my-key"
     127.0.0.1:6379> GET $KEY_root-bank/sub-bank/leaf-bank/my-key
     "my-value"
-
 There are three types of keys stored:
-
 - ``$BANK_*`` is a Redis SET containing the list of banks under the current bank
 - ``$BANKEYS_*`` is a Redis SET containing the list of keys under the current bank
 - ``$KEY_*`` keeps the value of the key
-
 These prefixes and the separator can be adjusted using the configuration options:
-
 bank_prefix: ``$BANK``
     The prefix used for the name of the Redis key storing the list of sub-banks.
-
 bank_keys_prefix: ``$BANKEYS``
     The prefix used for the name of the Redis keyt storing the list of keys under a certain bank.
-
 key_prefix: ``$KEY``
     The prefix of the Redis keys having the value of the keys to be cached under
     a certain bank.
-
 separator: ``_``
     The separator between the prefix and the key body.
-
 The connection details can be specified using:
-
 host: ``localhost``
     The hostname of the Redis server.
-
 port: ``6379``
     The Redis server port.
-
 cluster_mode: ``False``
     Whether cluster_mode is enabled or not
-
 cluster.startup_nodes:
     A list of host, port dictionaries pointing to cluster members. At least one is required
     but multiple nodes are better
-
     .. code-block::yaml
-
         cache.redis.cluster.startup_nodes
           - host: redis-member-1
             port: 6379
           - host: redis-member-2
             port: 6379
-
 cluster.skip_full_coverage_check: ``False``
     Some cluster providers restrict certain redis commands such as CONFIG for enhanced security.
     Set this option to true to skip checks that required advanced privileges.
-
     .. note::
-
         Most cloud hosted redis clusters will require this to be set to ``True``
-
 db: ``'0'``
     The database index.
-
     .. note::
-
         The database index must be specified as string not as integer value!
-
 password:
     Redis connection password.
-
+readonly_slave: ``False``
+    This option is used primarily on syndics which have a local redis slave (mirror) synced
+    to the primary master. Enabling this option will significantly increase cache performance
+    on syndics which have >1ms latency from the primary salt-master. Please note the database
+    number of the slave cannot be different from the database number on the primary redis.
+ro_host: ``localhost``
+    The hostname of the Redis read-only slave server.
+ro_port: ``6379``
+    The Redis server port of the read-only slave server.
+ro_password:
+    Redis connection password of the read-only slave.
 Configuration Example:
-
 .. code-block::yaml
-
     cache.redis.host: localhost
     cache.redis.port: 6379
     cache.redis.db: '0'
@@ -112,11 +92,27 @@ Configuration Example:
     cache.redis.bank_keys_prefix: #BANKEYS
     cache.redis.key_prefix: #KEY
     cache.redis.separator: '@'
-
-Cluster Configuration Example:
-
+Syndic Configuration Example:
+    For syndics which are in remote locations (different datacenters or high-latency hops)
+    significant performance improvements can be had by installing a local redis slave
+    pointing to the primary redis cache master (cache.redis.host). Using both the remote
+    and local redis configuration options ensures that cache writes are centralized and
+    heavy read activity remains localized.
 .. code-block::yaml
-
+    cache.redis.host: remotehost
+    cache.redis.port: 6379
+    cache.redis.db: '0'
+    cache.redis.readonly_slave: True
+    cache.redis.ro_host: localhost
+    cache.redis.ro_port: 6379
+    cache.redis.ro_password: my pass
+    cache.redis.password: my pass
+    cache.redis.bank_prefix: #BANK
+    cache.redis.bank_keys_prefix: #BANKEYS
+    cache.redis.key_prefix: #KEY
+    cache.redis.separator: '@'
+Cluster Configuration Example:
+.. code-block::yaml
     cache.redis.cluster_mode: true
     cache.redis.cluster.skip_full_coverage_check: true
     cache.redis.cluster.startup_nodes:
@@ -171,6 +167,7 @@ _BANK_KEYS_PREFIX = '$BANKEYS'
 _SEPARATOR = '_'
 
 REDIS_SERVER = None
+REDIS_RO_SERVER = None
 
 # -----------------------------------------------------------------------------
 # property functions
@@ -180,7 +177,6 @@ REDIS_SERVER = None
 def __virtual__():
     '''
     The redis library must be installed for this module to work.
-
     The redis redis cluster library must be installed if cluster_mode is True
     '''
     if not HAS_REDIS:
@@ -208,31 +204,48 @@ def _get_redis_cache_opts():
         'db': __opts__.get('cache.redis.db', '0'),
         'password': __opts__.get('cache.redis.password', ''),
         'cluster_mode': __opts__.get('cache.redis.cluster_mode', False),
+        'readonly_slave': __opts__.get('cache.redis.readonly_slave', False),
+        'ro_host': __opts__.get('cache.redis.ro_host', False),
+        'ro_port': __opts__.get('cache.redis.ro_port', 6379),
+        'ro_db': __opts__.get('cache.redis.db', '0'),
+        'ro_password': __opts__.get('cache.redis.ro_password', ''),
         'startup_nodes': __opts__.get('cache.redis.cluster.startup_nodes', {}),
         'skip_full_coverage_check': __opts__.get('cache.redis.cluster.skip_full_coverage_check', False),
     }
 
 
-def _get_redis_server(opts=None):
+def _get_redis_server(opts=None, readonly=False):
     '''
     Return the Redis server instance.
     Caching the object instance.
     '''
     global REDIS_SERVER
-    if REDIS_SERVER:
+    global REDIS_RO_SERVER
+
+    if REDIS_SERVER and not readonly:
         return REDIS_SERVER
+    if REDIS_RO_SERVER and readonly:
+        return REDIS_RO_SERVER
+
     if not opts:
         opts = _get_redis_cache_opts()
 
     if opts['cluster_mode']:
-        REDIS_SERVER = StrictRedisCluster(startup_nodes=opts['startup_nodes'],
-                                          skip_full_coverage_check=opts['skip_full_coverage_check'],
-                                          decode_responses=True)
+        REDIS_SERVER = StrictRedisCluster(
+            startup_nodes=opts['startup_nodes'],
+            skip_full_coverage_check=opts['skip_full_coverage_check'],
+            decode_responses=True)
     else:
-        REDIS_SERVER = redis.StrictRedis(opts['host'],
-                                   opts['port'],
-                                   db=opts['db'],
-                                   password=opts['password'])
+        if opts['readonly_slave'] and readonly:
+            REDIS_RO_SERVER = redis.StrictRedis(opts['ro_host'],
+                                            opts['ro_port'],
+                                            db=opts['ro_db'],
+                                            password=opts['ro_password'])
+        else:
+            REDIS_SERVER = redis.StrictRedis(opts['host'],
+                                            opts['port'],
+                                            db=opts['db'],
+                                            password=opts['password'])
     return REDIS_SERVER
 
 
@@ -241,11 +254,11 @@ def _get_redis_keys_opts():
     Build the key opts based on the user options.
     '''
     return {
-        'bank_prefix': __opts__.get('cache.redis.bank_prefix', _BANK_PREFIX),
-        'bank_keys_prefix': __opts__.get('cache.redis.bank_keys_prefix', _BANK_KEYS_PREFIX),
-        'key_prefix': __opts__.get('cache.redis.key_prefix', _KEY_PREFIX),
-        'separator': __opts__.get('cache.redis.separator', _SEPARATOR)
-    }
+        'bank_prefix': __opts__.get(
+            'cache.redis.bank_prefix', _BANK_PREFIX), 'bank_keys_prefix': __opts__.get(
+            'cache.redis.bank_keys_prefix', _BANK_KEYS_PREFIX), 'key_prefix': __opts__.get(
+                'cache.redis.key_prefix', _KEY_PREFIX), 'separator': __opts__.get(
+                    'cache.redis.separator', _SEPARATOR)}
 
 
 def _get_bank_redis_key(bank):
@@ -310,7 +323,8 @@ def _get_banks_to_remove(redis_server, bank, path=''):
     A simple tree tarversal algorithm that builds the list of banks to remove,
     starting from an arbitrary node in the tree.
     '''
-    current_path = bank if not path else '{path}/{bank}'.format(path=path, bank=bank)
+    current_path = bank if not path else '{path}/{bank}'.format(
+        path=path, bank=bank)
     bank_paths_to_remove = [current_path]
     # as you got here, you'll be removed
 
@@ -319,7 +333,11 @@ def _get_banks_to_remove(redis_server, bank, path=''):
     if not child_banks:
         return bank_paths_to_remove  # this bank does not have any child banks so we stop here
     for child_bank in child_banks:
-        bank_paths_to_remove.extend(_get_banks_to_remove(redis_server, child_bank, path=current_path))
+        bank_paths_to_remove.extend(
+            _get_banks_to_remove(
+                redis_server,
+                child_bank,
+                path=current_path))
         # go one more level deeper
         # and also remove the children of this child bank (if any)
     return bank_paths_to_remove
@@ -343,14 +361,14 @@ def store(bank, key, data):
         redis_pipe.set(redis_key, value)
         log.debug(
             'Setting the value for %s under %s (%s)',
-            key=key, bank=bank, redis_key=redis_key
+            key, bank, redis_key
         )
         redis_pipe.sadd(redis_bank_keys, key)
         log.debug('Adding %s to %s', key, redis_bank_keys)
         redis_pipe.execute()
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = 'Cannot set the Redis cache key {rkey}: {rerr}'.format(rkey=redis_key,
-                                                                      rerr=rerr)
+        mesg = 'Cannot set the Redis cache key {rkey}: {rerr}'.format(
+            rkey=redis_key, rerr=rerr)
         log.error(mesg)
         raise SaltCacheError(mesg)
 
@@ -359,16 +377,16 @@ def fetch(bank, key):
     '''
     Fetch data from the Redis cache.
     '''
-    redis_server = _get_redis_server()
+    redis_server = _get_redis_server(readonly=True)
     redis_key = _get_key_redis_key(bank, key)
     redis_value = None
     try:
         redis_value = redis_server.get(redis_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = 'Cannot fetch the Redis cache key {rkey}: {rerr}'.format(rkey=redis_key,
-                                                                        rerr=rerr)
+        mesg = 'Cannot fetch the Redis cache key {rkey}: {rerr}'.format(
+            rkey=redis_key, rerr=rerr)
         log.error(mesg)
-        raise SaltCacheError(mesg)
+        return {}
     if redis_value is None:
         return {}
     return __context__['serial'].loads(redis_value)
@@ -381,14 +399,11 @@ def flush(bank, key=None):
     This function is using the Redis pipelining for best performance.
     However, when removing a whole bank,
     in order to re-create the tree, there are a couple of requests made. In total:
-
     - one for node in the hierarchy sub-tree, starting from the bank node
     - one pipelined request to get the keys under all banks in the sub-tree
     - one pipeline request to remove the corresponding keys
-
     This is not quite optimal, as if we need to flush a bank having
     a very long list of sub-banks, the number of requests to build the sub-tree may grow quite big.
-
     An improvement for this would be loading a custom Lua script in the Redis instance of the user
     (using the ``register_script`` feature) and call it whenever we flush.
     This script would only need to build this sub-tree causing problems. It can be added later and the behaviour
@@ -410,19 +425,19 @@ def flush(bank, key=None):
             )
         try:
             log.debug('Executing the pipe...')
-            subtree_keys = redis_pipe.execute()  # here are the keys under these banks to be removed
+            # here are the keys under these banks to be removed
+            subtree_keys = redis_pipe.execute()
             # this retunrs a list of sets, e.g.:
             # [set([]), set(['my-key']), set(['my-other-key', 'yet-another-key'])]
             # one set corresponding to a bank
         except (RedisConnectionError, RedisResponseError) as rerr:
             mesg = 'Cannot retrieve the keys under these cache banks: {rbanks}: {rerr}'.format(
-                rbanks=', '.join(bank_paths_to_remove),
-                rerr=rerr
-            )
+                rbanks=', '.join(bank_paths_to_remove), rerr=rerr)
             log.error(mesg)
             raise SaltCacheError(mesg)
         total_banks = len(bank_paths_to_remove)
-        # bank_paths_to_remove and subtree_keys have the same length (see above)
+        # bank_paths_to_remove and subtree_keys have the same length (see
+        # above)
         for index in range(total_banks):
             bank_keys = subtree_keys[index]  # all the keys under this bank
             bank_path = bank_paths_to_remove[index]
@@ -462,8 +477,8 @@ def flush(bank, key=None):
     try:
         redis_pipe.execute()  # Fluuuush
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = 'Cannot flush the Redis cache bank {rbank}: {rerr}'.format(rbank=bank,
-                                                                          rerr=rerr)
+        mesg = 'Cannot flush the Redis cache bank {rbank}: {rerr}'.format(
+            rbank=bank, rerr=rerr)
         log.error(mesg)
         raise SaltCacheError(mesg)
     return True
@@ -478,8 +493,8 @@ def list_(bank):
     try:
         banks = redis_server.smembers(bank_redis_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = 'Cannot list the Redis cache key {rkey}: {rerr}'.format(rkey=bank_redis_key,
-                                                                       rerr=rerr)
+        mesg = 'Cannot list the Redis cache key {rkey}: {rerr}'.format(
+            rkey=bank_redis_key, rerr=rerr)
         log.error(mesg)
         raise SaltCacheError(mesg)
     if not banks:
@@ -491,12 +506,12 @@ def contains(bank, key):
     '''
     Checks if the specified bank contains the specified key.
     '''
-    redis_server = _get_redis_server()
+    redis_server = _get_redis_server(readonly=True)
     bank_redis_key = _get_bank_redis_key(bank)
     try:
         return redis_server.sismember(bank_redis_key, key)
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = 'Cannot retrieve the Redis cache key {rkey}: {rerr}'.format(rkey=bank_redis_key,
-                                                                           rerr=rerr)
+        mesg = 'Cannot retrieve the Redis cache key {rkey}: {rerr}'.format(
+            rkey=bank_redis_key, rerr=rerr)
         log.error(mesg)
         raise SaltCacheError(mesg)
