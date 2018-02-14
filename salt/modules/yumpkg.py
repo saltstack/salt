@@ -972,13 +972,15 @@ def list_upgrades(refresh=True, **kwargs):
     '''
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
+    extra_args = _get_extra_options(**kwargs)
 
     if salt.utils.data.is_true(refresh):
         refresh_db(check_update=False, **kwargs)
 
     cmd = [_yum(), '--quiet']
-    cmd.extend(repo_arg)
-    cmd.extend(exclude_arg)
+    for args in (repo_arg, exclude_arg, extra_args):
+        if args:
+            cmd.extend(args)
     cmd.extend(['list', 'upgrades' if _yum() == 'dnf' else 'updates'])
     out = __salt__['cmd.run_all'](cmd,
                                   output_loglevel='trace',
