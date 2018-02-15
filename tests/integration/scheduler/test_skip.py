@@ -250,7 +250,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['_skip_reason'], 'in_skip_range')
         self.assertEqual(ret['_skipped_time'], run_time)
 
-
         # eval at 3:00:01pm, will run.
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 3:00:01pm').timetuple()))
         self.schedule.eval(now=run_time)
