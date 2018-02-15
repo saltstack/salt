@@ -251,6 +251,11 @@ def _get_requestmode_info(interface):
         elif '[{0}]linklocalenabled=0'.format(interface) in ifacemod:
             return 'static'
 
+    # some versions of nirtcfg don't set the dhcpenabled/linklocalenabled variables
+    # when selecting "DHCP or Link Local" from MAX, so return it by default to avoid
+    # having the requestmode "None" because none of the conditions above matched.
+    return 'dhcp_linklocal'
+
 
 def _get_interface_info(interface):
     '''
