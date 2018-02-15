@@ -24,7 +24,7 @@ import salt.serializers.msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
-from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, zmq_version_info
+from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 import tornado.gen  # pylint: disable=F0401
@@ -486,7 +486,7 @@ class Master(SMaster):
 
         :param dict: The salt options
         '''
-        if zmq and zmq_version_info < (3, 2):
+        if zmq and ZMQ_VERSION_INFO < (3, 2):
             log.warning(
                 'You have a version of ZMQ less than ZMQ 3.2! There are '
                 'known connection keep-alive issues with ZMQ < 3.2 which '
