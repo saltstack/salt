@@ -41,17 +41,6 @@ if ZMQDefaultLoop is None:
     if ZMQDefaultLoop is None:
         ZMQDefaultLoop = tornado.ioloop.IOLoop
 
-# Build version info
-if zmq:
-    if hasattr(zmq, 'zmq_version_info'):
-        zmq_version_info = zmq.zmq_version_info()
-    else:
-        # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
-        # using zmq.zmq_version() and build a version info tuple.
-        zmq_version_info = tuple([int(v_el) for v_el in zmq.zmq_version().split('.')])
-else:
-    zmq_version_info = (-1, -1, -1)
-
 
 def install_zmq():
     '''
