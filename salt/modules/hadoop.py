@@ -87,6 +87,21 @@ def dfs(command=None, *args):
     else:
         return 'Error: command must be provided'
 
+def dfsadmin(command=None, *args):
+    '''
+    Execute a command on DFS
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hadoop.dfsadmin -report
+    '''
+    if command:
+        return _hadoop_cmd('dfsadmin', command, *args)
+    else:
+        return 'Error: command must be provided'
+
 
 def dfs_present(path):
     '''
