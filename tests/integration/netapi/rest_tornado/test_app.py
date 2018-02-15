@@ -18,13 +18,9 @@ from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 # Import 3rd-party libs
-import salt.ext.six as six
-try:
-    import zmq
-    from zmq.eventloop.ioloop import ZMQIOLoop
-    HAS_ZMQ_IOLOOP = True
-except ImportError:
-    HAS_ZMQ_IOLOOP = False
+from salt.ext import six
+from salt.utils.zeromq import zmq, ZMQDefaultLoop as ZMQIOLoop
+HAS_ZMQ_IOLOOP = bool(zmq)
 
 
 def json_loads(data):
