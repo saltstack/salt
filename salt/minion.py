@@ -645,10 +645,7 @@ class SMinion(MinionBase):
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if (self.opts.get('file_client', 'remote') == 'remote'
                 or self.opts.get('use_master_when_local', False)):
-            if self.opts['transport'] == 'zeromq' and zmq and not tornado.version_info >= (5,):
-                io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
-            else:
-                io_loop = ZMQDefaultLoop.current()
+            io_loop = ZMQDefaultLoop.current()
             io_loop.run_sync(
                 lambda: self.eval_master(self.opts, failed=True)
             )
