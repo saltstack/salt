@@ -2,7 +2,7 @@
 '''
 Module to manage Linux kernel modules
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -218,7 +218,7 @@ def mod_list(only_persist=False):
                         if not line.startswith('#') and mod_name:
                             mods.add(mod_name)
             except IOError:
-                log.error('kmod module could not open modules file at {0}'.format(conf))
+                log.error('kmod module could not open modules file at %s', conf)
     else:
         for mod in lsmod():
             mods.add(mod['module'])

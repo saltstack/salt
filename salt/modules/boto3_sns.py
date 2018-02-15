@@ -42,9 +42,12 @@ Connection module for Amazon SNS
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
+# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
+
+# Import Salt libs
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -65,10 +68,10 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto3_sns module could not be loaded: boto3 libraries not found')
-    __utils__['boto3.assign_funcs'](__name__, 'sns')
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto3.assign_funcs'](__name__, 'sns')
+    return has_boto_reqs
 
 
 def list_topics(region=None, key=None, keyid=None, profile=None):

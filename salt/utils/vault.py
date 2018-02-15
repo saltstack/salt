@@ -8,7 +8,7 @@ Utilities supporting modules for Hashicorp Vault. Configuration instructions are
 documented in the execution module docs.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import logging
 import os
@@ -31,7 +31,7 @@ def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
             __salt__ = salt.loader.minion_mods(__opts__)
             return True
     except Exception as e:
-        log.error("Could not load __salt__: {0}".format(e))
+        log.error("Could not load __salt__: %s", e)
         return False
 
 
@@ -47,10 +47,8 @@ def _get_token_and_url_from_master():
     # should be issued for the minion, so that the correct policies are applied
     if __opts__.get('__role', 'minion') == 'minion':
         private_key = '{0}/minion.pem'.format(pki_dir)
-        log.debug(
-                  'Running on minion, signing token request with key {0}'.
-                  format(private_key)
-                 )
+        log.debug('Running on minion, signing token request with key %s',
+                  private_key)
         signature = base64.b64encode(salt.crypt.sign_message(
                                                              private_key,
                                                              minion_id
@@ -61,10 +59,8 @@ def _get_token_and_url_from_master():
                                            )
     else:
         private_key = '{0}/master.pem'.format(pki_dir)
-        log.debug(
-                  'Running on master, signing token request for {0} with key {1}'.
-                  format(minion_id, private_key)
-                 )
+        log.debug('Running on master, signing token request for %s with key %s',
+                  minion_id, private_key)
         signature = base64.b64encode(salt.crypt.sign_message(
                                                              private_key,
                                                              minion_id
@@ -82,11 +78,11 @@ def _get_token_and_url_from_master():
         raise salt.exceptions.CommandExecutionError(result)
     if not isinstance(result, dict):
         log.error('Failed to get token from master! '
-                  'Response is not a dict: {0}'.format(result))
+                  'Response is not a dict: %s', result)
         raise salt.exceptions.CommandExecutionError(result)
     if 'error' in result:
         log.error('Failed to get token from master! '
-                  'An error was returned: {0}'.format(result['error']))
+                  'An error was returned: %s', result['error'])
         raise salt.exceptions.CommandExecutionError(result)
     return {
             'url': result['url'],
@@ -194,5 +190,5 @@ def _selftoken_expired():
         return False
     except Exception as e:
         raise salt.exceptions.CommandExecutionError(
-            'Error while looking up self token : {0}'.format(str(e))
-            )
+            'Error while looking up self token : {0}'.format(e)
+        )

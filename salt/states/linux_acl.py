@@ -28,19 +28,13 @@ Ensure a Linux ACL does not exist
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-
-# Import python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import salt libs
-import salt.utils.path
-
-# Impot salt exceptions
-from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext import six
+from salt.exceptions import CommandExecutionError
+import salt.utils.path
 
 __virtualname__ = 'acl'
 
@@ -111,13 +105,13 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
                                    'perms': perms},
                            'old': {'acl_name': acl_name,
                                    'acl_type': acl_type,
-                                   'perms': str(user[_search_name]['octal'])}}
+                                   'perms': six.text_type(user[_search_name]['octal'])}}
 
                 if __opts__['test']:
                     ret.update({'comment': 'Updated permissions will be applied for '
                                 '{0}: {1} -> {2}'.format(
                                     acl_name,
-                                    str(user[_search_name]['octal']),
+                                    six.text_type(user[_search_name]['octal']),
                                     perms),
                                 'result': None, 'pchanges': changes})
                     return ret

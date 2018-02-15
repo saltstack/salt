@@ -225,6 +225,6 @@ verifier:
   save:
     /tmp/xml-unittests-output: artifacts/
     /tmp/coverage.xml: artifacts/coverage/coverage.xml
-    /var/log/salt/minion: artifacts/logs/minion
+    /tmp/kitchen/var/log/salt/minion: artifacts/logs/minion
     /tmp/salt-runtests.log: artifacts/logs/salt-runtests.log
 <% end %>

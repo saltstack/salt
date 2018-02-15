@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import tempfile
@@ -19,6 +19,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
@@ -216,14 +217,14 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         with salt.utils.files.fopen(testfile, 'r') as fp_:
-            testfile_contents = fp_.read()
+            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
 
         contents = textwrap.dedent('''\
             # set variable identifying the chroot you work in (used in the prompt below)
             if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
                 debian_chroot=$(cat /etc/debian_chroot)
             fi
-            
+
             # enable bash completion in interactive shells
             if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
                 . /etc/bash_completion
@@ -246,7 +247,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         with salt.utils.files.fopen(testfile, 'r') as fp_:
-            testfile_contents = fp_.read()
+            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
 
         self.assertMultiLineEqual(contents, testfile_contents)
 
@@ -313,7 +314,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # Does it match?
         try:
             with salt.utils.files.fopen(testfile, 'r') as fp_:
-                contents = fp_.read()
+                contents = salt.utils.stringutils.to_unicode(fp_.read())
             self.assertMultiLineEqual(expected, contents)
             # Make sure we don't re-append existing text
             ret = self.run_function(
@@ -327,7 +328,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
             with salt.utils.files.fopen(testfile, 'r') as fp_:
-                contents = fp_.read()
+                contents = salt.utils.stringutils.to_unicode(fp_.read())
             self.assertMultiLineEqual(expected, contents)
         except Exception:
             if os.path.exists(testfile):
@@ -385,7 +386,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         with salt.utils.files.fopen(template_path, 'r') as fp_:
-            template = fp_.read()
+            template = salt.utils.stringutils.to_unicode(fp_.read())
             ret = self.run_function(
                 'state.template_str', [template], timeout=120
             )
@@ -411,7 +412,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         with salt.utils.files.fopen(template_path, 'r') as fp_:
-            template = fp_.read()
+            template = salt.utils.stringutils.to_unicode(fp_.read())
         ret = self.run_function(
             'state.template_str', [template], timeout=120
         )
@@ -1299,9 +1300,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isfile(tgt))
             with salt.utils.files.fopen(tgt, 'r') as cheese:
-                data = cheese.read()
-                self.assertIn('Gromit', data)
-                self.assertIn('Comte', data)
+                data = salt.utils.stringutils.to_unicode(cheese.read())
+            self.assertIn('Gromit', data)
+            self.assertIn('Comte', data)
         finally:
             if os.path.islink(tgt):
                 os.unlink(tgt)

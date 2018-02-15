@@ -9,6 +9,7 @@ import logging
 
 # Import Salt libs
 import salt.utils.data
+import salt.utils.data
 from salt.utils.odict import OrderedDict
 from tests.support.unit import TestCase, skipIf, LOREM_IPSUM
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
@@ -16,6 +17,8 @@ from salt.ext.six.moves import builtins  # pylint: disable=import-error,redefine
 
 log = logging.getLogger(__name__)
 _b = lambda x: x.encode('utf-8')
+# Some randomized data that will not decode
+BYTES = b'\x9c\xb1\xf7\xa3'
 
 
 class DataTestCase(TestCase):
@@ -27,14 +30,17 @@ class DataTestCase(TestCase):
         True,
         False,
         None,
-        [123, 456.789, _b('спам'), True, False, None],
-        (987, 654.321, _b('яйца'), None, (True, False)),
+        BYTES,
+        [123, 456.789, _b('спам'), True, False, None, BYTES],
+        (987, 654.321, _b('яйца'), None, (True, False, BYTES)),
         {_b('str_key'): _b('str_val'),
-         None: True, 123: 456.789,
+         None: True,
+         123: 456.789,
+         'blob': BYTES,
          _b('subdict'): {'unicode_key': 'unicode_val',
-                         _b('tuple'): (123, 'hello', _b('world'), True),
-                         _b('list'): [456, _b('спам'), False]}},
-        OrderedDict([(_b('foo'), 'bar'), (123, 456)])
+                         _b('tuple'): (123, 'hello', _b('world'), True, BYTES),
+                         _b('list'): [456, _b('спам'), False, BYTES]}},
+        OrderedDict([(_b('foo'), 'bar'), (123, 456), ('blob', BYTES)])
     ]
 
     def test_sorted_ignorecase(self):
@@ -214,27 +220,50 @@ class DataTestCase(TestCase):
             True,
             False,
             None,
-            [123, 456.789, 'спам', True, False, None],
-            (987, 654.321, 'яйца', None, (True, False)),
+            BYTES,
+            [123, 456.789, 'спам', True, False, None, BYTES],
+            (987, 654.321, 'яйца', None, (True, False, BYTES)),
             {'str_key': 'str_val',
-             None: True, 123: 456.789,
+             None: True,
+             123: 456.789,
+             'blob': BYTES,
              'subdict': {'unicode_key': 'unicode_val',
-                         'tuple': (123, 'hello', 'world', True),
-                         'list': [456, 'спам', False]}},
-            OrderedDict([('foo', 'bar'), (123, 456)])
+                         'tuple': (123, 'hello', 'world', True, BYTES),
+                         'list': [456, 'спам', False, BYTES]}},
+            OrderedDict([('foo', 'bar'), (123, 456), ('blob', BYTES)])
         ]
 
         ret = salt.utils.data.decode(
-            self.test_data, preserve_dict_class=True, preserve_tuples=True)
+            self.test_data,
+            encoding='utf-8',
+            keep=True,
+            preserve_dict_class=True,
+            preserve_tuples=True)
         self.assertEqual(ret, expected)
+
+        # The binary data in the data structure should fail to decode, even
+        # using the fallback, and raise an exception.
+        self.assertRaises(
+            UnicodeDecodeError,
+            salt.utils.data.decode,
+            self.test_data,
+            encoding='utf-8',
+            keep=False,
+            preserve_dict_class=True,
+            preserve_tuples=True)
 
         # Now munge the expected data so that we get what we would expect if we
         # disable preservation of dict class and tuples
-        expected[8] = [987, 654.321, 'яйца', None, [True, False]]
-        expected[9]['subdict']['tuple'] = [123, 'hello', 'world', True]
-        expected[10] = {'foo': 'bar', 123: 456}
+        expected[9] = [987, 654.321, 'яйца', None, [True, False, BYTES]]
+        expected[10]['subdict']['tuple'] = [123, 'hello', 'world', True, BYTES]
+        expected[11] = {'foo': 'bar', 123: 456, 'blob': BYTES}
+
         ret = salt.utils.data.decode(
-            self.test_data, preserve_dict_class=False, preserve_tuples=False)
+            self.test_data,
+            encoding='utf-8',
+            keep=True,
+            preserve_dict_class=False,
+            preserve_tuples=False)
         self.assertEqual(ret, expected)
 
         # Now test single non-string, non-data-structure items, these should
@@ -246,6 +275,14 @@ class DataTestCase(TestCase):
         # Test single strings (not in a data structure)
         self.assertEqual(salt.utils.data.decode('foo'), 'foo')
         self.assertEqual(salt.utils.data.decode(_b('bar')), 'bar')
+
+        # Test binary blob
+        self.assertEqual(salt.utils.data.decode(BYTES, keep=True), BYTES)
+        self.assertRaises(
+            UnicodeDecodeError,
+            salt.utils.data.decode,
+            BYTES,
+            keep=False)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_decode_fallback(self):
@@ -268,27 +305,52 @@ class DataTestCase(TestCase):
             True,
             False,
             None,
-            [123, 456.789, _b('спам'), True, False, None],
-            (987, 654.321, _b('яйца'), None, (True, False)),
+            BYTES,
+            [123, 456.789, _b('спам'), True, False, None, BYTES],
+            (987, 654.321, _b('яйца'), None, (True, False, BYTES)),
             {_b('str_key'): _b('str_val'),
-             None: True, 123: 456.789,
+             None: True,
+             123: 456.789,
+             _b('blob'): BYTES,
              _b('subdict'): {_b('unicode_key'): _b('unicode_val'),
-                             _b('tuple'): (123, _b('hello'), _b('world'), True),
-                             _b('list'): [456, _b('спам'), False]}},
-            OrderedDict([(_b('foo'), _b('bar')), (123, 456)])
+                             _b('tuple'): (123, _b('hello'), _b('world'), True, BYTES),
+                             _b('list'): [456, _b('спам'), False, BYTES]}},
+             OrderedDict([(_b('foo'), _b('bar')), (123, 456), (_b('blob'), BYTES)])
         ]
 
+        # Both keep=True and keep=False should work because the BYTES data is
+        # already bytes.
         ret = salt.utils.data.encode(
-            self.test_data, preserve_dict_class=True, preserve_tuples=True)
+            self.test_data,
+            keep=True,
+            preserve_dict_class=True,
+            preserve_tuples=True)
+        self.assertEqual(ret, expected)
+        ret = salt.utils.data.encode(
+            self.test_data,
+            keep=False,
+            preserve_dict_class=True,
+            preserve_tuples=True)
         self.assertEqual(ret, expected)
 
         # Now munge the expected data so that we get what we would expect if we
         # disable preservation of dict class and tuples
-        expected[8] = [987, 654.321, _b('яйца'), None, [True, False]]
-        expected[9][_b('subdict')][_b('tuple')] = [123, _b('hello'), _b('world'), True]
-        expected[10] = {_b('foo'): _b('bar'), 123: 456}
+        expected[9] = [987, 654.321, _b('яйца'), None, [True, False, BYTES]]
+        expected[10][_b('subdict')][_b('tuple')] = [
+            123, _b('hello'), _b('world'), True, BYTES
+        ]
+        expected[11] = {_b('foo'): _b('bar'), 123: 456, _b('blob'): BYTES}
         ret = salt.utils.data.encode(
-            self.test_data, preserve_dict_class=False, preserve_tuples=False)
+            self.test_data,
+            keep=True,
+            preserve_dict_class=False,
+            preserve_tuples=False)
+        self.assertEqual(ret, expected)
+        ret = salt.utils.data.encode(
+            self.test_data,
+            keep=False,
+            preserve_dict_class=False,
+            preserve_tuples=False)
         self.assertEqual(ret, expected)
 
         # Now test single non-string, non-data-structure items, these should
@@ -300,6 +362,70 @@ class DataTestCase(TestCase):
         # Test single strings (not in a data structure)
         self.assertEqual(salt.utils.data.encode('foo'), _b('foo'))
         self.assertEqual(salt.utils.data.encode(_b('bar')), _b('bar'))
+
+        # Test binary blob, nothing should happen even when keep=False since
+        # the data is already bytes
+        self.assertEqual(salt.utils.data.encode(BYTES, keep=True), BYTES)
+        self.assertEqual(salt.utils.data.encode(BYTES, keep=False), BYTES)
+
+    def test_encode_keep(self):
+        '''
+        Whereas we tested the keep argument in test_decode, it is much easier
+        to do a more comprehensive test of keep in its own function where we
+        can force the encoding.
+        '''
+        unicode_str = 'питон'
+        encoding = 'ascii'
+
+        # Test single string
+        self.assertEqual(
+            salt.utils.data.encode(unicode_str, encoding, keep=True),
+            unicode_str)
+        self.assertRaises(
+            UnicodeEncodeError,
+            salt.utils.data.encode,
+            unicode_str,
+            encoding,
+            keep=False)
+
+        data = [
+            unicode_str,
+            [b'foo', [unicode_str], {b'key': unicode_str}, (unicode_str,)],
+            {b'list': [b'foo', unicode_str],
+             b'dict': {b'key': unicode_str},
+             b'tuple': (b'foo', unicode_str)},
+            ([b'foo', unicode_str], {b'key': unicode_str}, (unicode_str,))
+        ]
+
+        # Since everything was a bytestring aside from the bogus data, the
+        # return data should be identical. We don't need to test recursive
+        # decoding, that has already been tested in test_encode.
+        self.assertEqual(
+            salt.utils.data.encode(data, encoding,
+                                   keep=True, preserve_tuples=True),
+            data
+        )
+        self.assertRaises(
+            UnicodeEncodeError,
+            salt.utils.data.encode,
+            data,
+            encoding,
+            keep=False,
+            preserve_tuples=True)
+
+        for index, item in enumerate(data):
+            self.assertEqual(
+                salt.utils.data.encode(data[index], encoding,
+                                       keep=True, preserve_tuples=True),
+                data[index]
+            )
+            self.assertRaises(
+                UnicodeEncodeError,
+                salt.utils.data.encode,
+                data[index],
+                encoding,
+                keep=False,
+                preserve_tuples=True)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_encode_fallback(self):

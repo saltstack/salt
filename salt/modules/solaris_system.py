@@ -7,7 +7,7 @@ This module is assumes we are using solaris-like shutdown
 .. versionadded:: 2016.3.0
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
 import salt.utils.path

@@ -12,6 +12,7 @@ from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
 import salt.utils.json
+import salt.utils.stringutils
 import salt.utils.yaml
 import salt.utils.schema as schema
 from salt.ext import six
@@ -777,8 +778,10 @@ class ConfigTestCase(TestCase):
             item = schema.IPv6Item(title='Item', description='Item description')
 
         try:
-            jsonschema.validate({'item': '::1'}, TestConf.serialize(),
-                                format_checker=jsonschema.FormatChecker())
+            jsonschema.validate(
+                {'item': salt.utils.stringutils.to_str('::1')},
+                TestConf.serialize(),
+                format_checker=jsonschema.FormatChecker())
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 

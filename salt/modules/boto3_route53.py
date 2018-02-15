@@ -56,6 +56,7 @@ import time
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
@@ -76,9 +77,7 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    if not HAS_BOTO3:
-        return (False, 'The boto3_route53 module could not be loaded: boto3 libraries not found')
-    return True
+    return salt.utils.versions.check_boto_reqs()
 
 
 def __init__(opts):
@@ -562,7 +561,7 @@ def associate_vpc_with_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
     return False
 
 
-def diassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
+def disassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
                                      VPCName=None, VPCRegion=None, Comment=None,
                                      region=None, key=None, keyid=None, profile=None):
     '''
@@ -887,5 +886,6 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
                 tries -= 1
                 continue
             log.error('Failed to apply requested changes to the hosted zone %s: %s',
-                      Name or HostedZoneId, e)
+                    (Name or HostedZoneId), six.text_type(e))
+            raise e
     return False

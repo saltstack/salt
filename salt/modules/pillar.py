@@ -2,7 +2,7 @@
 '''
 Extract the pillar data for this minion
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import collections

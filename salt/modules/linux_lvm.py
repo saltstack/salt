@@ -2,7 +2,7 @@
 '''
 Support for Linux LVM2
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os.path
@@ -488,7 +488,7 @@ def lvresize(size, lvpath):
         salt '*' lvm.lvresize +12M /dev/mapper/vg1-test
     '''
     ret = {}
-    cmd = ['lvresize', '-L', str(size), lvpath]
+    cmd = ['lvresize', '-L', six.text_type(size), lvpath]
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if cmd_ret['retcode'] != 0:
         return {}
