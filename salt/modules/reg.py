@@ -29,8 +29,8 @@ Values/Entries are name/data pairs. There can be many values in a key. The
 # When production windows installer is using Python 3, Python 2 code can be removed
 
 # Import _future_ python libs first & before any other code
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, unicode_literals
+
 # Import python libs
 import sys
 import logging
@@ -38,7 +38,6 @@ from salt.ext.six.moves import range  # pylint: disable=W0622,import-error
 
 # Import third party libs
 try:
-    import win32gui
     import win32api
     import win32con
     import pywintypes
@@ -48,6 +47,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.win_functions
 from salt.exceptions import CommandExecutionError
 
 PY2 = sys.version_info[0] == 2
@@ -68,7 +68,7 @@ def __virtual__():
     if not HAS_WINDOWS_MODULES:
         return (False, 'reg execution module failed to load: '
                        'One of the following libraries did not load: '
-                       + 'win32gui, win32con, win32api')
+                       'win32con, win32api, pywintypes')
 
     return __virtualname__
 
@@ -193,11 +193,7 @@ def broadcast_change():
 
         salt '*' reg.broadcast_change
     '''
-    # https://msdn.microsoft.com/en-us/library/windows/desktop/ms644952(v=vs.85).aspx
-    _, res = win32gui.SendMessageTimeout(
-        win32con.HWND_BROADCAST, win32con.WM_SETTINGCHANGE, 0, 0,
-        win32con.SMTO_ABORTIFHUNG, 5000)
-    return not bool(res)
+    return salt.utils.win_functions.broadcast_setting_change('Environment')
 
 
 def list_keys(hive, key=None, use_32bit_registry=False):
