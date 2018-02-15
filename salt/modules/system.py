@@ -25,9 +25,6 @@ import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-# Import 3rd-party libs
-from salt.ext import six
-
 __virtualname__ = 'system'
 
 
@@ -509,7 +506,6 @@ def get_computer_desc():
 
         salt '*' system.get_computer_desc
     '''
-    desc = None
     hostname_cmd = salt.utils.path.which('hostnamectl')
     if hostname_cmd:
         desc = __salt__['cmd.run'](
@@ -517,6 +513,7 @@ def get_computer_desc():
             python_shell=False
         )
     else:
+        desc = None
         pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
         try:
             with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
@@ -528,12 +525,12 @@ def get_computer_desc():
                         desc = _strip_quotes(match.group(1).strip())
                         # no break so we get the last occurance
         except IOError:
+            pass
+
+        if desc is None:
             return False
-    if six.PY3:
-        desc = desc.replace('\\"', '"')
-    else:
-        desc = desc.replace('\\"', '"').decode('string_escape')
-    return desc
+
+    return desc.replace(r'\"', r'"').replace(r'\n', '\n').replace(r'\t', '\t')
 
 
 def set_computer_desc(desc):
@@ -551,10 +548,9 @@ def set_computer_desc(desc):
 
         salt '*' system.set_computer_desc "Michael's laptop"
     '''
-    if six.PY3:
-        desc = desc.replace('"', '\\"')
-    else:
-        desc = desc.encode('string_escape').replace('"', '\\"')
+    desc = salt.utils.stringutils.to_unicode(
+        desc).replace('"', r'\"').replace('\n', r'\n').replace('\t', r'\t')
+
     hostname_cmd = salt.utils.path.which('hostnamectl')
     if hostname_cmd:
         result = __salt__['cmd.retcode'](
@@ -567,23 +563,22 @@ def set_computer_desc(desc):
         with salt.utils.files.fopen('/etc/machine-info', 'w'):
             pass
 
-    is_pretty_hostname_found = False
     pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
-    new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc)
+    new_line = salt.utils.stringutils.to_str('PRETTY_HOSTNAME="{0}"'.format(desc))
     try:
         with salt.utils.files.fopen('/etc/machine-info', 'r+') as mach_info:
             lines = mach_info.readlines()
             for i, line in enumerate(lines):
-                if pattern.match(line):
-                    is_pretty_hostname_found = True
+                if pattern.match(salt.utils.stringutils.to_unicode(line)):
                     lines[i] = new_line
-            if not is_pretty_hostname_found:
+                    break
+            else:
+                # PRETTY_HOSTNAME line was not found, add it to the end
                 lines.append(new_line)
             # time to write our changes to the file
             mach_info.seek(0, 0)
             mach_info.truncate()
-            mach_info.write(salt.utils.stringutils.to_str(''.join(lines)))
-            mach_info.write(salt.utils.stringutils.to_str('\n'))
+            mach_info.writelines(lines)
             return True
     except IOError:
         return False
