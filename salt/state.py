@@ -2183,8 +2183,7 @@ class State(object):
                     continue
                 if run_dict[tag].get('proc'):
                     # Run in parallel, first wait for a touch and then recheck
-                    time.sleep(0.01)
-                    return self.check_requisite(low, running, chunks, pre)
+                    run_dict[tag].get('proc').join()
                 if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
                         fun_stats.add('onfail')  # At least one state is OK
