@@ -181,7 +181,7 @@ def _format_git_opts(opts):
 
 def _find_ssh_exe():
     '''
-    Windows only: search for git.exe in known locations
+    Windows only: search for Git's bundled ssh.exe in known locations
     '''
     # Known locations for Git's ssh.exe in Windows
     globmasks = [os.path.join(os.getenv('SystemDrive'), os.sep,
@@ -280,7 +280,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 env['GIT_SSH'] = tmp_ssh_wrapper
 
             if 'salt-call' not in _salt_cli \
-                    and __salt__['ssh.key_is_encrypted'](id_file):
+                    and __utils__['ssh.key_is_encrypted'](id_file):
                 errors.append(
                     'Identity file {0} is passphrase-protected and cannot be '
                     'used in a non-interactive command. Using salt-call from '
