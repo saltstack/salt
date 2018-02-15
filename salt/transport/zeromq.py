@@ -497,14 +497,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
-        if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
-            # Socket monitor shall be used the only for debug
-            # purposes so using threading doesn't look too bad here
-            import threading
-            self._monitor = ZeroMQSocketMonitor(self.clients)
-            t = threading.Thread(target=self._monitor.start_poll)
-            t.start()
-
+        self._start_zmq_monitor()
         self.workers = self.context.socket(zmq.DEALER)
 
         if self.opts.get('ipc_mode', '') == 'tcp':
@@ -566,6 +559,21 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
         salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
         process_manager.add_process(self.zmq_device)
 
+    def _start_zmq_monitor(self):
+        '''
+        Starts ZMQ monitor for debugging purposes.
+        :return:
+        '''
+        # Socket monitor shall be used the only for debug
+        # purposes so using threading doesn't look too bad here
+
+        if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
+            log.debug('Starting ZMQ monitor')
+            import threading
+            self._w_monitor = ZeroMQSocketMonitor(self._socket)
+            threading.Thread(target=self._w_monitor.start_poll).start()
+            log.debug('ZMQ monitor has been started started')
+
     def post_fork(self, payload_handler, io_loop):
         '''
         After forking we need to create all of the local sockets to listen to the
@@ -580,13 +588,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
 
         self.context = zmq.Context(1)
         self._socket = self.context.socket(zmq.REP)
-        if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
-            # Socket monitor shall be used the only for debug
-            # purposes so using threading doesn't look too bad here
-            import threading
-            self._w_monitor = ZeroMQSocketMonitor(self._socket)
-            t = threading.Thread(target=self._w_monitor.start_poll)
-            t.start()
+        self._start_zmq_monitor()
 
         if self.opts.get('ipc_mode', '') == 'tcp':
             self.w_uri = 'tcp://127.0.0.1:{0}'.format(
