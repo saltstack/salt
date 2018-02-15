@@ -78,7 +78,13 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.git
     '''
     def setup_loader_modules(self):
-        return {git_mod: {}}
+        return {
+            git_mod: {
+                '__utils__': {
+                    'ssh.key_is_encrypted': Mock(return_value=False)
+                },
+            }
+        }
 
     def test_list_worktrees(self):
         '''
