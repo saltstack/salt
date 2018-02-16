@@ -1106,10 +1106,8 @@ class Schedule(object):
                     # Get next time frame for a "cron" job if it has been never
                     # executed before or already executed in the past.
                     try:
-                        data['_next_fire_time'] = int(
-                            croniter.croniter(data['cron'], now).get_next())
-                        data['_next_scheduled_fire_time'] = int(
-                            croniter.croniter(data['cron'], now).get_next())
+                        data['_next_fire_time'] = croniter.croniter(data['cron'], now).get_next(datetime.datetime)
+                        data['_next_scheduled_fire_time'] = croniter.croniter(data['cron'], now).get_next(datetime.datetime)
                     except (ValueError, KeyError):
                         log.error('Invalid cron string. Ignoring')
                         continue
@@ -1118,16 +1116,14 @@ class Schedule(object):
                     # configured loop interval is longer than that, we should
                     # shorten it to get our job executed closer to the beginning
                     # of desired time.
-                    interval = now - data['_next_fire_time']
+                    interval = (now - data['_next_fire_time']).total_seconds()
                     if interval >= 60 and interval < self.loop_interval:
                         self.loop_interval = interval
 
             else:
                 continue
 
-            log.debug('=== _next_fire_time %s now %s ===', data['_next_fire_time'], now)
-            seconds = (data['_next_fire_time'] - now).seconds
-            log.debug('=== seconds %s ===', seconds)
+            seconds = (data['_next_fire_time'] - now).total_seconds()
 
             if 'splay' in data:
                 # Got "splay" configured, make decision to run a job based on that
@@ -1277,7 +1273,6 @@ class Schedule(object):
                                     data['_skipped'] = True
                                 else:
                                     run = True
-                                log.debug('=== run %s ===', run)
                             else:
                                 log.error(
                                     'schedule.handle_func: Invalid range, end '
@@ -1318,7 +1313,6 @@ class Schedule(object):
                             run = True
 
             if not run:
-                log.debug('=== run is false, continue now %s ===', now)
                 continue
 
             miss_msg = ''
