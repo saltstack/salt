@@ -104,8 +104,8 @@ try:
 
     # Work around upstream bug where bytestrings were being decoded using the
     # default encoding (which is usually ascii on Python 2). This was fixed
-    # on 2 Feb 2018, so releases prior to 0.26.2 will need a workaround.
-    if PYGIT2_VERSION <= _LooseVersion('0.26.2'):
+    # on 2 Feb 2018, so releases prior to 0.26.3 will need a workaround.
+    if PYGIT2_VERSION <= _LooseVersion('0.26.3'):
         try:
             import pygit2.ffi
             import pygit2.remote
@@ -1682,7 +1682,7 @@ class Pygit2(GitProvider):
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
         fetch_kwargs = {}
-        # pygit2 0.23.2 brought
+        # pygit2 radically changed fetchiing in 0.23.2
         if self.remotecallbacks is not None:
             fetch_kwargs['callbacks'] = self.remotecallbacks
         else:
