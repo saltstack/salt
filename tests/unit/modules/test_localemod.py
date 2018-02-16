@@ -609,6 +609,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.listdir', MagicMock(return_value=['en_US'])):
             assert localemod.gen_locale('en_US.UTF-8', verbose=True) == ret
 
+    @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     def test_parse_localectl(self):
         localectl_out = ('   System Locale: LANG=en_US.UTF-8\n'
                          '                  LANGUAGE=en_US:en\n'
