@@ -111,6 +111,9 @@ def decode(data, encoding=None, errors='strict', keep=False,
             data = salt.utils.stringutils.to_unicode(
                 data, encoding, errors, normalize)
         except TypeError:
+            # to_unicode raises a TypeError when input is not a
+            # string/bytestring/bytearray. This is expected and simply means we
+            # are going to leave the value as-is.
             pass
         except UnicodeDecodeError:
             if not keep:
@@ -138,6 +141,9 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
                 key = salt.utils.stringutils.to_unicode(
                     key, encoding, errors, normalize)
             except TypeError:
+                # to_unicode raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeDecodeError:
                 if not keep:
@@ -160,6 +166,9 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
                 value = salt.utils.stringutils.to_unicode(
                     value, encoding, errors, normalize)
             except TypeError:
+                # to_unicode raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeDecodeError:
                 if not keep:
@@ -194,6 +203,9 @@ def decode_list(data, encoding=None, errors='strict', keep=False,
                 item = salt.utils.stringutils.to_unicode(
                     item, encoding, errors, normalize)
             except TypeError:
+                # to_unicode raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeDecodeError:
                 if not keep:
@@ -240,6 +252,9 @@ def encode(data, encoding=None, errors='strict', keep=False,
         try:
             return salt.utils.stringutils.to_bytes(data, encoding, errors)
         except TypeError:
+            # to_bytes raises a TypeError when input is not a
+            # string/bytestring/bytearray. This is expected and simply
+            # means we are going to leave the value as-is.
             pass
         except UnicodeEncodeError:
             if not keep:
@@ -265,6 +280,9 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
             try:
                 key = salt.utils.stringutils.to_bytes(key, encoding, errors)
             except TypeError:
+                # to_bytes raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeEncodeError:
                 if not keep:
@@ -285,6 +303,9 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
             try:
                 value = salt.utils.stringutils.to_bytes(value, encoding, errors)
             except TypeError:
+                # to_bytes raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeEncodeError:
                 if not keep:
@@ -318,6 +339,9 @@ def encode_list(data, encoding=None, errors='strict', keep=False,
             try:
                 item = salt.utils.stringutils.to_bytes(item, encoding, errors)
             except TypeError:
+                # to_bytes raises a TypeError when input is not a
+                # string/bytestring/bytearray. This is expected and simply
+                # means we are going to leave the value as-is.
                 pass
             except UnicodeEncodeError:
                 if not keep:
