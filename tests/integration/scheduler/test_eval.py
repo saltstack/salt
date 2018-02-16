@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import
 import copy
+import datetime
 import logging
 import os
 import random
@@ -24,11 +25,11 @@ import salt.utils.schedule
 
 from salt.modules.test import ping as ping
 
-try:
-    import croniter  # pylint: disable=W0611
-    HAS_CRONITER = True
-except ImportError:
-    HAS_CRONITER = False
+#try:
+#    import croniter  # pylint: disable=W0611
+#    HAS_CRONITER = True
+#except ImportError:
+HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
@@ -67,8 +68,8 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             }
           }
         }
-        run_time2 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
-        run_time1 = run_time2 - 1
+        run_time2 = dateutil_parser.parse('11/29/2017 4:00pm')
+        run_time1 = run_time2 - datetime.timedelta(seconds=1)
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -98,8 +99,8 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             }
           }
         }
-        run_time1 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
-        run_time2 = int(time.mktime(dateutil_parser.parse('11/29/2017 5:00pm').timetuple()))
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
+        run_time2 = dateutil_parser.parse('11/29/2017 5:00pm')
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -130,16 +131,16 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         LOOP_INTERVAL = random.randint(30, 59)
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
-        run_time2 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        run_time2 = dateutil_parser.parse('11/29/2017 4:00pm')
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
         # Evaluate 1 second at the run time
-        self.schedule.eval(now=run_time2 + LOOP_INTERVAL)
+        self.schedule.eval(now=run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL))
 
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time2 + LOOP_INTERVAL)
+        self.assertEqual(ret['_last_run'], run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL))
 
     def test_eval_multiple_whens_loop_interval(self):
         '''
@@ -160,21 +161,21 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         LOOP_INTERVAL = random.randint(30, 59)
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
-        run_time1 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
-        run_time2 = int(time.mktime(dateutil_parser.parse('11/29/2017 5:00pm').timetuple()))
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm') + datetime.timedelta(seconds=LOOP_INTERVAL)
+        run_time2 = dateutil_parser.parse('11/29/2017 5:00pm') + datetime.timedelta(seconds=LOOP_INTERVAL)
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
         # Evaluate 1 second at the run time
-        self.schedule.eval(now=run_time1 + LOOP_INTERVAL)
+        self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time1 + LOOP_INTERVAL)
+        self.assertEqual(ret['_last_run'], run_time1)
 
         # Evaluate 1 second at the run time
-        self.schedule.eval(now=run_time2 + LOOP_INTERVAL)
+        self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time2 + LOOP_INTERVAL)
+        self.assertEqual(ret['_last_run'], run_time2)
 
     def test_eval_once(self):
         '''
@@ -188,7 +189,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             }
           }
         }
-        run_time = int(time.mktime(dateutil_parser.parse('12/13/2017 1:00pm').timetuple()))
+        run_time = dateutil_parser.parse('12/13/2017 1:00pm')
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -196,6 +197,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
+        log.debug('=== ret %s ===', ret)
         self.assertEqual(ret['_last_run'], run_time)
 
     def test_eval_once_loop_interval(self):
@@ -215,7 +217,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
         # Run the job at the right plus LOOP_INTERVAL
-        run_time = int(time.mktime(dateutil_parser.parse('12/13/2017 1:00:{0}pm'.format(LOOP_INTERVAL)).timetuple()))
+        run_time = dateutil_parser.parse('12/13/2017 1:00:{0}pm'.format(LOOP_INTERVAL))
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -242,7 +244,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
-        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        run_time = dateutil_parser.parse('11/29/2017 4:00pm')
         with patch('croniter.croniter.get_next', MagicMock(return_value=run_time)):
             self.schedule.eval(now=run_time)
 
@@ -269,7 +271,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
-        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        run_time = dateutil_parser.parse('11/29/2017 4:00pm')
         with patch('croniter.croniter.get_next', MagicMock(return_value=run_time)):
             self.schedule.eval(now=run_time)
 

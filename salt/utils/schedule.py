@@ -843,7 +843,7 @@ class Schedule(object):
                 data['_run_on_start'] = True
 
             if not now:
-                now = int(time.time())
+                now = datetime.datetime.now()
 
             if 'until' in data:
                 if not _WHEN_SUPPORTED:
@@ -851,7 +851,6 @@ class Schedule(object):
                               'Ignoring until.')
                 else:
                     until__ = dateutil_parser.parse(data['until'])
-                    until = int(time.mktime(until__.timetuple()))
 
                     if until <= now:
                         log.debug(
@@ -866,7 +865,6 @@ class Schedule(object):
                               'Ignoring after.')
                 else:
                     after__ = dateutil_parser.parse(data['after'])
-                    after = int(time.mktime(after__.timetuple()))
 
                     if after >= now:
                         log.debug(
@@ -914,11 +912,11 @@ class Schedule(object):
                 # Copy the list so we can loop through it
                 for i in copy.deepcopy(_run_explicit):
                     if len(_run_explicit) > 1:
-                        if int(i) < now - self.opts['loop_interval']:
+                        if i < now - datetime.timedelta(seconds=self.opts['loop_interval']):
                             _run_explicit.remove(i)
 
                 if _run_explicit:
-                    if int(_run_explicit[0]) <= now < int(_run_explicit[0] + self.opts['loop_interval']):
+                    if _run_explicit[0] <= now < _run_explicit[0] + datetime.timedelta(seconds=self.opts['loop_interval']):
                         run = True
                         data['_next_fire_time'] = _run_explicit[0]
 
@@ -932,16 +930,16 @@ class Schedule(object):
                     data['_seconds'] = interval
 
                     if not data['_next_fire_time']:
-                        data['_next_fire_time'] = now + data['_seconds']
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
 
                     if interval < self.loop_interval:
                         self.loop_interval = interval
 
-                data['_next_scheduled_fire_time'] = now + data['_seconds']
+                data['_next_scheduled_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
 
             elif 'once' in data:
                 if data['_next_fire_time']:
-                    if data['_next_fire_time'] < now - self.opts['loop_interval'] or \
+                    if data['_next_fire_time'] < now - datetime.timedelta(seconds=self.opts['loop_interval']) or \
                        data['_next_fire_time'] > now and \
                        not data['_splay']:
                         continue
@@ -950,17 +948,15 @@ class Schedule(object):
                         not data['_splay']:
                     once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
                     try:
-                        _once = datetime.datetime.strptime(data['once'],
+                        once = datetime.datetime.strptime(data['once'],
                                                           once_fmt)
-
-                        once = int(time.mktime(_once.timetuple()))
                     except (TypeError, ValueError):
                         log.error('Date string could not be parsed: %s, %s',
                                   data['once'], once_fmt)
                         continue
                     # If _next_fire_time is less than now or greater
                     # than now, continue.
-                    if once < now - self.opts['loop_interval']:
+                    if once < now - datetime.timedelta(seconds=self.opts['loop_interval']):
                         continue
                     else:
                         data['_next_fire_time'] = once
@@ -1009,7 +1005,7 @@ class Schedule(object):
                                     i, job
                                 )
                                 continue
-                        _when.append(int(time.mktime(when__.timetuple())))
+                        _when.append(when__)
 
                     if data['_splay']:
                         _when.append(data['_splay'])
@@ -1020,7 +1016,7 @@ class Schedule(object):
                     # Copy the list so we can loop through it
                     for i in copy.deepcopy(_when):
                         if len(_when) > 1:
-                            if i < now - self.opts['loop_interval']:
+                            if i < now - datetime.timedelta(seconds=self.opts['loop_interval']):
                                 # Remove all missed schedules except the latest one.
                                 # We need it to detect if it was triggered previously.
                                 _when.remove(i)
@@ -1032,7 +1028,7 @@ class Schedule(object):
 
                         if '_run' not in data:
                             # Prevent run of jobs from the past
-                            data['_run'] = bool(when >= now - self.opts['loop_interval'])
+                            data['_run'] = bool(when >= now - datetime.timedelta(seconds=self.opts['loop_interval']))
 
                         if not data['_next_fire_time']:
                             data['_next_fire_time'] = when
@@ -1079,9 +1075,9 @@ class Schedule(object):
                         except ValueError:
                             log.error('Invalid date string. Ignoring')
                             continue
-                    when = int(time.mktime(when__.timetuple()))
 
-                    if when < now - self.opts['loop_interval'] and \
+                    when = when__
+                    if when < now - datetime.timedelta(seconds=self.opts['loop_interval']) and \
                             not data.get('_run', False) and \
                             not run and \
                             not data['_splay']:
@@ -1129,7 +1125,9 @@ class Schedule(object):
             else:
                 continue
 
-            seconds = data['_next_fire_time'] - now
+            log.debug('=== _next_fire_time %s now %s ===', data['_next_fire_time'], now)
+            seconds = (data['_next_fire_time'] - now).seconds
+            log.debug('=== seconds %s ===', seconds)
 
             if 'splay' in data:
                 # Got "splay" configured, make decision to run a job based on that
@@ -1138,12 +1136,12 @@ class Schedule(object):
                     # still in the future. We should trigger job run
                     # immediately otherwise.
                     splay = _splay(data['splay'])
-                    if now < data['_next_fire_time'] + splay:
+                    if now < data['_next_fire_time'] + datetime.timedelta(seconds=splay):
                         log.debug(
                             'schedule.handle_func: Adding splay of %s seconds '
                             'to next run.', splay
                         )
-                        data['_splay'] = data['_next_fire_time'] + splay
+                        data['_splay'] = data['_next_fire_time'] + datetime.timedelta(seconds=splay)
                         if 'when' in data:
                             data['_run'] = True
                     else:
@@ -1157,7 +1155,7 @@ class Schedule(object):
                 if seconds <= 0:
                     run = True
             elif 'when' in data and data['_run']:
-                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + self.opts['loop_interval']):
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + datetime.timedelta(seconds=self.opts['loop_interval'])):
                     data['_run'] = False
                     run = True
             elif 'cron' in data:
@@ -1167,7 +1165,7 @@ class Schedule(object):
                     data['_next_fire_time'] = None
                     run = True
             elif 'once' in data:
-                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + self.opts['loop_interval']):
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + datetime.timedelta(seconds=self.opts['loop_interval'])):
                     run = True
             elif seconds == 0:
                 run = True
@@ -1183,12 +1181,12 @@ class Schedule(object):
                     else:
                         if isinstance(data['range'], dict):
                             try:
-                                start = int(time.mktime(dateutil_parser.parse(data['range']['start']).timetuple()))
+                                start = dateutil_parser.parse(data['range']['start'])
                             except ValueError:
                                 log.error('Invalid date string for start. Ignoring job %s.', job)
                                 continue
                             try:
-                                end = int(time.mktime(dateutil_parser.parse(data['range']['end']).timetuple()))
+                                end = dateutil_parser.parse(data['range']['end'])
                             except ValueError:
                                 log.error('Invalid date string for end. Ignoring job %s.', job)
                                 continue
@@ -1236,7 +1234,7 @@ class Schedule(object):
                     else:
                         if isinstance(data['skip_during_range'], dict):
                             try:
-                                start = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['start']).timetuple()))
+                                start = dateutil_parser.parse(data['skip_during_range']['start'])
                             except ValueError:
                                 log.error(
                                     'Invalid date string for start in '
@@ -1245,7 +1243,7 @@ class Schedule(object):
                                 )
                                 continue
                             try:
-                                end = int(time.mktime(dateutil_parser.parse(data['skip_during_range']['end']).timetuple()))
+                                end = dateutil_parser.parse(data['skip_during_range']['end'])
                             except ValueError:
                                 log.error(
                                     'Invalid date string for end in '
@@ -1263,7 +1261,7 @@ class Schedule(object):
                                     data['run_explicit'] = []
                                 # Add a run_explicit for immediately after the
                                 # skip_during_range ends
-                                _run_immediate = end + self.opts['loop_interval']
+                                _run_immediate = end + datetime.timedelta(seconds=self.opts['loop_interval'])
                                 if _run_immediate not in data['run_explicit']:
                                     data['run_explicit'].append(_run_immediate)
 
@@ -1279,6 +1277,7 @@ class Schedule(object):
                                     data['_skipped'] = True
                                 else:
                                     run = True
+                                log.debug('=== run %s ===', run)
                             else:
                                 log.error(
                                     'schedule.handle_func: Invalid range, end '
@@ -1302,11 +1301,11 @@ class Schedule(object):
 
                     # Copy the list so we can loop through it
                     for i in copy.deepcopy(_skip_explicit):
-                        if i < now - self.opts['loop_interval']:
+                        if i < now - datetime.timedelta(seconds=self.opts['loop_interval']):
                             _skip_explicit.remove(i)
 
                     if _skip_explicit:
-                        if _skip_explicit[0] <= now <= (_skip_explicit[0] + self.opts['loop_interval']):
+                        if _skip_explicit[0] <= now <= (_skip_explicit[0] + datetime.timedelta(seconds=self.opts['loop_interval'])):
                             if self.skip_function:
                                 run = True
                                 func = self.skip_function
@@ -1319,6 +1318,7 @@ class Schedule(object):
                             run = True
 
             if not run:
+                log.debug('=== run is false, continue now %s ===', now)
                 continue
 
             miss_msg = ''
@@ -1384,7 +1384,7 @@ class Schedule(object):
                             proc.join()
             finally:
                 if '_seconds' in data:
-                    data['_next_fire_time'] = now + data['_seconds']
+                    data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
                 data['_last_run'] = now
                 data['_splay'] = None
             if salt.utils.platform.is_windows():
