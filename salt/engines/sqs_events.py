@@ -167,4 +167,6 @@ def start(queue, profile=None, tag='salt/engine/sqs', owner_acct_id=None):
     while True:
         if not q:
             q = sqs.get_queue(queue, owner_acct_id=owner_acct_id)
+            q.set_message_class(boto.sqs.message.RawMessage)
+
         _process_queue(q, queue, fire_master, tag=tag, owner_acct_id=owner_acct_id, message_format=message_format)
