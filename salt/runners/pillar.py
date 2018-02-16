@@ -3,6 +3,7 @@
 Functions to interact with the pillar compiler on the master
 '''
 from __future__ import absolute_import, print_function, unicode_literals
+import copy
 
 # Import salt libs
 import salt.pillar
@@ -82,25 +83,15 @@ def show_pillar(minion='*', **kwargs):
         pillar = runner.cmd('pillar.show_pillar', [])
         print(pillar)
     '''
-
-    saltenv = 'base'
-    pillarenv = __opts__['pillarenv'] if 'pillarenv' in __opts__ else None
+    saltenv = kwargs.pop('saltenv', 'base')
+    pillarenv = kwargs.pop('pillarenv', __opts__.get('pillarenv'))
     id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
     if grains is None:
         grains = {'fqdn': minion}
-
-    for key in kwargs:
-        if key == 'pillarenv':
-            __opts__['pillarenv'] = kwargs[key]
-        if key == 'saltenv':
-            saltenv = kwargs[key]
-        elif key == 'pillarenv':
-            pillarenv = kwargs[key]
-        else:
-            grains[key] = kwargs[key]
+    grains.update(kwargs)
 
     pillar = salt.pillar.Pillar(
-        __opts__,
+        copy.deepcopy(__opts__),
         grains,
         id_,
         saltenv,
