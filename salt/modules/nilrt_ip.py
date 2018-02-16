@@ -312,7 +312,7 @@ def get_interfaces_details():
     '''
     Get details about all the interfaces on the minion
 
-    :return: information about all connmans interfaces
+    :return: information about all interfaces omitting loopback
     :rtype: dictionary
 
     CLI Example:
@@ -322,18 +322,9 @@ def get_interfaces_details():
         salt '*' ip.get_interfaces_details
     '''
     if _is_older_nilrt():
-        _interfaces = __salt__['cmd.run']('ip link show').replace('\n ', ' ')
-        ilist = []
-        for interface in _interfaces.splitlines():
-            if 'lo:' not in interface:
-                ilist.append(_get_interface_info(interface.split()[1].strip()[:-1]))
-        interfaceList = {'interfaces': ilist}
-        return interfaceList
-    services = []
-    for service in _get_services():
-        services.append(_get_service_info(service))
-    interfaceList = {'interfaces': services}
-    return interfaceList
+        _interfaces = __salt__['cmd.shell']("ifconfig -a | sed 's/[ \t].*//;/^\(lo\|\)$/d'")
+        return {'interfaces': list(map(_get_interface_info, _interfaces.splitlines()))}
+    return {'interfaces': list(map(_get_service_info, _get_services()))}
 
 
 def up(interface, iface_type=None):
