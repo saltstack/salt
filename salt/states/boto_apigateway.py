@@ -5,6 +5,11 @@ Manage Apigateway Rest APIs
 
 .. versionadded:: 2016.11.0
 
+:depends:
+  - boto >= 2.8.0
+  - boto3 >= 1.2.1
+  - botocore >= 1.4.49
+
 Create and destroy rest apis depending on a swagger version 2 definition file.
 Be aware that this interacts with Amazon's services, and so may incur charges.
 
