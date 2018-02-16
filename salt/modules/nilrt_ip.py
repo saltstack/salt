@@ -272,7 +272,8 @@ def _get_interface_info(interface):
             netmask = split_line[3].strip()
             data['ipv4'] = {
                 'address': address.split(':')[1].strip(),
-                'netmask': netmask.split(':')[1].strip()
+                'netmask': netmask.split(':')[1].strip(),
+                'gateway': '0.0.0.0'
             }
             data['ipv4']['dns'] = _get_dns_info()
             data['ipv4']['requestmode'] = _get_requestmode_info(interface)
@@ -282,9 +283,9 @@ def _get_interface_info(interface):
                     'linklocal_only',
                     'static'
                     ]
-    iface_gateway = __salt__['cmd.run']('ip -4 route list type unicast dev {0} exact 0/0'.format(interface)).strip().split()
-    if len(iface_gateway) == 9:
-        data['ipv4']['gateway'] = iface_gateway
+    iface_gateway_hex = __salt__['cmd.shell']("grep {0} /proc/net/route | awk '{{ if ($2 == '00000000') print $3}}'".format(interface)).strip()
+    if iface_gateway_hex is not None and len(iface_gateway_hex) == 8:
+        data['ipv4']['gateway'] = '.'.join([str(int(iface_gateway_hex[i:i+2], 16)) for i in range(6, -1, -2)])
     return data
 
 
