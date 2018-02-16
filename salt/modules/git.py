@@ -267,7 +267,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 'git/ssh-id-wrapper'
             )
             tmp_ssh_wrapper = None
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 ssh_exe = _find_ssh_exe()
                 if ssh_exe is None:
                     raise CommandExecutionError(
