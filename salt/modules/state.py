@@ -2017,7 +2017,7 @@ def pkg(pkg_path,
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = salt.utils.json.load(fp_, object_hook=salt.utils.data.encode_dict)
+            roster_grains = salt.utils.json.load(fp_)
 
     if os.path.isfile(roster_grains_json):
         popts['grains'] = roster_grains

@@ -28,7 +28,7 @@ def find_json(raw):
     for ind, _ in enumerate(raw):
         working = '\n'.join(raw.splitlines()[ind:])
         try:
-            ret = json.loads(working, object_hook=salt.utils.data.decode_dict)  # future lint: blacklisted-function
+            ret = json.loads(working)  # future lint: blacklisted-function
         except ValueError:
             continue
         if ret:
