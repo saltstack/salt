@@ -36,7 +36,7 @@
 
 # The root directory prepended to these options: pki_dir, cachedir,
 # sock_dir, log_file, autosign_file, autoreject_file, extension_modules,
-# key_logfile, pidfile:
+# key_logfile, pidfile, autosign_grains_dir:
 #root_dir: /
 
 # The path to the master's configuration file.
@@ -297,6 +297,11 @@
 #batch_safe_limit: 100
 #batch_safe_size: 8
 
+# Master stats enables stats events to be fired from the master at close
+# to the defined interval
+#master_stats: False
+#master_stats_event_iter: 60
+
 
 #####        Security settings       #####
 ##########################################
@@ -337,13 +342,19 @@
 
 # If the autosign_file is specified, incoming keys specified in the
 # autosign_file will be automatically accepted. This is insecure.  Regular
-# expressions as well as globing lines are supported.
+# expressions as well as globing lines are supported. The file must be readonly
+# except for the owner. Use permissive_pki_access to allow the group write access.
 #autosign_file: /etc/salt/autosign.conf
 
 # Works like autosign_file, but instead allows you to specify minion IDs for
 # which keys will automatically be rejected. Will override both membership in
 # the autosign_file and the auto_accept setting.
 #autoreject_file: /etc/salt/autoreject.conf
+
+# If the autosign_grains_dir is specified, incoming keys from minons with grain
+# values matching those defined in files in this directory will be accepted
+# automatically. This is insecure. Minions need to be configured to send the grains.
+#autosign_grains_dir: /etc/salt/autosign_grains
 
 # Enable permissive access to the salt keys. This allows you to run the
 # master or minion as root, but have a non-root group be given access to
@@ -568,18 +579,35 @@
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
 
-# The Jinja renderer can strip extra carriage returns and whitespace
-# See http://jinja.pocoo.org/docs/api/#high-level-api
-#
-# If this is set to True the first newline after a Jinja block is removed
-# (block, not variable tag!). Defaults to False, corresponds to the Jinja
-# environment init variable "trim_blocks".
-#jinja_trim_blocks: False
-#
-# If this is set to True leading spaces and tabs are stripped from the start
-# of a line to a block. Defaults to False, corresponds to the Jinja
-# environment init variable "lstrip_blocks".
-#jinja_lstrip_blocks: False
+# Default Jinja environment options for all templates except sls templates
+#jinja_env:
+#  block_start_string: '{%'
+#  block_end_string: '%}'
+#  variable_start_string: '{{'
+#  variable_end_string: '}}'
+#  comment_start_string: '{#'
+#  comment_end_string: '#}'
+#  line_statement_prefix: 
+#  line_comment_prefix: 
+#  trim_blocks: False
+#  lstrip_blocks: False
+#  newline_sequence: '\n'
+#  keep_trailing_newline: False
+
+# Jinja environment options for sls templates
+#jinja_sls_env:
+#  block_start_string: '{%'
+#  block_end_string: '%}'
+#  variable_start_string: '{{'
+#  variable_end_string: '}}'
+#  comment_start_string: '{#'
+#  comment_end_string: '#}'
+#  line_statement_prefix: 
+#  line_comment_prefix: 
+#  trim_blocks: False
+#  lstrip_blocks: False
+#  newline_sequence: '\n'
+#  keep_trailing_newline: False
 
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
@@ -1274,4 +1302,3 @@
 # use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: -1
-

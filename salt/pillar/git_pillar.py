@@ -328,7 +328,7 @@ mountpoint to ``web/`` (and restart the ``salt-master`` daemon).
     - Content from mounted git_pillar repos can only be referenced by a top
       file in the same pillar environment.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -404,7 +404,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
         # Map env if env == '__env__' before checking the env value
         if env == '__env__':
             env = opts.get('pillarenv') \
-                or opts.get('environment') \
+                or opts.get('saltenv') \
                 or opts.get('git_pillar_base')
             log.debug('__env__ maps to %s', env)
 

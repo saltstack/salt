@@ -3,7 +3,7 @@
 Template render systems
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import codecs
@@ -127,7 +127,7 @@ def get_context(template, line, num_lines=5, marker=None):
     if marker:
         buf[error_line_in_context] += marker
 
-    return u'---\n{0}\n---'.format(u'\n'.join(buf))
+    return '---\n{0}\n---'.format('\n'.join(buf))
 
 
 def wrap_tmpl_func(render_str):
@@ -192,9 +192,8 @@ def wrap_tmpl_func(render_str):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
                     log.error(
-                        'Exception occurred while reading file '
-                        '{0}: {1}'.format(tmplsrc, exc),
-                        # Show full traceback if debug logging is enabled
+                        'Exception occurred while reading file %s: %s',
+                        tmplsrc, exc,
                         exc_info_on_loglevel=logging.DEBUG
                     )
                     raise exc
@@ -207,7 +206,7 @@ def wrap_tmpl_func(render_str):
                 output = output.encode(SLS_ENCODING)
             if salt.utils.platform.is_windows():
                 newline = False
-                if output.endswith(('\n', os.linesep)):
+                if salt.utils.stringutils.to_unicode(output).endswith(('\n', os.linesep)):
                     newline = True
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
@@ -215,8 +214,8 @@ def wrap_tmpl_func(render_str):
                     output += os.linesep
 
         except SaltRenderError as exc:
-            log.error("Rendering exception occurred: {0}".format(exc))
-            #return dict(result=False, data=str(exc))
+            log.exception('Rendering exception occurred')
+            #return dict(result=False, data=six.text_type(exc))
             raise
         except Exception:
             return dict(result=False, data=traceback.format_exc())
@@ -256,7 +255,7 @@ def _get_jinja_error_message(tb_data):
     '''
     try:
         line = _get_jinja_error_slug(tb_data)
-        return u'{0}({1}):\n{3}'.format(*line)
+        return '{0}({1}):\n{3}'.format(*line)
     except IndexError:
         pass
     return None
@@ -315,7 +314,7 @@ def _get_jinja_error(trace, context=None):
         if template_path:
             out = '\n{0}\n'.format(msg.splitlines()[0])
             with salt.utils.files.fopen(template_path) as fp_:
-                template_contents = fp_.read()
+                template_contents = salt.utils.stringutils.to_unicode(fp_.read())
             out += get_context(
                 template_contents,
                 line,
@@ -355,16 +354,40 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
     env_args['extensions'].append(salt.utils.jinja.SerializerExtension)
 
+    opt_jinja_env = opts.get('jinja_env', {})
+    opt_jinja_sls_env = opts.get('jinja_sls_env', {})
+
+    opt_jinja_env = opt_jinja_env if isinstance(opt_jinja_env, dict) else {}
+    opt_jinja_sls_env = opt_jinja_sls_env if isinstance(opt_jinja_sls_env, dict) else {}
+
     # Pass through trim_blocks and lstrip_blocks Jinja parameters
     # trim_blocks removes newlines around Jinja blocks
     # lstrip_blocks strips tabs and spaces from the beginning of
     # line to the start of a block.
     if opts.get('jinja_trim_blocks', False):
         log.debug('Jinja2 trim_blocks is enabled')
-        env_args['trim_blocks'] = True
+        log.warning('jinja_trim_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead')
+        opt_jinja_env['trim_blocks'] = True
+        opt_jinja_sls_env['trim_blocks'] = True
     if opts.get('jinja_lstrip_blocks', False):
         log.debug('Jinja2 lstrip_blocks is enabled')
-        env_args['lstrip_blocks'] = True
+        log.warning('jinja_lstrip_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead')
+        opt_jinja_env['lstrip_blocks'] = True
+        opt_jinja_sls_env['lstrip_blocks'] = True
+
+    def opt_jinja_env_helper(opts, optname):
+        for k, v in six.iteritems(opts):
+            k = k.lower()
+            if hasattr(jinja2.defaults, k.upper()):
+                log.debug('Jinja2 environment %s was set to %s by %s', k, v, optname)
+                env_args[k] = v
+            else:
+                log.warning('Jinja2 environment %s is not recognized', k)
+
+    if 'sls' in context and context['sls'] != '':
+        opt_jinja_env_helper(opt_jinja_sls_env, 'jinja_sls_env')
+    else:
+        opt_jinja_env_helper(opt_jinja_env, 'jinja_env')
 
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
@@ -431,12 +454,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             tmplstr = ''
         else:
             tmplstr += '\n{0}'.format(tracestr)
-        log.debug("Jinja Error")
-        log.debug("Exception: {0}".format(exc))
-        log.debug("Out: {0}".format(out))
-        log.debug("Line: {0}".format(line))
-        log.debug("TmplStr: {0}".format(tmplstr))
-        log.debug("TraceStr: {0}".format(tracestr))
+        log.debug('Jinja Error')
+        log.debug('Exception:', exc_info=True)
+        log.debug('Out: %s', out)
+        log.debug('Line: %s', line)
+        log.debug('TmplStr: %s', tmplstr)
+        log.debug('TraceStr: %s', tracestr)
 
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
@@ -521,7 +544,7 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     Render a Cheetah template.
     '''
     from Cheetah.Template import Template
-    return str(Template(tmplstr, searchList=[context]))
+    return salt.utils.data.decode(Template(tmplstr, searchList=[context]))
 # pylint: enable=3rd-party-module-not-gated
 
 
@@ -571,7 +594,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
                     'data': data}
         tgt = salt.utils.files.mkstemp()
         with salt.utils.files.fopen(tgt, 'w+') as target:
-            target.write(data)
+            target.write(salt.utils.stringutils.to_str(data))
         return {'result': True,
                 'data': tgt}
     except Exception:

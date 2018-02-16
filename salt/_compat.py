@@ -46,7 +46,7 @@ else:
 
 
 if HAS_XML:
-    if not hasattr(ElementTree, u'ParseError'):
+    if not hasattr(ElementTree, 'ParseError'):
         class ParseError(Exception):
             '''
             older versions of ElementTree do not have ParseError
@@ -56,7 +56,7 @@ if HAS_XML:
         ElementTree.ParseError = ParseError
 
 
-def text_(s, encoding=u'latin-1', errors=u'strict'):
+def text_(s, encoding='latin-1', errors='strict'):
     '''
     If ``s`` is an instance of ``binary_type``, return
     ``s.decode(encoding, errors)``, otherwise return ``s``
@@ -66,7 +66,7 @@ def text_(s, encoding=u'latin-1', errors=u'strict'):
     return s
 
 
-def bytes_(s, encoding=u'latin-1', errors=u'strict'):
+def bytes_(s, encoding='latin-1', errors='strict'):
     '''
     If ``s`` is an instance of ``text_type``, return
     ``s.encode(encoding, errors)``, otherwise return ``s``
@@ -79,25 +79,25 @@ def bytes_(s, encoding=u'latin-1', errors=u'strict'):
 if PY3:
     def ascii_native_(s):
         if isinstance(s, text_type):
-            s = s.encode(u'ascii')
-        return str(s, u'ascii', u'strict')
+            s = s.encode('ascii')
+        return str(s, 'ascii', 'strict')
 else:
     def ascii_native_(s):
         if isinstance(s, text_type):
-            s = s.encode(u'ascii')
+            s = s.encode('ascii')
         return str(s)
 
 ascii_native_.__doc__ = '''
 Python 3: If ``s`` is an instance of ``text_type``, return
-``s.encode(u'ascii')``, otherwise return ``str(s, 'ascii', 'strict')``
+``s.encode('ascii')``, otherwise return ``str(s, 'ascii', 'strict')``
 
 Python 2: If ``s`` is an instance of ``text_type``, return
-``s.encode(u'ascii')``, otherwise return ``str(s)``
-'''  # future lint: disable=non-unicode-string
+``s.encode('ascii')``, otherwise return ``str(s)``
+'''
 
 
 if PY3:
-    def native_(s, encoding=u'latin-1', errors=u'strict'):
+    def native_(s, encoding='latin-1', errors='strict'):
         '''
         If ``s`` is an instance of ``text_type``, return
         ``s``, otherwise return ``str(s, encoding, errors)``
@@ -106,7 +106,7 @@ if PY3:
             return s
         return str(s, encoding, errors)
 else:
-    def native_(s, encoding=u'latin-1', errors=u'strict'):
+    def native_(s, encoding='latin-1', errors='strict'):
         '''
         If ``s`` is an instance of ``text_type``, return
         ``s.encode(encoding, errors)``, otherwise return ``str(s)``
@@ -121,7 +121,7 @@ return ``str(s, encoding, errors)``
 
 Python 2: If ``s`` is an instance of ``text_type``, return
 ``s.encode(encoding, errors)``, otherwise return ``str(s)``
-'''  # future lint: disable=non-unicode-string
+'''
 
 
 def string_io(data=None):  # cStringIO can't handle unicode

@@ -6,7 +6,7 @@ the active status of minions
 .. versionadded:: 2016.11.0
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import fnmatch
 

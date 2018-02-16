@@ -23,7 +23,7 @@ Install any kind of pkg, dmg or app file on macOS:
             - version_check: xcodebuild -version=Xcode 7.1\n.*7B91b
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import re
@@ -254,13 +254,13 @@ def _mod_run_check(cmd_kwargs, onlyif, unless):
     '''
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            return {'comment': 'onlyif execution failed',
+            return {'comment': 'onlyif condition is false',
                     'skip_watch': True,
                     'result': True}
 
     if unless:
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless execution succeeded',
+            return {'comment': 'unless condition is true',
                     'skip_watch': True,
                     'result': True}
 

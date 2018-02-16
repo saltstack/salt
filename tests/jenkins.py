@@ -13,7 +13,6 @@ import glob
 import os
 import re
 import sys
-import json
 import time
 import shutil
 import optparse
@@ -22,7 +21,9 @@ import random
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.yaml
 try:
     from salt.utils.nb_popen import NonBlockingPopen
 except ImportError:
@@ -44,7 +45,6 @@ except ImportError:
         from nb_popen import NonBlockingPopen
 
 # Import 3rd-party libs
-import yaml
 try:
     import requests
     HAS_REQUESTS = True
@@ -77,7 +77,7 @@ def build_pillar_data(options):
         pillar['package_artifact_dir'] = options.package_artifact_dir
     if options.pillar:
         pillar.update(dict(options.pillar))
-    return yaml.dump(pillar, default_flow_style=True, indent=0, width=sys.maxint).rstrip()
+    return salt.utils.yaml.safe_dump(pillar, default_flow_style=True, indent=0, width=sys.maxint).rstrip()
 
 
 def build_minion_target(options, vm_name):
@@ -472,7 +472,7 @@ def run(opts):
             sys.exit(retcode)
 
         try:
-            version_info = json.loads(outstr)
+            version_info = salt.utils.json.loads(outstr)
             bootstrap_minion_version = os.environ.get(
                 'SALT_MINION_BOOTSTRAP_RELEASE',
                 opts.bootstrap_salt_commit[:7]
@@ -657,7 +657,7 @@ def run(opts):
             sys.exit(retcode)
 
         try:
-            remotes_info = json.loads(stdout.strip())
+            remotes_info = salt.utils.json.loads(stdout.strip())
             if remotes_info is None or remotes_info[vm_name] is None or opts.test_git_url not in remotes_info[vm_name]:
                 print('The cloned repository remote is not the desired one:')
                 print(' \'{0}\' is not in {1}'.format(opts.test_git_url, remotes_info))
@@ -704,7 +704,7 @@ def run(opts):
             sys.exit(retcode)
 
         try:
-            revision_info = json.loads(stdout.strip())
+            revision_info = salt.utils.json.loads(stdout.strip())
             if revision_info[vm_name][7:] != opts.test_git_commit[7:]:
                 print('The cloned repository commit is not the desired one:')
                 print(' \'{0}\' != \'{1}\''.format(revision_info[vm_name][:7], opts.test_git_commit[:7]))

@@ -6,7 +6,7 @@ minion.
 
 :depends:   - esky Python module for update functionality
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -52,6 +52,7 @@ import salt.utils.extmods
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.minion
+import salt.utils.path
 import salt.utils.process
 import salt.utils.url
 import salt.utils.versions
@@ -108,8 +109,8 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
-        with salt.utils.files.fopen(mod_file, 'a+') as ofile:
-            ofile.write('')
+        with salt.utils.files.fopen(mod_file, 'a'):
+            pass
     if form == 'grains' and \
        __opts__.get('grains_cache') and \
        os.path.isfile(os.path.join(__opts__['cachedir'], 'grains.cache.p')):
@@ -474,7 +475,7 @@ def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None, extmod_bla
     '''
     .. versionadded:: 0.10.0
 
-    Sync beacons from ``salt://_returners`` to the minion
+    Sync returners from ``salt://_returners`` to the minion
 
     saltenv
         The fileserver environment from which to sync. To sync from more than
@@ -585,6 +586,44 @@ def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blac
     return ret
 
 
+def sync_thorium(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Sync Thorium modules from ``salt://_thorium`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for engines to sync. If no top files are
+        found, then the ``base`` environment will be synced.
+
+    refresh: ``True``
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new Thorium modules are synced.
+        Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist
+        comma-seperated list of modules to sync
+
+    extmod_blacklist
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_thorium
+        salt '*' saltutil.sync_thorium saltenv=base,dev
+    '''
+    ret = _sync('thorium', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     Sync outputters from ``salt://_output`` to the minion
@@ -628,7 +667,7 @@ def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     '''
     .. versionadded:: 2017.7.0
 
-    Sync utility modules from ``salt://_cloud`` to the minion
+    Sync cloud modules from ``salt://_cloud`` to the minion
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -715,7 +754,7 @@ def list_extmods():
     mod_types = os.listdir(ext_dir)
     for mod_type in mod_types:
         ret[mod_type] = set()
-        for _, _, files in os.walk(os.path.join(ext_dir, mod_type)):
+        for _, _, files in salt.utils.path.os_walk(os.path.join(ext_dir, mod_type)):
             for fh_ in files:
                 ret[mod_type].add(fh_.split('.')[0])
         ret[mod_type] = list(ret[mod_type])
@@ -864,6 +903,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     ret['log_handlers'] = sync_log_handlers(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['engines'] = sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['thorium'] = sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
     if __opts__['file_client'] == 'local':
         ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
@@ -993,7 +1033,10 @@ def clear_cache():
             try:
                 os.remove(os.path.join(root, name))
             except OSError as exc:
-                log.error('Attempt to clear cache with saltutil.clear_cache FAILED with: {0}'.format(exc))
+                log.error(
+                    'Attempt to clear cache with saltutil.clear_cache '
+                    'FAILED with: %s', exc
+                )
                 return False
     return True
 
@@ -1093,7 +1136,7 @@ def find_cached_job(jid):
     '''
     serial = salt.payload.Serial(__opts__)
     proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
-    job_dir = os.path.join(proc_dir, str(jid))
+    job_dir = os.path.join(proc_dir, six.text_type(jid))
     if not os.path.isdir(job_dir):
         if not __opts__.get('cache_jobs'):
             return ('Local jobs cache directory not found; you may need to'
@@ -1103,19 +1146,17 @@ def find_cached_job(jid):
     path = os.path.join(job_dir, 'return.p')
     with salt.utils.files.fopen(path, 'rb') as fp_:
         buf = fp_.read()
-        fp_.close()
-        if buf:
-            try:
-                data = serial.loads(buf)
-            except NameError:
-                # msgpack error in salt-ssh
-                return
+    if buf:
+        try:
+            data = serial.loads(buf)
+        except NameError:
+            # msgpack error in salt-ssh
+            pass
         else:
-            return
-    if not isinstance(data, dict):
-        # Invalid serial object
-        return
-    return data
+            if isinstance(data, dict):
+                # if not a dict, this was an invalid serialized object
+                return data
+    return None
 
 
 def signal_job(jid, sig):
@@ -1148,7 +1189,7 @@ def signal_job(jid, sig):
                         data['pid']
                         )
             except OSError:
-                path = os.path.join(__opts__['cachedir'], 'proc', str(jid))
+                path = os.path.join(__opts__['cachedir'], 'proc', six.text_type(jid))
                 if os.path.isfile(path):
                     os.remove(path)
                 return ('Job {0} was not running and job data has been '
@@ -1264,7 +1305,7 @@ def revoke_auth(preserve_minion_cache=False):
 
     for master in masters:
         channel = salt.transport.Channel.factory(__opts__, master_uri=master)
-        tok = channel.auth.gen_token('salt')
+        tok = channel.auth.gen_token(b'salt')
         load = {'cmd': 'revoke_auth',
                 'id': __opts__['id'],
                 'tok': tok,

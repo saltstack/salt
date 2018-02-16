@@ -2,7 +2,7 @@
 '''
 Support for the softwareupdate command on MacOS.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 # Import python libs
@@ -12,6 +12,7 @@ import os
 # import salt libs
 import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 import salt.utils.mac_utils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -330,7 +331,7 @@ def list_downloads():
        salt '*' softwareupdate.list_downloads
     '''
     outfiles = []
-    for root, subFolder, files in os.walk('/Library/Updates'):
+    for root, subFolder, files in salt.utils.path.os_walk('/Library/Updates'):
         for f in files:
             outfiles.append(os.path.join(root, f))
 
@@ -343,7 +344,7 @@ def list_downloads():
     for update in _get_available():
         for f in dist_files:
             with salt.utils.files.fopen(f) as fhr:
-                if update.rsplit('-', 1)[0] in fhr.read():
+                if update.rsplit('-', 1)[0] in salt.utils.stringutils.to_unicode(fhr.read()):
                     ret.append(update)
 
     return ret

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
@@ -16,7 +16,9 @@ import salt.pillar.saltclass as saltclass
 base_path = os.path.dirname(os.path.realpath(__file__))
 fake_minion_id = 'fake_id'
 fake_pillar = {}
-fake_args = ({'path': '{0}/../../integration/files/saltclass/examples'.format(base_path)})
+fake_args = ({'path': os.path.abspath(
+                        os.path.join(base_path, '..', '..', 'integration',
+                                     'files', 'saltclass', 'examples'))})
 fake_opts = {}
 fake_salt = {}
 fake_grains = {}
@@ -34,10 +36,17 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
                            }}
 
     def _runner(self, expected_ret):
-        full_ret = saltclass.ext_pillar(fake_minion_id, fake_pillar, fake_args)
-        parsed_ret = full_ret['__saltclass__']['classes']
+        full_ret = {}
+        parsed_ret = []
+        try:
+            full_ret = saltclass.ext_pillar(fake_minion_id, fake_pillar, fake_args)
+            parsed_ret = full_ret['__saltclass__']['classes']
+        # Fail the test if we hit our NoneType error
+        except TypeError as err:
+            self.fail(err)
+        # Else give the parsed content result
         self.assertListEqual(parsed_ret, expected_ret)
 
     def test_succeeds(self):
-        ret = ['default.users', 'default.motd', 'default']
+        ret = ['default.users', 'default.motd', 'default', 'roles.app']
         self._runner(ret)

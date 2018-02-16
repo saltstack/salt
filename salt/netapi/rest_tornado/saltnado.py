@@ -1,6 +1,4 @@
 # encoding: utf-8
-from __future__ import absolute_import, print_function
-
 '''
 A non-blocking REST API for Salt
 ================================
@@ -186,8 +184,8 @@ a return like::
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
-'''  # pylint: disable=W0105
-# pylint: disable=W0232
+'''
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import time
@@ -198,7 +196,6 @@ from collections import defaultdict
 
 # pylint: disable=import-error
 import cgi
-import yaml
 import tornado.escape
 import tornado.httpserver
 import tornado.ioloop
@@ -217,14 +214,28 @@ import salt.netapi
 import salt.utils.args
 import salt.utils.event
 import salt.utils.json
+import salt.utils.yaml
 from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
-from salt.exceptions import EauthAuthenticationError
+from salt.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    EauthAuthenticationError
+)
 
 json = salt.utils.json.import_json()
-logger = logging.getLogger()
+log = logging.getLogger(__name__)
+
+
+def _json_dumps(obj, **kwargs):
+    '''
+    Invoke salt.utils.json.dumps using the alternate json module loaded using
+    salt.utils.json.import_json(). This ensures that we properly encode any
+    strings in the object before we perform the serialization.
+    '''
+    return salt.utils.json.dumps(obj, _json_module=json, **kwargs)
 
 # The clients rest_cherrypi supports. We want to mimic the interface, but not
 #     necessarily use the same API under the hood
@@ -391,8 +402,8 @@ class EventListener(object):
 
 class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylint: disable=W0223
     ct_out_map = (
-        ('application/json', json.dumps),
-        ('application/x-yaml', yaml.safe_dump),
+        ('application/json', _json_dumps),
+        ('application/x-yaml', salt.utils.yaml.safe_dump),
     )
 
     def _verify_client(self, low):
@@ -411,7 +422,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         Initialize the handler before requests are called
         '''
         if not hasattr(self.application, 'event_listener'):
-            logger.critical('init a listener')
+            log.debug('init a listener')
             self.application.event_listener = EventListener(
                 self.application.mod_opts,
                 self.application.opts,
@@ -515,11 +526,11 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         '''
         ct_in_map = {
             'application/x-www-form-urlencoded': self._form_loader,
-            'application/json': json.loads,
-            'application/x-yaml': yaml.safe_load,
-            'text/yaml': yaml.safe_load,
+            'application/json': salt.utils.json.loads,
+            'application/x-yaml': salt.utils.yaml.safe_load,
+            'text/yaml': salt.utils.yaml.safe_load,
             # because people are terrible and don't mean what they say
-            'text/plain': json.loads
+            'text/plain': salt.utils.json.loads
         }
 
         try:
@@ -727,9 +738,11 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             return
 
         except (AttributeError, IndexError):
-            logging.debug("Configuration for external_auth malformed for "
-                          "eauth '{0}', and user '{1}'."
-                          .format(token.get('eauth'), token.get('name')), exc_info=True)
+            log.debug(
+                "Configuration for external_auth malformed for eauth '%s', "
+                "and user '%s'.", token.get('eauth'), token.get('name'),
+                exc_info=True
+            )
             # TODO better error -- 'Configuration for external_auth could not be read.'
             self.send_error(500)
             return
@@ -890,12 +903,12 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
             try:
                 chunk_ret = yield getattr(self, '_disbatch_{0}'.format(low['client']))(low)
                 ret.append(chunk_ret)
-            except EauthAuthenticationError as exc:
+            except (AuthenticationError, AuthorizationError, EauthAuthenticationError):
                 ret.append('Failed to authenticate')
                 break
             except Exception as ex:
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
-                logger.error('Unexpected exception while handling request:', exc_info=True)
+                log.error('Unexpected exception while handling request:', exc_info=True)
 
         self.write(self.serialize({'return': ret}))
         self.finish()
@@ -1479,14 +1492,14 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.set_header('Cache-Control', 'no-cache')
         self.set_header('Connection', 'keep-alive')
 
-        self.write(u'retry: {0}\n'.format(400))
+        self.write('retry: {0}\n'.format(400))
         self.flush()
 
         while True:
             try:
                 event = yield self.application.event_listener.get_event(self)
-                self.write(u'tag: {0}\n'.format(event.get('tag', '')))
-                self.write(u'data: {0}\n\n'.format(json.dumps(event)))
+                self.write('tag: {0}\n'.format(event.get('tag', '')))
+                self.write(str('data: {0}\n\n').format(_json_dumps(event)))  # future lint: disable=blacklisted-function
                 self.flush()
             except TimeoutException:
                 break

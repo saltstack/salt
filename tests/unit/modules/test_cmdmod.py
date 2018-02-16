@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import tempfile
@@ -88,13 +88,6 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(LOG_LEVELS, self.mock_loglevels):
             self.assertEqual(cmdmod._check_loglevel(level='quiet'), None)
-
-    def test_check_loglevel_utils_quite(self):
-        '''
-        Tests the return of quiet=True
-        '''
-        with patch.dict(LOG_LEVELS, self.mock_loglevels):
-            self.assertEqual(cmdmod._check_loglevel(quiet=True), None)
 
     def test_parse_env_not_env(self):
         '''
@@ -228,7 +221,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
-                        ret = cmdmod._run('foo', use_vt=True).get('stderr')
+                        ret = cmdmod._run('foo', cwd=os.getcwd(), use_vt=True).get('stderr')
                         self.assertIn('foo', ret)
 
     def test_is_valid_shell_windows(self):

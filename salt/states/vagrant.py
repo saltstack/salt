@@ -51,7 +51,7 @@ value will select the ``primary`` (or only) machine in the Vagrantfile.
       create_table: True  # if not present
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import fnmatch
@@ -116,7 +116,7 @@ def _vagrant_call(node, function, section, comment, status_when_done=None, **kwa
                 response = response['name']
             changed_nodes.append({'node': node, function: response})
         except (SaltInvocationError, CommandExecutionError) as err:
-            ignored_nodes.append({'node': node, 'issue': str(err)})
+            ignored_nodes.append({'node': node, 'issue': six.text_type(err)})
     if not changed_nodes:
         ret['result'] = True
         ret['comment'] = 'No changes seen'

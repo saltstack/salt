@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -61,3 +61,19 @@ class PillarModuleTest(ModuleCase):
         self.assertDictContainsSubset(
             {'knights': ['Lancelot', 'Galahad', 'Bedevere', 'Robin']},
             get_items)
+
+    def test_pillar_command_line(self):
+        '''
+        Test to ensure when using pillar override
+        on command line works
+        '''
+        # test when pillar is overwriting previous pillar
+        overwrite = self.run_function('pillar.items', pillar={"monty":
+                                                              "overwrite"})
+        self.assertDictContainsSubset({'monty': 'overwrite'}, overwrite)
+
+        # test when using additional pillar
+        additional = self.run_function('pillar.items', pillar={"new":
+                                                              "additional"})
+
+        self.assertDictContainsSubset({'new': 'additional'}, additional)

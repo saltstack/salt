@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 sys.modules['pkg_resources'] = None
 import os
@@ -13,10 +13,14 @@ import salt.utils.stringutils
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 from salt.exceptions import (
-        SaltClientError,
-        SaltInvocationError,
-        EauthAuthenticationError
-        )
+    AuthenticationError,
+    AuthorizationError,
+    EauthAuthenticationError,
+    LoaderError,
+    SaltClientError,
+    SaltInvocationError,
+    SaltSystemExit
+)
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -78,7 +82,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if 'token' in self.config:
             import salt.utils.files
             try:
-                with salt.utils.files.fopen(os.path.join(self.config['cachedir'], '.root_key'), 'r') as fp_:
+                with salt.utils.files.fopen(os.path.join(self.config['key_dir'], '.root_key'), 'r') as fp_:
                     kwargs['key'] = fp_.readline()
             except IOError:
                 kwargs['token'] = self.config['token']
@@ -167,8 +171,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     out = 'progress'
                     try:
                         self._progress_ret(progress, out)
-                    except salt.exceptions.LoaderError as exc:
-                        raise salt.exceptions.SaltSystemExit(exc)
+                    except LoaderError as exc:
+                        raise SaltSystemExit(exc)
                     if 'return_count' not in progress:
                         ret.update(progress)
                 self._progress_end(out)
@@ -179,7 +183,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 for full_ret in self.local_client.cmd_cli(**kwargs):
                     ret_, out, retcode = self._format_ret(full_ret)
                     ret.update(ret_)
-                self._output_ret(ret, out)
+                self._output_ret(ret, out, retcode=retcode)
             else:
                 if self.options.verbose:
                     kwargs['verbose'] = True
@@ -188,7 +192,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     try:
                         ret_, out, retcode = self._format_ret(full_ret)
                         retcodes.append(retcode)
-                        self._output_ret(ret_, out)
+                        self._output_ret(ret_, out, retcode=retcode)
                         ret.update(full_ret)
                     except KeyError:
                         errors.append(full_ret)
@@ -208,9 +212,13 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
                 sys.exit(11)
 
-        except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
-            ret = str(exc)
-            self._output_ret(ret, '')
+        except (AuthenticationError,
+                AuthorizationError,
+                SaltInvocationError,
+                EauthAuthenticationError,
+                SaltClientError) as exc:
+            ret = six.text_type(exc)
+            self._output_ret(ret, '', retcode=1)
 
     def _preview_target(self):
         '''
@@ -251,7 +259,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
             try:
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
-            except salt.exceptions.SaltClientError as exc:
+            except SaltClientError:
                 sys.exit(2)
 
             ret = {}
@@ -265,7 +273,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             try:
                 self.config['batch'] = self.options.batch
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, parser=self.options)
-            except salt.exceptions.SaltClientError as exc:
+            except SaltClientError:
                 # We will print errors to the console further down the stack
                 sys.exit(1)
             # Printing the output is already taken care of in run() itself
@@ -345,12 +353,12 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if not hasattr(self, 'progress_bar'):
             try:
                 self.progress_bar = salt.output.get_progress(self.config, out, progress)
-            except Exception as exc:
-                raise salt.exceptions.LoaderError('\nWARNING: Install the `progressbar` python package. '
-                                                  'Requested job was still run but output cannot be displayed.\n')
+            except Exception:
+                raise LoaderError('\nWARNING: Install the `progressbar` python package. '
+                                  'Requested job was still run but output cannot be displayed.\n')
         salt.output.update_progress(self.config, progress, self.progress_bar, out)
 
-    def _output_ret(self, ret, out):
+    def _output_ret(self, ret, out, retcode=0):
         '''
         Print the output from a single return to the terminal
         '''
@@ -360,7 +368,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             self._print_docs(ret)
         else:
             # Determine the proper output method and run it
-            salt.output.display_output(ret, out, self.config)
+            salt.output.display_output(ret,
+                                       out=out,
+                                       opts=self.config,
+                                       _retcode=retcode)
         if not ret:
             sys.stderr.write('ERROR: No return received\n')
             sys.exit(2)
@@ -412,7 +423,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         for host in ret:
             if isinstance(ret[host], six.string_types) \
                     and (ret[host].startswith("Minion did not return")
-                         or ret[host] == 'VALUE TRIMMED'):
+                         or ret[host] == 'VALUE_TRIMMED'):
                 continue
             for fun in ret[host]:
                 if fun not in docs and ret[host][fun]:

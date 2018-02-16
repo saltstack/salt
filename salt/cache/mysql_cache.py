@@ -43,7 +43,7 @@ value to ``mysql``:
 .. _`python-mysql documentation`: http://python-mysql.readthedocs.io/en/latest/
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from time import sleep
 import logging
 try:

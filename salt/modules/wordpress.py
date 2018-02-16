@@ -6,12 +6,12 @@ This module is used to manage Wordpress installations
 '''
 
 # Import Python Modules
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 
 # Import Salt Modules
-from salt.ext.six.moves import map
 import salt.utils.path
+from salt.ext.six.moves import map
 
 Plugin = collections.namedtuple('Plugin', 'name status update versino')
 

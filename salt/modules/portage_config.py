@@ -4,13 +4,16 @@ Configure ``portage(5)``
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import shutil
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 
 # Import third party libs
 from salt.ext import six
@@ -75,8 +78,8 @@ def _get_config_file(conf, atom):
         if parts.cp == '*/*':
             # parts.repo will be empty if there is no repo part
             relative_path = parts.repo or "gentoo"
-        elif str(parts.cp).endswith('/*'):
-            relative_path = str(parts.cp).split("/")[0] + "_"
+        elif six.text_type(parts.cp).endswith('/*'):
+            relative_path = six.text_type(parts.cp).split("/")[0] + "_"
         else:
             relative_path = os.path.join(*[x for x in os.path.split(parts.cp) if x != '*'])
     else:
@@ -170,12 +173,12 @@ def _unify_keywords():
     old_path = BASE_PATH.format('keywords')
     if os.path.exists(old_path):
         if os.path.isdir(old_path):
-            for triplet in os.walk(old_path):
+            for triplet in salt.utils.path.os_walk(old_path):
                 for file_name in triplet[2]:
                     file_path = '{0}/{1}'.format(triplet[0], file_name)
                     with salt.utils.files.fopen(file_path) as fh_:
                         for line in fh_:
-                            line = line.strip()
+                            line = salt.utils.stringutils.to_unicode(line).strip()
                             if line and not line.startswith('#'):
                                 append_to_package_conf(
                                     'accept_keywords', string=line)
@@ -183,7 +186,7 @@ def _unify_keywords():
         else:
             with salt.utils.files.fopen(old_path) as fh_:
                 for line in fh_:
-                    line = line.strip()
+                    line = salt.utils.stringutils.to_unicode(line).strip()
                     if line and not line.startswith('#'):
                         append_to_package_conf('accept_keywords', string=line)
             os.remove(old_path)
@@ -218,7 +221,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
 
         backup_files = []
 
-        for triplet in os.walk(path):
+        for triplet in salt.utils.path.os_walk(path):
             for file_name in triplet[2]:
                 file_path = '{0}/{1}'.format(triplet[0], file_name)
                 cp = triplet[0][len(path) + 1:] + '/' + file_name
@@ -228,12 +231,13 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
 
                 if cp[0] == '/' or len(cp.split('/')) > 2:
                     with salt.utils.files.fopen(file_path) as fp_:
-                        rearrange.extend(fp_.readlines())
+                        rearrange.extend(salt.utils.data.decode(fp_.readlines()))
                     os.remove(file_path)
                 else:
                     new_contents = ''
                     with salt.utils.files.fopen(file_path, 'r+') as file_handler:
                         for line in file_handler:
+                            line = salt.utils.stringutils.to_unicode(line)
                             try:
                                 atom = line.strip().split()[0]
                             except IndexError:
@@ -263,7 +267,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                     pass
 
         if clean:
-            for triplet in os.walk(path):
+            for triplet in salt.utils.path.os_walk(path):
                 if len(triplet[1]) == 0 and len(triplet[2]) == 0 and \
                         triplet[0] != path:
                     shutil.rmtree(triplet[0])
@@ -475,7 +479,7 @@ def get_flags_from_package_conf(conf, atom):
         try:
             with salt.utils.files.fopen(package_file) as fp_:
                 for line in fp_:
-                    line = line.strip()
+                    line = salt.utils.stringutils.to_unicode(line).strip()
                     line_package = line.split()[0]
 
                     if has_wildcard:
@@ -562,7 +566,7 @@ def is_present(conf, atom):
             atom = portage.dep.Atom(atom, allow_wildcard=True)
         has_wildcard = '*' in atom
 
-        package_file = _get_config_file(conf, str(atom))
+        package_file = _get_config_file(conf, six.text_type(atom))
 
         # wildcards are valid in confs
         if has_wildcard:
@@ -573,11 +577,11 @@ def is_present(conf, atom):
         try:
             with salt.utils.files.fopen(package_file) as fp_:
                 for line in fp_:
-                    line = line.strip()
+                    line = salt.utils.stringutils.to_unicode(line).strip()
                     line_package = line.split()[0]
 
                     if has_wildcard:
-                        if line_package == str(atom):
+                        if line_package == six.text_type(atom):
                             return True
                     else:
                         line_list = _porttree().dbapi.xmatch("match-all", line_package)

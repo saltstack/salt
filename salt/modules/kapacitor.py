@@ -14,17 +14,15 @@ Kapacitor execution module.
 
 .. versionadded:: 2016.11.0
 '''
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
-from __future__ import absolute_import
-
-import json
-import logging
-
+# Import Salt lobs
+from salt.ext import six
 import salt.utils.http
+import salt.utils.json
 import salt.utils.path
 from salt.utils.decorators import memoize
-
-LOG = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -38,7 +36,7 @@ def version():
     '''
     version = __salt__['pkg.version']('kapacitor')
     if not version:
-        version = str(__salt__['config.option']('kapacitor.version', 'latest'))
+        version = six.string_types(__salt__['config.option']('kapacitor.version', 'latest'))
     return version
 
 
@@ -68,7 +66,7 @@ def get_task(name):
     if response['status'] == 404:
         return None
 
-    data = json.loads(response['body'])
+    data = salt.utils.json.loads(response['body'])
 
     if version() < '0.13':
         return {

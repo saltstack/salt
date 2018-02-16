@@ -102,6 +102,13 @@ A REST API for Salt
     expire_responses : True
         Whether to check for and kill HTTP responses that have exceeded the
         default timeout.
+
+        .. deprecated:: 2016.11.9, 2017.7.3, Oxygen
+
+            The "expire_responses" configuration setting, which corresponds
+            to the ``timeout_monitor`` setting in CherryPy, is no longer
+            supported in CherryPy versions >= 12.0.0.
+
     max_request_body_size : ``1048576``
         Maximum size for the HTTP request body.
     collect_stats : False
@@ -578,7 +585,6 @@ import collections
 import itertools
 import functools
 import logging
-import json
 import os
 import signal
 import tarfile
@@ -600,15 +606,19 @@ except ImportError:
     cpstats = None
     logger.warn('Import of cherrypy.cpstats failed.')
 
-import yaml
 # pylint: enable=import-error, 3rd-party-module-not-gated
 
 # Import Salt libs
 import salt
 import salt.auth
+import salt.exceptions
 import salt.utils.event
+import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.versions
+import salt.utils.yaml
 from salt.ext import six
+from salt.ext.six import BytesIO
 
 # Import salt-api libs
 import salt.netapi
@@ -825,9 +835,9 @@ def cors_tool():
 # Maps Content-Type to serialization functions; this is a tuple of tuples to
 # preserve order of preference.
 ct_out_map = (
-    ('application/json', json.dumps),
+    ('application/json', salt.utils.json.dumps),
     ('application/x-yaml', functools.partial(
-        yaml.safe_dump, default_flow_style=False)),
+        salt.utils.yaml.safe_dump, default_flow_style=False)),
 )
 
 
@@ -846,7 +856,9 @@ def hypermedia_handler(*args, **kwargs):
     try:
         cherrypy.response.processors = dict(ct_out_map)
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
-    except (salt.exceptions.EauthAuthenticationError,
+    except (salt.exceptions.AuthenticationError,
+            salt.exceptions.AuthorizationError,
+            salt.exceptions.EauthAuthenticationError,
             salt.exceptions.TokenAuthenticationError):
         raise cherrypy.HTTPError(401)
     except salt.exceptions.SaltInvocationError:
@@ -854,11 +866,18 @@ def hypermedia_handler(*args, **kwargs):
     except (salt.exceptions.SaltDaemonNotRunning,
             salt.exceptions.SaltReqTimeoutError) as exc:
         raise cherrypy.HTTPError(503, exc.strerror)
-    except (cherrypy.TimeoutError, salt.exceptions.SaltClientTimeout):
+    except salt.exceptions.SaltClientTimeout:
         raise cherrypy.HTTPError(504)
     except cherrypy.CherryPyException:
         raise
     except Exception as exc:
+        # The TimeoutError exception class was removed in CherryPy in 12.0.0, but
+        # Still check existence of TimeoutError and handle in CherryPy < 12.
+        # The check was moved down from the SaltClientTimeout error line because
+        # A one-line if statement throws a BaseException inheritance TypeError.
+        if hasattr(cherrypy, 'TimeoutError') and isinstance(exc, cherrypy.TimeoutError):
+            raise cherrypy.HTTPError(504)
+
         import traceback
 
         logger.debug("Error while processing request for: %s",
@@ -934,18 +953,6 @@ def urlencoded_processor(entity):
 
     :param entity: raw POST data
     '''
-    if six.PY3:
-        # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
-        entity.fp.read(fp_out=contents)
-        contents.seek(0)
-        body_str = contents.read()
-        body_bytes = salt.utils.stringutils.to_bytes(body_str)
-        body_bytes = six.BytesIO(body_bytes)
-        body_bytes.seek(0)
-        # Patch fp
-        entity.fp = body_bytes
-        del contents
     # First call out to CherryPy's default processor
     cherrypy._cpreqbody.process_urlencoded(entity)
     cherrypy._cpreqbody.process_urlencoded(entity)
@@ -964,13 +971,13 @@ def json_processor(entity):
         body = entity.fp.read()
     else:
         # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
+        contents = BytesIO()
         body = entity.fp.read(fp_out=contents)
         contents.seek(0)
-        body = contents.read()
+        body = salt.utils.stringutils.to_unicode(contents.read())
         del contents
     try:
-        cherrypy.serving.request.unserialized_data = json.loads(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.json.loads(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid JSON document')
 
@@ -988,12 +995,12 @@ def yaml_processor(entity):
         body = entity.fp.read()
     else:
         # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
+        contents = BytesIO()
         body = entity.fp.read(fp_out=contents)
         contents.seek(0)
-        body = contents.read()
+        body = salt.utils.stringutils.to_unicode(contents.read())
     try:
-        cherrypy.serving.request.unserialized_data = yaml.safe_load(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.yaml.safe_load(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
 
@@ -1014,12 +1021,12 @@ def text_processor(entity):
         body = entity.fp.read()
     else:
         # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = six.StringIO()
+        contents = BytesIO()
         body = entity.fp.read(fp_out=contents)
         contents.seek(0)
-        body = contents.read()
+        body = salt.utils.stringutils.to_unicode(contents.read())
     try:
-        cherrypy.serving.request.unserialized_data = json.loads(body)
+        cherrypy.serving.request.unserialized_data = salt.utils.json.loads(body)
     except ValueError:
         cherrypy.serving.request.unserialized_data = body
 
@@ -1159,10 +1166,6 @@ class LowDataAdapter(object):
         for chunk in lowstate:
             if token:
                 chunk['token'] = token
-                if cherrypy.session.get('user'):
-                    chunk['__current_eauth_user'] = cherrypy.session.get('user')
-                if cherrypy.session.get('groups'):
-                    chunk['__current_eauth_groups'] = cherrypy.session.get('groups')
 
             if client:
                 chunk['client'] = client
@@ -1862,9 +1865,6 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
-        cherrypy.session['user'] = token['name']
-        if 'groups' in token:
-            cherrypy.session['groups'] = token['groups']
 
         # Grab eauth config for the current backend for the current user
         try:
@@ -2336,12 +2336,12 @@ class Events(object):
                     listen=True)
             stream = event.iter_events(full=True, auto_reconnect=True)
 
-            yield u'retry: {0}\n'.format(400)
+            yield str('retry: 400\n')  # future lint: disable=blacklisted-function
 
             while True:
                 data = next(stream)
-                yield u'tag: {0}\n'.format(data.get('tag', ''))
-                yield u'data: {0}\n\n'.format(json.dumps(data))
+                yield str('tag: {0}\n').format(data.get('tag', ''))  # future lint: disable=blacklisted-function
+                yield str('data: {0}\n\n').format(salt.utils.json.dumps(data))  # future lint: disable=blacklisted-function
 
         return listen()
 
@@ -2522,8 +2522,10 @@ class WebsocketEndpoint(object):
                         if 'format_events' in kwargs:
                             SaltInfo.process(data, salt_token, self.opts)
                         else:
-                            handler.send('data: {0}\n\n'.format(
-                                json.dumps(data)), False)
+                            handler.send(
+                                str('data: {0}\n\n').format(salt.utils.json.dumps(data)),  # future lint: disable=blacklisted-function
+                                False
+                            )
                     except UnicodeDecodeError:
                         logger.error(
                                 "Error: Salt event has non UTF-8 data:\n{0}"
@@ -2839,8 +2841,6 @@ class API(object):
                 'server.socket_port': self.apiopts.get('port', 8000),
                 'server.thread_pool': self.apiopts.get('thread_pool', 100),
                 'server.socket_queue_size': self.apiopts.get('queue_size', 30),
-                'engine.timeout_monitor.on': self.apiopts.get(
-                    'expire_responses', True),
                 'max_request_body_size': self.apiopts.get(
                     'max_request_body_size', 1048576),
                 'debug': self.apiopts.get('debug', False),
@@ -2857,6 +2857,14 @@ class API(object):
                 'tools.cors_tool.on': True,
             },
         }
+
+        if salt.utils.versions.version_cmp(cherrypy.__version__, '12.0.0') < 0:
+            # CherryPy >= 12.0 no longer supports "timeout_monitor", only set
+            # this config option when using an older version of CherryPy.
+            # See Issue #44601 for more information.
+            conf['global']['engine.timeout_monitor.on'] = self.apiopts.get(
+                'expire_responses', True
+            )
 
         if cpstats and self.apiopts.get('collect_stats', False):
             conf['/']['tools.cpstats.on'] = True

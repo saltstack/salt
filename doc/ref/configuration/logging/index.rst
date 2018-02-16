@@ -225,15 +225,16 @@ enclosing brackets ``[`` and ``]``:
 
 Default: ``{}``
 
-This can be used to control logging levels more specifically.  The example sets
-the main salt library at the 'warning' level, but sets ``salt.modules`` to log
-at the ``debug`` level:
+This can be used to control logging levels more specifically, based on log call name.  The example sets
+the main salt library at the 'warning' level, sets ``salt.modules`` to log
+at the ``debug`` level, and sets a custom module to the ``all`` level:
 
 .. code-block:: yaml
 
   log_granular_levels:
     'salt': 'warning'
     'salt.modules': 'debug'
+    'salt.loader.saltmaster.ext.module.custom_module': 'all'
 
 External Logging Handlers
 -------------------------

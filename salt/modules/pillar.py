@@ -2,7 +2,7 @@
 '''
 Extract the pillar data for this minion
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import collections
@@ -12,7 +12,6 @@ import copy
 import os
 import copy
 import logging
-import yaml
 from salt.ext import six
 
 # Import salt libs
@@ -22,6 +21,7 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.functools
 import salt.utils.odict
+import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 
@@ -237,7 +237,7 @@ def items(*args, **kwargs):
     pillarenv = kwargs.get('pillarenv')
     if pillarenv is None:
         if __opts__.get('pillarenv_from_saltenv', False):
-            pillarenv = kwargs.get('saltenv') or __opts__['environment']
+            pillarenv = kwargs.get('saltenv') or __opts__['saltenv']
         else:
             pillarenv = __opts__['pillarenv']
 
@@ -429,8 +429,8 @@ def ext(external, pillar=None):
 
         .. code-block:: python
 
-            >>> import yaml
-            >>> ext_pillar = yaml.safe_load("""
+            >>> import salt.utils.yaml
+            >>> ext_pillar = salt.utils.yaml.safe_load("""
             ... ext_pillar:
             ...   - git:
             ...     - issue38440 https://github.com/terminalmage/git_pillar:
@@ -463,12 +463,12 @@ def ext(external, pillar=None):
         salt '*' pillar.ext "{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}"
     '''
     if isinstance(external, six.string_types):
-        external = yaml.safe_load(external)
+        external = salt.utils.yaml.safe_load(external)
     pillar_obj = salt.pillar.get_pillar(
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
+        __opts__['saltenv'],
         ext=external,
         pillar_override=pillar)
 

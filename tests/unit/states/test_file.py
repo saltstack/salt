@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from datetime import datetime
 import os
-import json
 import pprint
 import shutil
 
@@ -27,12 +26,11 @@ from tests.support.mock import (
     mock_open,
     patch)
 
-# Import third party libs
-import yaml
-
 # Import salt libs
 import salt.utils.files
+import salt.utils.json
 import salt.utils.platform
+import salt.utils.yaml
 import salt.states.file as filestate
 import salt.serializers.yaml as yamlserializer
 import salt.serializers.json as jsonserializer
@@ -75,13 +73,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             }
 
             filestate.serialize('/tmp', dataset)
-            self.assertEqual(yaml.load(returner.returned), dataset)
+            self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
 
             filestate.serialize('/tmp', dataset, formatter="yaml")
-            self.assertEqual(yaml.load(returner.returned), dataset)
+            self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
 
             filestate.serialize('/tmp', dataset, formatter="json")
-            self.assertEqual(json.loads(returner.returned), dataset)
+            self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
 
             filestate.serialize('/tmp', dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
@@ -577,7 +575,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                              'file.copy': mock_cp,
                              'file.manage_file': mock_ex,
                              'cmd.run_all': mock_cmd_fail}):
-                comt = ('Must provide name to file.managed')
+                comt = ('Destination file name is required')
                 ret.update({'comment': comt, 'name': '', 'pchanges': {}})
                 self.assertDictEqual(filestate.managed(''), ret)
 
@@ -710,7 +708,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         '''
         Test to ensure that a named directory is present and has the right perms
         '''
-        name = '/etc/grub.conf'
+        name = '/etc/testdir'
         user = 'salt'
         group = 'saltstack'
 
@@ -743,7 +741,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_check = MagicMock(return_value=(
             None,
             'The directory "{0}" will be changed'.format(name),
-            {'directory': 'new'}))
+            {name: {'directory': 'new'}}))
         mock_error = CommandExecutionError
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -801,21 +799,20 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                                  group=group),
                                              ret)
 
-                with patch.object(os.path, 'isfile', mock_f):
+                with patch.object(os.path, 'isdir', mock_f):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         if salt.utils.platform.is_windows():
                             comt = 'The directory "{0}" will be changed' \
                                    ''.format(name)
-                            p_chg = {'directory': 'new'}
                         else:
                             comt = ('The following files will be changed:\n{0}:'
                                     ' directory - new\n'.format(name))
-                            p_chg = {'/etc/grub.conf': {'directory': 'new'}}
+                        p_chg = {'/etc/testdir': {'directory': 'new'}}
                         ret.update({
                             'comment': comt,
                             'result': None,
                             'pchanges': p_chg,
-                            'changes': {'/etc/grub.conf': {'directory': 'new'}}
+                            'changes': {}
                         })
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
@@ -841,6 +838,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                  ret)
 
                         recurse = ['ignore_files', 'ignore_dirs']
+                        ret.update({'comment': 'Must not specify "recurse" '
+                                               'options "ignore_files" and '
+                                               '"ignore_dirs" at the same '
+                                               'time.',
+                                    'pchanges': {}})
                         with patch.object(os.path, 'isdir', mock_t):
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user,
