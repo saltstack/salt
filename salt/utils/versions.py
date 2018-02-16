@@ -292,3 +292,73 @@ def compare(ver1='', oper='==', ver2='', cmp_func=None, ignore_epoch=False):
             cmp_result = 1
 
         return cmp_result in cmp_map[oper]
+
+
+def check_boto_reqs(boto_ver=None,
+                    boto3_ver=None,
+                    botocore_ver=None,
+                    check_boto=True,
+                    check_boto3=True):
+    '''
+    Checks for the version of various required boto libs in one central location. Most
+    boto states and modules rely on a single version of the boto, boto3, or botocore libs.
+    However, some require newer versions of any of these dependencies. This function allows
+    the module to pass in a version to override the default minimum required version.
+
+    This function is useful in centralizing checks for ``__virtual__()`` functions in the
+    various, and many, boto modules and states.
+
+    boto_ver
+        The minimum required version of the boto library. Defaults to ``2.0.0``.
+
+    boto3_ver
+        The minimum required version of the boto3 library. Defaults to ``1.2.6``.
+
+    botocore_ver
+        The minimum required version of the botocore library. Defaults to ``1.3.23``.
+
+    check_boto
+        Boolean defining whether or not to check for boto deps. This defaults to ``True`` as
+        most boto modules/states rely on boto, but some do not.
+
+    check_boto3
+        Boolean defining whether or not to check for boto3 (and therefore botocore) deps.
+        This defaults to ``True`` as most boto modules/states rely on boto3/botocore, but
+        some do not.
+    '''
+    if check_boto is True:
+        try:
+            # Late import so we can only load these for this function
+            import boto
+            has_boto = True
+        except ImportError:
+            has_boto = False
+
+        if boto_ver is None:
+            boto_ver = '2.0.0'
+
+        if not has_boto or version_cmp(boto.__version__, boto_ver) == -1:
+            return False, 'A minimum version of boto {0} is required.'.format(boto_ver)
+
+    if check_boto3 is True:
+        try:
+            # Late import so we can only load these for this function
+            import boto3
+            import botocore
+            has_boto3 = True
+        except ImportError:
+            has_boto3 = False
+
+        # boto_s3_bucket module requires boto3 1.2.6 and botocore 1.3.23 for
+        # idempotent ACL operations via the fix in https://github.com/boto/boto3/issues/390
+        if boto3_ver is None:
+            boto3_ver = '1.2.6'
+        if botocore_ver is None:
+            botocore_ver = '1.3.23'
+
+        if not has_boto3 or version_cmp(boto3.__version__, boto3_ver) == -1:
+            return False, 'A minimum version of boto3 {0} is required.'.format(boto3_ver)
+        elif version_cmp(botocore.__version__, botocore_ver) == -1:
+            return False, 'A minimum version of botocore {0} is required'.format(botocore_ver)
+
+    return True

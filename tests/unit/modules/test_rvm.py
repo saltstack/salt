@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -53,7 +53,9 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm.install()
-            mock.assert_called_once_with('curl -Ls https://raw.githubusercontent.com/rvm/rvm/master/binscripts/rvm-installer | bash -s stable', runas=None, python_shell=True)
+            curl_cmd = 'curl -Ls https://raw.githubusercontent.com/rvm/rvm/master/binscripts/rvm-installer ' \
+                       '| bash -s stable'
+            mock.assert_called_once_with(curl_cmd, runas=None, python_shell=True)
 
     def test_install_ruby_nonroot(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout'})
