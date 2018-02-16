@@ -105,13 +105,11 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         run_time = dateutil_parser.parse('11/29/2017 1:30pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        log.debug('=== ret %s ===', ret)
 
         # eval at 2:30pm, will not run during range.
         run_time = dateutil_parser.parse('11/29/2017 2:30pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        log.debug('=== ret %s ===', ret)
         self.assertNotIn('_last_run', ret)
         self.assertEqual(ret['_skip_reason'], 'in_skip_range')
         self.assertEqual(ret['_skipped_time'], run_time)
@@ -120,7 +118,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         run_time = dateutil_parser.parse('11/29/2017 3:30pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        log.debug('=== ret %s ===', ret)
         self.assertEqual(ret['_last_run'], run_time)
 
     def test_skip_during_range_global(self):

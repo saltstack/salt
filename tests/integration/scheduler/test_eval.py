@@ -24,11 +24,11 @@ import salt.utils.schedule
 
 from salt.modules.test import ping as ping
 
-#try:
-#    import croniter  # pylint: disable=W0611
-#    HAS_CRONITER = True
-#except ImportError:
-HAS_CRONITER = False
+try:
+    import croniter  # pylint: disable=W0611
+    HAS_CRONITER = True
+except ImportError:
+    AS_CRONITER = False
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
