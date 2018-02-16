@@ -2,7 +2,7 @@
 
 # Number of days of inactivity before an issue becomes stale
 # 810 is approximately 2 years and 2 months
-daysUntilStale: 810
+daysUntilStale: 800
 
 # Number of days of inactivity before a stale issue is closed
 daysUntilClose: 7
