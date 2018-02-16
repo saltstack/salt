@@ -533,10 +533,11 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
             return
         log.info('MWorkerQueue under PID %s is closing', os.getpid())
         self._closing = True
-        if hasattr(self, '_monitor') and self._monitor is not None:
+        # pylint: disable=E0203
+        if getattr(self, '_monitor', None) is not None:
             self._monitor.stop()
             self._monitor = None
-        if hasattr(self, '_w_monitor') and self._w_monitor is not None:
+        if getattr(self, '_w_monitor', None) is not None:
             self._w_monitor.stop()
             self._w_monitor = None
         if hasattr(self, 'clients') and self.clients.closed is False:
@@ -549,6 +550,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
             self._socket.close()
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
+        # pylint: enable=E0203
 
     def pre_fork(self, process_manager):
         '''
