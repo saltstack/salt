@@ -1266,6 +1266,7 @@ class Schedule(object):
                                     data['_skipped'] = True
                                 else:
                                     run = True
+                                log.debug('=== run %s ===', run)
                             else:
                                 log.error(
                                     'schedule.handle_func: Invalid range, end '
@@ -1342,6 +1343,7 @@ class Schedule(object):
                             run = False
 
             if not run:
+                log.debug('=== run is false, continue now %s ===', now)
                 continue
 
             miss_msg = ''

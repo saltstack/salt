@@ -24,11 +24,11 @@ import salt.utils.schedule
 
 from salt.modules.test import ping as ping
 
-try:
-    import croniter  # pylint: disable=W0611
-    HAS_CRONITER = True
-except ImportError:
-    HAS_CRONITER = False
+#try:
+#    import croniter  # pylint: disable=W0611
+#    HAS_CRONITER = True
+#except ImportError:
+HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
@@ -201,6 +201,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
+        log.debug('=== ret %s ===', ret)
         self.assertEqual(ret['_last_run'], run_time)
 
     def test_eval_once_loop_interval(self):
