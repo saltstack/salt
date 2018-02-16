@@ -25,7 +25,7 @@ try:
         LIBZMQ_VERSION_INFO = tuple([int(v_el) for v_el in zmq.zmq_version().split('.')])
         if ZMQ_VERSION_INFO[0] > 16:  # 17.0.x+ deprecates zmq's ioloops
             ZMQDefaultLoop = tornado.ioloop.IOLoop
-except Exception as ex:
+except Exception:
     log.exception('Error while getting LibZMQ/PyZMQ library version')
 
 if ZMQDefaultLoop is None:
