@@ -940,31 +940,31 @@ class Schedule(object):
                 data['_next_scheduled_fire_time'] = now + data['_seconds']
 
             elif 'once' in data:
-                if data['_next_fire_time'] and \
-                        data['_next_fire_time'] < now - self.opts['loop_interval'] and \
-                        data['_next_fire_time'] > now and \
-                        not data['_splay']:
-                    continue
+                if data['_next_fire_time']:
+                    if data['_next_fire_time'] < now - self.opts['loop_interval'] or \
+                       data['_next_fire_time'] > now and \
+                       not data['_splay']:
+                        continue
 
                 if not data['_next_fire_time'] and \
                         not data['_splay']:
                     once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
                     try:
-                        once = datetime.datetime.strptime(data['once'],
+                        _once = datetime.datetime.strptime(data['once'],
                                                           once_fmt)
-                        data['_next_fire_time'] = int(
-                            time.mktime(once.timetuple()))
-                        data['_next_scheduled_fire_time'] = int(
-                            time.mktime(once.timetuple()))
+
+                        once = int(time.mktime(_once.timetuple()))
                     except (TypeError, ValueError):
                         log.error('Date string could not be parsed: %s, %s',
                                   data['once'], once_fmt)
                         continue
                     # If _next_fire_time is less than now or greater
                     # than now, continue.
-                    if data['_next_fire_time'] < now - self.opts['loop_interval'] and \
-                            data['_next_fire_time'] > now:
+                    if once < now - self.opts['loop_interval']:
                         continue
+                    else:
+                        data['_next_fire_time'] = once
+                        data['_next_scheduled_fire_time'] = once
 
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
@@ -1363,8 +1363,8 @@ class Schedule(object):
                 else:
                     if not self.standalone:
                         data = self._check_max_running(func, data, self.opts)
+                        run = data['run']
 
-                    run = data['run']
                     if run:
                         if multiprocessing_enabled:
                             thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
