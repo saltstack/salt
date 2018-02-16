@@ -522,7 +522,7 @@ def set_linklocal_only_all(interface):
     return True
 
 
-def set_static_all(interface, address, netmask, gateway, domains):
+def set_static_all(interface, address, netmask, gateway, nameservers):
     '''
     Configure specified adapter to use ipv4 manual settings
 
@@ -543,12 +543,11 @@ def set_static_all(interface, address, netmask, gateway, domains):
     validate, msg = _validate_ipv4([address, netmask, gateway])
     if not validate:
         raise salt.exceptions.CommandExecutionError(msg)
-    validate, msg = _space_delimited_list(domains)
+    validate, msg = _space_delimited_list(nameservers)
     if not validate:
         raise salt.exceptions.CommandExecutionError(msg)
-    if not isinstance(domains, list):
-        dns = domains.split(' ')
-        domains = dns
+    if not isinstance(nameservers, list):
+        nameservers = nameservers.split(' ')
     if _is_older_nilrt():
         if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'dhcpenabled\',value=\'0\''.format(interface))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not disable dhcp option\n'.format(interface))
@@ -561,7 +560,7 @@ def set_static_all(interface, address, netmask, gateway, domains):
         if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'Gateway\',value=\'{1}\''.format(interface, gateway))['retcode'] != 0:
             raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set gateway\n'.format(interface))
         if nameservers:
-            if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'DNS_Address\',value=\'{1}\''.format(interface, domains[0]))['retcode'] != 0:
+            if __salt__['cmd.run_all'](NIRTCFG_PATH + ' --set section={0},token=\'DNS_Address\',value=\'{1}\''.format(interface, nameservers[0]))['retcode'] != 0:
                 raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for interface: {0}\nError: could not set dns\n'.format(interface))
         disable(interface)
         enable(interface)
@@ -577,7 +576,7 @@ def set_static_all(interface, address, netmask, gateway, domains):
     ipv4['Gateway'] = dbus.String('{0}'.format(gateway), variant_level=1)
     try:
         service.set_property('IPv4.Configuration', ipv4)
-        service.set_property('Domains.Configuration', [dbus.String('{0}'.format(d)) for d in domains])
+        service.set_property('Nameservers.Configuration', [dbus.String('{0}'.format(d)) for d in nameservers])
     except Exception as exc:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for service: {0}\nError: {1}\n'.format(service, exc))
     return True
