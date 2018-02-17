@@ -29,7 +29,7 @@ try:
     import croniter  # pylint: disable=W0611
     HAS_CRONITER = True
 except ImportError:
-    AS_CRONITER = False
+    HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
@@ -217,7 +217,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
         # Run the job at the right plus LOOP_INTERVAL
-        run_time = dateutil_parser.parse('12/13/2017 1:00:{0}pm'.format(LOOP_INTERVAL))
+        run_time = dateutil_parser.parse('12/13/2017 1:00pm') + datetime.timedelta(seconds=LOOP_INTERVAL)
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
