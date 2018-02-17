@@ -1882,15 +1882,16 @@ def show_sls(mods, test=None, queue=False, **kwargs):
 
 def sls_exists(mods, test=None, queue=False, **kwargs):
     '''
-    Tests for the existance the of a specific sls or list of sls files on the
-    master. Similar to show_sls, rather than returning state details, returns
-    True or False. The default environment is ``base``, use ``saltenv`` to
-    specify a different environment.
+    Tests for the existance the of a specific SLS or list of SLS files on the
+    master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
+    rather than returning state details, returns True or False. The default
+    environment is ``base``, use ``saltenv`` to specify a different environment.
 
     .. versionadded:: Fluorine
 
     saltenv
-        Specify a salt fileserver environment to be used when applying states
+        Specify a salt fileserver environment from which to look for the SLS files
+        specified in the ``mods`` argument
 
     CLI Example:
 
@@ -1906,14 +1907,16 @@ def sls_exists(mods, test=None, queue=False, **kwargs):
 
 def id_exists(ids, mods, test=None, queue=False, **kwargs):
     '''
-    Tests the for a specific id or list of ids within a given state on the
-    master. Similar to sls_exists, returns True or False. The default
-    environment is ``base``, use ``saltenv`` to specify a different environment.
+    Tests for the existence of a specific ID or list of IDs within the
+    specified SLS file(s). Similar to :py:func:`state.sls_exists
+    <salt.modules.state.sls_exists>`, returns True or False. The default
+    environment is base``, use ``saltenv`` to specify a different environment.
 
     .. versionadded:: Fluorine
 
     saltenv
-        Specify a salt fileserver environment to be used when applying states
+        Specify a salt fileserver environment from which to look for the SLS files
+        specified in the ``mods`` argument
 
     CLI Example:
 
@@ -1923,14 +1926,9 @@ def id_exists(ids, mods, test=None, queue=False, **kwargs):
     '''
     if isinstance(ids, six.string_types):
         ids = ids.split(',')
-    try:
-        state_ids = show_sls(mods, test=test, queue=queue, **kwargs).keys()
-    except AttributeError:
-        return False
-    for state_id in ids:
-        if state_id not in state_ids:
-            return False
-    return True
+    ids = set(ids)
+    sls_ids = set(x['__id__'] for x in show_low_sls(mods, test=test, queue=queue, **kwargs))
+    return ids.issubset(sls_ids)
 
 
 def show_top(queue=False, **kwargs):

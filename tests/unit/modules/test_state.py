@@ -716,28 +716,29 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Test of id_exists
         '''
-        test_state = {"state_id1": {
-                            "some_value1": [{
-                                "key1": "value1"
-                            }, "test_state", {
-                                "order": 10001
-                            }],
-                            "__sls__": "state_name",
-                            "__env__": "base"
-                        },
-                        "state_id2": {
-                            "some_value2": [{
-                                "key2": "value2"
-                            }, "test_state2", {
-                                "order": 10001
-                            }],
-                            "__sls__": "state_name",
-                            "__env__": "base"
-                        }
-                    }
+        test_state = [{
+                        "key1": "value1",
+                        "name": "value1",
+                        "state": "file",
+                        "fun": "test",
+                        "__env__": "base",
+                        "__sls__": "test-sls",
+                        "order": 10000,
+                        "__id__": "state_id1"
+                    },
+                    {
+                        "key2": "value2",
+                        "name": "value2",
+                        "state": "file",
+                        "fun": "directory",
+                        "__env__": "base",
+                        "__sls__": "test-sls",
+                        "order": 10001,
+                        "__id__": "state_id2"
+                    }]
         mock = MagicMock(return_value=test_state)
-        with patch.object(state, 'show_sls', mock):
-            self.assertTrue(state.id_exists("state_id1,state_id2", "state_name"))
+        with patch.object(state, 'show_low_sls', mock):
+            self.assertTrue(state.id_exists("state_id1,state_id2", "test-sls"))
             self.assertFalse(state.id_exists("invalid", "state_name"))
 
     def test_top(self):
