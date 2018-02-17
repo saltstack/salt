@@ -144,7 +144,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.iostat('mypool', parsable=False)
-            self.assertEqual(ret['mypool']['capacity-alloc'], '46.7G')
+            self.assertEqual('46.7G', ret['mypool']['capacity-alloc'])
 
     def test_iostat_parsable(self):
         '''
@@ -172,7 +172,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.iostat('mypool', parsable=True)
-            self.assertEqual(ret['mypool']['capacity-alloc'], 50143743180)
+            self.assertEqual(50143743180, ret['mypool']['capacity-alloc'])
 
     def test_list(self):
         '''
@@ -194,7 +194,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('frag', '0%'),
                 ('health', 'ONLINE'),
             ]))])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_list_parsable(self):
         '''
@@ -216,7 +216,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('frag', '0%'),
                 ('health', 'ONLINE'),
             ]))])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_get(self):
         '''
@@ -231,7 +231,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.get('mypool', 'size', parsable=False)
             res = OrderedDict(OrderedDict([('size', '1.81T')]))
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_get_parsable(self):
         '''
@@ -246,7 +246,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.get('mypool', 'size', parsable=True)
             res = OrderedDict(OrderedDict([('size', 1992864825344)]))
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_get_whitespace(self):
         '''
@@ -261,7 +261,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.get('mypool', 'comment')
             res = OrderedDict(OrderedDict([('comment', "my testing pool")]))
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_scrub_start(self):
         '''
@@ -279,7 +279,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.scrub('mypool')
             res = OrderedDict(OrderedDict([('scrubbing', True)]))
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_scrub_pause(self):
         '''
@@ -297,7 +297,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.scrub('mypool', pause=True)
             res = OrderedDict(OrderedDict([('scrubbing', False)]))
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_scrub_stop(self):
         '''
@@ -315,7 +315,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.scrub('mypool', stop=True)
             res = OrderedDict(OrderedDict([('scrubbing', False)]))
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_split_success(self):
         '''
@@ -331,7 +331,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.split('datapool', 'backuppool')
             res = OrderedDict([('split', True)])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_split_exist_new(self):
         '''
@@ -347,7 +347,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.split('datapool', 'backuppool')
             res = OrderedDict([('split', False), ('error', 'Unable to split datapool: pool already exists')])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_split_missing_pool(self):
         '''
@@ -363,7 +363,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.split('datapool', 'backuppool')
             res = OrderedDict([('split', False), ('error', "cannot open 'datapool': no such pool")])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_split_not_mirror(self):
         '''
@@ -379,7 +379,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.split('datapool', 'backuppool')
             res = OrderedDict([('split', False), ('error', 'Unable to split datapool: Source pool must be composed only of mirrors')])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_labelclear_success(self):
         '''
@@ -395,7 +395,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.labelclear('/dev/rdsk/c0t0d0', force=False)
             res = OrderedDict([('labelcleared', True)])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_labelclear_nodevice(self):
         '''
@@ -414,7 +414,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('labelcleared', False),
                 ('error', 'failed to open /dev/rdsk/c0t0d0: No such file or directory'),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_labelclear_cleared(self):
         '''
@@ -433,7 +433,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('labelcleared', False),
                 ('error', 'failed to read label from /dev/rdsk/c0t0d0'),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_labelclear_exported(self):
         '''
@@ -454,7 +454,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('labelcleared', False),
                 ('error', 'use \'force=True\' to override the following error:\n/dev/rdsk/c0t0d0 is a member of exported pool "mypool"'),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     @skipIf(not salt.utils.path.which('mkfile'), 'Cannot find mkfile executable')
     def test_create_file_vdev_success(self):
@@ -473,7 +473,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict([
                 ('/vdisks/disk0', 'created'),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     @skipIf(not salt.utils.path.which('mkfile'), 'Cannot find mkfile executable')
     def test_create_file_vdev_nospace(self):
@@ -495,7 +495,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                     ('/vdisks/disk0', ' initialized 10424320 of 67108864 bytes: No space left on device'),
                 ])),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_export_success(self):
         '''
@@ -511,7 +511,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.export('mypool')
             res = OrderedDict([('exported', True)])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_export_nopool(self):
         '''
@@ -527,7 +527,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.export('mypool')
             res = OrderedDict([('exported', False), ('error', "cannot open 'mypool': no such pool")])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_import_success(self):
         '''
@@ -543,7 +543,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.import_('mypool')
             res = OrderedDict([('imported', True)])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_import_duplicate(self):
         '''
@@ -565,7 +565,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('imported', False),
                 ('error', "cannot import 'mypool': a pool with that name already exists\nuse the form 'zpool import <pool | id> <newpool>' to give it a new name"),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_import_nopool(self):
         '''
@@ -584,7 +584,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('imported', False),
                 ('error', "cannot import 'mypool': no such pool available"),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_online_success(self):
         '''
@@ -600,7 +600,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.online('mypool', '/dev/rdsk/c0t0d0')
             res = OrderedDict([('onlined', True)])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_online_nodevice(self):
         '''
@@ -619,7 +619,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('onlined', False),
                 ('error', 'cannot online /dev/rdsk/c0t0d1: no such device in pool'),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_offline_success(self):
         '''
@@ -635,7 +635,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.offline('mypool', '/dev/rdsk/c0t0d0')
             res = OrderedDict([('offlined', True)])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_offline_nodevice(self):
         '''
@@ -654,7 +654,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('offlined', False),
                 ('error', 'cannot offline /dev/rdsk/c0t0d1: no such device in pool'),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_offline_noreplica(self):
         '''
@@ -673,7 +673,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('offlined', False),
                 ('error', 'cannot offline /dev/rdsk/c0t0d1: no valid replicas'),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_reguid_success(self):
         '''
@@ -689,7 +689,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.reguid('mypool')
             res = OrderedDict([('reguided', True)])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_reguid_nopool(self):
         '''
@@ -708,7 +708,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('reguided', False),
                 ('error', "cannot open 'mypool': no such pool"),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_reopen_success(self):
         '''
@@ -724,7 +724,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.reopen('mypool')
             res = OrderedDict([('reopened', True)])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_reopen_nopool(self):
         '''
@@ -743,7 +743,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('reopened', False),
                 ('error', "cannot open 'mypool': no such pool"),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_upgrade_success(self):
         '''
@@ -759,7 +759,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.upgrade('mypool')
             res = OrderedDict([('upgraded', True)])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_upgrade_nopool(self):
         '''
@@ -778,7 +778,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('upgraded', False),
                 ('error', "cannot open 'mypool': no such pool"),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_history_success(self):
         '''
@@ -803,7 +803,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                     ('2018-01-19.16:01:55', 'zpool attach -f mypool /dev/rdsk/c0t0d0 /dev/rdsk/c0t0d1'),
                 ])),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_history_nopool(self):
         '''
@@ -821,7 +821,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict([
                 ('error', "cannot open 'mypool': no such pool"),
             ])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_clear_success(self):
         '''
@@ -837,7 +837,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(zpool.__utils__, utils_patch):
             ret = zpool.clear('mypool')
             res = OrderedDict([('cleared', True)])
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)
 
     def test_clear_nopool(self):
         '''
@@ -874,5 +874,4 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('cleared', False),
                 ('error', "cannot clear errors for /dev/rdsk/c0t0d0: no such device in pool"),
             ])
-            self.assertEqual(res, ret)
-            self.assertEqual(res, ret)
+            self.assertEqual(ret, res)

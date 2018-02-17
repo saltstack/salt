@@ -104,7 +104,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.create('myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.create('myzpool/mydataset'))
 
     def test_create_success_with_create_parent(self):
         '''
@@ -118,7 +118,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.create('myzpool/mydataset/mysubdataset', create_parent=True), res)
+            self.assertEqual(res, zfs.create('myzpool/mydataset/mysubdataset', create_parent=True))
 
     def test_create_success_with_properties(self):
         '''
@@ -133,13 +133,14 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
             self.assertEqual(
+                res,
                 zfs.create(
                     'myzpool/mydataset',
                     properties={
                         'mountpoint': '/export/zfs',
                         'sharenfs': 'on'
                     }
-                ), res
+                ),
             )
 
     def test_create_error_missing_dataset(self):
@@ -157,7 +158,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.create('myzpool'), res)
+            self.assertEqual(res, zfs.create('myzpool'))
 
     def test_create_error_trailing_slash(self):
         '''
@@ -174,7 +175,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.create('myzpool/'), res)
+            self.assertEqual(res, zfs.create('myzpool/'))
 
     def test_create_error_no_such_pool(self):
         '''
@@ -191,7 +192,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.create('myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.create('myzpool/mydataset'))
 
     def test_create_error_missing_parent(self):
         '''
@@ -208,7 +209,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.create('myzpool/mydataset/mysubdataset'), res)
+            self.assertEqual(res, zfs.create('myzpool/mydataset/mysubdataset'))
 
     def test_destroy_success(self):
         '''
@@ -222,7 +223,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.destroy('myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.destroy('myzpool/mydataset'))
 
     def test_destroy_error_not_exists(self):
         '''
@@ -239,7 +240,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.destroy('myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.destroy('myzpool/mydataset'))
 
     def test_destroy_error_has_children(self):
         '''
@@ -264,7 +265,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.destroy('myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.destroy('myzpool/mydataset'))
 
     def test_rename_success(self):
         '''
@@ -278,7 +279,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.rename('myzpool/mydataset', 'myzpool/newdataset'), res)
+            self.assertEqual(res, zfs.rename('myzpool/mydataset', 'myzpool/newdataset'))
 
     def test_rename_error_not_exists(self):
         '''
@@ -295,7 +296,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.rename('myzpool/mydataset', 'myzpool/newdataset'), res)
+            self.assertEqual(res, zfs.rename('myzpool/mydataset', 'myzpool/newdataset'))
 
     def test_list_success(self):
         '''
@@ -316,7 +317,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.list_('myzpool'), res)
+            self.assertEqual(res, zfs.list_('myzpool'))
 
     def test_list_parsable_success(self):
         '''
@@ -337,7 +338,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.list_('myzpool', parsable=False), res)
+            self.assertEqual(res, zfs.list_('myzpool', parsable=False))
 
     def test_list_custom_success(self):
         '''
@@ -358,7 +359,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.list_('myzpool', properties='canmount,used,avail,compression'), res)
+            self.assertEqual(res, zfs.list_('myzpool', properties='canmount,used,avail,compression'))
 
     def test_list_custom_parsable_success(self):
         '''
@@ -379,7 +380,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.list_('myzpool', properties='canmount,used,avail,compression', parsable=False), res)
+            self.assertEqual(res, zfs.list_('myzpool', properties='canmount,used,avail,compression', parsable=False))
 
     def test_list_error_no_dataset(self):
         '''
@@ -393,7 +394,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.list_('myzpool'), res)
+            self.assertEqual(res, zfs.list_('myzpool'))
 
     def test_list_mount_success(self):
         '''
@@ -413,7 +414,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.list_mount(), res)
+            self.assertEqual(res, zfs.list_mount())
 
     def test_mount_success(self):
         '''
@@ -427,7 +428,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.mount('myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.mount('myzpool/mydataset'))
 
     def test_mount_failure(self):
         '''
@@ -441,7 +442,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.mount('myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.mount('myzpool/mydataset'))
 
     def test_unmount_success(self):
         '''
@@ -455,7 +456,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.unmount('myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.unmount('myzpool/mydataset'))
 
     def test_unmount_failure(self):
         '''
@@ -472,7 +473,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.unmount('myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.unmount('myzpool/mydataset'))
 
     def test_inherit_success(self):
         '''
@@ -483,7 +484,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.inherit('compression', 'myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.inherit('compression', 'myzpool/mydataset'))
 
     def test_inherit_failure(self):
         '''
@@ -497,7 +498,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.inherit('canmount', 'myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.inherit('canmount', 'myzpool/mydataset'))
 
     def test_diff(self):
         '''
@@ -519,7 +520,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.diff('myzpool/mydataset@yesterday', 'myzpool/mydataset'), res)
+            self.assertEqual(res, zfs.diff('myzpool/mydataset@yesterday', 'myzpool/mydataset'))
 
     def test_diff_parsed_time(self):
         '''
@@ -543,7 +544,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.diff('myzpool/data@yesterday', 'myzpool/data', parsable=False), res)
+            self.assertEqual(res, zfs.diff('myzpool/data@yesterday', 'myzpool/data', parsable=False))
 
     def test_rollback_success(self):
         '''
@@ -554,7 +555,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.rollback('myzpool/mydataset@yesterday'), res)
+            self.assertEqual(res, zfs.rollback('myzpool/mydataset@yesterday'))
 
     def test_rollback_failure(self):
         '''
@@ -580,7 +581,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.rollback('myzpool/mydataset@yesterday'), res)
+            self.assertEqual(res, zfs.rollback('myzpool/mydataset@yesterday'))
 
     def test_clone_success(self):
         '''
@@ -591,7 +592,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.clone('myzpool/mydataset@yesterday', 'myzpool/yesterday'), res)
+            self.assertEqual(res, zfs.clone('myzpool/mydataset@yesterday', 'myzpool/yesterday'))
 
     def test_clone_failure(self):
         '''
@@ -605,7 +606,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.clone('myzpool/mydataset@yesterday', 'myzpool/archive/yesterday'), res)
+            self.assertEqual(res, zfs.clone('myzpool/mydataset@yesterday', 'myzpool/archive/yesterday'))
 
     def test_promote_success(self):
         '''
@@ -616,7 +617,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.promote('myzpool/yesterday'), res)
+            self.assertEqual(res, zfs.promote('myzpool/yesterday'))
 
     def test_promote_failure(self):
         '''
@@ -630,7 +631,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.promote('myzpool/yesterday'), res)
+            self.assertEqual(res, zfs.promote('myzpool/yesterday'))
 
     def test_bookmark_success(self):
         '''
@@ -642,7 +643,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
             mock_cmd = MagicMock(return_value=ret)
             with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
                  patch.dict(zfs.__utils__, utils_patch):
-                self.assertEqual(zfs.bookmark('myzpool/mydataset@yesterday', 'myzpool/mydataset#important'), res)
+                self.assertEqual(res, zfs.bookmark('myzpool/mydataset@yesterday', 'myzpool/mydataset#important'))
 
     def test_holds_success(self):
         '''
@@ -656,7 +657,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.holds('myzpool/mydataset@baseline'), res)
+            self.assertEqual(res, zfs.holds('myzpool/mydataset@baseline'))
 
     def test_holds_failure(self):
         '''
@@ -669,7 +670,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.holds('myzpool/mydataset@baseline'), res)
+            self.assertEqual(res, zfs.holds('myzpool/mydataset@baseline'))
 
     def test_hold_success(self):
         '''
@@ -680,7 +681,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.hold('important', 'myzpool/mydataset@baseline', 'myzpool/mydataset@release-1.0'), res)
+            self.assertEqual(res, zfs.hold('important', 'myzpool/mydataset@baseline', 'myzpool/mydataset@release-1.0'))
 
     def test_hold_failure(self):
         '''
@@ -694,7 +695,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.hold('important', 'myzpool/mydataset@baseline'), res)
+            self.assertEqual(res, zfs.hold('important', 'myzpool/mydataset@baseline'))
 
     def test_release_success(self):
         '''
@@ -705,7 +706,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.release('important', 'myzpool/mydataset@baseline', 'myzpool/mydataset@release-1.0'), res)
+            self.assertEqual(res, zfs.release('important', 'myzpool/mydataset@baseline', 'myzpool/mydataset@release-1.0'))
 
     def test_release_failure(self):
         '''
@@ -719,7 +720,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.release('important', 'myzpool/mydataset@baseline'), res)
+            self.assertEqual(res, zfs.release('important', 'myzpool/mydataset@baseline'))
 
     def test_snapshot_success(self):
         '''
@@ -730,7 +731,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.snapshot('myzpool/mydataset@baseline'), res)
+            self.assertEqual(res, zfs.snapshot('myzpool/mydataset@baseline'))
 
     def test_snapshot_failure(self):
         '''
@@ -744,7 +745,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.snapshot('myzpool/mydataset@baseline'), res)
+            self.assertEqual(res, zfs.snapshot('myzpool/mydataset@baseline'))
 
     def test_snapshot_failure2(self):
         '''
@@ -758,7 +759,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.snapshot('myzpool/mydataset@baseline'), res)
+            self.assertEqual(res, zfs.snapshot('myzpool/mydataset@baseline'))
 
     def test_set_success(self):
         '''
@@ -769,7 +770,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.set('myzpool/mydataset', compression='lz4'), res)
+            self.assertEqual(res, zfs.set('myzpool/mydataset', compression='lz4'))
 
     def test_set_failure(self):
         '''
@@ -783,7 +784,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.set('myzpool/mydataset', canmount='lz4'), res)
+            self.assertEqual(res, zfs.set('myzpool/mydataset', canmount='lz4'))
 
     def test_get_success(self):
         '''
@@ -800,7 +801,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.get('myzpool', properties='used', fields='value'), res)
+            self.assertEqual(res, zfs.get('myzpool', properties='used', fields='value'))
 
     def test_get_parsable_success(self):
         '''
@@ -817,4 +818,4 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}), \
              patch.dict(zfs.__utils__, utils_patch):
-            self.assertEqual(zfs.get('myzpool', properties='used', fields='value', parsable=False), res)
+            self.assertEqual(res, zfs.get('myzpool', properties='used', fields='value', parsable=False))
