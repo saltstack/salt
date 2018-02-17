@@ -9,6 +9,8 @@ States for managing zfs datasets
 
 .. versionadded:: 2016.3.0
 .. versionchanged:: Flourine
+  Big refactor to remove duplicate code, better type converions and improved
+  consistancy in output.
 
 .. code-block:: yaml
 
@@ -85,7 +87,6 @@ def _absent(name, dataset_type, force=False, recursive=False):
     recursive : boolean
         also destroy all the child datasets
 
-    .. versionchanged:: Flourine
     '''
     ret = {'name': name,
            'changes': {},
@@ -142,8 +143,6 @@ def filesystem_absent(name, force=False, recursive=False):
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
 
-    .. versionchanged:: Flourine
-
     .. warning::
 
         If a volume with ``name`` exists, this state will succeed without
@@ -170,8 +169,6 @@ def volume_absent(name, force=False, recursive=False):
         try harder to destroy the dataset (zfs destroy -f)
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
-
-    .. versionchanged:: Flourine
 
     .. warning::
 
@@ -200,7 +197,6 @@ def snapshot_absent(name, force=False, recursive=False):
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
 
-    .. versionchanged:: Flourine
     '''
     if not __utils__['zfs.is_snapshot'](name):
         ret = {'name': name,
@@ -223,7 +219,6 @@ def bookmark_absent(name, force=False, recursive=False):
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
 
-    .. versionchanged:: Flourine
     '''
     if not __utils__['zfs.is_bookmark'](name):
         ret = {'name': name,
@@ -246,7 +241,6 @@ def hold_absent(name, snapshot, recursive=False):
     recursive : boolean
         recursively releases a hold with the given tag on the snapshots of all descendent file systems.
 
-    .. versionchanged:: Flourine
     '''
     ret = {'name': name,
            'changes': {},
@@ -317,7 +311,6 @@ def hold_present(name, snapshot, recursive=False):
     recursive : boolean
         recursively add hold with the given tag on the snapshots of all descendent file systems.
 
-    .. versionchanged:: Flourine
     '''
     ret = {'name': name,
            'changes': {},
@@ -399,8 +392,6 @@ def _dataset_present(dataset_type, name, volume_size=None, sparse=False, create_
         name of snapshot to clone
     properties : dict
         additional zfs properties (-o)
-
-    .. versionchanged:: Flourine
 
     .. note::
         ``cloned_from`` is only use if the volume does not exist yet,
@@ -573,8 +564,6 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
     properties : dict
         additional zfs properties (-o)
 
-    .. versionchanged:: Flourine
-
     .. note::
         ``cloned_from`` is only use if the filesystem does not exist yet,
         when ``cloned_from`` is set after the filesystem exists it will be ignored.
@@ -611,8 +600,6 @@ def volume_present(name, volume_size, sparse=False, create_parent=False, propert
     properties : dict
         additional zfs properties (-o)
 
-    .. versionchanged:: Flourine
-
     .. note::
         ``cloned_from`` is only use if the volume does not exist yet,
         when ``cloned_from`` is set after the volume exists it will be ignored.
@@ -648,7 +635,6 @@ def bookmark_present(name, snapshot):
     snapshot : string
         name of snapshot
 
-    .. versionchanged:: Flourine
     '''
     ret = {'name': name,
            'changes': {},
@@ -710,8 +696,6 @@ def snapshot_present(name, recursive=False, properties=None):
         recursively create snapshots of all descendent datasets
     properties : dict
         additional zfs properties (-o)
-
-    .. versionchanged:: Flourine
 
     .. note:
         Properties are only set at creation time
@@ -775,7 +759,6 @@ def promoted(name):
         only one dataset can be the origin,
         if you promote a clone the original will now point to the promoted dataset
 
-    .. versionchanged:: Flourine
     '''
     ret = {'name': name,
            'changes': {},
@@ -886,7 +869,7 @@ def _schedule_snapshot_prepare(dataset, prefix, snapshots):
             continue
 
         ## NOTE: figure out if we need the current hold on the new snapshot
-        if len(snapshots[hold]) > 0:
+        if snapshots[hold]:
             ## NOTE: extract datetime from snapshot name
             timestamp = datetime.strptime(
                 snapshots[hold][-1],
@@ -942,7 +925,6 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
 
         switched to localtime from gmtime so times now take into account timezones.
 
-    .. versionchanged:: Flourine
     '''
     ret = {'name': name,
            'changes': {},
