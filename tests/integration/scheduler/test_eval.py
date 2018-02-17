@@ -28,7 +28,7 @@ try:
     import croniter  # pylint: disable=W0611
     HAS_CRONITER = True
 except ImportError:
-    AS_CRONITER = False
+    HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
