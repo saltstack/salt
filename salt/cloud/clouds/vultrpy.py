@@ -31,6 +31,26 @@ Set up the cloud profile at ``/etc/salt/cloud.profiles`` or
       size: 95
       enable_private_network: True
 
+This driver also supports Vultr's `startup script` feature.  You can list startup
+scripts in your account with
+
+.. code-block:: bash
+
+    salt-cloud -f list_scripts <name of vultr provider>
+
+That list will include the IDs of the scripts in your account.  Thus, if you
+have a script called 'setup-networking' with an ID of 493234 you can specify
+that startup script in a profile like so:
+
+.. code-block:: yaml
+
+    nyc-2gb-1cpu-ubuntu-17-04:
+      location: 1
+      provider: my-vultr-config
+      image: 223
+      size: 13
+      startup_script_id: 493234
+
 '''
 
 # Import python libs
