@@ -850,7 +850,7 @@ class Schedule(object):
                     log.error('Missing python-dateutil. '
                               'Ignoring until.')
                 else:
-                    until__ = dateutil_parser.parse(data['until'])
+                    until = dateutil_parser.parse(data['until'])
 
                     if until <= now:
                         log.debug(
@@ -864,7 +864,7 @@ class Schedule(object):
                     log.error('Missing python-dateutil. '
                               'Ignoring after.')
                 else:
-                    after__ = dateutil_parser.parse(data['after'])
+                    after = dateutil_parser.parse(data['after'])
 
                     if after >= now:
                         log.debug(
