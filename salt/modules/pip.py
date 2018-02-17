@@ -1337,6 +1337,7 @@ def list_all_versions(pkg,
 
     index_url
         Base URL of Python Package Index
+        .. versionadded:: Fluorine
 
     CLI Example:
 
