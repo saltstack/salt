@@ -47,6 +47,7 @@ def command(settings_module,
             bin_env=None,
             pythonpath=None,
             env=None,
+            runas=None,
             *args, **kwargs):
     '''
     Run arbitrary django management command
@@ -69,7 +70,7 @@ def command(settings_module,
     for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
             cmd = '{0} --{1}={2}'.format(cmd, key, value)
-    return __salt__['cmd.run'](cmd, env=env, python_shell=False)
+    return __salt__['cmd.run'](cmd, env=env, runas=runas, python_shell=False)
 
 
 def syncdb(settings_module,
@@ -78,7 +79,8 @@ def syncdb(settings_module,
            database=None,
            pythonpath=None,
            env=None,
-           noinput=True):
+           noinput=True,
+           runas=None):
     '''
     Run syncdb
 
@@ -106,6 +108,7 @@ def syncdb(settings_module,
                    bin_env,
                    pythonpath,
                    env,
+                   runas,
                    *args, **kwargs)
 
 
@@ -115,7 +118,8 @@ def createsuperuser(settings_module,
                     bin_env=None,
                     database=None,
                     pythonpath=None,
-                    env=None):
+                    env=None,
+                    runas=None):
     '''
     Create a super user for the database.
     This function defaults to use the ``--noinput`` flag which prevents the
@@ -139,6 +143,7 @@ def createsuperuser(settings_module,
                    bin_env,
                    pythonpath,
                    env,
+                   runas,
                    *args, **kwargs)
 
 
@@ -185,7 +190,8 @@ def collectstatic(settings_module,
                   link=False,
                   no_default_ignore=False,
                   pythonpath=None,
-                  env=None):
+                  env=None,
+                  runas=None):
     '''
     Collect static files from each of your applications into a single location
     that can easily be served in production.
@@ -216,4 +222,5 @@ def collectstatic(settings_module,
                    bin_env,
                    pythonpath,
                    env,
+                   runas,
                    *args, **kwargs)
