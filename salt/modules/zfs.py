@@ -8,6 +8,10 @@ Module for running ZFS command
 :depends:       salt.utils.zfs
 :platform:      illumos,freebsd,linux
 
+.. versionchanged:: Fluorine
+  Big refactor to remove duplicate code, better type converions and improved
+  consistancy in output.
+
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 
@@ -51,7 +55,6 @@ def exists(name, **kwargs):
         filesystem, snapshot, volume, bookmark, or all.
 
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
@@ -59,6 +62,7 @@ def exists(name, **kwargs):
 
         salt '*' zfs.exists myzpool/mydataset
         salt '*' zfs.exists myzpool/myvolume type=volume
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -107,7 +111,6 @@ def create(name, **kwargs):
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
@@ -168,13 +171,13 @@ def destroy(name, **kwargs):
         watch out when using recursive and recursive_all
 
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.destroy myzpool/mydataset [force=True|False]
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -220,13 +223,13 @@ def rename(name, new_name, **kwargs):
         snapshots are the only dataset that can be renamed recursively.
 
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.rename myzpool/mydataset myzpool/renameddataset
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -291,7 +294,6 @@ def list_(name=None, **kwargs):
         .. versionadded:: Oxygen
 
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
@@ -300,6 +302,7 @@ def list_(name=None, **kwargs):
         salt '*' zfs.list
         salt '*' zfs.list myzpool/mydataset [recursive=True|False]
         salt '*' zfs.list myzpool/mydataset properties="sharenfs,mountpoint"
+
     '''
     ret = OrderedDict()
 
@@ -378,6 +381,7 @@ def list_mount():
     .. code-block:: bash
 
         salt '*' zfs.list_mount
+
     '''
     ## List mounted filesystem
     res = __salt__['cmd.run_all'](
@@ -423,6 +427,7 @@ def mount(name=None, **kwargs):
         salt '*' zfs.mount
         salt '*' zfs.mount myzpool/mydataset
         salt '*' zfs.mount myzpool/mydataset options=ro
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -480,6 +485,7 @@ def unmount(name, **kwargs):
     .. code-block:: bash
 
         salt '*' zfs.unmount myzpool/mydataset [force=True|False]
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -523,13 +529,13 @@ def inherit(prop, name, **kwargs):
         operate as if the -S option was not specified.
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.inherit canmount myzpool/mydataset [recursive=True|False]
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -573,13 +579,13 @@ def diff(name_a, name_b=None, **kwargs):
         if true we don't parse the timestamp to a more readable date (default = True)
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.diff myzpool/mydataset@yesterday myzpool/mydataset
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -649,13 +655,13 @@ def rollback(name, **kwargs):
         must be destroyed by specifying the -r option.
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.rollback myzpool/mydataset@yesterday
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -708,13 +714,13 @@ def clone(name_a, name_b, **kwargs):
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.clone myzpool/mydataset@yesterday myzpool/mydataset_yesterday
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -776,6 +782,7 @@ def promote(name):
     .. code-block:: bash
 
         salt '*' zfs.promote myzpool/myclone
+
     '''
     ## Promote clone
     res = __salt__['cmd.run_all'](
@@ -813,6 +820,7 @@ def bookmark(snapshot, bookmark):
     .. code-block:: bash
 
         salt '*' zfs.bookmark myzpool/mydataset@yesterday myzpool/mydataset#complete
+
     '''
     # abort if we do not have feature flags
     if not __utils__['zfs.has_feature_flags']():
@@ -854,6 +862,7 @@ def holds(snapshot, **kwargs):
     .. code-block:: bash
 
         salt '*' zfs.holds myzpool/mydataset@baseline
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -923,6 +932,7 @@ def hold(tag, *snapshot, **kwargs):
 
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot [recursive=True]
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
+
     '''
     ## warn about tag change
     # NOTE: remove me 2 versions after Flourine
@@ -988,6 +998,7 @@ def release(tag, *snapshot, **kwargs):
 
         salt '*' zfs.release mytag myzpool/mydataset@mysnapshot [recursive=True]
         salt '*' zfs.release mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
+
     '''
     ## warn about tag change
     # NOTE: remove me 2 versions after Flourine
@@ -1040,7 +1051,6 @@ def snapshot(*snapshot, **kwargs):
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Flourine
 
     CLI Example:
 
@@ -1048,6 +1058,7 @@ def snapshot(*snapshot, **kwargs):
 
         salt '*' zfs.snapshot myzpool/mydataset@yesterday [recursive=True]
         salt '*' zfs.snapshot myzpool/mydataset@yesterday myzpool/myotherdataset@yesterday [recursive=True]
+
     '''
     ## Configure command
     # NOTE: initialize the defaults
@@ -1101,7 +1112,6 @@ def set(*dataset, **kwargs):
         megabytes, gigabytes, terabytes, petabytes, or exabytes respectively).
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Flourine
 
     CLI Example:
 
@@ -1110,6 +1120,7 @@ def set(*dataset, **kwargs):
         salt '*' zfs.set myzpool/mydataset compression=off
         salt '*' zfs.set myzpool/mydataset myzpool/myotherdataset compression=off
         salt '*' zfs.set myzpool/mydataset myzpool/myotherdataset compression=lz4 canmount=off
+
     '''
     ## Configure command
     # NOTE: push filesystem properties
@@ -1159,7 +1170,6 @@ def get(*dataset, **kwargs):
         for all datasets on the system.
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Flourine
 
     CLI Example:
 
@@ -1169,6 +1179,7 @@ def get(*dataset, **kwargs):
         salt '*' zfs.get myzpool/mydataset [recursive=True|False]
         salt '*' zfs.get myzpool/mydataset properties="sharenfs,mountpoint" [recursive=True|False]
         salt '*' zfs.get myzpool/mydataset myzpool/myotherdataset properties=available fields=value depth=1
+
     '''
     ## Configure command
     # NOTE: initialize the defaults

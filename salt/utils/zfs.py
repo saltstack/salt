@@ -10,6 +10,7 @@ These functions are for dealing with type conversion and basic execution
 :platform:      illumos,freebsd,linux
 
 .. versionadded:: Fluorine
+
 '''
 
 # Import python libs
@@ -126,14 +127,14 @@ def _property_parse_cmd(cmd, alias=None):
         prop_data = prop_data.lower().split()
 
         # NOTE: skip empty lines
-        if len(prop_data) == 0:
+        if not prop_data:
             continue
         # NOTE: parse header
         elif prop_data[0] == 'property':
             prop_hdr = prop_data
             continue
         # NOTE: skip lines after data
-        elif len(prop_hdr) == 0 or prop_data[1] not in ['no', 'yes']:
+        elif not prop_hdr or prop_data[1] not in ['no', 'yes']:
             continue
 
         # NOTE: create property dict
@@ -580,6 +581,7 @@ def from_auto_dict(values, source='auto'):
 
     .. note::
         The key will be passed as the name
+
     '''
     for name, value in values.items():
         values[name] = from_auto(name, value, source)
@@ -702,7 +704,7 @@ def parse_command_result(res, label=None):
                 error = error.replace('-r', 'recursive=True')
             ret['error'].append(error)
 
-        if len(ret['error']):
+        if ret['error']:
             ret['error'] = "\n".join(ret['error'])
         else:
             del ret['error']
