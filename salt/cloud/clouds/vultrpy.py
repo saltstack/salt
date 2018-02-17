@@ -249,6 +249,9 @@ def show_instance(name, call=None):
 
 
 def _lookup_vultrid(which_key, availkey, keyname):
+    '''
+    Helper function to retrieve a Vultr ID
+    '''
     if DETAILS == {}:
         _cache_provider_details()
 
@@ -275,9 +278,8 @@ def create(vm_):
     )
 
     if startup_script and str(startup_script) not in avail_scripts():
-        log.error('Your Vultr account does not have a startup script with ID {0}'.format(startup_script))
+        log.error('Your Vultr account does not have a startup script with ID %s', str(startup_script))
         return False
-
 
     if private_networking is not None:
         if not isinstance(private_networking, bool):
