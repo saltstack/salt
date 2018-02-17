@@ -109,6 +109,20 @@ def avail_locations(conn=None):
     return _query('regions/list')
 
 
+def avail_scripts(conn=None):
+    '''
+    return available startup scripts
+    '''
+    return _query('startupscript/list')
+
+
+def list_scripts(conn=None, call=None):
+    '''
+    return list of Startup Scripts
+    '''
+    return avail_scripts()
+
+
 def avail_sizes(conn=None):
     '''
     Return available sizes ("plans" in VultrSpeak)
@@ -236,6 +250,15 @@ def create(vm_):
         'enable_private_network', vm_, __opts__, search_global=False, default=False,
     )
 
+    startup_script = config.get_cloud_config_value(
+        'startup_script_id', vm_, __opts__, search_global=False, default=None,
+    )
+
+    if startup_script and str(startup_script) not in avail_scripts():
+        log.error('Your Vultr account does not have a startup script with ID {0}'.format(startup_script))
+        return False
+
+
     if private_networking is not None:
         if not isinstance(private_networking, bool):
             raise SaltCloudConfigError("'private_networking' should be a boolean value.")
@@ -276,6 +299,8 @@ def create(vm_):
         'hostname': vm_['name'],
         'enable_private_network': enable_private_network,
     }
+    if startup_script:
+        kwargs['SCRIPTID'] = startup_script
 
     log.info('Creating Cloud VM %s', vm_['name'])
 
