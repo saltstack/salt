@@ -9,6 +9,8 @@ States for managing zpools
 
 .. versionadded:: 2016.3.0
 .. versionchanged:: Flourine
+  Big refactor to remove duplicate code, better type converions and improved
+  consistancy in output.
 
 .. code-block:: yaml
 
@@ -334,7 +336,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
                 ret['comment'] = '{0} {1}'.format(ret['comment'], prop)
 
         if ret['result']:
-            ret['comment'] = 'properties updated' if len(ret['changes']) > 0 else 'no update needed'
+            ret['comment'] = 'properties updated' if ret['changes'] else 'no update needed'
 
     ## NOTE: import or create the pool (at least try to anyway)
     else:

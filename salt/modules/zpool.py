@@ -7,6 +7,11 @@ Module for running ZFS zpool command
 :maturity:      new
 :depends:       salt.utils.zfs
 :platform:      illumos,freebsd,linux
+
+.. versionchanged:: Fluorine
+  Big refactor to remove duplicate code, better type converions and improved
+  consistancy in output.
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -100,7 +105,6 @@ def status(zpool=None):
         optional name of storage pool
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
@@ -251,6 +255,7 @@ def iostat(zpool=None, sample_time=5, parsable=True):
     .. code-block:: bash
 
         salt '*' zpool.iostat myzpool
+
     '''
     ret = OrderedDict()
 
@@ -372,6 +377,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Tru
         salt '*' zpool.list zpool=tank
         salt '*' zpool.list 'size,free'
         salt '*' zpool.list 'size,free' tank
+
     '''
     ret = OrderedDict()
 
@@ -454,6 +460,7 @@ def get(zpool, prop=None, show_source=False, parsable=True):
     .. code-block:: bash
 
         salt '*' zpool.get myzpool
+
     '''
     ret = OrderedDict()
     value_properties = ['property', 'value', 'source']
@@ -525,6 +532,7 @@ def set(zpool, prop, value):
     .. code-block:: bash
 
         salt '*' zpool.set myzpool readonly yes
+
     '''
     ret = OrderedDict()
 
@@ -554,6 +562,7 @@ def exists(zpool):
     .. code-block:: bash
 
         salt '*' zpool.exists myzpool
+
     '''
     # list for zpool
     # NOTE: retcode > 0 if zpool does not exists
@@ -578,13 +587,12 @@ def destroy(zpool, force=False):
     force : boolean
         force destroy of pool
 
-    .. versionchanged:: 2016.3.0
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.destroy myzpool
+
     '''
     # destroy zpool
     res = __salt__['cmd.run_all'](
@@ -617,13 +625,12 @@ def scrub(zpool, stop=False, pause=False):
             Pause support was added in this PR:
             https://github.com/openzfs/openzfs/pull/407
 
-    .. versionchanged:: 2016.3.0
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.scrub myzpool
+
     '''
     ## select correct action
     if stop:
@@ -677,17 +684,6 @@ def create(zpool, *vdevs, **kwargs):
         create a boot partition
 
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' zpool.create myzpool /path/to/vdev1 [...] [force=True|False]
-        salt '*' zpool.create myzpool mirror /path/to/vdev1 /path/to/vdev2 [...] [force=True|False]
-        salt '*' zpool.create myzpool raidz1 /path/to/vdev1 /path/to/vdev2 raidz2 /path/to/vdev3 /path/to/vdev4 /path/to/vdev5 [...] [force=True|False]
-        salt '*' zpool.create myzpool mirror /path/to/vdev1 [...] mirror /path/to/vdev2 /path/to/vdev3 [...] [force=True|False]
-        salt '*' zpool.create myhybridzpool mirror /tmp/file1 [...] log mirror /path/to/vdev1 [...] cache /path/to/vdev2 [...] spare /path/to/vdev3 [...] [force=True|False]
 
     .. note::
 
@@ -708,6 +704,17 @@ def create(zpool, *vdevs, **kwargs):
         .. code-block:: bash
 
             salt '*' zpool.create myzpool /path/to/vdev1 [...] properties="{'property1': 'value1', 'property2': 'value2'}"
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.create myzpool /path/to/vdev1 [...] [force=True|False]
+        salt '*' zpool.create myzpool mirror /path/to/vdev1 /path/to/vdev2 [...] [force=True|False]
+        salt '*' zpool.create myzpool raidz1 /path/to/vdev1 /path/to/vdev2 raidz2 /path/to/vdev3 /path/to/vdev4 /path/to/vdev5 [...] [force=True|False]
+        salt '*' zpool.create myzpool mirror /path/to/vdev1 [...] mirror /path/to/vdev2 /path/to/vdev3 [...] [force=True|False]
+        salt '*' zpool.create myhybridzpool mirror /tmp/file1 [...] log mirror /path/to/vdev1 [...] cache /path/to/vdev2 [...] spare /path/to/vdev3 [...] [force=True|False]
+
     '''
     ## Configure pool
     # NOTE: initialize the defaults
@@ -767,13 +774,12 @@ def add(zpool, *vdevs, **kwargs):
     force : boolean
         forces use of device
 
-    .. versionchanged:: Fluorine
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.add myzpool /path/to/vdev1 /path/to/vdev2 [...]
+
     '''
     ## Configure pool
     # NOTE: initialize the defaults
@@ -821,14 +827,12 @@ def attach(zpool, device, new_device, force=False):
     force : boolean
         forces use of device
 
-    .. versionchanged:: 2016.3.0
-    .. versionchanged:: Fluorine
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.attach myzpool /path/to/vdev1 /path/to/vdev2 [...]
+
     '''
     ## Configure pool
     # NOTE: initialize the defaults
@@ -873,13 +877,12 @@ def detach(zpool, device):
     device : string
         device to detach
 
-    .. versionchanged:: Fluorine
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.detach myzpool /path/to/vdev1
+
     '''
     ## Update storage pool
     res = __salt__['cmd.run_all'](
@@ -923,14 +926,6 @@ def split(zpool, newzpool, **kwargs):
         additional pool properties for newzpool
 
     .. versionadded:: Oxygen
-    .. versionchanged:: Fluorine
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' zpool.split datamirror databackup
-        salt '*' zpool.split datamirror databackup altroot=/backup
 
     .. note::
 
@@ -945,6 +940,14 @@ def split(zpool, newzpool, **kwargs):
         .. code-block:: bash
 
             salt '*' zpool.split datamirror databackup properties="{'readonly': 'on'}"
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.split datamirror databackup
+        salt '*' zpool.split datamirror databackup altroot=/backup
+
     '''
     ## Configure pool
     # NOTE: initialize the defaults
@@ -991,13 +994,12 @@ def replace(zpool, old_device, new_device=None, force=False):
     force : boolean
         Forces use of new_device, even if its appears to be in use.
 
-    .. versionchanged:: Fluorine
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.replace myzpool /path/to/vdev1 /path/to/vdev2
+
     '''
     ## Configure pool
     # NOTE: initialize the defaults
@@ -1041,8 +1043,6 @@ def create_file_vdev(size, *vdevs):
 
     ``*vdevs`` is a list of full paths for mkfile to create
 
-    .. versionchanged:: Fluorine
-
     CLI Example:
 
     .. code-block:: bash
@@ -1052,6 +1052,7 @@ def create_file_vdev(size, *vdevs):
     .. note::
 
         Depending on file size, the above command may take a while to return.
+
     '''
     ret = OrderedDict()
     err = OrderedDict()
@@ -1091,7 +1092,6 @@ def export(*pools, **kwargs):
         force export of storage pools
 
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
@@ -1099,6 +1099,7 @@ def export(*pools, **kwargs):
 
         salt '*' zpool.export myzpool ... [force=True|False]
         salt '*' zpool.export myzpool2 myzpool2 ... [force=True|False]
+
     '''
     ## Configure pool
     # NOTE: initialize the defaults
@@ -1170,7 +1171,6 @@ def import_(zpool=None, new_name=None, **kwargs):
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
@@ -1179,6 +1179,7 @@ def import_(zpool=None, new_name=None, **kwargs):
         salt '*' zpool.import [force=True|False]
         salt '*' zpool.import myzpool [mynewzpool] [force=True|False]
         salt '*' zpool.import myzpool dir='/tmp'
+
     '''
     ## Configure pool
     # NOTE: initialize the defaults
@@ -1251,7 +1252,6 @@ def online(zpool, *vdevs, **kwargs):
             expanded before the new space will become available to the pool.
 
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
@@ -1315,13 +1315,13 @@ def offline(zpool, *vdevs, **kwargs):
         enable temporarily offline
 
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.offline myzpool /path/to/vdev1 [...] [temporary=True|False]
+
     '''
     ## Configure pool
     # NOTE: initialize the defaults
@@ -1353,23 +1353,19 @@ def labelclear(device, force=False):
     '''
     Removes ZFS label information from the specified device
 
-    .. warning::
-
-        The device must not be part of an active pool configuration.
-
     device : string
-        device
+        device, must not be part of an active pool configuration.
     force : boolean
         treat exported or foreign devices as inactive
 
     .. versionadded:: Oxygen
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.labelclear /path/to/dev
+
     '''
     ## clear label for all specified device
     res = __salt__['cmd.run_all'](
@@ -1405,6 +1401,7 @@ def clear(zpool, device=None):
 
         salt '*' zpool.clear mypool
         salt '*' zpool.clear mypool /path/to/dev
+
     '''
     ## Configure pool
     # NOTE: initialize the defaults
@@ -1438,7 +1435,6 @@ def reguid(zpool):
         name of storage pool
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
@@ -1466,13 +1462,13 @@ def reopen(zpool):
         name of storage pool
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.reopen myzpool
+
     '''
     ## reopen all devices fro pool
     res = __salt__['cmd.run_all'](
@@ -1490,24 +1486,24 @@ def upgrade(zpool=None, version=None):
     '''
     Enables all supported features on the given pool
 
-    .. warning::
-        Once this is done, the pool will no longer be accessible on systems that do not
-        support feature flags. See zpool-features(5) for details on compatibility with
-        systems that support feature flags, but do not support all features enabled on the pool.
-
     zpool : string
         optional storage pool, applies to all otherwize
     version : int
         version to upgrade to, if unspecified upgrade to the highest possible
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
+
+    .. warning::
+        Once this is done, the pool will no longer be accessible on systems that do not
+        support feature flags. See zpool-features(5) for details on compatibility with
+        systems that support feature flags, but do not support all features enabled on the pool.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.upgrade myzpool
+
     '''
     ## Configure pool
     # NOTE: initialize the defaults
@@ -1546,13 +1542,13 @@ def history(zpool=None, internal=False, verbose=False):
         toggle display of the user name, the hostname, and the zone in which the operation was performed
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zpool.upgrade myzpool
+
     '''
     ret = OrderedDict()
 
