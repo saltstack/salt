@@ -1054,7 +1054,7 @@ class Schedule(object):
                             continue
                         _when = self.opts['pillar']['whens'][data['when']]
                         try:
-                            when__ = dateutil_parser.parse(_when)
+                            when = dateutil_parser.parse(_when)
                         except ValueError:
                             log.error('Invalid date string. Ignoring')
                             continue
@@ -1065,18 +1065,17 @@ class Schedule(object):
                             continue
                         _when = self.opts['grains']['whens'][data['when']]
                         try:
-                            when__ = dateutil_parser.parse(_when)
+                            when = dateutil_parser.parse(_when)
                         except ValueError:
                             log.error('Invalid date string. Ignoring')
                             continue
                     else:
                         try:
-                            when__ = dateutil_parser.parse(data['when'])
+                            when = dateutil_parser.parse(data['when'])
                         except ValueError:
                             log.error('Invalid date string. Ignoring')
                             continue
 
-                    when = when__
                     if when < now - datetime.timedelta(seconds=self.opts['loop_interval']) and \
                             not data.get('_run', False) and \
                             not run and \
