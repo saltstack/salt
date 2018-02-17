@@ -32,6 +32,10 @@ try:
     import wmi  # pylint: disable=W0611
 except ImportError:
     HAS_DEPENDENCIES = False
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
 
 # Define the module's virtual name
 __virtualname__ = 'network'
@@ -512,3 +516,20 @@ def connect(host, port=None, **kwargs):
     ret['comment'] = 'Successfully connected to {0} ({1}) on {2} port {3}'\
         .format(host, _address[0], proto, port)
     return ret
+
+
+def is_private(ip_addr):
+    '''
+    Check if the given IP address is a private address
+
+    .. versionadded:: 2014.7.0
+    .. versionchanged:: 2015.8.0
+        IPv6 support
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.is_private 10.0.0.3
+    '''
+    return ipaddress.ip_address(ip_addr).is_private
