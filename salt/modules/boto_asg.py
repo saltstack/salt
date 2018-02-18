@@ -48,7 +48,6 @@ Connection module for Amazon Autoscale Groups
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import datetime
-import time
 import logging
 import sys
 import time
@@ -79,19 +78,19 @@ import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.odict as odict
+import salt.utils.versions
 
 
 def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_asg module could not be loaded: boto libraries not found')
-
-    __utils__['boto.assign_funcs'](__name__, 'asg', module='ec2.autoscale', pack=__salt__)
-    setattr(sys.modules[__name__], '_get_ec2_conn',
-            __utils__['boto.get_connection_func']('ec2'))
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'asg', module='ec2.autoscale', pack=__salt__)
+        setattr(sys.modules[__name__], '_get_ec2_conn',
+                __utils__['boto.get_connection_func']('ec2'))
+    return has_boto_reqs
 
 
 def __init__(opts):
@@ -500,7 +499,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
 def get_cloud_init_mime(cloud_init):
     '''
     Get a mime multipart encoded string from a cloud-init dict. Currently
-    supports scripts and cloud-config.
+    supports boothooks, scripts and cloud-config.
 
     CLI Example:
 

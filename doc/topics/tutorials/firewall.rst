@@ -130,7 +130,7 @@ command line.
 The Windows Firewall rule can be created by issuing a single command. Run the
 following command from the command line or a run prompt:
 
-.. code-block:: cmd
+.. code-block:: bash
 
     netsh advfirewall firewall add rule name="Salt" dir=in action=allow protocol=TCP localport=4505-4506
 

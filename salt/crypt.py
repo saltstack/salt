@@ -227,7 +227,7 @@ def sign_message(privkey_path, message, passphrase=None):
         return key.sign(digest)
     else:
         signer = PKCS1_v1_5.new(key)
-        return signer.sign(SHA.new(message))
+        return signer.sign(SHA.new(salt.utils.stringutils.to_bytes(message)))
 
 
 def verify_signature(pubkey_path, message, signature):
@@ -245,7 +245,7 @@ def verify_signature(pubkey_path, message, signature):
         return pubkey.verify(digest, signature)
     else:
         verifier = PKCS1_v1_5.new(pubkey)
-        return verifier.verify(SHA.new(message), signature)
+        return verifier.verify(SHA.new(salt.utils.stringutils.to_bytes(message)), signature)
 
 
 def gen_signature(priv_path, pub_path, sign_path, passphrase=None):

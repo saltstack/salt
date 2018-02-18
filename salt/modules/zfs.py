@@ -106,10 +106,7 @@ def _zfs_quote_escape_path(name):
     Quotes zfs path with single quotes and escapes single quotes in path if present
     '''
     if name:
-        if six.PY3:
-            name = '\'' + name.replace('\'', '\\\'') + '\''
-        else:
-            name = '\'' + name.encode('string_escape').replace('\'', '\\\'') + '\''
+        name = '\'' + name.replace('\'', '\\\'') + '\''
     return name
 
 
