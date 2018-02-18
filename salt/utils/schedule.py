@@ -845,34 +845,6 @@ class Schedule(object):
             if not now:
                 now = datetime.datetime.now()
 
-            if 'until' in data:
-                if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil. '
-                              'Ignoring until.')
-                else:
-                    until = dateutil_parser.parse(data['until'])
-
-                    if until <= now:
-                        log.debug(
-                            'Until time has passed skipping job: %s.',
-                            data['name']
-                        )
-                        continue
-
-            if 'after' in data:
-                if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil. '
-                              'Ignoring after.')
-                else:
-                    after = dateutil_parser.parse(data['after'])
-
-                    if after >= now:
-                        log.debug(
-                            'After time has not passed skipping job: %s.',
-                            data['name']
-                        )
-                        continue
-
             # Used for quick lookups when detecting invalid option combinations.
             schedule_keys = set(data.keys())
 
@@ -1144,9 +1116,10 @@ class Schedule(object):
 
                 if data['_splay']:
                     # The "splay" configuration has been already processed, just use it
-                    seconds = data['_splay'] - now
+                    seconds = (data['_splay'] - now).total_seconds()
 
             if '_seconds' in data:
+                log.debug('==== seconds %s ====', seconds)
                 if seconds <= 0:
                     run = True
             elif 'when' in data and data['_run']:
@@ -1310,6 +1283,40 @@ class Schedule(object):
                             data['_skipped'] = True
                         else:
                             run = True
+
+                if 'until' in data:
+                    if not _WHEN_SUPPORTED:
+                        log.error('Missing python-dateutil. '
+                                  'Ignoring until.')
+                    else:
+                        until = dateutil_parser.parse(data['until'])
+
+                        if until <= now:
+                            log.debug(
+                                'Until time has passed skipping job: %s.',
+                                data['name']
+                            )
+                            data['_skip_reason'] = 'until_passed'
+                            data['_skipped_time'] = now
+                            data['_skipped'] = True
+                            run = False
+
+                if 'after' in data:
+                    if not _WHEN_SUPPORTED:
+                        log.error('Missing python-dateutil. '
+                                  'Ignoring after.')
+                    else:
+                        after = dateutil_parser.parse(data['after'])
+
+                        if after >= now:
+                            log.debug(
+                                'After time has not passed skipping job: %s.',
+                                data['name']
+                            )
+                            data['_skip_reason'] = 'after_not_passed'
+                            data['_skipped_time'] = now
+                            data['_skipped'] = True
+                            run = False
 
             if not run:
                 continue
