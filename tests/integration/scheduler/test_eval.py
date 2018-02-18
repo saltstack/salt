@@ -7,7 +7,6 @@ import datetime
 import logging
 import os
 import random
-import time
 
 import dateutil.parser as dateutil_parser
 
