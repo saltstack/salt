@@ -420,3 +420,4 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status('job1')
         self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'disabled')

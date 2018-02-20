@@ -109,6 +109,7 @@ class Schedule(object):
         self.standalone = standalone
         self.skip_function = None
         self.skip_during_range = None
+        self.enabled = True
         if isinstance(intervals, dict):
             self.intervals = intervals
         else:
@@ -1266,11 +1267,17 @@ class Schedule(object):
             self.skip_function = schedule['skip_function']
         if 'skip_during_range' in schedule:
             self.skip_during_range = schedule['skip_during_range']
+        if 'enabled' in schedule:
+            self.enabled = schedule['enabled']
 
         _hidden = ['enabled',
                    'skip_function',
                    'skip_during_range']
         for job, data in six.iteritems(schedule):
+
+            # Skip anything that is a global schedule setting
+            if job in _hidden or not data:
+                continue
 
             # Clear these out between runs
             for item in ['_continue',
@@ -1279,10 +1286,6 @@ class Schedule(object):
                 if item in data:
                     del data[item]
             run = False
-
-            # Skip anything that is a global schedule setting
-            if job in _hidden or not data:
-                continue
 
             if not isinstance(data, dict):
                 log.error(
@@ -1488,6 +1491,11 @@ class Schedule(object):
             # information calculated, eg. _next_fire_time
             if '_continue' in data and data['_continue']:
                 run = False
+
+            # If there is no job specific enabled available,
+            # grab the global which defaults to True.
+            if 'enabled' not in data:
+                data['enabled'] = self.enabled
 
             # Job is disabled, set run to False
             if 'enabled' in data and not data['enabled']:
