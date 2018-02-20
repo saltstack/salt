@@ -515,8 +515,8 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.localhost.hostid.7f000001'])
 
-    @skipIf(salt.utils.platform.is_darwin(), 'MacOSX iscsi grains not supported')
-    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
+    @patch('salt.grains.core.os.path.isfile', MagicMock(return_value=True))
+    @patch('salt.grains.core.os.access', MagicMock(return_value=True))
     def test_linux_iscsi_iqn_grains(self):
         _iscsi_file = '## DO NOT EDIT OR REMOVE THIS FILE!\n' \
                       '## If you remove this file, the iSCSI daemon will not start.\n' \
@@ -525,13 +525,13 @@ PATCHLEVEL = 3
                       '## for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.\n' \
                       'InitiatorName=iqn.1993-08.org.debian:01:d12f7aba36\n'
 
-        with patch('os.path.isfile', MagicMock(return_value=True)):
-            with patch('salt.utils.files.fopen', mock_open()) as iscsi_initiator_file:
-                iscsi_initiator_file.return_value.__iter__.return_value = _iscsi_file.splitlines()
-                _grains = core.iscsi_iqn()
+        with patch('salt.utils.files.fopen', mock_open()) as iscsi_initiator_file:
+            iscsi_initiator_file.return_value.__iter__.return_value = _iscsi_file.splitlines()
+            iqn = core._linux_iqn()
 
-        self.assertEqual(_grains.get('iscsi_iqn'),
-                         ['iqn.1993-08.org.debian:01:d12f7aba36'])
+        assert isinstance(iqn, list)
+        assert len(iqn) == 1
+        assert iqn == ['iqn.1993-08.org.debian:01:d12f7aba36']
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
