@@ -1140,6 +1140,7 @@ class Schedule(object):
                     seconds = (data['_splay'] - now).total_seconds()
 
             if '_seconds' in data:
+                log.debug('==== seconds %s ====', seconds)
                 if seconds <= 0:
                     run = True
             elif 'when' in data and data['_run']:
