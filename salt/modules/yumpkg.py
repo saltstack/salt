@@ -1025,8 +1025,8 @@ def refresh_db(**kwargs):
 
     options = _get_options(**kwargs)
 
-    clean_cmd = [_yum(), '--quiet', 'clean', 'expire-cache']
-    update_cmd = [_yum(), '--quiet', 'check-update']
+    clean_cmd = [_yum(), '--quiet', '--assumeyes', 'clean', 'expire-cache']
+    update_cmd = [_yum(), '--quiet', '--assumeyes', 'check-update']
 
     if __grains__.get('os_family') == 'RedHat' \
             and __grains__.get('osmajorrelease') == 7:
