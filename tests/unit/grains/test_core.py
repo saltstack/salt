@@ -9,6 +9,11 @@ import logging
 import os
 
 # Import Salt Testing Libs
+try:
+    import pytest
+except ImportError as import_error:
+    pytest = None
+
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
@@ -44,6 +49,7 @@ IP6_ADD2 = '2001:4860:4860::8888'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not pytest, False)
 class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for core grains
