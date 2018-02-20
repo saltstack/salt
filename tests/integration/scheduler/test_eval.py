@@ -307,13 +307,11 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time = dateutil_parser.parse('11/29/2017 2:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job_eval_after')
-        log.debug('=== ret %s ===', ret)
 
         # eval at 3:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 3:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job_eval_after')
-        log.debug('=== ret %s ===', ret)
         self.assertEqual(ret['_last_run'], run_time)
 
         # eval at 4:00pm, will run.
