@@ -134,7 +134,8 @@ class Schedule(object):
 
     def _get_schedule(self,
                       include_opts=True,
-                      include_pillar=True):
+                      include_pillar=True,
+                      include_hidden=True):
         '''
         Return the schedule data structure
         '''
@@ -457,11 +458,13 @@ class Schedule(object):
         List the current schedule items
         '''
         if where == 'pillar':
-            schedule = self._get_schedule(include_opts=False)
+            schedule = self._get_schedule(include_opts=False,
+                                          include_hidden=False)
         elif where == 'opts':
-            schedule = self._get_schedule(include_pillar=False)
+            schedule = self._get_schedule(include_pillar=False,
+                                          include_hidden=False)
         else:
-            schedule = self._get_schedule()
+            schedule = self._get_schedule(include_hidden=False)
 
         # Fire the complete event back along with the list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -1140,7 +1143,6 @@ class Schedule(object):
                     seconds = (data['_splay'] - now).total_seconds()
 
             if '_seconds' in data:
-                log.debug('==== seconds %s ====', seconds)
                 if seconds <= 0:
                     run = True
             elif 'when' in data and data['_run']:
@@ -1246,8 +1248,8 @@ class Schedule(object):
                             # after the skip_during_range is over
                             if 'run_after_skip_range' in data and \
                                data['run_after_skip_range']:
-                                if 'run_explicit' not in data:
-                                    data['run_explicit'] = []
+                                if '_run_explicit' not in data:
+                                    data['_run_explicit'] = []
                                 # Add a run_explicit for immediately after the
                                 # skip_during_range ends
                                 _run_immediate = (end + datetime.timedelta(seconds=self.opts['loop_interval'])).strftime('%Y-%m-%dT%H:%M:%S')

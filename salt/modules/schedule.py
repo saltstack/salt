@@ -983,6 +983,8 @@ def postpone_job(name,
     ret = {'comment': [],
            'result': True}
 
+    time_fmt = kwargs.get('time_fmt', '%Y-%m-%dT%H:%M:%S')
+
     if not name:
         ret['comment'] = 'Job name is required.'
         ret['result'] = False
@@ -1082,6 +1084,8 @@ def skip_job(name, current_time, **kwargs):
 
     ret = {'comment': [],
            'result': True}
+
+    time_fmt = kwargs.get('time_fmt', '%Y-%m-%dT%H:%M:%S')
 
     if not name:
         ret['comment'] = 'Job name is required.'
