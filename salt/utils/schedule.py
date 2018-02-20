@@ -1245,8 +1245,8 @@ class Schedule(object):
                             # after the skip_during_range is over
                             if 'run_after_skip_range' in data and \
                                data['run_after_skip_range']:
-                                if '_run_explicit' not in data:
-                                    data['_run_explicit'] = []
+                                if 'run_explicit' not in data:
+                                    data['run_explicit'] = []
                                 # Add a run_explicit for immediately after the
                                 # skip_during_range ends
                                 _run_immediate = (end + datetime.timedelta(seconds=self.opts['loop_interval'])).strftime('%Y-%m-%dT%H:%M:%S')
