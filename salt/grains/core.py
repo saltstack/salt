@@ -2490,11 +2490,15 @@ def _linux_iqn():
     initiator = '/etc/iscsi/initiatorname.iscsi'
 
     if os.path.isfile(initiator):
-        with salt.utils.files.fopen(initiator, 'r') as _iscsi:
-            for line in _iscsi:
-                line = line.strip()
-                if line.startswith('InitiatorName='):
-                    ret.append(line.split('=', 1)[1])
+        if os.access(initiator, os.R_OK):
+            with salt.utils.files.fopen(initiator, 'r') as _iscsi:
+                for line in _iscsi:
+                    line = line.strip()
+                    if line.startswith('InitiatorName='):
+                        ret.append(line.split('=', 1)[1])
+        else:
+            log.debug('Access denied to %s', initiator)
+
     return ret
 
 
