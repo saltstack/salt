@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import tempfile
 
 # Import Salt Testing Libs
@@ -112,7 +112,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
 
         # The previous authorized key should have been replaced by the simpler one
         with salt.utils.files.fopen(temp_file.name) as _fh:
-            file_txt = _fh.read()
+            file_txt = salt.utils.stringutils.to_unicode(_fh.read())
             self.assertIn(enc, file_txt)
             self.assertIn(key, file_txt)
             self.assertNotIn(options, file_txt)
@@ -123,7 +123,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         key = 'abcxyz'
 
         with salt.utils.files.fopen(temp_file.name, 'a') as _fh:
-            _fh.write('{0} {1}'.format(enc, key))
+            _fh.write(salt.utils.stringutils.to_str('{0} {1}'.format(enc, key)))
 
         # Replace the simple key from before with the more complicated options + new email
         # Option example is taken from Pull Request #39855
@@ -137,7 +137,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
 
         # Assert that the new line was added as-is to the file
         with salt.utils.files.fopen(temp_file.name) as _fh:
-            file_txt = _fh.read()
+            file_txt = salt.utils.stringutils.to_unicode(_fh.read())
             self.assertIn(enc, file_txt)
             self.assertIn(key, file_txt)
             self.assertIn('{0} '.format(','.join(options)), file_txt)

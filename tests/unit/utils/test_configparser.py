@@ -6,7 +6,7 @@ tests.unit.utils.test_configparser
 Test the funcs in the custom parsers in salt.utils.configparser
 '''
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import errno
 import logging
@@ -71,7 +71,7 @@ class TestGitConfigParser(TestCase):
             with salt.utils.files.fopen(self.orig_config, 'wb') as fp_:
                 fp_.write(
                     salt.utils.stringutils.to_bytes(
-                        '\n'.join(ORIG_CONFIG)
+                        os.linesep.join(ORIG_CONFIG)
                     )
                 )
         self.conf = salt.utils.configparser.GitConfigParser()
