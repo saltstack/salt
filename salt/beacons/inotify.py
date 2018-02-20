@@ -10,14 +10,15 @@ Watch files and translate the changes into salt events
             setting the `disable_during_state_run` flag to `True` in
             the beacon configuration.
 
-:note: The `inotify` beacon only works on OSes that have `inotify` kernel support.
-       Currently this excludes FreeBSD, macOS, and Windows.
+:note: The `inotify` beacon only works on OSes that have `inotify`
+       kernel support.  Currently this excludes FreeBSD, macOS, and Windows.
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import collections
 import fnmatch
+import logging
 import os
 import re
 
@@ -43,7 +44,6 @@ except ImportError:
 
 __virtualname__ = 'inotify'
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -246,12 +246,13 @@ def beacon(config):
                     if isinstance(exclude, dict):
                         if exclude.values()[0].get('regex', False):
                             try:
-                                if re.search(exclude.keys()[0], event.pathname):
+                                if re.search(list(exclude)[0], event.pathname):
                                     _append = False
                             except Exception:
-                                log.warning('Failed to compile regex: {0}'.format(exclude.keys()[0]))
+                                log.warning('Failed to compile regex: %s',
+                                            list(exclude)[0])
                         else:
-                            exclude = exclude.keys()[0]
+                            exclude = list(exclude)[0]
                     elif '*' in exclude:
                         if fnmatch.fnmatch(event.pathname, exclude):
                             _append = False
@@ -265,7 +266,7 @@ def beacon(config):
                        'change': event.maskname}
                 ret.append(sub)
             else:
-                log.info('Excluding {0} from event for {1}'.format(event.pathname, path))
+                log.info('Excluding %s from event for %s', event.pathname, path)
 
     # Get paths currently being watched
     current = set()

@@ -11,7 +11,7 @@ SaltClass Pillar Module
 '''
 
 # import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import salt.utils.saltclass as sc
 import logging
 
@@ -45,7 +45,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         if 'path' not in i:
             path = '/srv/saltclass'
             args[i]['path'] = path
-            log.warning('path variable unset, using default: {0}'.format(path))
+            log.warning('path variable unset, using default: %s', path)
         else:
             path = i['path']
 

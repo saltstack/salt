@@ -7,7 +7,7 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import msgpack
 import socket
@@ -52,9 +52,14 @@ else:
 
 # Import third party libs
 try:
-    from Cryptodome.Cipher import PKCS1_OAEP
+    from M2Crypto import RSA
+    HAS_M2 = True
 except ImportError:
-    from Crypto.Cipher import PKCS1_OAEP
+    HAS_M2 = False
+    try:
+        from Cryptodome.Cipher import PKCS1_OAEP
+    except ImportError:
+        from Crypto.Cipher import PKCS1_OAEP
 
 if six.PY3 and salt.utils.platform.is_windows():
     USE_LOAD_BALANCER = True
@@ -224,7 +229,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         key = cls.__key(opts, **kwargs)
         obj = loop_instance_map.get(key)
         if obj is None:
-            log.debug('Initializing new AsyncTCPReqChannel for {0}'.format(key))
+            log.debug('Initializing new AsyncTCPReqChannel for %s', key)
             # we need to make a local variable for this, as we are going to store
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
@@ -232,7 +237,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             obj.__singleton_init__(opts, **kwargs)
             loop_instance_map[key] = obj
         else:
-            log.debug('Re-using AsyncTCPReqChannel for {0}'.format(key))
+            log.debug('Re-using AsyncTCPReqChannel for %s', key)
         return obj
 
     @classmethod
@@ -296,8 +301,11 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             yield self.auth.authenticate()
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
-        cipher = PKCS1_OAEP.new(key)
-        aes = cipher.decrypt(ret['key'])
+        if HAS_M2:
+            aes = key.private_decrypt(six.b(ret['key']), RSA.pkcs1_oaep_padding)
+        else:
+            cipher = PKCS1_OAEP.new(key)
+            aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         data = pcrypt.loads(ret[dictkey])
         if six.PY3:
@@ -475,9 +483,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             except salt.exceptions.SaltReqTimeoutError:
                 log.info('fire_master failed: master could not be contacted. Request timed out.')
             except Exception:
-                log.info('fire_master failed: {0}'.format(
-                    traceback.format_exc())
-                )
+                log.info('fire_master failed: %s', traceback.format_exc())
         else:
             self._reconnected = True
 
@@ -494,7 +500,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
     def connect(self):
         try:
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
-            self.tok = self.auth.gen_token('salt')
+            self.tok = self.auth.gen_token(b'salt')
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
             if self.auth.authenticated:
@@ -512,7 +518,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         except KeyboardInterrupt:
             raise
         except Exception as exc:
-            if '-|RETRY|-' not in str(exc):
+            if '-|RETRY|-' not in six.text_type(exc):
                 raise SaltClientError('Unable to sign_in to master: {0}'.format(exc))  # TODO: better error message
 
     def on_recv(self, callback):
@@ -667,7 +673,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                                                              req_opts['tgt'],
                                                              ), header=header))
             else:
-                log.error('Unknown req_fun {0}'.format(req_fun))
+                log.error('Unknown req_fun %s', req_fun)
                 # always attempt to return an error to the minion
                 stream.write('Server-side exception handling payload')
                 stream.close()
@@ -680,7 +686,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             log.error('Connection was unexpectedly closed', exc_info=True)
         except Exception as exc:  # pylint: disable=broad-except
             # Absorb any other exceptions
-            log.error('Unexpected exception occurred: {0}'.format(exc), exc_info=True)
+            log.error('Unexpected exception occurred: %s', exc, exc_info=True)
 
         raise tornado.gen.Return()
 
@@ -701,7 +707,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
         '''
         Handle incoming streams and add messages to the incoming queue
         '''
-        log.trace('Req client {0} connected'.format(address))
+        log.trace('Req client %s connected', address)
         self.clients.append((stream, address))
         unpacker = msgpack.Unpacker()
         try:
@@ -717,10 +723,10 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
                     self.io_loop.spawn_callback(self.message_handler, stream, header, framed_msg['body'])
 
         except tornado.iostream.StreamClosedError:
-            log.trace('req client disconnected {0}'.format(address))
+            log.trace('req client disconnected %s', address)
             self.clients.remove((stream, address))
         except Exception as e:
-            log.trace('other master-side exception: {0}'.format(e))
+            log.trace('other master-side exception: %s', e)
             self.clients.remove((stream, address))
             stream.close()
 
@@ -989,9 +995,9 @@ class SaltMessageClient(object):
                             if self._on_recv is not None:
                                 self.io_loop.spawn_callback(self._on_recv, header, body)
                             else:
-                                log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
+                                log.error('Got response for message_id %s that we are not tracking', message_id)
                 except tornado.iostream.StreamClosedError as e:
-                    log.debug('tcp stream to {0}:{1} closed, unable to recv'.format(self.host, self.port))
+                    log.debug('tcp stream to %s:%s closed, unable to recv', self.host, self.port)
                     for future in six.itervalues(self.send_future_map):
                         future.set_exception(e)
                     self.send_future_map = {}
@@ -1266,7 +1272,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                     client.id_ = load['id']
                     self._add_client_present(client)
             except tornado.iostream.StreamClosedError as e:
-                log.debug('tcp stream to {0} closed, unable to recv'.format(client.address))
+                log.debug('tcp stream to %s closed, unable to recv', client.address)
                 client.close()
                 self._remove_client_present(client)
                 self.clients.discard(client)
@@ -1276,7 +1282,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                 continue
 
     def handle_stream(self, stream, address):
-        log.trace('Subscriber at {0} connected'.format(address))
+        log.trace('Subscriber at %s connected', address)
         client = Subscriber(stream, address)
         self.clients.add(client)
         self.io_loop.spawn_callback(self._stream_read, client)
@@ -1284,7 +1290,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     # TODO: ACK the publish through IPC
     @tornado.gen.coroutine
     def publish_payload(self, package, _):
-        log.debug('TCP PubServer sending payload: {0}'.format(package))
+        log.debug('TCP PubServer sending payload: %s', package)
         payload = salt.transport.frame.frame_msg(package['payload'])
 
         to_remove = []
@@ -1305,7 +1311,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                         except tornado.iostream.StreamClosedError:
                             to_remove.append(client)
                 else:
-                    log.debug('Publish target {0} not connected'.format(topic))
+                    log.debug('Publish target %s not connected', topic)
         else:
             for client in self.clients:
                 try:
@@ -1315,7 +1321,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                 except tornado.iostream.StreamClosedError:
                     to_remove.append(client)
         for client in to_remove:
-            log.debug('Subscriber at {0} has disconnected from publisher'.format(client.address))
+            log.debug('Subscriber at %s has disconnected from publisher', client.address)
             client.close()
             self._remove_client_present(client)
             self.clients.discard(client)
@@ -1330,6 +1336,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+        self.ckminions = salt.utils.minions.CkMinions(opts)
         self.io_loop = None
 
     def __setstate__(self, state):
@@ -1378,7 +1385,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         )
 
         # Securely create socket
-        log.info('Starting the Salt Puller on {0}'.format(pull_uri))
+        log.info('Starting the Salt Puller on %s', pull_uri)
         old_umask = os.umask(0o177)
         try:
             pull_sock.start()
@@ -1434,6 +1441,16 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
 
         # add some targeting stuff for lists only (for now)
         if load['tgt_type'] == 'list':
-            int_payload['topic_lst'] = load['tgt']
+            if isinstance(load['tgt'], six.string_types):
+                # Fetch a list of minions that match
+                _res = self.ckminions.check_minions(load['tgt'],
+                                                    tgt_type=load['tgt_type'])
+                match_ids = _res['minions']
+
+                log.debug("Publish Side Match: %s", match_ids)
+                # Send list of miions thru so zmq can target them
+                int_payload['topic_lst'] = match_ids
+            else:
+                int_payload['topic_lst'] = load['tgt']
         # Send it over IPC!
         pub_sock.send(int_payload)

@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 from jinja2 import Environment, DictLoader, exceptions
 import ast
 import copy
 import datetime
-import json
 import os
 import pprint
 import re
 import tempfile
-import yaml
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
@@ -22,11 +20,13 @@ from tests.support.paths import TMP_CONF_DIR
 # Import Salt libs
 import salt.config
 import salt.loader
+import salt.utils.yaml
 from salt.exceptions import SaltRenderError
 
 from salt.ext import six
 from salt.ext.six.moves import builtins
 
+import salt.utils.json
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import (
     SaltCacheLoader,
@@ -310,12 +310,12 @@ class TestGetTemplate(TestCase):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
             with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
-                    salt.utils.stringutils.to_unicode(fp_.read()),
+                    salt.utils.stringutils.to_unicode(fp_.read(), 'utf-8'),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt))
-            self.assertEqual(u'Assunção' + os.linesep, out)
+            self.assertEqual('Assunção' + os.linesep, out)
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
     @skipIf(HAS_TIMELIB is False, 'The `timelib` library is not installed.')
@@ -376,7 +376,7 @@ class TestGetTemplate(TestCase):
             salt=self.local_salt
         )
         with salt.utils.files.fopen(out['data']) as fp:
-            result = salt.utils.stringutils.to_unicode(fp.read())
+            result = salt.utils.stringutils.to_unicode(fp.read(), 'utf-8')
             self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
 
     def test_get_context_has_enough_context(self):
@@ -424,7 +424,7 @@ class TestGetTemplate(TestCase):
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_render_with_unicode_syntax_error(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
-            template = u'hello\n\n{{ bad\n\nfoo\ud55c'
+            template = 'hello\n\n{{ bad\n\nfoo한'
             expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
             self.assertRaisesRegex(
                 SaltRenderError,
@@ -472,7 +472,7 @@ class TestGetTemplate(TestCase):
         )
 
     def test_render_with_undefined_variable_unicode(self):
-        template = u"hello\ud55c\n\n{{ foo }}\n\nfoo"
+        template = 'hello한\n\n{{ foo }}\n\nfoo'
         expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegex(
             SaltRenderError,
@@ -528,7 +528,7 @@ class TestJinjaDefaultOptions(TestCase):
             """
         rendered = render_jinja_tmpl(template,
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'onetwothree')
+        self.assertEqual(rendered, 'onetwothree')
 
     def test_statement_prefix(self):
 
@@ -541,7 +541,7 @@ class TestJinjaDefaultOptions(TestCase):
             """
         rendered = render_jinja_tmpl(template,
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'onetwothree')
+        self.assertEqual(rendered, 'onetwothree')
 
 
 class TestCustomExtensions(TestCase):
@@ -590,7 +590,7 @@ class TestCustomExtensions(TestCase):
             self.assertEqual(sorted(rendered), sorted(list(unique)))
         else:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
-            self.assertEqual(rendered, u"{0}".format(unique))
+            self.assertEqual(rendered, "{0}".format(unique))
 
     def test_unique_tuple(self):
         dataset = ('foo', 'foo', 'bar')
@@ -602,7 +602,7 @@ class TestCustomExtensions(TestCase):
             self.assertEqual(sorted(rendered), sorted(list(unique)))
         else:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
-            self.assertEqual(rendered, u"{0}".format(unique))
+            self.assertEqual(rendered, "{0}".format(unique))
 
     def test_unique_list(self):
         dataset = ['foo', 'foo', 'bar']
@@ -614,7 +614,7 @@ class TestCustomExtensions(TestCase):
             self.assertEqual(rendered, unique)
         else:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
-            self.assertEqual(rendered, u"{0}".format(unique))
+            self.assertEqual(rendered, "{0}".format(unique))
 
     def test_serialize_json(self):
         dataset = {
@@ -625,7 +625,7 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
-        self.assertEqual(dataset, json.loads(rendered))
+        self.assertEqual(dataset, salt.utils.json.loads(rendered))
 
     def test_serialize_yaml(self):
         dataset = {
@@ -643,7 +643,7 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
-        self.assertEqual(dataset, yaml.load(rendered))
+        self.assertEqual(dataset, salt.utils.yaml.safe_load(rendered))
 
     def test_serialize_yaml_str(self):
         dataset = "str value"
@@ -652,7 +652,7 @@ class TestCustomExtensions(TestCase):
         self.assertEqual(dataset, rendered)
 
     def test_serialize_yaml_unicode(self):
-        dataset = u"str value"
+        dataset = 'str value'
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
         if six.PY3:
@@ -681,11 +681,11 @@ class TestCustomExtensions(TestCase):
     def test_load_yaml(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{% set document = "{foo: it works}"|load_yaml %}{{ document.foo }}').render()
-        self.assertEqual(rendered, u"it works")
+        self.assertEqual(rendered, "it works")
 
         rendered = env.from_string('{% set document = document|load_yaml %}'
                                    '{{ document.foo }}').render(document="{foo: it works}")
-        self.assertEqual(rendered, u"it works")
+        self.assertEqual(rendered, "it works")
 
         with self.assertRaises(exceptions.TemplateRuntimeError):
             env.from_string('{% set document = document|load_yaml %}'
@@ -699,13 +699,13 @@ class TestCustomExtensions(TestCase):
                                         '{{ docu.foo }}'
 
         rendered = env.from_string(source).render(bar="barred")
-        self.assertEqual(rendered, u"barred, it works")
+        self.assertEqual(rendered, "barred, it works")
 
         source = '{{ bar }}, {% load_json as docu %}{"foo": "it works", "{{ bar }}": "baz"}{% endload %}' + \
                                         '{{ docu.foo }}'
 
         rendered = env.from_string(source).render(bar="barred")
-        self.assertEqual(rendered, u"barred, it works")
+        self.assertEqual(rendered, "barred, it works")
 
         with self.assertRaises(exceptions.TemplateSyntaxError):
             env.from_string('{% load_yamle as document %}{foo, bar: it works}{% endload %}').render()
@@ -717,11 +717,11 @@ class TestCustomExtensions(TestCase):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{% set document = \'{"foo": "it works"}\'|load_json %}'
                                    '{{ document.foo }}').render()
-        self.assertEqual(rendered, u"it works")
+        self.assertEqual(rendered, "it works")
 
         rendered = env.from_string('{% set document = document|load_json %}'
                                    '{{ document.foo }}').render(document='{"foo": "it works"}')
-        self.assertEqual(rendered, u"it works")
+        self.assertEqual(rendered, "it works")
 
         # bad quotes
         with self.assertRaises(exceptions.TemplateRuntimeError):
@@ -735,7 +735,7 @@ class TestCustomExtensions(TestCase):
         loader = DictLoader({'foo': '{bar: "my god is blue", foo: [1, 2, 3]}'})
         env = Environment(extensions=[SerializerExtension], loader=loader)
         rendered = env.from_string('{% import_yaml "foo" as doc %}{{ doc.bar }}').render()
-        self.assertEqual(rendered, u"my god is blue")
+        self.assertEqual(rendered, "my god is blue")
 
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_yaml "does not exists" as doc %}').render()
@@ -744,7 +744,7 @@ class TestCustomExtensions(TestCase):
         loader = DictLoader({'foo': '{"bar": "my god is blue", "foo": [1, 2, 3]}'})
         env = Environment(extensions=[SerializerExtension], loader=loader)
         rendered = env.from_string('{% import_json "foo" as doc %}{{ doc.bar }}').render()
-        self.assertEqual(rendered, u"my god is blue")
+        self.assertEqual(rendered, "my god is blue")
 
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_json "does not exists" as doc %}').render()
@@ -754,7 +754,7 @@ class TestCustomExtensions(TestCase):
         env = Environment(extensions=[SerializerExtension], loader=loader)
 
         rendered = env.from_string('{% import_text "foo" as doc %}{{ doc }}').render()
-        self.assertEqual(rendered, u"Foo!")
+        self.assertEqual(rendered, "Foo!")
 
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_text "does not exists" as doc %}').render()
@@ -791,22 +791,22 @@ class TestCustomExtensions(TestCase):
 
         env = Environment(extensions=[SerializerExtension], loader=loader)
         rendered = env.get_template('main1').render()
-        self.assertEqual(rendered, u"my god is blue")
+        self.assertEqual(rendered, "my god is blue")
 
         rendered = env.get_template('main2').render()
-        self.assertEqual(rendered, u"it works")
+        self.assertEqual(rendered, "it works")
 
         rendered = env.get_template('main3').render().strip()
-        self.assertEqual(rendered, u"my god is blue")
+        self.assertEqual(rendered, "my god is blue")
 
         rendered = env.get_template('main4').render().strip()
-        self.assertEqual(rendered, u"it works")
+        self.assertEqual(rendered, "it works")
 
         rendered = env.get_template('main5').render().strip()
-        self.assertEqual(rendered, u"my god is blue")
+        self.assertEqual(rendered, "my god is blue")
 
         rendered = env.get_template('main6').render().strip()
-        self.assertEqual(rendered, u"it works")
+        self.assertEqual(rendered, "it works")
 
     def test_nested_structures(self):
         env = Environment(extensions=[SerializerExtension])
@@ -822,7 +822,11 @@ class TestCustomExtensions(TestCase):
         ])
 
         rendered = env.from_string('{{ data }}').render(data=data)
-        self.assertEqual(rendered, u"{u'foo': {u'bar': u'baz', u'qux': 42}}")
+        self.assertEqual(
+            rendered,
+            "{u'foo': {u'bar': u'baz', u'qux': 42}}" if six.PY2
+                else "{'foo': {'bar': 'baz', 'qux': 42}}"
+        )
 
         rendered = env.from_string('{{ data }}').render(data=[
                                                             OrderedDict(
@@ -832,7 +836,11 @@ class TestCustomExtensions(TestCase):
                                                                 baz=42,
                                                             )
                                                         ])
-        self.assertEqual(rendered, u"[{'foo': u'bar'}, {'baz': 42}]")
+        self.assertEqual(
+            rendered,
+            "[{'foo': u'bar'}, {'baz': 42}]" if six.PY2
+                else "[{'foo': 'bar'}, {'baz': 42}]"
+        )
 
     def test_sequence(self):
         env = Environment()
@@ -859,143 +867,161 @@ class TestCustomExtensions(TestCase):
         self.assertEqual(rendered, '1')
 
     def test_is_ip(self):
-        '''Test the `is_ip` Jinja filter.'''
+        '''
+        Test the `is_ip` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | is_ip }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'True')
+        self.assertEqual(rendered, 'True')
 
         rendered = render_jinja_tmpl("{{ 'FE80::' | is_ip }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'True')
+        self.assertEqual(rendered, 'True')
 
         rendered = render_jinja_tmpl("{{ 'random' | is_ip }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'False')
+        self.assertEqual(rendered, 'False')
 
     def test_is_ipv4(self):
-        '''Test the `is_ipv4` Jinja filter.'''
+        '''
+        Test the `is_ipv4` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | is_ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'True')
+        self.assertEqual(rendered, 'True')
 
         rendered = render_jinja_tmpl("{{ 'FE80::' | is_ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'False')
+        self.assertEqual(rendered, 'False')
 
         rendered = render_jinja_tmpl("{{ 'random' | is_ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'False')
+        self.assertEqual(rendered, 'False')
 
     def test_is_ipv6(self):
-        '''Test the `is_ipv6` Jinja filter.'''
+        '''
+        Test the `is_ipv6` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | is_ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'False')
+        self.assertEqual(rendered, 'False')
 
         rendered = render_jinja_tmpl("{{ 'FE80::' | is_ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'True')
+        self.assertEqual(rendered, 'True')
 
         rendered = render_jinja_tmpl("{{ 'random' | is_ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'False')
+        self.assertEqual(rendered, 'False')
 
     def test_ipaddr(self):
-        '''Test the `ipaddr` Jinja filter.'''
+        '''
+        Test the `ipaddr` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipaddr }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'192.168.0.1')
+        self.assertEqual(rendered, '192.168.0.1')
 
         # provides a list with valid IP addresses only
         rendered = render_jinja_tmpl("{{ ['192.168.0.1', '172.17.17.1', 'foo', 'bar', '::'] | ipaddr | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'192.168.0.1, 172.17.17.1, ::')
+        self.assertEqual(rendered, '192.168.0.1, 172.17.17.1, ::')
 
         # return only multicast addresses
         rendered = render_jinja_tmpl("{{ ['224.0.0.1', 'FF01::1', '::'] | ipaddr(options='multicast') | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'224.0.0.1, ff01::1')
+        self.assertEqual(rendered, '224.0.0.1, ff01::1')
 
     def test_ipv4(self):
-        '''Test the `ipv4` Jinja filter.'''
+        '''
+        Test the `ipv4` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'192.168.0.1')
+        self.assertEqual(rendered, '192.168.0.1')
 
         rendered = render_jinja_tmpl("{{ ['192.168.0.1', '172.17.17.1'] | ipv4 | join(', ')}}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'192.168.0.1, 172.17.17.1')
+        self.assertEqual(rendered, '192.168.0.1, 172.17.17.1')
 
         rendered = render_jinja_tmpl("{{ 'fe80::' | ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'None')
+        self.assertEqual(rendered, 'None')
 
         rendered = render_jinja_tmpl("{{ 'random' | ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'None')
+        self.assertEqual(rendered, 'None')
 
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipv4(options='lo') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'None')
+        self.assertEqual(rendered, 'None')
 
         rendered = render_jinja_tmpl("{{ '127.0.0.1' | ipv4(options='lo') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'127.0.0.1')
+        self.assertEqual(rendered, '127.0.0.1')
 
     def test_ipv6(self):
-        '''Test the `ipv6` Jinja filter.'''
+        '''
+        Test the `ipv6` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'None')
+        self.assertEqual(rendered, 'None')
 
         rendered = render_jinja_tmpl("{{ 'random' | ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'None')
+        self.assertEqual(rendered, 'None')
 
         # returns the standard format value
         rendered = render_jinja_tmpl("{{ 'FE80:0:0::0' | ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'fe80::')
+        self.assertEqual(rendered, 'fe80::')
 
         # fe80:: is link local therefore will be returned
         rendered = render_jinja_tmpl("{{ 'fe80::' | ipv6(options='ll') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'fe80::')
+        self.assertEqual(rendered, 'fe80::')
 
         # fe80:: is not loopback
         rendered = render_jinja_tmpl("{{ 'fe80::' | ipv6(options='lo') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'None')
+        self.assertEqual(rendered, 'None')
 
         # returns only IPv6 addresses in the list
         rendered = render_jinja_tmpl("{{ ['fe80::', '192.168.0.1'] | ipv6 | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'fe80::')
+        self.assertEqual(rendered, 'fe80::')
 
         rendered = render_jinja_tmpl("{{ ['fe80::', '::'] | ipv6 | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'fe80::, ::')
+        self.assertEqual(rendered, 'fe80::, ::')
 
     def test_network_hosts(self):
-        '''Test the `network_hosts` Jinja filter.'''
+        '''
+        Test the `network_hosts` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1/30' | network_hosts | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'192.168.0.1, 192.168.0.2')
+        self.assertEqual(rendered, '192.168.0.1, 192.168.0.2')
 
     def test_network_size(self):
-        '''Test the `network_size` Jinja filter.'''
+        '''
+        Test the `network_size` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | network_size }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'1')
+        self.assertEqual(rendered, '1')
 
         rendered = render_jinja_tmpl("{{ '192.168.0.1/8' | network_size }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'16777216')
+        self.assertEqual(rendered, '16777216')
 
     def test_http_query(self):
-        '''Test the `http_query` Jinja filter.'''
+        '''
+        Test the `http_query` Jinja filter.
+        '''
         for backend in ('requests', 'tornado', 'urllib2'):
-            rendered = render_jinja_tmpl("{{ 'http://www.google.com' | http_query(backend='" + backend + "') }}",
+            rendered = render_jinja_tmpl("{{ 'http://icanhazip.com' | http_query(backend='" + backend + "') }}",
                                          dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
             self.assertIsInstance(rendered, six.text_type, 'Failed with backend: {}'.format(backend))
             dict_reply = ast.literal_eval(rendered)
@@ -1003,136 +1029,174 @@ class TestCustomExtensions(TestCase):
             self.assertIsInstance(dict_reply['body'], six.string_types, 'Failed with backend: {}'.format(backend))
 
     def test_to_bool(self):
-        '''Test the `to_bool` Jinja filter.'''
+        '''
+        Test the `to_bool` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 1 | to_bool }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'True')
+        self.assertEqual(rendered, 'True')
 
         rendered = render_jinja_tmpl("{{ 'True' | to_bool }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'True')
+        self.assertEqual(rendered, 'True')
 
         rendered = render_jinja_tmpl("{{ 0 | to_bool }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'False')
+        self.assertEqual(rendered, 'False')
 
         rendered = render_jinja_tmpl("{{ 'Yes' | to_bool }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'True')
+        self.assertEqual(rendered, 'True')
 
     def test_quote(self):
-        '''Test the `quote` Jinja filter.'''
+        '''
+        Test the `quote` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 'random' | quote }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'random')
+        self.assertEqual(rendered, 'random')
 
     def test_regex_search(self):
-        '''Test the `regex_search` Jinja filter.'''
+        '''
+        Test the `regex_search` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 'abcdefabcdef' | regex_search('BC(.*)', ignorecase=True) }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u"('defabcdef',)")  # because search looks only at the beginning
+        self.assertEqual(rendered, "('defabcdef',)")  # because search looks only at the beginning
 
     def test_regex_match(self):
-        '''Test the `regex_match` Jinja filter.'''
+        '''
+        Test the `regex_match` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 'abcdefabcdef' | regex_match('BC(.*)', ignorecase=True)}}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u"None")
+        self.assertEqual(rendered, "None")
 
     def test_regex_replace(self):
-        '''Test the `regex_replace` Jinja filter.'''
+        '''
+        Test the `regex_replace` Jinja filter.
+        '''
         rendered = render_jinja_tmpl(r"{{ 'lets replace spaces' | regex_replace('\s+', '__') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'lets__replace__spaces')
+        self.assertEqual(rendered, 'lets__replace__spaces')
 
     def test_uuid(self):
-        '''Test the `uuid` Jinja filter.'''
+        '''
+        Test the `uuid` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 'random' | uuid }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'3652b285-26ad-588e-a5dc-c2ee65edc804')
+        self.assertEqual(rendered, '3652b285-26ad-588e-a5dc-c2ee65edc804')
 
     def test_min(self):
-        '''Test the `min` Jinja filter.'''
+        '''
+        Test the `min` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | min }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'1')
+        self.assertEqual(rendered, '1')
 
     def test_max(self):
-        '''Test the `max` Jinja filter.'''
+        '''
+        Test the `max` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | max }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'3')
+        self.assertEqual(rendered, '3')
 
     def test_avg(self):
-        '''Test the `avg` Jinja filter.'''
+        '''
+        Test the `avg` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | avg }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'2.0')
+        self.assertEqual(rendered, '2.0')
 
     def test_union(self):
-        '''Test the `union` Jinja filter.'''
+        '''
+        Test the `union` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | union([2, 3, 4]) | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'1, 2, 3, 4')
+        self.assertEqual(rendered, '1, 2, 3, 4')
 
     def test_intersect(self):
-        '''Test the `intersect` Jinja filter.'''
+        '''
+        Test the `intersect` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | intersect([2, 3, 4]) | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'2, 3')
+        self.assertEqual(rendered, '2, 3')
 
     def test_difference(self):
-        '''Test the `difference` Jinja filter.'''
+        '''
+        Test the `difference` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | difference([2, 3, 4]) | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'1')
+        self.assertEqual(rendered, '1')
 
     def test_symmetric_difference(self):
-        '''Test the `symmetric_difference` Jinja filter.'''
+        '''
+        Test the `symmetric_difference` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | symmetric_difference([2, 3, 4]) | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'1, 4')
+        self.assertEqual(rendered, '1, 4')
 
     def test_md5(self):
-        '''Test the `md5` Jinja filter.'''
+        '''
+        Test the `md5` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 'random' | md5 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'7ddf32e17a6ac5ce04a8ecbf782ca509')
+        self.assertEqual(rendered, '7ddf32e17a6ac5ce04a8ecbf782ca509')
 
     def test_sha256(self):
-        '''Test the `sha256` Jinja filter.'''
+        '''
+        Test the `sha256` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 'random' | sha256 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'a441b15fe9a3cf56661190a0b93b9dec7d04127288cc87250967cf3b52894d11')
+        self.assertEqual(rendered, 'a441b15fe9a3cf56661190a0b93b9dec7d04127288cc87250967cf3b52894d11')
 
     def test_sha512(self):
-        '''Test the `sha512` Jinja filter.'''
+        '''
+        Test the `sha512` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 'random' | sha512 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, six.text_type(('811a90e1c8e86c7b4c0eef5b2c0bf0ec1b19c4b1b5a242e6455be93787cb473cb7bc'
                                                   '9b0fdeb960d00d5c6881c2094dd63c5c900ce9057255e2a4e271fc25fef1')))
 
     def test_hmac(self):
-        '''Test the `hmac` Jinja filter.'''
+        '''
+        Test the `hmac` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 'random' | hmac('secret', 'blah') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'False')
+        self.assertEqual(rendered, 'False')
 
         rendered = render_jinja_tmpl(("{{ 'get salted' | "
                                       "hmac('shared secret', 'eBWf9bstXg+NiP5AOwppB5HMvZiYMPzEM9W5YMm/AmQ=') }}"),
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'True')
+        self.assertEqual(rendered, 'True')
 
     def test_base64_encode(self):
-        '''Test the `base64_encode` Jinja filter.'''
+        '''
+        Test the `base64_encode` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 'random' | base64_encode }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'cmFuZG9t')
+        self.assertEqual(rendered, 'cmFuZG9t')
 
     def test_base64_decode(self):
-        '''Test the `base64_decode` Jinja filter.'''
+        '''
+        Test the `base64_decode` Jinja filter.
+        '''
         rendered = render_jinja_tmpl("{{ 'cmFuZG9t' | base64_decode }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, u'random')
+        self.assertEqual(rendered, 'random')
 
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])

@@ -2,13 +2,12 @@
 '''
 Create ssh executor system
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function
 # Import python libs
 import logging
 import os
 import tarfile
 import tempfile
-import json
 import shutil
 from contextlib import closing
 
@@ -16,6 +15,7 @@ from contextlib import closing
 import salt.client.ssh.shell
 import salt.client.ssh
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.thin
@@ -76,6 +76,12 @@ class SSHHighState(salt.state.BaseHighState):
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
         self.tops = salt.loader.tops(self.opts)
+
+        self._pydsl_all_decls = {}
+        self._pydsl_render_stack = []
+
+    def push_active(self):
+        salt.state.HighState.stack.append(self)
 
     def load_dynamic(self, matches):
         '''
@@ -181,13 +187,13 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
             [salt.utils.url.create('_utils')],
             ]
     with salt.utils.files.fopen(lowfn, 'w+') as fp_:
-        fp_.write(salt.utils.stringutils.to_str(json.dumps(chunks)))
+        salt.utils.json.dump(chunks, fp_)
     if pillar:
         with salt.utils.files.fopen(pillarfn, 'w+') as fp_:
-            fp_.write(salt.utils.stringutils.to_str(json.dumps(pillar)))
+            salt.utils.json.dump(pillar, fp_)
     if roster_grains:
         with salt.utils.files.fopen(roster_grainsfn, 'w+') as fp_:
-            fp_.write(salt.utils.stringutils.to_str(json.dumps(roster_grains)))
+            salt.utils.json.dump(roster_grains, fp_)
 
     if id_ is None:
         id_ = ''
@@ -195,7 +201,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
         cachedir = os.path.join('salt-ssh', id_).rstrip(os.sep)
     except AttributeError:
         # Minion ID should always be a str, but don't let an int break this
-        cachedir = os.path.join('salt-ssh', six.string_types(id_)).rstrip(os.sep)
+        cachedir = os.path.join('salt-ssh', six.text_type(id_)).rstrip(os.sep)
 
     for saltenv in file_refs:
         # Location where files in this saltenv will be cached
@@ -206,7 +212,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
             os.makedirs(env_root)
         for ref in file_refs[saltenv]:
             for name in ref:
-                short = salt.utils.url.parse(name)[0]
+                short = salt.utils.url.parse(name)[0].lstrip('/')
                 cache_dest = os.path.join(cache_dest_root, short)
                 try:
                     path = file_client.cache_file(name, saltenv, cachedir=cachedir)

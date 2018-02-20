@@ -11,7 +11,7 @@ This module implements the pkgbuild interface
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
@@ -83,7 +83,9 @@ def _create_rpmmacros():
 
     rpmmacros = os.path.join(home, '.rpmmacros')
     with salt.utils.files.fopen(rpmmacros, 'w') as afile:
-        afile.write('%_topdir {0}\n'.format(rpmbuilddir))
+        afile.write(
+            salt.utils.stringutils.to_str('%_topdir {0}\n'.format(rpmbuilddir))
+        )
         afile.write('%signature gpg\n')
         afile.write('%_source_filedigest_algorithm 8\n')
         afile.write('%_binary_filedigest_algorithm 8\n')
@@ -306,7 +308,7 @@ def build(runas,
                     shutil.copy(full, log_file)
                     ret.setdefault('Log Files', []).append(log_file)
         except Exception as exc:
-            log.error('Error building from {0}: {1}'.format(srpm, exc))
+            log.error('Error building from %s: %s', srpm, exc)
         finally:
             shutil.rmtree(results_dir)
     shutil.rmtree(deps_dir)

@@ -61,18 +61,17 @@ config:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
-import os.path
 import hashlib
-import json
 
 # Import Salt Libs
 from salt.ext import six
 import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
+import salt.utils.json
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -208,7 +207,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
 
     if Permissions is not None:
         if isinstance(Permissions, six.string_types):
-            Permissions = json.loads(Permissions)
+            Permissions = salt.utils.json.loads(Permissions)
         required_keys = set(('Action', 'Principal'))
         optional_keys = set(('SourceArn', 'SourceAccount', 'Qualifier'))
         for sid, permission in six.iteritems(Permissions):
@@ -321,7 +320,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
     if isinstance(conf, six.string_types):
-        conf = json.loads(conf)
+        conf = salt.utils.json.loads(conf)
     if not conf:
         # if the conf is None, we should explicitly set the VpcConfig to
         # {'SubnetIds': [], 'SecurityGroupIds': []} to take the lambda out of
@@ -380,8 +379,7 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Function config to be modified'])
         if __opts__['test']:
-            msg = 'Function {0} set to be modified.'.format(FunctionName)
-            ret['comment'] = msg
+            ret['comment'] = 'Function {0} set to be modified.'.format(FunctionName)
             ret['result'] = None
             return ret
         _r = __salt__['boto_lambda.update_function_config'](
@@ -423,8 +421,7 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key,
         update = True
     if update:
         if __opts__['test']:
-            msg = 'Function {0} set to be modified.'.format(FunctionName)
-            ret['comment'] = msg
+            ret['comment'] = 'Function {0} set to be modified.'.format(FunctionName)
             ret['result'] = None
             return ret
         ret['changes']['old'] = {
@@ -469,8 +466,7 @@ def _function_permissions_present(FunctionName, Permissions,
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Function permissions to be modified'])
         if __opts__['test']:
-            msg = 'Function {0} set to be modified.'.format(FunctionName)
-            ret['comment'] = msg
+            ret['comment'] = 'Function {0} set to be modified.'.format(FunctionName)
             ret['result'] = None
             return ret
         for sid, diff in six.iteritems(diffs):
@@ -655,8 +651,7 @@ def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Alias config to be modified'])
         if __opts__['test']:
-            msg = 'Alias {0} set to be modified.'.format(Name)
-            ret['comment'] = msg
+            ret['comment'] = 'Alias {0} set to be modified.'.format(Name)
             ret['result'] = None
             return ret
         _r = __salt__['boto_lambda.update_alias'](
@@ -874,9 +869,11 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName,
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Event source mapping to be modified'])
         if __opts__['test']:
-            msg = ('Event source mapping {0} set to be '
-                   'modified.'.format(_describe['UUID']))
-            ret['comment'] = msg
+            ret['comment'] = (
+                'Event source mapping {0} set to be modified.'.format(
+                    _describe['UUID']
+                )
+            )
             ret['result'] = None
             return ret
         _r = __salt__['boto_lambda.update_event_source_mapping'](

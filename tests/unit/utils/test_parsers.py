@@ -4,8 +4,10 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
+import logging
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
@@ -489,7 +491,7 @@ class LogSettingsParserTests(TestCase):
         # Check log file logger
         self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
 
-    @skipIf(salt.utils.is_windows(), 'Windows uses a logging listener')
+    @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
     def test_log_created(self):
         '''
         Tests that log file is created
@@ -499,18 +501,17 @@ class LogSettingsParserTests(TestCase):
         log_file_name = self.logfile_config_setting_name
         opts = self.default_config.copy()
         opts.update({'log_file': log_file})
-        if log_file_name is not 'log_file':
-            opts.update({log_file_name:
-                         getattr(self, log_file_name)})
+        if log_file_name != 'log_file':
+            opts.update({log_file_name: getattr(self, log_file_name)})
 
-        if log_file_name is 'key_logfile':
+        if log_file_name == 'key_logfile':
             self.skipTest('salt-key creates log file outside of parse_args.')
 
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
 
-        if log_file_name is 'log_file':
+        if log_file_name == 'log_file':
             self.assertEqual(os.path.getsize(log_file), 0)
         else:
             self.assertEqual(os.path.getsize(getattr(self, log_file_name)), 0)
@@ -1010,9 +1011,11 @@ class DaemonMixInTestCase(TestCase):
 
         # Setup mixin
         self.mixin = salt.utils.parsers.DaemonMixIn()
-        self.mixin.info = None
         self.mixin.config = {}
         self.mixin.config['pidfile'] = self.pid
+
+        # logger
+        self.logger = logging.getLogger('salt.utils.parsers')
 
     def test_pid_file_deletion(self):
         '''
@@ -1020,9 +1023,9 @@ class DaemonMixInTestCase(TestCase):
         '''
         with patch('os.unlink', MagicMock()) as os_unlink:
             with patch('os.path.isfile', MagicMock(return_value=True)):
-                with patch.object(self.mixin, 'info', MagicMock()):
+                with patch.object(self.logger, 'info') as mock_logger:
                     self.mixin._mixin_before_exit()
-                    assert self.mixin.info.call_count == 0
+                    assert mock_logger.call_count == 0
                     assert os_unlink.call_count == 1
 
     def test_pid_file_deletion_with_oserror(self):
@@ -1031,10 +1034,10 @@ class DaemonMixInTestCase(TestCase):
         '''
         with patch('os.unlink', MagicMock(side_effect=OSError())) as os_unlink:
             with patch('os.path.isfile', MagicMock(return_value=True)):
-                with patch.object(self.mixin, 'info', MagicMock()):
+                with patch.object(self.logger, 'info') as mock_logger:
                     self.mixin._mixin_before_exit()
                     assert os_unlink.call_count == 1
-                    self.mixin.info.assert_called_with(
+                    mock_logger.assert_called_with(
                         'PIDfile could not be deleted: {0}'.format(self.pid))
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module

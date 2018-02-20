@@ -5,12 +5,11 @@ A module for shelling out.
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions.
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import functools
 import glob
-import json
 import logging
 import os
 import shutil
@@ -27,6 +26,7 @@ import tempfile
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.powershell
@@ -43,11 +43,11 @@ from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range, zip
 from salt.ext.six.moves import shlex_quote as _cmd_quote
-from salt.utils.locales import sdecode
 
 # Only available on POSIX systems, nonfatal on windows
 try:
     import pwd
+    import grp
 except ImportError:
     pass
 
@@ -254,6 +254,7 @@ def _run(cmd,
          output_loglevel='debug',
          log_callback=None,
          runas=None,
+         group=None,
          shell=DEFAULT_SHELL,
          python_shell=False,
          env=None,
@@ -273,6 +274,7 @@ def _run(cmd,
          password=None,
          bg=False,
          encoded_cmd=False,
+         success_retcodes=None,
          **kwargs):
     '''
     Do the DRY thing and only call subprocess.Popen() once
@@ -286,6 +288,7 @@ def _run(cmd,
             .format(shell))
 
     log_callback = _check_cb(log_callback)
+    use_sudo = False
 
     if runas is None and '__context__' in globals():
         runas = __context__.get('runas')
@@ -372,10 +375,11 @@ def _run(cmd,
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
         msg = (
-            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
+            'Executing command {0}{1}{0} {2}{3}in directory \'{4}\'{5}'.format(
                 '\'' if not isinstance(cmd, list) else '',
                 _get_stripped(cmd),
                 'as user \'{0}\' '.format(runas) if runas else '',
+                'in group \'{0}\' '.format(group) if group else '',
                 cwd,
                 '. Executing command in the background, no output will be '
                 'logged.' if bg else ''
@@ -405,6 +409,24 @@ def _run(cmd,
             raise CommandExecutionError(
                 'User \'{0}\' is not available'.format(runas)
             )
+
+    if group:
+        if salt.utils.platform.is_windows():
+            msg = 'group is not currently available on Windows'
+            raise SaltInvocationError(msg)
+        if not which_bin(['sudo']):
+            msg = 'group argument requires sudo but not found'
+            raise CommandExecutionError(msg)
+        try:
+            grp.getgrnam(group)
+        except KeyError:
+            raise CommandExecutionError(
+                'Group \'{0}\' is not available'.format(runas)
+            )
+        else:
+            use_sudo = True
+
+    if runas or group:
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
@@ -412,9 +434,19 @@ def _run(cmd,
                 'import sys, os, itertools; '
                 'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items())))'
             )
-            if __grains__['os'] in ['MacOS', 'Darwin']:
-                env_cmd = ('sudo', '-i', '-u', runas, '--',
-                           sys.executable)
+
+            if use_sudo or __grains__['os'] in ['MacOS', 'Darwin']:
+                env_cmd = ['sudo']
+                # runas is optional if use_sudo is set.
+                if runas:
+                    env_cmd.extend(['-u', runas])
+                if group:
+                    env_cmd.extend(['-g', group])
+                if shell != DEFAULT_SHELL:
+                    env_cmd.extend(['-s', '--', shell, '-c'])
+                else:
+                    env_cmd.extend(['-i', '--'])
+                env_cmd.extend([sys.executable])
             elif __grains__['os'] in ['FreeBSD']:
                 env_cmd = ('su', '-', runas, '-c',
                            "{0} -c {1}".format(shell, sys.executable))
@@ -424,28 +456,25 @@ def _run(cmd,
                 env_cmd = ('su', runas, '-c', sys.executable)
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
-            env_encoded = subprocess.Popen(
+            log.debug(log_callback('env command: %s', env_cmd))
+            env_bytes = salt.utils.stringutils.to_bytes(subprocess.Popen(
                 env_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
-            ).communicate(py_code.encode(__salt_system_encoding__))[0]
+            ).communicate(salt.utils.stringutils.to_bytes(py_code))[0])
             if six.PY2:
                 import itertools
-                env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
+                env_runas = dict(itertools.izip(*[iter(env_bytes.split(b'\0'))]*2))
             elif six.PY3:
-                if isinstance(env_encoded, str):  # future lint: disable=blacklisted-function
-                    env_encoded = env_encoded.encode(__salt_system_encoding__)
-                env_runas = dict(list(zip(*[iter(env_encoded.split(b'\0'))]*2)))
+                env_runas = dict(list(zip(*[iter(env_bytes.split(b'\0'))]*2)))
 
-            env_runas = dict((sdecode(k), sdecode(v)) for k, v in six.iteritems(env_runas))
+            env_runas = dict(
+                (salt.utils.stringutils.to_str(k),
+                 salt.utils.stringutils.to_str(v))
+                for k, v in six.iteritems(env_runas)
+            )
             env_runas.update(env)
             env = env_runas
-            # Encode unicode kwargs to filesystem encoding to avoid a
-            # UnicodeEncodeError when the subprocess is invoked.
-            fse = sys.getfilesystemencoding()
-            for key, val in six.iteritems(env):
-                if isinstance(val, six.text_type):
-                    env[key] = val.encode(fse)
         except ValueError:
             raise CommandExecutionError(
                 'Environment could not be retrieved for User \'{0}\''.format(
@@ -490,7 +519,7 @@ def _run(cmd,
 
     kwargs = {'cwd': cwd,
               'shell': python_shell,
-              'env': run_env,
+              'env': run_env if six.PY3 else salt.utils.data.encode(run_env),
               'stdin': six.text_type(stdin) if stdin is not None else stdin,
               'stdout': stdout,
               'stderr': stderr,
@@ -514,11 +543,12 @@ def _run(cmd,
     else:
         _umask = None
 
-    if runas or umask:
+    if runas or group or umask:
         kwargs['preexec_fn'] = functools.partial(
             salt.utils.user.chugid_and_umask,
             runas,
-            _umask)
+            _umask,
+            group)
 
     if not salt.utils.platform.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
@@ -538,6 +568,18 @@ def _run(cmd,
             and not isinstance(cmd, list):
         cmd = salt.utils.args.shlex_split(cmd)
 
+    if success_retcodes is None:
+        success_retcodes = [0]
+    else:
+        try:
+            success_retcodes = [int(i) for i in
+                                salt.utils.args.split_input(
+                                    success_retcodes
+                                )]
+        except ValueError:
+            raise SaltInvocationError(
+                'success_retcodes must be a list of integers'
+            )
     if not use_vt:
         # This is where the magic happens
         try:
@@ -597,6 +639,8 @@ def _run(cmd,
                 err = err.rstrip()
         ret['pid'] = proc.process.pid
         ret['retcode'] = proc.process.returncode
+        if ret['retcode'] in success_retcodes:
+            ret['retcode'] = 0
         ret['stdout'] = out
         ret['stderr'] = err
     else:
@@ -666,6 +710,8 @@ def _run(cmd,
                     # the timeout
                     ret['stderr'] = stderr
                     ret['retcode'] = proc.exitstatus
+                    if ret['retcode'] in success_retcodes:
+                        ret['retcode'] = 0
                 ret['pid'] = proc.pid
         finally:
             proc.close(terminate=True, kill=True)
@@ -693,7 +739,8 @@ def _run_quiet(cmd,
                reset_system_locale=True,
                saltenv='base',
                pillarenv=None,
-               pillar_override=None):
+               pillar_override=None,
+               success_retcodes=None):
     '''
     Helper for running commands quietly for minion startup
     '''
@@ -713,7 +760,8 @@ def _run_quiet(cmd,
                 reset_system_locale=reset_system_locale,
                 saltenv=saltenv,
                 pillarenv=pillarenv,
-                pillar_override=pillar_override)['stdout']
+                pillar_override=pillar_override,
+                success_retcodes=success_retcodes)['stdout']
 
 
 def _run_all_quiet(cmd,
@@ -730,7 +778,8 @@ def _run_all_quiet(cmd,
                    saltenv='base',
                    pillarenv=None,
                    pillar_override=None,
-                   output_loglevel=None):
+                   output_loglevel=None,
+                   success_retcodes=None):
 
     '''
     Helper for running commands quietly for minion startup.
@@ -756,13 +805,15 @@ def _run_all_quiet(cmd,
                 reset_system_locale=reset_system_locale,
                 saltenv=saltenv,
                 pillarenv=pillarenv,
-                pillar_override=pillar_override)
+                pillar_override=pillar_override,
+                success_retcodes=success_retcodes)
 
 
 def run(cmd,
         cwd=None,
         stdin=None,
         runas=None,
+        group=None,
         shell=DEFAULT_SHELL,
         python_shell=None,
         env=None,
@@ -783,6 +834,7 @@ def run(cmd,
         encoded_cmd=False,
         raise_err=False,
         prepend_path=None,
+        success_retcodes=None,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -802,6 +854,9 @@ def run(cmd,
     :param str runas: User to run command as. If running on a Windows minion you
       must also pass a password. The target user account must be in the
       Administrators group.
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -918,6 +973,13 @@ def run(cmd,
         Be absolutely certain that you have sanitized your input prior to using
         python_shell=True
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -959,6 +1021,7 @@ def run(cmd,
                                          kwargs.get('__pub_jid', ''))
     ret = _run(cmd,
                runas=runas,
+               group=group,
                shell=shell,
                python_shell=python_shell,
                cwd=cwd,
@@ -980,6 +1043,7 @@ def run(cmd,
                bg=bg,
                password=password,
                encoded_cmd=encoded_cmd,
+               success_retcodes=success_retcodes,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1005,27 +1069,29 @@ def run(cmd,
 
 
 def shell(cmd,
-        cwd=None,
-        stdin=None,
-        runas=None,
-        shell=DEFAULT_SHELL,
-        env=None,
-        clean_env=False,
-        template=None,
-        rstrip=True,
-        umask=None,
-        output_loglevel='debug',
-        log_callback=None,
-        hide_output=False,
-        timeout=None,
-        reset_system_locale=True,
-        ignore_retcode=False,
-        saltenv='base',
-        use_vt=False,
-        bg=False,
-        password=None,
-        prepend_path=None,
-        **kwargs):
+          cwd=None,
+          stdin=None,
+          runas=None,
+          group=None,
+          shell=DEFAULT_SHELL,
+          env=None,
+          clean_env=False,
+          template=None,
+          rstrip=True,
+          umask=None,
+          output_loglevel='debug',
+          log_callback=None,
+          hide_output=False,
+          timeout=None,
+          reset_system_locale=True,
+          ignore_retcode=False,
+          saltenv='base',
+          use_vt=False,
+          bg=False,
+          password=None,
+          prepend_path=None,
+          success_retcodes=None,
+          **kwargs):
     '''
     Execute the passed command and return the output as a string.
 
@@ -1043,6 +1109,9 @@ def shell(cmd,
     :param str runas: User to run command as. If running on a Windows minion you
       must also pass a password. The target user account must be in the
       Administrators group.
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -1147,6 +1216,12 @@ def shell(cmd,
         ``env`` represents the environment variables for the command, and
         should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     CLI Example:
 
     .. code-block:: bash
@@ -1192,6 +1267,7 @@ def shell(cmd,
                cwd=cwd,
                stdin=stdin,
                runas=runas,
+               group=group,
                shell=shell,
                env=env,
                clean_env=clean_env,
@@ -1210,6 +1286,7 @@ def shell(cmd,
                python_shell=python_shell,
                bg=bg,
                password=password,
+               success_retcodes=success_retcodes,
                **kwargs)
 
 
@@ -1217,6 +1294,7 @@ def run_stdout(cmd,
                cwd=None,
                stdin=None,
                runas=None,
+               group=None,
                shell=DEFAULT_SHELL,
                python_shell=None,
                env=None,
@@ -1234,6 +1312,7 @@ def run_stdout(cmd,
                use_vt=False,
                password=None,
                prepend_path=None,
+               success_retcodes=None,
                **kwargs):
     '''
     Execute a command, and only return the standard out
@@ -1255,6 +1334,9 @@ def run_stdout(cmd,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default shell.
 
@@ -1345,6 +1427,12 @@ def run_stdout(cmd,
       ``env`` represents the environment variables for the command, and
       should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     CLI Example:
 
     .. code-block:: bash
@@ -1371,6 +1459,7 @@ def run_stdout(cmd,
                                          kwargs.get('__pub_jid', ''))
     ret = _run(cmd,
                runas=runas,
+               group=group,
                cwd=cwd,
                stdin=stdin,
                shell=shell,
@@ -1389,6 +1478,7 @@ def run_stdout(cmd,
                saltenv=saltenv,
                use_vt=use_vt,
                password=password,
+               success_retcodes=success_retcodes,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1418,6 +1508,7 @@ def run_stderr(cmd,
                cwd=None,
                stdin=None,
                runas=None,
+               group=None,
                shell=DEFAULT_SHELL,
                python_shell=None,
                env=None,
@@ -1435,6 +1526,7 @@ def run_stderr(cmd,
                use_vt=False,
                password=None,
                prepend_path=None,
+               success_retcodes=None,
                **kwargs):
     '''
     Execute a command and only return the standard error
@@ -1456,6 +1548,9 @@ def run_stderr(cmd,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -1547,6 +1642,12 @@ def run_stderr(cmd,
       ``env`` represents the environment variables for the command, and
       should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     CLI Example:
 
     .. code-block:: bash
@@ -1573,6 +1674,7 @@ def run_stderr(cmd,
                                          kwargs.get('__pub_jid', ''))
     ret = _run(cmd,
                runas=runas,
+               group=group,
                cwd=cwd,
                stdin=stdin,
                shell=shell,
@@ -1591,6 +1693,7 @@ def run_stderr(cmd,
                use_vt=use_vt,
                saltenv=saltenv,
                password=password,
+               success_retcodes=success_retcodes,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1620,6 +1723,7 @@ def run_all(cmd,
             cwd=None,
             stdin=None,
             runas=None,
+            group=None,
             shell=DEFAULT_SHELL,
             python_shell=None,
             env=None,
@@ -1639,6 +1743,7 @@ def run_all(cmd,
             password=None,
             encoded_cmd=False,
             prepend_path=None,
+            success_retcodes=None,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -1660,6 +1765,9 @@ def run_all(cmd,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -1773,6 +1881,12 @@ def run_all(cmd,
 
       .. versionadded:: 2016.3.6
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     CLI Example:
 
     .. code-block:: bash
@@ -1800,6 +1914,7 @@ def run_all(cmd,
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(cmd,
                runas=runas,
+               group=group,
                cwd=cwd,
                stdin=stdin,
                stderr=stderr,
@@ -1820,6 +1935,7 @@ def run_all(cmd,
                use_vt=use_vt,
                password=password,
                encoded_cmd=encoded_cmd,
+               success_retcodes=success_retcodes,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -1852,6 +1968,7 @@ def retcode(cmd,
             cwd=None,
             stdin=None,
             runas=None,
+            group=None,
             shell=DEFAULT_SHELL,
             python_shell=None,
             env=None,
@@ -1866,6 +1983,7 @@ def retcode(cmd,
             saltenv='base',
             use_vt=False,
             password=None,
+            success_retcodes=None,
             **kwargs):
     '''
     Execute a shell command and return the command's return code.
@@ -1887,6 +2005,9 @@ def retcode(cmd,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -1965,6 +2086,12 @@ def retcode(cmd,
     :rtype: None
     :returns: Return Code as an int or None if there was an exception.
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     CLI Example:
 
     .. code-block:: bash
@@ -1989,6 +2116,7 @@ def retcode(cmd,
     '''
     ret = _run(cmd,
                runas=runas,
+               group=group,
                cwd=cwd,
                stdin=stdin,
                stderr=subprocess.STDOUT,
@@ -2006,6 +2134,7 @@ def retcode(cmd,
                saltenv=saltenv,
                use_vt=use_vt,
                password=password,
+               success_retcodes=success_retcodes,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -2030,6 +2159,7 @@ def _retcode_quiet(cmd,
                    cwd=None,
                    stdin=None,
                    runas=None,
+                   group=None,
                    shell=DEFAULT_SHELL,
                    python_shell=False,
                    env=None,
@@ -2044,6 +2174,7 @@ def _retcode_quiet(cmd,
                    saltenv='base',
                    use_vt=False,
                    password=None,
+                   success_retcodes=None,
                    **kwargs):
     '''
     Helper for running commands quietly for minion startup.
@@ -2053,6 +2184,7 @@ def _retcode_quiet(cmd,
                    cwd=cwd,
                    stdin=stdin,
                    runas=runas,
+                   group=group,
                    shell=shell,
                    python_shell=python_shell,
                    env=env,
@@ -2067,6 +2199,7 @@ def _retcode_quiet(cmd,
                    saltenv=saltenv,
                    use_vt=use_vt,
                    password=password,
+                   success_retcodes=success_retcodes,
                    **kwargs)
 
 
@@ -2075,6 +2208,7 @@ def script(source,
            cwd=None,
            stdin=None,
            runas=None,
+           group=None,
            shell=DEFAULT_SHELL,
            python_shell=None,
            env=None,
@@ -2089,6 +2223,7 @@ def script(source,
            use_vt=False,
            bg=False,
            password=None,
+           success_retcodes=None,
            **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -2122,6 +2257,9 @@ def script(source,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run script as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -2201,6 +2339,12 @@ def script(source,
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
       more interactively to the console and the logs. This is experimental.
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     CLI Example:
 
     .. code-block:: bash
@@ -2275,12 +2419,16 @@ def script(source,
     if not salt.utils.platform.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
+
+    path = _cmd_quote(path)
+
     ret = _run(path + ' ' + six.text_type(args) if args else path,
                cwd=cwd,
                stdin=stdin,
                output_loglevel=output_loglevel,
                log_callback=log_callback,
                runas=runas,
+               group=group,
                shell=shell,
                python_shell=python_shell,
                env=env,
@@ -2291,6 +2439,7 @@ def script(source,
                use_vt=use_vt,
                bg=bg,
                password=password,
+               success_retcodes=success_retcodes,
                **kwargs)
     if salt.utils.platform.is_windows() and runas:
         _cleanup_tempfile(cwd)
@@ -2307,6 +2456,7 @@ def script_retcode(source,
                    cwd=None,
                    stdin=None,
                    runas=None,
+                   group=None,
                    shell=DEFAULT_SHELL,
                    python_shell=None,
                    env=None,
@@ -2319,6 +2469,7 @@ def script_retcode(source,
                    log_callback=None,
                    use_vt=False,
                    password=None,
+                   success_retcodes=None,
                    **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -2356,6 +2507,9 @@ def script_retcode(source,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run script as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -2429,6 +2583,12 @@ def script_retcode(source,
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
       more interactively to the console and the logs. This is experimental.
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     CLI Example:
 
     .. code-block:: bash
@@ -2454,6 +2614,7 @@ def script_retcode(source,
                   cwd=cwd,
                   stdin=stdin,
                   runas=runas,
+                  group=group,
                   shell=shell,
                   python_shell=python_shell,
                   env=env,
@@ -2466,6 +2627,7 @@ def script_retcode(source,
                   log_callback=log_callback,
                   use_vt=use_vt,
                   password=password,
+                  success_retcodes=success_retcodes,
                   **kwargs)['retcode']
 
 
@@ -2601,6 +2763,7 @@ def run_chroot(root,
                cwd=None,
                stdin=None,
                runas=None,
+               group=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
                env=None,
@@ -2617,6 +2780,7 @@ def run_chroot(root,
                saltenv='base',
                use_vt=False,
                bg=False,
+               success_retcodes=None,
                **kwargs):
     '''
     .. versionadded:: 2014.7.0
@@ -2641,6 +2805,9 @@ def run_chroot(root,
 
     runas
         User to run script as.
+
+    group
+        Group to run script as.
 
     shell
         Shell to execute under. Defaults to the system default shell.
@@ -2730,7 +2897,13 @@ def run_chroot(root,
         This is experimental.
 
 
-    CLI Example:
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+CLI Example:
 
     .. code-block:: bash
 
@@ -2758,6 +2931,7 @@ def run_chroot(root,
 
     ret = run_func(cmd,
                    runas=runas,
+                   group=group,
                    cwd=cwd,
                    stdin=stdin,
                    shell=shell,
@@ -2776,6 +2950,7 @@ def run_chroot(root,
                    pillarenv=kwargs.get('pillarenv'),
                    pillar=kwargs.get('pillar'),
                    use_vt=use_vt,
+                   success_retcodes=success_retcodes,
                    bg=bg)
 
     # Kill processes running in the chroot
@@ -2933,9 +3108,8 @@ def shell_info(shell, list_modules=False):
                 'HKEY_LOCAL_MACHINE',
                 'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
                 'Install')
-            if 'vtype' in install_data and \
-                    install_data['vtype'] == 'REG_DWORD' and \
-                    install_data['vdata'] == 1:
+            if install_data.get('vtype') == 'REG_DWORD' and \
+                    install_data.get('vdata') == 1:
                 details = __salt__['reg.list_values'](
                     'HKEY_LOCAL_MACHINE',
                     'Software\\Microsoft\\PowerShell\\{0}\\'
@@ -3038,26 +3212,27 @@ def shell_info(shell, list_modules=False):
 
 
 def powershell(cmd,
-        cwd=None,
-        stdin=None,
-        runas=None,
-        shell=DEFAULT_SHELL,
-        env=None,
-        clean_env=False,
-        template=None,
-        rstrip=True,
-        umask=None,
-        output_loglevel='debug',
-        hide_output=False,
-        timeout=None,
-        reset_system_locale=True,
-        ignore_retcode=False,
-        saltenv='base',
-        use_vt=False,
-        password=None,
-        depth=None,
-        encode_cmd=False,
-        **kwargs):
+               cwd=None,
+               stdin=None,
+               runas=None,
+               shell=DEFAULT_SHELL,
+               env=None,
+               clean_env=False,
+               template=None,
+               rstrip=True,
+               umask=None,
+               output_loglevel='debug',
+               hide_output=False,
+               timeout=None,
+               reset_system_locale=True,
+               ignore_retcode=False,
+               saltenv='base',
+               use_vt=False,
+               password=None,
+               depth=None,
+               encode_cmd=False,
+               success_retcodes=None,
+               **kwargs):
     '''
     Execute the passed PowerShell command and return the output as a dictionary.
 
@@ -3212,6 +3387,13 @@ def powershell(cmd,
       where characters may be dropped or incorrectly converted when executed.
       Default is False.
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
     :returns:
         :dict: A dictionary of data returned by the powershell command.
 
@@ -3241,6 +3423,13 @@ def powershell(cmd,
     else:
         encoded_cmd = False
 
+    # Put the whole command inside a try / catch block
+    # Some errors in PowerShell are not "Terminating Errors" and will not be
+    # caught in a try/catch block. For example, the `Get-WmiObject` command will
+    # often return a "Non Terminating Error". To fix this, make sure
+    # `-ErrorAction Stop` is set in the powershell command
+    cmd = 'try {' + cmd + '} catch { "{}" | ConvertTo-JSON}'
+
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
                    cwd=cwd,
@@ -3262,10 +3451,11 @@ def powershell(cmd,
                    python_shell=python_shell,
                    password=password,
                    encoded_cmd=encoded_cmd,
+                   success_retcodes=success_retcodes,
                    **kwargs)
 
     try:
-        return json.loads(response)
+        return salt.utils.json.loads(response)
     except Exception:
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
@@ -3292,6 +3482,7 @@ def powershell_all(cmd,
                    depth=None,
                    encode_cmd=False,
                    force_list=False,
+                   success_retcodes=None,
                    **kwargs):
     '''
     Execute the passed PowerShell command and return a dictionary with a result field
@@ -3485,6 +3676,13 @@ def powershell_all(cmd,
     :param bool force_list: The purpose of this paramater is described in the preamble
       of this function's documentation. Default value is False.
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
     :return: A dictionary with the following entries:
 
         result
@@ -3539,26 +3737,27 @@ def powershell_all(cmd,
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run_all(cmd,
-                   cwd=cwd,
-                   stdin=stdin,
-                   runas=runas,
-                   shell='powershell',
-                   env=env,
-                   clean_env=clean_env,
-                   template=template,
-                   rstrip=rstrip,
-                   umask=umask,
-                   output_loglevel=output_loglevel,
-                   quiet=quiet,
-                   timeout=timeout,
-                   reset_system_locale=reset_system_locale,
-                   ignore_retcode=ignore_retcode,
-                   saltenv=saltenv,
-                   use_vt=use_vt,
-                   python_shell=python_shell,
-                   password=password,
-                   encoded_cmd=encoded_cmd,
-                   **kwargs)
+                       cwd=cwd,
+                       stdin=stdin,
+                       runas=runas,
+                       shell='powershell',
+                       env=env,
+                       clean_env=clean_env,
+                       template=template,
+                       rstrip=rstrip,
+                       umask=umask,
+                       output_loglevel=output_loglevel,
+                       quiet=quiet,
+                       timeout=timeout,
+                       reset_system_locale=reset_system_locale,
+                       ignore_retcode=ignore_retcode,
+                       saltenv=saltenv,
+                       use_vt=use_vt,
+                       python_shell=python_shell,
+                       password=password,
+                       encoded_cmd=encoded_cmd,
+                       success_retcodes=success_retcodes,
+                       **kwargs)
     stdoutput = response['stdout']
 
     # if stdoutput is the empty string and force_list is True we return an empty list
@@ -3571,7 +3770,7 @@ def powershell_all(cmd,
 
     # If we fail to parse stdoutput we will raise an exception
     try:
-        result = json.loads(stdoutput)
+        result = salt.utils.json.loads(stdoutput)
     except Exception:
         err_msg = "cmd.powershell_all " + \
                   "cannot parse the Powershell output."
@@ -3595,23 +3794,25 @@ def powershell_all(cmd,
 
 
 def run_bg(cmd,
-        cwd=None,
-        runas=None,
-        shell=DEFAULT_SHELL,
-        python_shell=None,
-        env=None,
-        clean_env=False,
-        template=None,
-        umask=None,
-        timeout=None,
-        output_loglevel='debug',
-        log_callback=None,
-        reset_system_locale=True,
-        ignore_retcode=False,
-        saltenv='base',
-        password=None,
-        prepend_path=None,
-        **kwargs):
+           cwd=None,
+           runas=None,
+           group=None,
+           shell=DEFAULT_SHELL,
+           python_shell=None,
+           env=None,
+           clean_env=False,
+           template=None,
+           umask=None,
+           timeout=None,
+           output_loglevel='debug',
+           log_callback=None,
+           reset_system_locale=True,
+           ignore_retcode=False,
+           saltenv='base',
+           password=None,
+           prepend_path=None,
+           success_retcodes=None,
+           **kwargs):
     r'''
     .. versionadded: 2016.3.0
 
@@ -3643,6 +3844,9 @@ def run_bg(cmd,
       parameter will be ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
+
+    :param str group: Group to run command as. Not currently supported
+      on Windows.
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -3721,6 +3925,13 @@ def run_bg(cmd,
         Be absolutely certain that you have sanitized your input prior to using
         python_shell=True
 
+    :param list success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -3763,6 +3974,7 @@ def run_bg(cmd,
                with_communicate=False,
                rstrip=False,
                runas=runas,
+               group=group,
                shell=shell,
                python_shell=python_shell,
                cwd=cwd,
@@ -3777,6 +3989,7 @@ def run_bg(cmd,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                password=password,
+               success_retcodes=success_retcodes,
                **kwargs
                )
 

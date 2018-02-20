@@ -4,7 +4,7 @@ Execute batch runs
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import math
 import time
 import copy
@@ -273,7 +273,10 @@ class Batch(object):
                             out,
                             self.opts)
                 if failhard:
-                    log.error('ERROR: Minion {} returned with non-zero exit code. Batch run stopped due to failhard'.format(minion))
+                    log.error(
+                        'Minion %s returned with non-zero exit code. '
+                        'Batch run stopped due to failhard', minion
+                    )
                     raise StopIteration
 
             # remove inactive iterators from the iters list

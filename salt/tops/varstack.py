@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Use `Varstack <https://github.com/conversis/varstack>` to provide tops data
+Use `Varstack <https://github.com/conversis/varstack>`_ to provide tops data
 
 .. |varstack| replace:: **varstack**
 
@@ -23,7 +23,7 @@ as documented. Then, add to your master's configuration:
 Varstack will then use /path/to/the/config/file/varstack.yaml (usually
 /etc/varstack.yaml) to determine which configuration
 data to return as adapter information. From there you can take a look at the
-`README <https://github.com/conversis/varstack/blob/master/README.md>` of
+`README <https://github.com/conversis/varstack/blob/master/README.md>`_ of
 varstack to learn how this file is evaluated. The ENC part will just return
 the 'states' dictionary for the node.
 

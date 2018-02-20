@@ -11,8 +11,9 @@ config or pillar:
 
 :depends: pypureomapi Python module
 '''
-from __future__ import absolute_import
+
 # Import python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import struct
 
@@ -69,10 +70,10 @@ def add_host(mac, name=None, ip=None, ddns=False, group=None,
     statements = ''
     o = _conn()
     msg = omapi.OmapiMessage.open(b'host')
-    msg.message.append(('create', struct.pack('!I', 1)))
-    msg.message.append(('exclusive', struct.pack('!I', 1)))
+    msg.message.append(('create', struct.pack(b'!I', 1)))
+    msg.message.append(('exclusive', struct.pack(b'!I', 1)))
     msg.obj.append(('hardware-address', omapi.pack_mac(mac)))
-    msg.obj.append(('hardware-type', struct.pack('!I', 1)))
+    msg.obj.append(('hardware-type', struct.pack(b'!I', 1)))
     if ip:
         msg.obj.append(('ip-address', omapi.pack_ip(ip)))
     if name:
@@ -108,7 +109,7 @@ def delete_host(mac=None, name=None):
     msg = omapi.OmapiMessage.open(b'host')
     if mac:
         msg.obj.append(('hardware-address', omapi.pack_mac(mac)))
-        msg.obj.append(('hardware-type', struct.pack('!I', 1)))
+        msg.obj.append(('hardware-type', struct.pack(b'!I', 1)))
     if name:
         msg.obj.append(('name', name))
     response = o.query_server(msg)

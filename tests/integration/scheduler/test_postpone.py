@@ -5,6 +5,9 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
+import time
+
+import dateutil.parser as dateutil_parser
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -39,6 +42,10 @@ class SchedulerPostponeTest(ModuleCase, SaltReturnAssertsMixin):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
             functions = {'test.ping': ping}
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
+        self.schedule.opts['loop_interval'] = 1
+
+    def tearDown(self):
+        del self.schedule
 
     def test_postpone(self):
         '''
@@ -54,7 +61,7 @@ class SchedulerPostponeTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # 11/29/2017 4pm
-        run_time = 1512000000
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
 
         # 5 minute delay
         delay = 300

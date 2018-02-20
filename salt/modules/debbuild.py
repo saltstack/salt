@@ -11,7 +11,7 @@ This module implements the pkgbuild interface
 '''
 
 # import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
@@ -24,6 +24,7 @@ import traceback
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.vt
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
@@ -258,7 +259,7 @@ def _create_pbuilders(env):
     env_overrides = _get_build_env(env)
     if env_overrides and not env_overrides.isspace():
         with salt.utils.files.fopen(pbuilderrc, 'a') as fow:
-            fow.write('{0}'.format(env_overrides))
+            fow.write(salt.utils.stringutils.to_str(env_overrides))
 
 
 def _mk_tree():
@@ -364,7 +365,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     __salt__['cmd.run'](cmd, cwd=abspath_debname)
     cmd = 'rm -f {0}'.format(os.path.basename(spec_pathfile))
     __salt__['cmd.run'](cmd, cwd=abspath_debname)
-    cmd = 'debuild -S -uc -us'
+    cmd = 'debuild -S -uc -us -sa'
     __salt__['cmd.run'](cmd, cwd=abspath_debname, python_shell=True)
 
     cmd = 'rm -fR {0}'.format(abspath_debname)
@@ -581,12 +582,12 @@ def make_repo(repodir,
     codename, repocfg_dists = _get_repo_dists_env(env)
     repoconfdist = os.path.join(repoconf, 'distributions')
     with salt.utils.files.fopen(repoconfdist, 'w') as fow:
-        fow.write('{0}'.format(repocfg_dists))
+        fow.write(salt.utils.stringutils.to_str(repocfg_dists))
 
     repocfg_opts = _get_repo_options_env(env)
     repoconfopts = os.path.join(repoconf, 'options')
     with salt.utils.files.fopen(repoconfopts, 'w') as fow:
-        fow.write('{0}'.format(repocfg_opts))
+        fow.write(salt.utils.stringutils.to_str(repocfg_opts))
 
     local_keygrip_to_use = None
     local_key_fingerprint = None
@@ -603,7 +604,7 @@ def make_repo(repodir,
 
     if keyid is not None:
         with salt.utils.files.fopen(repoconfdist, 'a') as fow:
-            fow.write('SignWith: {0}\n'.format(keyid))
+            fow.write(salt.utils.stringutils.to_str('SignWith: {0}\n'.format(keyid)))
 
         # import_keys
         pkg_pub_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_pub_keyname', None))
@@ -666,6 +667,7 @@ def make_repo(repodir,
                 gpg_raw_info = fow.readlines()
 
             for gpg_info_line in gpg_raw_info:
+                gpg_info_line = salt.utils.stringutils.to_unicode(gpg_info_line)
                 gpg_info = gpg_info_line.split('=')
                 gpg_info_dict = {gpg_info[0]: gpg_info[1]}
                 __salt__['environ.setenv'](gpg_info_dict)
@@ -675,6 +677,7 @@ def make_repo(repodir,
                 gpg_raw_info = fow.readlines()
 
             for gpg_tty_info_line in gpg_raw_info:
+                gpg_info_line = salt.utils.stringutils.to_unicode(gpg_info_line)
                 gpg_tty_info = gpg_tty_info_line.split('=')
                 gpg_tty_info_dict = {gpg_tty_info[0]: gpg_tty_info[1]}
                 __salt__['environ.setenv'](gpg_tty_info_dict)

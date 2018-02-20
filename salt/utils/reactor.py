@@ -5,7 +5,7 @@ Functions which implement running reactor jobs
 
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import glob
 import logging
@@ -20,11 +20,11 @@ import salt.utils.data
 import salt.utils.event
 import salt.utils.files
 import salt.utils.process
+import salt.utils.yaml
 import salt.wheel
 import salt.defaults.exitcodes
 
 # Import 3rd-party libs
-import yaml
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             glob_ref = self.minion.functions['cp.cache_file'](glob_ref) or ''
         globbed_ref = glob.glob(glob_ref)
         if not globbed_ref:
-            log.error('Can not render SLS {0} for tag {1}. File missing or not found.'.format(glob_ref, tag))
+            log.error('Can not render SLS %s for tag %s. File missing or not found.', glob_ref, tag)
         for fn_ in globbed_ref:
             try:
                 res = self.render_template(
@@ -98,7 +98,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
 
                 react.update(res)
             except Exception:
-                log.error('Failed to render "{0}": '.format(fn_), exc_info=True)
+                log.exception('Failed to render "%s": ', fn_)
         return react
 
     def list_reactors(self, tag):
@@ -106,24 +106,16 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         Take in the tag from an event and return a list of the reactors to
         process
         '''
-        log.debug('Gathering reactors for tag {0}'.format(tag))
+        log.debug('Gathering reactors for tag %s', tag)
         reactors = []
         if isinstance(self.opts['reactor'], six.string_types):
             try:
                 with salt.utils.files.fopen(self.opts['reactor']) as fp_:
-                    react_map = yaml.safe_load(fp_.read())
+                    react_map = salt.utils.yaml.safe_load(fp_)
             except (OSError, IOError):
-                log.error(
-                    'Failed to read reactor map: "{0}"'.format(
-                        self.opts['reactor']
-                        )
-                    )
+                log.error('Failed to read reactor map: "%s"', self.opts['reactor'])
             except Exception:
-                log.error(
-                    'Failed to parse YAML in reactor map: "{0}"'.format(
-                        self.opts['reactor']
-                        )
-                    )
+                log.error('Failed to parse YAML in reactor map: "%s"', self.opts['reactor'])
         else:
             react_map = self.opts['reactor']
         for ropt in react_map:
@@ -145,22 +137,17 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         Return a list of the reactors
         '''
         if isinstance(self.minion.opts['reactor'], six.string_types):
-            log.debug('Reading reactors from yaml {0}'.format(self.opts['reactor']))
+            log.debug('Reading reactors from yaml %s', self.opts['reactor'])
             try:
                 with salt.utils.files.fopen(self.opts['reactor']) as fp_:
-                    react_map = yaml.safe_load(fp_.read())
+                    react_map = salt.utils.yaml.safe_load(fp_)
             except (OSError, IOError):
-                log.error(
-                    'Failed to read reactor map: "{0}"'.format(
-                        self.opts['reactor']
-                        )
-                    )
+                log.error('Failed to read reactor map: "%s"', self.opts['reactor'])
             except Exception:
                 log.error(
-                    'Failed to parse YAML in reactor map: "{0}"'.format(
-                        self.opts['reactor']
-                        )
-                    )
+                    'Failed to parse YAML in reactor map: "%s"',
+                    self.opts['reactor']
+                )
         else:
             log.debug('Not reading reactors from yaml')
             react_map = self.minion.opts['reactor']
@@ -206,7 +193,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         '''
         Render a list of reactor files and returns a reaction struct
         '''
-        log.debug('Compiling reactions for tag {0}'.format(tag))
+        log.debug('Compiling reactions for tag %s', tag)
         high = {}
         chunks = []
         try:
@@ -215,12 +202,15 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             if high:
                 errors = self.verify_high(high)
                 if errors:
-                    log.error(('Unable to render reactions for event {0} due to '
-                               'errors ({1}) in one or more of the sls files ({2})').format(tag, errors, reactors))
+                    log.error(
+                        'Unable to render reactions for event %s due to '
+                        'errors (%s) in one or more of the sls files (%s)',
+                        tag, errors, reactors
+                    )
                     return []  # We'll return nothing since there was an error
                 chunks = self.order_chunks(self.compile_high_data(high))
         except Exception as exc:
-            log.error('Exception trying to compile reactions: {0}'.format(exc), exc_info=True)
+            log.exception('Exception encountered while compiling reactions')
 
         self.resolve_aliases(chunks)
         return chunks

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
+import tempfile
 import textwrap
 
 # Import Salt Testing libs
@@ -13,13 +14,13 @@ from tests.support.helpers import (
     skip_if_binaries_missing,
     skip_if_not_root
 )
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.path
 
 # Import 3rd-party libs
 from salt.ext import six
-
 
 AVAILABLE_PYTHON_EXECUTABLE = salt.utils.path.which_bin([
     'python',
@@ -114,6 +115,29 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(self.run_function('cmd.retcode', ['exit 0'], python_shell=True), 0)
         self.assertEqual(self.run_function('cmd.retcode', ['exit 1'], python_shell=True), 1)
 
+    def test_run_all_with_success_retcodes(self):
+        '''
+        cmd.run with success_retcodes
+        '''
+        ret = self.run_function('cmd.run_all',
+                                ['exit 42'],
+                                success_retcodes=[42],
+                                python_shell=True)
+
+        self.assertTrue('retcode' in ret)
+        self.assertEqual(ret.get('retcode'), 0)
+
+    def test_retcode_with_success_retcodes(self):
+        '''
+        cmd.run with success_retcodes
+        '''
+        ret = self.run_function('cmd.retcode',
+                                ['exit 42'],
+                                success_retcodes=[42],
+                                python_shell=True)
+
+        self.assertEqual(ret, 0)
+
     def test_blacklist_glob(self):
         '''
         cmd_blacklist_glob
@@ -138,6 +162,28 @@ class CMDModuleTest(ModuleCase):
         script = 'salt://script.py'
         ret = self.run_function('cmd.script_retcode', [script])
         self.assertEqual(ret, 0)
+
+    def test_script_cwd(self):
+        '''
+        cmd.script with cwd
+        '''
+        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        args = 'saltines crackers biscuits=yes'
+        script = 'salt://script.py'
+        ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
+        self.assertEqual(ret['stdout'], args)
+
+    def test_script_cwd_with_space(self):
+        '''
+        cmd.script with cwd
+        '''
+        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=TMP), os.path.sep)
+        os.mkdir(tmp_cwd)
+
+        args = 'saltines crackers biscuits=yes'
+        script = 'salt://script.py'
+        ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
+        self.assertEqual(ret['stdout'], args)
 
     @destructiveTest
     def test_tty(self):

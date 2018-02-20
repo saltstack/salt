@@ -9,13 +9,14 @@ Beacon to fire events at login of users as registered in the wtmp file
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import os
 import struct
 import time
 
 # Import salt libs
+import salt.utils.stringutils
 import salt.utils.files
 
 # Import 3rd-party libs
@@ -26,7 +27,7 @@ from salt.ext.six.moves import map
 
 __virtualname__ = 'wtmp'
 WTMP = '/var/log/wtmp'
-FMT = 'hi32s4s32s256shhiii4i20x'
+FMT = b'hi32s4s32s256shhiii4i20x'
 FIELDS = [
           'type',
           'PID',
@@ -191,10 +192,8 @@ def beacon(config):
                 event[field] = pack[ind]
                 if isinstance(event[field], salt.ext.six.string_types):
                     if isinstance(event[field], bytes):
-                        event[field] = event[field].decode()
-                        event[field] = event[field].strip('b\x00')
-                    else:
-                        event[field] = event[field].strip('\x00')
+                        event[field] = salt.utils.stringutils.to_unicode(event[field])
+                    event[field] = event[field].strip('\x00')
 
             if users:
                 if event['user'] in users:

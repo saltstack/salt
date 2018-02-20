@@ -28,18 +28,20 @@ The timeout is how many seconds Salt should wait for
 any Ansible module to respond.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import logging
 import importlib
-import yaml
 import fnmatch
 import subprocess
-import json
 
+import salt.utils.json
 from salt.exceptions import LoaderError, CommandExecutionError
-from salt.utils import timed_subprocess
+import salt.utils.platform
+import salt.utils.timed_subprocess
+import salt.utils.yaml
+from salt.ext import six
 
 try:
     import ansible
@@ -150,19 +152,22 @@ class AnsibleModuleCaller(object):
                                                                                                   '')))
         if args:
             kwargs['_raw_params'] = ' '.join(args)
-        js_args = '{{"ANSIBLE_MODULE_ARGS": {args}}}'.format(args=json.dumps(kwargs))
+        js_args = str('{{"ANSIBLE_MODULE_ARGS": {args}}}')  # future lint: disable=blacklisted-function
+        js_args = js_args.format(args=salt.utils.json.dumps(kwargs))
 
-        proc_out = timed_subprocess.TimedProc(["echo", "{0}".format(js_args)],
-                                              stdout=subprocess.PIPE, timeout=self.timeout)
+        proc_out = salt.utils.timed_subprocess.TimedProc(
+            ["echo", "{0}".format(js_args)],
+            stdout=subprocess.PIPE, timeout=self.timeout)
         proc_out.run()
-        proc_exc = timed_subprocess.TimedProc(['python', module.__file__],
-                                              stdin=proc_out.stdout, stdout=subprocess.PIPE, timeout=self.timeout)
+        proc_exc = salt.utils.timed_subprocess.TimedProc(
+            ['python', module.__file__],
+            stdin=proc_out.stdout, stdout=subprocess.PIPE, timeout=self.timeout)
         proc_exc.run()
 
         try:
-            out = json.loads(proc_exc.stdout)
+            out = salt.utils.json.loads(proc_exc.stdout)
         except ValueError as ex:
-            out = {'Error': (proc_exc.stderr and (proc_exc.stderr + '.') or str(ex))}
+            out = {'Error': (proc_exc.stderr and (proc_exc.stderr + '.') or six.text_type(ex))}
             if proc_exc.stdout:
                 out['Given JSON output'] = proc_exc.stdout
             return out
@@ -212,6 +217,8 @@ def __virtual__():
     Ansible module caller.
     :return:
     '''
+    if salt.utils.platform.is_windows():
+        return False, "The ansiblegate module isn't supported on Windows"
     ret = ansible is not None
     msg = not ret and "Ansible is not installed on this system" or None
     if ret:
@@ -243,11 +250,11 @@ def help(module=None, *args):
     ret = {}
     for docset in module.DOCUMENTATION.split('---'):
         try:
-            docset = yaml.load(docset)
+            docset = salt.utils.yaml.safe_load(docset)
             if docset:
                 doc.update(docset)
         except Exception as err:
-            log.error("Error parsing doc section: {0}".format(err))
+            log.error("Error parsing doc section: %s", err)
     if not args:
         if 'description' in doc:
             description = doc.get('description') or ''

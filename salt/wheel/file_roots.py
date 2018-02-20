@@ -4,7 +4,7 @@ Read in files from the file_root and save files to the file root
 '''
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import salt libs
