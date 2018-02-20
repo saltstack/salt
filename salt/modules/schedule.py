@@ -979,6 +979,7 @@ def postpone_job(name,
         salt '*' schedule.postpone_job job current_time new_time time_fmt='%Y-%m-%dT%H:%M:%S'
     '''
 
+    time_fmt = kwargs.get('time_fmt') or '%Y-%m-%dT%H:%M:%S'
     ret = {'comment': [],
            'result': True}
 
@@ -994,8 +995,7 @@ def postpone_job(name,
     else:
         try:
             # Validate date string
-            datetime.datetime.strptime(current_time,
-                                       '%Y-%m-%dT%H:%M:%S')
+            datetime.datetime.strptime(current_time, time_fmt)
         except (TypeError, ValueError):
             log.error('Date string could not be parsed: %s, %s',
                       new_time, time_fmt)
@@ -1011,8 +1011,7 @@ def postpone_job(name,
     else:
         try:
             # Validate date string
-            datetime.datetime.strptime(new_time,
-                                       '%Y-%m-%dT%H:%M:%S')
+            datetime.datetime.strptime(new_time, time_fmt)
         except (TypeError, ValueError):
             log.error('Date string could not be parsed: %s, %s',
                       new_time, time_fmt)
@@ -1077,6 +1076,7 @@ def skip_job(name, current_time, **kwargs):
 
         salt '*' schedule.skip_job job time
     '''
+    time_fmt = kwargs.get('time_fmt') or '%Y-%m-%dT%H:%M:%S'
 
     ret = {'comment': [],
            'result': True}
@@ -1091,8 +1091,7 @@ def skip_job(name, current_time, **kwargs):
     else:
         # Validate date string
         try:
-            datetime.datetime.strptime(current_time,
-                                       '%Y-%m-%dT%H:%M:%S')
+            datetime.datetime.strptime(current_time, time_fmt)
         except (TypeError, ValueError):
             log.error('Date string could not be parsed: %s, %s',
                       current_time, time_fmt)
