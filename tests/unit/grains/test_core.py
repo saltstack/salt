@@ -836,8 +836,8 @@ SwapTotal:       4789244 kB'''
         with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
             assert core.dns() == ret
 
-    @patch('salt.grains.core.os.path.isfile', MagicMock(return_value=True))
-    @patch('salt.grains.core.os.access', MagicMock(return_value=False))
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=OSError(os.errno.EPERM,
+                                                                   'The cables are not the same length.')))
     @patch('salt.grains.core.log', MagicMock())
     def test_linux_iqn_non_root(self):
         '''
@@ -847,7 +847,9 @@ SwapTotal:       4789244 kB'''
         '''
         assert core._linux_iqn() == []
         core.log.debug.assert_called()
-        assert 'Access denied' in core.log.debug.call_args[0][0]
+        assert 'Error while accessing' in core.log.debug.call_args[0][0]
+        assert 'cables are not the same' in core.log.debug.call_args[0][2][1]
+        assert core.log.debug.call_args[0][2][0] == os.errno.EPERM
         assert core.log.debug.call_args[0][1] == '/etc/iscsi/initiatorname.iscsi'
 
     @patch('salt.grains.core.os.path.isfile', MagicMock(return_value=False))
