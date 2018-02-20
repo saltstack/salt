@@ -1556,8 +1556,8 @@ def install(name=None,
                             break
                     else:
                         if pkgname is not None:
-                            if re.match('kernel(-.+)?', pkgname):
-                                # kernel and its subpackages support multiple
+                            if re.match('^kernel(|-devel)$', pkgname):
+                                # kernel and kernel-devel support multiple
                                 # installs as their paths do not conflict.
                                 # Performing a yum/dnf downgrade will be a
                                 # no-op so just do an install instead. It will
