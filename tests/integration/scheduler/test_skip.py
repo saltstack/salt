@@ -64,7 +64,8 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         run_time = dateutil_parser.parse('11/29/2017 4:00pm')
-        self.schedule.skip_job('job1', {'time': run_time.strftime('%Y-%m-%dT%H:%M:%S')})
+        self.schedule.skip_job('job1', {'time': run_time.strftime('%Y-%m-%dT%H:%M:%S'),
+                                        'time_fmt': '%Y-%m-%dT%H:%M:%S'})
 
         # Run 11/29/2017 at 4pm
         self.schedule.eval(now=run_time)

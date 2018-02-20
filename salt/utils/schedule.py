@@ -486,16 +486,19 @@ class Schedule(object):
         '''
         time = data['time']
         new_time = data['new_time']
+        time_fmt = data.get('time_fmt', '%Y-%m-%dT%H:%M:%S')
 
         # ensure job exists, then disable it
         if name in self.opts['schedule']:
-            if '_skip_explicit' not in self.opts['schedule'][name]:
-                self.opts['schedule'][name]['_skip_explicit'] = []
-            self.opts['schedule'][name]['_skip_explicit'].append(time)
+            if 'skip_explicit' not in self.opts['schedule'][name]:
+                self.opts['schedule'][name]['skip_explicit'] = []
+            self.opts['schedule'][name]['skip_explicit'].append({'time': time,
+                                                                  'time_fmt': time_fmt})
 
-            if '_run_explicit' not in self.opts['schedule'][name]:
-                self.opts['schedule'][name]['_run_explicit'] = []
-            self.opts['schedule'][name]['_run_explicit'].append(new_time)
+            if 'run_explicit' not in self.opts['schedule'][name]:
+                self.opts['schedule'][name]['run_explicit'] = []
+            self.opts['schedule'][name]['run_explicit'].append({'time': new_time,
+                                                                 'time_fmt': time_fmt})
 
         elif name in self._get_schedule(include_opts=False):
             log.warning("Cannot modify job %s, it's in the pillar!", name)
@@ -512,12 +515,14 @@ class Schedule(object):
         Ignores jobs from pillar
         '''
         time = data['time']
+        time_fmt = data.get('time_fmt', '%Y-%m-%dT%H:%M:%S')
 
         # ensure job exists, then disable it
         if name in self.opts['schedule']:
-            if '_skip_explicit' not in self.opts['schedule'][name]:
-                self.opts['schedule'][name]['_skip_explicit'] = []
-            self.opts['schedule'][name]['_skip_explicit'].append(time)
+            if 'skip_explicit' not in self.opts['schedule'][name]:
+                self.opts['schedule'][name]['skip_explicit'] = []
+            self.opts['schedule'][name]['skip_explicit'].append({'time': time,
+                                                                  'time_fmt': time_fmt})
 
         elif name in self._get_schedule(include_opts=False):
             log.warning("Cannot modify job %s, it's in the pillar!", name)
@@ -813,7 +818,6 @@ class Schedule(object):
                    'skip_during_range']
         for job, data in six.iteritems(schedule):
 
-            log.debug('=== job %s data %s ===', job, data)
             # Clear out _skip_reason from previous runs
             if '_skip_reason' in data:
                 del data['_skip_reason']
@@ -889,11 +893,11 @@ class Schedule(object):
                 )
                 continue
 
-            if '_run_explicit' in data:
+            if 'run_explicit' in data:
                 _run_explicit = []
-                for _run_time in data['_run_explicit']:
-                    _run_explicit.append(datetime.datetime.strptime(_run_time,
-                                                                    '%Y-%m-%dT%H:%M:%S'))
+                for _run_time in data['run_explicit']:
+                    _run_explicit.append(datetime.datetime.strptime(_run_time['time'],
+                                                                    _run_time['time_fmt']))
 
                 if isinstance(_run_explicit, six.integer_types):
                     _run_explicit = [_run_explicit]
@@ -1241,13 +1245,14 @@ class Schedule(object):
                             # after the skip_during_range is over
                             if 'run_after_skip_range' in data and \
                                data['run_after_skip_range']:
-                                if '_run_explicit' not in data:
-                                    data['_run_explicit'] = []
+                                if 'run_explicit' not in data:
+                                    data['run_explicit'] = []
                                 # Add a run_explicit for immediately after the
                                 # skip_during_range ends
                                 _run_immediate = (end + datetime.timedelta(seconds=self.opts['loop_interval'])).strftime('%Y-%m-%dT%H:%M:%S')
-                                if _run_immediate not in data['_run_explicit']:
-                                    data['_run_explicit'].append(_run_immediate)
+                                if _run_immediate not in data['run_explicit']:
+                                    data['run_explicit'].append({'time': _run_immediate,
+                                                                 'time_fmt': '%Y-%m-%dT%H:%M:%S'})
 
                             if end > start:
                                 if start <= now <= end:
@@ -1276,11 +1281,11 @@ class Schedule(object):
                             )
                             continue
 
-                if '_skip_explicit' in data:
+                if 'skip_explicit' in data:
                     _skip_explicit = []
-                    for _skip_time in data['_skip_explicit']:
-                        _skip_explicit.append(datetime.datetime.strptime(_skip_time,
-                                                                         '%Y-%m-%dT%H:%M:%S'))
+                    for _skip_time in data['skip_explicit']:
+                        _skip_explicit.append(datetime.datetime.strptime(_skip_time['time'],
+                                                                         _skip_time['time_fmt']))
                     if isinstance(_skip_explicit, six.string_types):
                         _skip_explicit = [_skip_explicit]
 

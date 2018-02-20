@@ -966,7 +966,7 @@ def postpone_job(name,
     Postpone a job in the minion's schedule
 
     Current time and new time should be in date string format,
-    %Y-%m-%dT%H:%M:%S.
+    default value is %Y-%m-%dT%H:%M:%S.
 
     .. versionadded:: Oxygen
 
@@ -1028,11 +1028,13 @@ def postpone_job(name,
             event_data = {'name': name,
                           'time': current_time,
                           'new_time': new_time,
+                          'time_fmt': time_fmt,
                           'func': 'postpone_job'}
         elif name in list_(show_all=True, where='pillar', return_yaml=False):
             event_data = {'name': name,
                           'time': current_time,
                           'new_time': new_time,
+                          'time_fmt': time_fmt,
                           'where': 'pillar',
                           'func': 'postpone_job'}
         else:
@@ -1066,7 +1068,7 @@ def skip_job(name, current_time, **kwargs):
     Skip a job in the minion's schedule at specified time.
 
     Time to skip should be specified as date string format,
-    %Y-%m-%dT%H:%M:%S.
+    default value is %Y-%m-%dT%H:%M:%S.
 
     .. versionadded:: Oxygen
 
@@ -1107,10 +1109,12 @@ def skip_job(name, current_time, **kwargs):
         if name in list_(show_all=True, where='opts', return_yaml=False):
             event_data = {'name': name,
                           'time': current_time,
+                          'time_fmt': time_fmt,
                           'func': 'skip_job'}
         elif name in list_(show_all=True, where='pillar', return_yaml=False):
             event_data = {'name': name,
                           'time': current_time,
+                          'time_fmt': time_fmt,
                           'where': 'pillar',
                           'func': 'skip_job'}
         else:
