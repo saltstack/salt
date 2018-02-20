@@ -193,7 +193,7 @@ def present(name,
         return ret
 
     try:
-        vdata_decoded = salt.utils.to_unicode(vdata, 'utf-8')
+        vdata_decoded = salt.utils.stringutils.to_unicode(vdata, 'utf-8')
     except UnicodeDecodeError:
         # vdata contains binary data that can't be decoded
         vdata_decoded = vdata
