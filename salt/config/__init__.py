@@ -1112,7 +1112,7 @@ DEFAULT_MINION_OPTS = {
     'syndic_finger': '',
     'user': salt.utils.get_user(),
     'root_dir': salt.syspaths.ROOT_DIR,
-    'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
+    'pki_dir': os.path.join(salt.syspaths.VARIABLE_STATE_DIR, 'pki', 'minion'),
     'id': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'append_minionid_config_dirs': [],
@@ -1375,7 +1375,7 @@ DEFAULT_MASTER_OPTS = {
     'keep_jobs': 24,
     'archive_jobs': False,
     'root_dir': salt.syspaths.ROOT_DIR,
-    'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
+    'pki_dir': os.path.join(salt.syspaths.VARIABLE_STATE_DIR, 'pki', 'master'),
     'key_cache': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
@@ -1688,7 +1688,7 @@ DEFAULT_PROXY_MINION_OPTS = {
 
     'proxy_keep_alive': True,  # by default will try to keep alive the connection
     'proxy_keep_alive_interval': 1,  # frequency of the proxy keepalive in minutes
-    'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
+    'pki_dir': os.path.join(salt.syspaths.VARIABLE_STATE_DIR, 'pki', 'proxy'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
 }
