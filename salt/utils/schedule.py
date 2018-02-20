@@ -134,8 +134,7 @@ class Schedule(object):
 
     def _get_schedule(self,
                       include_opts=True,
-                      include_pillar=True,
-                      include_hidden=True):
+                      include_pillar=True):
         '''
         Return the schedule data structure
         '''
@@ -458,13 +457,11 @@ class Schedule(object):
         List the current schedule items
         '''
         if where == 'pillar':
-            schedule = self._get_schedule(include_opts=False,
-                                          include_hidden=False)
+            schedule = self._get_schedule(include_opts=False)
         elif where == 'opts':
-            schedule = self._get_schedule(include_pillar=False,
-                                          include_hidden=False)
+            schedule = self._get_schedule(include_pillar=False)
         else:
-            schedule = self._get_schedule(include_hidden=False)
+            schedule = self._get_schedule()
 
         # Fire the complete event back along with the list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -821,6 +818,7 @@ class Schedule(object):
                    'skip_during_range']
         for job, data in six.iteritems(schedule):
 
+            log.debug('=== job %s data %s ===', job, data)
             # Clear out _skip_reason from previous runs
             if '_skip_reason' in data:
                 del data['_skip_reason']
