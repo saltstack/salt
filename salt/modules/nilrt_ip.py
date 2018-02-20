@@ -160,10 +160,10 @@ def _get_service_info(service):
     '''
     service_info = pyconnman.ConnService(_add_path(service))
     data = {
-        'name': service,
+        'label': service,
         'wireless': service_info.get_property('Type') == 'wifi',
         'connectionid': six.text_type(service_info.get_property('Ethernet')['Interface']),
-        'HWAddress': six.text_type(service_info.get_property('Ethernet')['Address'])
+        'hwaddr': six.text_type(service_info.get_property('Ethernet')['Address'])
     }
 
     state = service_info.get_property('State')
