@@ -374,3 +374,49 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
                      '2017-13-13T13:00:00',
                      '%Y-%m-%dT%H:%M:%S')
         self.assertEqual(ret['_error'], _expected)
+
+    def test_eval_enabled(self):
+        '''
+        verify that scheduled job does not run
+        '''
+        job = {
+          'schedule': {
+            'enabled': True,
+            'job1': {
+              'function': 'test.ping',
+              'when': '11/29/2017 4:00pm',
+            }
+          }
+        }
+        run_time1 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate 1 second at the run time
+        self.schedule.eval(now=run_time1)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time1)
+
+    def test_eval_disabled(self):
+        '''
+        verify that scheduled job does not run
+        '''
+        job = {
+          'schedule': {
+            'enabled': False,
+            'job1': {
+              'function': 'test.ping',
+              'when': '11/29/2017 4:00pm',
+            }
+          }
+        }
+        run_time1 = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate 1 second at the run time
+        self.schedule.eval(now=run_time1)
+        ret = self.schedule.job_status('job1')
+        self.assertNotIn('_last_run', ret)
