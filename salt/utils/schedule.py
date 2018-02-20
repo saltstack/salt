@@ -1280,6 +1280,7 @@ class Schedule(object):
                     del data[item]
             run = False
 
+            # Skip anything that is a global schedule setting
             if job in _hidden:
                 continue
 
