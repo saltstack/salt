@@ -852,8 +852,7 @@ SwapTotal:       4789244 kB'''
         assert core.log.debug.call_args[0][2][0] == os.errno.EPERM
         assert core.log.debug.call_args[0][1] == '/etc/iscsi/initiatorname.iscsi'
 
-    @patch('salt.grains.core.os.path.isfile', MagicMock(return_value=False))
-    @patch('salt.grains.core.os.access', MagicMock(return_value=True))
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=OSError(os.errno.ENOENT, '')))
     @patch('salt.grains.core.log', MagicMock())
     def test_linux_iqn_no_iscsii_initiator(self):
         '''
@@ -861,7 +860,5 @@ SwapTotal:       4789244 kB'''
         iscsii initiator is not there accessible or is not supported.
         :return:
         '''
-        with pytest.raises(IOError) as error:
-            assert core._linux_iqn() == []
+        assert core._linux_iqn() == []
         core.log.debug.assert_not_called()
-        assert 'No such file or directory' in six.text_type(error)
