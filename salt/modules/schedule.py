@@ -965,8 +965,8 @@ def postpone_job(name,
     '''
     Postpone a job in the minion's schedule
 
-    Current time and new time should be specified specified date string format,
-    default format is %Y-%m-%dT%H:%M:%S.
+    Current time and new time should be in date string format,
+    %Y-%m-%dT%H:%M:%S.
 
     .. versionadded:: Oxygen
 
@@ -982,8 +982,6 @@ def postpone_job(name,
     ret = {'comment': [],
            'result': True}
 
-    time_fmt = kwargs.get('time_fmt', '%Y-%m-%dT%H:%M:%S')
-
     if not name:
         ret['comment'] = 'Job name is required.'
         ret['result'] = False
@@ -995,8 +993,9 @@ def postpone_job(name,
         return ret
     else:
         try:
-            current_time = datetime.datetime.strptime(current_time,
-                                                      time_fmt)
+            # Validate date string
+            datetime.datetime.strptime(current_time,
+                                       '%Y-%m-%dT%H:%M:%S')
         except (TypeError, ValueError):
             log.error('Date string could not be parsed: %s, %s',
                       new_time, time_fmt)
@@ -1011,8 +1010,9 @@ def postpone_job(name,
         return ret
     else:
         try:
-            new_time = datetime.datetime.strptime(new_time,
-                                                  time_fmt)
+            # Validate date string
+            datetime.datetime.strptime(new_time,
+                                       '%Y-%m-%dT%H:%M:%S')
         except (TypeError, ValueError):
             log.error('Date string could not be parsed: %s, %s',
                       new_time, time_fmt)
@@ -1066,8 +1066,8 @@ def skip_job(name, current_time, **kwargs):
     '''
     Skip a job in the minion's schedule at specified time.
 
-    Time to skip should be specified as specified date string format,
-    default format is %Y-%m-%dT%H:%M:%S.
+    Time to skip should be specified as date string format,
+    %Y-%m-%dT%H:%M:%S.
 
     .. versionadded:: Oxygen
 
@@ -1081,8 +1081,6 @@ def skip_job(name, current_time, **kwargs):
     ret = {'comment': [],
            'result': True}
 
-    time_fmt = kwargs.get('time_fmt', '%Y-%m-%dT%H:%M:%S')
-
     if not name:
         ret['comment'] = 'Job name is required.'
         ret['result'] = False
@@ -1091,9 +1089,10 @@ def skip_job(name, current_time, **kwargs):
         ret['comment'] = 'Job time is required.'
         ret['result'] = False
     else:
+        # Validate date string
         try:
-            current_time = datetime.datetime.strptime(current_time,
-                                                      time_fmt)
+            datetime.datetime.strptime(current_time,
+                                       '%Y-%m-%dT%H:%M:%S'))
         except (TypeError, ValueError):
             log.error('Date string could not be parsed: %s, %s',
                       current_time, time_fmt)

@@ -60,10 +60,11 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job to schedule
+        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         run_time = dateutil_parser.parse('11/29/2017 4:00pm')
-        self.schedule.skip_job('job1', {'time': run_time})
+        self.schedule.skip_job('job1', {'time': run_time.strftime('%Y-%m-%dT%H:%M:%S')})
 
         # Run 11/29/2017 at 4pm
         self.schedule.eval(now=run_time)
@@ -96,6 +97,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job to schedule
+        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # eval at 1:30pm to prime.
@@ -135,6 +137,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job to schedule
+        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # eval at 1:30pm to prime.
@@ -175,6 +178,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job to schedule
+        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # eval at 2:30pm, will not run during range.
