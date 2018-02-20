@@ -859,5 +859,7 @@ SwapTotal:       4789244 kB'''
         iscsii initiator is not there accessible or is not supported.
         :return:
         '''
-        assert core._linux_iqn() == []
+        with pytest.raises(IOError) as error:
+            assert core._linux_iqn() == []
         core.log.debug.assert_not_called()
+        assert 'No such file or directory' in six.text_type(error)
