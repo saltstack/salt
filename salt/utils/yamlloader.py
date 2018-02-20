@@ -5,10 +5,9 @@ Custom YAML loading in Salt
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import re
 import warnings
 
-# Import third party libs
-import re
 import yaml  # pylint: disable=blacklisted-import
 from yaml.nodes import MappingNode, SequenceNode
 from yaml.constructor import ConstructorError
@@ -17,6 +16,8 @@ try:
     yaml.Dumper = yaml.CDumper
 except Exception:
     pass
+
+import salt.utils.stringutils
 
 __all__ = ['SaltYamlSafeLoader', 'load', 'safe_load']
 
@@ -46,6 +47,9 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
             self.add_constructor(
                 'tag:yaml.org,2002:omap',
                 type(self).construct_yaml_map)
+        self.add_constructor(
+            'tag:yaml.org,2002:str',
+            type(self).construct_yaml_str)
         self.add_constructor(
             'tag:yaml.org,2002:python/unicode',
             type(self).construct_unicode)
@@ -118,6 +122,10 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
             if re.match(r'^u([\'"]).+\1$', node.value, flags=re.IGNORECASE):
                 node.value = eval(node.value, {}, {})  # pylint: disable=W0123
         return super(SaltYamlSafeLoader, self).construct_scalar(node)
+
+    def construct_yaml_str(self, node):
+        value = self.construct_scalar(node)
+        return salt.utils.stringutils.to_unicode(value)
 
     def flatten_mapping(self, node):
         merge = []
