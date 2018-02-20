@@ -522,9 +522,7 @@ def is_private(ip_addr):
     '''
     Check if the given IP address is a private address
 
-    .. versionadded:: 2014.7.0
-    .. versionchanged:: 2015.8.0
-        IPv6 support
+    .. versionadded:: Fluorine
 
     CLI Example:
 
