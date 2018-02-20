@@ -815,7 +815,7 @@ SwapTotal:       4789244 kB'''
                             _check_type(key, value, ip4_empty, ip6_empty)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
-    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
+    @patch.object(salt.utils.platform, 'is_windows', MagicMock(return_value=False))
     @patch('salt.grains.core.__opts__', {'ipv6': False})
     def test_dns_return(self):
         '''
