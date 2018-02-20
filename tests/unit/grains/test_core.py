@@ -815,6 +815,8 @@ SwapTotal:       4789244 kB'''
                             _check_type(key, value, ip4_empty, ip6_empty)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.grains.core.__opts__', {'ipv6': False})
     def test_dns_return(self):
         '''
         test the return for a dns grain. test for issue:
@@ -831,7 +833,8 @@ SwapTotal:       4789244 kB'''
                        [IP4_ADD1], 'search': ['test.saltstack.com'],
                        'ip6_nameservers': [IP6_ADD1], 'options':
                        []}}
-        self._run_dns_test(resolv_mock, ret)
+        with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
+            assert core.dns() == ret
 
     @patch('salt.grains.core.os.path.isfile', MagicMock(return_value=True))
     @patch('salt.grains.core.os.access', MagicMock(return_value=False))
@@ -858,12 +861,3 @@ SwapTotal:       4789244 kB'''
         '''
         assert core._linux_iqn() == []
         core.log.debug.assert_not_called()
-
-    def _run_dns_test(self, resolv_mock, ret):
-        with patch.object(salt.utils, 'is_windows',
-                          MagicMock(return_value=False)):
-            with patch.dict(core.__opts__, {'ipv6': False}):
-                with patch.object(salt.utils.dns, 'parse_resolv',
-                                  MagicMock(return_value=resolv_mock)):
-                    get_dns = core.dns()
-                    self.assertEqual(get_dns, ret)
