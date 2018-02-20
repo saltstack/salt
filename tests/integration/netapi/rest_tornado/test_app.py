@@ -18,12 +18,8 @@ from tests.support.unit import skipIf
 
 # Import 3rd-party libs
 from salt.ext import six
-try:
-    import zmq
-    from zmq.eventloop.ioloop import ZMQIOLoop
-    HAS_ZMQ_IOLOOP = True
-except ImportError:
-    HAS_ZMQ_IOLOOP = False
+from salt.utils.zeromq import zmq, ZMQDefaultLoop as ZMQIOLoop
+HAS_ZMQ_IOLOOP = bool(zmq)
 
 
 class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstract-method
