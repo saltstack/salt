@@ -63,5 +63,5 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         x509._parse_subject(subj)
         x509.log.trace.assert_called_once()
         assert x509.log.trace.call_args[0][0] == "Missing attribute '%s'. Error: %s"
-        assert x509.log.trace.call_args[0][1] == subj.nid.keys()[0]
+        assert x509.log.trace.call_args[0][1] == list(subj.nid.keys())[0]
         assert isinstance(x509.log.trace.call_args[0][2], TypeError)
