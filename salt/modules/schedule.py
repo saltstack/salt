@@ -1092,7 +1092,7 @@ def skip_job(name, current_time, **kwargs):
         # Validate date string
         try:
             datetime.datetime.strptime(current_time,
-                                       '%Y-%m-%dT%H:%M:%S'))
+                                       '%Y-%m-%dT%H:%M:%S')
         except (TypeError, ValueError):
             log.error('Date string could not be parsed: %s, %s',
                       current_time, time_fmt)
