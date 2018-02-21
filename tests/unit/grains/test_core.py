@@ -836,7 +836,7 @@ SwapTotal:       4789244 kB'''
         with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
             assert core.dns() == ret
 
-    @patch('salt.utils.files.fopen', MagicMock(side_effect=OSError(os.errno.EPERM,
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.EPERM,
                                                                    'The cables are not the same length.')))
     @patch('salt.grains.core.log', MagicMock())
     def test_linux_iqn_non_root(self):
@@ -852,7 +852,7 @@ SwapTotal:       4789244 kB'''
         assert core.log.debug.call_args[0][2].errno == os.errno.EPERM
         assert core.log.debug.call_args[0][1] == '/etc/iscsi/initiatorname.iscsi'
 
-    @patch('salt.utils.files.fopen', MagicMock(side_effect=OSError(os.errno.ENOENT, '')))
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.ENOENT, '')))
     @patch('salt.grains.core.log', MagicMock())
     def test_linux_iqn_no_iscsii_initiator(self):
         '''

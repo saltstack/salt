@@ -2494,7 +2494,7 @@ def _linux_iqn():
                 line = line.strip()
                 if line.startswith('InitiatorName='):
                     ret.append(line.split('=', 1)[1])
-    except OSError as ex:
+    except IOError as ex:
         if ex.errno != os.errno.ENOENT:
             log.debug("Error while accessing '%s': %s", initiator, ex)
 
