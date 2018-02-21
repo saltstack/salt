@@ -2161,6 +2161,8 @@ class Minion(MinionBase):
             self.schedule.disable_job(name, persist)
         elif func == 'postpone_job':
             self.schedule.postpone_job(name, data)
+        elif func == 'skip_job':
+            self.schedule.skip_job(name, data)
         elif func == 'reload':
             self.schedule.reload(schedule)
         elif func == 'list':
