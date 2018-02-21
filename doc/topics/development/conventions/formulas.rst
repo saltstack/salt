@@ -1234,7 +1234,7 @@ target platform, and any other installation or usage instructions or tips.
 
 A sample skeleton for the ``README.rst`` file:
 
-.. code-block:: rest
+.. code-block:: restructuredtext
 
     ===
     foo
@@ -1274,7 +1274,7 @@ A sample skeleton for the `CHANGELOG.rst` file:
 
 :file:`CHANGELOG.rst`:
 
-.. code-block:: rest
+.. code-block:: restructuredtext
 
     foo formula
     ===========
