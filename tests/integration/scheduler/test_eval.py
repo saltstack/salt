@@ -130,7 +130,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             }
           }
         }
-        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 12:00pm').timetuple()))
+        run_time = dateutil_parser.parse('11/29/2017 12:00pm')
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)

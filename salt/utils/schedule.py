@@ -227,7 +227,7 @@ class Schedule(object):
                 fp_.write(
                     salt.utils.stringutils.to_bytes(
                         salt.utils.yaml.safe_dump(
-                            {'schedule': schedule_data)}
+                            {'schedule': schedule_data}
                         )
                     )
                 )
@@ -499,7 +499,7 @@ class Schedule(object):
         '''
         time = data['time']
         new_time = data['new_time']
-        time_fmt = date.get('time_fmt', '%Y-%m-%dT%H:%M:%S')
+        time_fmt = data.get('time_fmt', '%Y-%m-%dT%H:%M:%S')
 
         # ensure job exists, then disable it
         if name in self.opts['schedule']:
@@ -510,7 +510,6 @@ class Schedule(object):
 
             if 'run_explicit' not in self.opts['schedule'][name]:
                 self.opts['schedule'][name]['run_explicit'] = []
-            self.opts['schedule'][name]['run_explicit'].append(new_time)
             self.opts['schedule'][name]['run_explicit'].append({'time': new_time,
                                                                 'time_fmt': time_fmt})
 
@@ -863,7 +862,7 @@ class Schedule(object):
                     log.error(data['_error'])
                     return data
                 # If _next_fire_time is less than now, continue
-                if once < datetime.timedelta(seconds=self.opts['loop_interval']):
+                if once < now - datetime.timedelta(seconds=self.opts['loop_interval']):
                     data['_continue'] = True
                 else:
                     data['_next_fire_time'] = once
@@ -921,7 +920,7 @@ class Schedule(object):
                             log.error(data['_error'])
                             return data
                 
-                _when.append(when__)
+                    _when.append(when__)
 
                 if data['_splay']:
                     _when.append(data['_splay'])
@@ -1146,7 +1145,6 @@ class Schedule(object):
                         # skip_during_range ends
                         _run_immediate = (end + datetime.timedelta(seconds=self.opts['loop_interval'])).strftime('%Y-%m-%dT%H:%M:%S')
                         if _run_immediate not in data['run_explicit']:
-                            data['run_explicit'].append(_run_immediate)
                             data['run_explicit'].append({'time': _run_immediate,
                                                          'time_fmt': '%Y-%m-%dT%H:%M:%S'})
 
@@ -1230,6 +1228,48 @@ class Schedule(object):
                                       'Ignoring job %s.', job)
                     log.error(data['_error'])
                     return data
+
+        def _handle_after(data):
+            if not _WHEN_SUPPORTED:
+                data['_error'] = ('Missing python-dateutil. ',
+                                  'Ignoring job %s', job)
+                log.error(data['_error'])
+            else:
+                after = dateutil_parser.parse(data['after'])
+
+                if after >= now:
+                    log.debug(
+                        'After time has not passed skipping job: %s.',
+                        data['name']
+                    )
+                    data['_skip_reason'] = 'after_not_passed'
+                    data['_skipped_time'] = now
+                    data['_skipped'] = True
+                    data['run'] = False
+                else:
+                    data['run'] = True
+            return data
+
+        def _handle_until(data):
+            if not _WHEN_SUPPORTED:
+                data['_error'] = ('Missing python-dateutil. ',
+                                  'Ignoring job %s', job)
+                log.error(data['_error'])
+            else:
+                until = dateutil_parser.parse(data['until'])
+
+                if until <= now:
+                    log.debug(
+                        'Until time has passed skipping job: %s.',
+                        data['name']
+                    )
+                    data['_skip_reason'] = 'until_passed'
+                    data['_skipped_time'] = now
+                    data['_skipped'] = True
+                    data['run'] = False
+                else:
+                    data['run'] = True
+            return data
 
         schedule = self._get_schedule()
         if not isinstance(schedule, dict):
@@ -1429,41 +1469,24 @@ class Schedule(object):
                     if 'func' in data:
                         func = data['func']
 
-                # Convert to sub function
                 if 'until' in data:
-                    if not _WHEN_SUPPORTED:
-                        log.error('Missing python-dateutil. '
-                                  'Ignoring until.')
-                    else:
-                        until = dateutil_parser.parse(data['until'])
+                    data = _handle_until(data)
 
-                        if until <= now:
-                            log.debug(
-                                'Until time has passed skipping job: %s.',
-                                data['name']
-                            )
-                            data['_skip_reason'] = 'until_passed'
-                            data['_skipped_time'] = now
-                            data['_skipped'] = True
-                            run = False
+                    # An error occurred so we bail out
+                    if '_error' in data and data['_error']:
+                        continue
+
+                    run = data['run']
 
                 # Convert to sub function
                 if 'after' in data:
-                    if not _WHEN_SUPPORTED:
-                        log.error('Missing python-dateutil. '
-                                  'Ignoring after.')
-                    else:
-                        after = dateutil_parser.parse(data['after'])
+                    data = _handle_after(data)
 
-                        if after >= now:
-                            log.debug(
-                                'After time has not passed skipping job: %s.',
-                                data['name']
-                            )
-                            data['_skip_reason'] = 'after_not_passed'
-                            data['_skipped_time'] = now
-                            data['_skipped'] = True
-                            run = False
+                    # An error occurred so we bail out
+                    if '_error' in data and data['_error']:
+                        continue
+
+                    run = data['run']
 
             # If the job item has continue, then we set run to False
             # so the job does not run but we still get the important
@@ -1545,7 +1568,7 @@ class Schedule(object):
                 if run:
                     data['_last_run'] = now
                     if '_seconds' in data:
-                        data['_next_fire_time'] = now + data['_seconds']
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
                     data['_splay'] = None
 
             if salt.utils.platform.is_windows():
