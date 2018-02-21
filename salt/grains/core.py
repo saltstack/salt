@@ -2488,13 +2488,16 @@ def _linux_iqn():
     ret = []
 
     initiator = '/etc/iscsi/initiatorname.iscsi'
-
-    if os.path.isfile(initiator):
+    try:
         with salt.utils.files.fopen(initiator, 'r') as _iscsi:
             for line in _iscsi:
                 line = line.strip()
                 if line.startswith('InitiatorName='):
                     ret.append(line.split('=', 1)[1])
+    except IOError as ex:
+        if ex.errno != os.errno.ENOENT:
+            log.debug("Error while accessing '%s': %s", initiator, ex)
+
     return ret
 
 
