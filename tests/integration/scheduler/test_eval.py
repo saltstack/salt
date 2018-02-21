@@ -53,7 +53,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts['loop_interval'] = 1
 
     def tearDown(self):
-        del self.schedule
+        self.schedule.reset()
 
     def test_eval(self):
         '''
@@ -71,7 +71,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time1 = run_time2 - datetime.timedelta(seconds=1)
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate 1 second before the run time
@@ -103,7 +102,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time2 = dateutil_parser.parse('11/29/2017 5:00pm')
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate run time1
@@ -135,7 +133,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time2 = dateutil_parser.parse('11/29/2017 4:00pm')
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate 1 second at the run time
@@ -167,7 +164,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time2 = dateutil_parser.parse('11/29/2017 5:00pm') + datetime.timedelta(seconds=LOOP_INTERVAL)
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate 1 second at the run time
@@ -195,7 +191,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time = dateutil_parser.parse('12/13/2017 1:00pm')
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate 1 second at the run time
@@ -223,7 +218,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time = dateutil_parser.parse('12/13/2017 1:00pm') + datetime.timedelta(seconds=LOOP_INTERVAL)
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate at the run time
@@ -274,7 +268,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts['loop_interval'] = LOOP_INTERVAL
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         run_time = dateutil_parser.parse('11/29/2017 4:00pm')
@@ -300,7 +293,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job to schedule
-        self.schedule.delete_job('job_eval_after')
         self.schedule.opts.update(job)
 
         # eval at 2:00pm to prime, simulate minion start up.
@@ -312,6 +304,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time = dateutil_parser.parse('11/29/2017 3:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job_eval_after')
+        log.debug('=== ret %s ===', ret)
         self.assertEqual(ret['_last_run'], run_time)
 
         # eval at 4:00pm, will run.
@@ -343,7 +336,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job to schedule
-        self.schedule.delete_job('job1')
         self.schedule.opts.update(job)
 
         # eval at 2:00pm to prime, simulate minion start up.
