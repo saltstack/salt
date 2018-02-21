@@ -159,7 +159,7 @@ def avail_sizes(call=None):
             '-f or --function, or with the --list-sizes option'
         )
 
-    items = query(method='sizes')
+    items = query(method='sizes', command='?per_page=100')
     ret = {}
     for size in items['sizes']:
         ret[size['slug']] = {}
