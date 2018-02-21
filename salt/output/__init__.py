@@ -226,6 +226,9 @@ def strip_esc_sequence(txt):
     from writing their own terminal manipulation commands
     '''
     if isinstance(txt, six.string_types):
-        return txt.replace('\033', '?')
+        try:
+            return txt.replace('\033', '?')
+        except UnicodeDecodeError:
+            return txt.replace(str('\033'), str('?'))  # future lint: disable=blacklisted-function
     else:
         return txt

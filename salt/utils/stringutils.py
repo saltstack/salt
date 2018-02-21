@@ -5,6 +5,7 @@ Functions for manipulating or otherwise processing strings
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import base64
 import errno
 import fnmatch
 import logging
@@ -203,7 +204,7 @@ def is_binary(data):
 @jinja_filter('random_str')
 def random(size=32):
     key = os.urandom(size)
-    return key.encode('base64').replace('\n', '')[:size]
+    return to_unicode(base64.b64encode(key).replace(b'\n', b'')[:size])
 
 
 @jinja_filter('contains_whitespace')
@@ -429,3 +430,38 @@ def print_cli(msg, retries=10, step=0.01):
                 else:
                     raise
         break
+
+
+def get_context(template, line, num_lines=5, marker=None):
+    '''
+    Returns debugging context around a line in a given string
+
+    Returns:: string
+    '''
+    template_lines = template.splitlines()
+    num_template_lines = len(template_lines)
+
+    # In test mode, a single line template would return a crazy line number like,
+    # 357. Do this sanity check and if the given line is obviously wrong, just
+    # return the entire template
+    if line > num_template_lines:
+        return template
+
+    context_start = max(0, line - num_lines - 1)  # subt 1 for 0-based indexing
+    context_end = min(num_template_lines, line + num_lines)
+    error_line_in_context = line - context_start - 1  # subtr 1 for 0-based idx
+
+    buf = []
+    if context_start > 0:
+        buf.append('[...]')
+        error_line_in_context += 1
+
+    buf.extend(template_lines[context_start:context_end])
+
+    if context_end < num_template_lines:
+        buf.append('[...]')
+
+    if marker:
+        buf[error_line_in_context] += marker
+
+    return '---\n{0}\n---'.format('\n'.join(buf))
