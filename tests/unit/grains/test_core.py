@@ -405,7 +405,7 @@ PATCHLEVEL = 3
         self._run_suse_os_grains_tests(_os_release_map)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
-    def test_ubuntu_os_grains(self):
+    def test_ubuntu_xenial_os_grains(self):
         '''
         Test if OS grains are parsed correctly in Ubuntu 16.04 "Xenial Xerus"
         '''
@@ -421,6 +421,24 @@ PATCHLEVEL = 3
             'osfinger': 'Ubuntu-16.04',
         }
         self._run_os_grains_tests("ubuntu-16.04", _os_release_map)
+
+    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    def test_ubuntu_artful_os_grains(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu 17.10 "Artful Aardvark"
+        '''
+        _os_release_map = {
+            'linux_distribution': ('Ubuntu', '17.10', 'artful'),
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'artful',
+            'osfullname': 'Ubuntu',
+            'osrelease': '17.10',
+            'osrelease_info': [17, 10],
+            'osmajorrelease': 17,
+            'osfinger': 'Ubuntu-17.10',
+        }
+        self._run_os_grains_tests("ubuntu-17.10", _os_release_map)
 
     def test_docker_virtual(self):
         '''
