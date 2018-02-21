@@ -407,17 +407,10 @@ PATCHLEVEL = 3
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_ubuntu_os_grains(self):
         '''
-        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        Test if OS grains are parsed correctly in Ubuntu 16.04 "Xenial Xerus"
         '''
         _os_release_map = {
             'linux_distribution': ('Ubuntu', '16.04', 'xenial'),
-            'os_release_file': {
-                'NAME': 'Ubuntu',
-                'VERSION': '16.04.1 LTS (Xenial Xerus)',
-                'VERSION_ID': '16.04',
-                'PRETTY_NAME': '',
-                'ID': 'ubuntu',
-            },
             'os': 'Ubuntu',
             'os_family': 'Debian',
             'oscodename': 'xenial',
@@ -427,7 +420,7 @@ PATCHLEVEL = 3
             'osmajorrelease': 16,
             'osfinger': 'Ubuntu-16.04',
         }
-        self._run_os_grains_tests(None, _os_release_map)
+        self._run_os_grains_tests("ubuntu-16.04", _os_release_map)
 
     def test_docker_virtual(self):
         '''

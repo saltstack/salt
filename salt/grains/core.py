@@ -1423,7 +1423,9 @@ def os_data():
                         grains['lsb_distrib_id'] = os_release['NAME'].strip()
                     if 'VERSION_ID' in os_release:
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
-                    if 'PRETTY_NAME' in os_release:
+                    if 'VERSION_CODENAME' in os_release:
+                        grains['lsb_distrib_codename'] = os_release['VERSION_CODENAME']
+                    elif 'PRETTY_NAME' in os_release:
                         codename = os_release['PRETTY_NAME']
                         # https://github.com/saltstack/salt/issues/44108
                         if os_release['ID'] == 'debian':
