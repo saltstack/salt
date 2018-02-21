@@ -55,7 +55,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts['grains']['whens'] = {'tea time': '11/29/2017 12:00pm'}
 
     def tearDown(self):
-        del self.schedule
+        self.schedule.reset()
 
     def test_eval(self):
         '''
@@ -73,7 +73,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time1 = run_time2 - datetime.timedelta(seconds=1)
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate 1 second before the run time
@@ -105,7 +104,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time2 = dateutil_parser.parse('11/29/2017 5:00pm')
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate run time1
@@ -159,7 +157,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time2 = dateutil_parser.parse('11/29/2017 4:00pm')
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate 1 second at the run time
@@ -191,7 +188,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time2 = dateutil_parser.parse('11/29/2017 5:00pm') + datetime.timedelta(seconds=LOOP_INTERVAL)
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate 1 second at the run time
@@ -247,7 +243,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         run_time = dateutil_parser.parse('12/13/2017 1:00pm') + datetime.timedelta(seconds=LOOP_INTERVAL)
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # Evaluate at the run time
@@ -270,7 +265,6 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add the job to the scheduler
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         run_time = dateutil_parser.parse('11/29/2017 4:00pm')

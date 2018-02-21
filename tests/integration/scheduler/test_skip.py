@@ -45,7 +45,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts['loop_interval'] = 1
 
     def tearDown(self):
-        del self.schedule
+        self.schedule.reset()
 
     def test_skip(self):
         '''
@@ -61,7 +61,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job to schedule
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         run_time = dateutil_parser.parse('11/29/2017 4:00pm')
@@ -99,7 +98,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job to schedule
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # eval at 1:30pm to prime.
@@ -156,7 +154,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job1 to schedule
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job1)
 
         # Eval
@@ -203,7 +200,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job to schedule
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # eval at 1:30pm to prime.
@@ -244,7 +240,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         # Add job to schedule
-        self.schedule.opts['schedule'] = {}
         self.schedule.opts.update(job)
 
         # eval at 2:30pm, will not run during range.

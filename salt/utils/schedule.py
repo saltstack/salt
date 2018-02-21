@@ -258,6 +258,14 @@ class Schedule(object):
         if persist:
             self.persist()
 
+    def reset(self):
+        '''
+        Reset the scheduler to defaults
+        '''
+        self.skip_function = None
+        self.skip_during_range = None
+        self.opts['schedule'] = {}
+
     def delete_job_prefix(self, name, persist=True):
         '''
         Deletes a job from the scheduler. Ignores jobs from pillar

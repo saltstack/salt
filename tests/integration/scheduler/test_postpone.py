@@ -45,7 +45,7 @@ class SchedulerPostponeTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts['loop_interval'] = 1
 
     def tearDown(self):
-        del self.schedule
+        self.schedule.reset()
 
     def test_postpone(self):
         '''
