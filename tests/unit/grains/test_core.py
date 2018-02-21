@@ -848,8 +848,8 @@ SwapTotal:       4789244 kB'''
         assert core._linux_iqn() == []
         core.log.debug.assert_called()
         assert 'Error while accessing' in core.log.debug.call_args[0][0]
-        assert 'cables are not the same' in core.log.debug.call_args[0][2][1]
-        assert core.log.debug.call_args[0][2][0] == os.errno.EPERM
+        assert 'cables are not the same' in core.log.debug.call_args[0][2].strerror
+        assert core.log.debug.call_args[0][2].errno == os.errno.EPERM
         assert core.log.debug.call_args[0][1] == '/etc/iscsi/initiatorname.iscsi'
 
     @patch('salt.utils.files.fopen', MagicMock(side_effect=OSError(os.errno.ENOENT, '')))
