@@ -26,6 +26,9 @@ from binascii import crc32
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
+from salt.performance.payloads import taken_by_minion
+from salt.performance.time_provider import TimestampProvider
+
 if six.PY3:
     import ipaddress
 else:
@@ -1551,6 +1554,12 @@ class Minion(MinionBase):
             salt.log.setup.setup_multiprocessing_logging()
 
         salt.utils.process.appendproctitle('{0}._thread_return {1}'.format(cls.__name__, data['jid']))
+
+        jid = data['jid']
+        minion_id = opts['id']
+        minion_instance._fire_master(
+            data=taken_by_minion(jid=jid, ts=TimestampProvider.get_now(), minion_id=minion_id),
+            tag='perf/minion')
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
