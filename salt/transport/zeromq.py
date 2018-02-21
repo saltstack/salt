@@ -241,7 +241,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                 tries=tries,
             )
         if HAS_M2:
-            aes = key.private_decrypt(six.b(ret['key']), RSA.pkcs1_oaep_padding)
+            aes = key.private_decrypt(ret['key'],
+                                      RSA.pkcs1_oaep_padding)
         else:
             cipher = PKCS1_OAEP.new(key)
             aes = cipher.decrypt(ret['key'])
