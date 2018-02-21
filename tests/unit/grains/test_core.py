@@ -405,6 +405,60 @@ PATCHLEVEL = 3
         self._run_suse_os_grains_tests(_os_release_map)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    def test_debian_7_os_grains(self):
+        '''
+        Test if OS grains are parsed correctly in Debian 7 "wheezy"
+        '''
+        _os_release_map = {
+            'linux_distribution': ('debian', '7.11', ''),
+            'os': 'Debian',
+            'os_family': 'Debian',
+            'oscodename': 'wheezy',
+            'osfullname': 'Debian GNU/Linux',
+            'osrelease': '7',
+            'osrelease_info': [7],
+            'osmajorrelease': 7,
+            'osfinger': 'Debian-7',
+        }
+        self._run_os_grains_tests("debian-7", _os_release_map)
+
+    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    def test_debian_8_os_grains(self):
+        '''
+        Test if OS grains are parsed correctly in Debian 8 "jessie"
+        '''
+        _os_release_map = {
+            'linux_distribution': ('debian', '8.10', ''),
+            'os': 'Debian',
+            'os_family': 'Debian',
+            'oscodename': 'jessie',
+            'osfullname': 'Debian GNU/Linux',
+            'osrelease': '8',
+            'osrelease_info': [8],
+            'osmajorrelease': 8,
+            'osfinger': 'Debian-8',
+        }
+        self._run_os_grains_tests("debian-8", _os_release_map)
+
+    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    def test_debian_9_os_grains(self):
+        '''
+        Test if OS grains are parsed correctly in Debian 9 "stretch"
+        '''
+        _os_release_map = {
+            'linux_distribution': ('debian', '9.3', ''),
+            'os': 'Debian',
+            'os_family': 'Debian',
+            'oscodename': 'stretch',
+            'osfullname': 'Debian GNU/Linux',
+            'osrelease': '9',
+            'osrelease_info': [9],
+            'osmajorrelease': 9,
+            'osfinger': 'Debian-9',
+        }
+        self._run_os_grains_tests("debian-9", _os_release_map)
+
+    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_ubuntu_xenial_os_grains(self):
         '''
         Test if OS grains are parsed correctly in Ubuntu 16.04 "Xenial Xerus"
