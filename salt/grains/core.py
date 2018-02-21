@@ -1694,7 +1694,7 @@ def os_data():
                 grains['osrelease_info']
             )
         os_name = grains['os' if grains.get('os') in (
-            'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
+            'Debian', 'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
         grains['osfinger'] = '{0}-{1}'.format(
             os_name, grains['osrelease'] if os_name in ('Ubuntu',) else grains['osrelease_info'][0])
 

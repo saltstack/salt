@@ -204,7 +204,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(os_grains.get('os_family'), 'Suse')
         self.assertEqual(os_grains.get('os'), 'SUSE')
 
-    def _run_os_grains_tests(self, os_release_filename, os_release_map):
+    def _run_os_grains_tests(self, os_release_filename, os_release_map, expectation):
         path_isfile_mock = MagicMock(side_effect=lambda x: x in os_release_map.get('files', []))
         empty_mock = MagicMock(return_value={})
         osarch_mock = MagicMock(return_value="amd64")
@@ -256,19 +256,16 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                                     with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
                                                         os_grains = core.os_data()
 
-        self.assertEqual(os_grains.get('os'), os_release_map['os'])
-        self.assertEqual(os_grains.get('os_family'), os_release_map['os_family'])
-        self.assertEqual(os_grains.get('osfullname'), os_release_map['osfullname'])
-        self.assertEqual(os_grains.get('oscodename'), os_release_map['oscodename'])
-        self.assertEqual(os_grains.get('osrelease'), os_release_map['osrelease'])
-        self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
-        self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
+        grains = {k: v for k, v in os_grains.items()
+                  if k in set(["os", "os_family", "osfullname", "oscodename", "osfinger",
+                               "osrelease", "osrelease_info", "osmajorrelease"])}
+        self.assertEqual(grains, expectation)
 
-    def _run_suse_os_grains_tests(self, os_release_map):
+    def _run_suse_os_grains_tests(self, os_release_map, expectation):
         os_release_map['linux_distribution'] = ('SUSE test', 'version', 'arch')
-        os_release_map['os'] = 'SUSE'
-        os_release_map['os_family'] = 'Suse'
-        self._run_os_grains_tests(None, os_release_map)
+        expectation['os'] = 'SUSE'
+        expectation['os_family'] = 'Suse'
+        self._run_os_grains_tests(None, os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles11sp3(self):
@@ -280,14 +277,17 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 VERSION = 11
 PATCHLEVEL = 3
 ''',
+            'files': ["/etc/SuSE-release"],
+        }
+        expectation = {
             'oscodename': 'SUSE Linux Enterprise Server 11 SP3',
             'osfullname': "SLES",
             'osrelease': '11.3',
-            'osrelease_info': [11, 3],
+            'osrelease_info': (11, 3),
             'osmajorrelease': 11,
-            'files': ["/etc/SuSE-release"],
+            'osfinger': 'SLES-11',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles11sp4(self):
@@ -304,13 +304,16 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:suse:sles:11:4'
             },
+        }
+        expectation = {
             'oscodename': 'SUSE Linux Enterprise Server 11 SP4',
             'osfullname': "SLES",
             'osrelease': '11.4',
-            'osrelease_info': [11, 4],
+            'osrelease_info': (11, 4),
             'osmajorrelease': 11,
+            'osfinger': 'SLES-11',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles12(self):
@@ -327,13 +330,16 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:suse:sles:12'
             },
+        }
+        expectation = {
             'oscodename': 'SUSE Linux Enterprise Server 12',
             'osfullname': "SLES",
             'osrelease': '12',
-            'osrelease_info': [12],
+            'osrelease_info': (12,),
             'osmajorrelease': 12,
+            'osfinger': 'SLES-12',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles12sp1(self):
@@ -350,13 +356,16 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:suse:sles:12:sp1'
             },
+        }
+        expectation = {
             'oscodename': 'SUSE Linux Enterprise Server 12 SP1',
             'osfullname': "SLES",
             'osrelease': '12.1',
-            'osrelease_info': [12, 1],
+            'osrelease_info': (12, 1),
             'osmajorrelease': 12,
+            'osfinger': 'SLES-12',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_opensuse_leap_42_1(self):
@@ -373,13 +382,16 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:opensuse:opensuse:42.1'
             },
+        }
+        expectation = {
             'oscodename': 'openSUSE Leap 42.1 (x86_64)',
             'osfullname': "Leap",
             'osrelease': '42.1',
-            'osrelease_info': [42, 1],
+            'osrelease_info': (42, 1),
             'osmajorrelease': 42,
+            'osfinger': 'Leap-42',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_tumbleweed(self):
@@ -396,13 +408,16 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:opensuse:opensuse:20160504'
             },
+        }
+        expectation = {
             'oscodename': 'openSUSE Tumbleweed (20160504) (x86_64)',
             'osfullname': "Tumbleweed",
             'osrelease': '20160504',
-            'osrelease_info': [20160504],
+            'osrelease_info': (20160504,),
             'osmajorrelease': 20160504,
+            'osfinger': 'Tumbleweed-20160504',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_debian_7_os_grains(self):
@@ -411,16 +426,18 @@ PATCHLEVEL = 3
         '''
         _os_release_map = {
             'linux_distribution': ('debian', '7.11', ''),
+        }
+        expectation = {
             'os': 'Debian',
             'os_family': 'Debian',
             'oscodename': 'wheezy',
             'osfullname': 'Debian GNU/Linux',
             'osrelease': '7',
-            'osrelease_info': [7],
+            'osrelease_info': (7,),
             'osmajorrelease': 7,
             'osfinger': 'Debian-7',
         }
-        self._run_os_grains_tests("debian-7", _os_release_map)
+        self._run_os_grains_tests("debian-7", _os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_debian_8_os_grains(self):
@@ -429,16 +446,18 @@ PATCHLEVEL = 3
         '''
         _os_release_map = {
             'linux_distribution': ('debian', '8.10', ''),
+        }
+        expectation = {
             'os': 'Debian',
             'os_family': 'Debian',
             'oscodename': 'jessie',
             'osfullname': 'Debian GNU/Linux',
             'osrelease': '8',
-            'osrelease_info': [8],
+            'osrelease_info': (8,),
             'osmajorrelease': 8,
             'osfinger': 'Debian-8',
         }
-        self._run_os_grains_tests("debian-8", _os_release_map)
+        self._run_os_grains_tests("debian-8", _os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_debian_9_os_grains(self):
@@ -447,16 +466,18 @@ PATCHLEVEL = 3
         '''
         _os_release_map = {
             'linux_distribution': ('debian', '9.3', ''),
+        }
+        expectation = {
             'os': 'Debian',
             'os_family': 'Debian',
             'oscodename': 'stretch',
             'osfullname': 'Debian GNU/Linux',
             'osrelease': '9',
-            'osrelease_info': [9],
+            'osrelease_info': (9,),
             'osmajorrelease': 9,
             'osfinger': 'Debian-9',
         }
-        self._run_os_grains_tests("debian-9", _os_release_map)
+        self._run_os_grains_tests("debian-9", _os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_ubuntu_xenial_os_grains(self):
@@ -465,16 +486,18 @@ PATCHLEVEL = 3
         '''
         _os_release_map = {
             'linux_distribution': ('Ubuntu', '16.04', 'xenial'),
+        }
+        expectation = {
             'os': 'Ubuntu',
             'os_family': 'Debian',
             'oscodename': 'xenial',
             'osfullname': 'Ubuntu',
             'osrelease': '16.04',
-            'osrelease_info': [16, 4],
+            'osrelease_info': (16, 4),
             'osmajorrelease': 16,
             'osfinger': 'Ubuntu-16.04',
         }
-        self._run_os_grains_tests("ubuntu-16.04", _os_release_map)
+        self._run_os_grains_tests("ubuntu-16.04", _os_release_map, expectation)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_ubuntu_artful_os_grains(self):
@@ -483,16 +506,18 @@ PATCHLEVEL = 3
         '''
         _os_release_map = {
             'linux_distribution': ('Ubuntu', '17.10', 'artful'),
+        }
+        expectation = {
             'os': 'Ubuntu',
             'os_family': 'Debian',
             'oscodename': 'artful',
             'osfullname': 'Ubuntu',
             'osrelease': '17.10',
-            'osrelease_info': [17, 10],
+            'osrelease_info': (17, 10),
             'osmajorrelease': 17,
             'osfinger': 'Ubuntu-17.10',
         }
-        self._run_os_grains_tests("ubuntu-17.10", _os_release_map)
+        self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
     def test_docker_virtual(self):
         '''
