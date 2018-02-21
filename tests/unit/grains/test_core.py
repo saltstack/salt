@@ -147,9 +147,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         _path_exists_map = {
             '/proc/1/cmdline': False
         }
-        _path_isfile_map = {
-            '/etc/os-release': True,
-        }
         _os_release_map = {
             'NAME': 'SLES',
             'VERSION': '12-SP1',
@@ -161,9 +158,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         path_exists_mock = MagicMock(side_effect=lambda x: _path_exists_map[x])
-        path_isfile_mock = MagicMock(
-            side_effect=lambda x: _path_isfile_map.get(x, False)
-        )
         empty_mock = MagicMock(return_value={})
         osarch_mock = MagicMock(return_value="amd64")
         os_release_mock = MagicMock(return_value=_os_release_map)
@@ -191,7 +185,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     with patch('{0}.__import__'.format(built_in),
                                side_effect=_import_mock):
                         # Skip all the /etc/*-release stuff (not pertinent)
-                        with patch.object(os.path, 'isfile', path_isfile_mock):
+                        with patch.object(os.path, 'isfile', MagicMock(return_value=False)):
                             with patch.object(core, '_parse_os_release', os_release_mock):
                                 # Mock linux_distribution to give us the OS
                                 # name that we want.
@@ -210,10 +204,10 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(os_grains.get('os'), 'SUSE')
 
     def _run_os_grains_tests(self, os_release_map):
-        path_isfile_mock = MagicMock(side_effect=lambda x: x in os_release_map['files'])
+        path_isfile_mock = MagicMock(side_effect=lambda x: x in os_release_map.get('files', []))
         empty_mock = MagicMock(return_value={})
         osarch_mock = MagicMock(return_value="amd64")
-        os_release_mock = MagicMock(return_value=os_release_map.get('os_release_file'))
+        os_release_mock = MagicMock(return_value=os_release_map.get('os_release_file', {}))
 
         orig_import = __import__
         if six.PY2:
@@ -309,7 +303,6 @@ PATCHLEVEL = 3
             'osrelease': '11.4',
             'osrelease_info': [11, 4],
             'osmajorrelease': 11,
-            'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
@@ -333,7 +326,6 @@ PATCHLEVEL = 3
             'osrelease': '12',
             'osrelease_info': [12],
             'osmajorrelease': 12,
-            'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
@@ -357,7 +349,6 @@ PATCHLEVEL = 3
             'osrelease': '12.1',
             'osrelease_info': [12, 1],
             'osmajorrelease': 12,
-            'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
@@ -381,7 +372,6 @@ PATCHLEVEL = 3
             'osrelease': '42.1',
             'osrelease_info': [42, 1],
             'osmajorrelease': 42,
-            'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
@@ -405,7 +395,6 @@ PATCHLEVEL = 3
             'osrelease': '20160504',
             'osrelease_info': [20160504],
             'osmajorrelease': 20160504,
-            'files': ["/etc/os-release"],
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
@@ -431,7 +420,6 @@ PATCHLEVEL = 3
             'osrelease_info': [16, 4],
             'osmajorrelease': 16,
             'osfinger': 'Ubuntu-16.04',
-            'files': '/etc/os-release',
         }
         self._run_os_grains_tests(_os_release_map)
 

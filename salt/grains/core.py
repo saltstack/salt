@@ -1218,19 +1218,22 @@ def _get_interfaces():
     return _INTERFACES
 
 
-def _parse_os_release():
+def _parse_os_release(os_release_files):
     '''
-    Parse /etc/os-release and return a parameter dictionary
+    Parse os-release and return a parameter dictionary
 
     See http://www.freedesktop.org/software/systemd/man/os-release.html
     for specification of the file format.
     '''
 
-    filename = '/etc/os-release'
-    if not os.path.isfile(filename):
-        filename = '/usr/lib/os-release'
-
     data = dict()
+    for filename in os_release_files:
+        if os.path.isfile(filename):
+            break
+    else:
+        # None of the specified os-release files exist
+        return data
+
     with salt.utils.fopen(filename) as ifile:
         regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
         for line in ifile:
@@ -1414,8 +1417,8 @@ def os_data():
                 # to be incorrectly set to "Arch".
                 grains['osfullname'] = 'Antergos Linux'
             elif 'lsb_distrib_id' not in grains:
-                if os.path.isfile('/etc/os-release') or os.path.isfile('/usr/lib/os-release'):
-                    os_release = _parse_os_release()
+                os_release = _parse_os_release(['/etc/os-release', '/usr/lib/os-release'])
+                if os_release:
                     if 'NAME' in os_release:
                         grains['lsb_distrib_id'] = os_release['NAME'].strip()
                     if 'VERSION_ID' in os_release:
