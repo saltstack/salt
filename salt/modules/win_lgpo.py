@@ -5067,9 +5067,9 @@ def get(policy_class=None, return_full_policy_names=True,
                                                                          _pol['Registry']['Path'],
                                                                          _pol['Registry']['Value'])['vdata']
                     log.debug(
-                        'Value {0} found for reg policy {1}'.format(
-                            salt.utils.to_unicode(class_vals[policy_name]),
-                            policy_name))
+                        'Value %r found for reg policy %s',
+                        class_vals[policy_name], policy_name
+                    )
                 elif 'Secedit' in _pol:
                     # get value from secedit
                     _ret, _val = _findOptionValueInSeceditFile(_pol['Secedit']['Option'])
