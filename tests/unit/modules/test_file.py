@@ -11,7 +11,7 @@ import textwrap
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, mock_open
+from tests.support.mock import MagicMock, Mock, patch, mock_open
 
 try:
     import pytest

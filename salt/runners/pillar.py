@@ -3,7 +3,6 @@
 Functions to interact with the pillar compiler on the master
 '''
 from __future__ import absolute_import, print_function, unicode_literals
-import copy
 
 # Import salt libs
 import salt.pillar
