@@ -415,6 +415,7 @@ PATCHLEVEL = 3
         Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
         '''
         _os_release_map = {
+            'linux_distribution': ('Ubuntu', '16.04', 'xenial'),
             'os_release_file': {
                 'NAME': 'Ubuntu',
                 'VERSION': '16.04.1 LTS (Xenial Xerus)',
@@ -422,21 +423,17 @@ PATCHLEVEL = 3
                 'PRETTY_NAME': '',
                 'ID': 'ubuntu',
             },
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
             'oscodename': 'xenial',
             'osfullname': 'Ubuntu',
             'osrelease': '16.04',
             'osrelease_info': [16, 4],
             'osmajorrelease': 16,
             'osfinger': 'Ubuntu-16.04',
+            'files': '/etc/os-release',
         }
-        self._run_ubuntu_os_grains_tests(_os_release_map)
-
-    def _run_ubuntu_os_grains_tests(self, os_release_map):
-        os_release_map['linux_distribution'] = ('Ubuntu', '16.04', 'xenial')
-        os_release_map['os'] = 'Ubuntu'
-        os_release_map['os_family'] = 'Debian'
-        os_release_map['files'] = '/etc/os-release'
-        self._run_os_grains_tests(os_release_map)
+        self._run_os_grains_tests(_os_release_map)
 
     def test_docker_virtual(self):
         '''
