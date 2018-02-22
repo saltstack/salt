@@ -39,6 +39,7 @@ IP4_ADD2 = '10.0.0.2'
 IP6_LOCAL = '::1'
 IP6_ADD1 = '2001:4860:4860::8844'
 IP6_ADD2 = '2001:4860:4860::8888'
+OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -203,11 +204,16 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(os_grains.get('os_family'), 'Suse')
         self.assertEqual(os_grains.get('os'), 'SUSE')
 
-    def _run_os_grains_tests(self, os_release_map):
+    def _run_os_grains_tests(self, os_release_filename, os_release_map):
         path_isfile_mock = MagicMock(side_effect=lambda x: x in os_release_map.get('files', []))
         empty_mock = MagicMock(return_value={})
         osarch_mock = MagicMock(return_value="amd64")
-        os_release_mock = MagicMock(return_value=os_release_map.get('os_release_file', {}))
+        if os_release_filename:
+            os_release_data = core._parse_os_release(
+                [os.path.join(OS_RELEASE_DIR, os_release_filename)])
+        else:
+            os_release_data = os_release_map.get('os_release_file', {})
+        os_release_mock = MagicMock(return_value=os_release_data)
 
         orig_import = __import__
         if six.PY2:
@@ -262,7 +268,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         os_release_map['linux_distribution'] = ('SUSE test', 'version', 'arch')
         os_release_map['os'] = 'SUSE'
         os_release_map['os_family'] = 'Suse'
-        self._run_os_grains_tests(os_release_map)
+        self._run_os_grains_tests(None, os_release_map)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles11sp3(self):
@@ -421,7 +427,7 @@ PATCHLEVEL = 3
             'osmajorrelease': 16,
             'osfinger': 'Ubuntu-16.04',
         }
-        self._run_os_grains_tests(_os_release_map)
+        self._run_os_grains_tests(None, _os_release_map)
 
     def test_docker_virtual(self):
         '''
