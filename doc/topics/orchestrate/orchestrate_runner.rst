@@ -263,16 +263,16 @@ To execute with pillar data.
 Return Codes in Runner/Wheel Jobs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 State (``salt.state``) jobs are able to report failure via the :ref:`state
 return dictionary <state-return-data>`. Remote execution (``salt.function``)
 jobs are able to report failure by setting a ``retcode`` key in the
 ``__context__`` dictionary. However, runner (``salt.runner``) and wheel
 (``salt.wheel``) jobs would only report a ``False`` result when the
-runner/wheel function raised an exception. As of the Oxygen release, it is now
-possible to set a retcode in runner and wheel functions just as you can do in
-remote execution functions. Here is some example pseudocode:
+runner/wheel function raised an exception. As of the 2018.3.0 release, it is
+now possible to set a retcode in runner and wheel functions just as you can do
+in remote execution functions. Here is some example pseudocode:
 
 .. code-block:: python
 
@@ -591,11 +591,11 @@ loadable and parsable format:
     }
 
 
-The Oxygen release includes a couple fixes to make parsing this data easier and
+The 2018.3.0 release includes a couple fixes to make parsing this data easier and
 more accurate. The first is the ability to set a :ref:`return code
 <orchestrate-runner-return-codes-runner-wheel>` in a custom runner or wheel
 function, as noted above. The second is a change to how failures are included
-in the return data. Prior to the Oxygen release, minions that failed a
+in the return data. Prior to the 2018.3.0 release, minions that failed a
 ``salt.state`` orchestration job would show up in the ``comment`` field of the
 return data, in a human-readable string that was not easily parsed. They are
 now included in the ``changes`` dictionary alongside the minions that

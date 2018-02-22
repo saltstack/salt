@@ -2034,7 +2034,7 @@ class GitBase(object):
         really designed right now for winrepo, as its repos need to be checked
         out into the winrepo locations and not within the cachedir.
 
-        As of the Oxygen release cycle, the classes used to interface with
+        As of the 2018.3 release cycle, the classes used to interface with
         Pygit2 and GitPython can be overridden by passing the git_providers
         argument when spawning a class instance. This allows for one to write
         classes which inherit from salt.utils.gitfs.Pygit2 or
@@ -2346,7 +2346,7 @@ class GitBase(object):
 
     def update(self, remotes=None):
         '''
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             The remotes argument was added. This being a list of remote URLs,
             it will only update matching remotes. This actually matches on
             repo.id
