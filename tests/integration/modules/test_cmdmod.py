@@ -115,6 +115,29 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(self.run_function('cmd.retcode', ['exit 0'], python_shell=True), 0)
         self.assertEqual(self.run_function('cmd.retcode', ['exit 1'], python_shell=True), 1)
 
+    def test_run_all_with_success_retcodes(self):
+        '''
+        cmd.run with success_retcodes
+        '''
+        ret = self.run_function('cmd.run_all',
+                                ['exit 42'],
+                                success_retcodes=[42],
+                                python_shell=True)
+
+        self.assertTrue('retcode' in ret)
+        self.assertEqual(ret.get('retcode'), 0)
+
+    def test_retcode_with_success_retcodes(self):
+        '''
+        cmd.run with success_retcodes
+        '''
+        ret = self.run_function('cmd.retcode',
+                                ['exit 42'],
+                                success_retcodes=[42],
+                                python_shell=True)
+
+        self.assertEqual(ret, 0)
+
     def test_blacklist_glob(self):
         '''
         cmd_blacklist_glob

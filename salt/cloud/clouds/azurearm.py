@@ -119,15 +119,7 @@ try:
 except ImportError:
     pass
 
-__opts__ = salt.config.minion_config('/etc/salt/minion')
-__utils__ = salt.loader.utils(__opts__)
-
 __virtualname__ = 'azurearm'
-
-if HAS_LIBS is True:
-    _get_client = __utils__['azurearm.get_client']  # pylint: disable=invalid-name
-    _log_cloud_error = __utils__['azurearm.log_cloud_error']  # pylint: disable=invalid-name
-    _paged_object_to_list = __utils__['azurearm.paged_object_to_list']  # pylint: disable=invalid-name
 
 log = logging.getLogger(__name__)
 
@@ -181,7 +173,7 @@ def get_api_versions(call=None, kwargs=None):  # pylint: disable=unused-argument
                 resource_dict = resource.as_dict()
                 api_versions = resource_dict['api_versions']
     except CloudError as exc:
-        _log_cloud_error('resource', exc.message)
+        __utils__['azurearm.log_cloud_error']('resource', exc.message)
 
     return api_versions
 
@@ -204,7 +196,7 @@ def get_resource_by_id(resource_id, api_version, extract_value=None):
         else:
             ret = resource_dict
     except CloudError as exc:
-        _log_cloud_error('resource', exc.message)
+        __utils__['azurearm.log_cloud_error']('resource', exc.message)
         ret = {'Error': exc.message}
 
     return ret
@@ -320,7 +312,7 @@ def get_conn(client_type):
         )
         conn_kwargs.update({'username': username, 'password': password})
 
-    client = _get_client(
+    client = __utils__['azurearm.get_client'](
         client_type=client_type, **conn_kwargs
     )
 
@@ -364,7 +356,7 @@ def avail_locations(call=None):
             lowercase = location.lower().replace(' ', '')
             ret['locations'].append(lowercase)
     except CloudError as exc:
-        _log_cloud_error('resource', exc.message)
+        __utils__['azurearm.log_cloud_error']('resource', exc.message)
         ret = {'Error': exc.message}
 
     return ret
@@ -424,7 +416,7 @@ def avail_images(call=None):
                             'version': version['name'],
                         }
         except CloudError as exc:
-            _log_cloud_error('compute', exc.message)
+            __utils__['azurearm.log_cloud_error']('compute', exc.message)
             data = {publisher: exc.message}
 
         return data
@@ -437,7 +429,7 @@ def avail_images(call=None):
             publisher = publisher_obj.as_dict()
             publishers.append(publisher['name'])
     except CloudError as exc:
-        _log_cloud_error('compute', exc.message)
+        __utils__['azurearm.log_cloud_error']('compute', exc.message)
 
     pool = ThreadPool(cpu_count() * 6)
     results = pool.map_async(_get_publisher_images, publishers)
@@ -471,7 +463,7 @@ def avail_sizes(call=None):
             size = size_obj.as_dict()
             ret[size['name']] = size
     except CloudError as exc:
-        _log_cloud_error('compute', exc.message)
+        __utils__['azurearm.log_cloud_error']('compute', exc.message)
         ret = {'Error': exc.message}
 
     return ret
@@ -600,7 +592,7 @@ def list_resource_groups(call=None):
             group = group_obj.as_dict()
             ret[group['name']] = group
     except CloudError as exc:
-        _log_cloud_error('resource', exc.message)
+        __utils__['azurearm.log_cloud_error']('resource', exc.message)
         ret = {'Error': exc.message}
 
     return ret
@@ -673,7 +665,7 @@ def _get_public_ip(name, resource_group):
         )
         pubip = pubip_query.as_dict()
     except CloudError as exc:
-        _log_cloud_error('network', exc.message)
+        __utils__['azurearm.log_cloud_error']('network', exc.message)
         pubip = {'error': exc.message}
 
     return pubip
@@ -1268,7 +1260,7 @@ def request_instance(vm_):
         if custom_extension:
             create_or_update_vmextension(kwargs=custom_extension)
     except CloudError as exc:
-        _log_cloud_error('compute', exc.message)
+        __utils__['azurearm.log_cloud_error']('compute', exc.message)
 
     try:
         return show_instance(vm_['name'], call='action')
@@ -1560,11 +1552,11 @@ def list_storage_accounts(call=None):
     ret = {}
     try:
         accounts_query = storconn.storage_accounts.list()
-        accounts = _paged_object_to_list(accounts_query)
+        accounts = __utils__['azurearm.paged_object_to_list'](accounts_query)
         for account in accounts:
             ret[account['name']] = account
     except CloudError as exc:
-        _log_cloud_error('storage', exc.message)
+        __utils__['azurearm.log_cloud_error']('storage', exc.message)
         ret = {'Error': exc.message}
 
     return ret
@@ -1888,7 +1880,7 @@ def create_or_update_vmextension(call=None, kwargs=None):  # pylint: disable=unu
         ret = ret.as_dict()
 
     except CloudError as exc:
-        _log_cloud_error('compute', 'Error attempting to create the VM extension: {0}'.format(exc.message))
+        __utils__['azurearm.log_cloud_error']('compute', 'Error attempting to create the VM extension: {0}'.format(exc.message))
         ret = {'error': exc.message}
 
     return ret
@@ -1937,7 +1929,7 @@ def stop(name, call=None):
                 else:
                     ret = {'error': exc.message}
         if not ret:
-            _log_cloud_error('compute', 'Unable to find virtual machine with name: {0}'.format(name))
+            __utils__['azurearm.log_cloud_error']('compute', 'Unable to find virtual machine with name: {0}'.format(name))
             ret = {'error': 'Unable to find virtual machine with name: {0}'.format(name)}
     else:
         try:
@@ -1949,7 +1941,7 @@ def stop(name, call=None):
             vm_result = instance.result()
             ret = vm_result.as_dict()
         except CloudError as exc:
-            _log_cloud_error('compute', 'Error attempting to stop {0}: {1}'.format(name, exc.message))
+            __utils__['azurearm.log_cloud_error']('compute', 'Error attempting to stop {0}: {1}'.format(name, exc.message))
             ret = {'error': exc.message}
 
     return ret
@@ -1998,7 +1990,7 @@ def start(name, call=None):
                 else:
                     ret = {'error': exc.message}
         if not ret:
-            _log_cloud_error('compute', 'Unable to find virtual machine with name: {0}'.format(name))
+            __utils__['azurearm.log_cloud_error']('compute', 'Unable to find virtual machine with name: {0}'.format(name))
             ret = {'error': 'Unable to find virtual machine with name: {0}'.format(name)}
     else:
         try:
@@ -2010,7 +2002,7 @@ def start(name, call=None):
             vm_result = instance.result()
             ret = vm_result.as_dict()
         except CloudError as exc:
-            _log_cloud_error('compute', 'Error attempting to start {0}: {1}'.format(name, exc.message))
+            __utils__['azurearm.log_cloud_error']('compute', 'Error attempting to start {0}: {1}'.format(name, exc.message))
             ret = {'error': exc.message}
 
     return ret
