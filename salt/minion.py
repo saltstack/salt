@@ -20,13 +20,16 @@ import contextlib
 import multiprocessing
 from random import randint, shuffle
 from stat import S_IMODE
+
+from salt.utils import json
+
 import salt.serializers.msgpack
 from binascii import crc32
 
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
-from salt.performance.payloads import taken_by_minion
+from salt.performance.payloads import taken_by_minion, executed_by_minion
 from salt.performance.time_provider import TimestampProvider
 
 if six.PY3:
@@ -1918,6 +1921,21 @@ class Minion(MinionBase):
                'the worker_threads value.', jid
             )
             return True
+
+        # [KN] _thread_return() would be a better place for this call but unfortunately this is the first time we ever
+        # see the payload to be returned. Probably, this function could be decoupled to have a single
+        # responsibility.
+        minion_id = self.opts['id']
+
+        # [KN] Unfortunately, we can't predict the real size of the payload (it depends on the transport settings).
+        # So we simply assume the json stringifying here just as a basic estimate.
+
+        # A serious refactoring is required to get a clear way of getting the actual payload size here.
+        payload_len = len(json.dumps(load))
+
+        self._fire_master(
+            data=executed_by_minion(jid=jid, ts=TimestampProvider.get_now(), minion_id=minion_id, return_size=payload_len),
+            tag='perf/minion')
 
         if sync:
             try:
