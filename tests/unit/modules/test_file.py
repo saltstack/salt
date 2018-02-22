@@ -11,7 +11,7 @@ import textwrap
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import Mock, MagicMock, patch
 
 # Import Salt libs
 import salt.utils
@@ -19,6 +19,7 @@ import salt.modules.file as filemod
 import salt.modules.config as configmod
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
+from salt.utils.jinja import SaltCacheLoader
 
 SED_CONTENT = '''test
 some
@@ -704,12 +705,13 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         contents = 'This is a {{ template }}.'
         defaults = {'template': 'templated file'}
-        ret = filemod.apply_template_on_contents(
-            contents,
-            template='jinja',
-            context={'opts': filemod.__opts__},
-            defaults=defaults,
-            saltenv='base')
+        with patch.object(SaltCacheLoader, 'file_client', Mock()):
+            ret = filemod.apply_template_on_contents(
+                contents,
+                template='jinja',
+                context={'opts': filemod.__opts__},
+                defaults=defaults,
+                saltenv='base')
         self.assertEqual(ret, 'This is a templated file.')
 
     def test_replace_line_in_empty_file(self):
