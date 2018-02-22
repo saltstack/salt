@@ -834,7 +834,7 @@ Returns:
 ----------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``str_to_num`` to ``to_num``.
 
 Converts a string to its numerical value.
@@ -882,7 +882,7 @@ Example:
 --------------------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
@@ -911,7 +911,7 @@ Returns:
 --------------------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
@@ -942,7 +942,7 @@ Returns:
 ---------------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``rand_str`` to ``random_hash`` to more accurately describe
     what the filter does. ``rand_str`` will be supported until the Neon
     release.

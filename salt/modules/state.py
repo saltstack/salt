@@ -1567,7 +1567,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
             ``pillar_roots`` or an external Pillar source.  Pillar values that
             are not included in the kwarg will not be overwritten.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 

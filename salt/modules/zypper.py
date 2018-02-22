@@ -681,7 +681,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         If ``all`` is specified, all valid attributes will be returned.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     removed:
         not supported
@@ -1120,7 +1120,7 @@ def install(name=None,
 
         If ``all`` is specified, all valid attributes will be returned.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
 
     Returns a dict containing the new package names and versions::
@@ -2129,7 +2129,7 @@ def list_installed_patches():
 
 def list_provides(**kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     List package provides of installed packages as a dict.
     {'<provided_name>': ['<package_name>', '<package_name>', ...]}
@@ -2160,7 +2160,7 @@ def list_provides(**kwargs):
 
 def resolve_capabilities(pkgs, refresh, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Convert name provides in ``pkgs`` into real package names if
     ``resolve_capabilities`` parameter is set to True. In case of

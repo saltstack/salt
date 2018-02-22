@@ -225,7 +225,7 @@ def human_to_bytes(size):
     return the number of bytes.  Will return 0 if the argument has
     unexpected form.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
     '''
     sbytes = size[:-1]
     unit = size[-1]

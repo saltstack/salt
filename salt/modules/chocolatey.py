@@ -432,7 +432,7 @@ def install(name,
         execution_timeout (str):
         Chocolatey execution timeout value you want to pass to the installation process. Default is None.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         str: The output of the ``chocolatey`` command
