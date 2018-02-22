@@ -133,7 +133,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
             a string of features in a comma delimited list (no spaces), or a
             list of features.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
                 Added the ability to pass a list of features to be installed.
 
         recurse (Options[bool]):
@@ -297,7 +297,7 @@ def remove(feature, remove_payload=False, restart=False):
             a string of features in a comma delimited list (no spaces), or a
             list of features.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
                 Added the ability to pass a list of features to be removed.
 
         remove_payload (Optional[bool]):
