@@ -43,7 +43,7 @@ try:
     from jnpr.junos.utils.scp import SCP
     import jnpr.junos.utils
     import jnpr.junos.cfg
-    import jnpr.junos as tables_par_dir
+    import jnpr.junos.op as tables_dir
     from jnpr.junos.factory.factory_loader import FactoryLoader
     from jnpr.junos.factory.optable import OpTable
     import jxmlease
@@ -1368,11 +1368,10 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
         get_kvargs['filters'] = filters
     if args is not None and isinstance(args, dict):
         get_kvargs['args'] = args
-    table_path = path or os.path.dirname(
-        os.path.abspath(tables_par_dir.__file__))
+    pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
     try:
-        file_loc = glob.glob(os.path.join(table_path, '*/{}'.format(file))) or \
-            glob.glob(os.path.join(table_path, '{}'.format(file)))
+        file_loc = glob.glob(os.path.join(path, '{}'.format(file))) or \
+                   glob.glob(os.path.join(pyez_tables_path, '{}'.format(file)))
         if len(file_loc) == 1:
             file_name = file_loc[0]
         elif len(file_loc) > 1:

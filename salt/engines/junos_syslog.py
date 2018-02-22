@@ -142,7 +142,7 @@ class _Parser(object):
         priority = Suppress("<") + ints + Suppress(">")
 
         # timestamp
-        month = Word(string.uppercase, string.lowercase, exact=3)
+        month = Word(string.ascii_uppercase, string.ascii_lowercase, exact=3)
         day = ints
         hour = Combine(ints + ":" + ints + ":" + ints)
 
