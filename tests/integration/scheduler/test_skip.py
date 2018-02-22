@@ -44,6 +44,9 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
 
+    def tearDown(self):
+        del self.schedule
+
     def test_skip(self):
         '''
         verify that scheduled job is skipped at the specified time
@@ -67,6 +70,8 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'skip_explicit')
+        self.assertEqual(ret['_skipped_time'], run_time)
 
         # Run 11/29/2017 at 5pm
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 5:00pm').timetuple()))
@@ -84,8 +89,8 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
               'function': 'test.ping',
               'hours': '1',
               'skip_during_range': {
-                  'start': '2pm',
-                  'end': '3pm'
+                  'start': '11/29/2017 2pm',
+                  'end': '11/29/2017 3pm'
               }
             }
           }
@@ -94,11 +99,18 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         # Add job to schedule
         self.schedule.opts.update(job)
 
+        # eval at 1:30pm to prime.
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 1:30pm').timetuple()))
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+
         # eval at 2:30pm, will not run during range.
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 2:30pm').timetuple()))
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'in_skip_range')
+        self.assertEqual(ret['_skipped_time'], run_time)
 
         # eval at 3:30pm, will run.
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 3:30pm').timetuple()))
@@ -177,8 +189,8 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             'skip_during_range': {
-              'start': '2pm',
-              'end': '3pm'
+              'start': '11/29/2017 2pm',
+              'end': '11/29/2017 3pm'
             },
             'job1': {
               'function': 'test.ping',
@@ -190,11 +202,18 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         # Add job to schedule
         self.schedule.opts.update(job)
 
+        # eval at 1:30pm to prime.
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 1:30pm').timetuple()))
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+
         # eval at 2:30pm, will not run during range.
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 2:30pm').timetuple()))
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'in_skip_range')
+        self.assertEqual(ret['_skipped_time'], run_time)
 
         # eval at 3:30pm, will run.
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 3:30pm').timetuple()))
@@ -228,6 +247,8 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'in_skip_range')
+        self.assertEqual(ret['_skipped_time'], run_time)
 
         # eval at 3:00:01pm, will run.
         run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 3:00:01pm').timetuple()))
