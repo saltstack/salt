@@ -800,8 +800,8 @@ def _case_password(ret, name, password, password_reset_required, region=None, ke
     log.debug('Login is : {0}.'.format(login))
     if login:
         ret['comment'] = ' '.join([ret['comment'], 'Login Profile has been set for IAM user {0}.'.format(name)])
-        ret['changes']['old']['LoginProfile'] = None
-        ret['changes']['new']['LoginProfile'] = login['LoginProfile']
+        ret['changes'].setdefault('new', {})['LoginProfile'] = login['LoginProfile']
+        ret['changes'].setdefault('old', {})['LoginProfile'] = None
         ret['changes']['new']['LoginProfile']['Password'] = 'REDACTED'
     else:
         ret['result'] = False
