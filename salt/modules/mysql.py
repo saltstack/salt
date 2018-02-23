@@ -1622,8 +1622,10 @@ def grant_exists(grant,
             if not target_tokens:  # Avoid the overhead of re-calc in loop
                 target_tokens = _grant_to_tokens(target)
             grant_tokens = _grant_to_tokens(grant)
+            grant_tokens_database = grant_tokens['database'].replace('"', '').replace('\\', '').replace('`', '')
+            target_tokens_database = target_tokens['database'].replace('"', '').replace('\\', '').replace('`', '')
             if grant_tokens['user'] == target_tokens['user'] and \
-                    grant_tokens['database'] == target_tokens['database'] and \
+                    grant_tokens_database == target_tokens_database and \
                     grant_tokens['host'] == target_tokens['host'] and \
                     set(grant_tokens['grant']) == set(target_tokens['grant']):
                 return True
