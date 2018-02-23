@@ -52,6 +52,9 @@ salt/**/thin.py                     @saltstack/team-ssh
 # Team State
 salt/state.py                       @saltstack/team-state
 
+# Team SUSE
+salt/**/*zypper*                      @saltstack/team-suse
+
 # Team Transport
 salt/transport/                     @saltstack/team-transport
 salt/utils/zeromq.py                @saltstack/team-transport
