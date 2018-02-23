@@ -786,7 +786,7 @@ def update_login_profile(user_name, password=None, password_reset_required=False
     conn3 = __utils__['boto3.get_connection']('iam', region=region, key=key, keyid=keyid, profile=profile)
     try:
         args = {'UserName': user_name, 'PasswordResetRequired': password_reset_required}
-        args.update({'Password': password}) if password is not None else None
+        args.update({'Password': password}) if password is not None else None  # pylint: disable=W0106
         conn3.update_login_profile(**args)  # returns None on success
         info = conn3.get_login_profile(UserName=user_name)
         log.info('Updated profile for IAM user {0}.'.format(user_name))
