@@ -759,13 +759,13 @@ def create_login_profile(user_name, password, password_reset_required=False,
     try:
         info = conn3.create_login_profile(UserName=user_name, Password=password,
                                           PasswordResetRequired=password_reset_required)
-        log.info('Created profile for user {0}.'.format(user_name))
+        log.info('Created profile for IAM user {0}.'.format(user_name))
         info.pop('ResponseMetadata')
         return info
     except botocore.exceptions.ClientError as e:
         log.debug(e)
         err = e.response.get('Error', {}).get('Message')
-        log.error('Failed to create profile for user {0}: {1}'.format(user_name, err))
+        log.error('Failed to create profile for IAM user {0}: {1}'.format(user_name, err))
         return False
 
 
@@ -789,13 +789,13 @@ def update_login_profile(user_name, password=None, password_reset_required=False
         args.update({'Password': password}) if password is not None else None
         conn3.update_login_profile(**args)  # returns None on success
         info = conn3.get_login_profile(UserName=user_name)
-        log.info('Updated profile for user {0}.'.format(user_name))
+        log.info('Updated profile for IAM user {0}.'.format(user_name))
         info.pop('ResponseMetadata')
         return info
     except botocore.exceptions.ClientError as e:
         log.debug(e)
         err = e.response.get('Error', {}).get('Message')
-        log.error('Failed to update profile for user {0}: {1}'.format(user_name, err))
+        log.error('Failed to update profile for IAM user {0}: {1}'.format(user_name, err))
         return False
 
 
