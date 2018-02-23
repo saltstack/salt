@@ -799,14 +799,13 @@ def _case_password(ret, name, password, password_reset_required, region=None, ke
                                                       region, key, keyid, profile)
     log.debug('Login is : {0}.'.format(login))
     if login:
-        if 'Conflict' in login:
-            ret['comment'] = ' '.join([ret['comment'], 'Login profile for user {0} exists.'.format(name)])
-        else:
-            ret['comment'] = ' '.join([ret['comment'], 'Password has been added to User {0}.'.format(name)])
-            ret['changes']['password'] = 'REDACTED'
+        ret['comment'] = ' '.join([ret['comment'], 'Login Profile has been set for IAM user {0}.'.format(name)])
+        ret['changes']['old']['LoginProfile'] = None
+        ret['changes']['new']['LoginProfile'] = login['LoginProfile']
+        ret['changes']['new']['LoginProfile']['Password'] = 'REDACTED'
     else:
         ret['result'] = False
-        ret['comment'] = ' '.join([ret['comment'], 'Password for user {0} could not be set.\nPlease check your password policy.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'Login Profile for IAM user {0} could not be set.'.format(name)])
     return ret
 
 
