@@ -740,8 +740,8 @@ def delete_group(group_name, region=None, key=None,
         return False
 
 
-def create_login_profile(user_name, password, region=None, key=None,
-                         keyid=None, profile=None):
+def create_login_profile(user_name, password, password_reset_required=False,
+                         region=None, key=None, keyid=None, profile=None):
     '''
     Creates a login profile for the specified user, give the user the
     ability to access AWS services and the AWS Management Console.
@@ -754,21 +754,48 @@ def create_login_profile(user_name, password, region=None, key=None,
 
         salt myminion boto_iam.create_login_profile user_name password
     '''
-    user = get_user(user_name, region, key, keyid, profile)
-    if not user:
-        log.error('IAM user %s does not exist', user_name)
-        return False
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    conn3 = __utils__['boto3.get_connection']('iam', region=region, key=key,
+                      keyid=keyid, profile=profile)
     try:
-        info = conn.create_login_profile(user_name, password)
-        log.info('Created profile for IAM user %s.', user_name)
+        info = conn3.create_login_profile(UserName=user_name, Password=password,
+                                          PasswordResetRequired=password_reset_required)
+        log.info('Created profile for user {0}.'.format(user_name))
+        info.pop('ResponseMetadata')
         return info
-    except boto.exception.BotoServerError as e:
+    except botocore.exceptions.ClientError as e:
         log.debug(e)
-        if 'Conflict' in e:
-            log.info('Profile already exists for IAM user %s.', user_name)
-            return 'Conflict'
-        log.error('Failed to update profile for IAM user %s.', user_name)
+        err = e.response.get('Error', {}).get('Message')
+        log.error('Failed to create profile for user {0}: {1}'.format(user_name, err))
+        return False
+
+
+def update_login_profile(user_name, password=None, password_reset_required=False,
+                         region=None, key=None, keyid=None, profile=None):
+    '''
+    Updates a login profile for the specified user, give the user the
+    ability to access AWS services and the AWS Management Console.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.update_login_profile user_name password
+    '''
+    conn3 = __utils__['boto3.get_connection']('iam', region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        args = {'UserName': user_name, 'PasswordResetRequired': password_reset_required}
+        args.update({'Password': password}) if password is not None else None
+        conn3.update_login_profile(**args)  # returns None on success
+        info = conn3.get_login_profile(UserName=user_name)
+        log.info('Updated profile for user {0}.'.format(user_name))
+        info.pop('ResponseMetadata')
+        return info
+    except botocore.exceptions.ClientError as e:
+        log.debug(e)
+        err = e.response.get('Error', {}).get('Message')
+        log.error('Failed to update profile for user {0}: {1}'.format(user_name, err))
         return False
 
 
