@@ -617,7 +617,7 @@ def scrub(zpool, stop=False, pause=False):
         if true, cancel ongoing scrub
     pause : boolean
         if true, pause ongoing scrub
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
 
@@ -680,7 +680,7 @@ def create(zpool, *vdevs, **kwargs):
     filesystem_properties : dict
         additional filesystem properties
     createboot : boolean
-        ..versionadded:: Oxygen
+        ..versionadded:: 2018.3.0
         create a boot partition
 
     .. versionadded:: 2015.5.0
@@ -925,7 +925,7 @@ def split(zpool, newzpool, **kwargs):
     properties : dict
         additional pool properties for newzpool
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     .. note::
 
@@ -1358,7 +1358,7 @@ def labelclear(device, force=False):
     force : boolean
         treat exported or foreign devices as inactive
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
