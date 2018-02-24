@@ -60,7 +60,7 @@ class RFC(object):
     Simple holding class for all RFC/IANA registered lists & standards
     '''
     # https://tools.ietf.org/html/rfc6844#section-3
-    COO_TAGS = (
+    CAA_TAGS = (
         'issue',
         'issuewild',
         'iodef'
@@ -88,10 +88,8 @@ class RFC(object):
     ))
 
     TLSA_SELECT = OrderedDict((
-        (0, 'pkixta'),
-        (1, 'pkixee'),
-        (2, 'daneta'),
-        (3, 'daneee'),
+        (0, 'cert'),
+        (1, 'spki'),
     ))
 
     TLSA_MATCHING = OrderedDict((
@@ -166,6 +164,17 @@ def _weighted_order(recs):
     return res
 
 
+def _cast(rec_data, rec_cast):
+    if isinstance(rec_cast, dict):
+        rec_data = type(rec_cast.keys()[0])(rec_data)
+        res = rec_cast[rec_data]
+        return res
+    elif isinstance(rec_cast, (list, tuple)):
+        return RFC.validate(rec_data, rec_cast)
+    else:
+        return rec_cast(rec_data)
+
+
 def _data2rec(schema, rec_data):
     '''
     schema = OrderedDict({
@@ -182,7 +191,7 @@ def _data2rec(schema, rec_data):
         rec_fields = rec_data.split(' ')
         assert len(rec_fields) == len(schema)
         return dict((
-            (field_name, rec_cast(rec_field))
+            (field_name, _cast(rec_field, rec_cast))
             for (field_name, rec_cast), rec_field in zip(schema.items(), rec_fields)
         ))
     except (AssertionError, AttributeError, TypeError, ValueError) as e:
@@ -218,6 +227,14 @@ def _data2rec_group(schema, recs_data, group_key):
 
 def _rec2data(*rdata):
     return ' '.join(rdata)
+
+
+def _clean(data):
+    data = data.strip(string.whitespace)
+    if data.startswith(('"', '\'')) and data.endswith(('"', '\'')):
+        return data[1:-1]
+    else:
+        return data
 
 
 def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
@@ -263,7 +280,7 @@ def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
         elif rtype == 'RRSIG':
             validated = True
             continue
-        res.append(rdata.strip(string.whitespace + '"'))
+        res.append(_clean(rdata))
 
     if res and secure and not validated:
         return False
@@ -316,7 +333,7 @@ def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
             elif l_type != rdtype:
                 raise ValueError('Invalid DNS type {}'.format(rdtype))
 
-            res.append(l_rec.strip(string.whitespace + '"'))
+            res.append(_clean(l_rec))
 
     except StopIteration:
         pass
@@ -388,7 +405,7 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
             if line.startswith(prefix):
                 line = line[len(prefix) + 1:]
                 break
-        res.append(line.strip(string.whitespace + '"'))
+        res.append(_clean(line))
 
     return res
 
@@ -412,7 +429,7 @@ def _lookup_dnspython(name, rdtype, timeout=None, servers=None, secure=None):
         resolver.ednsflags += dns.flags.DO
 
     try:
-        res = [six.text_type(rr.to_text().strip(string.whitespace + '"'))
+        res = [_clean(rr.to_text())
                for rr in resolver.query(name, rdtype, raise_on_no_answer=False)]
         return res
     except dns.rdatatype.UnknownRdatatype:
@@ -481,7 +498,7 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
                 else:
                     line = line.split(' ')
 
-            res.append(line[-1].strip(string.whitespace + '"'))
+            res.append(_clean(line[-1]))
             line = next(lookup_res)
 
     except StopIteration:
@@ -636,26 +653,25 @@ def query(
         qres = [answer for answer in lookup(name, 'TXT', **qargs) if answer.startswith('v=spf')]
 
     rec_map = {
-        'A':    a_rec,
-        'AAAA': aaaa_rec,
-        'CAA':  caa_rec,
-        'MX':   mx_rec,
-        'SOA':  soa_rec,
-        'SPF':  spf_rec,
-        'SRV':  srv_rec,
+        'A':     a_rec,
+        'AAAA':  aaaa_rec,
+        'CAA':   caa_rec,
+        'MX':    mx_rec,
+        'SOA':   soa_rec,
+        'SPF':   spf_rec,
+        'SRV':   srv_rec,
+        'SSHFP': sshfp_rec,
+        'TLSA':  tlsa_rec,
     }
 
-    if rdtype not in rec_map:
+    if not qres or rdtype not in rec_map:
         return qres
-
-    caster = rec_map[rdtype]
-
-    if rdtype in ('MX', 'SRV'):
-        # Grouped returns
-        res = caster(qres)
+    elif rdtype in ('A', 'AAAA', 'SSHFP', 'TLSA'):
+        res = [rec_map[rdtype](res) for res in qres]
+    elif rdtype in ('SOA', 'SPF'):
+        res = rec_map[rdtype](qres[0])
     else:
-        # List of results
-        res = list(map(caster, qres))
+        res = rec_map[rdtype](qres)
 
     return res
 
@@ -692,8 +708,8 @@ def caa_rec(rdatas):
     '''
     rschema = OrderedDict((
         ('flags', lambda flag: ['critical'] if int(flag) > 0 else []),
-        ('tag', lambda tag: RFC.validate(tag, RFC.COO_TAGS)),
-        ('value', lambda val: six.text_type(val).strip('"'))
+        ('tag', RFC.CAA_TAGS),
+        ('value', lambda val: val.strip('\'"'))
     ))
 
     res = _data2rec_group(rschema, rdatas, 'tag')
@@ -887,6 +903,21 @@ def sshfp_data(key_t, hash_t, pub):
     return _rec2data(key_t, hash_t, ssh_fp)
 
 
+def sshfp_rec(rdata):
+    '''
+    Validate and parse DNS record data for TLSA record(s)
+    :param rdata: DNS record data
+    :return: dict w/fields
+    '''
+    rschema = OrderedDict((
+        ('algorithm', RFC.SSHFP_ALGO),
+        ('fp_hash', RFC.SSHFP_HASH),
+        ('fingerprint', str)
+    ))
+
+    return _data2rec(rschema, rdata)
+
+
 def tlsa_data(pub, usage, selector, matching):
     '''
     Generate a TLSA rec
@@ -911,6 +942,22 @@ def tlsa_data(pub, usage, selector, matching):
         cert_fp = hasher.hexdigest()
 
     return _rec2data(usage, selector, matching, cert_fp)
+
+
+def tlsa_rec(rdata):
+    '''
+    Validate and parse DNS record data for TLSA record(s)
+    :param rdata: DNS record data
+    :return: dict w/fields
+    '''
+    rschema = OrderedDict((
+        ('usage', RFC.TLSA_USAGE),
+        ('selector', RFC.TLSA_SELECT),
+        ('matching', RFC.TLSA_MATCHING),
+        ('pub', str)
+    ))
+
+    return _data2rec(rschema, rdata)
 
 
 def service(
