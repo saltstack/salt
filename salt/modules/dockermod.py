@@ -6788,7 +6788,7 @@ def sls_build(repository,
     return ret
 
 
-def prune(system=True, containers=True, networks=True, images=True, build=True, volumes=False, **filters):
+def prune(system=True, containers=False, networks=False, images=False, build=False, volumes=False, **filters):
     '''
     Prune Docker's various subsystems
 
@@ -6798,7 +6798,7 @@ def prune(system=True, containers=True, networks=True, images=True, build=True, 
         prune containers, networks, images and build cache
 
     containers:
-        Removes all stopped containers
+        Removes stopped containers
         https://docs.docker.com/engine/reference/commandline/container_prune/#filtering
     images:
         Remove unused images
