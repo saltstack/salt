@@ -6786,3 +6786,58 @@ def sls_build(repository,
         stop(id_)
         rm_(id_)
     return ret
+
+
+def prune(system=True, containers=True, networks=True, images=True, build=True, volumes=False, **filters):
+    '''
+    Prune Docker's various subsystems
+
+    .. versionadded:: Fluorine
+
+    system:
+        prune containers, networks, images and build cache
+
+    containers:
+        Removes all stopped containers
+        https://docs.docker.com/engine/reference/commandline/container_prune/#filtering
+    images:
+        Remove unused images
+        use dangling=True as filter to only remove dangling images
+        https://docs.docker.com/engine/reference/commandline/image_prune/#filtering
+    networks:
+        Remove unreferenced networks
+        https://docs.docker.com/engine/reference/commandline/network_prune/#filtering
+    build:
+        Delete builder cache (filters aren't applicable)
+    volumes:
+        Remove unreferenced volumes
+        Documentation: https://docs.docker.com/engine/reference/commandline/volume_prune/
+    filters:
+        until (<timestamp>) - only remove objects created before given timestamp. Not applicable to volumes
+        label (label=<key>, label=<key>=<value>, label!=<key>, or label!=<key>=<value>) - only remove objects with (or without, in case label!=... is used) the specified labels.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker.prune system=False images=True dangling=True
+
+    '''
+
+    filters = __utils__['args.clean_kwargs'](**filters)
+    ret = {}
+    if system or containers:
+        ret['containers'] = _client_wrapper('prune_containers', kwargs=filters)
+    if system or networks:
+        ret['networks'] = _client_wrapper('prune_networks', kwargs=filters)
+    if system or images:
+        ret['images'] = _client_wrapper('prune_images', kwargs=filters)
+    if system or build:
+        # It's not in docker-py yet
+        ret['build'] = _client_wrapper(
+            '_result', _client_wrapper('_post', _client_wrapper('_url', '/build/prune')), True
+        )
+    if volumes:
+        ret['volumes'] = _client_wrapper('prune_volumes', kwargs=filters)
+
+    return ret
