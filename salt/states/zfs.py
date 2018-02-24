@@ -921,7 +921,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
         a schedule must be setup to automatically run the state. this means that if
         you run the state daily the hourly snapshot will only be made once per day!
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
 
         switched to localtime from gmtime so times now take into account timezones.
 
