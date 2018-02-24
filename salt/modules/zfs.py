@@ -21,6 +21,7 @@ import logging
 # Import Salt libs
 import salt.utils.args
 import salt.utils.path
+import salt.utils.versions
 import salt.modules.cmdmod
 from salt.utils.odict import OrderedDict
 from salt.ext.six.moves import zip
@@ -291,7 +292,7 @@ def list_(name=None, **kwargs):
         sort order (default = ascending)
     parsable : boolean
         display numbers in parsable (exact) values
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     .. versionadded:: 2015.5.0
 
@@ -313,6 +314,8 @@ def list_(name=None, **kwargs):
         properties = properties.split(',')
 
     # NOTE: name should be first property
+    #       we loop here because there 'name' can be in the list
+    #       multiple times.
     while 'name' in properties:
         properties.remove('name')
     properties.insert(0, 'name')
@@ -329,11 +332,12 @@ def list_(name=None, **kwargs):
         opts['-d'] = kwargs.get('depth')
     if kwargs.get('type', False):
         opts['-t'] = kwargs.get('type')
-    if kwargs.get('sort', False) and kwargs.get('sort') in properties:
+    kwargs_sort = kwargs.get('sort', False)
+    if kwargs_sort and kwargs_sort in properties:
         if kwargs.get('order', 'ascending').startswith('a'):
-            opts['-s'] = kwargs.get('sort')
+            opts['-s'] = kwargs_sort
         else:
-            opts['-S'] = kwargs.get('sort')
+            opts['-S'] = kwargs_sort
     if isinstance(properties, list):
         # NOTE: There can be only one -o and it takes a comma-seperated list
         opts['-o'] = ','.join(properties)
@@ -440,9 +444,16 @@ def mount(name=None, **kwargs):
     if kwargs.get('options', False):
         opts['-o'] = kwargs.get('options')
     if name in [None, '-a']:
-        # NOTE: still accept '-a' as name for backwards compatibility
-        #       two versions after Flourine this should just simplify
-        #       this to just set '-a' if name is not set.
+        # NOTE: the new way to mount all filesystems is to have name
+        #       set to ```None```. We still accept the old '-a' until
+        #       Sodium. After Sodium we can update the if statement
+        #       to ```if not name:```
+        if name == '-a':
+            salt.utils.versions.warn_until(
+                'Sodium',
+                'Passing \'-a\' as name is deprecated as of Salt Flourine. This '
+                'warning will be removed in Salt Sodium. Please pass name as '
+                '\'None\' instead to mount all filesystems.')
         flags.append('-a')
         name = None
 
@@ -923,7 +934,7 @@ def hold(tag, *snapshot, **kwargs):
 
     .. warning::
 
-        As of Flourine the tag parameter no longer accepts a comma-seprated value.
+        As of Flourine the tag parameter no longer accepts a comma-separated value.
         It's is now possible to create a tag that contains a comma, this was impossible before.
 
     CLI Example:
@@ -935,9 +946,11 @@ def hold(tag, *snapshot, **kwargs):
 
     '''
     ## warn about tag change
-    # NOTE: remove me 2 versions after Flourine
     if ',' in tag:
-        log.warning('zfs.hold - on Flourine and later a comma in a tag will no longer create multiple tags!')
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'A comma-separated tag is no support as of Salt Flourine. '
+            'This warning will be removed in Salt Sodium.')
 
     ## Configure command
     # NOTE: initialize the defaults
@@ -1001,9 +1014,11 @@ def release(tag, *snapshot, **kwargs):
 
     '''
     ## warn about tag change
-    # NOTE: remove me 2 versions after Flourine
     if ',' in tag:
-        log.warning('zfs.release - on Flourine and later a comma in a tag will no longer create multiple tags!')
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'A comma-separated tag is no support as of Salt Flourine. '
+            'This warning will be removed in Salt Sodium.')
 
     ## Configure command
     # NOTE: initialize the defaults
@@ -1162,7 +1177,7 @@ def get(*dataset, **kwargs):
         local, default, inherited, temporary, and none. The default value is all sources.
     parsable : boolean
         display numbers in parsable (exact) values (default = True)
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     .. note::
 
