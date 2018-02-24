@@ -49,7 +49,6 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             salt.utils.stringutils.to_str(self.pathsep.join(new_path))
         )
 
-
     def test_get_path(self):
         '''
         Test to Returns the system path
