@@ -11,8 +11,8 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.platform
 import salt.utils.win_functions as win_functions
-import salt.utils
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -53,7 +53,7 @@ class WinFunctionsTestCase(TestCase):
 
         self.assertEqual(encoded, '^"C:\\Some Path\\With Spaces^"')
 
-    @skipIf(not salt.utils.is_windows(), 'WinDLL only available on Windows')
+    @skipIf(not salt.utils.platform.is_windows(), 'WinDLL only available on Windows')
     def test_broadcast_setting_change(self):
         '''
             Test to rehash the Environment variables
