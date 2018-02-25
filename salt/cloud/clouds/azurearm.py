@@ -774,6 +774,25 @@ def create_network_interface(call=None, kwargs=None):
     ip_kwargs = {}
     ip_configurations = None
 
+    if 'load_balancer_backend_address_pools' in kwargs:
+        pool_dicts = kwargs['load_balancer_backend_address_pools']
+        if isinstance(pool_dicts, dict):
+            pool_ids = []
+            for load_bal, be_pools in pool_dicts.items():
+                for pool in be_pools:
+                    try:
+                        lbbep_data = netconn.load_balancer_backend_address_pools.get(
+                            kwargs['resource_group'],
+                            load_bal,
+                            pool,
+                        )
+                        pool_ids.append({'id': lbbep_data.as_dict()['id']})
+                    except CloudError as exc:
+                        log.error('There was a cloud error: %s', six.text_type(exc))
+                    except KeyError as exc:
+                        log.error('There was an error getting the Backend Pool ID: %s', six.text_type(exc))
+            ip_kwargs['load_balancer_backend_address_pools'] = pool_ids
+
     if 'private_ip_address' in kwargs.keys():
         ip_kwargs['private_ip_address'] = kwargs['private_ip_address']
         ip_kwargs['private_ip_allocation_method'] = IPAllocationMethod.static
@@ -930,6 +949,11 @@ def request_instance(vm_):
         compute_models, 'VirtualMachineSizeTypes'
     )
 
+    subscription_id = config.get_cloud_config_value(
+        'subscription_id',
+        get_configured_provider(), __opts__, search_global=False
+    )
+
     if vm_.get('driver') is None:
         vm_['driver'] = 'azurearm'
 
@@ -1039,6 +1063,24 @@ def request_instance(vm_):
             )
         os_kwargs['admin_password'] = vm_password
 
+    availability_set = config.get_cloud_config_value(
+        'availability_set',
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None
+    )
+    if availability_set is not None and isinstance(availability_set, six.string_types):
+        availability_set = {
+            'id': '/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Compute/availabilitySets/{2}'.format(
+                subscription_id,
+                vm_['resource_group'],
+                availability_set
+            )
+        }
+    else:
+        availability_set = None
+
     cloud_env = _get_cloud_environment()
 
     storage_endpoint_suffix = cloud_env.suffixes.storage_endpoint
@@ -1147,7 +1189,10 @@ def request_instance(vm_):
         img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
         source_image = None
         os_type = None
-        os_disk = None
+        os_disk = OSDisk(
+            create_option=DiskCreateOptionTypes.from_image,
+            disk_size_gb=vm_.get('os_disk_size_gb')
+        )
         img_ref = ImageReference(
             publisher=img_pub,
             offer=img_off,
@@ -1235,6 +1280,7 @@ def request_instance(vm_):
                 NetworkInterfaceReference(vm_['iface_id']),
             ],
         ),
+        availability_set=availability_set,
     )
 
     __utils__['cloud.fire_event'](
@@ -1257,15 +1303,15 @@ def request_instance(vm_):
             parameters=params
         )
         vm_create.wait()
+        vm_result = vm_create.result()
+        vm_result = vm_result.as_dict()
         if custom_extension:
             create_or_update_vmextension(kwargs=custom_extension)
     except CloudError as exc:
         __utils__['azurearm.log_cloud_error']('compute', exc.message)
+        vm_result = {}
 
-    try:
-        return show_instance(vm_['name'], call='action')
-    except CloudError:
-        return {}
+    return vm_result
 
 
 def create(vm_):
@@ -1304,7 +1350,12 @@ def create(vm_):
 
     log.info('Creating Cloud VM %s in %s', vm_['name'], location)
 
-    request_instance(vm_=vm_)
+    vm_request = request_instance(vm_=vm_)
+
+    if not vm_request or 'error' in vm_request:
+        err_message = 'Error creating VM {0}! ({1})'.format(vm_['name'], six.text_type(vm_request))
+        log.error(err_message)
+        raise SaltCloudSystemExit(err_message)
 
     def _query_node_data(name, bootstrap_interface):
         '''
