@@ -614,6 +614,8 @@ def lookup(
         if res:
             return res
 
+    return res
+
 
 def query(
     name,
@@ -915,7 +917,7 @@ def sshfp_rec(rdata):
     rschema = OrderedDict((
         ('algorithm', RFC.SSHFP_ALGO),
         ('fp_hash', RFC.SSHFP_HASH),
-        ('fingerprint', lambda val: val.lower()) # resolvers are inconsistent on this one
+        ('fingerprint', lambda val: val.lower())  # resolvers are inconsistent on this one
     ))
 
     return _data2rec(rschema, rdata)
