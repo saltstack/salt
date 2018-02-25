@@ -37,7 +37,6 @@ from salt.utils.odict import OrderedDict
 from salt.ext import six
 from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
 
-
 # Integrations
 try:
     import dns.resolver
@@ -189,12 +188,16 @@ def _data2rec(schema, rec_data):
     '''
     try:
         rec_fields = rec_data.split(' ')
-        assert len(rec_fields) == len(schema)
+        # spaces in digest fields are allowed
+        if len(rec_fields) > len(schema):
+            cutoff = len(schema) - 1
+            rec_fields = rec_fields[0:cutoff] + [''.join(rec_fields[cutoff:])]
+
         return dict((
             (field_name, _cast(rec_field, rec_cast))
             for (field_name, rec_cast), rec_field in zip(schema.items(), rec_fields)
         ))
-    except (AssertionError, AttributeError, TypeError, ValueError) as e:
+    except (AttributeError, TypeError, ValueError) as e:
         raise ValueError('Unable to cast "{0}" as "{2}": {1}'.format(
             rec_data,
             e,
@@ -246,7 +249,7 @@ def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
     :param servers: [] of servers to use
     :return: [] of records or False if error
     '''
-    cmd = 'dig +search +fail +noall +answer +noclass +nottl -t {0} '.format(rdtype)
+    cmd = 'dig +search +fail +noall +answer +noclass +nosplit +nottl -t {0} '.format(rdtype)
     if servers:
         cmd += ''.join(['@{0} '.format(srv) for srv in servers])
     if timeout is not None:
@@ -258,7 +261,7 @@ def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
     if secure:
         cmd += '+dnssec +adflag '
 
-    cmd = __salt__['cmd.run_all'](cmd + six.text_type(name), python_shell=False, output_loglevel='quiet')
+    cmd = __salt__['cmd.run_all']('{0} {1}'.format(cmd, name), python_shell=False, output_loglevel='quiet')
 
     if 'ignoring invalid type' in cmd['stderr']:
         raise ValueError('Invalid DNS type {}'.format(rdtype))
@@ -361,7 +364,7 @@ def _lookup_gai(name, rdtype, timeout=None):
         raise ValueError('Invalid DNS type {} for gai lookup'.format(rdtype))
 
     if timeout:
-        log.warn('Ignoring timeout on gai resolver; fix resolv.conf to do that')
+        log.info('Ignoring timeout on gai resolver; fix resolv.conf to do that')
 
     try:
         addresses = [sock[4][0] for sock in socket.getaddrinfo(name, None, sock_t, 0, socket.SOCK_RAW)]
@@ -386,7 +389,7 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
     if timeout:
         cmd += '-W {0} '.format(int(timeout))
 
-    cmd = __salt__['cmd.run_all'](cmd + name, python_shell=False, output_loglevel='quiet')
+    cmd = __salt__['cmd.run_all']('{0} {1}'.format(cmd, name), python_shell=False, output_loglevel='quiet')
 
     if 'invalid type' in cmd['stderr']:
         raise ValueError('Invalid DNS type {}'.format(rdtype))
@@ -709,7 +712,7 @@ def caa_rec(rdatas):
     rschema = OrderedDict((
         ('flags', lambda flag: ['critical'] if int(flag) > 0 else []),
         ('tag', RFC.CAA_TAGS),
-        ('value', lambda val: val.strip('\'"'))
+        ('value', lambda val: val.strip('\',"'))
     ))
 
     res = _data2rec_group(rschema, rdatas, 'tag')
