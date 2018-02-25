@@ -7,9 +7,16 @@ Azure (ARM) Compute Execution Module
 :maintainer: <devops@decisionlab.io>
 :maturity: new
 :depends:
-    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0
-    * `AutoRest swagger generator Python client runtime <https://pypi.python.org/pypi/msrest>`_ >= 0.4
-    * `AutoRest swagger generator Python client runtime (Azure-specific module) <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4
+    * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
+    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.8
+    * `azure-mgmt <https://pypi.python.org/pypi/azure-mgmt>`_ >= 1.0.0
+    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 1.0.0
+    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 1.7.1
+    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 1.1.0
+    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 1.0.0
+    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 0.32.0
+    * `azure-storage <https://pypi.python.org/pypi/azure-storage>`_ >= 0.34.3
+    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4.21
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
