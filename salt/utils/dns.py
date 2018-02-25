@@ -915,7 +915,7 @@ def sshfp_rec(rdata):
     rschema = OrderedDict((
         ('algorithm', RFC.SSHFP_ALGO),
         ('fp_hash', RFC.SSHFP_HASH),
-        ('fingerprint', str)
+        ('fingerprint', lambda val: val.lower()) # resolvers are inconsistent on this one
     ))
 
     return _data2rec(rschema, rdata)
