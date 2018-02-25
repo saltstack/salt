@@ -315,6 +315,7 @@ execution modules
     pcs
     pdbedit
     pecl
+    pf
     philips_hue
     pillar
     pip
