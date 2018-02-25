@@ -14,17 +14,23 @@ Azure (ARM) Utilities
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+from operator import itemgetter
 import importlib
 import logging
 import sys
 
 # Import Salt libs
 import salt.config
+import salt.ext.six as six
 import salt.loader
 import salt.version
 from salt.exceptions import (
     SaltInvocationError, SaltSystemExit
 )
+try:
+    from salt.ext.six.moves import range as six_range
+except ImportError:
+    six_range = range
 
 # Import third party libs
 try:
@@ -58,7 +64,7 @@ def _determine_auth(**kwargs):
     '''
     Acquire Azure ARM Credentials
     '''
-    if 'profile' in kwargs.keys():
+    if 'profile' in kwargs:
         azure_credentials = __salt__['config.option'](kwargs['profile'])
         kwargs.update(azure_credentials)
 
@@ -75,23 +81,35 @@ def _determine_auth(**kwargs):
         raise sys.exit('The Azure cloud environment {0} is not available.'.format(kwargs['cloud_environment']))
 
     if set(service_principal_creds_kwargs).issubset(kwargs):
-        credentials = ServicePrincipalCredentials(kwargs['client_id'],
-                                                  kwargs['secret'],
-                                                  tenant=kwargs['tenant'],
-                                                  cloud_environment=cloud_env)
+        if not (kwargs['client_id'] and kwargs['secret'] and kwargs['tenant']):
+            raise SaltInvocationError(
+                'The client_id, secret, and tenant parameters must all be '
+                'populated if using service principals.'
+            )
+        else:
+            credentials = ServicePrincipalCredentials(kwargs['client_id'],
+                                                      kwargs['secret'],
+                                                      tenant=kwargs['tenant'],
+                                                      cloud_environment=cloud_env)
     elif set(user_pass_creds_kwargs).issubset(kwargs):
-        credentials = UserPassCredentials(kwargs['username'],
-                                          kwargs['password'],
-                                          cloud_environment=cloud_env)
+        if not (kwargs['username'] and kwargs['password']):
+            raise SaltInvocationError(
+                'The username and password parameters must both be '
+                'populated if using username/password authentication.'
+            )
+        else:
+            credentials = UserPassCredentials(kwargs['username'],
+                                              kwargs['password'],
+                                              cloud_environment=cloud_env)
     else:
         raise SaltInvocationError(
-            'Unable to do determine credentials. '
+            'Unable to determine credentials. '
             'A subscription_id with username and password, '
             'or client_id, secret, and tenant or a profile with the '
             'required parameters populated'
         )
 
-    if 'subscription_id' not in kwargs.keys():
+    if 'subscription_id' not in kwargs:
         raise SaltInvocationError(
             'A subscription_id must be specified'
         )
@@ -108,11 +126,12 @@ def get_client(client_type, **kwargs):
     client_map = {'compute': 'ComputeManagement',
                   'storage': 'StorageManagement',
                   'network': 'NetworkManagement',
+                  'policy': 'Policy',
                   'resource': 'ResourceManagement',
                   'subscription': 'Subscription',
                   'web': 'WebSiteManagement'}
 
-    if client_type not in client_map.keys():
+    if client_type not in client_map:
         raise SaltSystemExit(
             'The Azure ARM client_type {0} specified can not be found.'.format(
                 client_type)
@@ -120,7 +139,7 @@ def get_client(client_type, **kwargs):
 
     map_value = client_map[client_type]
 
-    if client_type == 'subscription':
+    if client_type == 'subscription' or client_type == 'policy':
         module_name = 'resource'
     else:
         module_name = client_type
@@ -154,11 +173,16 @@ def get_client(client_type, **kwargs):
     return client
 
 
-def log_cloud_error(client, message):
+def log_cloud_error(client, message, **kwargs):
     '''
     Log an azurearm cloud error exception
     '''
-    log.error(
+    try:
+        cloud_logger = getattr(log, kwargs.get('azurearm_log_level'))
+    except:
+        cloud_logger = getattr(log, 'error')
+
+    cloud_logger(
          'An AzureARM %s CloudError has occurred: %s',
          client.capitalize(),
          message
@@ -182,3 +206,103 @@ def paged_object_to_list(paged_object):
             break
 
     return paged_return
+
+
+def create_object_model(module_name, object_name, **kwargs):
+    '''
+    Assemble an object from incoming parameters.
+    '''
+    object_kwargs = {}
+
+    try:
+        model_module = importlib.import_module('azure.mgmt.{0}.models'.format(module_name))
+        # pylint: disable=invalid-name
+        Model = getattr(model_module, object_name)
+    except ImportError:
+        raise sys.exit(
+            'The {0} model in the {1} Azure module is not available.'.format(object_name, module_name)
+        )
+
+    if '_attribute_map' in dir(Model):
+        for attr, items in Model._attribute_map.items():
+            param = kwargs.get(attr)
+            if param:
+                if items['type'][0].isupper() and isinstance(param, dict):
+                    object_kwargs[attr] = create_object_model(module_name, items['type'], **param)
+                elif items['type'][0] == '{' and isinstance(param, dict):
+                    object_kwargs[attr] = param
+                elif items['type'][0] == '[' and isinstance(param, list):
+                    obj_list = []
+                    for list_item in param:
+                        if items['type'][1].isupper() and isinstance(list_item, dict):
+                            obj_list.append(
+                                create_object_model(
+                                    module_name,
+                                    items['type'][items['type'].index('[')+1:items['type'].rindex(']')],
+                                    **list_item
+                                )
+                            )
+                        elif items['type'][1] == '{' and isinstance(list_item, dict):
+                            obj_list.append(list_item)
+                        elif not items['type'][1].isupper() and items['type'][1] != '{':
+                            obj_list.append(list_item)
+                    object_kwargs[attr] = obj_list
+                else:
+                    object_kwargs[attr] = param
+
+    # wrap calls to this function to catch TypeError exceptions
+    return Model(**object_kwargs)
+
+
+def compare_list_of_dicts(old, new, convert_id_to_name=None):
+    '''
+    Compare lists of dictionaries representing Azure objects. Only keys found in the "new" dictionaries are compared to
+    the "old" dictionaries, since getting Azure objects from the API returns some read-only data which should not be
+    used in the comparison. A list of parameter names can be passed in order to compare a bare object name to a full
+    Azure ID path for brevity. If string types are found in values, comparison is case insensitive. Return comment
+    should be used to trigger exit from the calling function.
+    '''
+    ret = {}
+
+    if not convert_id_to_name:
+        convert_id_to_name = []
+
+    if not isinstance(new, list):
+        ret['comment'] = 'must be provided as a list of dictionaries!'
+        return ret
+
+    if len(new) != len(old):
+        ret['changes'] = {
+            'old': old,
+            'new': new
+        }
+        return ret
+
+    try:
+        local_configs, remote_configs = [sorted(config, key=itemgetter('name')) for config in (new, old)]
+    except TypeError:
+        ret['comment'] = 'configurations must be provided as a list of dictionaries!'
+        return ret
+    except KeyError:
+        ret['comment'] = 'configuration dictionaries must contain the "name" key!'
+        return ret
+
+    for idx in six_range(0, len(local_configs)):
+        for key in local_configs[idx]:
+            local_val = local_configs[idx][key]
+            if key in convert_id_to_name:
+                remote_val = remote_configs[idx].get(key, {}).get('id', '').split('/')[-1]
+            else:
+                remote_val = remote_configs[idx].get(key)
+                if isinstance(local_val, six.string_types):
+                    local_val = local_val.lower()
+                if isinstance(remote_val, six.string_types):
+                    remote_val = remote_val.lower()
+            if local_val != remote_val:
+                ret['changes'] = {
+                    'old': remote_configs,
+                    'new': local_configs
+                }
+                return ret
+
+    return ret
