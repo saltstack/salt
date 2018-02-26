@@ -50,6 +50,35 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {core: {}}
 
+    @patch("os.path.isfile")
+    def test_parse_etc_os_release(self, path_isfile_mock):
+        path_isfile_mock.side_effect = lambda x: x == "/usr/lib/os-release"
+        with salt.utils.fopen(os.path.join(OS_RELEASE_DIR, "ubuntu-17.10")) as os_release_file:
+            os_release_content = os_release_file.readlines()
+        with patch("salt.utils.fopen", mock_open()) as os_release_file:
+            os_release_file.return_value.__iter__.return_value = os_release_content
+            os_release = core._parse_os_release(["/etc/os-release", "/usr/lib/os-release"])
+        self.assertEqual(os_release, {
+            "NAME": "Ubuntu",
+            "VERSION": "17.10 (Artful Aardvark)",
+            "ID": "ubuntu",
+            "ID_LIKE": "debian",
+            "PRETTY_NAME": "Ubuntu 17.10",
+            "VERSION_ID": "17.10",
+            "HOME_URL": "https://www.ubuntu.com/",
+            "SUPPORT_URL": "https://help.ubuntu.com/",
+            "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+            "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+            "VERSION_CODENAME": "artful",
+            "UBUNTU_CODENAME": "artful",
+        })
+
+    @patch("os.path.isfile")
+    def test_missing_os_release(self, path_isfile_mock):
+        path_isfile_mock.return_value = False
+        os_release = core._parse_os_release(["/etc/os-release", "/usr/lib/os-release"])
+        self.assertEqual(os_release, {})
+
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_gnu_slash_linux_in_os_name(self):
         '''
