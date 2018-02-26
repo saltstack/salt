@@ -473,11 +473,11 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     fromrepo='good',
                     branch='foo')
                 clean_cmd.assert_called_once_with(
-                    ['yum', '--quiet', 'clean', 'expire-cache', '--disablerepo=*',
+                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache', '--disablerepo=*',
                      '--enablerepo=good', '--branch=foo'],
                     python_shell=False)
                 update_cmd.assert_called_once_with(
-                    ['yum', '--quiet', 'check-update',
+                    ['yum', '--quiet', '--assumeyes', 'check-update',
                      '--setopt=autocheck_running_kernel=false', '--disablerepo=*',
                      '--enablerepo=good', '--branch=foo'],
                     output_loglevel='trace',
@@ -495,11 +495,11 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     disablerepo='bad',
                     branch='foo')
                 clean_cmd.assert_called_once_with(
-                    ['yum', '--quiet', 'clean', 'expire-cache', '--disablerepo=bad',
+                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache', '--disablerepo=bad',
                      '--enablerepo=good', '--branch=foo'],
                     python_shell=False)
                 update_cmd.assert_called_once_with(
-                    ['yum', '--quiet', 'check-update',
+                    ['yum', '--quiet', '--assumeyes', 'check-update',
                      '--setopt=autocheck_running_kernel=false', '--disablerepo=bad',
                      '--enablerepo=good', '--branch=foo'],
                     output_loglevel='trace',
@@ -516,7 +516,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     fromrepo='good',
                     branch='foo')
                 clean_cmd.assert_called_once_with(
-                    ['yum', '--quiet', 'clean', 'expire-cache', '--disablerepo=*',
+                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache', '--disablerepo=*',
                      '--enablerepo=good', '--branch=foo'],
                     python_shell=False)
 
@@ -529,7 +529,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     disablerepo='bad',
                     branch='foo')
                 clean_cmd.assert_called_once_with(
-                    ['yum', '--quiet', 'clean', 'expire-cache', '--disablerepo=bad',
+                    ['yum', '--quiet', '--assumeyes', 'clean', 'expire-cache', '--disablerepo=bad',
                      '--enablerepo=good', '--branch=foo'],
                     python_shell=False)
 

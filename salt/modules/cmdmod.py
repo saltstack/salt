@@ -285,6 +285,7 @@ def _run(cmd,
             shell
         )
 
+    output_loglevel = _check_loglevel(output_loglevel)
     log_callback = _check_cb(log_callback)
 
     if runas is None and '__context__' in globals():
@@ -311,6 +312,10 @@ def _run(cmd,
         # Handle edge cases where numeric/other input is entered, and would be
         # yaml-ified into non-string types
         cwd = six.text_type(cwd)
+
+    if bg:
+        ignore_retcode = True
+        use_vt = False
 
     if not salt.utils.platform.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
@@ -368,7 +373,7 @@ def _run(cmd,
         else:
             return cmd
 
-    if _check_loglevel(output_loglevel) is not None:
+    if output_loglevel is not None:
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
@@ -442,6 +447,10 @@ def _run(cmd,
                 for k, v in six.iteritems(env_runas)
             )
             env_runas.update(env)
+            # Fix platforms like Solaris that don't set a USER env var in the
+            # user's default environment as obtained above.
+            if env_runas.get('USER') != runas:
+                env_runas['USER'] = runas
             env = env_runas
         except ValueError:
             raise CommandExecutionError(
@@ -542,7 +551,7 @@ def _run(cmd,
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
                 'reason: '.format(
-                    cmd if _check_loglevel(output_loglevel) is not None
+                    cmd if output_loglevel is not None
                         else 'REDACTED',
                     kwargs
                 )
@@ -621,7 +630,7 @@ def _run(cmd,
         to = ''
         if timeout:
             to = ' (timeout: {0}s)'.format(timeout)
-        if _check_loglevel(output_loglevel) is not None:
+        if output_loglevel is not None:
             msg = 'Running {0} in VT{1}'.format(cmd, to)
             log.debug(log_callback(msg))
         stdout, stderr = '', ''
@@ -694,6 +703,26 @@ def _run(cmd,
     except NameError:
         # Ignore the context error during grain generation
         pass
+
+    # Log the output
+    if output_loglevel is not None:
+        if not ignore_retcode and ret['retcode'] != 0:
+            if output_loglevel < LOG_LEVELS['error']:
+                output_loglevel = LOG_LEVELS['error']
+            msg = (
+                'Command \'{0}\' failed with return code: {1}'.format(
+                    cmd,
+                    ret['retcode']
+                )
+            )
+            log.error(log_callback(msg))
+        if ret['stdout']:
+            log.log(output_loglevel, 'stdout: {0}'.format(log_callback(ret['stdout'])))
+        if ret['stderr']:
+            log.log(output_loglevel, 'stderr: {0}'.format(log_callback(ret['stderr'])))
+        if ret['retcode']:
+            log.log(output_loglevel, 'retcode: {0}'.format(ret['retcode']))
+
     return ret
 
 
@@ -3578,7 +3607,6 @@ def run_bg(cmd,
         output_loglevel='debug',
         log_callback=None,
         reset_system_locale=True,
-        ignore_retcode=False,
         saltenv='base',
         password=None,
         prepend_path=None,
@@ -3743,7 +3771,6 @@ def run_bg(cmd,
                log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                password=password,
                **kwargs

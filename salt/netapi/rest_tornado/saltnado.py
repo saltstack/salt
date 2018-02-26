@@ -248,28 +248,6 @@ def _json_dumps(obj, **kwargs):
 #  - "wheel" (need async api...)
 
 
-class SaltClientsMixIn(object):
-    '''
-    MixIn class to container all of the salt clients that the API needs
-    '''
-    # TODO: load this proactively, instead of waiting for a request
-    __saltclients = None
-
-    @property
-    def saltclients(self):
-        if SaltClientsMixIn.__saltclients is None:
-            local_client = salt.client.get_local_client(mopts=self.application.opts)
-            # TODO: refreshing clients using cachedict
-            SaltClientsMixIn.__saltclients = {
-                'local': local_client.run_job_async,
-                # not the actual client we'll use.. but its what we'll use to get args
-                'local_async': local_client.run_job_async,
-                'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
-                'runner_async': None,  # empty, since we use the same client as `runner`
-                }
-        return SaltClientsMixIn.__saltclients
-
-
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
 AUTH_COOKIE_NAME = 'session_id'
 
@@ -400,7 +378,7 @@ class EventListener(object):
                         del self.timeout_map[future]
 
 
-class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylint: disable=W0223
+class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
     ct_out_map = (
         ('application/json', _json_dumps),
         ('application/x-yaml', salt.utils.yaml.safe_dump),
@@ -427,6 +405,16 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
                 self.application.mod_opts,
                 self.application.opts,
             )
+
+        if not hasattr(self, 'saltclients'):
+            local_client = salt.client.get_local_client(mopts=self.application.opts)
+            self.saltclients = {
+                'local': local_client.run_job_async,
+                # not the actual client we'll use.. but its what we'll use to get args
+                'local_async': local_client.run_job_async,
+                'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
+                'runner_async': None,  # empty, since we use the same client as `runner`
+                }
 
     @property
     def token(self):
@@ -759,7 +747,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         self.write(self.serialize(ret))
 
 
-class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W0223
+class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     Main API handler for base "/"
     '''
