@@ -1070,8 +1070,8 @@ def refresh_db(**kwargs):
 
     options = _get_options(**kwargs)
 
-    clean_cmd = [_yum(), '--quiet', 'clean', 'expire-cache']
-    update_cmd = [_yum(), '--quiet', 'check-update']
+    clean_cmd = [_yum(), '--quiet', '--assumeyes', 'clean', 'expire-cache']
+    update_cmd = [_yum(), '--quiet', '--assumeyes', 'check-update']
 
     if __grains__.get('os_family') == 'RedHat' \
             and __grains__.get('osmajorrelease') == 7:
@@ -1525,8 +1525,8 @@ def install(name=None,
                             break
                     else:
                         if pkgname is not None:
-                            if re.match('kernel(-.+)?', pkgname):
-                                # kernel and its subpackages support multiple
+                            if re.match('^kernel(|-devel)$', pkgname):
+                                # kernel and kernel-devel support multiple
                                 # installs as their paths do not conflict.
                                 # Performing a yum/dnf downgrade will be a
                                 # no-op so just do an install instead. It will

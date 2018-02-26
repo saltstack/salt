@@ -447,6 +447,10 @@ def _run(cmd,
                 for k, v in six.iteritems(env_runas)
             )
             env_runas.update(env)
+            # Fix platforms like Solaris that don't set a USER env var in the
+            # user's default environment as obtained above.
+            if env_runas.get('USER') != runas:
+                env_runas['USER'] = runas
             env = env_runas
         except ValueError:
             raise CommandExecutionError(
