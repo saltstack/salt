@@ -11,6 +11,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.platform
 import salt.utils.win_functions as win_functions
 
 
@@ -51,3 +52,10 @@ class WinFunctionsTestCase(TestCase):
         encoded = win_functions.escape_argument('C:\\Some Path\\With Spaces')
 
         self.assertEqual(encoded, '^"C:\\Some Path\\With Spaces^"')
+
+    @skipIf(not salt.utils.platform.is_windows(), 'WinDLL only available on Windows')
+    def test_broadcast_setting_change(self):
+        '''
+            Test to rehash the Environment variables
+        '''
+        self.assertTrue(win_functions.broadcast_setting_change())
