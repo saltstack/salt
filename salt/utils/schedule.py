@@ -66,13 +66,6 @@ except ImportError:
     _CRON_SUPPORTED = False
 # pylint: enable=import-error
 
-try:
-    import pytz
-    _PYTZ_SUPPORTED = True
-except ImportError:
-    _PYTZ_SUPPORTED = False
-# pylint: enable=import-error
-
 log = logging.getLogger(__name__)
 
 
@@ -929,7 +922,7 @@ class Schedule(object):
                                               'Ignoring job %s.', i, job)
                             log.error(data['_error'])
                             return data
-                
+
                     _when.append(when__)
 
                 if data['_splay']:
