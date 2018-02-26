@@ -107,7 +107,7 @@ class DNShelpersCase(TestCase):
 
         wrong = [
             'not-an-ip',
-            '10 20 30 toomany.example.com',
+            'hundred 20 30 interror.example.com',
             '10 toolittle.example.com',
         ]
 
@@ -262,7 +262,7 @@ class DNSlookupsCase(TestCase):
                     if rec_t == 'SSHFP':
                         # Some resolvers 'split' the output and/or capitalize differently.
                         # So we need to workaround that here as well
-                        lookup_res = lookup_res[:4] + lookup_res[4:].replace(' ', '').lower()
+                        lookup_res = [res[:4] + res[4:].replace(' ', '').lower() for res in lookup_res]
 
                     self.assertEqual(
                         lookup_res, test_res,

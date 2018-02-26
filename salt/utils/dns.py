@@ -190,6 +190,7 @@ def _data2rec(schema, rec_data):
     try:
         rec_fields = rec_data.split(' ')
         # spaces in digest fields are allowed
+        assert len(rec_fields) >= len(schema)
         if len(rec_fields) > len(schema):
             cutoff = len(schema) - 1
             rec_fields = rec_fields[0:cutoff] + [''.join(rec_fields[cutoff:])]
@@ -202,7 +203,7 @@ def _data2rec(schema, rec_data):
                 for (field_name, rec_cast), rec_field in zip(schema.items(), rec_fields)
             ))
         return res
-    except (AttributeError, TypeError, ValueError) as e:
+    except (AssertionError, AttributeError, TypeError, ValueError) as e:
         raise ValueError('Unable to cast "{0}" as "{2}": {1}'.format(
             rec_data,
             e,
