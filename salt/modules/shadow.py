@@ -373,7 +373,7 @@ def set_expire(name, expire):
 
 def list_users():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Return a list of all shadow users
 

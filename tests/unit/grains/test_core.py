@@ -9,6 +9,11 @@ import logging
 import os
 
 # Import Salt Testing Libs
+try:
+    import pytest
+except ImportError as import_error:
+    pytest = None
+
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
@@ -44,6 +49,7 @@ IP6_ADD2 = '2001:4860:4860::8888'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not pytest, False)
 class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for core grains
@@ -515,8 +521,8 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.localhost.hostid.7f000001'])
 
-    @skipIf(salt.utils.platform.is_darwin(), 'MacOSX iscsi grains not supported')
-    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
+    @patch('salt.grains.core.os.path.isfile', MagicMock(return_value=True))
+    @patch('salt.grains.core.os.access', MagicMock(return_value=True))
     def test_linux_iscsi_iqn_grains(self):
         _iscsi_file = '## DO NOT EDIT OR REMOVE THIS FILE!\n' \
                       '## If you remove this file, the iSCSI daemon will not start.\n' \
@@ -525,13 +531,13 @@ PATCHLEVEL = 3
                       '## for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.\n' \
                       'InitiatorName=iqn.1993-08.org.debian:01:d12f7aba36\n'
 
-        with patch('os.path.isfile', MagicMock(return_value=True)):
-            with patch('salt.utils.files.fopen', mock_open()) as iscsi_initiator_file:
-                iscsi_initiator_file.return_value.__iter__.return_value = _iscsi_file.splitlines()
-                _grains = core.iscsi_iqn()
+        with patch('salt.utils.files.fopen', mock_open()) as iscsi_initiator_file:
+            iscsi_initiator_file.return_value.__iter__.return_value = _iscsi_file.splitlines()
+            iqn = core._linux_iqn()
 
-        self.assertEqual(_grains.get('iscsi_iqn'),
-                         ['iqn.1993-08.org.debian:01:d12f7aba36'])
+        assert isinstance(iqn, list)
+        assert len(iqn) == 1
+        assert iqn == ['iqn.1993-08.org.debian:01:d12f7aba36']
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
@@ -809,6 +815,8 @@ SwapTotal:       4789244 kB'''
                             _check_type(key, value, ip4_empty, ip6_empty)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils.platform, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.grains.core.__opts__', {'ipv6': False})
     def test_dns_return(self):
         '''
         test the return for a dns grain. test for issue:
@@ -825,13 +833,32 @@ SwapTotal:       4789244 kB'''
                        [IP4_ADD1], 'search': ['test.saltstack.com'],
                        'ip6_nameservers': [IP6_ADD1], 'options':
                        []}}
-        self._run_dns_test(resolv_mock, ret)
+        with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
+            assert core.dns() == ret
 
-    def _run_dns_test(self, resolv_mock, ret):
-        with patch.object(salt.utils, 'is_windows',
-                          MagicMock(return_value=False)):
-            with patch.dict(core.__opts__, {'ipv6': False}):
-                with patch.object(salt.utils.dns, 'parse_resolv',
-                                  MagicMock(return_value=resolv_mock)):
-                    get_dns = core.dns()
-                    self.assertEqual(get_dns, ret)
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.EPERM,
+                                                                   'The cables are not the same length.')))
+    @patch('salt.grains.core.log', MagicMock())
+    def test_linux_iqn_non_root(self):
+        '''
+        Test if linux_iqn is running on salt-master as non-root
+        and handling access denial properly.
+        :return:
+        '''
+        assert core._linux_iqn() == []
+        core.log.debug.assert_called()
+        assert 'Error while accessing' in core.log.debug.call_args[0][0]
+        assert 'cables are not the same' in core.log.debug.call_args[0][2].strerror
+        assert core.log.debug.call_args[0][2].errno == os.errno.EPERM
+        assert core.log.debug.call_args[0][1] == '/etc/iscsi/initiatorname.iscsi'
+
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.ENOENT, '')))
+    @patch('salt.grains.core.log', MagicMock())
+    def test_linux_iqn_no_iscsii_initiator(self):
+        '''
+        Test if linux_iqn is running on salt-master as root.
+        iscsii initiator is not there accessible or is not supported.
+        :return:
+        '''
+        assert core._linux_iqn() == []
+        core.log.debug.assert_not_called()

@@ -1567,7 +1567,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
             ``pillar_roots`` or an external Pillar source.  Pillar values that
             are not included in the kwarg will not be overwritten.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -2017,7 +2017,7 @@ def pkg(pkg_path,
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = salt.utils.json.load(fp_, object_hook=salt.utils.data.encode_dict)
+            roster_grains = salt.utils.json.load(fp_)
 
     if os.path.isfile(roster_grains_json):
         popts['grains'] = roster_grains

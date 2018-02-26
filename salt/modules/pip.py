@@ -1198,7 +1198,7 @@ def is_installed(pkgname=None,
 
         salt '*' pip.is_installed salt
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
         The packages wheel, setuptools, and distribute are included if the
         installed pip is new enough.

@@ -609,7 +609,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         If ``all`` is specified, all valid attributes will be returned.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1134,6 +1134,7 @@ def install(name=None,
             update_holds=False,
             saltenv='base',
             ignore_epoch=False,
+            saltenv='base',
             **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1196,7 +1197,7 @@ def install(name=None,
         Install a specific version of the package, e.g. 1.2.3-4.el5. Ignored
         if "pkgs" or "sources" is passed.
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             version can now contain comparison operators (e.g. ``>1.2.3``,
             ``<=2.0``, etc.)
 
@@ -1236,7 +1237,7 @@ def install(name=None,
         ignored when comparing the currently-installed version to the desired
         version.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
 
     Multiple Package Installation Options:
@@ -1295,7 +1296,7 @@ def install(name=None,
 
         If ``all`` is specified, all valid attributes will be returned.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Returns a dict containing the new package names and versions::
 

@@ -1262,7 +1262,7 @@ class State(object):
         '''
         err = []
         for chunk in chunks:
-            err += self.verify_data(chunk)
+            err.extend(self.verify_data(chunk))
         return err
 
     def order_chunks(self, chunks):
@@ -2716,12 +2716,12 @@ class State(object):
         errors = []
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
-        errors += ext_errors
-        errors += self.verify_high(high)
+        errors.extend(ext_errors)
+        errors.extend(self.verify_high(high))
         if errors:
             return errors
         high, req_in_errors = self.requisite_in(high)
-        errors += req_in_errors
+        errors.extend(req_in_errors)
         high = self.apply_exclude(high)
         # Verify that the high data is structurally sound
         if errors:
