@@ -26,6 +26,7 @@ from functools import reduce
 
 # Import salt libs
 from salt.ext import six
+from salt.ext.six import string_types
 from salt.ext.six.moves import map
 from salt.exceptions import SaltInvocationError
 
@@ -444,7 +445,7 @@ def read_monitor(api_key=None,
                     return ret
                 else:
                     response += [res]
-    else:
+    elif name is not None:
         names = []
         if isinstance(name, list):
             names += name
@@ -467,6 +468,21 @@ def read_monitor(api_key=None,
                 return ret
             else:
                 response += res['response']
+    else:  # Case for tag or monitor_tag searches
+        res = __utils__['datadog.get_all_monitors'](
+            group_states=group_states,
+            tags=tags,
+            monitor_tags=monitor_tags,
+            with_downtimes=with_downtimes
+        )
+        if not res['result']:
+            ret['response'] = res['response']
+            ret['comment'] = (
+                'An error occured when trying to read monitors.'
+            )
+            return ret
+        else:
+            response += res['response']
 
     ret['result'] = True
     ret['response'] = response
@@ -533,24 +549,41 @@ def update_monitor(api_key=None,
     if tags is None:
         tags = []
 
-    if id:  # Update the monitor with given ID
-        _id = id
-    elif name:  # Find ID of monitor with given name
-        ids = __utils__['datadog.find_monitors_with_name'](
-            api_key=api_key,
-            app_key=app_key,
-            name=name
-        )
-        if ids:  # Monitor with given name exists
-            _id = ids[0]
-        else:
-            ret['comment'] = "Can't find monitor with name {}".format(name)
-            return ret
-    else:
-        raise SaltInvocationError('Either id or name must be specified.')
+    #if id:  # Update the monitor with given ID
+    #    _id = id
+    #elif name:  # Find ID of monitor with given name
+    #    ids = __utils__['datadog.find_monitors_with_name'](
+    #        api_key=api_key,
+    #        app_key=app_key,
+    #        name=name
+    #    )
+    #    if ids:  # Monitor with given name exists
+    #        _id = ids[0]
+    #    else:
+    #        ret['comment'] = "Can't find monitor with name {}".format(name)
+    #        return ret
+    #else:
+    #    raise SaltInvocationError('Either id or name must be specified.')
+
+    res = read_monitor(
+        api_key=api_key,
+        app_key=app_key,
+        id=id,
+        name=name
+    )
+    if not res['result']:
+        ret['response'] = res['response']
+        ret['comment'] = res['comment']
+        return ret
+
+    if not name:
+        name = res['response'][0]['name']
+    if not query:
+        query = res['response'][0]['query']
 
     res = datadog.api.Monitor.update(
-        int(_id),
+        #int(_id),
+        res['response'][0]['id'],
         name=name,
         query=query,
         message=message,
@@ -611,11 +644,11 @@ def delete_monitor(api_key=None,
         return ret
 
     ids = []
-    if isinstance(id, (int, str)):
+    if isinstance(id, (int, string_types)):
         id = [id]
     if isinstance(id, list):
         ids += id
-    if isinstance(name, str):
+    if isinstance(name, string_types):
         name = [name]
     if isinstance(name, list):
         for _name in name:
@@ -640,12 +673,12 @@ def delete_monitor(api_key=None,
                 break
             failed_ids.append(ids[_index])
             intermediate.pop(_index)
-        ret['comment'] = 'Failed to delete indices {}'.format(', '.join(failed_ids))
+        ret['comment'] = 'Failed to delete indices {}'.format(', '.join(map(str, failed_ids)))
         return ret
 
     ret['result'] = True
     ret['comment'] = (
-        'Successfuly deleted monitors {}'.format(', '.join(ids))
+        'Successfuly deleted monitors {}'.format(', '.join(map(str, ids)))
     )
 
     return ret
