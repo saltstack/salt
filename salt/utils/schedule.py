@@ -908,8 +908,11 @@ class Schedule(object):
             if 'run_explicit' in data:
                 _run_explicit = []
                 for _run_time in data['run_explicit']:
-                    _run_explicit.append(datetime.datetime.strptime(_run_time['time'],
-                                                                    _run_time['time_fmt']))
+                    if isinstance(_run_time, datetime.datetime):
+                        _run_explicit.append(_run_time)
+                    else:
+                        _run_explicit.append(datetime.datetime.strptime(_run_time['time'],
+                                                                        _run_time['time_fmt']))
 
                 # Copy the list so we can loop through it
                 for i in copy.deepcopy(_run_explicit):
