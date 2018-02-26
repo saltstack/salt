@@ -1298,8 +1298,11 @@ class Schedule(object):
                 if 'skip_explicit' in data:
                     _skip_explicit = []
                     for _skip_time in data['skip_explicit']:
-                        _skip_explicit.append(datetime.datetime.strptime(_skip_time['time'],
-                                                                         _skip_time['time_fmt']))
+                        if isinstance(_skip_time, datetime.datetime):
+                            _skip_explicit.append(_skip_time)
+                        else:
+                            _skip_explicit.append(datetime.datetime.strptime(_skip_time['time'],
+                                                                             _skip_time['time_fmt']))
 
                     # Copy the list so we can loop through it
                     for i in copy.deepcopy(_skip_explicit):
