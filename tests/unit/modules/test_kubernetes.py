@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 from contextlib import contextmanager
 
@@ -18,6 +19,7 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
+import salt.utils.files
 from salt.modules import kubernetes
 
 
@@ -29,9 +31,6 @@ def mock_kubernetes_library():
     test, which blows up. This prevents that specific blow-up once
     """
     with patch('salt.modules.kubernetes.kubernetes') as mock_kubernetes_lib:
-        mock_kubernetes_lib.client.configuration.ssl_ca_cert = ''
-        mock_kubernetes_lib.client.configuration.cert_file = ''
-        mock_kubernetes_lib.client.configuration.key_file = ''
         yield mock_kubernetes_lib
 
 
@@ -141,23 +140,49 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     kubernetes.kubernetes.client.ExtensionsV1beta1Api().
                     create_namespaced_deployment().to_dict.called)
 
-    def test_setup_client_key_file(self):
+    def test_setup_kubeconfig_file(self):
         '''
-        Test that the `kubernetes.client-key-file` configuration isn't overwritten
+        Test that the `kubernetes.kubeconfig` configuration isn't overwritten
         :return:
         '''
         def settings(name, value=None):
             data = {
-                'kubernetes.client-key-file': '/home/testuser/.minikube/client.key',
+                'kubernetes.kubeconfig': '/home/testuser/.minikube/kubeconfig.cfg',
+                'kubernetes.context': 'minikube'
             }
             return data.get(name, value)
 
-        with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=settings)}):
-            config = kubernetes._setup_conn()
-            self.assertEqual(
-                settings('kubernetes.client-key-file'),
-                config['key_file'],
-            )
+        with mock_kubernetes_library() as mock_kubernetes_lib:
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=settings)}):
+                mock_kubernetes_lib.config.load_kube_config = Mock()
+                config = kubernetes._setup_conn()
+                self.assertEqual(
+                    settings('kubernetes.kubeconfig'),
+                    config['kubeconfig'],
+                )
+
+    def test_setup_kubeconfig_data_overwrite(self):
+        '''
+        Test that provided `kubernetes.kubeconfig` configuration is overwritten
+        by provided kubeconfig_data in the command
+        :return:
+        '''
+        def settings(name, value=None):
+            data = {
+                'kubernetes.kubeconfig': '/home/testuser/.minikube/kubeconfig.cfg',
+                'kubernetes.context': 'minikube'
+            }
+            return data.get(name, value)
+
+        with mock_kubernetes_library() as mock_kubernetes_lib:
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=settings)}):
+                mock_kubernetes_lib.config.load_kube_config = Mock()
+                config = kubernetes._setup_conn(kubeconfig_data='MTIzNDU2Nzg5MAo=', context='newcontext')
+                self.assertTrue(config['kubeconfig'].startswith('/tmp/salt-kubeconfig-'))
+                self.assertTrue(os.path.exists(config['kubeconfig']))
+                with salt.utils.files.fopen(config['kubeconfig'], 'r') as kcfg:
+                    self.assertEqual('1234567890\n', kcfg.read())
+                kubernetes._cleanup(**config)
 
     def test_node_labels(self):
         '''
