@@ -35,7 +35,7 @@ from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
+from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 
 # Integrations
 try:
