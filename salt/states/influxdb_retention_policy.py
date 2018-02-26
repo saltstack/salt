@@ -20,6 +20,33 @@ def __virtual__():
         return 'influxdb_retention_policy'
     return False
 
+def convert_duration(duration):
+    '''
+    Convert the a duration string into XXhYYmZZs format
+
+    duration
+        Duration to convert
+
+    Returns: duration_string
+        String representation of duration in XXhYYmZZs format
+    '''
+
+    # durations must be specified in days, weeks or hours
+
+    if (duration.endswith('h')):
+        hours = int(duration.split('h'))
+
+    elif (duration.endswith('d')):
+        days = duration.split('d')
+        hours = int(days[0]) * 24
+
+    elif (duration.endswith('w')):
+        weeks = duration.split('w')
+        hours = int(weeks[0]) * 24 * 7
+
+    duration_string = str(hours)+'h0m0s'
+    return(duration_string)
+
 
 def present(name, database, duration="7d",
             replication=1, default=False,
