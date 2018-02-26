@@ -491,6 +491,7 @@ def query(url,
             req_kwargs['ca_certs'] = ca_bundle
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
+        connect_timeout = opts.get('http_connect_timeout', salt.config.DEFAULT_MINION_OPTS['http_connect_timeout'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
         client_argspec = None
@@ -532,6 +533,7 @@ def query(url,
                 allow_nonstandard_methods=True,
                 streaming_callback=streaming_callback,
                 header_callback=header_callback,
+                connect_timeout=connect_timeout,
                 request_timeout=timeout,
                 proxy_host=proxy_host,
                 proxy_port=proxy_port,
