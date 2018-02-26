@@ -34,8 +34,7 @@ using the ``ec2-config`` provider, the payload for this tag would look like:
 
     {'name': 'web1',
      'profile': 'ec2-centos',
-     'provider': 'ec2-config'}
-
+     'provider': 'ec2-config:ec2'}
 
 Available Events
 ================
@@ -119,11 +118,55 @@ The payload for this event contains little more than the initial ``creating``
 event. This event is required in all cloud providers.
 
 
+Filtering Events
+================
+
+When creating a VM, it is possible with certain tags to filter how much
+information is sent to the event bus. The tags that can be filtered on any
+provider are:
+
+* ``salt/cloud/<minion_id>/creating``
+* ``salt/cloud/<minion_id>/requesting``
+* ``salt/cloud/<minion_id>/created``
+
+Other providers may allow other tags to be filtered; when that is the case,
+the documentation for that provider will contain more details.
+
+To filter information, create a section in your ``/etc/salt/cloud`` file called
+``filter_events``. Create a section for each tag that you want to filter, using
+the last segment of the tag. For instance, use ``creating`` to represent
+``salt/cloud/<minion_id>/creating``:
+
+.. code-block:: yaml
+
+    filter_events:
+      creating:
+        keys:
+          - name
+          - profile
+          - provider
+
+Any keys listed here will be added to the default keys that are already set to
+be displayed for that provider. If you wish to start with a clean slate and
+only show the keys specified, add another option called ``use_defaults`` and
+set it to ``False``.
+
+.. code-block:: yaml
+
+    filter_events:
+      creating:
+        keys:
+          - name
+          - profile
+          - provider
+        use_defaults: False
+
+
 Configuring the Event Reactor
 =============================
 
 The Event Reactor is built into the Salt Master process, and as such is
-configured via the master configuration file. Normally this will will be a YAML
+configured via the master configuration file. Normally this will be a YAML
 file located at ``/etc/salt/master``. Additionally, master configuration items
 can be stored, in YAML format, inside the ``/etc/salt/master.d/`` directory.
 
@@ -206,11 +249,11 @@ options that can be specified is ``startup_states``, which is commonly set to
 ``highstate``. This will tell the minion to immediately apply a :ref:`highstate
 <running-highstate>`, as soon as it is able to do so.
 
-This can present a problem with some system images on some cloud providers. For
+This can present a problem with some system images on some cloud hosts. For
 instance, Salt Cloud can be configured to log in as either the ``root`` user, or
-a user with ``sudo`` access. While some providers commonly use images that
+a user with ``sudo`` access. While some hosts commonly use images that
 lock out remote ``root`` access and require a user with ``sudo`` privileges to
-log in (notably EC2, with their ``ec2-user`` login), most cloud providers fall
+log in (notably EC2, with their ``ec2-user`` login), most cloud hosts fall
 back to ``root`` as the default login on all images, including for operating
 systems (such as Ubuntu) which normally disallow remote ``root`` login.
 

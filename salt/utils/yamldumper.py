@@ -15,10 +15,12 @@ except ImportError:
     from yaml import Dumper
     from yaml import SafeDumper
 
+import yaml
+import collections
 from salt.utils.odict import OrderedDict
 
 try:
-    from ioflo.base.odicting import odict
+    from ioflo.aid.odicting import odict  # pylint: disable=E0611
     HAS_IOFLO = True
 except ImportError:
     odict = None
@@ -38,12 +40,29 @@ class SafeOrderedDumper(SafeDumper):
 
 
 def represent_ordereddict(dumper, data):
-    return dumper.represent_dict(data.items())
+    return dumper.represent_dict(list(data.items()))
 
 
 OrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 
+OrderedDumper.add_representer(
+    collections.defaultdict,
+    yaml.representer.SafeRepresenter.represent_dict
+)
+SafeOrderedDumper.add_representer(
+    collections.defaultdict,
+    yaml.representer.SafeRepresenter.represent_dict
+)
+
 if HAS_IOFLO:
     OrderedDumper.add_representer(odict, represent_ordereddict)
     SafeOrderedDumper.add_representer(odict, represent_ordereddict)
+
+
+def safe_dump(data, stream=None, **kwargs):
+    '''
+    Use a custom dumper to ensure that defaultdict and OrderedDict are
+    represented properly
+    '''
+    return yaml.dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)

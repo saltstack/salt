@@ -1,3 +1,5 @@
+.. _release-0-17-0:
+
 =========================
 Salt 0.17.0 Release Notes
 =========================
@@ -158,10 +160,10 @@ Extensive additions have been added to Salt for LXC support. This included
 the backend libs for managing LXC containers. Addition into the salt-virt
 system is still in the works.
 
-Mac OS X User/Group Support
----------------------------
+macOS User/Group Support
+------------------------
 
-Salt is now able to manage users and groups on Minions running Mac OS X.
+Salt is now able to manage users and groups on Minions running macOS.
 However, at this time user passwords cannot be managed.
 
 Django ORM External Pillar

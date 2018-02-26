@@ -1,29 +1,47 @@
-===================
-Salt Based Projects
-===================
+=======================
+Salt Community Projects
+=======================
 
-A number of unofficial open source projects, based on Salt, or written to
-enhance Salt have been created.
+This page contains links to Salt-related projects created by community members.
+If you come across a useful project please add it to the list!
+
+Hubblestack
+===========
+Hubble is a modular, open-source security compliance framework built on top of
+SaltStack. The project provides on-demand profile-based auditing, real-time
+security event notifications, automated remediation, alerting and reporting.
+
+http://hubblestack.io/
+
+alkali
+======
+alkali is a collections of SaltStack states and pillar data that provide just
+the basics for provisioning Linux instances that may be built upon. alkali is
+a starter kit of sorts, to help new users to SaltStack get up-and-running
+quickly with the most commonly used, core packages.
+
+https://github.com/zulily/alkali
+
+buoyant
+=======
+buoyant leverages docker to provide an alternative to VM-centric SaltStack
+development environments. buoyant containers may be spun up nearly instantly,
+once an initial docker image has been built.
+
+https://github.com/zulily/buoyant
 
 Salt Sandbox
 ============
-
-Created by Aaron Bull Schaefer, aka "elasticdog".
-
-https://github.com/elasticdog/salt-sandbox
-
 Salt Sandbox is a multi-VM Vagrant-based Salt development environment used
 for creating and testing new Salt state modules outside of your production
 environment. It's also a great way to learn firsthand about Salt and its
 remote execution capabilities.
 
-Salt Sandbox will set up three separate virtual machines:
+https://github.com/elasticdog/salt-sandbox
 
-- salt.example.com - the Salt master server
-- minion1.example.com - the first Salt minion machine
-- minion2.example.com - the second Salt minion machine
+Salt Vagrant Demo
+=================
+A Salt Demo using Vagrant.
 
-These VMs can be used in conjunction to segregate and test your modules based
-on node groups, top file environments, grain values, etc. You can even test
-modules on different Linux distributions or release versions to better match
-your production infrastructure.
+https://github.com/UtahDave/salt-vagrant-demo
+

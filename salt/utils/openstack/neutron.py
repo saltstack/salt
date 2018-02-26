@@ -2,12 +2,15 @@
 '''
 Neutron class
 '''
-from __future__ import with_statement
+
 
 # Import python libs
+from __future__ import absolute_import, with_statement
 import logging
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 HAS_NEUTRON = False
 try:
     from neutronclient.v2_0 import client
@@ -16,6 +19,15 @@ try:
     HAS_NEUTRON = True
 except ImportError:
     pass
+
+HAS_KEYSTONEAUTH = False
+try:
+    import keystoneauth1.loading
+    import keystoneauth1.session
+    HAS_KEYSTONEAUTH = True
+except ImportError:
+    pass
+# pylint: enable=import-error
 
 # Import salt libs
 from salt import exceptions
@@ -28,15 +40,19 @@ def check_neutron():
     return HAS_NEUTRON
 
 
+def check_keystone():
+    return HAS_KEYSTONEAUTH
+
+
 def sanitize_neutronclient(kwargs):
     variables = (
         'username', 'user_id', 'password', 'token', 'tenant_name',
         'tenant_id', 'auth_url', 'service_type', 'endpoint_type',
-        'region_name', 'endpoint_url', 'timeout', 'insecure',
+        'region_name', 'verify', 'endpoint_url', 'timeout', 'insecure',
         'ca_cert', 'retries', 'raise_error', 'session', 'auth'
     )
     ret = {}
-    for var in kwargs.keys():
+    for var in six.iterkeys(kwargs):
         if var in variables:
             ret[var] = kwargs[var]
 
@@ -49,14 +65,70 @@ class SaltNeutron(NeutronShell):
     Class for all neutronclient functions
     '''
 
-    def __init__(self, username, tenant_name, auth_url, password=None,
-                 region_name=None, service_type=None, **kwargs):
+    def __init__(
+        self,
+        username,
+        tenant_name,
+        auth_url,
+        password=None,
+        region_name=None,
+        service_type='network',
+        os_auth_plugin=None,
+        use_keystoneauth=False,
+        **kwargs
+    ):
+
         '''
         Set up neutron credentials
         '''
         if not HAS_NEUTRON:
             return None
 
+        elif all([use_keystoneauth, HAS_KEYSTONEAUTH]):
+            self._new_init(username=username,
+                           project_name=tenant_name,
+                           auth_url=auth_url,
+                           region_name=region_name,
+                           service_type=service_type,
+                           os_auth_plugin=os_auth_plugin,
+                           password=password,
+                           **kwargs)
+        else:
+            self._old_init(username=username,
+                           tenant_name=tenant_name,
+                           auth_url=auth_url,
+                           region_name=region_name,
+                           service_type=service_type,
+                           os_auth_plugin=os_auth_plugin,
+                           password=password,
+                           **kwargs)
+
+    def _new_init(self, username, project_name, auth_url, region_name, service_type, password, os_auth_plugin, auth=None, verify=True, **kwargs):
+        if auth is None:
+            auth = {}
+
+        loader = keystoneauth1.loading.get_plugin_loader(os_auth_plugin or 'password')
+
+        self.client_kwargs = kwargs.copy()
+        self.kwargs = auth.copy()
+
+        self.kwargs['username'] = username
+        self.kwargs['project_name'] = project_name
+        self.kwargs['auth_url'] = auth_url
+        self.kwargs['password'] = password
+        if auth_url.endswith('3'):
+            self.kwargs['user_domain_name'] = kwargs.get('user_domain_name', 'default')
+            self.kwargs['project_domain_name'] = kwargs.get('project_domain_name', 'default')
+
+        self.client_kwargs['region_name'] = region_name
+        self.client_kwargs['service_type'] = service_type
+
+        self.client_kwargs = sanitize_neutronclient(self.client_kwargs)
+        options = loader.load_from_options(**self.kwargs)
+        self.session = keystoneauth1.session.Session(auth=options, verify=verify)
+        self.network_conn = client.Client(session=self.session, **self.client_kwargs)
+
+    def _old_init(self, username, tenant_name, auth_url, region_name, service_type, password, os_auth_plugin, auth=None, verify=True, **kwargs):
         self.kwargs = kwargs.copy()
 
         self.kwargs['username'] = username
@@ -65,6 +137,7 @@ class SaltNeutron(NeutronShell):
         self.kwargs['service_type'] = service_type
         self.kwargs['password'] = password
         self.kwargs['region_name'] = region_name
+        self.kwargs['verify'] = verify
 
         self.kwargs = sanitize_neutronclient(self.kwargs)
 
@@ -121,6 +194,10 @@ class SaltNeutron(NeutronShell):
         resource = self._fetch_ipsecpolicy(resource)
         return resource['id']
 
+    def _find_firewall_rule_id(self, resource):
+        resource = self._fetch_firewall_rule(resource)
+        return resource['id']
+
     def _fetch_port(self, name_or_id):
         resources = self.list_ports()['ports']
         return self._fetch(resources, name_or_id)
@@ -156,6 +233,14 @@ class SaltNeutron(NeutronShell):
 
     def _fetch_ipsecpolicy(self, name_or_id):
         resources = self.list_ipsecpolicies()['ipsecpolicies']
+        return self._fetch(resources, name_or_id)
+
+    def _fetch_firewall_rule(self, name_or_id):
+        resources = self.list_firewall_rules()['firewall_rules']
+        return self._fetch(resources, name_or_id)
+
+    def _fetch_firewall(self, name_or_id):
+        resources = self.list_firewalls()['firewalls']
         return self._fetch(resources, name_or_id)
 
     def get_quotas_tenant(self):
@@ -268,13 +353,24 @@ class SaltNeutron(NeutronShell):
         '''
         return self._fetch_network(network)
 
-    def create_network(self, name, router_ext=False):
+    def create_network(self, name, admin_state_up=True, router_ext=None, network_type=None, physical_network=None, segmentation_id=None, shared=None, vlan_transparent=None):
         '''
         Creates a new network
         '''
         body = {'name': name,
-                'admin_state_up': True,
-                'router:external': router_ext}
+                'admin_state_up': admin_state_up}
+        if router_ext:
+            body['router:external'] = router_ext
+        if network_type:
+            body['provider:network_type'] = network_type
+        if physical_network:
+            body['provider:physical_network'] = physical_network
+        if segmentation_id:
+            body['provider:segmentation_id'] = segmentation_id
+        if shared:
+            body['shared'] = shared
+        if vlan_transparent:
+            body['vlan_transparent'] = vlan_transparent
         return self.network_conn.create_network(body={'network': body})
 
     def update_network(self, network, name):
@@ -441,12 +537,16 @@ class SaltNeutron(NeutronShell):
 
         return self.network_conn.create_floatingip(body={'floatingip': body})
 
-    def update_floatingip(self, floatingip_id, port):
+    def update_floatingip(self, floatingip_id, port=None):
         '''
-        Updates a floatingip
+        Updates a floatingip, disassociates the floating ip if
+        port is set to `None`
         '''
-        port_id = self._find_port_id(port)
-        body = {'floatingip': {'port_id': port_id}}
+        if port is None:
+            body = {'floatingip': {}}
+        else:
+            port_id = self._find_port_id(port)
+            body = {'floatingip': {'port_id': port_id}}
         return self.network_conn.update_floatingip(
             floatingip=floatingip_id, body=body)
 
@@ -536,11 +636,11 @@ class SaltNeutron(NeutronShell):
             security_group_rule=sec_grp_rule_id)
         return ret if ret else True
 
-    def list_vpnservices(self, retrive_all=True, **kwargs):
+    def list_vpnservices(self, retrieve_all=True, **kwargs):
         '''
         Fetches a list of all configured VPN services for a tenant
         '''
-        return self.network_conn.list_vpnservices(retrive_all, **kwargs)
+        return self.network_conn.list_vpnservices(retrieve_all, **kwargs)
 
     def show_vpnservice(self, vpnservice, **kwargs):
         '''
@@ -727,6 +827,104 @@ class SaltNeutron(NeutronShell):
         ret = self.network_conn.delete_ipsecpolicy(ipseecpolicy_id)
         return ret if ret else True
 
+    def list_firewall_rules(self):
+        '''
+        Fetches a list of all configured firewall rules for a tenant
+        '''
+        return self.network_conn.list_firewall_rules()
+
+    def show_firewall_rule(self, firewall_rule):
+        '''
+        Fetches information of a specific firewall rule
+        '''
+        return self._fetch_firewall_rule(firewall_rule)
+
+    def create_firewall_rule(self, protocol, action, **kwargs):
+        '''
+        Create a new firlwall rule
+        '''
+        body = {'protocol': protocol, 'action': action}
+        if 'tenant_id' in kwargs:
+            body['tenant_id'] = kwargs['tenant_id']
+        if 'name' in kwargs:
+            body['name'] = kwargs['name']
+        if 'description' in kwargs:
+            body['description'] = kwargs['description']
+        if 'ip_version' in kwargs:
+            body['ip_version'] = kwargs['ip_version']
+        if 'source_ip_address' in kwargs:
+            body['source_ip_address'] = kwargs['source_ip_address']
+        if 'destination_port' in kwargs:
+            body['destination_port'] = kwargs['destination_port']
+        if 'shared' in kwargs:
+            body['shared'] = kwargs['shared']
+        if 'enabled' in kwargs:
+            body['enabled'] = kwargs['enabled']
+        return self.network_conn.create_firewall_rule(body={'firewall_rule': body})
+
+    def delete_firewall_rule(self, firewall_rule):
+        '''
+        Deletes the specified firewall rule
+        '''
+        firewall_rule_id = self._find_firewall_rule_id(firewall_rule)
+        ret = self.network_conn.delete_firewall_rule(firewall_rule_id)
+        return ret if ret else True
+
+    def update_firewall_rule(self, firewall_rule, protocol=None, action=None,
+                             name=None, description=None, ip_version=None,
+                             source_ip_address=None, destination_ip_address=None, source_port=None,
+                             destination_port=None, shared=None, enabled=None):
+        '''
+        Update a firewall rule
+        '''
+        body = {}
+        if protocol:
+            body['protocol'] = protocol
+        if action:
+            body['action'] = action
+        if name:
+            body['name'] = name
+        if description:
+            body['description'] = description
+        if ip_version:
+            body['ip_version'] = ip_version
+        if source_ip_address:
+            body['source_ip_address'] = source_ip_address
+        if destination_ip_address:
+            body['destination_ip_address'] = destination_ip_address
+        if source_port:
+            body['source_port'] = source_port
+        if destination_port:
+            body['destination_port'] = destination_port
+        if shared:
+            body['shared'] = shared
+        if enabled:
+            body['enabled'] = enabled
+        return self.network_conn.update_firewall_rule(firewall_rule, body={'firewall_rule': body})
+
+    def list_firewalls(self):
+        '''
+        Fetches a list of all firewalls for a tenant
+        '''
+        return self.network_conn.list_firewalls()
+
+    def show_firewall(self, firewall):
+        '''
+        Fetches information of a specific firewall
+        '''
+        return self._fetch_firewall(firewall)
+
+    def list_l3_agent_hosting_routers(self, router):
+        '''
+        List L3 agents.
+        '''
+        return self.network_conn.list_l3_agent_hosting_routers(router)
+
+    def list_agents(self):
+        '''
+        List agents.
+        '''
+        return self.network_conn.list_agents()
 
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.

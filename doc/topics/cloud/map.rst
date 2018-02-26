@@ -1,3 +1,5 @@
+.. _salt-cloud-map:
+
 ==============
 Cloud Map File
 ==============
@@ -5,7 +7,8 @@ Cloud Map File
 A number of options exist when creating virtual machines. They can be managed
 directly from profiles and the command line execution, or a more complex map
 file can be created. The map file allows for a number of virtual machines to
-be created and associated with specific profiles.
+be created and associated with specific profiles. The map file is designed to
+be run once to create these more complex scenarios using salt-cloud.
 
 Map files have a simple format, specify a profile and then a list of virtual
 machines to make from said profile:
@@ -78,6 +81,38 @@ A map file can include grains and minion configuration options:
           grains:
             cheese: more tasty
             omelet: with peppers
+
+Any top level data element from your profile may be overridden in the map file:
+
+.. code-block:: yaml
+
+    fedora_small:
+      - web1:
+        size: t2.micro
+      - web2:
+        size: t2.nano
+
+As of Salt 2017.7.0, nested elements are merged, and can can be specified
+individually without having to repeat the complete definition for each top
+level data element. In this example a separate MAC is assigned to each VMware
+instance while inheriting device parameters for for disk and network
+configuration:
+
+.. code-block:: yaml
+
+    nyc-vm:
+      - db1:
+          devices:
+            network:
+              Network Adapter 1:
+                mac: '44:44:44:44:44:41'
+      - db2:
+          devices:
+            network:
+              Network Adapter 1:
+                mac: '44:44:44:44:44:42'
+
+
 
 A map file may also be used with the various query options:
 
@@ -162,3 +197,24 @@ Another example:
 
 The above example makes the ``web3`` minion answer to the local master, not the
 newly created master.
+
+
+Using Direct Map Data
+=====================
+When using modules that access the ``CloudClient`` directly (notably, the
+``cloud`` execution and runner modules), it is possible to pass in the contents
+of a map file, rather than a path to the location of the map file.
+
+Normally when using these modules, the path to the map file is passed in using:
+
+.. code-block:: bash
+
+    salt-run cloud.map_run /path/to/cloud.map
+
+To pass in the actual map data, use the ``map_data`` argument:
+
+.. code-block:: bash
+
+    salt-run cloud.map_run map_data='{"centos7": [{"saltmaster": {"minion": \
+        {"transport": "tcp"}, "make_master": true, "master": {"transport": \
+        "tcp"}}}, {"minion001": {"minion": {"transport": "tcp"}}}]}'

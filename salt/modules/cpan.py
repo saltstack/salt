@@ -28,7 +28,7 @@ def __virtual__():
     '''
     if salt.utils.which('cpan'):
         return True
-    return False
+    return (False, 'Unable to locate cpan. Make sure it is installed and in the PATH.')
 
 
 def install(module):
@@ -50,9 +50,6 @@ def install(module):
 
     cmd = 'cpan -i {0}'.format(module)
     out = __salt__['cmd.run'](cmd)
-
-    import pprint
-    pprint.pprint(out)
 
     if "don't know what it is" in out:
         ret['error'] = 'CPAN cannot identify this package'

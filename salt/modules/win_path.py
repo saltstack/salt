@@ -11,18 +11,18 @@ from __future__ import absolute_import
 # Python Libs
 import logging
 import re
+import os
 from salt.ext.six.moves import map
 
 # Third party libs
 try:
-    import win32gui
-    import win32con
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
 
 # Import salt libs
 import salt.utils
+import salt.utils.win_functions
 
 # Settings
 log = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_WIN32:
         return 'win_path'
-    return False
+    return (False, "Module win_path: module only works on Windows systems")
 
 
 def _normalize_dir(string):
@@ -46,7 +46,15 @@ def _normalize_dir(string):
 
 def rehash():
     '''
-    Send a WM_SETTINGCHANGE Broadcast to Windows to refresh the Environment variables
+    Send a WM_SETTINGCHANGE Broadcast to Windows to refresh the Environment
+    variables for new processes.
+
+    .. note::
+        This will only affect new processes that aren't launched by services. To
+        apply changes to the path to services, the host must be restarted. The
+        ``salt-minion``, if running as a service, will not see changes to the
+        environment until the system is restarted. See
+        `MSDN Documentation <https://support.microsoft.com/en-us/help/821761/changes-that-you-make-to-environment-variables-do-not-affect-services>`_
 
     CLI Example:
 
@@ -54,12 +62,7 @@ def rehash():
 
         salt '*' win_path.rehash
     '''
-    return win32gui.SendMessageTimeout(win32con.HWND_BROADCAST,
-                                       win32con.WM_SETTINGCHANGE,
-                                       0,
-                                       'Environment',
-                                       0,
-                                       10000)[0] == 1
+    return salt.utils.win_functions.broadcast_setting_change('Environment')
 
 
 def get_path():
@@ -130,6 +133,11 @@ def add(path, index=0):
     if index > len(sysPath):
         index = len(sysPath)
 
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path not in localPath:
+        localPath.append(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
+
     # Check if we are in the system path at the right location
     try:
         currIndex = sysPath.index(path)
@@ -173,6 +181,11 @@ def remove(path):
     '''
     path = _normalize_dir(path)
     sysPath = get_path()
+
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path in localPath:
+        localPath.remove(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
 
     try:
         sysPath.remove(path)

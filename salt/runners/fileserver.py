@@ -5,11 +5,10 @@ Directly manage the Salt fileserver plugins
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.utils
 import salt.fileserver
 
 
-def envs(backend=None, sources=False, outputter=None):
+def envs(backend=None, sources=False):
     '''
     Return the available fileserver environments. If no backend is provided,
     then the environments for all configured backends will be returned.
@@ -37,21 +36,118 @@ def envs(backend=None, sources=False, outputter=None):
         salt-run fileserver.envs git
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
-    output = fileserver.envs(back=backend, sources=sources)
-
-    if outputter:
-        salt.utils.warn_until(
-            'Boron',
-            'The \'outputter\' argument to the fileserver.envs runner has '
-            'been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
-        )
-        return {'outputter': outputter, 'data': output}
-    else:
-        return output
+    return sorted(fileserver.envs(back=backend, sources=sources))
 
 
-def file_list(saltenv='base', backend=None, outputter=None):
+def clear_file_list_cache(saltenv=None, backend=None):
+    '''
+    .. versionadded:: 2016.11.0
+
+    The Salt fileserver caches the files/directories/symlinks for each
+    fileserver backend and environment as they are requested. This is done to
+    help the fileserver scale better. Without this caching, when
+    hundreds/thousands of minions simultaneously ask the master what files are
+    available, this would cause the master's CPU load to spike as it obtains
+    the same information separately for each minion.
+
+    saltenv
+        By default, this runner will clear the file list caches for all
+        environments. This argument allows for a list of environments to be
+        passed, to clear more selectively. This list can be passed either as a
+        comma-separated string, or a Python list.
+
+    backend
+        Similar to the ``saltenv`` parameter, this argument will restrict the
+        cache clearing to specific fileserver backends (the default behavior is
+        to clear from all enabled fileserver backends). This list can be passed
+        either as a comma-separated string, or a Python list.
+
+    .. note:
+        The maximum age for the cached file lists (i.e. the age at which the
+        cache will be disregarded and rebuilt) is defined by the
+        :conf_master:`fileserver_list_cache_time` configuration parameter.
+
+    Since the ability to clear these caches is often required by users writing
+    custom runners which add/remove files, this runner can easily be called
+    from within a custom runner using any of the following examples:
+
+    .. code-block:: python
+
+        # Clear all file list caches
+        __salt__['fileserver.clear_file_list_cache']()
+        # Clear just the 'base' saltenv file list caches
+        __salt__['fileserver.clear_file_list_cache'](saltenv='base')
+        # Clear just the 'base' saltenv file list caches from just the 'roots'
+        # fileserver backend
+        __salt__['fileserver.clear_file_list_cache'](saltenv='base', backend='roots')
+        # Clear all file list caches from the 'roots' fileserver backend
+        __salt__['fileserver.clear_file_list_cache'](backend='roots')
+
+    .. note::
+        In runners, the ``__salt__`` dictionary will likely be renamed to
+        ``__runner__`` in a future Salt release to distinguish runner functions
+        from remote execution functions. See `this GitHub issue`_ for
+        discussion/updates on this.
+
+    .. _`this GitHub issue`: https://github.com/saltstack/salt/issues/34958
+
+    If using Salt's Python API (not a runner), the following examples are
+    equivalent to the ones above:
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.runner
+
+        opts = salt.config.master_config('/etc/salt/master')
+        opts['fun'] = 'fileserver.clear_file_list_cache'
+
+        # Clear all file list_caches
+        opts['arg'] = []  # No arguments
+        runner = salt.runner.Runner(opts)
+        cleared = runner.run()
+
+        # Clear just the 'base' saltenv file list caches
+        opts['arg'] = ['base', None]
+        runner = salt.runner.Runner(opts)
+        cleared = runner.run()
+
+        # Clear just the 'base' saltenv file list caches from just the 'roots'
+        # fileserver backend
+        opts['arg'] = ['base', 'roots']
+        runner = salt.runner.Runner(opts)
+        cleared = runner.run()
+
+        # Clear all file list caches from the 'roots' fileserver backend
+        opts['arg'] = [None, 'roots']
+        runner = salt.runner.Runner(opts)
+        cleared = runner.run()
+
+
+    This function will return a dictionary showing a list of environments which
+    were cleared for each backend. An empty return dictionary means that no
+    changes were made.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        # Clear all file list caches
+        salt-run fileserver.clear_file_list_cache
+        # Clear just the 'base' saltenv file list caches
+        salt-run fileserver.clear_file_list_cache saltenv=base
+        # Clear just the 'base' saltenv file list caches from just the 'roots'
+        # fileserver backend
+        salt-run fileserver.clear_file_list_cache saltenv=base backend=roots
+        # Clear all file list caches from the 'roots' fileserver backend
+        salt-run fileserver.clear_file_list_cache backend=roots
+    '''
+    fileserver = salt.fileserver.Fileserver(__opts__)
+    load = {'saltenv': saltenv, 'fsbackend': backend}
+    return fileserver.clear_file_list_cache(load=load)
+
+
+def file_list(saltenv='base', backend=None):
     '''
     Return a list of files from the salt fileserver
 
@@ -80,21 +176,10 @@ def file_list(saltenv='base', backend=None, outputter=None):
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
     load = {'saltenv': saltenv, 'fsbackend': backend}
-    output = fileserver.file_list(load=load)
-
-    if outputter:
-        salt.utils.warn_until(
-            'Boron',
-            'The \'outputter\' argument to the fileserver.file_list runner '
-            'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
-        )
-        return {'outputter': outputter, 'data': output}
-    else:
-        return output
+    return fileserver.file_list(load=load)
 
 
-def symlink_list(saltenv='base', backend=None, outputter=None):
+def symlink_list(saltenv='base', backend=None):
     '''
     Return a list of symlinked files and dirs
 
@@ -123,21 +208,10 @@ def symlink_list(saltenv='base', backend=None, outputter=None):
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
     load = {'saltenv': saltenv, 'fsbackend': backend}
-    output = fileserver.symlink_list(load=load)
-
-    if outputter:
-        salt.utils.warn_until(
-            'Boron',
-            'The \'outputter\' argument to the fileserver.symlink_list '
-            'runner has been deprecated. Please specify an outputter using '
-            '--out. See the output of \'salt-run -h\' for more information.'
-        )
-        return {'outputter': outputter, 'data': output}
-    else:
-        return output
+    return fileserver.symlink_list(load=load)
 
 
-def dir_list(saltenv='base', backend=None, outputter=None):
+def dir_list(saltenv='base', backend=None):
     '''
     Return a list of directories in the given environment
 
@@ -166,21 +240,10 @@ def dir_list(saltenv='base', backend=None, outputter=None):
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
     load = {'saltenv': saltenv, 'fsbackend': backend}
-    output = fileserver.dir_list(load=load)
-
-    if outputter:
-        salt.utils.warn_until(
-            'Boron',
-            'The \'outputter\' argument to the fileserver.dir_list runner '
-            'has been deprecated. Please specify an outputter using --out. '
-            'See the output of \'salt-run -h\' for more information.'
-        )
-        return {'outputter': outputter, 'data': output}
-    else:
-        return output
+    return fileserver.dir_list(load=load)
 
 
-def empty_dir_list(saltenv='base', backend=None, outputter=None):
+def empty_dir_list(saltenv='base', backend=None):
     '''
     .. versionadded:: 2015.5.0
 
@@ -214,18 +277,7 @@ def empty_dir_list(saltenv='base', backend=None, outputter=None):
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
     load = {'saltenv': saltenv, 'fsbackend': backend}
-    output = fileserver.file_list_emptydirs(load=load)
-
-    if outputter:
-        salt.utils.warn_until(
-            'Boron',
-            'The \'outputter\' argument to the fileserver.empty_dir_list '
-            'runner has been deprecated. Please specify an outputter using '
-            '--out. See the output of \'salt-run -h\' for more information.'
-        )
-        return {'outputter': outputter, 'data': output}
-    else:
-        return output
+    return fileserver.file_list_emptydirs(load=load)
 
 
 def update(backend=None):
@@ -293,8 +345,8 @@ def clear_cache(backend=None):
     if errors:
         ret['errors'] = errors
     if not ret:
-        ret = 'No cache was cleared'
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+        return 'No cache was cleared'
+    return ret
 
 
 def clear_lock(backend=None, remote=None):
@@ -313,9 +365,9 @@ def clear_lock(backend=None, remote=None):
         Only clear the update lock for the specified backend(s).
 
     remote
-        If not None, then any remotes which contain the passed string will have
-        their lock cleared. For example, a ``remote`` value of **github** will
-        remove the lock from all github.com remotes.
+        If specified, then any remotes which contain the passed string will
+        have their lock cleared. For example, a ``remote`` value of **github**
+        will remove the lock from all github.com remotes.
 
     CLI Example:
 
@@ -334,8 +386,8 @@ def clear_lock(backend=None, remote=None):
     if errors:
         ret['errors'] = errors
     if not ret:
-        ret = 'No locks were removed'
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+        return 'No locks were removed'
+    return ret
 
 
 def lock(backend=None, remote=None):
@@ -376,5 +428,5 @@ def lock(backend=None, remote=None):
     if errors:
         ret['errors'] = errors
     if not ret:
-        ret = 'No locks were set'
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+        return 'No locks were set'
+    return ret

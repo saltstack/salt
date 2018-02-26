@@ -141,7 +141,7 @@ def main():
         )
         for idx, resource_name in enumerate(sorted(handled_resources)):
             sys.stdout.write(
-                '[{0:>{pad}}/{1}] Removing resource {resource_name!r}'.format(
+                '[{0:>{pad}}/{1}] Removing resource \'{resource_name}\''.format(
                     idx + 1,
                     non_handled_resources,
                     pad=len(str(non_handled_resources)),

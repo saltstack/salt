@@ -3,9 +3,20 @@
 Return data to a PostgreSQL server with json data stored in Pg's jsonb data type
 
 :maintainer:    Dave Boucha <dave@saltstack.com>, Seth House <shouse@saltstack.com>, C. R. Oldham <cr@saltstack.com>
-:maturity:      new
+:maturity:      Stable
 :depends:       python-psycopg2
 :platform:      all
+
+.. note::
+    There are three PostgreSQL returners.  Any can function as an external
+    :ref:`master job cache <external-master-cache>`. but each has different
+    features.  SaltStack recommends
+    :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
+    a version of PostgreSQL that has the appropriate native binary JSON types.
+    Otherwise, review
+    :mod:`returners.postgres <salt.returners.postgres>` and
+    :mod:`returners.postgres_local_cache <salt.returners.postgres_local_cache>`
+    to see which module best suits your particular needs.
 
 To enable this returner, the minion will need the python client for PostgreSQL
 installed and the following values configured in the minion or master
@@ -55,8 +66,8 @@ Use the following Pg database schema:
     -- Table structure for table `jids`
     --
     DROP TABLE IF EXISTS jids;
-    CREATE OR REPLACE TABLE jids (
-       jid varchar(255) NOT NULL primary key
+    CREATE TABLE jids (
+       jid varchar(255) NOT NULL primary key,
        load jsonb NOT NULL
     );
     CREATE INDEX idx_jids_jsonb on jids
@@ -119,6 +130,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return pgjsonb --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return pgjsonb --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
@@ -151,7 +171,7 @@ __virtualname__ = 'pgjsonb'
 
 def __virtual__():
     if not HAS_PG:
-        return False
+        return False, 'Could not import pgjsonb returner; python-psycopg2 is not installed.'
     return True
 
 
@@ -234,14 +254,14 @@ def returner(ret):
         with _get_serv(ret, commit=True) as cur:
             sql = '''INSERT INTO salt_returns
                     (fun, jid, return, id, success, full_ret, alter_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)'''
+                    VALUES (%s, %s, %s, %s, %s, %s, to_timestamp(%s))'''
 
             cur.execute(sql, (ret['fun'], ret['jid'],
                               psycopg2.extras.Json(ret['return']),
                               ret['id'],
                               ret.get('success', False),
                               psycopg2.extras.Json(ret),
-                              time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
+                              time.time()))
     except salt.exceptions.SaltMasterError:
         log.critical('Could not store return with pgjsonb returner. PostgreSQL server unavailable.')
 
@@ -258,12 +278,12 @@ def event_return(events):
             tag = event.get('tag', '')
             data = event.get('data', '')
             sql = '''INSERT INTO salt_events (tag, data, master_id, alter_time)
-                     VALUES (%s, %s, %s, %s)'''
+                     VALUES (%s, %s, %s, to_timestamp(%s))'''
             cur.execute(sql, (tag, psycopg2.extras.Json(data),
-                              __opts__['id'], time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
+                              __opts__['id'], time.time()))
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid id
     '''
@@ -280,6 +300,13 @@ def save_load(jid, load):
             # Without this try:except: we get tons of duplicate entry errors
             # which result in job returns not being stored properly
             pass
+
+
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 def get_load(jid):
@@ -344,14 +371,14 @@ def get_jids():
     '''
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT DISTINCT jid
+        sql = '''SELECT jid, load
                 FROM jids'''
 
         cur.execute(sql)
         data = cur.fetchall()
-        ret = []
-        for jid in data:
-            ret.append(jid[0])
+        ret = {}
+        for jid, load in data:
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
         return ret
 
 

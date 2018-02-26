@@ -99,7 +99,7 @@ Options
 
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/minion
-.. |loglevel| replace:: ``info``
+.. |loglevel| replace:: ``warning``
 
 .. include:: _includes/output-options.rst
 

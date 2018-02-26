@@ -1,3 +1,7 @@
+:orphan:
+
+.. _legacy-salt-api-release-notes:
+
 =============
 Release notes
 =============

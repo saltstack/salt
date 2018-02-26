@@ -11,13 +11,13 @@ from __future__ import absolute_import
 
 # Import python libs
 import sys
-import atexit
 import logging
 import threading
 import logging.handlers
 
 # Import salt libs
 from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
+from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
 
@@ -105,8 +105,118 @@ class SysLogHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.SysLogHandler
     '''
 
 
+class RotatingFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.RotatingFileHandler, NewStyleClassMixIn):
+    '''
+    Rotating file handler which properly handles exc_info on a per handler basis
+    '''
+    def handleError(self, record):
+        '''
+        Override the default error handling mechanism
+
+        Deal with log file rotation errors due to log file in use
+        more softly.
+        '''
+        handled = False
+
+        # Can't use "salt.utils.is_windows()" in this file
+        if (sys.platform.startswith('win') and
+                logging.raiseExceptions and
+                sys.stderr):  # see Python issue 13807
+            exc_type, exc, exc_traceback = sys.exc_info()
+            try:
+                # PermissionError is used since Python 3.3.
+                # OSError is used for previous versions of Python.
+                if exc_type.__name__ in ('PermissionError', 'OSError') and exc.winerror == 32:
+                    if self.level <= logging.WARNING:
+                        sys.stderr.write('[WARNING ] Unable to rotate the log file "{0}" '
+                                         'because it is in use\n'.format(self.baseFilename)
+                        )
+                    handled = True
+            finally:
+                # 'del' recommended. See documentation of
+                # 'sys.exc_info()' for details.
+                del exc_type, exc, exc_traceback
+
+        if not handled:
+            super(RotatingFileHandler, self).handleError(record)
+
+
 if sys.version_info > (2, 6):
     class WatchedFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.WatchedFileHandler, NewStyleClassMixIn):
         '''
         Watched file handler which properly handles exc_info on a per handler basis
         '''
+
+
+if sys.version_info < (3, 2):
+    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.Handler, NewStyleClassMixIn):
+        '''
+        This handler sends events to a queue. Typically, it would be used together
+        with a multiprocessing Queue to centralise logging to file in one process
+        (in a multi-process application), so as to avoid file write contention
+        between processes.
+
+        This code is new in Python 3.2, but this class can be copy pasted into
+        user code for use with earlier Python versions.
+        '''
+
+        def __init__(self, queue):
+            '''
+            Initialise an instance, using the passed queue.
+            '''
+            logging.Handler.__init__(self)
+            self.queue = queue
+
+        def enqueue(self, record):
+            '''
+            Enqueue a record.
+
+            The base implementation uses put_nowait. You may want to override
+            this method if you want to use blocking, timeouts or custom queue
+            implementations.
+            '''
+            try:
+                self.queue.put_nowait(record)
+            except queue.Full:
+                sys.stderr.write('[WARNING ] Message queue is full, '
+                                 'unable to write "{0}" to log'.format(record)
+                                 )
+
+        def prepare(self, record):
+            '''
+            Prepares a record for queuing. The object returned by this method is
+            enqueued.
+
+            The base implementation formats the record to merge the message
+            and arguments, and removes unpickleable items from the record
+            in-place.
+
+            You might want to override this method if you want to convert
+            the record to a dict or JSON string, or send a modified copy
+            of the record while leaving the original intact.
+            '''
+            # The format operation gets traceback text into record.exc_text
+            # (if there's exception data), and also puts the message into
+            # record.message. We can then use this to replace the original
+            # msg + args, as these might be unpickleable. We also zap the
+            # exc_info attribute, as it's no longer needed and, if not None,
+            # will typically not be pickleable.
+            self.format(record)
+            record.msg = record.getMessage()
+            record.args = None
+            record.exc_info = None
+            return record
+
+        def emit(self, record):
+            '''
+            Emit a record.
+
+            Writes the LogRecord to the queue, preparing it for pickling first.
+            '''
+            try:
+                self.enqueue(self.prepare(record))
+            except Exception:
+                self.handleError(record)
+else:
+    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member,E0240
+        pass

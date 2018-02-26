@@ -46,7 +46,7 @@ def __virtual__():
     '''
     if HAS_PYBLUEZ:
         return __virtualname__
-    return False
+    return (False, 'The bluetooth execution module cannot be loaded: bluetooth not installed.')
 
 
 def version():

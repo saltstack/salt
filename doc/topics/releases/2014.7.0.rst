@@ -1,3 +1,5 @@
+.. _release-2014-7-0:
+
 =============================================
 Salt 2014.7.0 Release Notes - Codename Helium
 =============================================
@@ -53,7 +55,7 @@ Simply stated, users running Salt with RAET should expect some hiccups as we
 hammer out the update. This is a BETA release of Salt RAET.
 
 For information about how to use Salt with RAET please see the
-:doc:`tutorial </topics/transports/raet/index>`.
+:ref:`tutorial <raet>`.
 
 Salt SSH Enhancements
 =====================
@@ -170,8 +172,8 @@ These runtime modifications make it easy to run groups of states together. In
 future versions, we hope to fill out the ``mod_aggregate`` system to build in
 more and more optimizations.
 
-For more documentation on ``mod_aggregate``, see :doc:`the documentation
-</ref/states/aggregate>`.
+For more documentation on ``mod_aggregate``, see :ref:`the documentation
+<mod-aggregate-state>`.
 
 New Requisites: onchanges and onfail
 ------------------------------------
@@ -184,7 +186,7 @@ The other new requisites, ``onfail``, and ``onfail_in``, allow for a state to ru
 in reaction to the failure of another state.
 
 For more information about these new requisites, see the
-:doc:`requisites documentation </ref/states/requisites>`.
+:ref:`requisites documentation <requisites>`.
 
 
 Global onlyif and unless
@@ -466,7 +468,7 @@ Configurable Trunk/Branches/Tags Paths
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Prior to this release, the paths where trunk, branches, and tags were located
-could only be in directores named "trunk", "branches", and "tags" directly
+could only be in directories named "trunk", "branches", and "tags" directly
 under the root of the repository. Three new config parameters
 (:conf_master:`svnfs_trunk`, :conf_master:`svnfs_branches`, and
 :conf_master:`svnfs_tags`) allow SVN repositories which are laid out
@@ -551,7 +553,7 @@ New Salt-Cloud Providers
 Salt Call Change
 ================
 
-When used with a returner, salt-call now contacts a master if ``--local`` 
+When used with a returner, salt-call now contacts a master if ``--local``
 is not specicified.
 
 

@@ -2,16 +2,19 @@
 '''
 System Profiler Module
 
-Interface with Mac OSX's command-line System Profiler utility to get
+Interface with macOS's command-line System Profiler utility to get
 information about package receipts and installed applications.
 
 .. versionadded:: 2015.5.0
 
 '''
 
+from __future__ import absolute_import
+
 import plistlib
 import subprocess
 import salt.utils
+from salt.ext import six
 
 PROFILER_BINARY = '/usr/sbin/system_profiler'
 
@@ -24,8 +27,8 @@ def __virtual__():
 
     if PROFILER_BINARY:
         return True
-    else:
-        return False
+    return (False, 'The system_profiler execution module cannot be loaded: '
+            'system_profiler unavailable.')
 
 
 def _call_system_profiler(datatype):
@@ -39,7 +42,10 @@ def _call_system_profiler(datatype):
          '-xml', datatype], stdout=subprocess.PIPE)
     (sysprofresults, sysprof_stderr) = p.communicate(input=None)
 
-    plist = plistlib.readPlistFromString(sysprofresults)
+    if six.PY2:
+        plist = plistlib.readPlistFromString(sysprofresults)
+    else:
+        plist = plistlib.readPlistFromBytes(sysprofresults)
 
     try:
         apps = plist[0]['_items']

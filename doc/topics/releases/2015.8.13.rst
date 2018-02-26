@@ -1,0 +1,51 @@
+============================
+Salt 2015.8.13 Release Notes
+============================
+
+Version 2015.8.13 is a bugfix release for :ref:`2015.8.0 <release-2015-8-0>`.
+
+
+Security Fixes
+==============
+
+CVE-2017-5192: local_batch client external authentication not respected
+
+The ``LocalClient.cmd_batch()`` method client does not accept ``external_auth``
+credentials and so access to it from salt-api has been removed for now. This
+vulnerability allows code execution for already-authenticated users and is only
+in effect when running salt-api as the ``root`` user.
+
+CVE-2017-5200: Salt-api allows arbitrary command execution on a salt-master via
+Salt's ssh_client
+
+Users of Salt-API and salt-ssh could execute a command on the salt master via a
+hole when both systems were enabled.
+
+We recommend everyone on the 2015.8 branch upgrade to a patched release as soon
+as possible.
+
+
+Changes for v2015.8.12..v2015.8.13
+----------------------------------
+
+Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
+
+*Generated at: 2017-01-09T21:17:06Z*
+
+Statistics:
+
+- Total Merges: **3**
+- Total Issue references: **3**
+- Total PR references: **5**
+
+Changes:
+
+* 3428232 Clean up tests and docs for batch execution
+* 3d8f3d1 Remove batch execution from NetapiClient and Saltnado
+* 97b0f64 Lintfix
+* d151666 Add explanation comment
+* 62f2c87 Add docstring
+* 9b0a786 Explain what it is about and how to configure that
+* 5ea3579 Pick up a specified roster file from the configured locations
+* 3a8614c Disable custom rosters in API
+* c0e5a11 Add roster disable flag

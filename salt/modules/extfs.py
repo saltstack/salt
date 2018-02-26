@@ -18,7 +18,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'The extfs execution module cannot be loaded: only available on non-Windows systems.')
     return True
 
 
@@ -245,6 +245,8 @@ def dump(device, args=None):
             elif line.startswith('Group') and not line.startswith('Group descriptor size'):
                 mode = 'blocks'
             else:
+                if len(comps) < 2:
+                    continue
                 ret['attributes'][comps[0]] = comps[1].strip()
 
         if mode == 'blocks':

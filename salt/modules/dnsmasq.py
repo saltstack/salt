@@ -2,14 +2,15 @@
 '''
 Module for managing dnsmasq
 '''
+
+# Import Python libs
 from __future__ import absolute_import
+import logging
+import os
 
 # Import salt libs
 import salt.utils
-
-# Import python libs
-import os
-import logging
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def __virtual__():
     Only work on POSIX-like systems.
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'dnsmasq execution module cannot be loaded: only works on non-Windows systems.')
     return True
 
 
@@ -47,7 +48,7 @@ def fullversion():
 
     .. code-block:: bash
 
-        salt '*' dnsmasq.version
+        salt '*' dnsmasq.fullversion
     '''
     cmd = 'dnsmasq -v'
     out = __salt__['cmd.run'](cmd).splitlines()
@@ -71,13 +72,19 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
     to the end of the main config file (and not to any includes). If you need
     an option added to a specific include file, specify it as the config_file.
 
+    :param string config_file: config file where settings should be updated / added.
+    :param bool follow: attempt to set the config option inside any file within
+        the ``conf-dir`` where it has already been enabled.
+    :param kwargs: key value pairs that contain the configuration settings that you
+        want set.
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' dnsmasq.set_config domain=mydomain.com
         salt '*' dnsmasq.set_config follow=False domain=mydomain.com
-        salt '*' dnsmasq.set_config file=/etc/dnsmasq.conf domain=mydomain.com
+        salt '*' dnsmasq.set_config config_file=/etc/dnsmasq.conf domain=mydomain.com
     '''
     dnsopts = get_config(config_file)
     includes = [config_file]
@@ -92,32 +99,44 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
             if filename.endswith('#') and filename.endswith('#'):
                 continue
             includes.append('{0}/{1}'.format(dnsopts['conf-dir'], filename))
+
+    ret_kwargs = {}
     for key in kwargs:
+        # Filter out __pub keys as they should not be added to the config file
+        # See Issue #34263 for more information
+        if key.startswith('__'):
+            continue
+        ret_kwargs[key] = kwargs[key]
+
         if key in dnsopts:
             if isinstance(dnsopts[key], str):
                 for config in includes:
                     __salt__['file.sed'](path=config,
-                                    before='^{0}=.*'.format(key),
-                                    after='{0}={1}'.format(key, kwargs[key]))
+                                         before='^{0}=.*'.format(key),
+                                         after='{0}={1}'.format(key, kwargs[key]))
             else:
                 __salt__['file.append'](config_file,
-                                    '{0}={1}'.format(key, kwargs[key]))
+                                        '{0}={1}'.format(key, kwargs[key]))
         else:
             __salt__['file.append'](config_file,
                                     '{0}={1}'.format(key, kwargs[key]))
-    return kwargs
+    return ret_kwargs
 
 
 def get_config(config_file='/etc/dnsmasq.conf'):
     '''
     Dumps all options from the config file.
 
+    config_file
+        The location of the config file from which to obtain contents.
+        Defaults to ``/etc/dnsmasq.conf``.
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' dnsmasq.get_config
-        salt '*' dnsmasq.get_config file=/etc/dnsmasq.conf
+        salt '*' dnsmasq.get_config config_file=/etc/dnsmasq.conf
     '''
     dnsopts = _parse_dnamasq(config_file)
     if 'conf-dir' in dnsopts:
@@ -138,6 +157,12 @@ def _parse_dnamasq(filename):
     Generic function for parsing dnsmasq files including includes.
     '''
     fileopts = {}
+
+    if not os.path.isfile(filename):
+        raise CommandExecutionError(
+            'Error: No such file \'{0}\''.format(filename)
+        )
+
     with salt.utils.fopen(filename, 'r') as fp_:
         for line in fp_:
             if not line.strip():

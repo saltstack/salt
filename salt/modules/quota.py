@@ -26,7 +26,7 @@ def __virtual__():
     '''
     if not salt.utils.is_windows() and salt.utils.which('setquota'):
         return 'quota'
-    return False
+    return (False, 'The quota execution module cannot be loaded: the module is only available on POSIX-like systems with the setquota binary available.')
 
 
 def report(mount):
@@ -64,9 +64,7 @@ def _parse_quota(mount, opts):
             continue
         comps = line.split()
         if mode == 'header':
-            if 'Report for' in line:
-                pass
-            elif 'Block grace time' in line:
+            if 'Block grace time' in line:
                 blockg, inodeg = line.split(';')
                 blockgc = blockg.split(': ')
                 inodegc = inodeg.split(': ')

@@ -28,7 +28,7 @@ def __virtual__():
     Only load if ipvsadm command exists on the system.
     '''
     if not __detect_os():
-        return False
+        return (False, 'The lvs execution module cannot be loaded: the ipvsadm binary is not in the path.')
 
     return 'lvs'
 

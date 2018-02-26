@@ -17,7 +17,7 @@ depends=('python2'
          'python2-psutil')
 makedepends=('git')
 provides=()
-backup=('etc/salt/master' 
+backup=('etc/salt/master'
         'etc/salt/minion')
 options=()
 srcdir="$PWD/../.."
@@ -26,9 +26,9 @@ package() {
   cd "$srcdir"
 
   python2 setup.py install --root=$pkgdir/ --optimize=1
-  
+
   mkdir -p $pkgdir/etc/rc.d/
   cp $srcdir/pkg/arch/salt-master $pkgdir/etc/rc.d/
   cp $srcdir/pkg/arch/salt-minion $pkgdir/etc/rc.d/
   chmod +x $pkgdir/etc/rc.d/*
-} 
+}

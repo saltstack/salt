@@ -24,16 +24,20 @@ import os.path
 
 __PLATFORM = sys.platform.lower()
 
+
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.
     import salt._syspaths as __generated_syspaths  # pylint: disable=no-name-in-module
 except ImportError:
-    import imp
-    __generated_syspaths = imp.new_module('salt._syspaths')
+    import types
+    __generated_syspaths = types.ModuleType('salt._syspaths')
     for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
-                'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'BASE_PILLAR_ROOTS_DIR',
-                'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR'):
+                'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR',
+                'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
+                'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
+                'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH',
+                'SHARE_DIR'):
         setattr(__generated_syspaths, key, None)
 
 
@@ -71,6 +75,19 @@ if CONFIG_DIR is None:
     else:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
 
+SHARE_DIR = __generated_syspaths.SHARE_DIR
+if SHARE_DIR is None:
+    if __PLATFORM.startswith('win'):
+        SHARE_DIR = os.path.join(ROOT_DIR, 'share')
+    elif 'freebsd' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'share', 'salt')
+    elif 'netbsd' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
+    elif 'sunos5' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
+    else:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
+
 CACHE_DIR = __generated_syspaths.CACHE_DIR
 if CACHE_DIR is None:
     CACHE_DIR = os.path.join(ROOT_DIR, 'var', 'cache', 'salt')
@@ -91,6 +108,10 @@ BASE_PILLAR_ROOTS_DIR = __generated_syspaths.BASE_PILLAR_ROOTS_DIR
 if BASE_PILLAR_ROOTS_DIR is None:
     BASE_PILLAR_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'pillar')
 
+BASE_THORIUM_ROOTS_DIR = __generated_syspaths.BASE_THORIUM_ROOTS_DIR
+if BASE_THORIUM_ROOTS_DIR is None:
+    BASE_THORIUM_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'thorium')
+
 BASE_MASTER_ROOTS_DIR = __generated_syspaths.BASE_MASTER_ROOTS_DIR
 if BASE_MASTER_ROOTS_DIR is None:
     BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt-master')
@@ -103,9 +124,22 @@ PIDFILE_DIR = __generated_syspaths.PIDFILE_DIR
 if PIDFILE_DIR is None:
     PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
 
+SPM_FORMULA_PATH = __generated_syspaths.SPM_FORMULA_PATH
+if SPM_FORMULA_PATH is None:
+    SPM_FORMULA_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'salt')
+
+SPM_PILLAR_PATH = __generated_syspaths.SPM_PILLAR_PATH
+if SPM_PILLAR_PATH is None:
+    SPM_PILLAR_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'pillar')
+
+SPM_REACTOR_PATH = __generated_syspaths.SPM_REACTOR_PATH
+if SPM_REACTOR_PATH is None:
+    SPM_REACTOR_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'reactor')
+
 
 __all__ = [
     'ROOT_DIR',
+    'SHARE_DIR',
     'CONFIG_DIR',
     'CACHE_DIR',
     'SOCK_DIR',
@@ -113,9 +147,13 @@ __all__ = [
     'BASE_FILE_ROOTS_DIR',
     'BASE_PILLAR_ROOTS_DIR',
     'BASE_MASTER_ROOTS_DIR',
+    'BASE_THORIUM_ROOTS_DIR',
     'LOGS_DIR',
     'PIDFILE_DIR',
     'INSTALL_DIR',
     'CLOUD_DIR',
-    'BOOTSTRAP'
+    'BOOTSTRAP',
+    'SPM_FORMULA_PATH',
+    'SPM_PILLAR_PATH',
+    'SPM_REACTOR_PATH'
 ]

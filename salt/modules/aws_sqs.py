@@ -2,6 +2,8 @@
 '''
 Support for the Amazon Simple Queue Service.
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 import logging
 import json
@@ -19,7 +21,7 @@ def __virtual__():
     if salt.utils.which('aws'):
         # awscli is installed, load the module
         return True
-    return False
+    return (False, 'The module aws_sqs could not be loaded: aws command not found')
 
 
 def _region(region):
@@ -162,6 +164,11 @@ def list_queues(region, opts=None, user=None):
 
     user : None
         Run hg as a user other than what the minion runs as
+
+    CLI Example:
+
+        salt '*' aws_sqs.list_queues <region>
+
     '''
     out = _run_aws('list-queues', region, opts, user)
 
@@ -187,6 +194,11 @@ def create_queue(name, region, opts=None, user=None):
 
     user : None
         Run hg as a user other than what the minion runs as
+
+    CLI Example:
+
+        salt '*' aws_sqs.create_queue <sqs queue> <region>
+
     '''
 
     create = {'queue-name': name}
@@ -216,6 +228,11 @@ def delete_queue(name, region, opts=None, user=None):
 
     user : None
         Run hg as a user other than what the minion runs as
+
+    CLI Example:
+
+        salt '*' aws_sqs.delete_queue <sqs queue> <region>
+
     '''
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
@@ -263,6 +280,11 @@ def queue_exists(name, region, opts=None, user=None):
 
     user : None
         Run hg as a user other than what the minion runs as
+
+    CLI Example:
+
+        salt '*' aws_sqs.queue_exists <sqs queue> <region>
+
     '''
     output = list_queues(region, opts, user)
 

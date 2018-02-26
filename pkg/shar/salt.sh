@@ -21,7 +21,7 @@ if test -z "$pyver"; then
     elif test -f /etc/arch-release; then
         python=python2
     fi
-    
+
     if test -z "$pyver"; then
         test -z "$python" && python=python
         pyver=`/usr/bin/env $python -V 2>&1 | cut -f2 -d' ' | cut -f1,2 -d.`

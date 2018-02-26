@@ -7,11 +7,11 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
+import salt.utils.network
 
 # Import python libs
 import logging
 import re
-import socket
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +22,10 @@ def __virtual__():
     '''
     Only load module if dig binary is present
     '''
-    return True if salt.utils.which('dig') else False
+    if salt.utils.which('dig'):
+        return __virtualname__
+    return (False, 'The dig execution module cannot be loaded: '
+            'the dig binary is not in the path.')
 
 
 def check_ip(addr):
@@ -36,19 +39,14 @@ def check_ip(addr):
         salt ns1 dig.check_ip 127.0.0.1
         salt ns1 dig.check_ip 1111:2222:3333:4444:5555:6666:7777:8888
     '''
+
     try:
         addr = addr.rsplit('/', 1)
     except AttributeError:
         # Non-string passed
         return False
 
-    # Test IPv4 first
-    try:
-        is_ipv4 = bool(socket.inet_pton(socket.AF_INET, addr[0]))
-    except socket.error:
-        # Not valid
-        is_ipv4 = False
-    if is_ipv4:
+    if salt.utils.network.is_ipv4(addr[0]):
         try:
             if 1 <= int(addr[1]) <= 32:
                 return True
@@ -59,13 +57,7 @@ def check_ip(addr):
             # No subnet notation used (i.e. just an IPv4 address)
             return True
 
-    # Test IPv6 next
-    try:
-        is_ipv6 = bool(socket.inet_pton(socket.AF_INET6, addr[0]))
-    except socket.error:
-        # Not valid
-        is_ipv6 = False
-    if is_ipv6:
+    if salt.utils.network.is_ipv6(addr[0]):
         try:
             if 8 <= int(addr[1]) <= 128:
                 return True
@@ -99,7 +91,7 @@ def A(host, nameserver=None):
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warn(
+        log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
                 cmd['retcode']
@@ -131,7 +123,7 @@ def AAAA(host, nameserver=None):
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warn(
+        log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
                 cmd['retcode']
@@ -163,7 +155,7 @@ def NS(domain, resolve=True, nameserver=None):
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warn(
+        log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
                 cmd['retcode']
@@ -204,8 +196,8 @@ def SPF(domain, record='SPF', nameserver=None):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     # In this case, 0 is not the same as False
     if result['retcode'] != 0:
-        log.warn(
-            'dig returned exit code {0!r}. Returning empty list as fallback.'
+        log.warning(
+            'dig returned exit code \'{0}\'. Returning empty list as fallback.'
             .format(result['retcode'])
         )
         return []
@@ -261,7 +253,7 @@ def MX(domain, resolve=False, nameserver=None):
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warn(
+        log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
                 cmd['retcode']
@@ -299,7 +291,7 @@ def TXT(host, nameserver=None):
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
 
     if cmd['retcode'] != 0:
-        log.warn(
+        log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
                 cmd['retcode']

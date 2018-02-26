@@ -1,4 +1,4 @@
-.. _targeting_range:
+.. _targeting-range:
 
 ==========
 SECO Range

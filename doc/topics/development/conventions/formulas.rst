@@ -252,7 +252,7 @@ Use ``module.function`` notation
 
 So-called "short-declaration" notation is preferred for referencing state
 modules and state functions. It provides a consistent pattern of
-``module.function`` shared between Salt States, the Reactor, Overstate, Salt
+``module.function`` shared between Salt States, the Reactor, Salt
 Mine, the Scheduler, as well as with the CLI.
 
 .. code-block:: yaml
@@ -416,9 +416,9 @@ from the Salt Master. For example:
     {% set some_data = salt.pillar.get('some_data', {'sane default': True}) %}
 
     {# or #}
-    
+
     {% import_yaml 'path/to/file.yaml' as some_data %}
-    
+
     {# or #}
 
     {% import_json 'path/to/file.json' as some_data %}
@@ -437,7 +437,7 @@ data from the state that will make use of the data.
 Light conditionals and looping
 ``````````````````````````````
 
-Jinja is extremely powerful for programatically generating Salt states. It is
+Jinja is extremely powerful for programmatically generating Salt states. It is
 also easy to overuse. As a rule of thumb, if it is hard to read it will be hard
 to maintain!
 
@@ -461,7 +461,7 @@ Below is a simple example of a readable loop:
 
 Avoid putting a Jinja conditionals within Salt states where possible.
 Readability suffers and the correct YAML indentation is difficult to see in the
-surrounding visual noise. Parameterization (discussed below) and variables are
+surrounding visual noise. Parametrization (discussed below) and variables are
 both useful techniques to avoid this. For example:
 
 .. code-block:: yaml
@@ -500,7 +500,7 @@ both useful techniques to avoid this. For example:
         - name: {{ name }}
 
 Dictionaries are useful to effectively "namespace" a collection of variables.
-This is useful with parameterization (discussed below). Dictionaries are also
+This is useful with parametrization (discussed below). Dictionaries are also
 easily combined and merged. And they can be directly serialized into YAML which
 is often easier than trying to create valid YAML through templating. For
 example:
@@ -582,7 +582,7 @@ read it will be hard to maintain -- switch to a format that is easier to read.
 Using alternate renderers is very simple to do using Salt's "she-bang" syntax
 at the top of the file. The Python renderer must simply return the correct
 :ref:`highstate data structure <states-highstate-example>`. The following
-example is a state tree of two sls files, one simple and one complicated. 
+example is a state tree of two sls files, one simple and one complicated.
 
 ``/srv/salt/top.sls``:
 
@@ -778,13 +778,27 @@ state file using the following syntax:
       service.running:
         - name: {{ mysql.service }}
 
+Organizing Pillar data
+``````````````````````
+
+It is considered a best practice to make formulas expect **all**
+formula-related parameters to be placed under second-level ``lookup`` key,
+within a main namespace designated for holding data for particular
+service/software/etc, managed by the formula:
+
+.. code-block:: yaml
+
+    mysql:
+      lookup:
+        version: 5.7.11
+
 Collecting common values
 ````````````````````````
 
 Common values can be collected into a *base* dictionary.  This
 minimizes repetition of identical values in each of the
 ``lookup_dict`` sub-dictionaries.  Now only the values that are
-different from the base must be specified of the alternates:
+different from the base must be specified by the alternates:
 
 :file:`map.jinja`:
 
@@ -885,7 +899,7 @@ When to use lookup tables
 The ``map.jinja`` file is only a convention within Salt Formulas. This greater
 pattern is useful for a wide variety of data in a wide variety of workflows.
 This pattern is not limited to pulling data from a single file or data source.
-This pattern is useful in States, Pillar, the Reactor, and Overstate as well.
+This pattern is useful in States, Pillar and the Reactor, for example.
 
 Working with a data structure instead of, say, a config file allows the data to
 be cobbled together from multiple sources (local files, remote Pillar, database
@@ -952,7 +966,7 @@ XML.)
 
     {% import_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
     {% set server_xml_final_values = salt.pillar.get(
-        'appX:server_xml_overrides', 
+        'appX:server_xml_overrides',
         default=server_xml_defaults,
         merge=True)
     %}
@@ -967,10 +981,10 @@ The :py:func:`file.serialize <salt.states.file.serialize>` state can provide a
 shorthand for creating some files from data structures. There are also many
 examples within Salt Formulas of creating one-off "serializers" (often as Jinja
 macros) that reformat a data structure to a specific config file format. For
-example, `Nginx vhosts`__ or the `php.ini`__
+example, look at the`Nginx vhosts`_ states or the `php.ini`_ file template.
 
-__: https://github.com/saltstack-formulas/nginx-formula/blob/5cad4512/nginx/ng/vhosts_config.sls
-__: https://github.com/saltstack-formulas/php-formula/blob/82e2cd3a/php/ng/files/php.ini
+.. _`Nginx vhosts`: https://github.com/saltstack-formulas/nginx-formula/blob/5cad4512/nginx/ng/vhosts_config.sls
+.. _`php.ini`: https://github.com/saltstack-formulas/php-formula/blob/82e2cd3a/php/ng/files/php.ini
 
 Environment specific information
 ................................
@@ -1148,7 +1162,7 @@ Pillar overrides
 
 Pillar lookups must use the safe :py:func:`~salt.modules.pillar.get`
 and must provide a default value. Create local variables using the Jinja
-``set`` construct to increase redability and to avoid potentially hundreds or
+``set`` construct to increase readability and to avoid potentially hundreds or
 thousands of function calls across a large state tree.
 
 .. code-block:: jinja
@@ -1220,7 +1234,7 @@ target platform, and any other installation or usage instructions or tips.
 
 A sample skeleton for the ``README.rst`` file:
 
-.. code-block:: rest
+.. code-block:: restructuredtext
 
     ===
     foo
@@ -1231,7 +1245,7 @@ A sample skeleton for the ``README.rst`` file:
     .. note::
 
         See the full `Salt Formulas installation and usage instructions
-        <http://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
+        <https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
 
     Available states
     ================
@@ -1260,7 +1274,7 @@ A sample skeleton for the `CHANGELOG.rst` file:
 
 :file:`CHANGELOG.rst`:
 
-.. code-block:: rest
+.. code-block:: restructuredtext
 
     foo formula
     ===========

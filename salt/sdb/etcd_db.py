@@ -33,6 +33,7 @@ is hosting the etcd database and ``etcd.port`` refers to the port on that host.
 '''
 
 # import python libs
+from __future__ import absolute_import
 import logging
 
 try:
@@ -75,6 +76,18 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
     client = _get_conn(profile)
     result = client.get(key)
     return result.value
+
+
+def delete(key, service=None, profile=None):  # pylint: disable=W0613
+    '''
+    Get a value from the etcd service
+    '''
+    client = _get_conn(profile)
+    try:
+        client.delete(key)
+        return True
+    except Exception:
+        return False
 
 
 def _get_conn(profile):

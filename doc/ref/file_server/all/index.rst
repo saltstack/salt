@@ -1,8 +1,8 @@
 .. _all-salt.fileserver:
 
-=======================================
-Full list of builtin fileserver modules
-=======================================
+==================
+fileserver modules
+==================
 
 .. currentmodule:: salt.fileserver
 
@@ -10,6 +10,7 @@ Full list of builtin fileserver modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    azurefs
     gitfs
     hgfs
     minionfs

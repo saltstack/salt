@@ -1,5 +1,0 @@
--r _requirements.txt
-
-libnacl
-ioflo
-raet

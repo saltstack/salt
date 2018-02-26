@@ -3,16 +3,20 @@
 A module written originally by Armin Ronacher to manage file transfers in an
 atomic way
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import tempfile
 import sys
 import errno
 import time
 import random
+import shutil
 import salt.ext.six as six
+
+# Import salt libs
+import salt.utils.win_dacl
 
 
 CAN_RENAME_OPEN_FILE = False
@@ -117,6 +121,14 @@ class _AtomicWFile(object):
         if self._fh.closed:
             return
         self._fh.close()
+        if os.path.isfile(self._filename):
+            shutil.copymode(self._filename, self._tmp_filename)
+            if salt.utils.win_dacl.HAS_WIN32:
+                owner = salt.utils.win_dacl.get_owner(self._filename)
+                salt.utils.win_dacl.set_owner(self._tmp_filename, owner)
+            else:
+                st = os.stat(self._filename)
+                os.chown(self._tmp_filename, st.st_uid, st.st_gid)
         atomic_rename(self._tmp_filename, self._filename)
 
     def __exit__(self, exc_type, exc_value, traceback):

@@ -97,6 +97,7 @@ import sys
 
 import salt.exceptions
 import salt.ext.six as six
+import salt.utils
 
 HAS_VIRTUALENV = False
 
@@ -152,7 +153,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     '''
 
     if not os.path.isdir(project_path):
-        log.error('Django project dir: {0!r} not a directory!'.format(
+        log.error('Django project dir: \'{0}\' not a directory!'.format(
             project_path))
         return {}
     if HAS_VIRTUALENV and env is not None and os.path.isdir(env):
@@ -177,14 +178,14 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         base_env = {}
         proc = subprocess.Popen(['bash', '-c', 'env'], stdout=subprocess.PIPE)
         for line in proc.stdout:
-            (key, _, value) = line.partition('=')
+            (key, _, value) = salt.utils.to_str(line).partition('=')
             base_env[key] = value
 
         command = ['bash', '-c', 'source {0} && env'.format(env_file)]
         proc = subprocess.Popen(command, stdout=subprocess.PIPE)
 
         for line in proc.stdout:
-            (key, _, value) = line.partition('=')
+            (key, _, value) = salt.utils.to_str(line).partition('=')
             # only add a key if it is different or doesn't already exist
             if key not in base_env or base_env[key] != value:
                 os.environ[key] = value.rstrip('\n')

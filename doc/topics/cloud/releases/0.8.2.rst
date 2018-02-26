@@ -11,7 +11,7 @@ Documentation
 =============
 
 The documentation for Salt Cloud can be found on Read the Docs:
-http://salt-cloud.readthedocs.org
+https://salt-cloud.readthedocs.io
 
 Download
 ========
@@ -22,7 +22,7 @@ https://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.2.tar.gz
 
 https://cloud.github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.2.tar.gz
 
-Some packages have been made available for salt-cloud and more on on their
+Some packages have been made available for salt-cloud and more on their
 way. Packages for Arch, and FreeBSD are being made available thanks to the
 work of Christer Edwards, and packages for RHEL and Fedora are being created
 by Clint Savage. Package availability will be announced on the salt mailing list.

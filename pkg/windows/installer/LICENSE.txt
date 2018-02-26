@@ -1,4 +1,4 @@
-   Salt - Remote execution system   
+   Salt - Remote execution system
 
    Copyright 2011 Thomas S Hatch
 

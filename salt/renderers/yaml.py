@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 YAML Renderer for Salt
+
+For YAML usage information see :ref:`Understanding YAML <yaml>`.
 '''
 
 from __future__ import absolute_import
@@ -13,6 +15,7 @@ from yaml.parser import ParserError
 from yaml.constructor import ConstructorError
 
 # Import salt libs
+import salt.utils.url
 from salt.utils.yamlloader import SaltYamlSafeLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
@@ -57,9 +60,9 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
             raise SaltRenderError(exc)
         if len(warn_list) > 0:
             for item in warn_list:
-                log.warn(
-                    '{warn} found in salt://{sls} environment={saltenv}'.format(
-                        warn=item.message, sls=sls, saltenv=saltenv
+                log.warning(
+                    '{warn} found in {sls} saltenv={env}'.format(
+                        warn=item.message, sls=salt.utils.url.create(sls), env=saltenv
                     )
                 )
         if not data:
@@ -71,6 +74,25 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
             elif __opts__.get('yaml_utf8'):
                 data = _yaml_result_unicode_to_utf8(data)
         log.debug('Results of YAML rendering: \n{0}'.format(data))
+
+        def _validate_data(data):
+            '''
+            PyYAML will for some reason allow improper YAML to be formed into
+            an unhashable dict (that is, one with a dict as a key). This
+            function will recursively go through and check the keys to make
+            sure they're not dicts.
+            '''
+            if isinstance(data, dict):
+                for key, value in six.iteritems(data):
+                    if isinstance(key, dict):
+                        raise SaltRenderError(
+                            'Invalid YAML, possible double curly-brace')
+                    _validate_data(value)
+            elif isinstance(data, list):
+                for item in data:
+                    _validate_data(item)
+
+        _validate_data(data)
         return data
 
 
@@ -80,6 +102,8 @@ def _yaml_result_unicode_to_utf8(data):
 
     This is a recursive function
     '''
+    if six.PY3:
+        return data
     if isinstance(data, OrderedDict):
         for key, elt in six.iteritems(data):
             data[key] = _yaml_result_unicode_to_utf8(elt)

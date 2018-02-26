@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 
 def __virtual__():
-    return False
+    return (False, 'The test_virtual execution module failed to load.')
 
 
 def ping():

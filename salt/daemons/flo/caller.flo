@@ -38,7 +38,25 @@ framer inbound be inactive first start
         do salt raet road stack service rx
         do salt raet lane stack service rx
 
-framer bootstrap be inactive first join
+
+framer bootstrap be inactive first setup
+
+    frame setup
+        enter
+            do salt raet road clustered per inode ".salt.road.manor."
+            do salt raet road usher minion setup per inode ".salt.road.manor."
+        go clustermaster
+        go multimaster
+
+    frame clustermaster
+        let if salt.road.manor.cluster.clustered
+        print Setting Up Master Cluster ....
+        go join
+
+    frame multimaster
+        print Setting Up Master or MultiMaster
+        go join
+
     frame join
         print Joining...
         enter
@@ -49,7 +67,6 @@ framer bootstrap be inactive first join
 
         go next if joined in .salt.road.manor.status
         go abort if rejected in .salt.road.manor.status
-        #go abort if elapsed >= 10
 
     frame joined
         print Joined
@@ -69,6 +86,11 @@ framer bootstrap be inactive first join
         print Allowed
         go next if elapsed >= 0.5
 
+    frame clustering
+        print Cluster Setup ...
+        do salt raet road cluster load setup
+        go next
+
     frame manager
         # start the manager framer
         bid start manager #start alive presence from minion side
@@ -81,8 +103,7 @@ framer bootstrap be inactive first join
         go router
 
     frame router
-        do salt raet router
-
+        do salt raet router minion
 
     frame abort
         bid stop all

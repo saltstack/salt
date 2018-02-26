@@ -12,7 +12,7 @@ from __future__ import absolute_import
 import os
 import stat
 
-from ioflo.base.odicting import odict
+from ioflo.aid.odicting import odict
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
@@ -65,6 +65,7 @@ def test():
             raet_port=7530,
             transport='raet',
             client_acl=dict(),
+            publisher_acl=dict(),
             pki_dir=pkiDirpath,
             sock_dir=sockDirpath,
             cachedir=cacheDirpath,

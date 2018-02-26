@@ -1,9 +1,12 @@
+.. _tutorial-http:
+
 HTTP Modules
 ============
 
 This tutorial demonstrates using the various HTTP modules available in Salt.
-These modules wrap the Python ``urllib2`` and ``requests`` libraries, extending
-them in a manner that is more consistent with Salt workflows.
+These modules wrap the Python ``tornado``, ``urllib2``, and ``requests``
+libraries, extending them in a manner that is more consistent with Salt
+workflows.
 
 The ``salt.utils.http`` Library
 -------------------------------
@@ -26,13 +29,20 @@ This library can be imported with:
 Configuring Libraries
 ~~~~~~~~~~~~~~~~~~~~~
 
-This library can make use of either ``urllib2``, which ships with Python, or
-``requests``, which can be installed separately. By default, ``urllib2`` will
-be used. In order to switch to ``requests``, set the following variable:
+This library can make use of either ``tornado``, which is required by Salt,
+``urllib2``, which ships with Python, or ``requests``, which can be installed
+separately. By default, ``tornado`` will be used. In order to switch to
+``urllib2``, set the following variable:
 
 .. code-block:: yaml
 
-    requests_lib: True
+    backend: urllib2
+
+In order to switch to ``requests``, set the following variable:
+
+.. code-block:: yaml
+
+    backend: requests
 
 This can be set in the master or minion configuration file, or passed as an
 option directly to any ``http.query()`` functions.
@@ -42,8 +52,12 @@ option directly to any ``http.query()`` functions.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This function forms a basic query, but with some add-ons not present in the
-``urllib2`` and ``requests`` libraries. Not all functionality currently
-available in these libraries has been added, but can be in future iterations.
+``tornado``, ``urllib2``, and ``requests`` libraries. Not all functionality
+currently available in these libraries has been added, but can be in future
+iterations.
+
+HTTPS Request Methods
+`````````````````````
 
 A basic query can be performed by calling this function with no more than a
 single URL:
@@ -71,7 +85,10 @@ required by the remote server (XML, JSON, plain text, etc).
         data=json.loads(mydict)
     )
 
-Bear in mind that this data must be sent pre-formatted; this function will not
+Data Formatting and Templating
+``````````````````````````````
+
+Bear in mind that the data must be sent pre-formatted; this function will not
 format it for you. However, a templated file stored on the local system may be
 passed through, along with variables to populate it with. To pass through only
 the file (untemplated):
@@ -93,7 +110,7 @@ To pass through a file that contains jinja + yaml templating (the default):
         method='POST',
         data_file='/srv/salt/somefile.jinja',
         data_render=True,
-        template_data={'key1': 'value1', 'key2': 'value2'}
+        template_dict={'key1': 'value1', 'key2': 'value2'}
     )
 
 To pass through a file that contains mako templating:
@@ -106,7 +123,7 @@ To pass through a file that contains mako templating:
         data_file='/srv/salt/somefile.mako',
         data_render=True,
         data_renderer='mako',
-        template_data={'key1': 'value1', 'key2': 'value2'}
+        template_dict={'key1': 'value1', 'key2': 'value2'}
     )
 
 Because this function uses Salt's own rendering system, any Salt renderer can
@@ -123,7 +140,7 @@ However, this can be changed to ``master`` if necessary.
         method='POST',
         data_file='/srv/salt/somefile.jinja',
         data_render=True,
-        template_data={'key1': 'value1', 'key2': 'value2'},
+        template_dict={'key1': 'value1', 'key2': 'value2'},
         opts=__opts__
     )
 
@@ -132,9 +149,12 @@ However, this can be changed to ``master`` if necessary.
         method='POST',
         data_file='/srv/salt/somefile.jinja',
         data_render=True,
-        template_data={'key1': 'value1', 'key2': 'value2'},
+        template_dict={'key1': 'value1', 'key2': 'value2'},
         node='master'
     )
+
+Headers
+```````
 
 Headers may also be passed through, either as a ``header_list``, a
 ``header_dict``, or as a ``header_file``. As with the ``data_file``, the
@@ -150,12 +170,15 @@ a Python dict.
         header_file='/srv/salt/headers.jinja',
         header_render=True,
         header_renderer='jinja',
-        template_data={'key1': 'value1', 'key2': 'value2'}
+        template_dict={'key1': 'value1', 'key2': 'value2'}
     )
 
 Because much of the data that would be templated between headers and data may be
-the same, the ``template_data`` is the same for both. Correcting possible
+the same, the ``template_dict`` is the same for both. Correcting possible
 variable name collisions is up to the user.
+
+Authentication
+``````````````
 
 The ``query()`` function supports basic HTTP authentication. A username and
 password may be passed in as ``username`` and ``password``, respectively.
@@ -167,6 +190,9 @@ password may be passed in as ``username`` and ``password``, respectively.
         username='larry',
         password=`5700g3543v4r`,
     )
+
+Cookies and Sessions
+````````````````````
 
 Cookies are also supported, using Python's built-in ``cookielib``. However, they
 are turned off by default. To turn cookies on, set ``cookies`` to True.
@@ -220,6 +246,29 @@ Salt's cache directory, is ``cookies.session.p``. This can also be changed.
 The format of this file is msgpack, which is consistent with much of the rest
 of Salt's internal structure. Historically, the extension for this file is
 ``.p``. There are no current plans to make this configurable.
+
+Proxy
+`````
+
+If the ``tornado`` backend is used (``tornado`` is the default), proxy
+information configured in ``proxy_host``, ``proxy_port``, ``proxy_username``,
+and ``proxy_password`` from the ``__opts__`` dictionary will be used.  Normally
+these are set in the minion configuration file.
+
+.. code-block:: yaml
+
+    proxy_host: proxy.my-domain
+    proxy_port: 31337
+    proxy_username: charon
+    proxy_password: obolus
+
+.. code-block:: python
+
+    salt.utils.http.query(
+        'http://example.com',
+        opts=__opts__,
+        backend='tornado'
+    )
 
 Return Data
 ~~~~~~~~~~~
@@ -312,7 +361,7 @@ debugging purposes, SSL verification can be turned off.
 
 CA Bundles
 ~~~~~~~~~~
-The ``requests`` library has its own method of detecting which CA (certficate
+The ``requests`` library has its own method of detecting which CA (certificate
 authority) bundle file to use. Usually this is implemented by the packager for
 the specific operating system distribution that you are using. However,
 ``urllib2`` requires a little more work under the hood. By default, Salt will
@@ -328,7 +377,8 @@ using the ``ca_bundle`` variable.
     )
 
 Updating CA Bundles
-+++++++++++++++++++
+```````````````````
+
 The ``update_ca_bundle()`` function can be used to update the bundle file at a
 specified location. If the target location is not specified, then it will
 attempt to auto-detect the location of the bundle file. If the URL to download

@@ -1,0 +1,7 @@
+mysql-python
+timelib
+yappi>=0.8.2
+--allow-unverified python-novaclient>2.17.0
+--allow-unverified python-neutronclient>2.3.6
+python-gnupg
+cherrypy>=3.2.2

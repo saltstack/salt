@@ -18,6 +18,9 @@ import salt.utils
 import salt.client.ssh.client
 import salt.exceptions
 
+# Import third party libs
+import salt.ext.six as six
+
 
 class NetapiClient(object):
     '''
@@ -28,6 +31,7 @@ class NetapiClient(object):
     >>> lowstate = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
     >>> client.run(lowstate)
     '''
+
     def __init__(self, opts):
         self.opts = opts
 
@@ -38,9 +42,13 @@ class NetapiClient(object):
         Note, this will return an invalid success if the master crashed or was
         not shut down cleanly.
         '''
+        if self.opts['transport'] == 'tcp':
+            ipc_file = 'publish_pull.ipc'
+        else:
+            ipc_file = 'workers.ipc'
         return os.path.exists(os.path.join(
             self.opts['sock_dir'],
-            'workers.ipc'))
+            ipc_file))
 
     def run(self, low):
         '''
@@ -54,8 +62,9 @@ class NetapiClient(object):
             raise salt.exceptions.SaltDaemonNotRunning(
                     'Salt Master is not available.')
 
-        if 'client' not in low:
-            raise salt.exceptions.SaltException('No client specified')
+        if low.get('client') not in CLIENTS:
+            raise salt.exceptions.SaltInvocationError(
+                    'Invalid client specified: \'{0}\''.format(low.get('client')))
 
         if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
             raise salt.exceptions.EauthAuthenticationError(
@@ -93,6 +102,17 @@ class NetapiClient(object):
         local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd(*args, **kwargs)
 
+    def local_subset(self, *args, **kwargs):
+        '''
+        Run :ref:`execution modules <all-salt.modules>` against subsets of minions
+
+        .. versionadded:: 2016.3.0
+
+        Wraps :py:meth:`salt.client.LocalClient.cmd_subset`
+        '''
+        local = salt.client.get_local_client(mopts=self.opts)
+        return local.cmd_subset(*args, **kwargs)
+
     def local_batch(self, *args, **kwargs):
         '''
         Run :ref:`execution modules <all-salt.modules>` against batches of minions
@@ -115,21 +135,11 @@ class NetapiClient(object):
 
         :return: Returns the result from the salt-ssh command
         '''
-        ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts)
+        ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts,
+                                                      disable_custom_roster=True)
         return ssh_client.cmd_sync(kwargs)
 
-    def ssh_async(self, fun, timeout=None, **kwargs):
-        '''
-        Run salt-ssh commands asynchronously
-
-        Wraps :py:meth:`salt.client.ssh.client.SSHClient.cmd_async`.
-
-        :return: Returns the JID to check for results on
-        '''
-        kwargs['fun'] = fun
-        return salt.client.ssh.client.cmd_async(kwargs)
-
-    def runner(self, fun, timeout=None, **kwargs):
+    def runner(self, fun, timeout=None, full_return=False, **kwargs):
         '''
         Run `runner modules <all-salt.runners>` synchronously
 
@@ -142,7 +152,7 @@ class NetapiClient(object):
         '''
         kwargs['fun'] = fun
         runner = salt.runner.RunnerClient(self.opts)
-        return runner.cmd_sync(kwargs, timeout=timeout)
+        return runner.cmd_sync(kwargs, timeout=timeout, full_return=full_return)
 
     def runner_async(self, fun, **kwargs):
         '''
@@ -188,3 +198,9 @@ class NetapiClient(object):
         kwargs['fun'] = fun
         wheel = salt.wheel.WheelClient(self.opts)
         return wheel.cmd_async(kwargs)
+
+CLIENTS = [
+    name for name, _
+    in inspect.getmembers(NetapiClient, predicate=inspect.ismethod if six.PY2 else None)
+    if not (name == 'run' or name.startswith('_'))
+]

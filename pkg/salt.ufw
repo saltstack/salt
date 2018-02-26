@@ -2,5 +2,5 @@
 # firewall rules to systems with UFW.  Activate with 'ufw allow salt'
 [Salt]
 title=salt
-description=fast and powerful configuration management and remote execution 
+description=fast and powerful configuration management and remote execution
 ports=4505,4506/tcp

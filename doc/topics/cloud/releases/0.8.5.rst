@@ -11,7 +11,7 @@ Documentation
 =============
 
 The documentation for Salt Cloud can be found on Read the Docs:
-http://salt-cloud.readthedocs.org
+https://salt-cloud.readthedocs.io
 
 Download
 ========
@@ -20,7 +20,7 @@ Salt Cloud can be downloaded and install via pypi:
 
 https://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.5.tar.gz
 
-Some packages have been made available for salt-cloud and more on on their
+Some packages have been made available for salt-cloud and more on their
 way. Packages for Arch and FreeBSD are being made available thanks to the
 work of Christer Edwards, and packages for RHEL and Fedora are being created
 by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package

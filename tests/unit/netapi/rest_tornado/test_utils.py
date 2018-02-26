@@ -1,12 +1,11 @@
 # coding: utf-8
 
+# Import Python Libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting.unit import skipIf
-from salttesting.case import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../..')
+from tests.support.unit import skipIf
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -21,6 +20,8 @@ except ImportError:
     # Let's create a fake AsyncHTTPTestCase so we can properly skip the test case
     class AsyncTestCase(object):
         pass
+
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # pylint: enable=import-error
 
 try:
@@ -30,18 +31,7 @@ except ImportError:
     HAS_TORNADO = False
 
 # Import utility lib from tests
-from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
-
-
-@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
-class TestUtils(TestCase):
-    def test_batching(self):
-        self.assertEqual(1, saltnado.get_batch_size('1', 10))
-        self.assertEqual(2, saltnado.get_batch_size('2', 10))
-
-        self.assertEqual(1, saltnado.get_batch_size('10%', 10))
-        # TODO: exception in this case? The core doesn't so we shouldn't
-        self.assertEqual(11, saltnado.get_batch_size('110%', 10))
+from tests.unit.utils.test_event import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
@@ -52,7 +42,7 @@ class TestSaltnadoUtils(AsyncTestCase):
         '''
         # create a few futures
         futures = []
-        for x in xrange(0, 3):
+        for x in range(0, 3):
             future = tornado.concurrent.Future()
             future.add_done_callback(self.stop)
             futures.append(future)
@@ -99,7 +89,8 @@ class TestEventListener(AsyncTestCase):
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
                                                     {'sock_dir': SOCK_DIR,
                                                      'transport': 'zeromq'})
-            event_future = event_listener.get_event(1, 'evt1', self.stop)  # get an event future
+            self._finished = False  # fit to event_listener's behavior
+            event_future = event_listener.get_event(self, 'evt1', self.stop)  # get an event future
             me.fire_event({'data': 'foo2'}, 'evt2')  # fire an event we don't want
             me.fire_event({'data': 'foo1'}, 'evt1')  # fire an event we do want
             self.wait()  # wait for the future
@@ -109,6 +100,27 @@ class TestEventListener(AsyncTestCase):
             self.assertEqual(event_future.result()['tag'], 'evt1')
             self.assertEqual(event_future.result()['data']['data'], 'foo1')
 
+    def test_set_event_handler(self):
+        '''
+        Test subscribing events using set_event_handler
+        '''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR)
+            event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
+                                                    {'sock_dir': SOCK_DIR,
+                                                     'transport': 'zeromq'})
+            self._finished = False  # fit to event_listener's behavior
+            event_future = event_listener.get_event(self,
+                                                    tag='evt',
+                                                    callback=self.stop,
+                                                    timeout=1,
+                                                    )  # get an event future
+            me.fire_event({'data': 'foo'}, 'evt')  # fire an event we do want
+            self.wait()
+
+            # check that we subscribed the event we wanted
+            self.assertEqual(len(event_listener.timeout_map), 0)
+
     def test_timeout(self):
         '''
         Make sure timeouts work correctly
@@ -117,7 +129,8 @@ class TestEventListener(AsyncTestCase):
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
                                                     {'sock_dir': SOCK_DIR,
                                                      'transport': 'zeromq'})
-            event_future = event_listener.get_event(1,
+            self._finished = False  # fit to event_listener's behavior
+            event_future = event_listener.get_event(self,
                                                     tag='evt1',
                                                     callback=self.stop,
                                                     timeout=1,
@@ -126,7 +139,3 @@ class TestEventListener(AsyncTestCase):
             self.assertTrue(event_future.done())
             with self.assertRaises(saltnado.TimeoutException):
                 event_future.result()
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(TestUtils, needs_daemon=False)

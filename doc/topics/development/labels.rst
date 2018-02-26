@@ -37,7 +37,7 @@ coordinate with the assignee via the GitHub issue tracker to create the best pos
     The issue is being actively worked on by a SaltStack engineer.  Sprint milestones names are constructed from the
     chemical symbol of the next release's codename and the number of sprints until that release is made.  For example,
     if the next release codename is ``Neon`` and there are five sprints until that release, the corresponding sprint
-    milestone will be called ``Ne 5``.  See :doc:`<topics/releases/version_numbers>` for a discussion of Salt's release
+    milestone will be called ``Ne 5``.  See :ref:`<version-numbers>` for a discussion of Salt's release
     codenames.
 
 Labels
@@ -134,6 +134,7 @@ code relevant to issues or the source code changed by pull requests.
 * ``RAET``
 * ``Returners``
 * ``Runners``
+* ``SPM``
 * ``Salt-API``
 * ``Salt-Cloud``
 * ``Salt-SSH``
@@ -261,7 +262,7 @@ the tests pass and the pull request can be merged.
 ``Tests Passed``
     The pull request has passed all tests even though some test results are negative.  Sometimes the automated testing
     infrastructure will encounter internal errors unrelated to the code change in the pull request that cause test runs
-    to fail.  These errors can be caused by cloud provider and network issues and also Jenkins issues like erroneously
+    to fail.  These errors can be caused by cloud host and network issues and also Jenkins issues like erroneously
     accumulating workspace artifacts, resource exhaustion, and bugs that arise from long running Jenkins processes.
 
 Other
@@ -287,9 +288,12 @@ with labels.
 ``Story``
     The issue is used by a SaltStack engineer to track progress on multiple related issues in a single place.
 
+``Stretch``
+    The issue is an optional goal for the current sprint but may not be delivered.
+
 ``ZD``
     The issue is related to a Zendesk customer support ticket.
 
 ``<Release>``
-    The issue is scheduled to be implemented by ``<Release>``.  See :doc:`<topics/releases/version_numbers>` for a
+    The issue is scheduled to be implemented by ``<Release>``.  See :ref:`<version-numbers>` for a
     discussion of Salt's release codenames.

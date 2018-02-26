@@ -1,0 +1,498 @@
+.. _release-2016-3-0:
+
+============================================
+Salt 2016.3.0 Release Notes - Codename Boron
+============================================
+
+Known Issues
+============
+
+.. warning::
+    **Some Salt Masters may need to apply a patch for Default Job Cache to
+    prevent a possible crash**
+
+    An issue exists that prevents the Salt master from cleaning the default job
+    cache. This issue can cause an overconsumption of resources resulting in
+    a crash. 2016.3.0 Salt masters should apply the patch in :PR:`33555`. This
+    issue will be addressed in 2016.3.1.
+
+- :issue:`33516`: When upgrading from 2015.8.10 to 2016.3.0 on centos7/redhat7
+  salt-minion must be restarted twice.
+- :issue:`33517`: SPM does not work on amazon linux 2015 in 2016.3.0.
+
+Backwards-incompatible Changes
+==============================
+
+- The default path for the :conf_master:`extension_modules` master config
+  option has been changed.  Prior to this release, the location was a directory
+  named ``extmods`` in the Salt cachedir. On most platforms, this would put the
+  :conf_master:`extension_modules` directory in ``/var/cache/salt/extmods``.
+  It has been moved one directory down, into the master cachedir. On most
+  platforms, this is ``/var/cache/salt/master/extmods``. Most users won't have
+  to worry about this, but those who have been manually placing custom runners
+  into ``/var/cache/salt/extmods/runners``, or outputters into
+  ``/var/cache/salt/extmods/output``, etc. will be affected by this. To
+  transition, it is recommended not to simply move the extmods directory into
+  ``/var/cache/salt/master``, but to copy the custom modules into the salt
+  fileserver under ``salt://_runners``, ``salt://_output``, etc. and sync them
+  using the functions in the new :mod:`saltutil runner
+  <salt.runners.saltutil>`.
+- The :py:func:`pkg.check_db <salt.modules.yumpkg.check_db>` function has been
+  removed for yum/dnf.
+
+
+Core Changes
+============
+
+- The ``onchanges`` requisite now fires if **any** watched state changes. :issue:`19592`.
+- The ``ext_pillar`` functions **must** now accept a minion ID as the first
+  argument. This stops the deprecation path started in Salt 0.17.x. Before this
+  minion ID first argument was introduced, the minion ID could be retrieved
+  accessing ``__opts__['id']`` losing the reference to the master ID initially
+  set in opts. This is no longer the case, ``__opts__['id']`` will be kept as
+  the master ID.
+- Custom types can now be synced to the master using the new :mod:`saltutil
+  runner <salt.runners.saltutil>`. Before, these needed to manually be placed
+  under the :conf_master:`extension_modules` directory. This allows custom
+  modules to easily be synced to the master to make them available when
+  compiling Pillar data. Just place custom runners into ``salt://_runners``,
+  custom outputters into ``salt://_output``, etc. and use the functions from
+  the :mod:`saltutil runner <salt.runners.saltutil>` to sync them.
+- The ``client_acl`` configuration options were renamed to ``publisher_acl``.
+- Added a new ``--config-dump`` option (:issue:`26639`).
+- TCP Transport presence events were updated to work with a NAT (:pull:`30629`).
+- A :conf_minion:`minion_pillar_cache` setting was added to save rendered
+  pillar data to cachedir for later use when file_client is set to local
+  (:pull:`30428`).
+- Added the ability for binary data (such as a license key) to be distributed
+  via pillar using the :mod:`file.managed <salt.states.file.managed>`
+  (:issue:`9569`).
+- Scheduled jobs now include ``success`` and ``retcode`` (:issue:`24237`).
+- The ``saltversioninfo`` grain was changed from a string to a list to enable
+  reading values by index. (:pull:`30082`).
+- A :conf_master:`pillar_merge_lists` option was added to enable recursively
+  merging pillar lists by aggregating them instead of replacing them
+  (:pull:`30062`).
+- Grain values reported by Debian 8 (jessie) when lsb-release is installed were
+  updated for consistency (:pull:`28649`).
+- A new option for minions called master_tries has been added. This specifies
+  the number of times a minion should attempt to contact a master to attempt
+  a connection. This allows better handling of occasional master downtime in
+  a multi-master topology.
+- The default directory for deploying the salt-thin tarball has changed for
+  salt-ssh. It is now /var/tmp instead of /tmp. Users may also wish
+  to delete any directories in /tmp ending with `_salt/`. (:issue:`32771`)
+
+
+External Module Packaging
+=========================
+
+Modules may now be packaged via entry-points in setuptools. See
+:ref:`external module packaging <tutorial-packaging-modules>` tutorial
+for more information.
+
+
+Cloud Changes
+=============
+
+- Refactored the OpenNebula driver and added numerous ``--function`` and
+  ``--action`` commands to enhance Salt support for image, template, security group,
+  virtual network and virtual machine management in OpenNebula.
+
+- Added execution/state modules to support the deployment of AWS cognito
+  identity pools (:pull:`31094`).
+
+- Added ability to set tags and listener policies on a AWS ELB (:pull:`27552`).
+
+Platform Changes
+================
+
+- Renamed modules related to macOS. The following module filenames were changed.
+  The virtual name remained unchanged.
+
+- **PR** `#30558`_: renamed osxdesktop.py to mac_desktop.py
+- **PR** `#30557`_: renamed macports.py to mac_ports.py
+- **PR** `#30556`_: renamed darwin_sysctl.py to mac_sysctl.py
+- **PR** `#30555`_: renamed brew.py to mac_brew.py
+- **PR** `#30552`_: renamed darwin_pkgutil.py to mac_pkgutil.py
+
+.. _`#30558`: https://github.com/saltstack/salt/pull/30558
+.. _`#30557`: https://github.com/saltstack/salt/pull/30557
+.. _`#30556`: https://github.com/saltstack/salt/pull/30556
+.. _`#30555`: https://github.com/saltstack/salt/pull/30555
+.. _`#30552`: https://github.com/saltstack/salt/pull/30552
+
+
+Package Support
+===============
+
+- Ubuntu Xenial: Packages for Ubuntu Xenial (16.04) are available for 2016.3.0 and
+  onwards. See `repo.saltstack.com`_ for more information. Note that Xenial comes
+  with Debian's packaged version of Salt 2015.8.8 and official `repo.saltstack.com`_
+  packages are available for 2015.8 releases beginning with Salt 2015.8.11.
+
+.. _`repo.saltstack.com`: https://repo.saltstack.com/#ubuntu
+
+
+Proxy Minion Changes
+====================
+
+The deprecated config option ``enumerate_proxy_minions`` has been removed.
+
+As mentioned in earlier documentation, the ``add_proxymodule_to_opts``
+configuration variable defaults to ``False`` in this release.  This means if you
+have proxymodules or other code looking in ``__opts__['proxymodule']`` you
+will need to set this variable in your ``/etc/salt/proxy`` file, or
+modify your code to use the `__proxy__` injected variable.
+
+The ``__proxyenabled__`` directive now only applies to grains and proxy modules
+themselves.  Standard execution modules and state modules are not prevented
+from loading for proxy minions.
+
+Support has been added to Salt's loader allowing custom proxymodules
+to be placed in ``salt://_proxy``.  Proxy minions that need these modules
+will need to be restarted to pick up any changes.  A corresponding utility function,
+``saltutil.sync_proxymodules``, has been added to sync these modules to minions.
+
+Enhancements in grains processing have made the ``__proxyenabled__`` directive
+somewhat redundant in dynamic grains code.  It is still required, but best
+practices for the ``__virtual__`` function in grains files have changed.  It
+is now recommended that the ``__virtual__`` functions check to make sure
+they are being loaded for the correct proxytype, example below:
+
+.. code-block:: python
+
+    def __virtual__():
+        '''
+        Only work on proxy
+        '''
+        try:
+            if salt.utils.is_proxy() and \
+               __opts__['proxy']['proxytype'] == 'ssh_sample':
+                return __virtualname__
+        except KeyError:
+            pass
+
+        return False
+
+The try/except block above exists because grains are processed very early
+in the proxy minion startup process, sometimes earlier than the proxy
+key in the ``__opts__`` dictionary is populated.
+
+Grains are loaded so early in startup that no dunder dictionaries are
+present, so ``__proxy__``, ``__salt__``, etc. are not available.  Custom
+grains located in ``/srv/salt/_grains`` and in the salt install grains
+directory can now take a single argument, ``proxy``, that is identical
+to ``__proxy__``.  This enables patterns like
+
+.. code-block:: python
+
+   def get_ip(proxy):
+       '''
+       Ask the remote device what IP it has
+       '''
+       return {'ip':proxy['proxymodulename.get_ip']()}
+
+
+Then the grain ``ip`` will contain the result of calling the ``get_ip()`` function
+in the proxymodule called ``proxymodulename``.
+
+Proxy modules now benefit from including a function called ``initialized()``.  This
+function should return ``True`` if the proxy's ``init()`` function has been successfully
+called.  This is needed to make grains processing easier.
+
+Finally, if there is a function called ``grains`` in the proxymodule, it
+will be executed on proxy-minion startup and its contents will be merged with
+the rest of the proxy's grains.  Since older proxy-minions might have used other
+methods to call such a function and add its results to grains, this is config-gated
+by a new proxy configuration option called ``proxy_merge_grains_in_module``.  This
+defaults to ``False`` in this release.  It will default to True in the release after
+next.  The next release is codenamed **Carbon**, the following is **Nitrogen**.
+
+The example proxy minions ``rest_sample`` and ``ssh_sample`` have been updated to
+reflect these changes.
+
+Syndic Updates
+==============
+
+A major performance and management issue was found and fixed in the syndic. This makes
+the Salt Syndic substantially more reliable and performant. Please make sure that the
+syndic and the master of masters which syndics attach to are updated, otherwise the
+syndic fixes alone can cause minor performance issues with older master of masters.
+Please update masters first, then syndics.
+Minions do not need to be updated for this fix to work.
+
+Module Changes
+==============
+
+- :mod:`file execution module <salt.modules.file>`: ``show_diff`` is deprecated in favor
+  of ``show_changes``. (:pull:`30988`)
+
+- :mod:`reg execution module <salt.modules.reg>`:
+
+  - Removed the following deprecated functions from the reg module (:pull:`30956`):
+
+    - read_key
+    - set_key
+    - create_key
+    - delete_key
+  - Removed force parameter from reg state module
+  - Fixed virtual function in state
+  - Improved error information for ``reg.delete_value`` function
+
+- :mod:`jboss7 execution module <salt.modules.jboss7>`: ``deployed`` function was
+  decoupled from Artifactory by removing Artifactory-specific functionality.
+  Note that the changes in some of the function arguments break existing state
+  files, see :issue:`30515` and :pull:`3080` for details.
+- :mod:`pkg state module <salt.states.pkg>`: The ``wait`` function was removed,
+  the functionality was replaced with the ``onchanges`` requisite (:pull:`30297`).
+- :mod:`firewalld state module <salt.states.firewalld>`: A ``permanent`` argument
+  was added ``add_port``. Note that ``permanent`` defaults to ``True``, which changes
+  previous behavior (:pull:`30275`). A ``bind`` function was also added that allows
+  binding zones to interfaces and sources (:pull:`29497`).
+- :mod:`journald beacon module <salt.beacons.journald>`: The event string was updated
+  to include a tag. Note this might impact existing reactors based on this beacon.
+  (:pull:`30116`).
+- :mod:`postgres_privileges state module <salt.states.postgres_privileges>`:
+  The default value of the ``prepend`` argument was changed from ``None`` to
+  ``public``.
+- :mod:`zenoss execution module <salt.modules.zenoss.add_device>`: The
+  ``add_device`` function was updated with a default value of ``1000`` for
+  ``prod_state`` to match the documentation (:pull:`28924`).
+- The etcd execution module, state module, returner module, and util module
+  were refactor (:pull:`28599`). This refactor changes error returns for
+  several functions (primarily edge cases):
+
+  - get: Used to return '' on key-not-found. Now returns None.
+  - set: Used to return '' on issues setting keys. Now returns None.
+  - ls: Used to return {path: {}} on key-not-found. Now returns None.
+  - Tree: Used to return {} on key-not-found. Now returns None.
+- :mod:`smartos_virt execution module <salt.modules.smartos_virt>`: Updated to
+  use most of the new smartos_vmadm (:pull:`28284`).
+- :mod:`apache_conf state module <salt.states.apache_conf>`,
+  :mod:`apache_module state module <salt.states.apache_module>`, and
+  :mod:`apache_site state module <salt.states.apache_site>`: the ``enable`` and
+  ``disable`` functions were renamed to ``enabled`` and ``disabled``,
+  respectively.  In :pull:`33562`, these functions were readded and properly
+  deprecated and will be removed in Salt 2017.7.0.  This fix will be available
+  in 2016.3.1.  As a workaround, try
+
+  .. code-block:: sls
+
+      apache_module.enable{{ 'd' if grains.saltversioninfo == [2016, 3, 0] else '' }}
+
+
+
+New Features
+============
+
+Thorium - Provisional New Reactor
+---------------------------------
+
+The 2016.3 release introduces the new Thorium Reactor. This reactor is an
+experimental new feature that implements a flow programming interface using
+the salt state system as the engine. This means that the Thorium reactor uses
+a classic state tree approach to create a reactor that can aggregate event
+data from multiple sources and make aggregate decisions about executing
+reactions.
+
+This feature is both experimental and provisional, it may be removed and APIs
+may be changed. This system should be considered as ambitious as the Salt
+State System in that the scope of adding a programmable logic engine of
+this scale into the event systems is non trivial.
+
+See :ref:`Thorium Complex Reactor <thorium-reactor>`.
+
+Improved Mac OS Support
+-----------------------
+
+
+Improved Solaris Support
+------------------------
+
+A lot of work was done to improve support for SmartOS. This work also
+resulted in improvements for Solaris and illumos as SmartOS.
+
+- rewrite of :mod:`vmadm module <salt.modules.smartos_vmadm>` (SmartOS)
+- rewrite of :mod:`imgadm module <salt.modules.smartos_imgadm>` (SmartOS)
+- deprecation of :mod:`virt module <salt.modules.smartos_virt>` in favor of vmadm (SmartOS)
+- implemented :mod:`smartos state <salt.states.smartos>` (SmartOS)
+- improved :mod:`zpool module <salt.modules.zpool>` add SmartOS, illumos and Solaris support
+- improved :mod:`zfs module <salt.modules.zfs>` add SmartOS, illumos and Solaris support
+- implemented :mod:`zpool state <salt.states.zpool>`
+- implemented :mod:`zfs state <salt.states.zfs>`
+  implemented :mod:`solaris_system <salt.modules.solaris_system>` system module to provide better Solaris support (:pull:`30519`)
+- other minor fixes to grains, localmod, ...
+
+Tornado Transport
+-----------------
+
+
+.. important::
+    The Tornado Transport wire protocol was changed in 2016.3, making it incompatible with 2015.8 (:pull:`29339`).
+
+Windows DSC Integration (Experiemental)
+---------------------------------------
+
+Dimension Data Cloud Support
+----------------------------
+A SaltStack Cloud driver for `Dimension Data Public Cloud`_, provides the driver functionality to service automation for any of the Dimension
+Data Public Cloud locations:
+
+- Deploy new virtual machines
+- List and query virtual machine images
+- Destroy and query virtual machines
+
+Documentation of the Dimension Data SaltStack integration is found on `developer.dimensiondata.com`_
+
+.. _`Dimension Data Public Cloud`: https://cloud.dimensiondata.com/
+.. _`developer.dimensiondata.com`: https://developer.dimensiondata.com/display/SAL/Getting+started
+
+Minion Blackout
+---------------
+During a blackout, minions will not execute any remote execution commands,
+except for :mod:`saltutil.refresh_pillar
+<salt.modules.saltutil.refresh_pillar>`. Blackouts are enabled using a special
+pillar key, ``minion_blackout`` set to ``True``.
+
+See :ref:`Minion Blackout <blackout>`.
+
+Splunk Returner
+---------------
+A Splunk Returner that uses HTTP Event Collector is now available (:pull:`30718`).
+
+SQLCipher Pillar Module
+-----------------------
+Support was added for retrieving pillar data via queries to SQLCiper databases (:pull:`29782`).
+
+New Modules
+===========
+The following list contains a link to the new modules added in this release.
+
+Beacons
+-------
+* :mod:`beacons.adb <salt.beacons.adb>`
+* :mod:`beacons.glxinfo <salt.beacons.glxinfo>`
+* :mod:`beacons.memusage <salt.beacons.memusage>`
+* :mod:`beacons.network_settings <salt.beacons.network_settings>`
+* :mod:`beacons.proxy_example <salt.beacons.proxy_example>`
+* :mod:`beacons.salt_proxy <salt.beacons.salt_proxy>`
+
+Engines
+-------
+* :mod:`engines.docker_events <salt.engines.docker_events>`
+* :mod:`engines.redis_sentinel <salt.engines.redis_sentinel>`
+* :mod:`engines.slack <salt.engines.slack>`
+* :mod:`engines.sqs_events <salt.engines.sqs_events>`
+* :mod:`engines.thorium <salt.engines.thorium>`
+
+Execution Modules
+-----------------
+* :mod:`modules.bcache <salt.modules.bcache>`
+* :mod:`modules.beacons <salt.modules.beacons>`
+* :mod:`modules.boto_cloudtrail <salt.modules.boto_cloudtrail>`
+* :mod:`modules.boto_datapipeline <salt.modules.boto_datapipeline>`
+* :mod:`modules.boto_iot <salt.modules.boto_iot>`
+* :mod:`modules.boto_lambda <salt.modules.boto_lambda>`
+* :mod:`modules.boto_s3_bucket <salt.modules.boto_s3_bucket>`
+* :mod:`modules.chronos <salt.modules.chronos>`
+* :mod:`modules.cytest <salt.modules.cytest>`
+* :mod:`modules.dockercompose <salt.modules.dockercompose>`
+* :mod:`modules.dsc <salt.modules.dsc>`
+* :mod:`modules.ethtool <salt.modules.ethtool>`
+* :mod:`modules.github <salt.modules.github>`
+* :mod:`modules.infoblox <salt.modules.infoblox>`
+* :mod:`modules.iwtools <salt.modules.iwtools>`
+* :mod:`modules.jenkins <salt.modules.jenkins>`
+* :mod:`modules.linux_ip <salt.modules.linux_ip>`
+* :mod:`modules.mac_assistive <salt.modules.mac_assistive>`
+* :mod:`modules.mac_brew <salt.modules.mac_brew>`
+* :mod:`modules.mac_defaults <salt.modules.mac_defaults>`
+* :mod:`modules.mac_desktop <salt.modules.mac_desktop>`
+* :mod:`modules.mac_keychain <salt.modules.mac_keychain>`
+* :mod:`modules.mac_pkgutil <salt.modules.mac_pkgutil>`
+* :mod:`modules.mac_ports <salt.modules.mac_ports>`
+* :mod:`modules.mac_power <salt.modules.mac_power>`
+* :mod:`modules.mac_service <salt.modules.mac_service>`
+* :mod:`modules.mac_shadow <salt.modules.mac_shadow>`
+* :mod:`modules.mac_softwareupdate <salt.modules.mac_softwareupdate>`
+* :mod:`modules.mac_sysctl <salt.modules.mac_sysctl>`
+* :mod:`modules.mac_system <salt.modules.mac_system>`
+* :mod:`modules.mac_timezone <salt.modules.mac_timezone>`
+* :mod:`modules.mac_xattr <salt.modules.mac_xattr>`
+* :mod:`modules.marathon <salt.modules.marathon>`
+* :mod:`modules.minion <salt.modules.minion>`
+* :mod:`modules.openvswitch <salt.modules.openvswitch>`
+* :mod:`modules.opkg <salt.modules.opkg>`
+* :mod:`modules.philips_hue <salt.modules.philips_hue>`
+* :mod:`modules.proxy <salt.modules.proxy>`
+* :mod:`modules.pushbullet <salt.modules.pushbullet>`
+* :mod:`modules.restartcheck <salt.modules.restartcheck>`
+* :mod:`modules.s6 <salt.modules.s6>`
+* :mod:`modules.salt_proxy <salt.modules.salt_proxy>`
+* :mod:`modules.ssh_package <salt.modules.ssh_package>`
+* :mod:`modules.ssh_service <salt.modules.ssh_service>`
+* :mod:`modules.sysfs <salt.modules.sysfs>`
+* :mod:`modules.vboxmanage <salt.modules.vboxmanage>`
+* :mod:`modules.win_certutil <salt.modules.win_certutil>`
+* :mod:`modules.win_dism <salt.modules.win_dism>`
+* :mod:`modules.win_dism <salt.modules.win_dism>`
+* :mod:`modules.win_license <salt.modules.win_license>`
+* :mod:`modules.win_iis <salt.modules.win_iis>`
+* :mod:`modules.win_task <salt.modules.win_task>`
+* :mod:`modules.zabbix <salt.modules.zabbix>`
+
+Pillar
+------
+* :mod:`pillar.http_yaml <salt.pillar.http_yaml>`
+* :mod:`pillar.stack <salt.pillar.stack>`
+
+Proxy
+-----
+* :mod:`proxy.chronos <salt.proxy.chronos>`
+* :mod:`proxy.junos <salt.proxy.junos>`
+* :mod:`proxy.marathon <salt.proxy.marathon>`
+* :mod:`proxy.phillips_hue <salt.proxy.phillips_hue>`
+* :mod:`proxy.ssh_sample <salt.proxy.ssh_sample>`
+
+Roster
+------
+* :mod:`roster.range <salt.roster.range>`
+
+States
+------
+* :mod:`states.apache_conf <salt.states.apache_conf>`
+* :mod:`states.apache_site <salt.states.apache_site>`
+* :mod:`states.boto_cloudtrail <salt.states.boto_cloudtrail>`
+* :mod:`states.boto_datapipeline <salt.states.boto_datapipeline>`
+* :mod:`states.boto_iot <salt.states.boto_iot>`
+* :mod:`states.boto_lamda <salt.states.boto_lamda>`
+* :mod:`states.boto_s3_bucket <salt.states.boto_s3_bucket>`
+* :mod:`states.chocolatey <salt.states.chocolatey>`
+* :mod:`states.chronos_job <salt.states.chronos_job>`
+* :mod:`states.firewall <salt.states.firewall>`
+* :mod:`states.github <salt.states.github>`
+* :mod:`states.gpg <salt.states.gpg>`
+* :mod:`states.grafana_dashboard <salt.states.grafana_dashboard>`
+* :mod:`states.grafana_datasource <salt.states.grafana_datasource>`
+* :mod:`states.infoblox <salt.states.infoblox>`
+* :mod:`states.jenkins <salt.states.jenkins>`
+* :mod:`states.mac_assistive <salt.states.mac_assistive>`
+* :mod:`states.mac_defaults <salt.states.mac_defaults>`
+* :mod:`states.mac_keychain <salt.states.mac_keychain>`
+* :mod:`states.mac_xattr <salt.states.mac_xattr>`
+* :mod:`states.marathon_app <salt.states.marathon_app>`
+* :mod:`states.openvswitch_bridge <salt.states.openvswitch_bridge>`
+* :mod:`states.openvswitch_port <salt.states.openvswitch_port>`
+* :mod:`states.postgres_cluster <salt.states.postgres_cluster>`
+* :mod:`states.proxy <salt.states.proxy>`
+* :mod:`states.salt_proxy <salt.states.salt_proxy>`
+* :mod:`states.virt <salt.states.virt>`
+* :mod:`states.win_certutil <salt.states.win_certutil>`
+* :mod:`states.win_dism <salt.states.win_dism>`
+* :mod:`states.win_license <salt.states.win_license>`
+* :mod:`states.zabbix_host <salt.states.zabbix_host>`
+* :mod:`states.zabbix_hostgroup <salt.states.zabbix_hostgroup>`
+* :mod:`states.zabbix_user <salt.states.zabbix_user>`
+* :mod:`states.zabbix_usergroup <salt.states.zabbix_usergroup>`
+

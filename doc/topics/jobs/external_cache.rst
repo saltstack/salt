@@ -1,4 +1,4 @@
-.. _external-master-cache:
+.. _external-job-cache:
 
 =========================================
 Storing Job Results in an External System
@@ -13,11 +13,12 @@ mechanisms to send job results to other systems (databases, local syslog,
 and others):
 
 * External Job Cache
-* Master Job Cache 
+* Master Job Cache
 
-The major difference between these two
-mechanism is from where results are returned (from the Salt Master or Salt
-Minion).
+The major difference between these two mechanism is from where results are
+returned (from the Salt Master or Salt Minion). Configuring either of these
+options will also make the :py:mod:`Jobs Runner functions <salt.runners.jobs>`
+to automatically query the remote stores for infomation.
 
 External Job Cache - Minion-Side Returner
 -----------------------------------------
@@ -62,7 +63,7 @@ Before you configure a job cache, it is essential to understand Salt returner
 modules ("returners"). Returners are pluggable Salt Modules that take the data
 returned by jobs, and then perform any necessary steps to send the data to an
 external system. For example, a returner might establish a connection,
-authenticate, and then format and transfer data. 
+authenticate, and then format and transfer data.
 
 The Salt Returner system provides the core functionality used by the External
 and Master Job Cache systems, and the same returners are used by both systems.
@@ -77,7 +78,7 @@ For example, the MySQL returner requires:
 
 * A database created using provided schema (structure is available at
   :mod:`MySQL returner <salt.returners.mysql>`)
-* A user created with with privileges to the database
+* A user created with privileges to the database
 * Optional SSL configuration
 
 A simpler returner, such as Slack or HipChat, requires:
@@ -89,12 +90,33 @@ A simpler returner, such as Slack or HipChat, requires:
 Step 2: Configure the Returner
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-After you understand the configuration and have the external system ready, add
-the returner configuration settings to the Salt Minion configuration file for
-the External Job Cache, or to the Salt Master configuration file for the Master
-Job Cache. 
+After you understand the configuration and have the external system ready, the
+configuration requirements must be declared.
 
-For example, MySQL requires:
+External Job Cache
+""""""""""""""""""
+
+The returner configuration settings can be declared in the Salt Minion
+configuration file, the Minion's pillar data, or the Minion's grains.
+
+If ``external_job_cache`` configuration settings are specified in more than
+one place, the options are retrieved in the following order. The first
+configuration location that is found is the one that will be used.
+
+- Minion configuration file
+- Minion's grains
+- Minion's pillar data
+
+Master Job Cache
+""""""""""""""""
+
+The returner configuration settings for the Master Job Cache should be
+declared in the Salt Master's configuration file.
+
+Configuration File Examples
+"""""""""""""""""""""""""""
+
+MySQL requires:
 
 .. code-block:: yaml
 
@@ -108,7 +130,7 @@ Slack requires:
 
 .. code-block:: yaml
 
-    slack.channel: 'channel' 
+    slack.channel: 'channel'
     slack.api_key: 'key'
     slack.from_name: 'name'
 

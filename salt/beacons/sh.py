@@ -2,13 +2,19 @@
 '''
 Watch the shell commands being executed actively. This beacon requires strace.
 '''
+
 # Import python libs
+from __future__ import absolute_import
 import time
+
 # Import salt libs
 import salt.utils
 import salt.utils.vt
 
 __virtualname__ = 'sh'
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -34,6 +40,16 @@ def _get_shells():
     return __context__['sh.shells']
 
 
+def __validate__(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for sh beacon should be a list of dicts
+    if not isinstance(config, dict):
+        return False, ('Configuration for sh beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
+
+
 def beacon(config):
     '''
     Scan the shell execve routines. This beacon will convert all login shells
@@ -49,7 +65,7 @@ def beacon(config):
     ps_out = __salt__['status.procs']()
     track_pids = []
     for pid in ps_out:
-        if ps_out[pid].get('cmd', '') in shells:
+        if any(ps_out[pid].get('cmd', '').lstrip('-') in shell for shell in shells):
             track_pids.append(pid)
     if pkey not in __context__:
         __context__[pkey] = {}

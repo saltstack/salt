@@ -2,7 +2,7 @@
 Getting Started With SoftLayer
 ==============================
 
-SoftLayer is a public cloud provider, and baremetal hardware hosting provider.
+SoftLayer is a public cloud host, and baremetal hardware hosting service.
 
 Dependencies
 ============
@@ -36,7 +36,7 @@ Set up the cloud config at ``/etc/salt/cloud.providers``:
       user: MYUSER1138
       apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
 
-      provider: softlayer
+      driver: softlayer
 
 
     my-softlayer-hw:
@@ -48,8 +48,16 @@ Set up the cloud config at ``/etc/salt/cloud.providers``:
       user: MYUSER1138
       apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
 
-      provider: softlayer_hw
+      driver: softlayer_hw
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Access Credentials
 ==================
@@ -132,7 +140,34 @@ instance.
 
 disk_size
 ---------
-The amount of disk space that will be allocated to this image, in megabytes.
+The amount of disk space that will be allocated to this image, in gigabytes.
+
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: 100
+
+Using Multiple Disks
+~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.1
+
+SoftLayer allows up to 5 disks to be specified for a virtual machine upon
+creation. Multiple disks can be specified either as a list or a comma-delimited
+string. The first ``disk_size`` specified in the string or list will be the first
+disk size assigned to the VM.
+
+List Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: ['100', '20', '20']
+
+String Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: '100, 20, 20'
 
 local_disk
 ----------
@@ -150,6 +185,66 @@ The domain name that will be used in the FQDN (Fully Qualified Domain Name) for
 this instance. The `domain` setting will be used in conjunction with the
 instance name to form the FQDN.
 
+use_fqdn
+--------
+If set to True, the Minion will be identified by the FQDN (Fully Qualified Domain
+Name) which is a result of combining the ``domain`` configuration value and the
+Minion name specified either via the CLI or a map file rather than only using the
+short host name, or Minion ID. Default is False.
+
+.. versionadded:: 2016.3.0
+
+For example, if the value of ``domain`` is ``example.com`` and a new VM was created
+via the CLI with ``salt-cloud -p base_softlayer_ubuntu my-vm``, the resulting
+Minion ID would be ``my-vm.example.com``.
+
+.. note::
+    When enabling the ``use_fqdn`` setting, the Minion ID will be the FQDN and will
+    interact with salt commands with the FQDN instead of the short hostname. However,
+    due to the way the SoftLayer API is constructed, some Salt Cloud functions such
+    as listing nodes or destroying VMs will only list the short hostname of the VM
+    instead of the FQDN.
+
+Example output displaying the SoftLayer hostname quirk mentioned in the note above
+(note the Minion ID is ``my-vm.example.com``, but the VM to be destroyed is listed
+with its short hostname, ``my-vm``):
+
+.. code-block:: bash
+
+    # salt-key -L
+    Accepted Keys:
+    my-vm.example.com
+    Denied Keys:
+    Unaccepted Keys:
+    Rejected Keys:
+    #
+    #
+    # salt my-vm.example.com test.ping
+    my-vm.example.com:
+        True
+    #
+    #
+    # salt-cloud -d my-vm.example.com
+    [INFO    ] salt-cloud starting
+    [INFO    ] POST https://api.softlayer.com/xmlrpc/v3.1/SoftLayer_Account
+    The following virtual machines are set to be destroyed:
+      softlayer-config:
+        softlayer:
+          my-vm
+
+    Proceed? [N/y] y
+    ... proceeding
+    [INFO    ] Destroying in non-parallel mode.
+    [INFO    ] POST https://api.softlayer.com/xmlrpc/v3.1/SoftLayer_Account
+    [INFO    ] POST https://api.softlayer.com/xmlrpc/v3.1/SoftLayer_Virtual_Guest
+    softlayer-config:
+        ----------
+        softlayer:
+            ----------
+            my-vm:
+                True
+
+
 location
 --------
 Images to build an instance can be found using the `--list-locations` option:
@@ -163,6 +258,19 @@ max_net_speed
 Specifies the connection speed for the instance's network components. This
 setting is optional. By default, this is set to 10.
 
+post_uri
+--------
+Specifies the uri location of the script to be downloaded and run after the instance
+is provisioned.
+
+.. versionadded:: 2015.8.1
+
+Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      post_uri: 'https://SOMESERVERIP:8000/myscript.sh'
+
 public_vlan
 -----------
 If it is necessary for an instance to be created within a specific frontend
@@ -171,6 +279,15 @@ configuration.
 
 This ID can be queried using the `list_vlans` function, as described below. This
 setting is optional.
+
+If this setting is set to `None`, salt-cloud will connect to the private ip of
+the server.
+
+.. note::
+
+    If this setting is not provided and the server is not built with a public
+    vlan, `private_ssh` or `private_wds` will need to be set to make sure that
+    salt-cloud attempts to connect to the private ip.
 
 private_vlan
 ------------
@@ -187,12 +304,12 @@ If a server is to only be used internally, meaning it does not have a public
 VLAN associated with it, this value would be set to True. This setting is
 optional. The default is False.
 
-private_ssh
------------
+private_ssh or private_wds
+--------------------------
 Whether to run the deploy script on the server using the public IP address
-or the private IP address. If set to True, Salt Cloud will attempt to SSH into
-the new server using the private IP address. The default is False. This
-settiong is optional.
+or the private IP address. If set to True, Salt Cloud will attempt to SSH or
+WinRM into the new server using the private IP address. The default is False.
+This settiong is optional.
 
 global_identifier
 -----------------
@@ -383,7 +500,7 @@ The `globalIdentifier` returned in this list is necessary for the
 
 Optional Products for SoftLayer HW
 ==================================
-The softlayer_hw provider supports the ability to add optional products, which
+The softlayer_hw driver supports the ability to add optional products, which
 are supported by SoftLayer's API. These products each have an ID associated with
 them, that can be passed into Salt Cloud with the `optional_products` option:
 

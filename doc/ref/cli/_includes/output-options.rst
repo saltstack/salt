@@ -33,6 +33,10 @@ Output Options
 
     Write the output to the specified file.
 
+.. option:: --out-file-append, --output-file-append
+
+    Append the output to the specified file.
+
 .. option:: --no-color
 
     Disable all colored output
@@ -46,3 +50,14 @@ Output Options
 
         ``green`` denotes success, ``red`` denotes failure, ``blue`` denotes
         changes and success and ``yellow`` denotes a expected future change in configuration.
+
+.. option:: --state-output=STATE_OUTPUT, --state_output=STATE_OUTPUT
+
+    Override the configured state_output value for minion
+    output. One of 'full', 'terse', 'mixed', 'changes' or
+    'filter'. Default: 'none'.
+
+.. option:: --state-verbose=STATE_VERBOSE, --state_verbose=STATE_VERBOSE
+
+    Override the configured state_verbose value for minion
+    output. Set to True or False. Default: none.

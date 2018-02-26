@@ -27,13 +27,17 @@ the Salt Virt systems.
     This project never took off, but was functional and proves the early
     viability of Salt to be a cloud controller.
 
+.. warning::
+    Salt Virt does not work with KVM that is running in a VM. KVM must be running
+    on the base hardware.
+
 Salt Virt Tutorial
 ==================
 
 A tutorial about how to get Salt Virt up and running has been added to the
 tutorial section:
 
-:doc:`Cloud Controller Tutorial </topics/tutorials/cloud_controller>`
+:ref:`Cloud Controller Tutorial <cloud-controller>`
 
 The Salt Virt Runner
 ====================
@@ -62,3 +66,4 @@ Deploy from Network or Disk
 .. toctree::
     disk
     nic
+    ../tutorials/cloud_controller

@@ -1,10 +1,14 @@
 [Unit]
 Description=The Salt API
-After=syslog.target network.target
+Documentation=man:salt-api(1) file:///usr/share/doc/salt/html/contents.html https://docs.saltstack.com/en/latest/contents.html
+After=network.target
 
 [Service]
-Type=simple
+Type=notify
+NotifyAccess=all
+LimitNOFILE=8192
 ExecStart=/usr/bin/salt-api
+TimeoutStopSec=3
 
 [Install]
 WantedBy=multi-user.target

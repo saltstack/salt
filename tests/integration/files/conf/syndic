@@ -1,12 +1,9 @@
-include: master
-# syndic basic config
-# same config as master ./except the syndic bits
-# in the TestCase we add at the top of the configfile the content of ./master
-# to avoid duplication
-order_masters: True
-acceptance_wait_time: 1
-syndic_log_file: osyndic.log
-syndic_pidfile: osyndic.pid
+# Syndic Settings
+id: syndic
+interface: 127.0.0.1
 syndic_master: localhost
 syndic_master_port: 54506
-
+syndic_log_file: syndic.log
+syndic_pidfile: syndic.pid
+tcp_pub_port: 64510
+tcp_pull_port: 64511

@@ -30,7 +30,7 @@ DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
 # Source function library.
 if [ -f $DEBIAN_VERSION ]; then
-   break   
+   break
 elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
     . /etc/rc.status
 else
@@ -58,7 +58,7 @@ start() {
         rc_status -v
     elif [ -e $DEBIAN_VERSION ]; then
         if [ -f $LOCKFILE ]; then
-            echo -n "already started, lock file found" 
+            echo -n "already started, lock file found"
             RETVAL=1
         elif $PYTHON $SALTMASTER -d $MASTER_ARGS >& /dev/null; then
             echo -n "OK"
@@ -108,6 +108,7 @@ case "$1" in
             echo -n "Checking for service salt-master "
             checkproc $SALTMASTER
             rc_status -v
+            RETVAL=$?
         elif [ -f $DEBIAN_VERSION ]; then
             if [ -f $LOCKFILE ]; then
                 RETVAL=0
@@ -121,15 +122,15 @@ case "$1" in
             RETVAL=$?
         fi
         ;;
-    condrestart)
+    condrestart|try-restart)
         [ -f $LOCKFILE ] && restart || :
         ;;
     reload)
         echo "can't reload configuration, you have to restart it"
-        RETVAL=$?
+        RETVAL=1
         ;;
     *)
-        echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload}"
         exit 1
         ;;
 esac

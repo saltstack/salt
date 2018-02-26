@@ -10,27 +10,33 @@ Should be removed once support for psutil <2.0 is dropped. (eg RHEL 6)
 Built off of http://grodola.blogspot.com/2014/01/psutil-20-porting.html
 '''
 
+# Import Python libs
 from __future__ import absolute_import
 
+# Import Salt libs
+import salt.ext.six as six
+
 # No exception handling, as we want ImportError if psutil doesn't exist
-import psutil
+import psutil  # pylint: disable=3rd-party-module-not-gated
 
 if psutil.version_info >= (2, 0):
-    from psutil import *  # pylint: disable=wildcard-import
+    from psutil import *  # pylint: disable=wildcard-import,unused-wildcard-import,3rd-party-module-not-gated
 else:
     # Import hack to work around bugs in old psutil's
     # Psuedo "from psutil import *"
     _globals = globals()
     for attr in psutil.__all__:
-        _temp = __import__('psutil', globals(), locals(), [attr], -1)
+        _temp = __import__('psutil', globals(), locals(), [attr], -1 if six.PY2 else 0)
         try:
             _globals[attr] = getattr(_temp, attr)
         except AttributeError:
             pass
 
     # Import functions not in __all__
-    from psutil import disk_partitions  # pylint: disable=unused-import
-    from psutil import disk_usage  # pylint: disable=unused-import
+    # pylint: disable=unused-import,3rd-party-module-not-gated
+    from psutil import disk_partitions
+    from psutil import disk_usage
+    # pylint: enable=unused-import,3rd-party-module-not-gated
 
     # Alias new module functions
     def boot_time():
@@ -41,7 +47,11 @@ else:
 
     # Alias renamed module functions
     pids = psutil.get_pid_list
-    users = psutil.get_users
+    try:
+        users = psutil.get_users
+    except AttributeError:
+        users = lambda: (_ for _ in ()).throw(NotImplementedError('Your '
+                                              'psutil version is too old'))
 
     # Deprecated in 1.0.1, but not mentioned in blog post
     if psutil.version_info < (1, 0, 1):
@@ -68,10 +78,16 @@ else:
                 return self.get_nice()
 
         def rlimit(self, *args, **kwargs):
-            if args or kwargs:
-                return self.set_rlimit(*args, **kwargs)
+            '''
+            set_rlimit and get_limit were not introduced until psutil v1.1.0
+            '''
+            if psutil.version_info >= (1, 1, 0):
+                if args or kwargs:
+                    return self.set_rlimit(*args, **kwargs)
+                else:
+                    return self.get_rlimit()
             else:
-                return self.get_rlimit()
+                pass
 
     # Alias renamed Process functions
     _PROCESS_FUNCTION_MAP = {
@@ -93,7 +109,7 @@ else:
 
     }
 
-    for new, old in _PROCESS_FUNCTION_MAP.iteritems():
+    for new, old in six.iteritems(_PROCESS_FUNCTION_MAP):
         try:
             setattr(Process, new, psutil.Process.__dict__[old])
         except KeyError:

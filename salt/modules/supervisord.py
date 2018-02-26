@@ -59,7 +59,7 @@ def _ctl_cmd(cmd, name, conf_file, bin_env):
     ret.append(cmd)
     if name:
         ret.append(name)
-    return ' ' .join(ret)
+    return ret
 
 
 def _get_return(ret):
@@ -245,9 +245,9 @@ def reread(user=None, conf_file=None, bin_env=None):
     return _get_return(ret)
 
 
-def update(user=None, conf_file=None, bin_env=None):
+def update(user=None, conf_file=None, bin_env=None, name=None):
     '''
-    Reload config and add/remove as necessary
+    Reload config and add/remove/update as necessary
 
     user
         user to run supervisorctl as
@@ -256,6 +256,9 @@ def update(user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor
         installed
+    name
+        name of the process group to update. if none then update any
+        process group that has changes
 
     CLI Example:
 
@@ -263,8 +266,15 @@ def update(user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.update
     '''
+
+    if isinstance(name, string_types):
+        if name.endswith(':'):
+            name = name[:-1]
+        elif name.endswith(':*'):
+            name = name[:-2]
+
     ret = __salt__['cmd.run_all'](
-        _ctl_cmd('update', None, conf_file, bin_env),
+        _ctl_cmd('update', name, conf_file, bin_env),
         runas=user,
         python_shell=False,
     )
@@ -395,7 +405,7 @@ def options(name, conf_file=None):
     config = _read_config(conf_file)
     section_name = 'program:{0}'.format(name)
     if section_name not in config.sections():
-        raise CommandExecutionError('Process {0!r} not found'.format(name))
+        raise CommandExecutionError('Process \'{0}\' not found'.format(name))
     ret = {}
     for key, val in config.items(section_name):
         val = salt.utils.str_to_num(val.split(';')[0].strip())

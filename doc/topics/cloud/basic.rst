@@ -3,7 +3,7 @@ Salt Cloud basic usage
 
 Salt Cloud needs, at least, one configured
 :ref:`Provider <cloud-provider-specifics>`
-and :doc:`Profile <profiles>` to be functional.
+and :ref:`Profile <salt-cloud-profiles>` to be functional.
 
 Creating a VM
 -------------
@@ -19,7 +19,7 @@ Assuming there is a profile configured as following:
 .. code-block:: bash
 
     fedora_rackspace:
-        provider: rackspace
+        provider: my-rackspace-config
         image: Fedora 17
         size: 256 server
         script: bootstrap-salt

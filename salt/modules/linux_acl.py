@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Support for Linux File Access Control Lists
+
+The Linux ACL module requires the `getfacl` and `setfacl` binaries.
+
 '''
 from __future__ import absolute_import
 
@@ -18,7 +21,7 @@ def __virtual__():
     '''
     if salt.utils.which('getfacl'):
         return __virtualname__
-    return False
+    return (False, 'The linux_acl execution module cannot be loaded: the getfacl binary is not in the path.')
 
 
 def version():
@@ -63,7 +66,7 @@ def getfacl(*args, **kwargs):
     if recursive:
         cmd += ' -R'
     for dentry in args:
-        cmd += ' {0}'.format(dentry)
+        cmd += ' "{0}"'.format(dentry)
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     dentry = ''
     for line in out:
@@ -109,11 +112,12 @@ def getfacl(*args, **kwargs):
                 if entity in vals:
                     del vals[entity]
                     if acl_type == 'acl':
-                        ret[dentry][entity] = vals
+                        ret[dentry][entity] = [{"": vals}]
                     elif acl_type == 'default':
                         if 'defaults' not in ret[dentry]:
                             ret[dentry]['defaults'] = {}
-                        ret[dentry]['defaults'][entity] = vals
+                        ret[dentry]['defaults'][entity] = [{"": vals}]
+
     return ret
 
 
@@ -140,17 +144,17 @@ def _parse_acl(acl, user, group):
     # Set the permissions fields
     octal = 0
     vals['permissions'] = {}
-    if 'r' in comps[2]:
+    if 'r' in comps[-1]:
         octal += 4
         vals['permissions']['read'] = True
     else:
         vals['permissions']['read'] = False
-    if 'w' in comps[2]:
+    if 'w' in comps[-1]:
         octal += 2
         vals['permissions']['write'] = True
     else:
         vals['permissions']['write'] = False
-    if 'x' in comps[2]:
+    if 'x' in comps[-1]:
         octal += 1
         vals['permissions']['execute'] = True
     else:
@@ -179,12 +183,27 @@ def wipefacls(*args, **kwargs):
     if recursive:
         cmd += ' -R'
     for dentry in args:
-        cmd += ' {0}'.format(dentry)
+        cmd += ' "{0}"'.format(dentry)
     __salt__['cmd.run'](cmd, python_shell=False)
     return True
 
 
-def modfacl(acl_type, acl_name, perms, *args, **kwargs):
+def _acl_prefix(acl_type):
+    prefix = ''
+    if acl_type.startswith('d'):
+        prefix = 'd:'
+        acl_type = acl_type.replace('default:', '')
+        acl_type = acl_type.replace('d:', '')
+    if acl_type == 'user' or acl_type == 'u':
+        prefix += 'u'
+    elif acl_type == 'group' or acl_type == 'g':
+        prefix += 'g'
+    elif acl_type == 'mask' or acl_type == 'm':
+        prefix += 'm'
+    return prefix
+
+
+def modfacl(acl_type, acl_name='', perms='', *args, **kwargs):
     '''
     Add or modify a FACL for the specified file(s)
 
@@ -208,24 +227,15 @@ def modfacl(acl_type, acl_name, perms, *args, **kwargs):
 
     cmd += ' -m'
 
-    prefix = ''
-    if acl_type.startswith('d'):
-        prefix = 'd:'
-        acl_type = acl_type.replace('default:', '')
-        acl_type = acl_type.replace('d:', '')
-    if acl_type == 'user' or acl_type == 'u':
-        prefix += 'u'
-    elif acl_type == 'group' or acl_type == 'g':
-        prefix += 'g'
-    cmd = '{0} {1}:{2}:{3}'.format(cmd, prefix, acl_name, perms)
+    cmd = '{0} {1}:{2}:{3}'.format(cmd, _acl_prefix(acl_type), acl_name, perms)
 
     for dentry in args:
-        cmd += ' {0}'.format(dentry)
+        cmd += ' "{0}"'.format(dentry)
     __salt__['cmd.run'](cmd, python_shell=False)
     return True
 
 
-def delfacl(acl_type, acl_name, *args, **kwargs):
+def delfacl(acl_type, acl_name='', *args, **kwargs):
     '''
     Remove specific FACL from the specified file(s)
 
@@ -243,22 +253,15 @@ def delfacl(acl_type, acl_name, *args, **kwargs):
 
     _raise_on_no_files(*args)
 
-    cmd = 'setfacl -x'
+    cmd = 'setfacl'
     if recursive:
         cmd += ' -R'
 
-    prefix = ''
-    if acl_type.startswith('d'):
-        prefix = 'd:'
-        acl_type = acl_type.replace('default:', '')
-        acl_type = acl_type.replace('d:', '')
-    if acl_type == 'user' or acl_type == 'u':
-        prefix += 'u'
-    elif acl_type == 'group' or acl_type == 'g':
-        prefix += 'g'
-    cmd = '{0} {1}:{2}'.format(cmd, prefix, acl_name)
+    cmd += ' -x'
+
+    cmd = '{0} {1}:{2}'.format(cmd, _acl_prefix(acl_type), acl_name)
 
     for dentry in args:
-        cmd += ' {0}'.format(dentry)
+        cmd += ' "{0}"'.format(dentry)
     __salt__['cmd.run'](cmd, python_shell=False)
     return True

@@ -46,18 +46,14 @@ There is also the option of specifying a dynamic inventory, and generating it on
 
     #!/bin/bash
     echo '{
-      "servers": {
-        "hosts": [
-          "salt.gtmanfred.com"
-        ]
-      },
-      "desktop": {
-        "hosts": [
-          "home"
-        ]
-      },
+      "servers": [
+        "salt.gtmanfred.com"
+      ],
+      "desktop": [
+        "home"
+      ],
       "computers": {
-        "hosts":{},
+        "hosts": [],
         "children": [
           "desktop",
           "servers"
@@ -91,16 +87,20 @@ This is the format that an inventory script needs to output to work with ansible
 
 Any of the [groups] or direct hostnames will return.  The 'all' is special, and returns everything.
 '''
+# Import Python libs
 from __future__ import absolute_import
 import os
 import re
 import fnmatch
-import shlex
 import json
-import salt.utils
 import subprocess
+
+# Import Salt libs
+import salt.utils
 from salt.roster import get_roster_file
 
+# Import 3rd-party libs
+import salt.ext.six as six
 
 CONVERSION = {
     'ansible_ssh_host': 'host',
@@ -135,17 +135,18 @@ class Target(object):
         Execute the correct tgt_type routine and return
         '''
         try:
-            return getattr(self, 'get_{0}'.format(self.tgt_type))()
+            routine = getattr(self, 'get_{0}'.format(self.tgt_type))
         except AttributeError:
             return {}
+        return routine()
 
     def get_glob(self):
         '''
         Return minions that match via glob
         '''
         ret = dict()
-        for key, value in self.groups.items():
-            for host, info in value.items():
+        for key, value in six.iteritems(self.groups):
+            for host, info in six.iteritems(value):
                 if fnmatch.fnmatch(host, self.tgt):
                     ret[host] = info
         for nodegroup in self.groups:
@@ -205,7 +206,7 @@ class Inventory(Target):
         '''
         Parse lines in the inventory file that are under the same group block
         '''
-        line_args = shlex.split(line)
+        line_args = salt.utils.shlex_split(line)
         name = line_args[0]
         host = {line_args[0]: dict()}
         for arg in line_args[1:]:
@@ -244,14 +245,16 @@ class Script(Target):
         self.tgt = tgt
         self.tgt_type = tgt_type
         inventory, error = subprocess.Popen([inventory_file], shell=True, stdout=subprocess.PIPE).communicate()
-        self.inventory = json.loads(inventory)
+        self.inventory = json.loads(salt.utils.to_str(inventory))
         self.meta = self.inventory.get('_meta', {})
         self.groups = dict()
         self.hostvars = dict()
         self.parents = dict()
-        for key, value in self.inventory.items():
+        for key, value in six.iteritems(self.inventory):
             if key == '_meta':
                 continue
+            if type(value) is list:
+                self._parse_groups(key, value)
             if 'hosts' in value:
                 self._parse_groups(key, value['hosts'])
             if 'children' in value:
@@ -271,8 +274,9 @@ class Script(Target):
             if tmp is not False:
                 if server not in host:
                     host[server] = dict()
-                for tmpkey, tmpval in tmp.items():
-                    host[server][CONVERSION[tmpkey]] = tmpval
+                for tmpkey, tmpval in six.iteritems(tmp):
+                    if tmpkey in CONVERSION:
+                        host[server][CONVERSION[tmpkey]] = tmpval
                 if 'sudo' in host[server]:
                     host[server]['passwd'], host[server]['sudo'] = host[server]['sudo'], True
 

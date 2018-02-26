@@ -7,8 +7,11 @@ import logging
 log = logging.getLogger(__name__)
 
 # Import pyrax (SDK for Rackspace cloud) third party libs
-import pyrax
-import pyrax.exceptions
+try:
+    import pyrax
+    import pyrax.exceptions
+except ImportError:
+    raise
 
 # Import salt classes
 from salt.utils.openstack.pyrax import authenticate

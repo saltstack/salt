@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
 import io
+
+# Import 3rd-party libs
 import yaml
 import salt.ext.six as six
 
@@ -11,7 +16,7 @@ def yaml_dquote(text):
     quote characters.
     '''
     with io.StringIO() as ostream:
-        yemitter = yaml.emitter.Emitter(ostream)
+        yemitter = yaml.emitter.Emitter(ostream, width=six.MAXSIZE)
         yemitter.write_double_quoted(six.text_type(text))
         return ostream.getvalue()
 
@@ -23,7 +28,7 @@ def yaml_squote(text):
     quote characters.
     '''
     with io.StringIO() as ostream:
-        yemitter = yaml.emitter.Emitter(ostream)
+        yemitter = yaml.emitter.Emitter(ostream, width=six.MAXSIZE)
         yemitter.write_single_quoted(six.text_type(text))
         return ostream.getvalue()
 

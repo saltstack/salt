@@ -1,0 +1,13 @@
+[Unit]
+Description=salt-proxy service for %i
+Documentation=man:salt-proxy(1) file:///usr/share/doc/salt/html/contents.html https://docs.saltstack.com/en/latest/contents.html
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/salt-proxy --proxyid=%i
+Type=simple
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

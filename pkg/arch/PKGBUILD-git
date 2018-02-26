@@ -51,13 +51,13 @@ pkgver() {
 
 #build() {
 #  cd "${srcdir}/${_gitname}"
-#  python2 setup.py build 
+#  python2 setup.py build
    # no need to build setup.py install will do this
 #}
 
 package() {
   cd "${srcdir}/${_gitname}"
-  
+
   python2 setup.py install --root=${pkgdir}/ --optimize=1
 
   install -Dm644 ${srcdir}/salt/pkg/arch/salt-master.service ${pkgdir}/usr/lib/systemd/system/salt-master.service

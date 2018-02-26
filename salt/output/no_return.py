@@ -23,7 +23,9 @@ class NestDisplay(object):
     Create generator for nested output
     '''
     def __init__(self):
-        self.colors = salt.utils.get_colors(__opts__.get('color'))
+        self.colors = salt.utils.get_colors(
+                __opts__.get('color'),
+                __opts__.get('color_theme'))
 
     def display(self, ret, indent, prefix, out):
         '''
@@ -51,7 +53,7 @@ class NestDisplay(object):
         return out
 
 
-def output(ret):
+def output(ret, **kwargs):  # pylint: disable=unused-argument
     '''
     Display ret data
     '''

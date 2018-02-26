@@ -61,12 +61,19 @@ def returner(load):
         _mminion().returners['{0}.returner'.format(returner_)](load)
 
 
-def save_load(jid, clear_load):
+def save_load(jid, clear_load, minions=None):
     '''
     Write load to all returners in multi_returner
     '''
     for returner_ in __opts__[CONFIG_KEY]:
         _mminion().returners['{0}.save_load'.format(returner_)](jid, clear_load)
+
+
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 def get_load(jid):

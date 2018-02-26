@@ -42,13 +42,13 @@ Freenode at #salt. There is no need to introduce yourself, or ask permission to
 join in, just help and be helped! Make sure to wait for an answer, sometimes it
 may take a few moments for someone to reply.
 
-  `<http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83>`_
+`<http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83>`_
 
 **Mailing List** - The SaltStack community users mailing list is hosted by
 Google groups. Anyone can post to ask questions about SaltStack products and
 anyone can help answer. Join the conversation!
 
-  `<https://groups.google.com/forum/#!forum/salt-users>`_
+`<https://groups.google.com/forum/#!forum/salt-users>`_
 
 You may subscribe to the list without a Google account by emailing
 salt-users+subscribe@googlegroups.com and you may post to the list by emailing
@@ -67,8 +67,8 @@ Engage SaltStack
 
 `SaltConf`_, **User Groups and Meetups** - SaltStack has a vibrant and `global
 community`_ of customers, users, developers and enthusiasts. Connect with other
-Salted folks in your area of the world, or join `SaltConf16`_, the SaltStack
-annual user conference, April 19-21 in Salt Lake City. Please let us know if
+Salted folks in your area of the world, or join `SaltConf18`_, the SaltStack
+annual user conference, September 10-14 in Salt Lake City. Please let us know if
 you would like to start a user group or if we should add your existing
 SaltStack user group to this list by emailing: info@saltstack.com
 
@@ -91,7 +91,7 @@ services`_ offerings.
 
 .. _SaltConf: http://www.youtube.com/user/saltstack
 .. _global community: http://www.meetup.com/pro/saltstack/
-.. _SaltConf16: http://saltconf.com/
+.. _SaltConf18: http://saltconf.com/
 .. _SaltStack education offerings: http://saltstack.com/training/
 .. _SaltStack Certified Engineer (SSCE): http://saltstack.com/certification/
 .. _SaltStack professional services: http://saltstack.com/services/
@@ -104,6 +104,8 @@ helping people get new code and fixes into SaltStack projects. Log into
 GitHub and get started with one of the largest developer communities in
 the world. The following links should get you started:
 
-* `<https://github.com/saltstack>`_
-* `<https://docs.saltstack.com/en/latest/topics/development/index.html>`_
+`<https://github.com/saltstack>`_
 
+`<https://docs.saltstack.com/en/latest/topics/development/index.html>`_
+
+`<https://docs.saltstack.com/en/develop/topics/development/pull_requests.html>`_

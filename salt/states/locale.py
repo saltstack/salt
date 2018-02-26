@@ -3,20 +3,35 @@
 Management of languages/locales
 ===============================
 
-The locale can be managed for the system:
+Manage the available locales and the system default:
 
 .. code-block:: yaml
 
-    en_US.UTF-8:
-      locale.system
+    us_locale:
+      locale.present:
+        - name: en_US.UTF-8
+
+    default_locale:
+      locale.system:
+        - name: en_US.UTF-8
+        - require:
+          - locale: us_locale
 '''
+
+from __future__ import absolute_import
+
+# Import salt libs
+from salt.exceptions import CommandExecutionError
 
 
 def __virtual__():
     '''
     Only load if the locale module is available in __salt__
     '''
-    return 'locale.get_locale' in __salt__
+    if 'locale.get_locale' in __salt__:
+        return True
+    else:
+        return (False, __salt__.missing_fun_string('locale.get_locale'))
 
 
 def system(name):
@@ -30,21 +45,26 @@ def system(name):
            'changes': {},
            'result': None,
            'comment': ''}
-    if __salt__['locale.get_locale']() == name:
-        ret['result'] = True
-        ret['comment'] = 'System locale {0} already set'.format(name)
-        return ret
-    if __opts__['test']:
-        ret['comment'] = 'System locale {0} needs to be set'.format(name)
-        return ret
-    if __salt__['locale.set_locale'](name):
-        ret['changes'] = {'locale': name}
-        ret['result'] = True
-        ret['comment'] = 'Set system locale {0}'.format(name)
-        return ret
-    else:
+    try:
+        if __salt__['locale.get_locale']() == name:
+            ret['result'] = True
+            ret['comment'] = 'System locale {0} already set'.format(name)
+            return ret
+        if __opts__['test']:
+            ret['comment'] = 'System locale {0} needs to be set'.format(name)
+            return ret
+        if __salt__['locale.set_locale'](name):
+            ret['changes'] = {'locale': name}
+            ret['result'] = True
+            ret['comment'] = 'Set system locale {0}'.format(name)
+            return ret
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to set system locale to {0}'.format(name)
+            return ret
+    except CommandExecutionError as err:
         ret['result'] = False
-        ret['comment'] = 'Failed to set system locale to {0}'.format(name)
+        ret['comment'] = 'Failed to set system locale: {0}'.format(err)
         return ret
 
 
@@ -55,7 +75,8 @@ def present(name):
     .. versionadded:: 2014.7.0
 
     name
-        The name of the locale to be present
+        The name of the locale to be present. Some distributions require the
+        charmap to be specified as part of the locale at this point.
     '''
     ret = {'name': name,
            'changes': {},

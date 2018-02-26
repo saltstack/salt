@@ -1,8 +1,8 @@
 .. _all-salt.sdb:
 
-================================
-Full list of builtin sdb modules
-================================
+===========
+sdb modules
+===========
 
 .. currentmodule:: salt.sdb
 
@@ -10,7 +10,17 @@ Full list of builtin sdb modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cache
+    confidant
+    consul
+    couchdb
+    env
     etcd_db
     keyring_db
     memcached
+    rest
     sqlite3
+    tism
+    vault
+    yaml
+

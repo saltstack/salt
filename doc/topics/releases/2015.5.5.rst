@@ -2,8 +2,7 @@
 Salt 2015.5.5 Release Notes
 ===========================
 
-Version 2015.5.5 is a bugfix release for :doc:`2015.5.0
-</topics/releases/2015.5.0>`.
+Version 2015.5.5 is a bugfix release for :ref:`2015.5.0<release-2015-5-0>`.
 
 Changes:
 
@@ -51,7 +50,7 @@ Changes:
   - **ISSUE** `#25192`_: (*deuscapturus*) 2015.5.2 boto_cloudwatch_alarm.present not working.
     | refs: `#26290`_
 
-- **PR** `#26288`_: (*bbinet*) allow to delete grains which value is False
+- **PR** `#26288`_: (*bbinet*) allow deleting grains which value is False
   @ *2015-08-13T18:24:36Z*
 
 - **PR** `#26263`_: (*rallytime*) Don't make changes when test=True for openstack present/absent funcs
@@ -547,7 +546,7 @@ Changes:
 - **PR** `#25807`_: (*rallytime*) Provide helpful error when using actions with a mapfile
   @ *2015-07-29T15:30:15Z*
 
-  - **ISSUE** `#22699`_: (*arthurlogilab*) salt-cloud fails on KeyError when given a nonexistant action
+  - **ISSUE** `#22699`_: (*arthurlogilab*) salt-cloud fails on KeyError when given a nonexistent action
     | refs: `#25807`_
 
 - **PR** `#25818`_: (*jfindlay*) fix autoruns list
@@ -1049,7 +1048,7 @@ Changes:
 - **PR** `#25392`_: (*rallytime*) Back-port `#25256`_ to 2015.5
   @ *2015-07-14T03:25:13Z*
 
-  - **PR** `#25256`_: (*yanatan16*) Dont assume source_hash exists
+  - **PR** `#25256`_: (*yanatan16*) Don't assume source_hash exists
     | refs: `#25392`_
 
 - **PR** `#25398`_: (*twangboy*) Fix date
@@ -1110,7 +1109,7 @@ Changes:
 - **PR** `#25326`_: (*rallytime*) Back-port `#20972`_ to 2015.5
   @ *2015-07-10T18:49:44Z*
 
-  - **ISSUE** `#19288`_: (*oba11*) AssociatePublicIpAddress doesnt work with salt-cloud 2014.7.0
+  - **ISSUE** `#19288`_: (*oba11*) AssociatePublicIpAddress doesn't work with salt-cloud 2014.7.0
     | refs: `#20972`_ `#25326`_
   - **PR** `#20972`_: (*JohannesEbke*) Fix interface cleanup when using AssociatePublicIpAddress in `#19288`_
     | refs: `#25326`_
@@ -1302,7 +1301,7 @@ Changes:
   - **ISSUE** `#24979`_: (*mavenAtHouzz*) [Discussion] Support for more than 1 netapi.rest_tornado server process
     | refs: `#25149`_
 
-- **PR** `#25120`_: (*d--j*) add missing continue for exeption case
+- **PR** `#25120`_: (*d--j*) add missing continue for exception case
   @ *2015-07-02T19:38:45Z*
 
 - **PR** `#25117`_: (*basepi*) Fix fileclient.is_cached
@@ -1365,7 +1364,7 @@ Changes:
 
   - **ISSUE** `#26366`_: (*GreatSnoopy*) The development tree produces hanging, 100%cpu salt-master processes
     | refs: `#26443`_
-  - **ISSUE** `#26301`_: (*waynew*) CPU pegged out running salt-master (after running command) 
+  - **ISSUE** `#26301`_: (*waynew*) CPU pegged out running salt-master (after running command)
     | refs: `#26443`_
   - **ISSUE** `#25998`_: (*driskell*) Event subsystem discarding required events during --batch breaking it for slow running commands
     | refs: `#26000`_
@@ -1388,7 +1387,7 @@ Changes:
 - **PR** `#26496`_: (*jfindlay*) add dateutil dependency reporting
   @ *2015-08-19T22:46:31Z*
 
-- **PR** `#26494`_: (*cachedout*) Remove unecessary debug statements
+- **PR** `#26494`_: (*cachedout*) Remove unnecessary debug statements
   @ *2015-08-19T20:46:00Z*
 
 - **PR** `#26465`_: (*rallytime*) Back-port `#26457`_ to 2015.5
@@ -2025,7 +2024,6 @@ Changes:
 .. _`fix-24036`: https://github.com/saltstack/salt/issues/24036
 .. _`fix-24272`: https://github.com/saltstack/salt/issues/24272
 .. _`fix-24483`: https://github.com/saltstack/salt/issues/24483
-.. _`fix-24484`: https://github.com/saltstack/salt/issues/24484
 .. _`fix-24882`: https://github.com/saltstack/salt/issues/24882
 .. _`fix-25192`: https://github.com/saltstack/salt/issues/25192
 .. _`fix-25616`: https://github.com/saltstack/salt/issues/25616
@@ -2033,11 +2031,7 @@ Changes:
 .. _`#16049`: https://github.com/saltstack/salt/issues/16049
 .. _`#16179`: https://github.com/saltstack/salt/issues/16179
 .. _`#24334`: https://github.com/saltstack/salt/issues/24334
-.. _`#24484`: https://github.com/saltstack/salt/issues/24484
 .. _`#25562`: https://github.com/saltstack/salt/issues/25562
-.. _`#25801`: https://github.com/saltstack/salt/issues/25801
-.. _`#25998`: https://github.com/saltstack/salt/issues/25998
-.. _`#26000`: https://github.com/saltstack/salt/pull/26000
 .. _`#26155`: https://github.com/saltstack/salt/issues/26155
 .. _`#26160`: https://github.com/saltstack/salt/pull/26160
 .. _`#26161`: https://github.com/saltstack/salt/issues/26161

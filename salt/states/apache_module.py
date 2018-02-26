@@ -9,14 +9,18 @@ Enable and disable apache modules.
 .. code-block:: yaml
 
     Enable cgi module:
-        apache_module.enable:
-            - name: cgi
+      apache_module.enabled:
+        - name: cgi
 
     Disable cgi module:
-        apache_module.disable:
-            - name: cgi
+      apache_module.disabled:
+        - name: cgi
 '''
+
+# Import Python libs
 from __future__ import absolute_import
+
+# Import salt libs
 from salt.ext.six import string_types
 
 
@@ -27,16 +31,18 @@ def __virtual__():
     return 'apache_module' if 'apache.a2enmod' in __salt__ else False
 
 
-def enable(name):
+def enabled(name):
     '''
     Ensure an Apache module is enabled.
+
+    .. versionadded:: 2016.3.0
 
     name
         Name of the Apache module
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_enabled = __salt__['apache.check_mod_enabled']('{0}.load'.format(name))
+    is_enabled = __salt__['apache.check_mod_enabled'](name)
     if not is_enabled:
         if __opts__['test']:
             msg = 'Apache module {0} is set to be enabled.'.format(name)
@@ -61,16 +67,18 @@ def enable(name):
     return ret
 
 
-def disable(name):
+def disabled(name):
     '''
     Ensure an Apache module is disabled.
+
+    .. versionadded:: 2016.3.0
 
     name
         Name of the Apache module
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_enabled = __salt__['apache.check_mod_enabled']('{0}.load'.format(name))
+    is_enabled = __salt__['apache.check_mod_enabled'](name)
     if is_enabled:
         if __opts__['test']:
             msg = 'Apache module {0} is set to be disabled.'.format(name)

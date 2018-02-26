@@ -13,6 +13,7 @@ import yaml
 
 # Import salt libs
 import salt.config
+from salt.utils.yamldumper import SafeOrderedDumper
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +40,13 @@ def apply(key, value):
     data = values()
     data[key] = value
     with salt.utils.fopen(path, 'w+') as fp_:
-        fp_.write(yaml.dump(data, default_flow_style=False))
+        fp_.write(
+            yaml.dump(
+                data,
+                default_flow_style=False,
+                Dumper=SafeOrderedDumper
+            )
+        )
 
 
 def update_config(file_name, yaml_contents):
@@ -77,7 +84,7 @@ def update_config(file_name, yaml_contents):
 
         if not os.path.exists(dir_path):
             log.debug('Creating directory {0}'.format(dir_path))
-            os.makedirs(dir_path, 755)
+            os.makedirs(dir_path, 0o755)
 
         file_path = os.path.join(dir_path, file_name)
         with salt.utils.fopen(file_path, 'w') as fp_:

@@ -17,13 +17,16 @@ A state module for creating or destroying software RAID devices.
         - chunk: 256
         - run: True
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -61,6 +64,9 @@ def present(name,
     devices
         A list of devices used to build the array.
 
+    kwargs
+        Optional arguments to be passed to mdadm.
+
     Example:
 
     .. code-block:: yaml
@@ -93,14 +99,14 @@ def present(name,
         cmd = 'mdadm -E {0}'.format(dev)
         can_assemble[dev] = __salt__['cmd.retcode'](cmd) == 0
 
-    if True in can_assemble.values() and False in can_assemble.values():
-        in_raid = sorted([x[0] for x in can_assemble.items() if x[1]])
-        not_in_raid = sorted([x[0] for x in can_assemble.items() if not x[1]])
+    if True in six.itervalues(can_assemble) and False in six.itervalues(can_assemble):
+        in_raid = sorted([x[0] for x in six.iteritems(can_assemble) if x[1]])
+        not_in_raid = sorted([x[0] for x in six.iteritems(can_assemble) if not x[1]])
         ret['comment'] = 'Devices are a mix of RAID constituents ({0}) and '\
             'non-RAID-constituents({1}).'.format(in_raid, not_in_raid)
         ret['result'] = False
         return ret
-    elif can_assemble.values()[0]:
+    elif next(six.itervalues(can_assemble)):
         do_assemble = True
         verb = 'assembled'
     else:

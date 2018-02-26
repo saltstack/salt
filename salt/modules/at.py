@@ -4,6 +4,10 @@ Wrapper module for at(1)
 
 Also, a 'tag' feature has been added to more
 easily tag jobs.
+
+:platform:      linux,openbsd,freebsd
+
+.. versionchanged:: 2017.7.0
 '''
 from __future__ import absolute_import
 
@@ -15,8 +19,8 @@ import datetime
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import map
-from salt.ext.six.moves import shlex_quote as _cmd_quote
 # pylint: enable=import-error,redefined-builtin
+from salt.exceptions import CommandNotFoundError
 
 # Import salt libs
 import salt.utils
@@ -27,25 +31,30 @@ import salt.utils
 # Tested on OpenBSD 5.0
 BSD = ('OpenBSD', 'FreeBSD')
 
+__virtualname__ = 'at'
+
 
 def __virtual__():
     '''
     Most everything has the ability to support at(1)
     '''
-    if salt.utils.is_windows() or salt.utils.which('at') is None:
-        return False
-    return True
+    if salt.utils.is_windows() or salt.utils.is_sunos():
+        return (False, 'The at module could not be loaded: unsupported platform')
+    if salt.utils.which('at') is None:
+        return (False, 'The at module could not be loaded: at command not found')
+    return __virtualname__
 
 
 def _cmd(binary, *args):
     '''
     Wrapper to run at(1) or return None.
     '''
-    # TODO: Use CommandNotFoundException for this
     binary = salt.utils.which(binary)
-    if binary:
-        return __salt__['cmd.run_stdout']('{0} {1}'.format(binary,
-            ' '.join(args)))
+    if not binary:
+        raise CommandNotFoundError('{0}: command not found'.format(binary))
+    cmd = [binary] + list(args)
+    return __salt__['cmd.run_stdout']([binary] + list(args),
+                                      python_shell=False)
 
 
 def atq(tag=None):
@@ -78,15 +87,15 @@ def atq(tag=None):
     if output == '':
         return {'jobs': jobs}
 
+    # Jobs created with at.at() will use the following
+    # comment to denote a tagged job.
+    job_kw_regex = re.compile(r'^### SALT: (\w+)')
+
     # Split each job into a dictionary and handle
     # pulling out tags or only listing jobs with a certain
     # tag
     for line in output.splitlines():
         job_tag = ''
-
-        # Jobs created with at.at() will use the following
-        # comment to denote a tagged job.
-        job_kw_regex = re.compile(r'^### SALT: (\w+)')
 
         # Redhat/CentOS
         if __grains__['os_family'] == 'RedHat':
@@ -160,6 +169,9 @@ def atrm(*args):
     if not args:
         return {'jobs': {'removed': [], 'tag': None}}
 
+    # Convert all to strings
+    args = [str(arg) for arg in args]
+
     if args[0] == 'all':
         if len(args) > 1:
             opts = list(list(map(str, [j['job'] for j in atq(args[1])['jobs']])))
@@ -169,7 +181,7 @@ def atrm(*args):
             ret = {'jobs': {'removed': opts, 'tag': None}}
     else:
         opts = list(list(map(str, [i['job'] for i in atq()['jobs']
-            if i['job'] in args])))
+            if str(i['job']) in args])))
         ret = {'jobs': {'removed': opts, 'tag': None}}
 
     # Shim to produce output similar to what __virtual__() should do
@@ -206,28 +218,16 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     if not binary:
         return '\'at.at\' is not available.'
 
-    if __grains__['os_family'] == 'RedHat':
-        echo_cmd = 'echo -e'
-    else:
-        echo_cmd = 'echo'
-
     if 'tag' in kwargs:
-        cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(_cmd_quote(kwargs['tag']),
-                                                          _cmd_quote(' '.join(args[1:])),
-                                                          binary,
-                                                          _cmd_quote(args[0]),
-                                                          echo_cmd)
+        stdin = '### SALT: {0}\n{1}'.format(kwargs['tag'], ' '.join(args[1:]))
     else:
-        cmd = '{3} "{1}" | {2} {0}'.format(_cmd_quote(args[0]),
-                                           _cmd_quote(' '.join(args[1:])),
-                                           binary,
-                                           echo_cmd)
+        stdin = ' '.join(args[1:])
+    cmd = [binary, args[0]]
 
-    # Can't use _cmd here since we need to prepend 'echo_cmd'
+    cmd_kwargs = {'stdin': stdin, 'python_shell': False}
     if 'runas' in kwargs:
-        output = __salt__['cmd.run']('{0}'.format(cmd), python_shell=True, runas=kwargs['runas'])
-    else:
-        output = __salt__['cmd.run']('{0}'.format(cmd), python_shell=True)
+        cmd_kwargs['runas'] = kwargs['runas']
+    output = __salt__['cmd.run'](cmd, **cmd_kwargs)
 
     if output is None:
         return '\'at.at\' is not available.'
@@ -268,7 +268,7 @@ def atc(jobid):
     if output is None:
         return '\'at.atc\' is not available.'
     elif output == '':
-        return {'error': 'invalid job id {0!r}'.format(jobid)}
+        return {'error': 'invalid job id \'{0}\''.format(jobid)}
 
     return output
 

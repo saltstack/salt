@@ -1,8 +1,8 @@
 .. _all-salt.renderers:
 
-=====================================
-Full list of builtin renderer modules
-=====================================
+================
+renderer modules
+================
 
 .. currentmodule:: salt.renderers
 
@@ -11,12 +11,16 @@ Full list of builtin renderer modules
     :template: autosummary.rst.tmpl
 
     cheetah
+    dson
     genshi
     gpg
+    hjson
     jinja
     json
+    json5
     mako
     msgpack
+    pass
     py
     pydsl
     pyobjects

@@ -18,7 +18,7 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Gentoo' and salt.utils.which('eselect'):
         return 'eselect'
-    return False
+    return (False, 'The eselect execution module cannot be loaded: either the system is not Gentoo or the eselect binary is not in the path.')
 
 
 def exec_action(module, action, module_parameter=None, action_parameter=None, state_only=False):
@@ -89,12 +89,17 @@ def get_modules():
     return modules
 
 
-def get_target_list(module):
+def get_target_list(module, action_parameter=None):
     '''
     List available targets for the given module.
 
     module
         name of the module to be queried for its targets
+
+    action_parameter
+        additional params passed to the defined action
+
+        .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -102,7 +107,7 @@ def get_target_list(module):
 
         salt '*' eselect.get_target_list kernel
     '''
-    exec_output = exec_action(module, 'list')
+    exec_output = exec_action(module, 'list', action_parameter=action_parameter)
     if not exec_output:
         return None
 

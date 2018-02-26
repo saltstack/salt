@@ -21,6 +21,7 @@
           host: 127.0.0.1
           port: 9999
           version: 0
+          msg_type: logstash
 
     In the `Logstash`_ configuration file:
 
@@ -43,6 +44,7 @@
           host: 127.0.0.1
           port: 9999
           version: 1
+          msg_type: logstash
 
     In the `Logstash`_ configuration file:
 
@@ -152,9 +154,9 @@
     .. _`high water mark`: http://api.zeromq.org/3-2:zmq-setsockopt
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import json
 import logging
@@ -162,12 +164,12 @@ import logging.handlers
 import datetime
 
 # Import salt libs
-from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
 import salt.utils.network
 
 # Import Third party libs
+import salt.ext.six as six
 try:
     import zmq
 except ImportError:
@@ -185,7 +187,7 @@ def __virtual__():
         log.trace(
             'None of the required configuration sections, '
             '\'logstash_udp_handler\' and \'logstash_zmq_handler\', '
-            'were found the in the configuration. Not loading the Logstash '
+            'were found in the configuration. Not loading the Logstash '
             'logging handlers module.'
         )
         return False
@@ -199,6 +201,7 @@ def setup_handlers():
         host = __opts__['logstash_udp_handler'].get('host', None)
         port = __opts__['logstash_udp_handler'].get('port', None)
         version = __opts__['logstash_udp_handler'].get('version', 0)
+        msg_type = __opts__['logstash_udp_handler'].get('msg_type', 'logstash')
 
         if host is None and port is None:
             log.debug(
@@ -207,7 +210,7 @@ def setup_handlers():
                 'configuring the logstash UDP logging handler.'
             )
         else:
-            logstash_formatter = LogstashFormatter(version=version)
+            logstash_formatter = LogstashFormatter(msg_type=msg_type, version=version)
             udp_handler = DatagramLogstashHandler(host, port)
             udp_handler.setFormatter(logstash_formatter)
             udp_handler.setLevel(
@@ -304,7 +307,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             )
 
         # Add any extra attributes to the message field
-        for key, value in record.__dict__.items():
+        for key, value in six.iteritems(record.__dict__):
             if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
                        'filename', 'funcName', 'id', 'levelname', 'levelno',
                        'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
@@ -317,7 +320,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 message_dict['@fields'][key] = value
                 continue
 
-            if isinstance(value, (string_types, bool, dict, float, int, list)):
+            if isinstance(value, (six.string_types, bool, dict, float, int, list)):
                 message_dict['@fields'][key] = value
                 continue
 
@@ -348,7 +351,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             )
 
         # Add any extra attributes to the message field
-        for key, value in record.__dict__.items():
+        for key, value in six.iteritems(record.__dict__):
             if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
                        'filename', 'funcName', 'id', 'levelname', 'levelno',
                        'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
@@ -361,7 +364,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 message_dict[key] = value
                 continue
 
-            if isinstance(value, (string_types, bool, dict, float, int, list)):
+            if isinstance(value, (six.string_types, bool, dict, float, int, list)):
                 message_dict[key] = value
                 continue
 

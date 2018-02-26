@@ -1,0 +1,5 @@
+===========================
+Salt 2016.3.6 Release Notes
+===========================
+
+Version 2016.3.6 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.

@@ -23,7 +23,9 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres.schema_exists' in __salt__
+    if 'postgres.schema_exists' not in __salt__:
+        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    return True
 
 
 def present(dbname, name,
@@ -38,6 +40,9 @@ def present(dbname, name,
 
     name
         The name of the schema to manage
+
+    owner
+        The database user that will be the owner of the schema
 
     db_user
         database username if different from config or default
@@ -99,7 +104,7 @@ def absent(dbname, name,
            db_user=None, db_password=None,
            db_host=None, db_port=None):
     '''
-    Ensure that the named schema is absent
+    Ensure that the named schema is absent.
 
     dbname
         The database's name will work on

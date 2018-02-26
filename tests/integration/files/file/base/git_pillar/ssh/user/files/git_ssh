@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/bin/ssh -p {{ pillar['git_pillar']['sshd_port'] }} -i /root/.ssh/{{ pillar['git_pillar']['id_rsa_nopass'] }} "$@"

@@ -1,3 +1,5 @@
+.. _starting-states:
+
 =========================
 How Do I Use Salt States?
 =========================
@@ -16,7 +18,7 @@ This is often called configuration management.
 .. note::
 
     This is just the beginning of using states, make sure to read up on pillar
-    :doc:`Pillar </topics/tutorials/pillar>` next.
+    :ref:`Pillar <pillar-walk-through>` next.
 
 
 It is All Just Data
@@ -39,8 +41,8 @@ The Top File
 ============
 
 The example SLS files in the below sections can be assigned to hosts using a
-file called :strong:`top.sls`. This file is described in-depth :doc:`here
-</ref/states/top>`.
+file called :strong:`top.sls`. This file is described in-depth :ref:`here
+<states-top>`.
 
 
 Default Data - YAML
@@ -169,6 +171,8 @@ this:
 
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
+
+.. include:: ../../_incl/_incl/sls_filename_cant_contain_period.rst
 
 But when using more than one single SLS file, more components can be added to
 the toolkit. Consider this SSH example:
@@ -306,7 +310,7 @@ to configure the banner.
 In the new mod_python SLS the mod_python package is added, but more importantly
 the apache service was extended to also watch the mod_python package.
 
-.. include:: /_incl/extend_with_require_watch.rst
+.. include:: ../../_incl/extend_with_require_watch.rst
 
 
 Understanding the Render System
@@ -328,9 +332,9 @@ templating system, and more notably, the pure Python or ``py``, ``pydsl`` &
 ``pyobjects`` renderers.
 The ``py`` renderer allows for SLS files to be written in pure Python,
 allowing for the utmost level of flexibility and power when preparing SLS
-data; while the :doc:`pydsl</ref/renderers/all/salt.renderers.pydsl>` renderer
+data; while the :mod:`pydsl<salt.renderers.pydsl>` renderer
 provides a flexible, domain-specific language for authoring SLS data in Python;
-and the :doc:`pyobjects</ref/renderers/all/salt.renderers.pyobjects>` renderer
+and the :mod:`pyobjects<salt.renderers.pyobjects>` renderer
 gives you a `"Pythonic"`_ interface to building state data.
 
 .. _`Jinja2`: http://jinja.pocoo.org/
@@ -344,9 +348,8 @@ gives you a `"Pythonic"`_ interface to building state data.
     They can also be used in :mod:`file.managed <salt.states.file.managed>`
     states, making file management much more dynamic and flexible. Some
     examples for using templates in managed files can be found in the
-    documentation for the :doc:`file states
-    </ref/states/all/salt.states.file>`, as well as the :ref:`MooseFS
-    example<jinja-example-moosefs>` below.
+    documentation for the :mod:`file state <salt.states.file>`, as well as the
+    :ref:`MooseFS example<jinja-example-moosefs>` below.
 
 
 Getting to Know the Default - yaml_jinja
@@ -364,7 +367,7 @@ for the Grains to be accessed from within the template. A few examples:
 
 ``apache/init.sls:``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
       pkg.installed:
@@ -408,7 +411,7 @@ a MooseFS distributed filesystem chunkserver:
 
 ``moosefs/chunk.sls:``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     include:
       - moosefs
@@ -493,9 +496,9 @@ This is a very simple example; the first line has an SLS shebang that
 tells Salt to not use the default renderer, but to use the ``py`` renderer.
 Then the run function is defined, the return value from the run function
 must be a Salt friendly data structure, or better known as a Salt
-:doc:`HighState data structure</ref/states/highstate>`.
+:ref:`HighState data structure<states-highstate>`.
 
-Alternatively, using the :doc:`pydsl</ref/renderers/all/salt.renderers.pydsl>`
+Alternatively, using the :mod:`pydsl<salt.renderers.pydsl>`
 renderer, the above example can be written more succinctly as:
 
 .. code-block:: python
@@ -505,7 +508,7 @@ renderer, the above example can be written more succinctly as:
     include('python', delayed=True)
     state('django').pkg.installed()
 
-The :doc:`pyobjects</ref/renderers/all/salt.renderers.pyobjects>` renderer
+The :mod:`pyobjects<salt.renderers.pyobjects>` renderer
 provides an `"Pythonic"`_ object based approach for building the state data.
 The above example could be written as:
 
@@ -517,7 +520,7 @@ The above example could be written as:
     Pkg.installed("django")
 
 
-This Python examples would look like this if they were written in YAML:
+These Python examples would look like this if they were written in YAML:
 
 .. code-block:: yaml
 
@@ -531,8 +534,8 @@ This example clearly illustrates that; one, using the YAML renderer by default
 is a wise decision and two, unbridled power can be obtained where needed by
 using a pure Python SLS.
 
-Running and debugging salt states.
-----------------------------------
+Running and Debugging Salt States
+---------------------------------
 
 Once the rules in an SLS are ready, they should be tested to ensure they
 work properly. To invoke these rules, simply execute
@@ -554,4 +557,4 @@ Next Reading
 With an understanding of states, the next recommendation is to become familiar
 with Salt's pillar interface:
 
-    :doc:`Pillar Walkthrough </topics/tutorials/pillar>`
+    :ref:`Pillar Walkthrough <pillar-walk-through>`

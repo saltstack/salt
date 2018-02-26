@@ -1,0 +1,2 @@
+pip==9.0.1
+setuptools==35.0.2

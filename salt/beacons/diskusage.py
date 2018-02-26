@@ -12,9 +12,6 @@ from __future__ import absolute_import
 import logging
 import re
 
-# Import Salt libs
-import salt.utils
-
 # Import Third Party Libs
 try:
     import psutil
@@ -28,41 +25,83 @@ __virtualname__ = 'diskusage'
 
 
 def __virtual__():
-    if salt.utils.is_windows():
-        return False
-    elif HAS_PSUTIL is False:
+    if HAS_PSUTIL is False:
         return False
     else:
         return __virtualname__
 
 
-def beacon(config):
+def __validate__(config):
     '''
+    Validate the beacon configuration
+    '''
+    # Configuration for diskusage beacon should be a list of dicts
+    if not isinstance(config, dict):
+        return False, ('Configuration for diskusage beacon '
+                       'must be a dictionary.')
+    return True, 'Valid beacon configuration'
+
+
+def beacon(config):
+    r'''
     Monitor the disk usage of the minion
 
     Specify thresholds for each disk and only emit a beacon if any of them are
     exceeded.
 
-    code_block:: yaml
+    .. code-block:: yaml
 
         beacons:
           diskusage:
             - /: 63%
             - /mnt/nfs: 50%
+
+    Windows drives must be quoted to avoid yaml syntax errors
+
+    .. code-block:: yaml
+
+        beacons:
+          diskusage:
+            -  interval: 120
+            - 'c:\': 90%
+            - 'd:\': 50%
+
+    Regular expressions can be used as mount points.
+
+    .. code-block:: yaml
+
+        beacons:
+          diskusage:
+            - '^\/(?!home).*$': 90%
+            - '^[a-zA-Z]:\$': 50%
+
+    The first one will match all mounted disks beginning with "/", except /home
+    The second one will match disks from A:\ to Z:\ on a Windows system
+
+    Note that if a regular expression are evaluated after static mount points,
+    which means that if a regular expression matches an other defined mount point,
+    it will override the previously defined threshold.
+
     '''
+    parts = psutil.disk_partitions(all=False)
     ret = []
-    for diskusage in config:
-        mount = diskusage.keys()[0]
+    for mounts in config:
+        mount = mounts.keys()[0]
 
         try:
             _current_usage = psutil.disk_usage(mount)
         except OSError:
             # Ensure a valid mount point
-            log.error('{0} is not a valid mount point, skipping.'.format(mount))
+            log.warning('{0} is not a valid mount point, try regex.'.format(mount))
+            for part in parts:
+                if re.match(mount, part.mountpoint):
+                    row = {}
+                    row[part.mountpoint] = mounts[mount]
+                    config.append(row)
             continue
 
         current_usage = _current_usage.percent
-        monitor_usage = diskusage[mount]
+        monitor_usage = mounts[mount]
         if '%' in monitor_usage:
             monitor_usage = re.sub('%', '', monitor_usage)
         monitor_usage = float(monitor_usage)

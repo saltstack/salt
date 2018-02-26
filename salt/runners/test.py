@@ -37,11 +37,23 @@ def raw_arg(*args, **kwargs):
     return ret
 
 
+def metasyntactic(locality='us'):
+    '''
+    Return common metasyntactic variables for the given locality
+    '''
+    lookup = {
+        'us': ['foo', 'bar', 'baz', 'qux', 'quux', 'quuz', 'corge', 'grault',
+            'garply', 'waldo', 'fred', 'plugh', 'xyzzy', 'thud'],
+        'uk': ['wibble', 'wobble', 'wubble', 'flob'],
+    }
+    return lookup.get(locality, None)
+
+
 def stdout_print():
     '''
     Print 'foo' and return 'bar'
     '''
-    print ('foo')
+    print('foo')
     return 'bar'
 
 
@@ -49,7 +61,7 @@ def sleep(s_time=10):
     '''
     Sleep t seconds, then return True
     '''
-    print (s_time)
+    print(s_time)
     time.sleep(s_time)
     return True
 

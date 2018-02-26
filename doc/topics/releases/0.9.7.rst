@@ -73,7 +73,7 @@ lookup_jid
 ``````````
 
 When jobs are executed the return data is sent back to the master and cached.
-By default is is cached for 24 hours, but this can be configured via the
+By default is cached for 24 hours, but this can be configured via the
 ``keep_jobs`` option in the master configuration.
 
 Using the ``lookup_jid`` runner will display the same return data that the
@@ -99,7 +99,7 @@ to another environment.
 
 An external node classification can be set in the master configuration file via
 the ``external_nodes`` option:
-http://salt.readthedocs.org/en/latest/ref/configuration/master.html#external-nodes
+https://salt.readthedocs.io/en/latest/ref/configuration/master.html#external-nodes
 
 External nodes are loaded in addition to the top files. If it is intended to
 only use external nodes, do not deploy any top files.

@@ -1,26 +1,24 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
+from __future__ import absolute_import
+from __future__ import print_function
 import json
 import time
-from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
+import threading
 
 # Import Salt Libs
+import salt.utils
 from salt.netapi.rest_tornado import saltnado
-from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
+from salt.utils.versions import StrictVersion
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
+from tests.unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
+from tests.support.helpers import flaky
+from tests.support.unit import skipIf
 
-ensure_in_syspath('../../../')
-
-try:
-    import tornado
-    HAS_TORNADO = True
-except ImportError:
-    HAS_TORNADO = False
-
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     import zmq
     from zmq.eventloop.ioloop import ZMQIOLoop
@@ -29,15 +27,30 @@ except ImportError:
     HAS_ZMQ_IOLOOP = False
 
 
-@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
+def json_loads(data):
+    if six.PY3 and isinstance(data, bytes):
+        data = data.decode('utf-8')
+    return json.loads(data)
+
+
+class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstract-method
+
+    @property
+    def opts(self):
+        return self.get_config('client_config', from_scratch=True)
+
+    @property
+    def mod_opts(self):
+        return self.get_config('minion', from_scratch=True)
+
+
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 @skipIf(StrictVersion(zmq.__version__) < StrictVersion('14.0.1'), 'PyZMQ must be >= 14.0.1 to run these tests.')
-class TestSaltAPIHandler(SaltnadoTestCase):
+class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):
-        application = tornado.web.Application([('/', saltnado.SaltAPIHandler)], debug=True)
+        urls = [('/', saltnado.SaltAPIHandler)]
 
-        application.auth = self.auth
-        application.opts = self.opts
+        application = self.build_tornado_app(urls)
 
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
@@ -47,18 +60,13 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         Test the root path which returns the list of clients we support
         '''
         response = self.fetch('/',
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                 )
         self.assertEqual(response.code, 200)
-        response_obj = json.loads(response.body)
-        self.assertEqual(response_obj['clients'],
-                         ['runner',
-                          'runner_async',
-                          'local_async',
-                          'local',
-                          'local_batch']
-                         )
+        response_obj = json_loads(response.body)
+        self.assertEqual(sorted(response_obj['clients']),
+                         ['local', 'local_async', 'runner', 'runner_async'])
         self.assertEqual(response_obj['return'], 'Welcome')
 
     def test_post_no_auth(self):
@@ -75,14 +83,14 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json']},
                               follow_redirects=False,
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         self.assertEqual(response.code, 302)
         self.assertEqual(response.headers['Location'], '/login')
 
     # Local client tests
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_simple_local_post(self):
         '''
         Test a basic API of /
@@ -96,10 +104,10 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
     def test_simple_local_post_no_tgt(self):
@@ -115,73 +123,47 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
-    # local_batch tests
-    @skipIf(True, 'to be reenabled when #23623 is merged')
-    def test_simple_local_batch_post(self):
+    # local client request body test
+    @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
+    def test_simple_local_post_only_dictionary_request(self):
         '''
-        Basic post against local_batch
+        Test a basic API of /
         '''
-        low = [{'client': 'local_batch',
+        low = {'client': 'local',
                 'tgt': '*',
                 'fun': 'test.ping',
-                }]
+              }
         response = self.fetch('/',
                               method='POST',
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
-    # local_batch tests
-    @skipIf(True, 'to be reenabled when #23623 is merged')
-    def test_full_local_batch_post(self):
+    def test_simple_local_post_invalid_request(self):
         '''
-        Test full parallelism of local_batch
+        Test a basic API of /
         '''
-        low = [{'client': 'local_batch',
-                'tgt': '*',
-                'fun': 'test.ping',
-                'batch': '100%',
-                }]
+        low = ["invalid request"]
         response = self.fetch('/',
                               method='POST',
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
-        response_obj = json.loads(response.body)
-        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
-
-    def test_simple_local_batch_post_no_tgt(self):
-        '''
-        Local_batch testing with no tgt
-        '''
-        low = [{'client': 'local_batch',
-                'tgt': 'minion_we_dont_have',
-                'fun': 'test.ping',
-                }]
-        response = self.fetch('/',
-                              method='POST',
-                              body=json.dumps(low),
-                              headers={'Content-Type': self.content_type_map['json'],
-                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
-                              )
-        response_obj = json.loads(response.body)
-        self.assertEqual(response_obj['return'], [{}])
+        self.assertEqual(response.code, 400)
 
     # local_async tests
     def test_simple_local_async_post(self):
@@ -194,11 +176,9 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
 
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
 
@@ -221,11 +201,9 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
 
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
         ret[1]['minions'] = sorted(ret[1]['minions'])
@@ -257,11 +235,9 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
 
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
         ret[1]['minions'] = sorted(ret[1]['minions'])
@@ -284,7 +260,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
 
     # runner tests
@@ -297,10 +273,10 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
         self.assertEqual(set(response_obj['return'][0]), set(['minion', 'sub_minion']))
 
@@ -317,53 +293,47 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               connect_timeout=10,
                               request_timeout=10,
                               )
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         self.assertIn('return', response_obj)
         self.assertEqual(1, len(response_obj['return']))
         self.assertIn('jid', response_obj['return'][0])
         self.assertIn('tag', response_obj['return'][0])
 
 
-@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
+@flaky
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-class TestMinionSaltAPIHandler(SaltnadoTestCase):
+class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):
-        application = tornado.web.Application([(r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
-                                               (r"/minions", saltnado.MinionSaltAPIHandler),
-                                               ], debug=True)
-
-        application.auth = self.auth
-        application.opts = self.opts
-
+        urls = [(r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
+                (r"/minions", saltnado.MinionSaltAPIHandler),
+                ]
+        application = self.build_tornado_app(urls)
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
+    @skipIf(True, 'issue #34753')
     def test_get_no_mid(self):
         response = self.fetch('/minions',
                               method='GET',
                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               follow_redirects=False,
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
         # one per minion
         self.assertEqual(len(response_obj['return'][0]), 2)
         # check a single grain
-        for minion_id, grains in response_obj['return'][0].iteritems():
+        for minion_id, grains in six.iteritems(response_obj['return'][0]):
             self.assertEqual(minion_id, grains['id'])
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         response = self.fetch('/minions/minion',
                               method='GET',
                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               follow_redirects=False,
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
         self.assertEqual(len(response_obj['return'][0]), 1)
         # check a single grain
@@ -378,11 +348,9 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
 
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
 
@@ -402,11 +370,9 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
 
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
 
@@ -421,7 +387,7 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         make sure you get an error
         '''
         # get a token for this test
-        low = [{'client': 'local_batch',
+        low = [{'client': 'local',
                 'tgt': '*',
                 'fun': 'test.ping',
                 }]
@@ -430,27 +396,21 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         self.assertEqual(response.code, 400)
 
 
-@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-class TestJobsSaltAPIHandler(SaltnadoTestCase):
+class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):
-        application = tornado.web.Application([(r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
-                                               (r"/jobs", saltnado.JobsSaltAPIHandler),
-                                               ], debug=True)
-
-        application.auth = self.auth
-        application.opts = self.opts
-
+        urls = [(r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
+                (r"/jobs", saltnado.JobsSaltAPIHandler),
+                ]
+        application = self.build_tornado_app(urls)
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         # test with no JID
         self.http_client.fetch(self.get_url('/jobs'),
@@ -458,12 +418,11 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                                method='GET',
                                headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                                follow_redirects=False,
-                               request_timeout=10,  # wait up to 10s for this response-- jenkins seems to be slow
                                )
-        response = self.wait(timeout=10)
-        response_obj = json.loads(response.body)['return'][0]
+        response = self.wait(timeout=30)
+        response_obj = json_loads(response.body)['return'][0]
         try:
-            for jid, ret in response_obj.iteritems():
+            for jid, ret in six.iteritems(response_obj):
                 self.assertIn('Function', ret)
                 self.assertIn('Target', ret)
                 self.assertIn('Target-type', ret)
@@ -471,20 +430,19 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                 self.assertIn('StartTime', ret)
                 self.assertIn('Arguments', ret)
         except AttributeError as attribute_error:
-            print json.loads(response.body)
+            print(json_loads(response.body))
             raise
 
         # test with a specific JID passed in
-        jid = response_obj.iterkeys().next()
+        jid = next(six.iterkeys(response_obj))
         self.http_client.fetch(self.get_url('/jobs/{0}'.format(jid)),
                                self.stop,
                                method='GET',
                                headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                                follow_redirects=False,
-                               request_timeout=10,  # wait up to 10s for this response-- jenkins seems to be slow
                                )
-        response = self.wait(timeout=10)
-        response_obj = json.loads(response.body)['return'][0]
+        response = self.wait(timeout=30)
+        response_obj = json_loads(response.body)['return'][0]
         self.assertIn('Function', response_obj)
         self.assertIn('Target', response_obj)
         self.assertIn('Target-type', response_obj)
@@ -496,20 +454,16 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
 
 # TODO: run all the same tests from the root handler, but for now since they are
 # the same code, we'll just sanity check
-@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-class TestRunSaltAPIHandler(SaltnadoTestCase):
+class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):
-        application = tornado.web.Application([("/run", saltnado.RunSaltAPIHandler),
-                                               ], debug=True)
-
-        application.auth = self.auth
-        application.opts = self.opts
-
+        urls = [("/run", saltnado.RunSaltAPIHandler),
+                ]
+        application = self.build_tornado_app(urls)
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         low = [{'client': 'local',
                 'tgt': '*',
@@ -520,24 +474,19 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
-        response_obj = json.loads(response.body)
+        response_obj = json_loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
 
-@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-class TestEventsSaltAPIHandler(SaltnadoTestCase):
+class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):
-        application = tornado.web.Application([(r"/events", saltnado.EventsSaltAPIHandler),
-                                               ], debug=True)
-
-        application.auth = self.auth
-        application.opts = self.opts
-
+        urls = [(r"/events", saltnado.EventsSaltAPIHandler),
+                ]
+        application = self.build_tornado_app(urls)
         application.event_listener = saltnado.EventListener({}, self.opts)
+
         # store a reference, for magic later!
         self.application = application
         self.events_to_fire = 0
@@ -548,14 +497,14 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
         response = self.fetch('/events',
                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               streaming_callback=self.on_event,
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
 
     def _stop(self):
         self.stop()
 
     def on_event(self, event):
+        if six.PY3:
+            event = event.decode('utf-8')
         if self.events_to_fire > 0:
             self.application.event_listener.event.fire_event({
                 'foo': 'bar',
@@ -576,53 +525,57 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
             self.assertTrue(data.startswith('data: '))
 
 
-@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-class TestWebhookSaltAPIHandler(SaltnadoTestCase):
-    def get_app(self):
-        application = tornado.web.Application([(r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
-                                               ], debug=True)
+class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
-        application.auth = self.auth
-        application.opts = self.opts
+    def get_app(self):
+
+        urls = [(r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
+                ]
+
+        application = self.build_tornado_app(urls)
 
         self.application = application
 
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
+    @skipIf(True, 'Skipping until we can devote more resources to debugging this test.')
     def test_post(self):
-        def verify_event(future):
-            '''
-            Verify that the event fired on the master matches what we sent
-            '''
-            event = future.result()
+        self._future_resolved = threading.Event()
+        try:
+            def verify_event(future):
+                '''
+                Notify the threading event that the future is resolved
+                '''
+                self._future_resolved.set()
+
+            self._finished = False  # TODO: remove after some cleanup of the event listener
+
+            # get an event future
+            future = self.application.event_listener.get_event(self,
+                                                               tag='salt/netapi/hook',
+                                                               callback=verify_event)
+            # fire the event
+            response = self.fetch('/hook',
+                                  method='POST',
+                                  body='foo=bar',
+                                  headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                                  )
+            response_obj = json_loads(response.body)
+            self.assertTrue(response_obj['success'])
+            resolve_future_timeout = 60
+            self._future_resolved.wait(resolve_future_timeout)
+            try:
+                event = future.result()
+            except Exception as exc:
+                self.fail('Failed to resolve future under {} secs: {}'.format(resolve_future_timeout, exc))
             self.assertEqual(event['tag'], 'salt/netapi/hook')
             self.assertIn('headers', event['data'])
-            self.assertEqual(event['data']['post'], {'foo': 'bar'})
-        # get an event future
-        self._finished = False  # TODO: remove after some cleanup of the event listener
-        event = self.application.event_listener.get_event(self,
-                                                          tag='salt/netapi/hook',
-                                                          callback=verify_event,
-                                                          )
-        # fire the event
-        response = self.fetch('/hook',
-                              method='POST',
-                              body='foo=bar',
-                              headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
-                              )
-        response_obj = json.loads(response.body)
-        self.assertTrue(response_obj['success'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(TestEventsSaltAPIHandler,
-              TestJobsSaltAPIHandler,
-              TestMinionSaltAPIHandler,
-              TestRunSaltAPIHandler,
-              TestSaltAPIHandler,
-              TestWebhookSaltAPIHandler, needs_daemon=True)
+            self.assertEqual(
+                event['data']['post'],
+                {'foo': salt.utils.to_bytes('bar')}
+            )
+        finally:
+            self._future_resolved.clear()
+            del self._future_resolved

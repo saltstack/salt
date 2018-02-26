@@ -18,7 +18,10 @@ def __virtual__():
     '''
     Only run on NetBSD systems
     '''
-    return __virtualname__ if __grains__['os'] == 'NetBSD' else False
+    if __grains__['os'] == 'NetBSD':
+        return __virtualname__
+    return (False, 'The netbsd_sysctl execution module failed to load: '
+            'only available on NetBSD.')
 
 
 def show(config_file=False):
@@ -114,7 +117,8 @@ def persist(name, value, config='/etc/sysctl.conf'):
     # create /etc/sysctl.conf if not present
     if not os.path.isfile(config):
         try:
-            salt.utils.fopen(config, 'w+').close()
+            with salt.utils.fopen(config, 'w+'):
+                pass
         except (IOError, OSError):
             msg = 'Could not create {0}'
             raise CommandExecutionError(msg.format(config))

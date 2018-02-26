@@ -1,3 +1,5 @@
+.. _best-practices:
+
 ============================
 Salt :index:`Best Practices`
 ============================
@@ -122,7 +124,22 @@ An example ``top.sls`` may be as simple as the following:
       '*':
         - packages
 
-Or much more complicated, using a variety of matchers:
+Any number of matchers can be added to the base environment. For example, here
+is an expanded version of the Pillar top file stated above:
+
+/srv/pillar/top.sls:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+      'web*':
+        - apache
+        - vim
+
+Or an even more complicated example, using a variety of matchers in numerous
+environments:
 
 /srv/pillar/top.sls:
 
@@ -320,7 +337,7 @@ modification of static values:
         'Debian': {
             'server': 'apache2',
             'service': 'apache2',
-             'conf': '/etc/apache2/apache.conf',
+            'conf': '/etc/apache2/apache.conf',
         },
         'RedHat': {
             'server': 'httpd',
@@ -376,7 +393,7 @@ to be broken into two states.
         'Debian': {
             'server': 'apache2',
             'service': 'apache2',
-             'conf': '/etc/apache2/apache.conf',
+            'conf': '/etc/apache2/apache.conf',
         },
         'RedHat': {
             'server': 'httpd',

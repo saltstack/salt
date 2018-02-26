@@ -4,8 +4,8 @@ Salt 0.17.4 Release Notes
 
 :release: 2013-12-10
 
-Version 0.17.4 is another bugfix release for :doc:`0.17.0
-</topics/releases/0.17.0>`.  The changes include:
+Version 0.17.4 is another bugfix release for :ref:`0.17.0
+<release-0-17-0>`.  The changes include:
 
 - Fix file.replace bug when replacement str is numeric (:issue:`9101`)
 - Fix regression in file.managed (:issue:`9131`)

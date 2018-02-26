@@ -1,0 +1,64 @@
+Loading repository data...
+Reading installed packages...
+
+
+Information for package vim:
+----------------------------
+Repository: SLE12-SP1-x86_64-Pool
+Name: vim
+Version: 7.4.326-2.62
+Arch: x86_64
+Vendor: SUSE LLC <https://www.suse.com/>
+Support Level: Level 3
+Installed: No
+Status: not installed
+Installed Size: 2,6 MiB
+Summary: Vi IMproved
+Description: 
+  Vim (Vi IMproved) is an almost compatible version of the UNIX editor
+  vi. Almost every possible command can be performed using only ASCII
+  characters. Only the 'Q' command is missing (you do not need it). Many
+  new features have been added: multilevel undo, command line history,
+  file name completion, block operations, and editing of binary data.
+  
+  Vi is available for the AMIGA, MS-DOS, Windows NT, and various versions
+  of UNIX.
+  
+  For SUSE Linux, Vim is used as /usr/bin/vi.
+
+Information for package python:
+-------------------------------
+Repository: SLE12-SP1-x86_64-Pool
+Name: python
+Version: 2.7.9-20.2
+Arch: x86_64
+Vendor: SUSE LLC <https://www.suse.com/>
+Support Level: Level 3
+Installed: Yes
+Status: up-to-date
+Installed Size: 1,4 MiB
+Summary: Python Interpreter
+Description: 
+  Python is an interpreted, object-oriented programming language, and is
+  often compared to Tcl, Perl, Scheme, or Java.  You can find an overview
+  of Python in the documentation and tutorials included in the python-doc
+  (HTML) or python-doc-pdf (PDF) packages.
+  
+  If you want to install third party modules using distutils, you need to
+  install python-devel package.
+
+Information for package emacs:
+------------------------------
+Repository: SLE12-SP1-x86_64-Pool
+Name: emacs
+Version: 24.3-14.44
+Arch: x86_64
+Vendor: SUSE LLC <https://www.suse.com/>
+Support Level: Level 3
+Installed: Yes
+Status: up-to-date
+Installed Size: 63,9 MiB
+Summary: GNU Emacs Base Package
+Description: 
+  Basic package for the GNU Emacs editor. Requires emacs-x11 or
+  emacs-nox.

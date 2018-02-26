@@ -114,19 +114,48 @@ a parameter to the state and setting it to ``random`` will change that value
 from ``*`` to a randomized numeric value. However, if that field in the cron
 entry on the minion already contains a numeric value, then using the ``random``
 keyword will not modify it.
+
+Added the opportunity to set a job with a special keyword like '@reboot' or
+'@hourly'. Quotes must be used, otherwise PyYAML will strip the '@' sign.
+
+.. code-block:: yaml
+
+    /path/to/cron/script:
+      cron.present:
+        - user: root
+        - special: '@hourly'
+
+The script will be executed every reboot if cron daemon support this option.
+
+.. code-block:: yaml
+
+    /path/to/cron/otherscript:
+      cron.absent:
+        - user: root
+        - special: '@daily'
+
+This counter part definition will ensure than a job with a special keyword
+is not set.
 '''
 from __future__ import absolute_import
 
 # Import python libs
 import os
-from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.modules.cron import (
     _needs_change,
     _cron_matched
 )
+
+
+def __virtual__():
+    if 'cron.list_tab' in __salt__:
+        return True
+    else:
+        return (False, 'cron module could not be loaded')
 
 
 def _check_cron(user,
@@ -137,7 +166,9 @@ def _check_cron(user,
                 month=None,
                 dayweek=None,
                 comment=None,
-                identifier=None):
+                commented=None,
+                identifier=None,
+                special=None):
     '''
     Return the changes
     '''
@@ -153,18 +184,33 @@ def _check_cron(user,
         dayweek = str(dayweek).lower()
     if identifier is not None:
         identifier = str(identifier)
+    if commented is not None:
+        commented = commented is True
     if cmd is not None:
         cmd = str(cmd)
     lst = __salt__['cron.list_tab'](user)
-    for cron in lst['crons']:
-        if _cron_matched(cron, cmd, identifier):
-            if any([_needs_change(x, y) for x, y in
-                    ((cron['minute'], minute), (cron['hour'], hour),
-                     (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek), (cron['identifier'], identifier),
-                     (cron['cmd'], cmd), (cron['comment'], comment))]):
-                return 'update'
-            return 'present'
+    if special is None:
+        for cron in lst['crons']:
+            if _cron_matched(cron, cmd, identifier):
+                if any([_needs_change(x, y) for x, y in
+                        ((cron['minute'], minute), (cron['hour'], hour),
+                         (cron['daymonth'], daymonth), (cron['month'], month),
+                         (cron['dayweek'], dayweek), (cron['identifier'], identifier),
+                         (cron['cmd'], cmd), (cron['comment'], comment),
+                         (cron['commented'], commented))]):
+                    return 'update'
+                return 'present'
+    else:
+        for cron in lst['special']:
+            if _cron_matched(cron, cmd, identifier):
+                if any([_needs_change(x, y) for x, y in
+                        ((cron['spec'], special),
+                         (cron['identifier'], identifier),
+                         (cron['cmd'], cmd),
+                         (cron['comment'], comment),
+                         (cron['commented'], commented))]):
+                    return 'update'
+                return 'present'
     return 'absent'
 
 
@@ -216,7 +262,9 @@ def present(name,
             month='*',
             dayweek='*',
             comment=None,
-            identifier=False):
+            commented=False,
+            identifier=False,
+            special=None):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -251,11 +299,23 @@ def present(name,
     comment
         User comment to be added on line previous the cron job
 
+    commented
+        The cron job is set commented (prefixed with ``#DISABLED#``).
+        Defaults to False.
+
+        .. versionadded:: 2016.3.0
+
     identifier
         Custom-defined identifier for tracking the cron line for future crontab
-        edits. This defaults to the state id
+        edits. This defaults to the state name
+
+    special
+        A special keyword to specify periodicity (eg. @reboot, @hourly...).
+        Quotes must be used, otherwise PyYAML will strip the '@' sign.
+
+        .. versionadded:: 2016.3.0
     '''
-    name = ' '.join(name.strip().split())
+    name = name.strip()
     if identifier is False:
         identifier = name
     ret = {'changes': {},
@@ -271,7 +331,9 @@ def present(name,
                              month=month,
                              dayweek=dayweek,
                              comment=comment,
-                             identifier=identifier)
+                             commented=commented,
+                             identifier=identifier,
+                             special=special)
         ret['result'] = None
         if status == 'absent':
             ret['comment'] = 'Cron {0} is set to be added'.format(name)
@@ -282,15 +344,24 @@ def present(name,
             ret['comment'] = 'Cron {0} is set to be updated'.format(name)
         return ret
 
-    data = __salt__['cron.set_job'](user=user,
-                                    minute=minute,
-                                    hour=hour,
-                                    daymonth=daymonth,
-                                    month=month,
-                                    dayweek=dayweek,
-                                    cmd=name,
-                                    comment=comment,
-                                    identifier=identifier)
+    if special is None:
+        data = __salt__['cron.set_job'](user=user,
+                                        minute=minute,
+                                        hour=hour,
+                                        daymonth=daymonth,
+                                        month=month,
+                                        dayweek=dayweek,
+                                        cmd=name,
+                                        comment=comment,
+                                        commented=commented,
+                                        identifier=identifier)
+    else:
+        data = __salt__['cron.set_special'](user=user,
+                                            special=special,
+                                            cmd=name,
+                                            comment=comment,
+                                            commented=commented,
+                                            identifier=identifier)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -313,6 +384,7 @@ def present(name,
 def absent(name,
            user='root',
            identifier=False,
+           special=None,
            **kwargs):
     '''
     Verifies that the specified cron job is absent for the specified user; only
@@ -327,13 +399,17 @@ def absent(name,
 
     identifier
         Custom-defined identifier for tracking the cron line for future crontab
-        edits. This defaults to the state id
+        edits. This defaults to the state name
+
+    special
+        The special keyword used in the job (eg. @reboot, @hourly...).
+        Quotes must be used, otherwise PyYAML will strip the '@' sign.
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use
     ###       of unsupported arguments will result in a traceback.
 
-    name = ' '.join(name.strip().split())
+    name = name.strip()
     if identifier is False:
         identifier = name
     ret = {'name': name,
@@ -342,7 +418,7 @@ def absent(name,
            'comment': ''}
 
     if __opts__['test']:
-        status = _check_cron(user, name)
+        status = _check_cron(user, name, identifier=identifier)
         ret['result'] = None
         if status == 'absent':
             ret['result'] = True
@@ -351,7 +427,11 @@ def absent(name,
             ret['comment'] = 'Cron {0} is set to be removed'.format(name)
         return ret
 
-    data = __salt__['cron.rm_job'](user, name, identifier=identifier)
+    if special is None:
+        data = __salt__['cron.rm_job'](user, name, identifier=identifier)
+    else:
+        data = __salt__['cron.rm_special'](user, name, special=special, identifier=identifier)
+
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)
         return ret
@@ -368,12 +448,12 @@ def absent(name,
 
 def file(name,
          source_hash='',
+         source_hash_name=None,
          user='root',
          template=None,
          context=None,
          replace=True,
          defaults=None,
-         env=None,
          backup='',
          **kwargs):
     '''
@@ -395,6 +475,45 @@ def file(name,
         the source, or a source hash string. The source hash string is the
         hash algorithm followed by the hash of the file:
         ``md5=e138491e9d5b97023cea823fe17bac22``
+
+    source_hash_name
+        When ``source_hash`` refers to a hash file, Salt will try to find the
+        correct hash by matching the filename/URI associated with that hash. By
+        default, Salt will look for the filename being managed. When managing a
+        file at path ``/tmp/foo.txt``, then the following line in a hash file
+        would match:
+
+        .. code-block:: text
+
+            acbd18db4cc2f85cedef654fccc4a4d8    foo.txt
+
+        However, sometimes a hash file will include multiple similar paths:
+
+        .. code-block:: text
+
+            37b51d194a7513e45b56f6524f2d51f2    ./dir1/foo.txt
+            acbd18db4cc2f85cedef654fccc4a4d8    ./dir2/foo.txt
+            73feffa4b7f6bb68e44cf984c85f6e88    ./dir3/foo.txt
+
+        In cases like this, Salt may match the incorrect hash. This argument
+        can be used to tell Salt which filename to match, to ensure that the
+        correct hash is identified. For example:
+
+        .. code-block:: yaml
+
+            foo_crontab:
+              cron.file:
+                - name: https://mydomain.tld/dir2/foo.txt
+                - source_hash: https://mydomain.tld/hashes
+                - source_hash_name: ./dir2/foo.txt
+
+        .. note::
+            This argument must contain the full filename entry from the
+            checksum file, as this argument is meant to disambiguate matches
+            for multiple files that have the same basename. So, in the
+            example above, simply using ``foo.txt`` would not match.
+
+        .. versionadded:: 2016.3.5
 
     user
         The user to whom the crontab should be assigned. This defaults to
@@ -419,10 +538,18 @@ def file(name,
         Overrides the default backup mode for the user's crontab.
     '''
     # Initial set up
-    mode = __salt__['config.manage_mode']('0600')
-    owner, group, crontab_dir = _get_cron_info()
+    mode = '0600'
 
-    cron_path = salt.utils.mkstemp()
+    try:
+        group = __salt__['user.info'](user)['groups'][0]
+    except Exception:
+        ret = {'changes': {},
+               'comment': "Could not identify group for user {0}".format(user),
+               'name': name,
+               'result': False}
+        return ret
+
+    cron_path = salt.utils.files.mkstemp()
     with salt.utils.fopen(cron_path, 'w+') as fp_:
         raw_cron = __salt__['cron.raw_cron'](user)
         if not raw_cron.endswith('\n'):
@@ -438,17 +565,6 @@ def file(name,
     # declaration for this state will be a source URI.
     source = name
 
-    if isinstance(env, string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
-
     if not replace and os.stat(cron_path).st_size > 0:
         ret['comment'] = 'User {0} already has a crontab. No changes ' \
                          'made'.format(user)
@@ -459,7 +575,8 @@ def file(name,
         fcm = __salt__['file.check_managed'](cron_path,
                                              source,
                                              source_hash,
-                                             owner,
+                                             source_hash_name,
+                                             user,
                                              group,
                                              mode,
                                              template,
@@ -484,12 +601,14 @@ def file(name,
             template,
             source,
             source_hash,
-            owner,
+            source_hash_name,
+            user,
             group,
             mode,
             __env__,
             context,
             defaults,
+            False,        # skip_verify
             **kwargs
         )
     except Exception as exc:
@@ -511,7 +630,7 @@ def file(name,
             ret,
             source,
             source_sum,
-            owner,
+            user,
             group,
             mode,
             __env__,
@@ -523,18 +642,23 @@ def file(name,
         ret['comment'] = 'Unable to manage file: {0}'.format(exc)
         return ret
 
-    if ret['changes']:
+    cron_ret = None
+    if "diff" in ret['changes']:
         cron_ret = __salt__['cron.write_cron_file_verbose'](user, cron_path)
-        ret['changes'] = {'diff': ret['changes']['diff']}
-        ret['comment'] = 'Crontab for user {0} was updated'.format(user)
+        # Check cmd return code and show success or failure
+        if cron_ret['retcode'] == 0:
+            ret['comment'] = 'Crontab for user {0} was updated'.format(user)
+            ret['result'] = True
+            ret['changes'] = ret['changes']['diff']
+        else:
+            ret['comment'] = 'Unable to update user {0} crontab {1}.' \
+                             ' Error: {2}'.format(user, cron_path, cron_ret['stderr'])
+            ret['result'] = False
+            ret['changes'] = {}
     elif ret['result']:
         ret['comment'] = 'Crontab for user {0} is in the correct ' \
                          'state'.format(user)
-
-    if cron_ret['retcode']:
-        ret['comment'] = 'Unable to update user {0} crontab {1}.' \
-                         ' Error: {2}'.format(user, cron_path, cron_ret['stderr'])
-        ret['result'] = False
+        ret['changes'] = {}
 
     os.unlink(cron_path)
     return ret
@@ -607,7 +731,7 @@ def env_absent(name,
         the root user
     '''
 
-    name = ' '.join(name.strip().split())
+    name = name.strip()
     ret = {'name': name,
            'result': True,
            'changes': {},

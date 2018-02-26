@@ -4,6 +4,19 @@ Pure python state renderer
 
 The SLS file should contain a function called ``run`` which returns high state
 data.
+The highstate data is a dictionary containing identifiers as keys, and execution
+dictionaries as values. For example the following state declaration in YAML::
+
+    common_packages:
+      pkg.installed:
+       - pkgs:
+          - curl
+          - vim
+
+
+tranlastes to::
+
+     {'common_packages': {'pkg.installed': [{'pkgs': ['curl', 'vim']}]}}
 
 In this module, a few objects are defined for you, giving access to Salt's
 execution functions, grains, pillar, etc. They are:
@@ -28,6 +41,19 @@ execution functions, grains, pillar, etc. They are:
   ``/srv/salt/foo/bar/baz.sls``, then ``__sls__`` in that file will be
   ``foo.bar.baz``.
 
+The global contet `data` (same as context ``{{ data }}` ` for states written with Jinja + YAML.
+The following YAML + Jinja state declaration::
+
+    {% if data['id'] == 'mysql1' %}
+    highstate_run:
+      local.state.apply:
+        - tgt: mysql1
+    {% endif %}
+
+Translate to::
+
+    if data['id'] == 'mysql1':
+        return {'highstate_run': {'local.state.apply': [{'tgt': 'mysql1'}]}}
 
 .. code-block:: python
    :linenos:

@@ -1,3 +1,5 @@
+.. _troubleshooting:
+
 ===============
 Troubleshooting
 ===============
@@ -64,7 +66,7 @@ You can check port connectivity from the minion with the nc command:
   nc -v -z salt.master.ip 4505
   nc -v -z salt.master.ip 4506
 
-There is also a :doc:`firewall configuration</topics/tutorials/firewall>`
+There is also a :ref:`firewall configuration<firewall>`
 document that might help as well.
 
 If you've enabled the right TCP ports on your operating system or Linux
@@ -100,8 +102,8 @@ verbosity, increase the loglevel using the ``-l`` argument:
 The main difference between using ``salt`` and using ``salt-call`` is that
 ``salt-call`` is run from the minion, and it only runs the selected function on
 that minion. By contrast, ``salt`` is run from the master, and requires you to
-specify the minions on which to run the command using salt's :doc:`targeting
-system </topics/targeting/index>`.
+specify the minions on which to run the command using salt's :ref:`targeting
+system <targeting>`.
 
 Too many open files
 ===================
@@ -242,7 +244,7 @@ Then pass the signal to the master or minion when it seems to be unresponsive:
     killall -SIGUSR1 salt-master
     killall -SIGUSR1 salt-minion
 
-Also under BSD and Mac OS X in addition to SIGUSR1 signal, debug subroutine set
+Also under BSD and macOS in addition to SIGUSR1 signal, debug subroutine set
 up for SIGINFO which has an advantage of being sent by Ctrl+T shortcut.
 
 When filing an issue or sending questions to the mailing list for a problem
@@ -260,6 +262,6 @@ backwards compatible as possible.
 Debugging the Master and Minion
 ===============================
 
-A list of common :doc:`master</topics/troubleshooting/master>` and
-:doc:`minion</topics/troubleshooting/minion>` troubleshooting steps provide a
+A list of common :ref:`master<troubleshooting-salt-master>` and
+:ref:`minion<troubleshooting-minion-salt-call>` troubleshooting steps provide a
 starting point for resolving issues you may encounter.

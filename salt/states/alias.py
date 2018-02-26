@@ -16,6 +16,15 @@ aliases:
     thomas:
       alias.present:
         - target: thomas@example.com
+
+The default alias file is set to ``/etc/aliases``, as defined in Salt's
+:mod:`config execution module <salt.modules.config>`. To change the alias
+file from the default location, set the following in your minion config:
+
+.. code-block:: yaml
+
+    aliases.file: /my/alias/file
+
 '''
 
 

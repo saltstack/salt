@@ -25,7 +25,7 @@ def __virtual__():
     Set the vbox_guest module if the OS Linux
     '''
     if __grains__.get('kernel', '') not in ('Linux', ):
-        return False
+        return (False, 'The vbox_guest execution module failed to load: only available on Linux systems.')
     return __virtualname__
 
 
@@ -100,21 +100,15 @@ def _additions_install_opensuse(**kwargs):
     kernel_type = re.sub(
         r'^(\d|\.|-)*', '', __grains__.get('kernelrelease', ''))
     kernel_devel = 'kernel-{0}-devel'.format(kernel_type)
-    ret = __salt__['state.single']('pkg.installed', 'devel packages',
-                                   pkgs=['make', 'gcc', kernel_devel])
-    return ret
+    return __states__['pkg.installed'](None, pkgs=['make', 'gcc', kernel_devel])
 
 
 def _additions_install_ubuntu(**kwargs):
-    ret = __salt__['state.single']('pkg.installed', 'devel packages',
-                                   pkgs=['dkms', ])
-    return ret
+    return __states__['pkg.installed'](None, pkgs=['dkms', ])
 
 
 def _additions_install_fedora(**kwargs):
-    ret = __salt__['state.single']('pkg.installed', 'devel packages',
-                                   pkgs=['dkms', 'gcc'])
-    return ret
+    return __states__['pkg.installed'](None, pkgs=['dkms', 'gcc'])
 
 
 def _additions_install_linux(mount_point, **kwargs):

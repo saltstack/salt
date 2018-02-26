@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-uWSGI stats server http://uwsgi-docs.readthedocs.org/en/latest/StatsServer.html
+uWSGI stats server https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html
 
 :maintainer: Peter Baumgartner <pete@lincolnloop.com>
 :maturity:   new
@@ -22,7 +22,7 @@ def __virtual__():
     cmd = 'uwsgi'
     if salt.utils.which(cmd):
         return cmd
-    return False
+    return (False, 'The uwsgi execution module failed to load: the uwsgi binary is not in the path.')
 
 
 def stats(socket):

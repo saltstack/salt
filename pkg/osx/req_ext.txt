@@ -1,0 +1,2 @@
+cryptography==2.0
+pyOpenSSL==17.1.0

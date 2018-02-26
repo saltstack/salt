@@ -43,7 +43,7 @@ def main():
         sys.exit(1)
 
     for locale in sys.argv[1:]:
-        print('Download {0!r} translations catalog...'.format(locale))
+        print('Download \'{0}\' translations catalog...'.format(locale))
         txclib.utils.exec_command('pull', ['-l', locale], tx_root)
 
     print('Done')

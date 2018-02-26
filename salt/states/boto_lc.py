@@ -61,7 +61,14 @@ and autoscale groups are completely dependent on each other.
         - block_device_mappings:
             - '/dev/sda1':
                 size: 20
+                volume_type: 'io1'
+                iops: 220
+                delete_on_termination: true
         - cloud_init:
+            boothooks:
+              'disable-master.sh': |
+                #!/bin/bash
+                echo "manual" > /etc/init/salt-master.override
             scripts:
               'run_salt.sh': |
                 #!/bin/bash
@@ -106,6 +113,8 @@ def present(
         name,
         image_id,
         key_name=None,
+        vpc_id=None,
+        vpc_name=None,
         security_groups=None,
         user_data=None,
         cloud_init=None,
@@ -113,15 +122,12 @@ def present(
         kernel_id=None,
         ramdisk_id=None,
         block_device_mappings=None,
+        delete_on_termination=None,
         instance_monitoring=False,
         spot_price=None,
         instance_profile_name=None,
         ebs_optimized=False,
         associate_public_ip_address=None,
-        volume_type=None,
-        delete_on_termination=True,
-        iops=None,
-        use_block_device_types=False,
         region=None,
         key=None,
         keyid=None,
@@ -139,6 +145,16 @@ def present(
     key_name
         Name of the EC2 key pair to use for instances. Key must exist or
         creation of the launch configuration will fail.
+
+    vpc_id
+        The VPC id where the security groups are defined. Only necessary when
+        using named security groups that exist outside of the default VPC.
+        Mutually exclusive with vpc_name.
+
+    vpc_name
+        Name of the VPC where the security groups are defined. Only Necessary
+        when using named security groups that exist outside of the default VPC.
+        Mutually exclusive with vpc_id.
 
     security_groups
         List of Names or security group id’s of the security groups with which
@@ -162,7 +178,33 @@ def present(
         The RAM disk ID for the instance.
 
     block_device_mappings
-        A dict of block device mappings.
+        A dict of block device mappings that contains a dict
+        with volume_type, delete_on_termination, iops, size, encrypted,
+        snapshot_id.
+
+        volume_type
+            Indicates what volume type to use. Valid values are standard, io1, gp2.
+            Default is standard.
+
+        delete_on_termination
+            Whether the volume should be explicitly marked for deletion when its instance is
+            terminated (True), or left around (False).  If not provided, or None is explicitly passed,
+            the default AWS behaviour is used, which is True for ROOT volumes of instances, and
+            False for all others.
+
+        iops
+            For Provisioned IOPS (SSD) volumes only. The number of I/O operations per
+            second (IOPS) to provision for the volume.
+
+        size
+            Desired volume size (in GiB).
+
+        encrypted
+            Indicates whether the volume should be encrypted. Encrypted EBS volumes must
+            be attached to instances that support Amazon EBS encryption. Volumes that are
+            created from encrypted snapshots are automatically encrypted. There is no way
+            to create an encrypted volume from an unencrypted snapshot or an unencrypted
+            volume from an encrypted snapshot.
 
     instance_monitoring
         Whether instances in group are launched with detailed monitoring.
@@ -185,18 +227,6 @@ def present(
         Virtual Private Cloud. Specifies whether to assign a public IP address
         to each instance launched in a Amazon VPC.
 
-    volume_type
-        Undocumented in boto.
-
-    delete_on_termination
-        Undocumented in boto.
-
-    iops
-        Undocumented in boto.
-
-    use_block_device_types
-        Undocumented in boto.
-
     region
         The region to connect to.
 
@@ -214,9 +244,11 @@ def present(
         raise SaltInvocationError('user_data and cloud_init are mutually'
                                   ' exclusive options.')
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
-                                                              key, keyid,
-                                                              profile)
+    exists = __salt__['boto_asg.launch_configuration_exists'](name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
     if not exists:
         if __opts__['test']:
             msg = 'Launch configuration set to be created.'
@@ -228,12 +260,27 @@ def present(
         # TODO: Ensure image_id, key_name, security_groups and instance_profile
         # exist, or throw an invocation error.
         created = __salt__['boto_asg.create_launch_configuration'](
-            name, image_id, key_name, security_groups, user_data,
-            instance_type, kernel_id, ramdisk_id, block_device_mappings,
-            instance_monitoring, spot_price, instance_profile_name,
-            ebs_optimized, associate_public_ip_address, volume_type,
-            delete_on_termination, iops, use_block_device_types, region, key,
-            keyid, profile)
+            name,
+            image_id,
+            key_name=key_name,
+            vpc_id=vpc_id,
+            vpc_name=vpc_name,
+            security_groups=security_groups,
+            user_data=user_data,
+            instance_type=instance_type,
+            kernel_id=kernel_id,
+            ramdisk_id=ramdisk_id,
+            block_device_mappings=block_device_mappings,
+            delete_on_termination=delete_on_termination,
+            instance_monitoring=instance_monitoring,
+            spot_price=spot_price,
+            instance_profile_name=instance_profile_name,
+            ebs_optimized=ebs_optimized,
+            associate_public_ip_address=associate_public_ip_address,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile)
         if created:
             ret['changes']['old'] = None
             ret['changes']['new'] = name
@@ -271,16 +318,22 @@ def absent(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
-                                                              key, keyid,
-                                                              profile)
+    exists = __salt__['boto_asg.launch_configuration_exists'](name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
     if exists:
         if __opts__['test']:
             ret['comment'] = 'Launch configuration set to be deleted.'
             ret['result'] = None
             return ret
         deleted = __salt__['boto_asg.delete_launch_configuration'](
-            name, region, key, keyid, profile)
+                                                              name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
         if deleted:
             ret['changes']['old'] = name
             ret['changes']['new'] = None
