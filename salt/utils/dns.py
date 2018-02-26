@@ -130,6 +130,7 @@ def _tree(domain, tld=False):
     :param tld: Include TLD in list
     :return: [ 'dc2.ams2.example.com', 'ams2.example.com', 'example.com']
     '''
+    domain = domain.rstrip('.')
     if '.' not in domain:
         raise ValueError('Provide a decent domain')
 
@@ -531,7 +532,7 @@ def lookup(
     :param method: gai (getaddrinfo()), dnspython, dig, drill, host, nslookup or auto (default)
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
-    :param walk: Find records in parents if they don't exist
+    :param walk: Walk the DNS upwards looking for the record type or name/recordtype if walk='name'.
     :param walk_tld: Include the final domain in the walk
     :param secure: return only DNSSEC secured responses
     :return: [] of record data
@@ -595,13 +596,16 @@ def lookup(
         name = [name]
     else:
         idx = 0
-        if rdtype == 'SRV':  # The only rr I know that has 2 name components
+        if rdtype in ('SRV', 'TLSA'):  # The only RRs I know that have 2 name components
             idx = name.find('.') + 1
         idx = name.find('.', idx) + 1
         domain = name[idx:]
-        name = name[0:idx]
+        rname = name[0:idx]
 
-        name = [name + domain for domain in _tree(domain, walk_tld)]
+        name = _tree(domain, walk_tld)
+        if walk == 'name':
+            name = [rname + domain for domain in name]
+
         if timeout:
             timeout /= len(name)
 
@@ -638,7 +642,7 @@ def query(
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
     :param secure: return only DNSSEC secured response
-    :param walk: Find records in parents if they don't exist
+    :param walk: Walk the DNS upwards looking for the record type or name/recordtype if walk='name'.
     :param walk_tld: Include the top-level domain in the walk
     :return: [] of records
     '''
