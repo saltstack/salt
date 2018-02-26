@@ -910,7 +910,7 @@ def srv_name(svc, proto='tcp', domain=None):
     :return:
     '''
     proto = RFC.validate(proto, RFC.SRV_PROTO)
-    if svc.isdigit():
+    if isinstance(svc, int) or svc.isdigit():
         svc = _to_port(svc)
 
     if domain:
