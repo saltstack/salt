@@ -698,15 +698,16 @@ def host(name, ip4=True, ip6=True, **kwargs):
 
     the rest is passed on to lookup()
     '''
-    res = []
+    res = {}
     if ip6:
         ip6 = lookup(name, 'AAAA', **kwargs)
         if ip6:
-            res.append(ip6)
+            res['ip6'] = ip6
     if ip4:
         ip4 = lookup(name, 'A', **kwargs)
         if ip4:
-            res.append(ip4)
+            res['ip4'] = ip4
+
     return res
 
 
