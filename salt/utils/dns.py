@@ -655,10 +655,13 @@ def query(
     if rdtype == 'PTR' and not name.endswith('arpa'):
         name = ptr_name(name)
 
-    qres = lookup(name, rdtype, **qargs)
-    if rdtype == 'SPF' and not qres:
+    if rdtype == 'SPF':
         # 'SPF' has become a regular 'TXT' again
         qres = [answer for answer in lookup(name, 'TXT', **qargs) if answer.startswith('v=spf')]
+        if not qres:
+            qres = lookup(name, rdtype, **qargs)
+    else:
+        qres = lookup(name, rdtype, **qargs)
 
     rec_map = {
         'A':     a_rec,
@@ -681,6 +684,29 @@ def query(
     else:
         res = rec_map[rdtype](qres)
 
+    return res
+
+
+def host(name, ip4=True, ip6=True, **kwargs):
+    '''
+    Return a list of addresses for name
+
+    ip6:
+        Return IPv6 addresses
+    ip4:
+        Return IPv4 addresses
+
+    the rest is passed on to lookup()
+    '''
+    res = []
+    if ip6:
+        ip6 = lookup(name, 'AAAA', **kwargs)
+        if ip6:
+            res.append(ip6)
+    if ip4:
+        ip4 = lookup(name, 'A', **kwargs)
+        if ip4:
+            res.append(ip4)
     return res
 
 
