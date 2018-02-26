@@ -11,7 +11,7 @@ import tempfile
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 from tests.support.paths import CODE_DIR
 
 
@@ -33,6 +33,7 @@ class SPMManTest(ModuleCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
 
+    @flaky
     def test_man_spm(self):
         '''
         test man spm

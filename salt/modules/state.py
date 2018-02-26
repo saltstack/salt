@@ -927,8 +927,8 @@ def highstate(test=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.higstate exclude=bar,baz
-            salt '*' state.higstate exclude=foo*
+            salt '*' state.highstate exclude=bar,baz
+            salt '*' state.highstate exclude=foo*
             salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
 
     saltenv
