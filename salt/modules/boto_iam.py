@@ -740,6 +740,32 @@ def delete_group(group_name, region=None, key=None,
         return False
 
 
+def get_login_profile(user_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return current Login Profile attached to user, if the user exists and
+    has a profile attached, None otherwise.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.get_login_profile bob.dobbs
+    '''
+    conn3 = __utils__['boto3.get_connection']('iam', region=region, key=key,
+                      keyid=keyid, profile=profile)
+    try:
+        ret = conn3.get_login_profile(UserName=user_name)
+        ret.pop('ResponseMetadata')
+        return ret
+    except botocore.exceptions.ClientError as e:
+        log.debug(e)
+        err = e.response.get('Error', {}).get('Message')
+        # Error.Code is 'NoSuchEntity' for both a missing user and a missing Login Profile...
+        if 'Cannot find Login Profile for User' not in err:
+            log.error('Failed to get Login Profile for IAM user {0}: {1}'.format(user_name, err))
+        return None
+
+
 def create_login_profile(user_name, password, password_reset_required=False,
                          region=None, key=None, keyid=None, profile=None):
     '''

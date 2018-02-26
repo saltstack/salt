@@ -507,6 +507,10 @@ def user_present(name, policies=None, policies_from_pillars=None, managed_polici
 
     password (string)
         The password for the new user. Must comply with account policy.
+        NOTE that because AWS will not for any reason return the existing password
+        if one is set, there is no way to compare one passed in with what may be
+        currently set.  This means that if ANY login profile is found, it is assumed
+        to be correct, and will never be updated.
 
     password_reset_required (bool)
         If a password is provided, setting this to True will force the user to
@@ -553,14 +557,14 @@ def user_present(name, policies=None, policies_from_pillars=None, managed_polici
             ret['changes']['user'] = created
             ret['comment'] = ' '.join([ret['comment'], 'User {0} has been created.'.format(name)])
             if password:
-                ret = _case_password(ret, name, password, password_reset_required, region, key, keyid, profile)
+                ret = _set_login_profile(ret, name, password, password_reset_required, region, key, keyid, profile)
             _ret = _user_policies_present(name, _policies, region, key, keyid, profile)
             ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     else:
         ret['comment'] = ' '.join([ret['comment'], 'User {0} is present.'.format(name)])
         if password:
-            ret = _case_password(ret, name, password, password_reset_required, region, key, keyid, profile)
+            ret = _set_login_profile(ret, name, password, password_reset_required, region, key, keyid, profile)
         _ret = _user_policies_present(name, _policies, region, key, keyid, profile)
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
@@ -790,7 +794,11 @@ def _user_policies_deleted(
     return ret
 
 
-def _case_password(ret, name, password, password_reset_required, region=None, key=None, keyid=None, profile=None):
+def _set_login_profile(ret, name, password, password_reset_required, region=None, key=None, keyid=None, profile=None):
+    current = __salt__['boto_iam.get_login_profile'](name, region, key, keyid, profile)
+    if current is not None:
+        ret['comment'] = ' '.join([ret['comment'], 'Login Profile for IAM user {0} already set.'.format(name)])
+        return ret
     if __opts__['test']:
         ret['comment'] = 'Login policy for {0} is set to be changed.'.format(name)
         ret['result'] = None
