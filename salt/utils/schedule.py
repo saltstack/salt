@@ -1071,11 +1071,13 @@ class Schedule(object):
                             log.error('Invalid date string. Ignoring')
                             continue
                     else:
-                        try:
-                            when = dateutil_parser.parse(data['when'])
-                        except ValueError:
-                            log.error('Invalid date string. Ignoring')
-                            continue
+                        when = data['when']
+                        if not isinstance(when, datetime.datetime):
+                            try:
+                                when = dateutil_parser.parse(when)
+                            except ValueError:
+                                log.error('Invalid date string. Ignoring')
+                                continue
 
                     if when < now - datetime.timedelta(seconds=self.opts['loop_interval']) and \
                             not data.get('_run', False) and \
