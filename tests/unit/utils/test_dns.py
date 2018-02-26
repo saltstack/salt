@@ -97,7 +97,7 @@ class DNShelpersCase(TestCase):
         ]
 
         results = [
-            {'address': ipaddress.IPv4Address(right[0])},
+            ipaddress.IPv4Address(right[0]),
             {'preference': 10, 'name': 'mbox.example.com'},
             {'prio': 10, 'weight': 20, 'port': 30, 'name': 'example.com'}
         ]

@@ -194,10 +194,14 @@ def _data2rec(schema, rec_data):
             cutoff = len(schema) - 1
             rec_fields = rec_fields[0:cutoff] + [''.join(rec_fields[cutoff:])]
 
-        return dict((
-            (field_name, _cast(rec_field, rec_cast))
-            for (field_name, rec_cast), rec_field in zip(schema.items(), rec_fields)
-        ))
+        if len(schema) == 1:
+            res = _cast(rec_fields[0], next(iter(schema.values())))
+        else:
+            res = dict((
+                (field_name, _cast(rec_field, rec_cast))
+                for (field_name, rec_cast), rec_field in zip(schema.items(), rec_fields)
+            ))
+        return res
     except (AttributeError, TypeError, ValueError) as e:
         raise ValueError('Unable to cast "{0}" as "{2}": {1}'.format(
             rec_data,
@@ -216,9 +220,14 @@ def _data2rec_group(schema, recs_data, group_key):
         for rdata in recs_data:
             rdata = _data2rec(schema, rdata)
             assert rdata and group_key in rdata
+
             idx = rdata.pop(group_key)
             if idx not in res:
                 res[idx] = []
+
+            if len(rdata) == 1:
+                rdata = next(iter(rdata.values()))
+
             res[idx].append(rdata)
         return res
     except (AssertionError, ValueError) as e:
@@ -233,7 +242,7 @@ def _rec2data(*rdata):
     return ' '.join(rdata)
 
 
-def _clean(data):
+def _data_clean(data):
     data = data.strip(string.whitespace)
     if data.startswith(('"', '\'')) and data.endswith(('"', '\'')):
         return data[1:-1]
@@ -284,7 +293,7 @@ def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
         elif rtype == 'RRSIG':
             validated = True
             continue
-        res.append(_clean(rdata))
+        res.append(_data_clean(rdata))
 
     if res and secure and not validated:
         return False
@@ -337,7 +346,7 @@ def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
             elif l_type != rdtype:
                 raise ValueError('Invalid DNS type {}'.format(rdtype))
 
-            res.append(_clean(l_rec))
+            res.append(_data_clean(l_rec))
 
     except StopIteration:
         pass
@@ -409,7 +418,7 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
             if line.startswith(prefix):
                 line = line[len(prefix) + 1:]
                 break
-        res.append(_clean(line))
+        res.append(_data_clean(line))
 
     return res
 
@@ -433,7 +442,7 @@ def _lookup_dnspython(name, rdtype, timeout=None, servers=None, secure=None):
         resolver.ednsflags += dns.flags.DO
 
     try:
-        res = [_clean(rr.to_text())
+        res = [_data_clean(rr.to_text())
                for rr in resolver.query(name, rdtype, raise_on_no_answer=False)]
         return res
     except dns.rdatatype.UnknownRdatatype:
@@ -502,7 +511,7 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
                 else:
                     line = line.split(' ')
 
-            res.append(_clean(line[-1]))
+            res.append(_data_clean(line[-1]))
             line = next(lookup_res)
 
     except StopIteration:
