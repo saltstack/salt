@@ -797,7 +797,7 @@ class Schedule(object):
 
         loop_interval = self.opts['loop_interval']
         if not isinstance(loop_interval, datetime.timedelta):
-            loop_interval = datetime.timedelta(loop_interval)
+            loop_interval = datetime.timedelta(seconds=loop_interval)
 
         def _splay(splaytime):
             '''
