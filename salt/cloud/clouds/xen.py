@@ -565,11 +565,6 @@ def create(vm_):
     record = {}
     ret = {}
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     # fire creating event
     __utils__['cloud.fire_event'](
         'event',
