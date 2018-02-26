@@ -251,6 +251,7 @@ LINTOWIN = {
     'Asia/Jerusalem': 'Israel Standard Time',
     'Asia/Kabul': 'Afghanistan Standard Time',
     'Asia/Karachi': 'Pakistan Standard Time',
+    'Asia/Kathmandu': 'Nepal Standard Time',
     'Asia/Katmandu': 'Nepal Standard Time',
     'Asia/Krasnoyarsk': 'North Asia Standard Time',
     'Asia/Kuala_Lumpur': 'Singapore Standard Time',
@@ -459,7 +460,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and salt.utils.which('tzutil'):
         return __virtualname__
-    return False
+    return (False, "Module win_timezone: tzutil not found or is not on Windows client")
 
 
 def get_zone():
@@ -493,7 +494,10 @@ def get_offset():
     string = False
     zone = __salt__['cmd.run'](['tzutil', '/g'], python_shell=False)
     prev = ''
-    for line in __salt__['cmd.run'](['tzutil', '/l'], python_shell=False).splitlines():
+    zone_list = __salt__['cmd.run'](['tzutil', '/l'],
+                                    python_shell=False,
+                                    output_loglevel='trace').splitlines()
+    for line in zone_list:
         if zone == line:
             string = prev
             break
