@@ -86,17 +86,6 @@ from __future__ import absolute_import
 import json
 import logging
 
-# Salt libs
-import salt.config
-import salt.loader
-
-
-__opts__ = salt.config.minion_config('/etc/salt/minion')
-__grains__ = salt.loader.grains(__opts__)
-__opts__['grains'] = __grains__
-__utils__ = salt.loader.utils(__opts__)
-
-
 __virtualname__ = 'azurearm_resource'
 
 log = logging.getLogger(__name__)

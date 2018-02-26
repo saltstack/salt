@@ -89,17 +89,6 @@ parameters are sensitive, it's recommended to pass them to the states via pillar
 from __future__ import absolute_import
 import logging
 
-# Salt libs
-import salt.config
-import salt.loader
-
-
-__opts__ = salt.config.minion_config('/etc/salt/minion')
-__grains__ = salt.loader.grains(__opts__)
-__opts__['grains'] = __grains__
-__utils__ = salt.loader.utils(__opts__)
-
-
 __virtualname__ = 'azurearm_compute'
 
 log = logging.getLogger(__name__)

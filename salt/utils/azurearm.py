@@ -187,7 +187,7 @@ def log_cloud_error(client, message, **kwargs):
     '''
     try:
         cloud_logger = getattr(log, kwargs.get('azurearm_log_level'))
-    except:
+    except (AttributeError, TypeError):
         cloud_logger = getattr(log, 'error')
 
     cloud_logger(

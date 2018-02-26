@@ -92,27 +92,12 @@ from __future__ import absolute_import
 import logging
 
 # Salt libs
-import salt.config
-import salt.loader
 try:
     from salt.ext.six.moves import range as six_range
 except ImportError:
     six_range = range
 
-
-__opts__ = salt.config.minion_config('/etc/salt/minion')
-__grains__ = salt.loader.grains(__opts__)
-__opts__['grains'] = __grains__
-__utils__ = salt.loader.utils(__opts__)
-
-
 __virtualname__ = 'azurearm_network'
-
-try:
-    _compare_list_of_dicts = __utils__['azurearm.compare_list_of_dicts']  # pylint: disable=invalid-name
-    HAS_LIBS = True
-except KeyError:
-    HAS_LIBS = False
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +106,7 @@ def __virtual__():
     '''
     Only make this state available if the azurearm_network module is available.
     '''
-    return __virtualname__ if HAS_LIBS and 'azurearm_network.check_ip_address_availability' in __salt__ else False
+    return __virtualname__ if 'azurearm_network.check_ip_address_availability' in __salt__ else False
 
 
 def virtual_network_present(name, address_prefixes, resource_group, dns_servers=None,
@@ -631,7 +616,7 @@ def network_security_group_present(name, resource_group, tags=None, security_rul
             ret['changes']['tags'] = tag_changes
 
         if security_rules:
-            comp_ret = _compare_list_of_dicts(nsg.get('security_rules', []), security_rules)
+            comp_ret = __utils__['azurearm.compare_list_of_dicts'](nsg.get('security_rules', []), security_rules)
 
             if comp_ret.get('comment'):
                 ret['comment'] = '"security_rules" {0}'.format(comp_ret['comment'])
@@ -864,13 +849,17 @@ def security_rule_present(name, access, direction, priority, protocol, security_
     ]
 
     for params in exclusive_params:
+        # pylint: disable=eval-used
         if not eval(params[0]) and not eval(params[1]):
             ret['comment'] = 'Either the {0} or {1} parameter must be provided!'.format(params[0], params[1])
             return ret
+        # pylint: disable=eval-used
         if eval(params[0]):
+            # pylint: disable=eval-used
             if not isinstance(eval(params[0]), list):
                 ret['comment'] = 'The {0} parameter must be a list!'.format(params[0])
                 return ret
+            # pylint: disable=exec-used
             exec('{0} = None'.format(params[1]))
 
     rule = __salt__['azurearm_network.security_rule_get'](
@@ -1332,7 +1321,7 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
 
         # frontend_ip_configurations changes
         if frontend_ip_configurations:
-            comp_ret = _compare_list_of_dicts(
+            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
                 load_bal.get('frontend_ip_configurations', []),
                 frontend_ip_configurations,
                 ['public_ip_address', 'subnet']
@@ -1347,7 +1336,7 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
 
         # backend_address_pools changes
         if backend_address_pools:
-            comp_ret = _compare_list_of_dicts(
+            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
                 load_bal.get('backend_address_pools', []),
                 backend_address_pools
             )
@@ -1361,7 +1350,7 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
 
         # probes changes
         if probes:
-            comp_ret = _compare_list_of_dicts(load_bal.get('probes', []), probes)
+            comp_ret = __utils__['azurearm.compare_list_of_dicts'](load_bal.get('probes', []), probes)
 
             if comp_ret.get('comment'):
                 ret['comment'] = '"probes" {0}'.format(comp_ret['comment'])
@@ -1372,7 +1361,7 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
 
         # load_balancing_rules changes
         if load_balancing_rules:
-            comp_ret = _compare_list_of_dicts(
+            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
                 load_bal.get('load_balancing_rules', []),
                 load_balancing_rules,
                 ['frontend_ip_configuration', 'backend_address_pool', 'probe']
@@ -1387,7 +1376,7 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
 
         # inbound_nat_rules changes
         if inbound_nat_rules:
-            comp_ret = _compare_list_of_dicts(
+            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
                 load_bal.get('inbound_nat_rules', []),
                 inbound_nat_rules,
                 ['frontend_ip_configuration']
@@ -1402,7 +1391,7 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
 
         # inbound_nat_pools changes
         if inbound_nat_pools:
-            comp_ret = _compare_list_of_dicts(
+            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
                 load_bal.get('inbound_nat_pools', []),
                 inbound_nat_pools,
                 ['frontend_ip_configuration']
@@ -1417,7 +1406,7 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
 
         # outbound_nat_rules changes
         if outbound_nat_rules:
-            comp_ret = _compare_list_of_dicts(
+            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
                 load_bal.get('outbound_nat_rules', []),
                 outbound_nat_rules,
                 ['frontend_ip_configuration']
@@ -1984,7 +1973,7 @@ def network_interface_present(name, ip_configurations, subnet, virtual_network, 
                     break
 
         # ip_configurations changes
-        comp_ret = _compare_list_of_dicts(
+        comp_ret = __utils__['azurearm.compare_list_of_dicts'](
             iface.get('ip_configurations', []),
             ip_configurations,
             ['public_ip_address', 'subnet']
@@ -2206,7 +2195,7 @@ def route_table_present(name, resource_group, tags=None, routes=None, disable_bg
 
         # routes changes
         if routes:
-            comp_ret = _compare_list_of_dicts(rt_tbl.get('routes', []), routes)
+            comp_ret = __utils__['azurearm.compare_list_of_dicts'](rt_tbl.get('routes', []), routes)
 
             if comp_ret.get('comment'):
                 ret['comment'] = '"routes" {0}'.format(comp_ret['comment'])

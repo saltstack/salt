@@ -50,10 +50,6 @@ to every function in order to work properly.
 from __future__ import absolute_import
 import logging
 
-# Salt libs
-import salt.config
-import salt.loader
-
 # Azure libs
 HAS_LIBS = False
 try:
@@ -64,19 +60,7 @@ try:
 except ImportError:
     pass
 
-__opts__ = salt.config.minion_config('/etc/salt/minion')
-__grains__ = salt.loader.grains(__opts__)
-__opts__['grains'] = __grains__
-__utils__ = salt.loader.utils(__opts__)
-
-
 __virtualname__ = 'azurearm_compute'
-
-if HAS_LIBS:
-    _create_object_model = __utils__['azurearm.create_object_model']  # pylint: disable=invalid-name
-    _get_client = __utils__['azurearm.get_client']  # pylint: disable=invalid-name
-    _log_cloud_error = __utils__['azurearm.log_cloud_error']  # pylint: disable=invalid-name
-    _paged_object_to_list = __utils__['azurearm.paged_object_to_list']  # pylint: disable=invalid-name
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +107,7 @@ def availability_set_create_or_update(name, resource_group, **kwargs):  # pylint
             return False
         kwargs['location'] = rg_props['location']
 
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
 
     # Use VM names to link to the IDs of existing VMs.
     if isinstance(kwargs.get('virtual_machines'), list):
@@ -139,7 +123,7 @@ def availability_set_create_or_update(name, resource_group, **kwargs):  # pylint
         kwargs['virtual_machines'] = vm_list
 
     try:
-        setmodel = _create_object_model('compute', 'AvailabilitySet', **kwargs)
+        setmodel = __utils__['azurearm.create_object_model']('compute', 'AvailabilitySet', **kwargs)
     except TypeError as exc:
         result = {'error': 'The object model could not be built. ({1})'.format(str(exc))}
         return result
@@ -153,7 +137,7 @@ def availability_set_create_or_update(name, resource_group, **kwargs):  # pylint
         result = av_set.as_dict()
 
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
     except SerializationError as exc:
         result = {'error': 'The object model could not be parsed. ({0})'.format(str(exc))}
@@ -180,7 +164,7 @@ def availability_set_delete(name, resource_group, **kwargs):
 
     '''
     result = False
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         compconn.availability_sets.delete(
             resource_group_name=resource_group,
@@ -189,7 +173,7 @@ def availability_set_delete(name, resource_group, **kwargs):
         result = True
 
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
 
     return result
 
@@ -212,7 +196,7 @@ def availability_set_get(name, resource_group, **kwargs):
         salt-call azurearm_compute.availability_set_get testset testgroup
 
     '''
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         av_set = compconn.availability_sets.get(
             resource_group_name=resource_group,
@@ -221,7 +205,7 @@ def availability_set_get(name, resource_group, **kwargs):
         result = av_set.as_dict()
 
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -244,9 +228,9 @@ def availability_sets_list(resource_group, **kwargs):
 
     '''
     result = {}
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
-        avail_sets = _paged_object_to_list(
+        avail_sets = __utils__['azurearm.paged_object_to_list'](
             compconn.availability_sets.list(
                 resource_group_name=resource_group
             )
@@ -255,7 +239,7 @@ def availability_sets_list(resource_group, **kwargs):
         for avail_set in avail_sets:
             result[avail_set['name']] = avail_set
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -282,9 +266,9 @@ def availability_sets_list_available_sizes(name, resource_group, **kwargs):  # p
 
     '''
     result = {}
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
-        sizes = _paged_object_to_list(
+        sizes = __utils__['azurearm.paged_object_to_list'](
             compconn.availability_sets.list_available_sizes(
                 resource_group_name=resource_group,
                 availability_set_name=name
@@ -294,7 +278,7 @@ def availability_sets_list_available_sizes(name, resource_group, **kwargs):  # p
         for size in sizes:
             result[size['name']] = size
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -330,7 +314,7 @@ def virtual_machine_capture(name, destination_name, resource_group, prefix='capt
         azure.mgmt.compute.models, 'VirtualMachineCaptureParameters'
     )
 
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         # pylint: disable=invalid-name
         vm = compconn.virtual_machines.capture(
@@ -346,7 +330,7 @@ def virtual_machine_capture(name, destination_name, resource_group, prefix='capt
         vm_result = vm.result()
         result = vm_result.as_dict()
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -373,7 +357,7 @@ def virtual_machine_get(name, resource_group, **kwargs):
     '''
     expand = kwargs.get('expand')
 
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         # pylint: disable=invalid-name
         vm = compconn.virtual_machines.get(
@@ -383,7 +367,7 @@ def virtual_machine_get(name, resource_group, **kwargs):
         )
         result = vm.as_dict()
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -408,7 +392,7 @@ def virtual_machine_convert_to_managed_disks(name, resource_group, **kwargs):  #
         salt-call azurearm_compute.virtual_machine_convert_to_managed_disks testvm testgroup
 
     '''
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         # pylint: disable=invalid-name
         vm = compconn.virtual_machines.convert_to_managed_disks(
@@ -419,7 +403,7 @@ def virtual_machine_convert_to_managed_disks(name, resource_group, **kwargs):  #
         vm_result = vm.result()
         result = vm_result.as_dict()
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -443,7 +427,7 @@ def virtual_machine_deallocate(name, resource_group, **kwargs):
         salt-call azurearm_compute.virtual_machine_deallocate testvm testgroup
 
     '''
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         # pylint: disable=invalid-name
         vm = compconn.virtual_machines.deallocate(
@@ -454,7 +438,7 @@ def virtual_machine_deallocate(name, resource_group, **kwargs):
         vm_result = vm.result()
         result = vm_result.as_dict()
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -479,7 +463,7 @@ def virtual_machine_generalize(name, resource_group, **kwargs):
 
     '''
     result = False
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         compconn.virtual_machines.generalize(
             resource_group_name=resource_group,
@@ -487,7 +471,7 @@ def virtual_machine_generalize(name, resource_group, **kwargs):
         )
         result = True
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
 
     return result
 
@@ -509,9 +493,9 @@ def virtual_machines_list(resource_group, **kwargs):
 
     '''
     result = {}
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
-        vms = _paged_object_to_list(
+        vms = __utils__['azurearm.paged_object_to_list'](
             compconn.virtual_machines.list(
                 resource_group_name=resource_group
             )
@@ -519,7 +503,7 @@ def virtual_machines_list(resource_group, **kwargs):
         for vm in vms:  # pylint: disable=invalid-name
             result[vm['name']] = vm
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -539,15 +523,15 @@ def virtual_machines_list_all(**kwargs):
 
     '''
     result = {}
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
-        vms = _paged_object_to_list(
+        vms = __utils__['azurearm.paged_object_to_list'](
             compconn.virtual_machines.list_all()
         )
         for vm in vms:  # pylint: disable=invalid-name
             result[vm['name']] = vm
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -573,9 +557,9 @@ def virtual_machines_list_available_sizes(name, resource_group, **kwargs):  # py
 
     '''
     result = {}
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
-        sizes = _paged_object_to_list(
+        sizes = __utils__['azurearm.paged_object_to_list'](
             compconn.virtual_machines.list_available_sizes(
                 resource_group_name=resource_group,
                 vm_name=name
@@ -584,7 +568,7 @@ def virtual_machines_list_available_sizes(name, resource_group, **kwargs):  # py
         for size in sizes:
             result[size['name']] = size
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -608,7 +592,7 @@ def virtual_machine_power_off(name, resource_group, **kwargs):
         salt-call azurearm_compute.virtual_machine_power_off testvm testgroup
 
     '''
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         # pylint: disable=invalid-name
         vm = compconn.virtual_machines.power_off(
@@ -619,7 +603,7 @@ def virtual_machine_power_off(name, resource_group, **kwargs):
         vm_result = vm.result()
         result = vm_result.as_dict()
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -643,7 +627,7 @@ def virtual_machine_restart(name, resource_group, **kwargs):
         salt-call azurearm_compute.virtual_machine_restart testvm testgroup
 
     '''
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         # pylint: disable=invalid-name
         vm = compconn.virtual_machines.restart(
@@ -654,7 +638,7 @@ def virtual_machine_restart(name, resource_group, **kwargs):
         vm_result = vm.result()
         result = vm_result.as_dict()
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -678,7 +662,7 @@ def virtual_machine_start(name, resource_group, **kwargs):
         salt-call azurearm_compute.virtual_machine_start testvm testgroup
 
     '''
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         # pylint: disable=invalid-name
         vm = compconn.virtual_machines.start(
@@ -689,7 +673,7 @@ def virtual_machine_start(name, resource_group, **kwargs):
         vm_result = vm.result()
         result = vm_result.as_dict()
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
@@ -713,7 +697,7 @@ def virtual_machine_redeploy(name, resource_group, **kwargs):
         salt-call azurearm_compute.virtual_machine_redeploy testvm testgroup
 
     '''
-    compconn = _get_client('compute', **kwargs)
+    compconn = __utils__['azurearm.get_client']('compute', **kwargs)
     try:
         # pylint: disable=invalid-name
         vm = compconn.virtual_machines.redeploy(
@@ -724,7 +708,7 @@ def virtual_machine_redeploy(name, resource_group, **kwargs):
         vm_result = vm.result()
         result = vm_result.as_dict()
     except CloudError as exc:
-        _log_cloud_error('compute', str(exc), **kwargs)
+        __utils__['azurearm.log_cloud_error']('compute', str(exc), **kwargs)
         result = {'error': str(exc)}
 
     return result
