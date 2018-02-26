@@ -86,6 +86,9 @@ from __future__ import absolute_import
 import json
 import logging
 
+# Salt libs
+import salt.utils
+
 __virtualname__ = 'azurearm_resource'
 
 log = logging.getLogger(__name__)
