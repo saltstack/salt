@@ -338,7 +338,7 @@ class DNSlookupsCase(TestCase):
                 'mocksrvr.the-loeki.net.\tSSHFP\t1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344A67E5597\n',
                 'mocksrvr.the-loeki.net.\tSSHFP\t4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BBC859AB1B\n',
                 'mocksrvr.the-loeki.net.\tSSHFP\t3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5'
-            ]
+            ],
             'TXT': [
                 'example.com.\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ]
