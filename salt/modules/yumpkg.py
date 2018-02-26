@@ -1134,7 +1134,6 @@ def install(name=None,
             update_holds=False,
             saltenv='base',
             ignore_epoch=False,
-            saltenv='base',
             **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
