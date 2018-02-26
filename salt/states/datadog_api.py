@@ -57,7 +57,7 @@ def monitor_managed(api_key=None,
                     name=None,
                     type=None,
                     query=None,
-                    message='',
+                    message=None,
                     tags=None,
                     options=None):
     '''
@@ -118,6 +118,8 @@ def monitor_managed(api_key=None,
         tags = []
     if options is None:
         options = {}
+    if message is None:
+        message = ''
 
     defaults = _get_defaults(api_key=api_key, app_key=app_key)
     if message == '':

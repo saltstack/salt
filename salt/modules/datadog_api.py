@@ -494,7 +494,7 @@ def update_monitor(api_key=None,
                    id=None,
                    name=None,
                    query=None,
-                   message='',
+                   message=None,
                    options=None,
                    tags=None):
     '''
@@ -548,22 +548,8 @@ def update_monitor(api_key=None,
         options = {}
     if tags is None:
         tags = []
-
-    #if id:  # Update the monitor with given ID
-    #    _id = id
-    #elif name:  # Find ID of monitor with given name
-    #    ids = __utils__['datadog.find_monitors_with_name'](
-    #        api_key=api_key,
-    #        app_key=app_key,
-    #        name=name
-    #    )
-    #    if ids:  # Monitor with given name exists
-    #        _id = ids[0]
-    #    else:
-    #        ret['comment'] = "Can't find monitor with name {}".format(name)
-    #        return ret
-    #else:
-    #    raise SaltInvocationError('Either id or name must be specified.')
+    if message is None:
+        message = ''
 
     res = read_monitor(
         api_key=api_key,
@@ -582,7 +568,6 @@ def update_monitor(api_key=None,
         query = res['response'][0]['query']
 
     res = datadog.api.Monitor.update(
-        #int(_id),
         res['response'][0]['id'],
         name=name,
         query=query,
