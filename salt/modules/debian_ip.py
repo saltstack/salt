@@ -23,6 +23,7 @@ from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
+import salt.utils.dns
 import salt.utils.files
 import salt.utils.odict
 import salt.utils.stringutils
@@ -228,38 +229,23 @@ def _read_file(path):
 
 def _parse_resolve():
     '''
-    Parse /etc/resolv.conf and return domainname
+    Parse /etc/resolv.conf
     '''
-    contents = _read_file(_DEB_RESOLV_FILE)
-    return contents
+    return salt.utils.dns.parse_resolv(_DEB_RESOLV_FILE)
 
 
 def _parse_domainname():
     '''
     Parse /etc/resolv.conf and return domainname
     '''
-    contents = _read_file(_DEB_RESOLV_FILE)
-    pattern = r'domain\s+(?P<domain_name>\S+)'
-    prog = re.compile(pattern)
-    for item in contents:
-        match = prog.match(item)
-        if match:
-            return match.group('domain_name')
-    return ''
+    return _parse_resolve().get('domain', '')
 
 
 def _parse_searchdomain():
     '''
     Parse /etc/resolv.conf and return searchdomain
     '''
-    contents = _read_file(_DEB_RESOLV_FILE)
-    pattern = r'search\s+(?P<search_domain>\S+)'
-    prog = re.compile(pattern)
-    for item in contents:
-        match = prog.match(item)
-        if match:
-            return match.group('search_domain')
-    return ''
+    return _parse_resolve().get('search', '')
 
 
 def _parse_hostname():
@@ -2075,38 +2061,29 @@ def build_network_settings(**settings):
     # If the domain changes, then we should write the resolv.conf file.
     if new_domain or new_search:
         # Look for existing domain line and update if necessary
-        contents = _parse_resolve()
-        domain_prog = re.compile(r'domain\s+(?P<domain_name>\S+)')
-        search_prog = re.compile(r'search\s+(?P<search_domain>\S+)')
+        resolve = _parse_resolve()
+        domain_prog = re.compile(r'domain\s+')
+        search_prog = re.compile(r'search\s+')
         new_contents = []
-        found_domain = False
-        found_search = False
-        for item in contents:
-            domain_match = domain_prog.match(item)
-            search_match = search_prog.match(item)
-            if domain_match:
-                new_contents.append('domain {0}\n' . format(domainname))
-                found_domain = True
-            elif search_match:
-                new_contents.append('search {0}\n' . format(searchdomain))
-                found_search = True
-            else:
-                new_contents.append(item)
+
+        for item in _read_file(_DEB_RESOLV_FILE):
+            if domain_prog.match(item):
+                item = 'domain {0}'.format(domainname)
+            elif search_prog.match(item):
+                item = 'search {0}'.format(searchdomain)
+            new_contents.append(item)
 
         # A domain line didn't exist so we'll add one in
         # with the new domainname
-        if not found_domain:
-            new_contents.insert(0, 'domain {0}\n' . format(domainname))
+        if 'domain' not in resolve:
+            new_contents.insert(0, 'domain {0}' . format(domainname))
 
         # A search line didn't exist so we'll add one in
         # with the new search domain
-        if not found_search:
-            if new_contents[0].startswith('domain'):
-                new_contents.insert(1, 'search {0}\n' . format(searchdomain))
-            else:
-                new_contents.insert(0, 'search {0}\n' . format(searchdomain))
+        if 'search' not in resolve:
+            new_contents.insert('domain' in resolve, 'search {0}'.format(searchdomain))
 
-        new_resolv = ''.join(new_contents)
+        new_resolv = '\n'.join(new_contents)
 
         # Write /etc/resolv.conf
         if not ('test' in settings and settings['test']):

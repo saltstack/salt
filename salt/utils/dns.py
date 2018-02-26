@@ -524,7 +524,8 @@ def lookup(
     secure=None
 ):
     '''
-    Lookup DNS record data
+    Lookup DNS records and return their data
+
     :param name: name to lookup
     :param rdtype: DNS record type
     :param method: gai (getaddrinfo()), dnspython, dig, drill, host, nslookup or auto (default)
@@ -628,7 +629,9 @@ def query(
     secure=None
 ):
     '''
-    Query DNS for information
+    Query DNS for information.
+    Where `lookup()` returns record data, `query()` tries to interpret the data and return it's results
+
     :param name: name to lookup
     :param rdtype: DNS record type
     :param method: gai (getaddrinfo()), pydns, dig, drill, host, nslookup or auto (default)
