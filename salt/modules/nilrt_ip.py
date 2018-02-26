@@ -169,7 +169,9 @@ def _get_service_info(service):
     state = service_info.get_property('State')
     if state == 'ready' or state == 'online':
         data['up'] = True
-        data['ipv4'] = {}
+        data['ipv4'] = {
+            'gateway': '0.0.0.0'
+        }
         ipv4 = 'IPv4'
         if service_info.get_property('IPv4')['Method'] == 'manual':
             ipv4 += '.Configuration'
