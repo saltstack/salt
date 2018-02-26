@@ -16,20 +16,9 @@ import salt.utils.dns
 from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group
 from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host, _lookup_nslookup
 
-# Integrations
-try:
-    import dns.resolver
-    HAS_DNSPYTHON = True
-except ImportError:
-    HAS_DNSPYTHON = False
-
 # Testing
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-
-# Debug
-# import pprint
-# ppr = pprint.PrettyPrinter(indent=2).pprint
 
 
 class DNShelpersCase(TestCase):
@@ -200,7 +189,7 @@ class DNSlookupsCase(TestCase):
             ['10 mx1.example.com.', '20 mx2.example.eu.', '30 mx3.example.nl.']
         ],
         'SSHFP': [
-            [ '3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5',
+             ['3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5',
               '4 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b',
               '1 2 500ca871d8e255e01f1261a2370c4e5406b8712f19916d3ab9f86344a67e5597',
               '1 1 0aabda8af5418108e8a5d3f90f207226b2c89fbe']
@@ -525,7 +514,6 @@ class DNSlookupsCase(TestCase):
         }
 
         self._test_cmd_lookup(_lookup_host, wrong_type=wrong_type, wrong=wrongs, right=rights, empty=empty)
-
 
     def test_nslookup(self):
         # all nslookup returns look like this
