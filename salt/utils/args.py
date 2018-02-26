@@ -346,11 +346,11 @@ def split_input(val, mapper=None):
     if mapper is None:
         mapper = lambda x: x
     if isinstance(val, list):
-        return map(mapper, val)
+        return list(map(mapper, val))
     try:
-        return map(mapper, [x.strip() for x in val.split(',')])
+        return list(map(mapper, [x.strip() for x in val.split(',')]))
     except AttributeError:
-        return map(mapper, [x.strip() for x in six.text_type(val).split(',')])
+        return list(map(mapper, [x.strip() for x in six.text_type(val).split(',')]))
 
 
 def test_mode(**kwargs):
