@@ -911,9 +911,6 @@ class Schedule(object):
                     _run_explicit.append(datetime.datetime.strptime(_run_time['time'],
                                                                     _run_time['time_fmt']))
 
-                if isinstance(_run_explicit, six.integer_types):
-                    _run_explicit = [_run_explicit]
-
                 # Copy the list so we can loop through it
                 for i in copy.deepcopy(_run_explicit):
                     if len(_run_explicit) > 1:
