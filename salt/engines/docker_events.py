@@ -54,7 +54,7 @@ def start(docker_url='unix://var/run/docker.sock',
           - docker_events:
               docker_url: unix://var/run/docker.sock
               filters:
-                containers:
+                event:
                 - start
                 - stop
                 - die
