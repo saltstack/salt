@@ -316,6 +316,7 @@ How this is used depends on the operating system that is being deployed. If
 used, any ``userdata`` setting will be ignored.
 
 wait_for_ip_timeout
+
 -------------------
 Optional. Default is ``600``. When waiting for a VM to be created, Salt Cloud
 will attempt to connect to the VM's IP address until it starts responding. This
