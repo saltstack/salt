@@ -1044,6 +1044,40 @@ cache events are fired when a minion requests a minion data cache refresh.
 
     minion_data_cache_events: True
 
+.. conf_master:: http_connect_timeout
+
+``http_connect_timeout``
+------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``20``
+
+HTTP connection timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_connect_timeout: 20
+
+.. conf_master:: http_request_timeout
+
+``http_request_timeout``
+------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``3600``
+
+HTTP request timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_request_timeout: 3600
+
 .. _salt-ssh-configuration:
 
 Salt-SSH Configuration

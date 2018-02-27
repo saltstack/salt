@@ -456,7 +456,8 @@ def _run(cmd,
                 env_cmd = ('su', runas, '-c', sys.executable)
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
-            log.debug(log_callback('env command: %s', env_cmd))
+            msg = 'env command: {0}'.format(env_cmd)
+            log.debug(log_callback(msg))
             env_bytes = salt.utils.stringutils.to_bytes(subprocess.Popen(
                 env_cmd,
                 stdin=subprocess.PIPE,
