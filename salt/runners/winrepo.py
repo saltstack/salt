@@ -164,7 +164,8 @@ def update_git_repos(opts=None, clean=False, masterless=False):
 
     ret = {}
     for remotes, base_dir in winrepo_cfg:
-        if not any((salt.utils.gitfs.HAS_GITPYTHON, salt.utils.gitfs.HAS_PYGIT2)):
+        if not any((salt.utils.gitfs.GITPYTHON_VERSION,
+                    salt.utils.gitfs.PYGIT2_VERSION)):
             # Use legacy code
             winrepo_result = {}
             for remote_info in remotes:
