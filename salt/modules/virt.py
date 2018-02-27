@@ -638,8 +638,7 @@ def init(name,
                 else:
                     log.debug('Copying {0} to {1}'.format(sfn, img_dest))
                     salt.utils.files.copyfile(sfn, img_dest)
-                mask = os.umask(0)
-                os.umask(mask)
+                mask = salt.utils.files.get_umask()
                 # Apply umask and remove exec bit
                 mode = (0o0777 ^ mask) & 0o0666
                 os.chmod(img_dest, mode)
