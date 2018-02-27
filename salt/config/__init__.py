@@ -3699,7 +3699,9 @@ def apply_minion_config(overrides=None,
             )
             opts['fileserver_backend'][idx] = new_val
 
-    opts['__cli'] = os.path.basename(sys.argv[0])
+    opts['__cli'] = salt.utils.stringutils.to_unicode(
+        os.path.basename(sys.argv[0])
+    )
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
