@@ -65,7 +65,9 @@ class DNShelpersCase(TestCase):
         ]
 
         # What are the odds of this tripping over a build
+        # 1/(8!^4) builds?
         self.assertNotEqual(
+            _weighted_order(list(recs[-1])),
             _weighted_order(list(recs[-1])),
             _weighted_order(list(recs[-1]))
         )
