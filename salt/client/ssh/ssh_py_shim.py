@@ -106,8 +106,10 @@ def need_deployment():
     if os.path.exists(OPTIONS.saltdir):
         shutil.rmtree(OPTIONS.saltdir)
     old_umask = os.umask(0o077)
-    os.makedirs(OPTIONS.saltdir)
-    os.umask(old_umask)
+    try:
+        os.makedirs(OPTIONS.saltdir)
+    finally:
+        os.umask(old_umask)
     # Verify perms on saltdir
     if not is_windows():
         euid = os.geteuid()
