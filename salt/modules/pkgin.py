@@ -229,7 +229,7 @@ def refresh_db(force=False):
     force
         Pass -f so that the cache is always refreshed.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
 
     CLI Example:
@@ -312,7 +312,7 @@ def list_upgrades(refresh=True, **kwargs):
     '''
     List all available package upgrades.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     refresh
         Whether or not to refresh the package database before installing.

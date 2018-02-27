@@ -138,7 +138,7 @@ name) is set in the :conf_minion:`master` configuration setting.
 ``master_tops_first``
 ---------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``False``
 
@@ -340,7 +340,7 @@ option on the Salt master.
 ``source_interface_name``
 -------------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The name of the interface to use when establishing the connection to the Master.
 
@@ -379,7 +379,7 @@ Configuration example:
 ``source_address``
 ------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The source IP address or the domain name to be used when connecting the Minion
 to the Master.
@@ -404,7 +404,7 @@ Configuration example:
 ``source_ret_port``
 -------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The source port to be used when connecting the Minion to the Master ret server.
 
@@ -427,7 +427,7 @@ Configuration example:
 ``source_publish_port``
 -----------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The source port to be used when connecting the Minion to the Master publish
 server.
@@ -1324,7 +1324,7 @@ The password used for HTTP proxy access.
 ``docker.compare_container_networks``
 -------------------------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``{'static': ['Aliases', 'Links', 'IPAMConfig'], 'automatic': ['IPAddress', 'Gateway', 'GlobalIPv6Address', 'IPv6Gateway']}``
 
@@ -1904,7 +1904,7 @@ enabled and can be disabled by changing this value to ``False``.
 ``saltenv``
 -----------
 
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``environment`` to ``saltenv``. If ``environment`` is used,
     ``saltenv`` will take its value. If both are used, ``environment`` will be
     ignored and ``saltenv`` will be used.
@@ -1923,7 +1923,7 @@ environments is to isolate via the top file.
 ``lock_saltenv``
 ----------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``False``
 
@@ -2455,7 +2455,7 @@ minion's pki directory.
 ``autosign_grains``
 -------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``not defined``
 
@@ -2648,7 +2648,7 @@ executed in a thread.
 ``process_count_max``
 -------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``-1``
 

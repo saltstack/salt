@@ -164,7 +164,7 @@ def persist(name, value, config='/etc/sysctl.conf', apply_change=False):
 
     with salt.utils.files.fopen(config, 'r') as ifile:
         for line in ifile:
-            line = salt.utils.stringutils.to_unicode(line).rstrip('\n')
+            line = salt.utils.stringutils.to_unicode(line)
             if not line.startswith('{0}='.format(name)):
                 nlines.append(line)
                 continue
