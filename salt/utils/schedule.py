@@ -789,7 +789,7 @@ class Schedule(object):
         '''
         Evaluate and execute the schedule
 
-        :param int now: Override current time with a Unix timestamp``
+        :param datetime now: Override current time with a datetime object instance``
 
         '''
 
