@@ -413,7 +413,7 @@ class Schedule(object):
             data = self._check_max_running(func,
                                            data,
                                            self.opts,
-                                           int(time.time()))
+                                           datetime.datetime.now())
 
         # Grab run, assume True
         run = data.get('run', True)
@@ -797,11 +797,15 @@ class Schedule(object):
         '''
         Evaluate and execute the schedule
 
-        :param int now: Override current time with a Unix timestamp``
+        :param datetime now: Override current time with a datetime object instance``
 
         '''
 
         log.trace('==== evaluating schedule now %s =====', now)
+
+        loop_interval = self.opts['loop_interval']
+        if not isinstance(loop_interval, datetime.timedelta):
+            loop_interval = datetime.timedelta(seconds=loop_interval)
 
         def _splay(splaytime):
             '''
@@ -842,12 +846,12 @@ class Schedule(object):
 
             return data
 
-        def _handle_once(data):
+        def _handle_once(data, loop_interval):
             '''
             Handle schedule item with once
             '''
             if data['_next_fire_time']:
-                if data['_next_fire_time'] < now - datetime.timedelta(seconds=self.opts['loop_interval']) or \
+                if data['_next_fire_time'] < now - loop_interval or \
                    data['_next_fire_time'] > now and \
                    not data['_splay']:
                     data['_continue'] = True
@@ -865,14 +869,14 @@ class Schedule(object):
                     log.error(data['_error'])
                     return data
                 # If _next_fire_time is less than now, continue
-                if once < now - datetime.timedelta(seconds=self.opts['loop_interval']):
+                if once < now - loop_interval:
                     data['_continue'] = True
                 else:
                     data['_next_fire_time'] = once
                     data['_next_scheduled_fire_time'] = once
             return data
 
-        def _handle_when(data):
+        def _handle_when(data, loop_interval):
             '''
             Handle schedule item with when
             '''
@@ -934,7 +938,7 @@ class Schedule(object):
                 # Copy the list so we can loop through it
                 for i in copy.deepcopy(_when):
                     if len(_when) > 1:
-                        if i < now - datetime.timedelta(seconds=self.opts['loop_interval']):
+                        if i < now - loop_interval:
                             # Remove all missed schedules except the latest one.
                             # We need it to detect if it was triggered previously.
                             _when.remove(i)
@@ -946,7 +950,7 @@ class Schedule(object):
 
                     if '_run' not in data:
                         # Prevent run of jobs from the past
-                        data['_run'] = bool(when >= now - datetime.timedelta(seconds=self.opts['loop_interval']))
+                        data['_run'] = bool(when >= now - loop_interval)
 
                     if not data['_next_fire_time']:
                         data['_next_fire_time'] = when
@@ -1000,7 +1004,7 @@ class Schedule(object):
                         log.error(data['_error'])
                         return data
 
-                if when < now - datetime.timedelta(seconds=self.opts['loop_interval']) and \
+                if when < now - loop_interval and \
                         not data.get('_run', False) and \
                         not data.get('run', False) and \
                         not data['_splay']:
@@ -1022,7 +1026,7 @@ class Schedule(object):
 
             return data
 
-        def _handle_cron(data):
+        def _handle_cron(data, loop_interval):
             '''
             Handle schedule item with cron
             '''
@@ -1052,32 +1056,32 @@ class Schedule(object):
                     self.loop_interval = interval
             return data
 
-        def _handle_run_explicit(data):
+        def _handle_run_explicit(data, loop_interval):
             '''
             Handle schedule item with run_explicit
             '''
             _run_explicit = []
             for _run_time in data['run_explicit']:
-                _run_explicit.append(datetime.datetime.strptime(_run_time['time'],
-                                                                _run_time['time_fmt']))
+                if isinstance(_run_time, datetime.datetime):
+                    _run_explicit.append(_run_time)
+                else:
+                    _run_explicit.append(datetime.datetime.strptime(_run_time['time'],
+                                                                    _run_time['time_fmt']))
             data['run'] = False
-
-            if isinstance(_run_explicit, six.integer_types):
-                _run_explicit = [_run_explicit]
 
             # Copy the list so we can loop through it
             for i in copy.deepcopy(_run_explicit):
                 if len(_run_explicit) > 1:
-                    if i < now - datetime.timedelta(seconds=self.opts['loop_interval']):
+                    if i < now - loop_interval:
                         _run_explicit.remove(i)
 
             if _run_explicit:
-                if _run_explicit[0] <= now < _run_explicit[0] + datetime.timedelta(seconds=self.opts['loop_interval']):
+                if _run_explicit[0] <= now < _run_explicit[0] + loop_interval:
                     data['run'] = True
                     data['_next_fire_time'] = _run_explicit[0]
             return data
 
-        def _handle_skip_explicit(data):
+        def _handle_skip_explicit(data, loop_interval):
             '''
             Handle schedule item with skip_explicit
             '''
@@ -1085,19 +1089,19 @@ class Schedule(object):
 
             _skip_explicit = []
             for _skip_time in data['skip_explicit']:
-                _skip_explicit.append(datetime.datetime.strptime(_skip_time['time'],
-                                                                 _skip_time['time_fmt']))
-
-            if isinstance(_skip_explicit, six.string_types):
-                _skip_explicit = [_skip_explicit]
+                if isinstance(_skip_time, datetime.datetime):
+                    _skip_explicit.append(_skip_time)
+                else:
+                    _skip_explicit.append(datetime.datetime.strptime(_skip_time['time'],
+                                                                     _skip_time['time_fmt']))
 
             # Copy the list so we can loop through it
             for i in copy.deepcopy(_skip_explicit):
-                if i < now - datetime.timedelta(seconds=self.opts['loop_interval']):
+                if i < now - loop_interval:
                     _skip_explicit.remove(i)
 
             if _skip_explicit:
-                if _skip_explicit[0] <= now <= (_skip_explicit[0] + datetime.timedelta(seconds=self.opts['loop_interval'])):
+                if _skip_explicit[0] <= now <= (_skip_explicit[0] + loop_interval):
                     if self.skip_function:
                         data['run'] = True
                         data['func'] = self.skip_function
@@ -1110,7 +1114,7 @@ class Schedule(object):
                 data['run'] = True
             return data
 
-        def _handle_skip_during_range(data):
+        def _handle_skip_during_range(data, loop_interval):
             '''
             Handle schedule item with skip_explicit
             '''
@@ -1146,7 +1150,7 @@ class Schedule(object):
                             data['run_explicit'] = []
                         # Add a run_explicit for immediately after the
                         # skip_during_range ends
-                        _run_immediate = (end + datetime.timedelta(seconds=self.opts['loop_interval'])).strftime('%Y-%m-%dT%H:%M:%S')
+                        _run_immediate = (end + loop_interval).strftime('%Y-%m-%dT%H:%M:%S')
                         if _run_immediate not in data['run_explicit']:
                             data['run_explicit'].append({'time': _run_immediate,
                                                          'time_fmt': '%Y-%m-%dT%H:%M:%S'})
@@ -1369,17 +1373,17 @@ class Schedule(object):
                 continue
 
             if 'run_explicit' in data:
-                data = _handle_run_explicit(data)
+                data = _handle_run_explicit(data, loop_interval)
                 run = data['run']
 
             if True in [True for item in time_elements if item in data]:
                 data = _handle_time_elements(data)
             elif 'once' in data:
-                data = _handle_once(data)
+                data = _handle_once(data, loop_interval)
             elif 'when' in data:
-                data = _handle_when(data)
+                data = _handle_when(data, loop_interval)
             elif 'cron' in data:
-                data = _handle_cron(data)
+                data = _handle_cron(data, loop_interval)
             else:
                 continue
 
@@ -1415,7 +1419,7 @@ class Schedule(object):
                 if seconds <= 0:
                     run = True
             elif 'when' in data and data['_run']:
-                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + datetime.timedelta(seconds=self.opts['loop_interval'])):
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + loop_interval):
                     data['_run'] = False
                     run = True
             elif 'cron' in data:
@@ -1425,7 +1429,7 @@ class Schedule(object):
                     data['_next_fire_time'] = None
                     run = True
             elif 'once' in data:
-                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + datetime.timedelta(seconds=self.opts['loop_interval'])):
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + loop_interval):
                     run = True
             elif seconds == 0:
                 run = True
@@ -1435,7 +1439,7 @@ class Schedule(object):
                 data['_run_on_start'] = False
             elif run:
                 if 'range' in data:
-                    data = _handle_range(data)
+                    data = _handle_range(data, loop_interval)
 
                     # An error occurred so we bail out
                     if '_error' in data and data['_error']:
@@ -1452,7 +1456,7 @@ class Schedule(object):
                     data['skip_during_range'] = self.skip_during_range
 
                 if 'skip_during_range' in data and data['skip_during_range']:
-                    data = _handle_skip_during_range(data)
+                    data = _handle_skip_during_range(data, loop_interval)
 
                     # An error occurred so we bail out
                     if '_error' in data and data['_error']:
@@ -1464,7 +1468,7 @@ class Schedule(object):
                         func = data['func']
 
                 if 'skip_explicit' in data:
-                    data = _handle_skip_explicit(data)
+                    data = _handle_skip_explicit(data, loop_interval)
 
                     # An error occurred so we bail out
                     if '_error' in data and data['_error']:
@@ -1484,7 +1488,6 @@ class Schedule(object):
 
                     run = data['run']
 
-                # Convert to sub function
                 if 'after' in data:
                     data = _handle_after(data)
 
