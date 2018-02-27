@@ -6,7 +6,6 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import logging
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
