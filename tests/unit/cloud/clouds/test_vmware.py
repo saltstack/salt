@@ -1239,6 +1239,38 @@ class VMwareTestCase(ExtendedTestCase):
             kwargs={'name': 'cCD2GgJGPG1DUnPeFBoPeqtdmUxIWxDoVFbA14vIG0BPoUECkgbRMnnY6gaUPBvIDCcsZ5HU48ubgQu5c'},
             call='function')
 
+    def test__add_new_hard_disk_helper(self):
+        with patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None)):
+            with patch('salt.utils.vmware.get_mor_using_container_view', side_effect=[None, None]):
+                self.assertRaises(
+                    SaltCloudSystemExit,
+                    vmware._add_new_hard_disk_helper,
+                    disk_label='test',
+                    size_gb=100,
+                    unit_number=0,
+                    datastore='whatever'
+                    )
+            with patch('salt.utils.vmware.get_mor_using_container_view', side_effect=['Datastore', None]):
+                self.assertRaises(
+                    AttributeError,
+                    vmware._add_new_hard_disk_helper,
+                    disk_label='test',
+                    size_gb=100,
+                    unit_number=0,
+                    datastore='whatever'
+                    )
+                vmware.salt.utils.vmware.get_mor_using_container_view.assert_called_with(None, vim.Datastore, 'whatever')
+            with patch('salt.utils.vmware.get_mor_using_container_view', side_effect=[None, 'Cluster']):
+                self.assertRaises(
+                    AttributeError,
+                    vmware._add_new_hard_disk_helper,
+                    disk_label='test',
+                    size_gb=100,
+                    unit_number=0,
+                    datastore='whatever'
+                    )
+                vmware.salt.utils.vmware.get_mor_using_container_view.assert_called_with(None, vim.StoragePod, 'whatever')
+
 
 class CloneFromSnapshotTest(TestCase):
     '''

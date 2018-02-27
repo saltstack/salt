@@ -144,7 +144,7 @@ class CMDModuleTest(ModuleCase):
         '''
         self.assertEqual(self.run_function('cmd.run',
                 ['bad_command --foo']).rstrip(),
-                'ERROR: This shell command is not permitted: "bad_command --foo"')
+                'ERROR: The shell command "bad_command --foo" is not permitted')
 
     def test_script(self):
         '''
