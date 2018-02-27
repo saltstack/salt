@@ -136,9 +136,9 @@ class DNShelpersCase(TestCase):
         results = [
             OrderedDict([(10, [{'srvr': 'mbox.example.com'}])]),
             OrderedDict([
-                (10, [{'srvr': 'mbox1.example.com'}]),
-                (20, [{'srvr': 'mbox2.example.com'}, {'srvr': 'mbox3.example.com'}]),
-                (30, [{'srvr': 'mbox4.example.com'}, {'srvr': 'mbox5.example.com'}, {'srvr': 'mbox6.example.com'}])]
+                (10, ['mbox1.example.com']),
+                (20, ['mbox2.example.com', 'mbox3.example.com']),
+                (30, ['mbox4.example.com', 'mbox5.example.com', 'mbox6.example.com'])]
             ),
         ]
 
@@ -191,10 +191,12 @@ class DNSlookupsCase(TestCase):
             ['10 mx1.example.com.', '20 mx2.example.eu.', '30 mx3.example.nl.']
         ],
         'SSHFP': [
-             ['3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5',
-              '4 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b',
+            [
+              '1 1 0aabda8af5418108e8a5d3f90f207226b2c89fbe',
               '1 2 500ca871d8e255e01f1261a2370c4e5406b8712f19916d3ab9f86344a67e5597',
-              '1 1 0aabda8af5418108e8a5d3f90f207226b2c89fbe']
+              '3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5',
+              '4 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b'
+            ]
         ],
         'TXT': [
             ['v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all']
@@ -327,8 +329,8 @@ class DNSlookupsCase(TestCase):
             'SSHFP': [
                 'mocksrvr.the-loeki.net.\tSSHFP\t1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n',
                 'mocksrvr.the-loeki.net.\tSSHFP\t1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344A67E5597\n',
-                'mocksrvr.the-loeki.net.\tSSHFP\t4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BBC859AB1B\n',
-                'mocksrvr.the-loeki.net.\tSSHFP\t3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5'
+                'mocksrvr.the-loeki.net.\tSSHFP\t3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n',
+                'mocksrvr.the-loeki.net.\tSSHFP\t4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BBC859AB1B'
             ],
             'TXT': [
                 'example.com.\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
@@ -405,10 +407,10 @@ class DNSlookupsCase(TestCase):
                 'example.com.\t4404\tIN\tMX\t30 mx3.example.nl.'
             ],
             'SSHFP': [
-                'mocksrvr.the-loeki.net.\t3339\tIN\tSSHFP\t4 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b\n',
                 'mocksrvr.the-loeki.net.\t3339\tIN\tSSHFP\t1 1 0aabda8af5418108e8a5d3f90f207226b2c89fbe\n',
                 'mocksrvr.the-loeki.net.\t3339\tIN\tSSHFP\t1 2 500ca871d8e255e01f1261a2370c4e5406b8712f19916d3ab9f86344a67e5597\n',
-                'mocksrvr.the-loeki.net.\t3339\tIN\tSSHFP\t3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5'
+                'mocksrvr.the-loeki.net.\t3339\tIN\tSSHFP\t3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5\n',
+                'mocksrvr.the-loeki.net.\t3339\tIN\tSSHFP\t4 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b'
             ],
             'TXT': [
                 'example.com.\t4404\tIN\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
@@ -505,10 +507,10 @@ class DNSlookupsCase(TestCase):
                 'example.com mail is handled by 30 mx3.example.nl.'
             ],
             'SSHFP': [
-                'mocksrvr.the-loeki.net has SSHFP record 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n',
+                'mocksrvr.the-loeki.net has SSHFP record 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n',
                 'mocksrvr.the-loeki.net has SSHFP record 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344 A67E5597\n',
-                'mocksrvr.the-loeki.net has SSHFP record 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B\n',
-                'mocksrvr.the-loeki.net has SSHFP record 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE'
+                'mocksrvr.the-loeki.net has SSHFP record 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n',
+                'mocksrvr.the-loeki.net has SSHFP record 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B'
             ],
             'TXT':   [
                 'example.com descriptive text "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
@@ -568,10 +570,10 @@ class DNSlookupsCase(TestCase):
                 'example.com\tmail exchanger = 30 mx3.example.nl.'
             ],
             'SSHFP': [
+                'mocksrvr.the-loeki.net\trdata_44 = 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n',
                 'mocksrvr.the-loeki.net\trdata_44 = 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344 A67E5597\n',
-                'mocksrvr.the-loeki.net\trdata_44 = 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B\n',
                 'mocksrvr.the-loeki.net\trdata_44 = 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n',
-                'mocksrvr.the-loeki.net\trdata_44 = 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE'
+                'mocksrvr.the-loeki.net\trdata_44 = 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B'
             ],
             'TXT': [
                 'example.com\ttext = "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
