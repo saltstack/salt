@@ -25,6 +25,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.files
 import salt.utils.platform
 import salt.grains.core as core
 
@@ -61,9 +62,9 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.isfile")
     def test_parse_etc_os_release(self, path_isfile_mock):
         path_isfile_mock.side_effect = lambda x: x == "/usr/lib/os-release"
-        with salt.utils.fopen(os.path.join(OS_RELEASE_DIR, "ubuntu-17.10")) as os_release_file:
+        with salt.utils.files.fopen(os.path.join(OS_RELEASE_DIR, "ubuntu-17.10")) as os_release_file:
             os_release_content = os_release_file.readlines()
-        with patch("salt.utils.fopen", mock_open()) as os_release_file:
+        with patch("salt.utils.files.fopen", mock_open()) as os_release_file:
             os_release_file.return_value.__iter__.return_value = os_release_content
             os_release = core._parse_os_release(["/etc/os-release", "/usr/lib/os-release"])
         self.assertEqual(os_release, {
@@ -477,7 +478,7 @@ PATCHLEVEL = 3
         }
         self._run_os_grains_tests("debian-7", _os_release_map, expectation)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_debian_8_os_grains(self):
         '''
         Test if OS grains are parsed correctly in Debian 8 "jessie"
@@ -497,7 +498,7 @@ PATCHLEVEL = 3
         }
         self._run_os_grains_tests("debian-8", _os_release_map, expectation)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_debian_9_os_grains(self):
         '''
         Test if OS grains are parsed correctly in Debian 9 "stretch"
@@ -517,7 +518,7 @@ PATCHLEVEL = 3
         }
         self._run_os_grains_tests("debian-9", _os_release_map, expectation)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_ubuntu_xenial_os_grains(self):
         '''
         Test if OS grains are parsed correctly in Ubuntu 16.04 "Xenial Xerus"
