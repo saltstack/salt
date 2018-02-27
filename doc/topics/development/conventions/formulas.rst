@@ -1242,10 +1242,10 @@ A sample skeleton for the ``README.rst`` file:
 
     Install and configure the FOO service.
 
-    .. note::
+    **NOTE**
 
-        See the full `Salt Formulas installation and usage instructions
-        <https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
+    See the full `Salt Formulas installation and usage instructions
+    <https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
 
     Available states
     ================
