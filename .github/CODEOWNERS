@@ -53,7 +53,11 @@ salt/**/thin.py                     @saltstack/team-ssh
 salt/state.py                       @saltstack/team-state
 
 # Team SUSE
-salt/**/*zypper*                      @saltstack/team-suse
+salt/**/*btrfs*                     @saltstack/team-suse
+salt/**/*kubernetes*                @saltstack/team-suse
+salt/**/*xfs*                       @saltstack/team-suse
+salt/**/*yumpkg*                    @saltstack/team-suse
+salt/**/*zypper*                    @saltstack/team-suse
 
 # Team Transport
 salt/transport/                     @saltstack/team-transport
