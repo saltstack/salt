@@ -2126,10 +2126,6 @@ def _read_conf_file(path):
                 conf_opts['id'] = six.text_type(conf_opts['id'])
             else:
                 conf_opts['id'] = sdecode(conf_opts['id'])
-        for key, value in six.iteritems(conf_opts.copy()):
-            if isinstance(value, six.text_type) and six.PY2:
-                # We do not want unicode settings
-                conf_opts[key] = value.encode('utf-8')
         return conf_opts
 
 
