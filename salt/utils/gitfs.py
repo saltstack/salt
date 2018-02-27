@@ -1224,9 +1224,9 @@ class Pygit2(GitProvider):
         Checkout the configured branch/tag
         '''
         tgt_ref = self.get_checkout_target()
-        local_ref = 'refs/heads/' + tgt_ref
-        remote_ref = 'refs/remotes/origin/' + tgt_ref
-        tag_ref = 'refs/tags/' + tgt_ref
+        local_ref = 'refs/heads/{0}'.format(tgt_ref)
+        remote_ref = 'refs/remotes/origin/{0}'.format(tgt_ref)
+        tag_ref = 'refs/tags/{0}'.format(tgt_ref)
 
         try:
             local_head = self.repo.lookup_reference('HEAD')
