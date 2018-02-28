@@ -175,7 +175,7 @@ def load(stream, Loader=SaltYamlSafeLoader):
 
 def safe_load(stream, Loader=SaltYamlSafeLoader):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Helper function which automagically uses our custom loader.
     '''

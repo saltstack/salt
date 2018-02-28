@@ -327,7 +327,7 @@ def rename(name, new_name, **kwargs):
 def list_(name=None, **kwargs):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
 
     Return a list of all datasets or a specified dataset on the system and the
     values of their used, available, referenced, and mountpoint properties.
@@ -349,7 +349,7 @@ def list_(name=None, **kwargs):
         sort order (default = ascending)
     parsable : boolean
         display numbers in parsable (exact) values
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1199,7 +1199,7 @@ def set(*dataset, **kwargs):
 def get(*dataset, **kwargs):
     '''
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
 
     Displays properties for the given datasets.
 
@@ -1221,7 +1221,7 @@ def get(*dataset, **kwargs):
         local, default, inherited, temporary, and none. The default value is all sources.
     parsable : boolean
         display numbers in parsable (exact) values
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     .. note::
 

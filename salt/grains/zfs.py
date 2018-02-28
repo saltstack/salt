@@ -7,7 +7,7 @@ ZFS grain provider
 :depends:       salt.utils, salt.module.cmdmod
 :platform:      illumos,freebsd,linux
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 '''
 from __future__ import absolute_import, print_function, unicode_literals
