@@ -175,7 +175,7 @@ def _always_running_service(name):
         return False
 
     # check if KeepAlive is True and not just set.
-    if keep_alive == True:
+    if keep_alive is True:
         return True
 
     return False
