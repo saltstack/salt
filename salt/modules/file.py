@@ -1596,7 +1596,8 @@ def _set_line_eol(src, line):
     Add line ending
     '''
     regex = re.compile('((?<!\r)\n|\r(?!\n)|\r\n)$')
-    line_ending = regex.search(src).group()
+    match = regex.search(src)
+    line_ending = match and match.group() or os.linesep
     return line.rstrip() + line_ending
 
 
