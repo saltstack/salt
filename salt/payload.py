@@ -128,15 +128,20 @@ class Serial(object):
                          the contents cannot be converted.
         '''
         try:
+            def ext_type_decoder(code, data):
+                if code == 78:
+                    return datetime.datetime.strptime(data, "%Y%m%dT%H:%M:%S.%f")
+                return data
+
             gc.disable()  # performance optimization for msgpack
             if msgpack.version >= (0, 4, 0):
                 # msgpack only supports 'encoding' starting in 0.4.0.
                 # Due to this, if we don't need it, don't pass it at all so
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
-                ret = msgpack.loads(msg, use_list=True, encoding=encoding)
+                ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder, encoding=encoding)
             else:
-                ret = msgpack.loads(msg, use_list=True)
+                ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder)
             if six.PY3 and encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:
@@ -214,34 +219,10 @@ class Serial(object):
             # msgpack doesn't support datetime.datetime datatype
             # So here we have converted datetime.datetime to custom datatype
             # This is msgpack Extended types numbered 78
-            def default(obj):
-                return msgpack.ExtType(78, obj)
-
-            def dt_encode(obj):
-                datetime_str = obj.strftime("%Y%m%dT%H:%M:%S.%f")
-                if msgpack.version >= (0, 4, 0):
-                    return msgpack.packb(datetime_str, default=default, use_bin_type=use_bin_type)
-                else:
-                    return msgpack.packb(datetime_str, default=default)
-
             def datetime_encoder(obj):
-                if isinstance(obj, dict):
-                    for key, value in six.iteritems(obj.copy()):
-                        encodedkey = datetime_encoder(key)
-                        if key != encodedkey:
-                            del obj[key]
-                            key = encodedkey
-                        obj[key] = datetime_encoder(value)
-                    return dict(obj)
-                elif isinstance(obj, (list, tuple)):
-                    obj = list(obj)
-                    for idx, entry in enumerate(obj):
-                        obj[idx] = datetime_encoder(entry)
-                    return obj
                 if isinstance(obj, datetime.datetime):
-                    return dt_encode(obj)
-                else:
-                    return obj
+                    return msgpack.ExtType(78, obj.strftime("%Y%m%dT%H:%M:%S.%f"))
+                return obj
 
             def immutable_encoder(obj):
                 log.debug('IMMUTABLE OBJ: %s', obj)
@@ -254,9 +235,9 @@ class Serial(object):
 
             if "datetime.datetime" in six.text_type(e):
                 if msgpack.version >= (0, 4, 0):
-                    return msgpack.dumps(datetime_encoder(msg), use_bin_type=use_bin_type)
+                    return msgpack.dumps(msg, default=datetime_encoder, use_bin_type=use_bin_type)
                 else:
-                    return msgpack.dumps(datetime_encoder(msg))
+                    return msgpack.dumps(msg, default=datetime_encoder)
             elif "Immutable" in six.text_type(e):
                 if msgpack.version >= (0, 4, 0):
                     return msgpack.dumps(msg, default=immutable_encoder, use_bin_type=use_bin_type)
