@@ -345,7 +345,7 @@ def _format_host(host, data):
                         comment = '{0} {1}'.format(comment, item)
                 elif isinstance(ret['data'], dict):
                     for key, value in ret['data'].items():
-                        comment = '{0}\n\t\t{1}: {2}'.format(comment, key, value)
+                        comment = u'{0}\n\t\t{1}: {2}'.format(comment, key, value)
                 else:
                     comment = '{0} {1}'.format(comment, ret['data'])
             for detail in ['start_time', 'duration']:
