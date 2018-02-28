@@ -463,7 +463,7 @@ class TestGetTemplate(TestCase):
 class TestJinjaDefaultOptions(TestCase):
 
     def __init__(self, *args, **kws):
-        super(TestCustomExtensions, self).__init__(*args, **kws)
+        TestCase.__init__(self, *args, **kws)
         self.local_opts = {
             'cachedir': TEMPLATES_DIR,
             'file_client': 'local',
