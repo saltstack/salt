@@ -2157,6 +2157,9 @@ class GitBase(object):
                 for saltenv, saltenv_conf in six.iteritems(repo_obj.saltenv):
                     if 'ref' in saltenv_conf:
                         ref = saltenv_conf['ref']
+                        repo_obj.saltenv_revmap.setdefault(
+                            ref, []).append(saltenv)
+
                         if saltenv == 'base':
                             # Remove redundant 'ref' config for base saltenv
                             repo_obj.saltenv[saltenv].pop('ref')
@@ -2171,9 +2174,6 @@ class GitBase(object):
                                 )
                                 # Rewrite 'base' config param
                                 repo_obj.base = ref
-                        else:
-                            repo_obj.saltenv_revmap.setdefault(
-                                ref, []).append(saltenv)
 
                 # Build list of all envs defined by ref mappings in the
                 # per-remote 'saltenv' param. We won't add any matching envs
