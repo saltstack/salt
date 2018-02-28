@@ -18,6 +18,7 @@ import salt.crypt
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 from salt.exceptions import SaltReqTimeoutError
+from salt.utils.odict import OrderedDict
 
 # Import third party libs
 from salt.ext import six
@@ -138,7 +139,7 @@ class Serial(object):
                 # Due to this, if we don't need it, don't pass it at all so
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
-                ret = msgpack.loads(msg, use_list=True, encoding=encoding)
+                ret = msgpack.loads(msg, use_list=True, encoding=encoding, object_pairs_hook=OrderedDict)
             else:
                 ret = msgpack.loads(msg, use_list=True)
             if six.PY3 and encoding is None and not raw:
