@@ -67,7 +67,7 @@ def _localectl_status():
     Parse localectl status into a dict.
     :return: dict
     '''
-    if salt.utils.which('localectl') is None:
+    if salt.utils.path.which('localectl') is None:
         raise CommandExecutionError('Unable to find "localectl"')
 
     ret = {}

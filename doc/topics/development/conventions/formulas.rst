@@ -1258,7 +1258,7 @@ target platform, and any other installation or usage instructions or tips.
 
 A sample skeleton for the ``README.rst`` file:
 
-.. code-block:: rest
+.. code-block:: restructuredtext
 
     ===
     foo
@@ -1269,7 +1269,7 @@ A sample skeleton for the ``README.rst`` file:
     .. note::
 
         See the full `Salt Formulas installation and usage instructions
-        <http://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
+        <https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
 
     Available states
     ================
@@ -1298,7 +1298,7 @@ A sample skeleton for the `CHANGELOG.rst` file:
 
 :file:`CHANGELOG.rst`:
 
-.. code-block:: rest
+.. code-block:: restructuredtext
 
     foo formula
     ===========
