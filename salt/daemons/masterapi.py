@@ -94,8 +94,8 @@ def init_git_pillar(opts):
                     pillar.init_remotes(
                         opts_dict['git'],
                         git_pillar.PER_REMOTE_OVERRIDES,
-                        git_pillar.PER_REMOTE_ONLY
-                    )
+                        git_pillar.PER_REMOTE_ONLY,
+                        git_pillar.GLOBAL_ONLY)
                     ret.append(pillar)
                 except FileserverConfigError:
                     if opts.get('git_pillar_verify_config', True):
