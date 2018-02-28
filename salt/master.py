@@ -504,7 +504,8 @@ class Master(SMaster):
                             git_pillar.init_remotes(
                                 repo['git'],
                                 salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                                salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                                salt.pillar.git_pillar.GLOBAL_ONLY)
                         except FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:

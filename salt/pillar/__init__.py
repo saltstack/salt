@@ -792,7 +792,8 @@ class Pillar(object):
                 git_pillar.init_remotes(
                     self.ext['git'],
                     salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                    salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                    salt.pillar.git_pillar.GLOBAL_ONLY)
                 git_pillar.fetch_remotes()
         except TypeError:
             # Handle malformed ext_pillar
