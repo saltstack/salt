@@ -335,6 +335,21 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
     return cleanup_requirements, None
 
 
+def _pass_env_vars_to_cmd(env_vars, cmd_kwargs):
+    '''
+    Process passed env_vars and add them to command env.
+    '''
+    if env_vars:
+        if isinstance(env_vars, dict):
+            for key, val in six.iteritems(env_vars):
+                if not isinstance(val, six.string_types):
+                    val = str(val)
+                cmd_kwargs.setdefault('env', {})[key] = val
+        else:
+            raise CommandExecutionError(
+                'env_vars {0} is not a dictionary'.format(env_vars))
+
+
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
             bin_env=None,
@@ -803,15 +818,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
 
-    if env_vars:
-        if isinstance(env_vars, dict):
-            for key, val in six.iteritems(env_vars):
-                if not isinstance(val, six.string_types):
-                    val = str(val)
-                cmd_kwargs.setdefault('env', {})[key] = val
-        else:
-            raise CommandExecutionError(
-                'env_vars {0} is not a dictionary'.format(env_vars))
+    _pass_env_vars_to_cmd(env_vars, cmd_kwargs)
 
     try:
         if cwd:
@@ -966,7 +973,8 @@ def uninstall(pkgs=None,
 def freeze(bin_env=None,
            user=None,
            cwd=None,
-           use_vt=False):
+           use_vt=False,
+           env_vars=None):
     '''
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -1019,6 +1027,7 @@ def freeze(bin_env=None,
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+    _pass_env_vars_to_cmd(env_vars, cmd_kwargs)
     result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
 
     if result['retcode'] > 0:
@@ -1030,7 +1039,8 @@ def freeze(bin_env=None,
 def list_(prefix=None,
           bin_env=None,
           user=None,
-          cwd=None):
+          cwd=None,
+          env_vars=None):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
@@ -1059,7 +1069,7 @@ def list_(prefix=None,
     if prefix is None or 'pip'.startswith(prefix):
         packages['pip'] = version(bin_env)
 
-    for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
+    for line in freeze(bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
             # ignore comment lines
