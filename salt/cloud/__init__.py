@@ -240,7 +240,7 @@ class CloudClient(object):
                          if a.get('provider', '')]
             if providers:
                 _providers = opts.get('providers', {})
-                for provider in list(_providers).copy():
+                for provider in _providers.copy():
                     if provider not in providers:
                         _providers.pop(provider)
         return opts

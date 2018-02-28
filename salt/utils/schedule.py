@@ -158,6 +158,49 @@ class Schedule(object):
             schedule.update(opts_schedule)
         return schedule
 
+    def _check_max_running(self, func, data, opts, now):
+        '''
+        Return the schedule data structure
+        '''
+        # Check to see if there are other jobs with this
+        # signature running.  If there are more than maxrunning
+        # jobs present then don't start another.
+        # If jid_include is False for this job we can ignore all this
+        # NOTE--jid_include defaults to True, thus if it is missing from the data
+        # dict we treat it like it was there and is True
+
+        # Check if we're able to run
+        if not data['run']:
+            return data
+        if 'jid_include' not in data or data['jid_include']:
+            jobcount = 0
+            for job in salt.utils.minion.running(self.opts):
+                if 'schedule' in job:
+                    log.debug(
+                        'schedule.handle_func: Checking job against fun '
+                        '%s: %s', func, job
+                    )
+                    if data['name'] == job['schedule'] \
+                            and salt.utils.process.os_is_running(job['pid']):
+                        jobcount += 1
+                        log.debug(
+                            'schedule.handle_func: Incrementing jobcount, '
+                            'now %s, maxrunning is %s',
+                            jobcount, data['maxrunning']
+                        )
+                        if jobcount >= data['maxrunning']:
+                            log.debug(
+                                'schedule.handle_func: The scheduled job '
+                                '%s was not started, %s already running',
+                                data['name'], data['maxrunning']
+                            )
+                            data['_skip_reason'] = 'maxrunning'
+                            data['_skipped'] = True
+                            data['_skip_time'] = now
+                            data['run'] = False
+                            return data
+        return data
+
     def persist(self):
         '''
         Persist the modified schedule into <<configdir>>/<<default_include>>/_schedule.conf
@@ -357,22 +400,31 @@ class Schedule(object):
             data['name'] = name
         log.info('Running Job: %s', name)
 
-        multiprocessing_enabled = self.opts.get('multiprocessing', True)
-        if multiprocessing_enabled:
-            thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
-        else:
-            thread_cls = threading.Thread
+        if not self.standalone:
+            data = self._check_max_running(func,
+                                           data,
+                                           self.opts,
+                                           int(time.time()))
 
-        if multiprocessing_enabled:
-            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+        # Grab run, assume True
+        run = data.get('run', True)
+        if run:
+            multiprocessing_enabled = self.opts.get('multiprocessing', True)
+            if multiprocessing_enabled:
+                thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+            else:
+                thread_cls = threading.Thread
+
+            if multiprocessing_enabled:
+                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                    # Reset current signals before starting the process in
+                    # order not to inherit the current signal handlers
+                    proc.start()
+                proc.join()
+            else:
                 proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                # Reset current signals before starting the process in
-                # order not to inherit the current signal handlers
                 proc.start()
-            proc.join()
-        else:
-            proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-            proc.start()
 
     def enable_schedule(self):
         '''
@@ -544,34 +596,6 @@ class Schedule(object):
                 salt.minion.get_proc_dir(self.opts['cachedir']),
                 ret['jid']
             )
-
-            # Check to see if there are other jobs with this
-            # signature running.  If there are more than maxrunning
-            # jobs present then don't start another.
-            # If jid_include is False for this job we can ignore all this
-            # NOTE--jid_include defaults to True, thus if it is missing from the data
-            # dict we treat it like it was there and is True
-            if 'jid_include' not in data or data['jid_include']:
-                jobcount = 0
-                for job in salt.utils.minion.running(self.opts):
-                    if 'schedule' in job:
-                        log.debug('schedule.handle_func: Checking job against '
-                                  'fun %s: %s', ret['fun'], job)
-                        if ret['schedule'] == job['schedule'] \
-                                and salt.utils.process.os_is_running(job['pid']):
-                            jobcount += 1
-                            log.debug(
-                                'schedule.handle_func: Incrementing jobcount, '
-                                'now %s, maxrunning is %s',
-                                jobcount, data['maxrunning']
-                            )
-                            if jobcount >= data['maxrunning']:
-                                log.debug(
-                                    'schedule.handle_func: The scheduled job '
-                                    '%s was not started, %s already running',
-                                    ret['schedule'], data['maxrunning']
-                                )
-                                return False
 
         if multiprocessing_enabled and not salt.utils.platform.is_windows():
             # Reconfigure multiprocessing logging after daemonizing
@@ -796,6 +820,8 @@ class Schedule(object):
                 if interval < self.loop_interval:
                     self.loop_interval = interval
 
+                data['_next_scheduled_fire_time'] = now + data['_seconds']
+
             return data
 
         def _handle_once(data):
@@ -815,6 +841,8 @@ class Schedule(object):
                     once = datetime.datetime.strptime(data['once'],
                                                       once_fmt)
                     data['_next_fire_time'] = int(
+                        time.mktime(once.timetuple()))
+                    data['_next_scheduled_fire_time'] = int(
                         time.mktime(once.timetuple()))
                 except (TypeError, ValueError):
                     data['_error'] = ('Date string could not ',
@@ -931,6 +959,8 @@ class Schedule(object):
                     if not data['_next_fire_time']:
                         data['_next_fire_time'] = when
 
+                    data['_next_scheduled_fire_time'] = when
+
                     if data['_next_fire_time'] < when and \
                             not run and \
                             not data['_run']:
@@ -1016,6 +1046,8 @@ class Schedule(object):
                 if not data['_next_fire_time']:
                     data['_next_fire_time'] = when
 
+                data['_next_scheduled_fire_time'] = when
+
                 if data['_next_fire_time'] < when and \
                         not data['_run']:
                     data['_next_fire_time'] = when
@@ -1038,6 +1070,8 @@ class Schedule(object):
                 # executed before or already executed in the past.
                 try:
                     data['_next_fire_time'] = int(
+                        croniter.croniter(data['cron'], now).get_next())
+                    data['_next_scheduled_fire_time'] = int(
                         croniter.croniter(data['cron'], now).get_next())
                 except (ValueError, KeyError):
                     data['_error'] = 'Invalid cron string. Ignoring.'
@@ -1097,6 +1131,8 @@ class Schedule(object):
                         data['func'] = self.skip_function
                     else:
                         data['_skip_reason'] = 'skip_explicit'
+                        data['_skipped_time'] = now
+                        data['_skipped'] = True
                         data['run'] = False
             else:
                 data['run'] = True
@@ -1149,6 +1185,8 @@ class Schedule(object):
                                 data['func'] = self.skip_function
                             else:
                                 data['_skip_reason'] = 'in_skip_range'
+                                data['_skipped_time'] = now
+                                data['_skipped'] = True
                                 data['run'] = False
                         else:
                             data['run'] = True
@@ -1224,8 +1262,6 @@ class Schedule(object):
         schedule = self._get_schedule()
         if not isinstance(schedule, dict):
             raise ValueError('Schedule must be of type dict.')
-        if 'enabled' in schedule and not schedule['enabled']:
-            return
         if 'skip_function' in schedule:
             self.skip_function = schedule['skip_function']
         if 'skip_during_range' in schedule:
@@ -1235,6 +1271,7 @@ class Schedule(object):
                    'skip_function',
                    'skip_during_range']
         for job, data in six.iteritems(schedule):
+
             # Clear these out between runs
             for item in ['_continue',
                          '_error',
@@ -1473,19 +1510,35 @@ class Schedule(object):
                 returners = self.returners
                 self.returners = {}
             try:
-                if run:
-                    if 'jid_include' not in data or data['jid_include']:
-                        data['jid_include'] = True
-                        log.debug('schedule: This job was scheduled with jid_include, '
-                                  'adding to cache (jid_include defaults to True)')
-                        if 'maxrunning' in data:
-                            log.debug('schedule: This job was scheduled with a max '
-                                      'number of %s', data['maxrunning'])
-                        else:
-                            log.info('schedule: maxrunning parameter was not specified for '
-                                     'job %s, defaulting to 1.', job)
-                            data['maxrunning'] = 1
+                # Job is disabled, continue
+                if 'enabled' in data and not data['enabled']:
+                    log.debug('Job: %s is disabled', job)
+                    data['_skip_reason'] = 'disabled'
+                    data['_skipped_time'] = now
+                    data['_skipped'] = True
+                    continue
 
+                if 'jid_include' not in data or data['jid_include']:
+                    data['jid_include'] = True
+                    log.debug('schedule: This job was scheduled with jid_include, '
+                              'adding to cache (jid_include defaults to True)')
+                    if 'maxrunning' in data:
+                        log.debug('schedule: This job was scheduled with a max '
+                                  'number of %s', data['maxrunning'])
+                    else:
+                        log.info('schedule: maxrunning parameter was not specified for '
+                                 'job %s, defaulting to 1.', job)
+                        data['maxrunning'] = 1
+
+                if self.standalone:
+                    data['run'] = run
+                    data = self._check_max_running(func,
+                                                   data,
+                                                   self.opts,
+                                                   now)
+                    run = data['run']
+
+                if run:
                     log.info('Running scheduled job: %s%s', job, miss_msg)
 
                     if multiprocessing_enabled:

@@ -17,6 +17,7 @@ import logging.handlers
 
 # Import salt libs
 from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
+from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
 
@@ -174,7 +175,12 @@ if sys.version_info < (3, 2):
             this method if you want to use blocking, timeouts or custom queue
             implementations.
             '''
-            self.queue.put_nowait(record)
+            try:
+                self.queue.put_nowait(record)
+            except queue.Full:
+                sys.stderr.write('[WARNING ] Message queue is full, '
+                                 'unable to write "{0}" to log'.format(record)
+                                 )
 
         def prepare(self, record):
             '''

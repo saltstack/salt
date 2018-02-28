@@ -482,15 +482,6 @@ def info_installed(*names, **kwargs):
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in six.iteritems(pkg_nfo):
-            if isinstance(value, six.string_types):
-                # Check, if string is encoded in a proper UTF-8
-                if six.PY3:
-                    value_ = value.encode('UTF-8', 'ignore').decode('UTF-8', 'ignore')
-                else:
-                    value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
-                if value != value_:
-                    value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (invalid UTF-8)'
-                    log.error('Package %s has bad UTF-8 code in %s: %s', pkg_name, key, value)
             if key == 'source_rpm':
                 t_nfo['source'] = value
             else:
@@ -824,30 +815,31 @@ def mod_repo(repo, **kwargs):
     be created, so long as the following values are specified:
 
     repo or alias
-        alias by which the zypper refers to the repo
+        alias by which Zypper refers to the repo
 
     url, mirrorlist or baseurl
-        the URL for zypper to reference
+        the URL for Zypper to reference
 
     enabled
-        enable or disable (True or False) repository,
+        Enable or disable (True or False) repository,
         but do not remove if disabled.
 
     refresh
-        enable or disable (True or False) auto-refresh of the repository.
+        Enable or disable (True or False) auto-refresh of the repository.
 
     cache
         Enable or disable (True or False) RPM files caching.
 
     gpgcheck
-        Enable or disable (True or False) GOG check for this repository.
+        Enable or disable (True or False) GPG check for this repository.
 
-    gpgautoimport
-        Automatically trust and import new repository.
+    gpgautoimport : False
+        If set to True, automatically trust and import public GPG key for
+        the repository.
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
-    url can only be deleted if a mirrorlist is specified (or vice versa).
+    URL can only be deleted if a ``mirrorlist`` is specified (or vice versa).
 
     CLI Examples:
 
