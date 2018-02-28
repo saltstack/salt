@@ -19,7 +19,7 @@ relies on the CIMC proxy module to interface with the device.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__name__)
@@ -58,24 +58,24 @@ def hostname(name, hostname=None):
         set_name:
           cimc.hostname:
             - hostname: foobar
-            
+
     '''
-    
+
     ret = _default_ret(name)
 
     current_name = __salt__['cimc.get_hostname']()
-    
+
     req_change = False
-    
+
     try:
-        
+
         if current_name != hostname:
             req_change = True
-        
+
         if req_change:
 
             update = __salt__['cimc.set_hostname'](hostname)
-                                                              
+
             if not update:
                 ret['result'] = False
                 ret['comment'] = "Error setting hostname."
@@ -86,7 +86,7 @@ def hostname(name, hostname=None):
             ret['comment'] = "Hostname modified."
         else:
             ret['comment'] = "Hostname already configured. No changes required."
-                
+
     except Exception as err:
         ret['result'] = False
         ret['comment'] = "Error occurred setting hostname."
@@ -96,12 +96,12 @@ def hostname(name, hostname=None):
     ret['result'] = True
 
     return ret
-    
-    
+
+
 def logging_levels(name, remote=None, local=None):
     '''
-    Ensures that the logging levels are set on the device. The logging levels 
-    must match the following options: emergency, alert, critical, error, warning, 
+    Ensures that the logging levels are set on the device. The logging levels
+    must match the following options: emergency, alert, critical, error, warning,
     notice, informational, debug.
 
     name: The name of the module function to execute.
@@ -118,27 +118,27 @@ def logging_levels(name, remote=None, local=None):
           cimc.logging_levels:
             - remote: informational
             - local: notice
-            
+
     '''
 
     ret = _default_ret(name)
 
     syslog_conf = __salt__['cimc.get_syslog_settings']()
-    
+
     req_change = False
-    
+
     try:
         syslog_dict = syslog_conf['outConfigs']['commSyslog'][0]
-        
+
         if remote and syslog_dict['remoteSeverity'] != remote:
             req_change = True
         elif local and syslog_dict['localSeverity'] != local:
             req_change = True
-                    
+
         if req_change:
 
             update = __salt__['cimc.set_logging_levels'](remote, local)
-                                                              
+
             if update['outConfig']['commSyslog'][0]['status'] != 'modified':
                 ret['result'] = False
                 ret['comment'] = "Error setting logging levels."
@@ -149,7 +149,7 @@ def logging_levels(name, remote=None, local=None):
             ret['comment'] = "Logging level settings modified."
         else:
             ret['comment'] = "Logging level already configured. No changes required."
-                
+
     except Exception as err:
         ret['result'] = False
         ret['comment'] = "Error occurred setting logging level settings."
@@ -159,8 +159,8 @@ def logging_levels(name, remote=None, local=None):
     ret['result'] = True
 
     return ret
-    
-    
+
+
 def ntp(name, servers):
     '''
     Ensures that the NTP servers are configured. Servers are provided as an individual string or list format. Only four
@@ -250,28 +250,28 @@ def power_configuration(name, policy=None, delayType=None, delayValue=None):
 
     name: The name of the module function to execute.
 
-    policy(str): The action to be taken when chassis power is restored after 
+    policy(str): The action to be taken when chassis power is restored after
     an unexpected power loss. This can be one of the following:
-        
-        reset: The server is allowed to boot up normally when power is 
-        restored. The server can restart immediately or, optionally, after a
-        fixed or random delay. 
-            
-        stay-off: The server remains off until it is manually restarted.
-            
-        last-state: The server restarts and the system attempts to restore 
-        any processes that were running before power was lost. 
 
-    delayType(str): If the selected policy is reset, the restart can be 
+        reset: The server is allowed to boot up normally when power is
+        restored. The server can restart immediately or, optionally, after a
+        fixed or random delay.
+
+        stay-off: The server remains off until it is manually restarted.
+
+        last-state: The server restarts and the system attempts to restore
+        any processes that were running before power was lost.
+
+    delayType(str): If the selected policy is reset, the restart can be
     delayed with this option. This can be one of the following:
-        
-        fixed: The server restarts after a fixed delay. 
-            
+
+        fixed: The server restarts after a fixed delay.
+
         random: The server restarts after a random delay.
-            
-    delayValue(int): If a fixed delay is selected, once chassis power is 
-    restored and the Cisco IMC has finished rebooting, the system waits for 
-    the specified number of seconds before restarting the server. Enter an 
+
+    delayValue(int): If a fixed delay is selected, once chassis power is
+    restored and the Cisco IMC has finished rebooting, the system waits for
+    the specified number of seconds before restarting the server. Enter an
     integer between 0 and 240.
 
 
@@ -284,7 +284,7 @@ def power_configuration(name, policy=None, delayType=None, delayValue=None):
             - policy: reset
             - delayType: fixed
             - delayValue: 0
-            
+
         power_off:
           cimc.power_configuration:
             - policy: stay-off
@@ -295,12 +295,12 @@ def power_configuration(name, policy=None, delayType=None, delayValue=None):
     ret = _default_ret(name)
 
     power_conf = __salt__['cimc.get_power_configuration']()
-    
+
     req_change = False
-    
+
     try:
         power_dict = power_conf['outConfigs']['biosVfResumeOnACPowerLoss'][0]
-        
+
         if policy and power_dict['vpResumeOnACPowerLoss'] != policy:
             req_change = True
         elif policy == "reset":
@@ -314,13 +314,12 @@ def power_configuration(name, policy=None, delayType=None, delayValue=None):
             ret['comment'] = "The power policy must be specified."
             return ret
 
-                    
         if req_change:
 
             update = __salt__['cimc.set_power_configuration'](policy,
                                                               delayType,
                                                               delayValue)
-                                                              
+
             if update['outConfig']['biosVfResumeOnACPowerLoss'][0]['status'] != 'modified':
                 ret['result'] = False
                 ret['comment'] = "Error setting power configuration."
@@ -331,7 +330,7 @@ def power_configuration(name, policy=None, delayType=None, delayValue=None):
             ret['comment'] = "Power settings modified."
         else:
             ret['comment'] = "Power settings already configured. No changes required."
-                
+
     except Exception as err:
         ret['result'] = False
         ret['comment'] = "Error occurred setting power settings."
@@ -463,7 +462,7 @@ def user(name, id='', user='', priv='', password='', status='active'):
     ret = _default_ret(name)
 
     user_conf = __salt__['cimc.get_users']()
-    
+
     try:
         for entry in user_conf['outConfigs']['aaaUser']:
             if entry['id'] == str(id):

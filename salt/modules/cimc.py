@@ -268,7 +268,7 @@ def get_hostname():
 
     '''
     ret = __proxy__['cimc.get_config_resolver_class']('mgmtIf', True)
-    
+
     try:
         return ret['outConfigs']['mgmtIf'][0]['hostname']
     except Exception as err:
@@ -466,8 +466,8 @@ def get_syslog_settings():
     ret = __proxy__['cimc.get_config_resolver_class']('commSyslog', False)
 
     return ret
-    
-    
+
+
 def get_system_info():
     '''
     Get the system information.
@@ -637,8 +637,8 @@ def set_hostname(hostname=None):
 
     '''
     if not hostname:
-        raise salt.exceptions.CommandExecutionError("Hostname option must be provided.") 
-    
+        raise salt.exceptions.CommandExecutionError("Hostname option must be provided.")
+
     dn = "sys/rack-unit-1/mgmt/if-1"
     inconfig = """<mgmtIf dn="sys/rack-unit-1/mgmt/if-1" hostname="{0}" ></mgmtIf>""".format(hostname)
 
@@ -671,24 +671,24 @@ def set_logging_levels(remote=None, local=None):
         salt '*' cimc.set_logging_levels remote=error local=notice
 
     '''
-    
-    logging_options = ['emergency', 
-                       'alert', 
-                       'critical', 
+
+    logging_options = ['emergency',
+                       'alert',
+                       'critical',
                        'error',
                        'warning',
                        'notice',
                        'informational',
                        'debug']
-    
+
     query = ""
-    
+
     if remote:
         if remote in logging_options:
             query += ' remoteSeverity="{0}"'.format(remote)
         else:
             raise salt.exceptions.CommandExecutionError("Remote Severity option is not valid.")
-            
+
     if local:
         if local in logging_options:
             query += ' localSeverity="{0}"'.format(local)
@@ -701,7 +701,7 @@ def set_logging_levels(remote=None, local=None):
     ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
 
     return ret
-    
+
 
 def set_ntp_server(server1='', server2='', server3='', server4=''):
     '''
@@ -741,28 +741,28 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
     C-Series servers.
 
     Args:
-        policy(str): The action to be taken when chassis power is restored after 
+        policy(str): The action to be taken when chassis power is restored after
         an unexpected power loss. This can be one of the following:
-        
-            reset: The server is allowed to boot up normally when power is 
-            restored. The server can restart immediately or, optionally, after a
-            fixed or random delay. 
-            
-            stay-off: The server remains off until it is manually restarted.
-            
-            last-state: The server restarts and the system attempts to restore 
-            any processes that were running before power was lost. 
 
-        delayType(str): If the selected policy is reset, the restart can be 
+            reset: The server is allowed to boot up normally when power is
+            restored. The server can restart immediately or, optionally, after a
+            fixed or random delay.
+
+            stay-off: The server remains off until it is manually restarted.
+
+            last-state: The server restarts and the system attempts to restore
+            any processes that were running before power was lost.
+
+        delayType(str): If the selected policy is reset, the restart can be
         delayed with this option. This can be one of the following:
-        
-            fixed: The server restarts after a fixed delay. 
-            
+
+            fixed: The server restarts after a fixed delay.
+
             random: The server restarts after a random delay.
-            
-        delayValue(int): If a fixed delay is selected, once chassis power is 
-        restored and the Cisco IMC has finished rebooting, the system waits for 
-        the specified number of seconds before restarting the server. Enter an 
+
+        delayValue(int): If a fixed delay is selected, once chassis power is
+        restored and the Cisco IMC has finished rebooting, the system waits for
+        the specified number of seconds before restarting the server. Enter an
         integer between 0 and 240.
 
     CLI Example:
@@ -774,7 +774,7 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
         salt '*' cimc.set_power_configuration reset fixed 0
 
     '''
-    
+
     query = ""
     if policy == "reset":
         query = ' vpResumeOnACPowerLoss="reset"'
@@ -795,15 +795,15 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
         raise salt.exceptions.CommandExecutionError("The power state must be specified.")
 
     dn = "sys/rack-unit-1/board/Resume-on-AC-power-loss"
-    inconfig = """<biosVfResumeOnACPowerLoss 
+    inconfig = """<biosVfResumeOnACPowerLoss
     dn="sys/rack-unit-1/board/Resume-on-AC-power-loss"{0}>
     </biosVfResumeOnACPowerLoss>""".format(query)
 
     ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
 
     return ret
-    
-    
+
+
 def set_syslog_server(server=None, type="primary"):
     '''
     Set the SYSLOG server on the host.
@@ -842,8 +842,8 @@ def set_syslog_server(server=None, type="primary"):
     ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
 
     return ret
-    
-    
+
+
 def set_user(uid=None, username=None, password=None, priv=None, status=None):
     '''
     Sets a CIMC user with specified configurations.
@@ -856,7 +856,7 @@ def set_user(uid=None, username=None, password=None, priv=None, status=None):
         password(str): The clear text password of the user.
 
         priv(str): The privilege level of the user.
-        
+
         status(str): The account status of the user.
 
     CLI Example:
@@ -873,13 +873,13 @@ def set_user(uid=None, username=None, password=None, priv=None, status=None):
 
     if status:
         conf += ' accountStatus="{0}"'.format(status)
-        
+
     if username:
         conf += ' name="{0}"'.format(username)
 
     if priv:
         conf += ' priv="{0}"'.format(priv)
-        
+
     if password:
         conf += ' pwd="{0}"'.format(password)
 
