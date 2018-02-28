@@ -342,7 +342,8 @@ def clear_git_lock(role, remote=None, **kwargs):
                 obj.init_remotes(
                     ext_pillar['git'],
                     salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                    salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                    salt.pillar.git_pillar.GLOBAL_ONLY)
                 git_objects.append(obj)
     elif role == 'winrepo':
         winrepo_dir = __opts__['winrepo_dir']
@@ -357,7 +358,8 @@ def clear_git_lock(role, remote=None, **kwargs):
             obj.init_remotes(
                 remotes,
                 salt.runners.winrepo.PER_REMOTE_OVERRIDES,
-                salt.runners.winrepo.PER_REMOTE_ONLY)
+                salt.runners.winrepo.PER_REMOTE_ONLY,
+                salt.runners.winrepo.GLOBAL_ONLY)
             git_objects.append(obj)
     else:
         raise SaltInvocationError('Invalid role \'{0}\''.format(role))
