@@ -8,7 +8,7 @@ Module for handling kubernetes calls.
 
         kubernetes.kubeconfig: '/path/to/kubeconfig'
         kubernetes.kubeconfig-data: '<base64 encoded kubeconfig content'
-        kubernetes.contect: 'context'
+        kubernetes.context: 'context'
 
 These settings can be also overrided by adding `context and `kubeconfig` or
 `kubeconfig_data` parameters when calling a function.
