@@ -82,19 +82,17 @@ def show_pillar(minion='*', **kwargs):
         pillar = runner.cmd('pillar.show_pillar', [])
         print(pillar)
     '''
-
+    pillarenv = None
     saltenv = 'base'
-    pillarenv = __opts__['pillarenv'] if 'pillarenv' in __opts__ else None
     id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
     if grains is None:
         grains = {'fqdn': minion}
 
     for key in kwargs:
-        if key == 'pillarenv':
-            __opts__['pillarenv'] = kwargs[key]
         if key == 'saltenv':
             saltenv = kwargs[key]
         elif key == 'pillarenv':
+            # pillarenv overridden on CLI
             pillarenv = kwargs[key]
         else:
             grains[key] = kwargs[key]
