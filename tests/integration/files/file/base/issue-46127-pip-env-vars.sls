@@ -29,7 +29,7 @@ setup_test_virtualenv_1:
 
 issue-46127-setup:
   pip.installed:
-    - name: 'carbon < 1.1'
+    - name: 'carbon < 1.3'
     - no_deps: True
     - env_vars:
         PYTHONPATH: "/opt/graphite/lib/:/opt/graphite/webapp/"

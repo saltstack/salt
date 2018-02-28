@@ -562,7 +562,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             for key in six.iterkeys(ret):
                 self.assertTrue(ret[key]['result'])
-                if ret[key]['name'] != 'carbon < 1.1':
+                if ret[key]['name'] != 'carbon < 1.3':
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
@@ -583,11 +583,11 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertTrue(ret[key]['result'])
                 # As we are re-running the formula, some states will not be run
                 # and "name" may or may not be present, so we use .get() pattern
-                if ret[key].get('name', '') != 'carbon < 1.1':
+                if ret[key].get('name', '') != 'carbon < 1.3':
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
-                    ('Python package carbon < 1.1 was already installed\n'
+                    ('Python package carbon < 1.3 was already installed\n'
                      'All packages were successfully installed'))
                 break
             else:
