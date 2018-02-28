@@ -1384,7 +1384,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ 'www.google.com' | dns_check }}
+  {{ 'www.google.com' | dns_check(port=443) }}
 
 Returns:
 
