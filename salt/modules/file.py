@@ -1591,13 +1591,17 @@ def _set_line_indent(src, line, indent):
     return ''.join(idt) + line.lstrip()
 
 
+def _get_eol(line):
+    regex = re.compile('((?<!\r)\n|\r(?!\n)|\r\n)$')
+    match = regex.search(src)
+    return match and match.group() or ''
+
+
 def _set_line_eol(src, line):
     '''
     Add line ending
     '''
-    regex = re.compile('((?<!\r)\n|\r(?!\n)|\r\n)$')
-    match = regex.search(src)
-    line_ending = match and match.group() or os.linesep
+    line_ending = _get_eol(src) or os.linesep
     return line.rstrip() + line_ending
 
 
@@ -1794,6 +1798,8 @@ def line(path, content=None, match=None, mode=None, location=None,
             if location == 'start':
                 body.insert(0, _set_line_eol(body[0], content))
             elif location == 'end':
+                if not _get_eol(body[-1]):
+                    body[-1] = _set_line_eol(body[-2], body[-1])
                 body.append(_set_line_eol(body[-1] if body else os.linesep, content))
 
     elif mode == 'ensure':
