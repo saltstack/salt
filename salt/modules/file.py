@@ -1745,7 +1745,7 @@ def _assert_occurrence(src, probe, target, amount=1):
     return occ
 
 
-def _get_line_indent(src, line, indent):
+def _set_line_indent(src, line, indent):
     '''
     Indent the line with the source line.
     '''
@@ -1758,7 +1758,7 @@ def _get_line_indent(src, line, indent):
             break
         idt.append(c)
 
-    return ''.join(idt) + line.strip()
+    return ''.join(idt) + line.lstrip()
 
 
 def line(path, content=None, match=None, mode=None, location=None,
@@ -1901,7 +1901,7 @@ def line(path, content=None, match=None, mode=None, location=None,
     elif mode == 'delete':
         body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
     elif mode == 'replace':
-        body = os.linesep.join([(_get_line_indent(file_line, content, indent)
+        body = os.linesep.join([(_set_line_indent(file_line, content, indent)
                                 if (file_line.find(match) > -1 and not file_line == content) else file_line)
                                 for file_line in body.split(os.linesep)])
     elif mode == 'insert':
@@ -1919,7 +1919,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                     if line.find(after) > -1:
                         in_range = True
                     elif line.find(before) > -1 and in_range:
-                        out.append(_get_line_indent(line, content, indent))
+                        out.append(_set_line_indent(line, content, indent))
                     out.append(line)
                 body = os.linesep.join(out)
 
@@ -1930,7 +1930,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                 for idx in range(len(lines)):
                     _line = lines[idx]
                     if _line.find(before) > -1:
-                        cnd = _get_line_indent(_line, content, indent)
+                        cnd = _set_line_indent(_line, content, indent)
                         if not idx or (idx and _starts_till(lines[idx - 1], cnd) < 0):  # Job for replace instead
                             out.append(cnd)
                     out.append(_line)
@@ -1942,7 +1942,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                 lines = body.split(os.linesep)
                 for idx, _line in enumerate(lines):
                     out.append(_line)
-                    cnd = _get_line_indent(_line, content, indent)
+                    cnd = _set_line_indent(_line, content, indent)
                     # No duplicates or append, if "after" is the last line
                     if (_line.find(after) > -1 and
                             (lines[((idx + 1) < len(lines)) and idx + 1 or idx].strip() != cnd or
@@ -1954,7 +1954,7 @@ def line(path, content=None, match=None, mode=None, location=None,
             if location == 'start':
                 body = os.linesep.join((content, body))
             elif location == 'end':
-                body = os.linesep.join((body, _get_line_indent(body[-1], content, indent) if body else content))
+                body = os.linesep.join((body, _set_line_indent(body[-1], content, indent) if body else content))
 
     elif mode == 'ensure':
         after = after and after.strip()
@@ -1987,7 +1987,7 @@ def line(path, content=None, match=None, mode=None, location=None,
             for idx in range(len(body)):
                 if body[idx].find(before) > -1:
                     prev = (idx > 0 and idx or 1) - 1
-                    out.append(_get_line_indent(body[idx], content, indent))
+                    out.append(_set_line_indent(body[idx], content, indent))
                     if _starts_till(out[prev], content) > -1:
                         del out[prev]
                 out.append(body[idx])
@@ -2006,7 +2006,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                     next_line = idx + 1 < len(body) and body[idx + 1] or None
                     if next_line is not None and _starts_till(next_line, content) > -1:
                         skip = next_line
-                    out.append(_get_line_indent(body[idx], content, indent))
+                    out.append(_set_line_indent(body[idx], content, indent))
             body = os.linesep.join(out)
 
         else:
