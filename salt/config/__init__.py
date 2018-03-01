@@ -3887,6 +3887,10 @@ def apply_master_config(overrides=None, defaults=None):
             )
             opts['saltenv'] = opts['environment']
 
+    if six.PY2 and 'rest_cherrypy' in opts:
+        # CherryPy is not unicode-compatible
+        opts['rest_cherrypy'] = salt.utils.data.encode(opts['rest_cherrypy'])
+
     for idx, val in enumerate(opts['fileserver_backend']):
         if val in ('git', 'hg', 'svn', 'minion'):
             new_val = val + 'fs'
