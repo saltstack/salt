@@ -121,8 +121,12 @@ def _setup_conn(**kwargs):
 def _cleanup(**kwargs):
     if 'kubeconfig' in kwargs:
         kubeconfig = kwargs.get('kubeconfig')
-        if os.path.exists(kubeconfig) and os.path.basename(kubeconfig).startswith('salt-kubeconfig-'):
-            salt.utils.files.safe_rm(kubeconfig)
+        if kubeconfig and os.path.basename(kubeconfig).startswith('salt-kubeconfig-'):
+            try:
+                os.unlink(kubeconfig)
+            except (IOError, OSError) as err:
+                if err.errno != errno.ENOENT:
+                    log.exception('Removing kubeconfig failed: {0}'.format(err))
 
 
 def ping(**kwargs):
