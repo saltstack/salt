@@ -2218,7 +2218,6 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
     main config file.
     '''
     # Protect against empty option
-
     if not include:
         return {}
 
@@ -3835,10 +3834,10 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
                                     defaults['default_include'])
     include = overrides.get('include', [])
 
-    overrides.update(include_config(default_include, path, verbose=False),
-                     exit_on_config_errors=exit_on_config_errors)
-    overrides.update(include_config(include, path, verbose=True),
-                     exit_on_config_errors=exit_on_config_errors)
+    overrides.update(include_config(default_include, path, verbose=False,
+                     exit_on_config_errors=exit_on_config_errors))
+    overrides.update(include_config(include, path, verbose=True,
+                     exit_on_config_errors=exit_on_config_errors))
     opts = apply_master_config(overrides, defaults)
     _validate_ssh_minion_opts(opts)
     _validate_opts(opts)
