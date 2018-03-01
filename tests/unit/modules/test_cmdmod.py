@@ -234,7 +234,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
-                        with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=OSError)):
+                        with patch('salt.utils.subprocess.TimedProc', MagicMock(side_effect=OSError)):
                             self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
 
     def test_run_no_vt_io_error(self):
@@ -245,7 +245,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
-                        with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=IOError)):
+                        with patch('salt.utils.subprocess.TimedProc', MagicMock(side_effect=IOError)):
                             self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
 
     @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')

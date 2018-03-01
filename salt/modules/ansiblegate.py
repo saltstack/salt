@@ -39,7 +39,7 @@ import subprocess
 import salt.utils.json
 from salt.exceptions import LoaderError, CommandExecutionError
 import salt.utils.platform
-import salt.utils.timed_subprocess
+import salt.utils.subprocess
 import salt.utils.yaml
 from salt.ext import six
 
@@ -155,11 +155,11 @@ class AnsibleModuleCaller(object):
         js_args = str('{{"ANSIBLE_MODULE_ARGS": {args}}}')  # future lint: disable=blacklisted-function
         js_args = js_args.format(args=salt.utils.json.dumps(kwargs))
 
-        proc_out = salt.utils.timed_subprocess.TimedProc(
+        proc_out = salt.utils.subprocess.TimedProc(
             ["echo", "{0}".format(js_args)],
             stdout=subprocess.PIPE, timeout=self.timeout)
         proc_out.run()
-        proc_exc = salt.utils.timed_subprocess.TimedProc(
+        proc_exc = salt.utils.subprocess.TimedProc(
             ['python', module.__file__],
             stdin=proc_out.stdout, stdout=subprocess.PIPE, timeout=self.timeout)
         proc_exc.run()

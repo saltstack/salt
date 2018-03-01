@@ -32,7 +32,7 @@ import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.stringutils
 import salt.utils.templates
-import salt.utils.timed_subprocess
+import salt.utils.subprocess
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
@@ -594,7 +594,7 @@ def _run(cmd,
     if not use_vt:
         # This is where the magic happens
         try:
-            proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+            proc = salt.utils.subprocess.TimedProc(cmd, **kwargs)
         except (OSError, IOError) as exc:
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
@@ -3093,7 +3093,7 @@ def shell_info(shell, list_modules=False):
             newenv['HOME'] = os.path.expanduser('~')
             log.debug('HOME environment set to %s', newenv['HOME'])
         try:
-            proc = salt.utils.timed_subprocess.TimedProc(
+            proc = salt.utils.subprocess.TimedProc(
                 shell_data,
                 stdin=None,
                 stdout=subprocess.PIPE,

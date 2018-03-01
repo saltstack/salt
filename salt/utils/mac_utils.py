@@ -15,7 +15,7 @@ import time
 import salt.utils.args
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.timed_subprocess
+import salt.utils.subprocess
 import salt.grains.extra
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, SaltInvocationError,\
@@ -76,7 +76,7 @@ def _run_all(cmd):
               }
 
     try:
-        proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+        proc = salt.utils.subprocess.TimedProc(cmd, **kwargs)
 
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
