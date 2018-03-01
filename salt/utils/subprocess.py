@@ -13,6 +13,7 @@ import threading
 import salt.exceptions
 import salt.utils.data
 from salt.ext import six
+from salt.ext.six.moves import range
 
 
 log = logging.getLogger(__name__)
