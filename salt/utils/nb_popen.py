@@ -6,7 +6,7 @@
     salt.utils.nb_popen
     ~~~~~~~~~~~~~~~~~~~
 
-    Non blocking subprocess Popen.
+    Non blocking salt.utils.subprocess.FdPopen
 
     This functionality has been adapted to work on windows following the recipe
     found on:
