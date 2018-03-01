@@ -280,20 +280,14 @@ def launchctl(sub_cmd, *args, **kwargs):
         return ret['stdout'] if return_stdout else True
 
 
-@decorators.memoize
-def available_services():
+def _available_services():
     '''
-    Return a dictionary of all available services on the system
-
-    Returns:
-        dict: All available services
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        import salt.utils.mac_service
-        salt.utils.mac_service.available_services()
+    This is a helper function needed for testing. We are using the memoziation
+    decorator on the `available_services` function, which causes the function
+    to run once and then return the results of the first run on subsequent
+    calls. This causes problems when trying to test the functionality of the
+    `available_services` function. So this function is needed until we can
+    figure out how to properly mock the memoization decorator.
     '''
     launchd_paths = [
         '/Library/LaunchAgents',
@@ -348,3 +342,22 @@ def available_services():
                         'plist': plist}
 
     return _available_services
+
+
+
+@decorators.memoize
+def available_services():
+    '''
+    Return a dictionary of all available services on the system
+
+    Returns:
+        dict: All available services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        import salt.utils.mac_service
+        salt.utils.mac_service.available_services()
+    '''
+    return _available_services()

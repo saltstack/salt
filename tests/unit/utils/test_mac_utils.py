@@ -241,7 +241,7 @@ class MacUtilsTestCase(TestCase):
         ]
 
         mock_exists.return_value = True
-        ret = mac_utils.available_services()
+        ret = mac_utils._available_services()
 
         # Make sure it's a dict with 8 items
         self.assertTrue(isinstance(ret, dict))
@@ -289,7 +289,7 @@ class MacUtilsTestCase(TestCase):
         ]
 
         mock_exists.side_effect = [True, True, True, True, False, False, True, True]
-        ret = mac_utils.available_services()
+        ret = mac_utils._available_services()
 
         # Make sure it's a dict with 6 items
         self.assertTrue(isinstance(ret, dict))
@@ -347,7 +347,7 @@ class MacUtilsTestCase(TestCase):
             MagicMock(Label='com.apple.slld2'),
         ]
 
-        ret = mac_utils.available_services()
+        ret = mac_utils._available_services()
 
         cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'
         calls = [
@@ -425,7 +425,7 @@ class MacUtilsTestCase(TestCase):
         mock_run.return_value = '<some xml>'
         mock_read_plist_from_string.return_value = 'malformedness'
 
-        ret = mac_utils.available_services()
+        ret = mac_utils._available_services()
 
         cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'
         calls = [
