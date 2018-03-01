@@ -497,13 +497,9 @@ class Pillar(object):
                 else:
                     saltenvs.add(self.opts['pillarenv'])
             else:
-                for saltenv in self._get_envs():
-                    if self.opts.get('pillar_source_merging_strategy', None) == "none":
-                        if self.saltenv and saltenv != self.saltenv:
-                            continue
-                        if not self.saltenv and not saltenv == 'base':
-                            continue
-                    saltenvs.add(saltenv)
+                saltenvs = self._get_envs()
+                if self.opts.get('pillar_source_merging_strategy', None) == "none":
+                    saltenvs &= set([self.saltenv or 'base'])
 
             for saltenv in saltenvs:
                 top = self.client.cache_file(self.opts['state_top'], saltenv)
