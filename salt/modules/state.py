@@ -1257,8 +1257,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
                 return st_.state.call_high(high_, orchestration_jid)
     os.umask(umask)
 
-    if isinstance(mods, six.string_types):
-        mods = salt.utils.args.split_input(mods)
+    mods = salt.utils.args.split_input(mods)
 
     st_.push_active()
     try:
@@ -1269,8 +1268,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
             return errors
 
         if exclude:
-            if isinstance(exclude, six.string_types):
-                exclude = salt.utils.args.split_input(exclude)
+            exclude = salt.utils.args.split_input(exclude)
             if '__exclude__' in high_:
                 high_['__exclude__'].extend(exclude)
             else:
@@ -1665,8 +1663,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         __context__['retcode'] = 5
         return ['Pillar failed to render with the following messages:'] + errors
 
-    if isinstance(mods, six.string_types):
-        split_mods = salt.utils.args.split_input(split_mods)
+    split_mods = salt.utils.args.split_input(mods)
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({opts['saltenv']: split_mods})
@@ -1774,8 +1771,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         __context__['retcode'] = 5
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
-    if isinstance(mods, six.string_types):
-        mods = salt.utils.args.split_input(mods)
+    mods = salt.utils.args.split_input(mods)
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({opts['saltenv']: mods})
@@ -1863,8 +1859,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
         __context__['retcode'] = 5
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
-    if isinstance(mods, six.string_types):
-        mods = salt.utils.args.split_input(mods)
+    mods = salt.utils.args.split_input(mods)
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({opts['saltenv']: mods})
@@ -1924,8 +1919,7 @@ def id_exists(ids, mods, test=None, queue=False, **kwargs):
 
         salt '*' state.id_exists create_myfile,update_template filestate saltenv=dev
     '''
-    if isinstance(ids, six.string_types):
-        ids = salt.utils.args.split_input(ids)
+    ids = salt.utils.args.split_input(ids)
     ids = set(ids)
     sls_ids = set(x['__id__'] for x in show_low_sls(mods, test=test, queue=queue, **kwargs))
     return ids.issubset(sls_ids)
@@ -2167,8 +2161,7 @@ def disable(states):
         'msg': ''
     }
 
-    if isinstance(states, six.string_types):
-        states = salt.utils.args.split_input(states)
+    states = salt.utils.args.split_input(states)
 
     msg = []
     _disabled = __salt__['grains.get']('state_runs_disabled')
@@ -2219,8 +2212,7 @@ def enable(states):
         'msg': ''
     }
 
-    if isinstance(states, six.string_types):
-        states = salt.utils.args.split_input(states)
+    states = salt.utils.args.split_input(states)
     log.debug('states %s', states)
 
     msg = []
