@@ -95,7 +95,6 @@ import logging
 import os
 import sys
 
-import salt.exceptions
 from salt.ext import six
 import salt.utils.stringutils
 
