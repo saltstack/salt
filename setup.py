@@ -657,6 +657,7 @@ class TestCommand(Command):
         '''
 
     def run(self):
+        # pylint: disable=blacklisted-function
         from subprocess import Popen
         self.run_command('build')
         build_cmd = self.get_finalized_command('build_ext')
@@ -671,6 +672,7 @@ class TestCommand(Command):
             stdout=sys.stdout, stderr=sys.stderr,
             cwd=build_cmd.build_lib
         )
+        # pylint: enable=blacklisted-function
         test_process.communicate()
         sys.exit(test_process.returncode)
 
