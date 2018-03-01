@@ -1260,7 +1260,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '  base:',
             '    - /srv/salt',
             '    - /srv/sugar',
-            cfg_content
+            '    ' + cfg_content
         ])
 
         isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
