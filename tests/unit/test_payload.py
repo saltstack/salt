@@ -7,18 +7,19 @@
     ~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import Salt libs
+# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import time
 import errno
 import threading
+import datetime
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
 from tests.support.helpers import MockWraps
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
-# Import salt libs
+# Import Salt libs
 import salt.payload
 from salt.utils.odict import OrderedDict
 import salt.exceptions
@@ -58,6 +59,20 @@ class PayloadTestCase(TestCase):
             odata = payload.loads(payload.dumps(idata.copy()))
             self.assertNoOrderedDict(odata)
             self.assertEqual(idata, odata)
+
+    def test_datetime_dump_load(self):
+        '''
+        Check the custom datetime handler can understand itself
+        '''
+        payload = salt.payload.Serial('msgpack')
+        idata = {datetime.datetime.now(): datetime.datetime.now(),
+                 'int': 1,
+                 'str': 'abc',
+                 'list': [1, 2, 3],
+                 'dict': {'key': 'value'}}
+        sdata = payload.dumps(idata.copy())
+        odata = payload.loads(sdata)
+        self.assertEqual(idata, odata)
 
 
 class SREQTestCase(TestCase):
