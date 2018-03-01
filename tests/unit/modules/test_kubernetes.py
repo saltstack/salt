@@ -140,18 +140,24 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     kubernetes.kubernetes.client.ExtensionsV1beta1Api().
                     create_namespaced_deployment().to_dict.called)
 
+    @staticmethod
+    def settings(name, value=None):
+        '''
+        Test helper
+        :return: settings or default
+        '''
+        data = {
+            'kubernetes.kubeconfig': '/home/testuser/.minikube/kubeconfig.cfg',
+            'kubernetes.context': 'minikube'
+        }
+        return data.get(name, value)
+
+
     def test_setup_kubeconfig_file(self):
         '''
         Test that the `kubernetes.kubeconfig` configuration isn't overwritten
         :return:
         '''
-        def settings(name, value=None):
-            data = {
-                'kubernetes.kubeconfig': '/home/testuser/.minikube/kubeconfig.cfg',
-                'kubernetes.context': 'minikube'
-            }
-            return data.get(name, value)
-
         with mock_kubernetes_library() as mock_kubernetes_lib:
             with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=settings)}):
                 mock_kubernetes_lib.config.load_kube_config = Mock()
@@ -167,13 +173,6 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         by provided kubeconfig_data in the command
         :return:
         '''
-        def settings(name, value=None):
-            data = {
-                'kubernetes.kubeconfig': '/home/testuser/.minikube/kubeconfig.cfg',
-                'kubernetes.context': 'minikube'
-            }
-            return data.get(name, value)
-
         with mock_kubernetes_library() as mock_kubernetes_lib:
             with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=settings)}):
                 mock_kubernetes_lib.config.load_kube_config = Mock()
