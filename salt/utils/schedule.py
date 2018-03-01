@@ -135,7 +135,8 @@ class Schedule(object):
 
     def _get_schedule(self,
                       include_opts=True,
-                      include_pillar=True):
+                      include_pillar=True,
+                      remove_hidden=False):
         '''
         Return the schedule data structure
         '''
@@ -150,6 +151,13 @@ class Schedule(object):
             if not isinstance(opts_schedule, dict):
                 raise ValueError('Schedule must be of type dict.')
             schedule.update(opts_schedule)
+
+        if remove_hidden:
+            _schedule = copy.deepcopy(schedule)
+            for job in _schedule:
+                for item in _schedule[job]:
+                    if item.startswith('_'):
+                        del schedule[job][item]
         return schedule
 
     def _check_max_running(self, func, data, opts, now):
@@ -215,7 +223,8 @@ class Schedule(object):
 
         schedule_conf = os.path.join(minion_d_dir, '_schedule.conf')
         log.debug('Persisting schedule')
-        schedule_data = self._get_schedule(include_pillar=False)
+        schedule_data = self._get_schedule(include_pillar=False,
+                                           remote_hidden=True)
         try:
             with salt.utils.files.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
@@ -1392,7 +1401,7 @@ class Schedule(object):
                 log.debug('Sommething went wrong')
                 continue
 
-            seconds = (data['_next_fire_time'] - now).total_seconds()
+            seconds = int((data['_next_fire_time'] - now).total_seconds())
 
             if 'splay' in data:
                 # Got "splay" configured, make decision to run a job based on that
