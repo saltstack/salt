@@ -24,6 +24,7 @@ import select
 import logging
 import tempfile
 import subprocess
+import salt.utils.subprocess
 
 mswindows = (sys.platform == "win32")
 
@@ -37,7 +38,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-class NonBlockingPopen(SafePopen):
+class NonBlockingPopen(salt.utils.subprocess.FdPopen):
 
     #_stdin_logger_name_ = 'salt.utils.nb_popen.STDIN.PID-{pid}'
     _stdout_logger_name_ = 'salt.utils.nb_popen.STDOUT.PID-{pid}'
