@@ -43,8 +43,27 @@ class SubprocessTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for the salt.utils.subprocess.FdPopen
     '''
+
+    def setup_loader_modules(self):
+        return {subprocess: {}}
+
+    @patch('salt.utils.subprocess.log', MagicMock())
+    @patch('sys.platform', 'linux2')
+    @patch('salt.utils.subprocess.six.PY2', True)
+    @patch('os.getpid', MagicMock(return_value=111))
+    @patch('os.listdir', MagicMock(return_value=[0, 1, 2, 3, 4]))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.closerange', MagicMock())
+    @patch('os.fdopen', MagicMock(return_value=''))
+    @patch.object(salt.utils.subprocess.FdPopen, '_execute_child', MagicMock())
+    @patch.object(salt.utils.subprocess.FdPopen, '_get_handles',
+                  MagicMock(return_value=((None, None, None, None, None, None), None,)))
     def test_close_fds_active_on_linux(self):
         '''
         Should test if the close_fds is available on Linux
         :return:
         '''
+        subprocess.FdPopen(None)._close_fds(0)
+        salt.utils.subprocess.log.debug.assert_called()
+        msg, val = salt.utils.subprocess.log.debug.call_args[0]
+        assert (msg % val) == 'Closing 5 file descriptors'
