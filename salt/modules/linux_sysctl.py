@@ -132,7 +132,7 @@ def assign(name, value):
             trans_args = ({
                 ord('/'): '.',
                 ord('.'): '/'
-            })
+            },)
         else:
             trans_args = string.maketrans('./', '/.')
         tran_tab = name.translate(*trans_args)
