@@ -708,7 +708,7 @@ class SaltTestingParser(optparse.OptionParser):
                 sys.stdout.flush()
                 time.sleep(0.5)
 
-            # Let's get the container's exit code. We can't trust on Popen's
+            # Let's get the container's exit code. We can't trust on FdPopen's
             # returncode because it's not reporting the proper one? Still
             # haven't narrowed it down why.
             sys.stdout.write(' * Container exit code: ')
