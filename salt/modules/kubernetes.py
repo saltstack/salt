@@ -37,6 +37,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import sys
 import os.path
 import base64
+import errno
 import logging
 import tempfile
 import signal

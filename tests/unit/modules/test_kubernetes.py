@@ -152,18 +152,17 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         }
         return data.get(name, value)
 
-
     def test_setup_kubeconfig_file(self):
         '''
         Test that the `kubernetes.kubeconfig` configuration isn't overwritten
         :return:
         '''
         with mock_kubernetes_library() as mock_kubernetes_lib:
-            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=settings)}):
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
                 mock_kubernetes_lib.config.load_kube_config = Mock()
                 config = kubernetes._setup_conn()
                 self.assertEqual(
-                    settings('kubernetes.kubeconfig'),
+                    self.settings('kubernetes.kubeconfig'),
                     config['kubeconfig'],
                 )
 
@@ -174,7 +173,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with mock_kubernetes_library() as mock_kubernetes_lib:
-            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=settings)}):
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
                 mock_kubernetes_lib.config.load_kube_config = Mock()
                 config = kubernetes._setup_conn(kubeconfig_data='MTIzNDU2Nzg5MAo=', context='newcontext')
                 self.assertTrue(config['kubeconfig'].startswith('/tmp/salt-kubeconfig-'))
