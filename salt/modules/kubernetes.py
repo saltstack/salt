@@ -24,6 +24,12 @@ provided `kubeconfig` entry is prefered.
     salt '*' kubernetes.nodes kubeconfig=/etc/salt/k8s/kubeconfig context=minikube
 
 .. versionadded: 2017.7.0
+.. versionchanged:: Fluorine
+
+.. warning::
+
+    Configuration options changed in Flourine.
+
 '''
 
 # Import Python Futures
