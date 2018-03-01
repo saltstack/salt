@@ -10,14 +10,14 @@ Module for handling kubernetes calls.
         kubernetes.kubeconfig-data: '<base64 encoded kubeconfig content'
         kubernetes.context: 'context'
 
-These settings can be also overrided by adding `context and `kubeconfig` or
+These settings can be overridden by adding `context and `kubeconfig` or
 `kubeconfig_data` parameters when calling a function.
 
 The data format for `kubernetes.kubeconfig-data` value is the content of
 `kubeconfig` base64 encoded in one line.
 
 Only `kubeconfig` or `kubeconfig-data` should be provided. In case both are
-provided `kubeconfig` entry is prefered.
+provided `kubeconfig` entry is preferred.
 
 .. code-block:: bash
 
@@ -126,7 +126,7 @@ def _cleanup(**kwargs):
                 os.unlink(kubeconfig)
             except (IOError, OSError) as err:
                 if err.errno != errno.ENOENT:
-                    log.exception('Removing kubeconfig failed: {0}'.format(err))
+                    log.exception(err)
 
 
 def ping(**kwargs):
