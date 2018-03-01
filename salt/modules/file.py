@@ -1730,7 +1730,7 @@ def _assert_occurrence(src, probe, target, amount=1):
     '''
     Raise an exception, if there are different amount of specified occurrences in src.
     '''
-    occ = src.count(probe)
+    occ = len([l for l in src if l.count(probe)])
     if occ > amount:
         msg = 'more than'
     elif occ < amount:
@@ -1760,6 +1760,20 @@ def _set_line_indent(src, line, indent):
         idt.append(c)
 
     return ''.join(idt) + line.lstrip()
+
+
+def _get_eol(line):
+    compiled = re.compile('((?<!\r)\n|\r(?!\n)|\r\n)$')
+    match = compiled.search(line)
+    return match and match.group() or ''
+
+
+def _set_line_eol(src, line):
+    '''
+    Add line ending
+    '''
+    line_ending = _get_eol(src) or os.linesep
+    return line.rstrip('\r\n') + line_ending
 
 
 def line(path, content=None, match=None, mode=None, location=None,
