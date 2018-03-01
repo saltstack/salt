@@ -2,21 +2,23 @@
 '''
 Manage and query NPM packages.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import python libs
-import json
 import logging
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
-import salt.utils
+import salt.utils.json
+import salt.utils.path
+import salt.utils.user
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)
@@ -32,14 +34,14 @@ def __virtual__():
     Only work when npm is installed.
     '''
     try:
-        if salt.utils.which('npm') is not None:
+        if salt.utils.path.which('npm') is not None:
             _check_valid_version()
             return True
         else:
             return (False, 'npm execution module could not be loaded '
                            'because the npm binary could not be located')
     except CommandExecutionError as exc:
-        return (False, str(exc))
+        return (False, six.text_type(exc))
 
 
 def _check_valid_version():
@@ -48,9 +50,9 @@ def _check_valid_version():
     npm must be at least version 1.2.
     '''
     # pylint: disable=no-member
-    npm_version = distutils.version.LooseVersion(
+    npm_version = _LooseVersion(
         salt.modules.cmdmod.run('npm --version', output_loglevel='quiet'))
-    valid_version = distutils.version.LooseVersion('1.2')
+    valid_version = _LooseVersion('1.2')
     # pylint: enable=no-member
     if npm_version < valid_version:
         raise CommandExecutionError(
@@ -155,7 +157,7 @@ def install(pkg=None,
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -168,7 +170,7 @@ def install(pkg=None,
     # npm >1.2.21 is putting the output to stderr even though retcode is 0
     npm_output = result['stdout'] or result['stderr']
     try:
-        return json.loads(npm_output)
+        return salt.utils.json.loads(npm_output)
     except ValueError:
         pass
 
@@ -191,7 +193,7 @@ def _extract_json(npm_output):
     while lines and (lines[0].startswith('[fsevents]') or lines[0].startswith('Pass ')):
         lines = lines[1:]
     try:
-        return json.loads(''.join(lines))
+        return salt.utils.json.loads(''.join(lines))
     except ValueError:
         pass
     return None
@@ -234,7 +236,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -281,7 +283,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     depth
         Limit the depth of the packages listed
 
-        .. versionadded:: 2016.11.6, Nitrogen
+        .. versionadded:: 2016.11.6, 2017.7.0
 
     CLI Example:
 
@@ -293,7 +295,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -321,7 +323,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     if result['retcode'] != 0 and result['stderr']:
         raise CommandExecutionError(result['stderr'])
 
-    return json.loads(result['stdout']).get('dependencies', {})
+    return salt.utils.json.loads(result['stdout']).get('dependencies', {})
 
 
 def cache_clean(path=None, runas=None, env=None, force=False):
@@ -356,7 +358,7 @@ def cache_clean(path=None, runas=None, env=None, force=False):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -403,7 +405,7 @@ def cache_list(path=None, runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -443,7 +445,7 @@ def cache_path(runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 

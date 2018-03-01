@@ -201,16 +201,18 @@ rackconnect v3 cloud network as its variable.
 # pylint: disable=E0102
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import socket
 import pprint
-import yaml
 
 # Import Salt Libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.cloud
+import salt.utils.files
+import salt.utils.pycrypto
+import salt.utils.yaml
 import salt.client
 from salt.utils.openstack import nova
 try:
@@ -220,10 +222,8 @@ except ImportError as exc:
 
 # Import Salt Cloud Libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
-import salt.utils.cloud
-import salt.utils.pycrypto as sup
 import salt.config as config
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
@@ -304,7 +304,7 @@ def get_conn():
     kwargs['project_id'] = vm_['tenant']
     kwargs['auth_url'] = vm_['identity_url']
     kwargs['region_name'] = vm_['compute_region']
-    kwargs['use_keystoneauth'] = vm_['use_keystoneauth']
+    kwargs['use_keystoneauth'] = vm_.get('use_keystoneauth', False)
 
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
@@ -363,7 +363,7 @@ def get_image(conn, vm_):
         raise SaltCloudNotFound(
             'The specified image, \'{0}\', could not be found: {1}'.format(
                 vm_image,
-                str(exc)
+                exc
             )
         )
 
@@ -404,7 +404,7 @@ def get_size(conn, vm_):
         return sizes[0]
 
     for size in sizes:
-        if vm_size and str(vm_size) in (str(sizes[size]['id']), str(size)):
+        if vm_size and six.text_type(vm_size) in (six.text_type(sizes[size]['id']), six.text_type(size)):
             return sizes[size]['id']
     raise SaltCloudNotFound(
         'The specified size, \'{0}\', could not be found.'.format(vm_size)
@@ -444,9 +444,7 @@ def ignore_cidr(vm_, ip):
         'ignore_cidr', vm_, __opts__, default='', search_global=False
     )
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
-        log.warning(
-            'IP "{0}" found within "{1}"; ignoring it.'.format(ip, cidr)
-        )
+        log.warning('IP "%s" found within "%s"; ignoring it.', ip, cidr)
         return True
 
     return False
@@ -532,7 +530,7 @@ def destroy(name, conn=None, call=None):
     node = conn.server_by_name(name)
     profiles = get_configured_provider()['profiles']  # pylint: disable=E0602
     if node is None:
-        log.error('Unable to find the VM {0}'.format(name))
+        log.error('Unable to find the VM %s', name)
     profile = None
     if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
         profile = node.extra['metadata']['profile']
@@ -542,18 +540,15 @@ def destroy(name, conn=None, call=None):
         flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
 
     if flush_mine_on_destroy:
-        log.info('Clearing Salt Mine: {0}'.format(name))
+        log.info('Clearing Salt Mine: %s', name)
         salt_client = salt.client.get_local_client(__opts__['conf_file'])
         minions = salt_client.cmd(name, 'mine.flush')
 
-    log.info('Clearing Salt Mine: {0}, {1}'.format(
-        name,
-        flush_mine_on_destroy
-    ))
-    log.info('Destroying VM: {0}'.format(name))
+    log.info('Clearing Salt Mine: %s, %s', name, flush_mine_on_destroy)
+    log.info('Destroying VM: %s', name)
     ret = conn.delete(node.id)
     if ret:
-        log.info('Destroyed VM: {0}'.format(name))
+        log.info('Destroyed VM: %s', name)
         # Fire destroy action
         __utils__['cloud.fire_event'](
             'event',
@@ -570,7 +565,7 @@ def destroy(name, conn=None, call=None):
         __utils__['cloud.cachedir_index_del'](name)
         return True
 
-    log.error('Failed to Destroy VM: {0}'.format(name))
+    log.error('Failed to Destroy VM: %s', name)
     return False
 
 
@@ -587,7 +582,7 @@ def request_instance(vm_=None, call=None):
         raise SaltCloudSystemExit(
             'The request_instance action must be called with -a or --action.'
         )
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
     kwargs = vm_.copy()
@@ -651,7 +646,7 @@ def request_instance(vm_=None, call=None):
         kwargs['files'] = {}
         for src_path in files:
             if os.path.exists(files[src_path]):
-                with salt.utils.fopen(files[src_path], 'r') as fp_:
+                with salt.utils.files.fopen(files[src_path], 'r') as fp_:
                     kwargs['files'][src_path] = fp_.read()
             else:
                 kwargs['files'][src_path] = files[src_path]
@@ -661,7 +656,7 @@ def request_instance(vm_=None, call=None):
     )
     if userdata_file is not None:
         try:
-            with salt.utils.fopen(userdata_file, 'r') as fp_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fp_:
                 kwargs['userdata'] = salt.utils.cloud.userdata_template(
                     __opts__, vm_, fp_.read()
                 )
@@ -675,16 +670,18 @@ def request_instance(vm_=None, call=None):
 
     kwargs.update(get_block_mapping_opts(vm_))
 
+    event_kwargs = {
+        'name': kwargs['name'],
+        'image': kwargs.get('image_id', 'Boot From Volume'),
+        'size': kwargs['flavor_id'],
+    }
+
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': {
-                'name': kwargs['name'],
-                'image': kwargs.get('image_id', 'Boot From Volume'),
-                'size': kwargs['flavor_id'],
-            }
+            'kwargs': __utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
@@ -737,22 +734,15 @@ def request_instance(vm_=None, call=None):
                         floating_ip = fl_ip
                         break
                 if floating_ip is None:
-                    log.error('No IP addresses available to allocate for this server: {0}'.format(vm_['name']))
+                    log.error('No IP addresses available to allocate for this server: %s', vm_['name'])
 
         def __query_node_data(vm_):
             try:
                 node = show_instance(vm_['name'], 'action')
-                log.debug(
-                    'Loaded node data for {0}:\n{1}'.format(
-                        vm_['name'],
-                        pprint.pformat(node)
-                    )
-                )
+                log.debug('Loaded node data for %s:\n%s', vm_['name'], pprint.pformat(node))
             except Exception as err:
                 log.error(
-                    'Failed to get nodes list: {0}'.format(
-                        err
-                    ),
+                    'Failed to get nodes list: %s', err,
                     # Show the traceback if the debug logging level is enabled
                     exc_info_on_loglevel=logging.DEBUG
                 )
@@ -775,7 +765,7 @@ def request_instance(vm_=None, call=None):
             except SaltCloudSystemExit:
                 pass
             finally:
-                raise SaltCloudSystemExit(str(exc))
+                raise SaltCloudSystemExit(six.text_type(exc))
 
         try:
             conn.floating_ip_associate(vm_['name'], floating_ip)
@@ -798,12 +788,13 @@ def request_instance(vm_=None, call=None):
 def _query_node_data(vm_, data, conn):
     try:
         node = show_instance(vm_['name'], 'action')
-        log.debug('Loaded node data for {0}:'
-                  '\n{1}'.format(vm_['name'], pprint.pformat(node)))
+        log.debug('Loaded node data for %s:\n%s', vm_['name'], pprint.pformat(node))
     except Exception as err:
         # Show the traceback if the debug logging level is enabled
-        log.error('Failed to get nodes list: {0}'.format(err),
-                  exc_info_on_loglevel=logging.DEBUG)
+        log.error(
+            'Failed to get nodes list: %s', err,
+            exc_info_on_loglevel=logging.DEBUG
+        )
         # Trigger a failure in the wait for IP function
         return False
 
@@ -885,13 +876,13 @@ def _query_node_data(vm_, data, conn):
             if private_ip is False:
                 continue
             if salt.utils.cloud.is_public_ip(private_ip):
-                log.warning('{0} is a public IP'.format(private_ip))
+                log.warning('%s is a public IP', private_ip)
                 data.public_ips.append(private_ip)
                 log.warning('Public IP address was not ready when we last checked. '
                             'Appending public IP address now.')
                 public = data.public_ips
             else:
-                log.warning('{0} is a private IP'.format(private_ip))
+                log.warning('%s is a private IP', private_ip)
                 ignore_ip = ignore_cidr(vm_, private_ip)
                 if private_ip not in data.private_ips and not ignore_ip:
                     result.append(private_ip)
@@ -922,13 +913,13 @@ def _query_node_data(vm_, data, conn):
             non_private_ips.append(fixed)
 
     if non_private_ips:
-        log.debug('result = {0}'.format(non_private_ips))
+        log.debug('result = %s', non_private_ips)
         data.private_ips = result
         if ssh_interface(vm_) != 'private_ips':
             return data
 
     if result:
-        log.debug('result = {0}'.format(result))
+        log.debug('result = %s', result)
         data.private_ips = result
         if ssh_interface(vm_) == 'private_ips':
             return data
@@ -961,20 +952,11 @@ def create(vm_):
 
     vm_['key_filename'] = key_filename
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -984,7 +966,7 @@ def create(vm_):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
+            log.debug('Generating minion keys for \'%s\'', vm_['name'])
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -994,7 +976,7 @@ def create(vm_):
             )
         data = conn.server_show_libcloud(vm_['instance_id'])
         if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
-            vm_['password'] = sup.secure_password()
+            vm_['password'] = salt.utils.pycrypto.secure_password()
             conn.root_password(vm_['instance_id'], vm_['password'])
     else:
         # Put together all of the information required to request the instance,
@@ -1020,7 +1002,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     log.debug('VM is now running')
 
@@ -1032,20 +1014,20 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.floating_ips)
     else:
         ip_address = preferred_ip(vm_, data.public_ips)
-    log.debug('Using IP address {0}'.format(ip_address))
+    log.debug('Using IP address %s', ip_address)
 
     if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
-        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+        log.info('Salt interface set to: %s', salt_ip_address)
     elif salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'fixed_ips':
         salt_ip_address = preferred_ip(vm_, data.fixed_ips)
-        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+        log.info('Salt interface set to: %s', salt_ip_address)
     elif salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'floating_ips':
         salt_ip_address = preferred_ip(vm_, data.floating_ips)
-        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+        log.info('Salt interface set to: %s', salt_ip_address)
     else:
         salt_ip_address = preferred_ip(vm_, data.public_ips)
-        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+        log.debug('Salt interface set to: %s', salt_ip_address)
 
     if not ip_address:
         raise SaltCloudSystemExit('A valid IP address was not found')
@@ -1060,11 +1042,10 @@ def create(vm_):
     if 'password' in ret['extra']:
         del ret['extra']['password']
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data.__dict__)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data.__dict__)
     )
 
     event_data = {
@@ -1082,7 +1063,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=event_data,
+        args=__utils__['cloud.filter_event']('created', event_data, list(event_data)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1132,7 +1113,7 @@ def list_nodes(call=None, **kwargs):
         public = []
         if 'addresses' not in server_tmp:
             server_tmp['addresses'] = {}
-        for network in server_tmp['addresses'].keys():
+        for network in server_tmp['addresses']:
             for address in server_tmp['addresses'][network]:
                 if salt.utils.cloud.is_public_ip(address.get('addr', '')):
                     public.append(address['addr'])
@@ -1283,7 +1264,7 @@ def volume_create_attach(name, call=None, **kwargs):
         )
 
     if type(kwargs['volumes']) is str:
-        volumes = yaml.safe_load(kwargs['volumes'])
+        volumes = salt.utils.yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
 

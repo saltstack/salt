@@ -8,22 +8,25 @@ Homebrew for macOS
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
-import json
+import functools
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.functools
+import salt.utils.json
+import salt.utils.path
 import salt.utils.pkg
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
-from salt.ext.six.moves import zip
 
 # Import third party libs
-import json
+from salt.ext import six
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +39,7 @@ def __virtual__():
     Confine this module to Mac OS with Homebrew.
     '''
 
-    if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
+    if salt.utils.path.which('brew') and __grains__['os'] == 'MacOS':
         return __virtualname__
     return (False, 'The brew module could not be loaded: brew not found or grain os != MacOS')
 
@@ -61,7 +64,7 @@ def _tap(tap, runas=None):
     try:
         _call_brew(cmd)
     except CommandExecutionError:
-        log.error('Failed to tap "{0}"'.format(tap))
+        log.error('Failed to tap "%s"', tap)
         return False
 
     return True
@@ -104,9 +107,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -118,18 +121,42 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    cmd = 'brew list --versions'
     ret = {}
-    out = _call_brew(cmd)['stdout']
-    for line in out.splitlines():
-        try:
-            name_and_versions = line.split(' ')
-            name = name_and_versions[0]
-            installed_versions = name_and_versions[1:]
-            newest_version = sorted(installed_versions, cmp=salt.utils.version_cmp).pop()
-        except ValueError:
-            continue
-        __salt__['pkg_resource.add_pkg'](ret, name, newest_version)
+    cmd = 'brew info --json=v1 --installed'
+    package_info = salt.utils.json.loads(_call_brew(cmd)['stdout'])
+
+    for package in package_info:
+        # Brew allows multiple versions of the same package to be installed.
+        # Salt allows for this, so it must be accounted for.
+        versions = [v['version'] for v in package['installed']]
+        # Brew allows for aliasing of packages, all of which will be
+        # installable from a Salt call, so all names must be accounted for.
+        names = package['aliases'] + [package['name'], package['full_name']]
+        # Create a list of tuples containing all possible combinations of
+        # names and versions, because all are valid.
+        combinations = [(n, v) for n in names for v in versions]
+
+        for name, version in combinations:
+            __salt__['pkg_resource.add_pkg'](ret, name, version)
+
+    # Grab packages from brew cask, if available.
+    # Brew Cask doesn't provide a JSON interface, must be parsed the old way.
+    try:
+        cask_cmd = 'brew cask list --versions'
+        out = _call_brew(cask_cmd)['stdout']
+
+        for line in out.splitlines():
+            try:
+                name_and_versions = line.split(' ')
+                name = '/'.join(('caskroom/cask', name_and_versions[0]))
+                installed_versions = name_and_versions[1:]
+                key_func = functools.cmp_to_key(salt.utils.versions.version_cmp)
+                newest_version = sorted(installed_versions, key=key_func).pop()
+            except ValueError:
+                continue
+            __salt__['pkg_resource.add_pkg'](ret, name, newest_version)
+    except CommandExecutionError:
+        pass
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
@@ -169,7 +196,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3>
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
     if refresh:
         refresh_db()
 
@@ -185,7 +212,7 @@ def latest_version(*names, **kwargs):
         return versions_dict
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -236,7 +263,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -285,9 +312,10 @@ def _info(*pkgs):
     cmd = 'brew info --json=v1 {0}'.format(' '.join(pkgs))
     brew_result = _call_brew(cmd)
     if brew_result['retcode']:
-        log.error('Failed to get info about packages: {0}'.format(' '.join(pkgs)))
+        log.error('Failed to get info about packages: %s',
+                  ' '.join(pkgs))
         return {}
-    output = json.loads(brew_result['stdout'])
+    output = salt.utils.json.loads(brew_result['stdout'])
     return dict(zip(pkgs, output))
 
 
@@ -389,7 +417,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -417,7 +445,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     ret = {}
 
     try:
-        data = json.loads(res['stdout'])
+        data = salt.utils.json.loads(res['stdout'])
     except ValueError as err:
         msg = 'unable to interpret output from "brew outdated": {0}'.format(err)
         log.error(msg)
@@ -470,13 +498,13 @@ def upgrade(refresh=True):
 
     old = list_pkgs()
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     result = _call_brew('brew upgrade', failhard=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(

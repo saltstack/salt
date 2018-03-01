@@ -2,7 +2,7 @@
 '''
 Make api awesomeness
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import inspect
 import os
@@ -14,9 +14,12 @@ import salt.config
 import salt.runner
 import salt.syspaths
 import salt.wheel
-import salt.utils
+import salt.utils.args
 import salt.client.ssh.client
 import salt.exceptions
+
+# Import third party libs
+from salt.ext import six
 
 
 class NetapiClient(object):
@@ -60,14 +63,15 @@ class NetapiClient(object):
                     'Salt Master is not available.')
 
         if low.get('client') not in CLIENTS:
-            raise salt.exceptions.SaltInvocationError('Invalid client specified')
+            raise salt.exceptions.SaltInvocationError(
+                    'Invalid client specified: \'{0}\''.format(low.get('client')))
 
         if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
             raise salt.exceptions.EauthAuthenticationError(
                     'No authentication credentials given')
 
         l_fun = getattr(self, low['client'])
-        f_call = salt.utils.format_call(l_fun, low)
+        f_call = salt.utils.args.format_call(l_fun, low)
         return l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
     def local_async(self, *args, **kwargs):
@@ -135,7 +139,7 @@ class NetapiClient(object):
                                                       disable_custom_roster=True)
         return ssh_client.cmd_sync(kwargs)
 
-    def runner(self, fun, timeout=None, **kwargs):
+    def runner(self, fun, timeout=None, full_return=False, **kwargs):
         '''
         Run `runner modules <all-salt.runners>` synchronously
 
@@ -148,7 +152,7 @@ class NetapiClient(object):
         '''
         kwargs['fun'] = fun
         runner = salt.runner.RunnerClient(self.opts)
-        return runner.cmd_sync(kwargs, timeout=timeout)
+        return runner.cmd_sync(kwargs, timeout=timeout, full_return=full_return)
 
     def runner_async(self, fun, **kwargs):
         '''
@@ -197,6 +201,6 @@ class NetapiClient(object):
 
 CLIENTS = [
     name for name, _
-    in inspect.getmembers(NetapiClient, predicate=inspect.ismethod)
+    in inspect.getmembers(NetapiClient, predicate=inspect.ismethod if six.PY2 else None)
     if not (name == 'run' or name.startswith('_'))
 ]

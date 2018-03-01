@@ -16,11 +16,11 @@ Library for interacting with PagerDuty API
             pagerduty.subdomain: mysubdomain
             pagerduty.api_key: F3Rbyjbve43rfFWf2214
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-import json
 import logging
 import salt.utils.http
+import salt.utils.json
 from salt.version import __version__
 
 log = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ def query(method='GET', profile_dict=None, url=None, path='api/v1',
         method,
         params=params,
         header_dict=headers,
-        data=json.dumps(data),
+        data=salt.utils.json.dumps(data),
         decode=False,
         text=True,
         opts=opts,
@@ -113,7 +113,7 @@ def list_items(action, key, profile_dict=None, api_key=None, opts=None):
     List items belonging to an API call. Used for list_services() and
     list_incidents()
     '''
-    items = json.loads(query(
+    items = salt.utils.json.loads(query(
         profile_dict=profile_dict,
         api_key=api_key,
         action=action,

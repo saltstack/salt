@@ -4,7 +4,7 @@ Connection library for Amazon S3
 
 :depends: requests
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -17,11 +17,13 @@ except ImportError:
     HAS_REQUESTS = False  # pylint: disable=W0612
 
 # Import Salt libs
-import salt.utils
 import salt.utils.aws
+import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +32,8 @@ def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
           verify_ssl=True, full_headers=False, kms_keyid=None,
-          location=None, role_arn=None, chunk_size=16384):
+          location=None, role_arn=None, chunk_size=16384, path_style=False,
+          https_enable=True):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -54,9 +57,19 @@ def query(key, keyid, method='GET', params=None, headers=None,
     The service_url will form the basis for the final endpoint that is used to
     query the service.
 
+    Path style can be enabled:
+
+        s3.path_style: True
+
+    This can be useful if you need to use salt with a proxy for an s3 compatible storage
+
+    You can use either https protocol or http protocol:
+
+        s3.https_enable: True
+
     SSL verification may also be turned off in the configuration:
 
-    s3.verify_ssl: False
+        s3.verify_ssl: False
 
     This is required if using S3 bucket names that contain a period, as
     these will not match Amazon's S3 wildcard certificates. Certificate
@@ -81,10 +94,13 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not service_url:
         service_url = 's3.amazonaws.com'
 
-    if bucket:
-        endpoint = '{0}.{1}'.format(bucket, service_url)
-    else:
+    if not bucket or path_style:
         endpoint = service_url
+    else:
+        endpoint = '{0}.{1}'.format(bucket, service_url)
+
+    if path_style and bucket:
+        path = '{0}/{1}'.format(bucket, path)
 
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
     if not key:
@@ -104,13 +120,13 @@ def query(key, keyid, method='GET', params=None, headers=None,
     payload_hash = None
     if method == 'PUT':
         if local_file:
-            payload_hash = salt.utils.get_hash(local_file, form='sha256')
+            payload_hash = salt.utils.hashutils.get_hash(local_file, form='sha256')
 
     if path is None:
         path = ''
 
     if not requesturl:
-        requesturl = 'https://{0}/{1}'.format(endpoint, path)
+        requesturl = (('https' if https_enable else 'http')+'://{0}/{1}').format(endpoint, path)
         headers, requesturl = salt.utils.aws.sig4(
             method,
             endpoint,
@@ -126,42 +142,46 @@ def query(key, keyid, method='GET', params=None, headers=None,
             payload_hash=payload_hash,
         )
 
-    log.debug('S3 Request: {0}'.format(requesturl))
+    log.debug('S3 Request: %s', requesturl)
     log.debug('S3 Headers::')
-    log.debug('    Authorization: {0}'.format(headers['Authorization']))
+    log.debug('    Authorization: %s', headers['Authorization'])
 
     if not data:
         data = None
 
-    if method == 'PUT':
-        if local_file:
-            with salt.utils.fopen(local_file, 'r') as data:
-                result = requests.request(method,
-                                          requesturl,
-                                          headers=headers,
-                                          data=data,
-                                          verify=verify_ssl,
-                                          stream=True)
-    elif method == 'GET' and local_file and not return_bin:
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl,
-                                  stream=True)
-    else:
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl)
+    try:
+        if method == 'PUT':
+            if local_file:
+                data = salt.utils.files.fopen(local_file, 'r')  # pylint: disable=resource-leakage
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl,
+                                      stream=True)
+        elif method == 'GET' and local_file and not return_bin:
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl,
+                                      stream=True)
+        else:
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl)
+    finally:
+        if data is not None:
+            data.close()
 
     err_code = None
     err_msg = None
     if result.status_code >= 400:
         # On error the S3 API response should contain error message
         err_text = result.content or 'Unknown error'
-        log.debug('    Response content: {0}'.format(err_text))
+        log.debug('    Response content: %s', err_text)
 
         # Try to get err info from response xml
         try:
@@ -169,12 +189,14 @@ def query(key, keyid, method='GET', params=None, headers=None,
             err_code = err_data['Code']
             err_msg = err_data['Message']
         except (KeyError, ET.ParseError) as err:
-            log.debug('Failed to parse s3 err response. {0}: {1}'.format(
-                type(err).__name__, err))
+            log.debug(
+                'Failed to parse s3 err response. %s: %s',
+                type(err).__name__, err
+            )
             err_code = 'http-{0}'.format(result.status_code)
             err_msg = err_text
 
-    log.debug('S3 Response Status Code: {0}'.format(result.status_code))
+    log.debug('S3 Response Status Code: %s', result.status_code)
 
     if method == 'PUT':
         if result.status_code != 200:
@@ -187,13 +209,13 @@ def query(key, keyid, method='GET', params=None, headers=None,
                     bucket, err_code, err_msg))
 
         if local_file:
-            log.debug('Uploaded from {0} to {1}'.format(local_file, path))
+            log.debug('Uploaded from %s to %s', local_file, path)
         else:
-            log.debug('Created bucket {0}'.format(bucket))
+            log.debug('Created bucket %s', bucket)
         return
 
     if method == 'DELETE':
-        if not str(result.status_code).startswith('2'):
+        if not six.text_type(result.status_code).startswith('2'):
             if path:
                 raise CommandExecutionError(
                     'Failed to delete {0} from bucket {1}. {2}: {3}'.format(
@@ -203,9 +225,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
                     bucket, err_code, err_msg))
 
         if path:
-            log.debug('Deleted {0} from bucket {1}'.format(path, bucket))
+            log.debug('Deleted %s from bucket %s', path, bucket)
         else:
-            log.debug('Deleted bucket {0}'.format(bucket))
+            log.debug('Deleted bucket %s', bucket)
         return
 
     # This can be used to save a binary object to disk
@@ -214,8 +236,8 @@ def query(key, keyid, method='GET', params=None, headers=None,
             raise CommandExecutionError(
                 'Failed to get file. {0}: {1}'.format(err_code, err_msg))
 
-        log.debug('Saving to local file: {0}'.format(local_file))
-        with salt.utils.fopen(local_file, 'wb') as out:
+        log.debug('Saving to local file: %s', local_file)
+        with salt.utils.files.fopen(local_file, 'wb') as out:
             for chunk in result.iter_content(chunk_size=chunk_size):
                 out.write(chunk)
         return 'Saved to local file: {0}'.format(local_file)

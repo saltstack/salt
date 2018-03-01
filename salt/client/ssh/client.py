@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
 import logging
+import random
 
 # Import Salt libs
 import salt.config
+import salt.utils.versions
 import salt.syspaths as syspaths
 from salt.exceptions import SaltClientError  # Temporary
 
@@ -29,10 +31,9 @@ class SSHClient(object):
         else:
             if os.path.isdir(c_path):
                 log.warning(
-                    '{0} expects a file path not a directory path({1}) to '
-                    'it\'s \'c_path\' keyword argument'.format(
-                        self.__class__.__name__, c_path
-                    )
+                    '%s expects a file path not a directory path(%s) to '
+                    'its \'c_path\' keyword argument',
+                    self.__class__.__name__, c_path
                 )
             self.opts = salt.config.client_config(c_path)
 
@@ -45,19 +46,28 @@ class SSHClient(object):
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             kwarg=None,
             **kwargs):
         '''
         Prepare the arguments
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.versions.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         opts = copy.deepcopy(self.opts)
         opts.update(kwargs)
         if timeout:
             opts['timeout'] = timeout
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts['argv'] = [fun] + arg
-        opts['selected_target_option'] = expr_form
+        opts['selected_target_option'] = tgt_type
         opts['tgt'] = tgt
         opts['arg'] = arg
         return salt.client.ssh.SSH(opts)
@@ -68,7 +78,7 @@ class SSHClient(object):
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             kwarg=None,
             **kwargs):
@@ -78,24 +88,32 @@ class SSHClient(object):
 
         .. versionadded:: 2015.5.0
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.versions.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         ssh = self._prep_ssh(
                 tgt,
                 fun,
                 arg,
                 timeout,
-                expr_form,
+                tgt_type,
                 kwarg,
                 **kwargs)
         for ret in ssh.run_iter(jid=kwargs.get('jid', None)):
             yield ret
 
-    def cmd(
-            self,
+    def cmd(self,
             tgt,
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             kwarg=None,
             **kwargs):
         '''
@@ -104,12 +122,21 @@ class SSHClient(object):
 
         .. versionadded:: 2015.5.0
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.versions.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         ssh = self._prep_ssh(
                 tgt,
                 fun,
                 arg,
                 timeout,
-                expr_form,
+                tgt_type,
                 kwarg,
                 **kwargs)
         final = {}
@@ -131,7 +158,7 @@ class SSHClient(object):
                 'tgt': 'silver',
                 'fun': 'test.ping',
                 'arg': (),
-                'expr_form'='glob',
+                'tgt_type'='glob',
                 'kwarg'={}
                 })
             {'silver': {'fun_args': [], 'jid': '20141202152721523072', 'return': True, 'retcode': 0, 'success': True, 'fun': 'test.ping', 'id': 'silver'}}
@@ -139,7 +166,7 @@ class SSHClient(object):
 
         kwargs = copy.deepcopy(low)
 
-        for ignore in ['tgt', 'fun', 'arg', 'timeout', 'expr_form', 'kwarg']:
+        for ignore in ['tgt', 'fun', 'arg', 'timeout', 'tgt_type', 'kwarg']:
             if ignore in kwargs:
                 del kwargs[ignore]
 
@@ -147,7 +174,7 @@ class SSHClient(object):
                         low['fun'],
                         low.get('arg', []),
                         low.get('timeout'),
-                        low.get('expr_form'),
+                        low.get('tgt_type'),
                         low.get('kwarg'),
                         **kwargs)
 
@@ -163,10 +190,60 @@ class SSHClient(object):
                 'tgt': 'silver',
                 'fun': 'test.ping',
                 'arg': (),
-                'expr_form'='glob',
+                'tgt_type'='glob',
                 'kwarg'={}
                 })
             {'silver': {'fun_args': [], 'jid': '20141202152721523072', 'return': True, 'retcode': 0, 'success': True, 'fun': 'test.ping', 'id': 'silver'}}
         '''
         # TODO Not implemented
         raise SaltClientError
+
+    def cmd_subset(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            tgt_type='glob',
+            ret='',
+            kwarg=None,
+            sub=3,
+            **kwargs):
+        '''
+        Execute a command on a random subset of the targeted systems
+
+        The function signature is the same as :py:meth:`cmd` with the
+        following exceptions.
+
+        :param sub: The number of systems to execute on
+
+        .. code-block:: python
+
+            >>> import salt.client.ssh.client
+            >>> sshclient= salt.client.ssh.client.SSHClient()
+            >>> sshclient.cmd_subset('*', 'test.ping', sub=1)
+            {'jerry': True}
+
+        .. versionadded:: 2017.7.0
+        '''
+        if 'expr_form' in kwargs:
+            salt.utils.versions.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+        minion_ret = self.cmd(tgt,
+                              'sys.list_functions',
+                              tgt_type=tgt_type,
+                              **kwargs)
+        minions = list(minion_ret)
+        random.shuffle(minions)
+        f_tgt = []
+        for minion in minions:
+            if fun in minion_ret[minion]['return']:
+                f_tgt.append(minion)
+            if len(f_tgt) >= sub:
+                break
+        return self.cmd_iter(f_tgt, fun, arg, timeout, tgt_type='list', ret=ret, kwarg=kwarg, **kwargs)

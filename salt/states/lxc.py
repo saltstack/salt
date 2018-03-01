@@ -4,11 +4,11 @@ Manage Linux Containers
 =======================
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 __docformat__ = 'restructuredtext en'
 
 # Import salt libs
-import salt.utils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
@@ -28,6 +28,7 @@ def present(name,
             backing=None,
             vgname=None,
             lvname=None,
+            thinpool=None,
             path=None):
     '''
     .. versionchanged:: 2015.8.0
@@ -78,8 +79,11 @@ def present(name,
     **Container Creation Arguments**
 
     template
-        The template to use. E.g., 'ubuntu' or 'fedora'. Conflicts with the
-        ``image`` argument.
+        The template to use. For example, ``ubuntu`` or ``fedora``.
+        For a full list of available templates, check out
+        the :mod:`lxc.templates <salt.modules.lxc.templates>` function.
+
+        Conflicts with the ``image`` argument.
 
         .. note::
 
@@ -114,6 +118,10 @@ def present(name,
         Remember to double-indent the options, due to :ref:`how PyYAML works
         <nested-dict-indentation>`.
 
+        For available template options, refer to the lxc template scripts
+        which are ususally located under ``/usr/share/lxc/templates``,
+        or run ``lxc-create -t <template> -h``.
+
     image
         A tar archive to use as the rootfs for the container. Conflicts with
         the ``template`` argument.
@@ -135,6 +143,10 @@ def present(name,
 
     lvname
         Name of the LVM logical volume in which to create the volume for this
+        container. Only applicable if ``backing`` is set to ``lvm``.
+
+    thinpool
+        Name of a pool volume that will be used for thin-provisioning this
         container. Only applicable if ``backing`` is set to ``lvm``.
     '''
     ret = {'name': name,
@@ -239,7 +251,8 @@ def present(name,
                     backing=backing,
                     vgname=vgname,
                     path=path,
-                    lvname=lvname)
+                    lvname=lvname,
+                    thinpool=thinpool)
         except (CommandExecutionError, SaltInvocationError) as exc:
             ret['result'] = False
             ret['comment'] = exc.strerror
@@ -695,7 +708,7 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
     # Until a reasonable alternative for this state function is created, we need
     # to keep this function around and cannot officially remove it. Progress of
     # the new function will be tracked in https://github.com/saltstack/salt/issues/35523
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'This state is unsuitable for setting parameters that appear more '
         'than once in an LXC config file, or parameters which must appear in '

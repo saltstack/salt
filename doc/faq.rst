@@ -190,6 +190,8 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
       file.symlink:
         - target: /usr/local/bin/foo
 
+.. _which-version:
+
 Can I run different versions of Salt on my Master and Minion?
 -------------------------------------------------------------
 
@@ -323,7 +325,7 @@ The following example works on UNIX-like operating systems:
 
 .. code-block:: jinja
 
-    {%- if grains['os'] != 'Windows' %
+    {%- if grains['os'] != 'Windows' %}
     Restart Salt Minion:
       cmd.run:
         - name: 'salt-call --local service.restart salt-minion'
@@ -416,6 +418,8 @@ Because grains can be set by users that have access to the minion configuration
 files on the local system, grains are considered less secure than other
 identifiers in Salt. Use caution when targeting sensitive operations or setting
 pillar values based on grain data.
+
+The only grain which can be safely used is ``grains['id']`` which contains the Minion ID.
 
 When possible, you should target sensitive operations and data using the Minion
 ID. If the Minion ID of a system changes, the Salt Minion's public key must be

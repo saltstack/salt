@@ -37,7 +37,7 @@ Example:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
 import pprint
@@ -47,7 +47,7 @@ import time
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -146,7 +146,7 @@ def __call_cli(jboss_config, command, retries=1):
     cli_script = ' '.join(command_segments)
 
     cli_command_result = __salt__['cmd.run_all'](cli_script)
-    log.debug('cli_command_result=%s', str(cli_command_result))
+    log.debug('cli_command_result=%s', cli_command_result)
 
     log.debug('========= STDOUT:\n%s', cli_command_result['stdout'])
     log.debug('========= STDERR:\n%s', cli_command_result['stderr'])
@@ -244,7 +244,7 @@ def __process_tokens_internal(tokens, start_at=0):
     if __is_dict_start(tokens[start_at]) and start_at == 0:  # the top object
         return __process_tokens_internal(tokens, start_at=1)
 
-    log.debug("__process_tokens, start_at="+str(start_at))
+    log.debug("__process_tokens, start_at=%s", start_at)
     token_no = start_at
     result = {}
     current_key = None
@@ -263,22 +263,22 @@ def __process_tokens_internal(tokens, start_at=0):
         elif __is_datatype(token):
             log.debug("    TYPE: DATATYPE: %s ", token)
             result[current_key] = __get_datatype(token)
-            log.debug("    %s -> %s", current_key, str(result[current_key]))
+            log.debug("    %s -> %s", current_key, result[current_key])
             current_key = None
         elif __is_boolean(token):
             log.debug("    TYPE: BOOLEAN ")
             result[current_key] = __get_boolean(token)
-            log.debug("    %s -> %s", current_key, str(result[current_key]))
+            log.debug("    %s -> %s", current_key, result[current_key])
             current_key = None
         elif __is_int(token):
             log.debug("    TYPE: INT ")
             result[current_key] = __get_int(token)
-            log.debug("    %s -> %s", current_key, str(result[current_key]))
+            log.debug("    %s -> %s", current_key, result[current_key])
             current_key = None
         elif __is_long(token):
             log.debug("    TYPE: LONG ")
             result[current_key] = __get_long(token)
-            log.debug("    %s -> %s", current_key, str(result[current_key]))
+            log.debug("    %s -> %s", current_key, result[current_key])
             current_key = None
         elif __is_undefined(token):
             log.debug("    TYPE: UNDEFINED ")
@@ -290,7 +290,7 @@ def __process_tokens_internal(tokens, start_at=0):
             dict_value, token_no = __process_tokens_internal(tokens, start_at=token_no+1)
             log.debug("    DICT = %s ", dict_value)
             result[current_key] = dict_value
-            log.debug("    %s -> %s", current_key, str(result[current_key]))
+            log.debug("    %s -> %s", current_key, result[current_key])
             current_key = None
         elif __is_dict_end(token):
             log.debug("    TYPE: DICT END")
@@ -312,7 +312,7 @@ def __tokenize(cli_output):
     # \\ means a single backslash here
     tokens_re = re.compile(r'("(?:[^"\\]|\\"|\\\\)*"|=>|{|}|true|false|undefined|[0-9A-Za-z]+)', re.DOTALL)
     tokens = tokens_re.findall(cli_output)
-    log.debug("tokens=%s", str(tokens))
+    log.debug("tokens=%s", tokens)
     return tokens
 
 

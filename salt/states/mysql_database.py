@@ -14,13 +14,13 @@ Databases can be set as either absent or present.
     frank:
       mysql_database.present
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 import logging
 
 
-LOG = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -56,12 +56,12 @@ def present(name, character_set=None, collate=None, **connection_args):
     if existing:
         alter = False
         if character_set and character_set != existing.get('character_set'):
-            LOG.debug('character set differes from {0} : {1}'.format(
-                character_set, existing.get('character_set')))
+            log.debug('character set differes from %s : %s',
+                      character_set, existing.get('character_set'))
             alter = True
         if collate and collate != existing.get('collate'):
-            LOG.debug('collate set differes from {0} : {1}'.format(
-                collate, existing.get('collate')))
+            log.debug('collate set differs from %s : %s',
+                      collate, existing.get('collate'))
             alter = True
         if alter:
             __salt__['mysql.alter_db'](

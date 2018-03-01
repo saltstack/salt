@@ -10,7 +10,7 @@ The postgres_group module is used to create and manage Postgres groups.
     frank:
       postgres_group.present
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 
@@ -136,7 +136,7 @@ def present(name,
     # default to encrypted passwords
     if encrypted is not False:
         encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
-    # maybe encrypt if if not already and necessary
+    # maybe encrypt if it's not already and necessary
     password = postgres._maybe_encrypt_password(name,
                                                 password,
                                                 encrypted=encrypted)

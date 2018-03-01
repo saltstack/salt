@@ -27,19 +27,20 @@ A flexible renderer that takes a templating engine and a data format
 #
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import os
 import re
 import getopt
 import copy
-from os import path as ospath
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 __all__ = ['render']
@@ -75,7 +76,7 @@ def __init__(opts):
     STATE_NAME = STATE_FUNC.split('.')[0]
 
 
-MOD_BASENAME = ospath.basename(__file__)
+MOD_BASENAME = os.path.basename(__file__)
 INVALID_USAGE_ERROR = SaltRenderError(
     'Invalid use of {0} renderer!\n'
     '''Usage: #!{1} [-GoSp] [<data_renderer> [options] . <template_renderer> [options]]
@@ -108,7 +109,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
     implicit_require = False
 
     def process_sls_data(data, context=None, extract=False):
-        sls_dir = ospath.dirname(sls.replace('.', ospath.sep)) if '.' in sls else sls
+        sls_dir = os.path.dirname(sls.replace('.', os.path.sep)) if '.' in sls else sls
         ctx = dict(sls_dir=sls_dir if sls_dir else '.')
 
         if context:
@@ -156,8 +157,8 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             raise
         except Exception as err:
             log.exception(
-                'Error found while pre-processing the salt file '
-                '{0}:\n{1}'.format(sls, err)
+                'Error found while pre-processing the salt file %s:\n%s',
+                sls, err
             )
             from salt.state import State
             state = State(__opts__)
@@ -206,10 +207,10 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             raise INVALID_USAGE_ERROR
 
         if isinstance(input, six.string_types):
-            with salt.utils.fopen(input, 'r') as ifile:
-                sls_templ = ifile.read()
+            with salt.utils.files.fopen(input, 'r') as ifile:
+                sls_templ = salt.utils.stringutils.to_unicode(ifile.read())
         else:  # assume file-like
-            sls_templ = input.read()
+            sls_templ = salt.utils.stringutils.to_unicode(input.read())
 
         # first pass to extract the state configuration
         match = re.search(__opts__['stateconf_end_marker'], sls_templ)
@@ -235,7 +236,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
 
     if log.isEnabledFor(logging.DEBUG):
         import pprint  # FIXME: pprint OrderedDict
-        log.debug('Rendered sls: {0}'.format(pprint.pformat(data)))
+        log.debug('Rendered sls: %s', pprint.pformat(data))
     return data
 
 
@@ -363,7 +364,8 @@ def statelist(states_dict, sid_excludes=frozenset(['include', 'exclude'])):
 
 
 REQUISITES = set([
-    'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in', 'listen', 'listen_in'
+    'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in', 'listen', 'listen_in',
+    'onchanges', 'onchanges_in', 'onfail', 'onfail_in'
 ])
 
 
@@ -382,7 +384,7 @@ def rename_state_ids(data, sls, is_extend=False):
             if sid.startswith('.'):
                 req[sname] = _local_to_abs_sid(sid, sls)
 
-    for sid in data:
+    for sid in list(data):
         if sid.startswith('.'):
             newsid = _local_to_abs_sid(sid, sls)
             if newsid in data:
@@ -405,8 +407,8 @@ def rename_state_ids(data, sls, is_extend=False):
             del data[sid]
 
 
-REQUIRE = set(['require', 'watch', 'listen'])
-REQUIRE_IN = set(['require_in', 'watch_in', 'listen_in'])
+REQUIRE = set(['require', 'watch', 'listen', 'onchanges', 'onfail'])
+REQUIRE_IN = set(['require_in', 'watch_in', 'listen_in', 'onchanges_in', 'onfail_in'])
 EXTENDED_REQUIRE = {}
 EXTENDED_REQUIRE_IN = {}
 
@@ -414,8 +416,8 @@ from itertools import chain
 
 
 # To avoid cycles among states when each state requires the one before it:
-#   explicit require/watch/listen can only contain states before it
-#   explicit require_in/watch_in/listen_in can only contain states after it
+#   explicit require/watch/listen/onchanges/onfail can only contain states before it
+#   explicit require_in/watch_in/listen_in/onchanges_in/onfail_in can only contain states after it
 def add_implicit_requires(data):
 
     def T(sid, state):  # pylint: disable=C0103
@@ -449,7 +451,7 @@ def add_implicit_requires(data):
         for _, rstate, rsid in reqs:
             if T(rsid, rstate) in states_after:
                 raise SaltRenderError(
-                    'State({0}) can\'t require/watch/listen a state({1}) defined '
+                    'State({0}) can\'t require/watch/listen/onchanges/onfail a state({1}) defined '
                     'after it!'.format(tag, T(rsid, rstate))
                 )
 
@@ -459,7 +461,7 @@ def add_implicit_requires(data):
         for _, rstate, rsid in reqs:
             if T(rsid, rstate) in states_before:
                 raise SaltRenderError(
-                    'State({0}) can\'t require_in/watch_in/listen_in a state({1}) '
+                    'State({0}) can\'t require_in/watch_in/listen_in/onchanges_in/onfail_in a state({1}) '
                     'defined before it!'.format(tag, T(rsid, rstate))
                 )
 
@@ -571,7 +573,7 @@ def extract_state_confs(data, is_extend=False):
 
         if not is_extend and state_id in STATE_CONF_EXT:
             extend = STATE_CONF_EXT[state_id]
-            for requisite in 'require', 'watch', 'listen':
+            for requisite in 'require', 'watch', 'listen', 'onchanges', 'onfail':
                 if requisite in extend:
                     extend[requisite] += to_dict[state_id].get(requisite, [])
             to_dict[state_id].update(STATE_CONF_EXT[state_id])

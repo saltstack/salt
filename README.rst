@@ -44,6 +44,11 @@ may take a few moments for someone to reply.
 
 `<http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83>`_
 
+**SaltStack Slack** - Alongside IRC is our SaltStack Community Slack for the
+SaltStack Working groups. Use the following link to request an invitation.
+
+`<https://saltstackcommunity.herokuapp.com/>`_
+
 **Mailing List** - The SaltStack community users mailing list is hosted by
 Google groups. Anyone can post to ask questions about SaltStack products and
 anyone can help answer. Join the conversation!
@@ -67,10 +72,11 @@ Engage SaltStack
 
 `SaltConf`_, **User Groups and Meetups** - SaltStack has a vibrant and `global
 community`_ of customers, users, developers and enthusiasts. Connect with other
-Salted folks in your area of the world, or join `SaltConf16`_, the SaltStack
-annual user conference, April 19-21 in Salt Lake City. Please let us know if
-you would like to start a user group or if we should add your existing
-SaltStack user group to this list by emailing: info@saltstack.com
+Salted folks in your area of the world, or join `SaltConf`_, the SaltStack
+annual user conference held in Salt Lake City. Please visit the `SaltConf`_ site
+for details of our next conference. Also, please let us know if you would like
+to start a user group or if we should add your existing SaltStack user group to
+this list by emailing: info@saltstack.com
 
 **SaltStack Training** - Get access to proprietary `SaltStack education
 offerings`_ through instructor-led training offered on-site, virtually or at
@@ -89,9 +95,8 @@ services`_ offerings.
 * LinkedIn Group - `<https://www.linkedin.com/groups/4877160>`_
 * Google+ - `<https://plus.google.com/b/112856352920437801867/+SaltStackInc/posts>`_
 
-.. _SaltConf: http://www.youtube.com/user/saltstack
 .. _global community: http://www.meetup.com/pro/saltstack/
-.. _SaltConf16: http://saltconf.com/
+.. _SaltConf: http://saltconf.com/
 .. _SaltStack education offerings: http://saltstack.com/training/
 .. _SaltStack Certified Engineer (SSCE): http://saltstack.com/certification/
 .. _SaltStack professional services: http://saltstack.com/services/
@@ -108,3 +113,4 @@ the world. The following links should get you started:
 
 `<https://docs.saltstack.com/en/latest/topics/development/index.html>`_
 
+`<https://docs.saltstack.com/en/develop/topics/development/pull_requests.html>`_

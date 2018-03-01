@@ -37,8 +37,8 @@ set_file
     Due to how PyYAML imports nested dicts (see :ref:`here <yaml-idiosyncrasies>`),
     the values in the ``data`` dict must be indented four spaces instead of two.
 '''
-from __future__ import absolute_import
-import salt.ext.six as six
+from __future__ import absolute_import, print_function, unicode_literals
+from salt.ext import six
 
 
 # Define the module's virtual name
@@ -185,7 +185,7 @@ def set(name, data, **kwargs):
         if args['type'] == 'boolean':
             args['value'] = 'true' if args['value'] else 'false'
 
-        if current is not None and [key, args['type'], str(args['value'])] in current:
+        if current is not None and [key, args['type'], six.text_type(args['value'])] in current:
             if ret['comment'] is '':
                 ret['comment'] = 'Unchanged answers: '
             ret['comment'] += ('{0} ').format(key)

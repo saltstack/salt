@@ -4,19 +4,20 @@ Control virtual machines via Salt
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 import logging
 
 # Import Salt libs
 import salt.client
-import salt.utils.virt
-import salt.utils.cloud
 import salt.key
+import salt.utils.cloud
+import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -68,13 +69,13 @@ def query(host=None, quiet=False):
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
         for info in client.cmd_iter('virtual:physical',
-                                    'virt.full_info', expr_form='grain'):
+                                    'virt.full_info', tgt_type='grain'):
             if not info:
                 continue
             if not isinstance(info, dict):
                 continue
             chunk = {}
-            id_ = next(info.iterkeys())
+            id_ = next(six.iterkeys(info))
             if host:
                 if host != id_:
                     continue
@@ -105,7 +106,7 @@ def list(host=None, quiet=False, hyper=None):  # pylint: disable=redefined-built
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
     for info in client.cmd_iter('virtual:physical',
-                                'virt.vm_info', expr_form='grain'):
+                                'virt.vm_info', tgt_type='grain'):
         if not info:
             continue
         if not isinstance(info, dict):
@@ -185,7 +186,7 @@ def init(
         The number of cpus to allocate to this new virtual machine.
 
     mem
-        The amount of memory to allocate tot his virtual machine. The number
+        The amount of memory to allocate to this virtual machine. The number
         is interpreted in megabytes.
 
     image
@@ -245,8 +246,8 @@ def init(
         __jid_event__.fire_event({'message': 'Minion will be preseeded'}, 'progress')
         priv_key, pub_key = salt.utils.cloud.gen_keys()
         accepted_key = os.path.join(__opts__['pki_dir'], 'minions', name)
-        with salt.utils.fopen(accepted_key, 'w') as fp_:
-            fp_.write(pub_key)
+        with salt.utils.files.fopen(accepted_key, 'w') as fp_:
+            fp_.write(salt.utils.stringutils.to_str(pub_key))
 
     client = salt.client.get_local_client(__opts__['conf_file'])
 
@@ -370,7 +371,7 @@ def force_off(name):
     try:
         cmd_ret = client.cmd_iter(
                 host,
-                'virt.destroy',
+                'virt.stop',
                 [name],
                 timeout=600)
     except SaltClientError as client_error:
@@ -405,7 +406,7 @@ def purge(name, delete_key=True):
         ret.update(comp)
 
     if delete_key:
-        log.debug('Deleting key {0}'.format(name))
+        log.debug('Deleting key %s', name)
         skey = salt.key.Key(__opts__)
         skey.delete_key(name)
     __jid_event__.fire_event({'message': 'Purged VM {0}'.format(name)}, 'progress')

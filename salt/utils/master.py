@@ -8,7 +8,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import os
 import logging
 import signal
@@ -19,9 +19,13 @@ import salt.log
 import salt.cache
 import salt.client
 import salt.pillar
-import salt.utils
 import salt.utils.atomicfile
+import salt.utils.files
 import salt.utils.minions
+import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.verify
+import salt.utils.versions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
@@ -29,7 +33,7 @@ from salt.utils.cache import CacheCli as cache_cli
 from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import zmq
     HAS_ZMQ = True
@@ -61,31 +65,43 @@ class MasterPillarUtil(object):
 
         # my_runner.py
         tgt = 'web*'
-        pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form='glob', opts=__opts__)
+        pillar_util = salt.utils.master.MasterPillarUtil(tgt, tgt_type='glob', opts=__opts__)
         pillar_data = pillar_util.get_minion_pillar()
     '''
     def __init__(self,
                  tgt='',
-                 expr_form='glob',
+                 tgt_type='glob',
                  saltenv=None,
                  use_cached_grains=True,
                  use_cached_pillar=True,
                  grains_fallback=True,
                  pillar_fallback=True,
-                 opts=None):
+                 opts=None,
+                 expr_form=None):
 
-        log.debug('New instance of {0} created.'.format(
-            self.__class__.__name__))
+        # remember to remove the expr_form argument from this function when
+        # performing the cleanup on this deprecation.
+        if expr_form is not None:
+            salt.utils.versions.warn_until(
+                'Fluorine',
+                'the target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = expr_form
+
+        log.debug('New instance of %s created.',
+                  self.__class__.__name__)
         if opts is None:
-            log.error('{0}: Missing master opts init arg.'.format(
-                self.__class__.__name__))
+            log.error('%s: Missing master opts init arg.',
+                      self.__class__.__name__)
             raise SaltException('{0}: Missing master opts init arg.'.format(
                 self.__class__.__name__))
         else:
             self.opts = opts
         self.serial = salt.payload.Serial(self.opts)
         self.tgt = tgt
-        self.expr_form = expr_form
+        self.tgt_type = tgt_type
         self.saltenv = saltenv
         self.use_cached_grains = use_cached_grains
         self.use_cached_pillar = use_cached_pillar
@@ -93,12 +109,11 @@ class MasterPillarUtil(object):
         self.pillar_fallback = pillar_fallback
         self.cache = salt.cache.factory(opts)
         log.debug(
-            'Init settings: tgt: \'{0}\', expr_form: \'{1}\', saltenv: \'{2}\', '
-            'use_cached_grains: {3}, use_cached_pillar: {4}, '
-            'grains_fallback: {5}, pillar_fallback: {6}'.format(
-                tgt, expr_form, saltenv, use_cached_grains, use_cached_pillar,
-                grains_fallback, pillar_fallback
-            )
+            'Init settings: tgt: \'%s\', tgt_type: \'%s\', saltenv: \'%s\', '
+            'use_cached_grains: %s, use_cached_pillar: %s, '
+            'grains_fallback: %s, pillar_fallback: %s',
+            tgt, tgt_type, saltenv, use_cached_grains, use_cached_pillar,
+            grains_fallback, pillar_fallback
         )
 
     def _get_cached_mine_data(self, *minion_ids):
@@ -110,7 +125,7 @@ class MasterPillarUtil(object):
                       'and enfore_mine_cache are both disabled.')
             return mine_data
         if not minion_ids:
-            minion_ids = self.cache.ls('minions')
+            minion_ids = self.cache.list('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
@@ -129,17 +144,16 @@ class MasterPillarUtil(object):
                       'enabled.')
             return grains, pillars
         if not minion_ids:
-            minion_ids = self.cache.ls('minions')
+            minion_ids = self.cache.list('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
             mdata = self.cache.fetch('minions/{0}'.format(minion_id), 'data')
             if not isinstance(mdata, dict):
                 log.warning(
-                    'cache.fetch should always return a dict. ReturnedType: {0}, MinionId: {1}'.format(
-                        type(mdata).__name__,
-                        minion_id
-                    )
+                    'cache.fetch should always return a dict. ReturnedType: %s, MinionId: %s',
+                    type(mdata).__name__,
+                    minion_id
                 )
                 continue
             if 'grains' in mdata:
@@ -150,13 +164,13 @@ class MasterPillarUtil(object):
 
     def _get_live_minion_grains(self, minion_ids):
         # Returns a dict of grains fetched directly from the minions
-        log.debug('Getting live grains for minions: "{0}"'.format(minion_ids))
+        log.debug('Getting live grains for minions: "%s"', minion_ids)
         client = salt.client.get_local_client(self.opts['conf_file'])
         ret = client.cmd(
                        ','.join(minion_ids),
                         'grains.items',
                         timeout=self.opts['timeout'],
-                        expr_form='list')
+                        tgt_type='list')
         return ret
 
     def _get_live_minion_pillar(self, minion_id=None, minion_grains=None):
@@ -165,19 +179,18 @@ class MasterPillarUtil(object):
             return {}
         if not minion_grains:
             log.warning(
-                'Cannot get pillar data for {0}: no grains supplied.'.format(
-                    minion_id
-                )
+                'Cannot get pillar data for %s: no grains supplied.',
+                minion_id
             )
             return {}
-        log.debug('Getting live pillar for {0}'.format(minion_id))
+        log.debug('Getting live pillar for %s', minion_id)
         pillar = salt.pillar.Pillar(
                             self.opts,
                             minion_grains,
                             minion_id,
                             self.saltenv,
                             self.opts['ext_pillar'])
-        log.debug('Compiling pillar for {0}'.format(minion_id))
+        log.debug('Compiling pillar for %s', minion_id)
         ret = pillar.compile_pillar()
         return ret
 
@@ -192,14 +205,14 @@ class MasterPillarUtil(object):
         if self.use_cached_grains:
             cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
-            log.debug('Missed cached minion grains for: {0}'.format(missed_minions))
+            log.debug('Missed cached minion grains for: %s', missed_minions)
             if self.grains_fallback:
                 lret = self._get_live_minion_grains(missed_minions)
             ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         else:
             lret = self._get_live_minion_grains(minion_ids)
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
-            log.debug('Missed live minion grains for: {0}'.format(missed_minions))
+            log.debug('Missed live minion grains for: %s', missed_minions)
             if self.grains_fallback:
                 cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
             ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
@@ -217,28 +230,29 @@ class MasterPillarUtil(object):
         if self.use_cached_pillar:
             cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
-            log.debug('Missed cached minion pillars for: {0}'.format(missed_minions))
+            log.debug('Missed cached minion pillars for: %s', missed_minions)
             if self.pillar_fallback:
                 lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in missed_minions])
             ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         else:
             lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in minion_ids])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
-            log.debug('Missed live minion pillars for: {0}'.format(missed_minions))
+            log.debug('Missed live minion pillars for: %s', missed_minions)
             if self.pillar_fallback:
                 cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
             ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         return ret
 
     def _tgt_to_list(self):
-        # Return a list of minion ids that match the target and expr_form
+        # Return a list of minion ids that match the target and tgt_type
         minion_ids = []
         ckminions = salt.utils.minions.CkMinions(self.opts)
-        minion_ids = ckminions.check_minions(self.tgt, self.expr_form)
+        _res = ckminions.check_minions(self.tgt, self.tgt_type)
+        minion_ids = _res['minions']
         if len(minion_ids) == 0:
-            log.debug('No minions matched for tgt="{0}" and expr_form="{1}"'.format(self.tgt, self.expr_form))
+            log.debug('No minions matched for tgt="%s" and tgt_type="%s"', self.tgt, self.tgt_type)
             return {}
-        log.debug('Matching minions for tgt="{0}" and expr_form="{1}": {2}'.format(self.tgt, self.expr_form, minion_ids))
+        log.debug('Matching minions for tgt="%s" and tgt_type="%s": %s', self.tgt, self.tgt_type, minion_ids)
         return minion_ids
 
     def get_minion_pillar(self):
@@ -269,11 +283,11 @@ class MasterPillarUtil(object):
         else:
             cached_minion_grains = {}
             cached_minion_pillars = {}
-        log.debug('Getting minion grain data for: {0}'.format(minion_ids))
+        log.debug('Getting minion grain data for: %s', minion_ids)
         minion_grains = self._get_minion_grains(
                                         *minion_ids,
                                         cached_grains=cached_minion_grains)
-        log.debug('Getting minion pillar data for: {0}'.format(minion_ids))
+        log.debug('Getting minion pillar data for: %s', minion_ids)
         minion_pillars = self._get_minion_pillar(
                                         *minion_ids,
                                         grains=minion_grains,
@@ -286,7 +300,7 @@ class MasterPillarUtil(object):
         cached minion data on the master, or by fetching the grains
         directly on the minion.
 
-        By default, this function tries hard to get the pillar data:
+        By default, this function tries hard to get the grains data:
             - Try to get the cached minion grains if the master
                 has minion_data_cache: True
             - If the grains data for the minion is cached, use it.
@@ -295,12 +309,14 @@ class MasterPillarUtil(object):
         '''
         minion_grains = {}
         minion_ids = self._tgt_to_list()
+        if not minion_ids:
+            return {}
         if any(arg for arg in [self.use_cached_grains, self.grains_fallback]):
             log.debug('Getting cached minion data.')
             cached_minion_grains, cached_minion_pillars = self._get_cached_minion_data(*minion_ids)
         else:
             cached_minion_grains = {}
-        log.debug('Getting minion grain data for: {0}'.format(minion_ids))
+        log.debug('Getting minion grain data for: %s', minion_ids)
         minion_grains = self._get_minion_grains(
                                         *minion_ids,
                                         cached_grains=cached_minion_grains)
@@ -312,7 +328,7 @@ class MasterPillarUtil(object):
         '''
         mine_data = {}
         minion_ids = self._tgt_to_list()
-        log.debug('Getting cached mine data for: {0}'.format(minion_ids))
+        log.debug('Getting cached mine data for: %s', minion_ids)
         mine_data = self._get_cached_mine_data(*minion_ids)
         return mine_data
 
@@ -338,9 +354,9 @@ class MasterPillarUtil(object):
             return False
 
         minion_ids = self._tgt_to_list()
-        log.debug('Clearing cached {0} data for: {1}'.format(
-            ', '.join(clear_what),
-            minion_ids))
+        log.debug('Clearing cached %s data for: %s',
+                  ', '.join(clear_what),
+                  minion_ids)
         if clear_pillar == clear_grains:
             # clear_pillar and clear_grains are both True or both False.
             # This means we don't deal with pillar/grains caches at all.
@@ -352,7 +368,7 @@ class MasterPillarUtil(object):
             # in the same file, 'data.p'
             grains, pillars = self._get_cached_minion_data(*minion_ids)
         try:
-            c_minions = self.cache.ls('minions')
+            c_minions = self.cache.list('minions')
             for minion_id in minion_ids:
                 if not salt.utils.verify.valid_id(self.opts, minion_id):
                     continue
@@ -595,10 +611,10 @@ class ConnectedCache(MultiprocessingProcess):
             # check for next cache-request
             if socks.get(creq_in) == zmq.POLLIN:
                 msg = serial.loads(creq_in.recv())
-                log.debug('ConCache Received request: {0}'.format(msg))
+                log.debug('ConCache Received request: %s', msg)
 
                 # requests to the minion list are send as str's
-                if isinstance(msg, str):
+                if isinstance(msg, six.string_types):
                     if msg == 'minions':
                         # Send reply back to client
                         reply = serial.dumps(self.minions)
@@ -630,9 +646,10 @@ class ConnectedCache(MultiprocessingProcess):
 
                     data = new_c_data[0]
 
-                    if isinstance(data, str):
+                    if isinstance(data, six.string_types):
                         if data not in self.minions:
-                            log.debug('ConCache Adding minion {0} to cache'.format(new_c_data[0]))
+                            log.debug('ConCache Adding minion %s to cache',
+                                      new_c_data[0])
                             self.minions.append(data)
 
                     elif isinstance(data, list):
@@ -643,7 +660,7 @@ class ConnectedCache(MultiprocessingProcess):
                     log.debug('ConCache Got malformed result dict from worker')
                     del new_c_data
 
-                log.info('ConCache {0} entries in cache'.format(len(self.minions)))
+                log.info('ConCache %s entries in cache', len(self.minions))
 
             # check for next timer-event to start new jobs
             if socks.get(timer_in) == zmq.POLLIN:
@@ -670,7 +687,43 @@ def ping_all_connected_minions(opts):
     else:
         tgt = '*'
         form = 'glob'
-    client.cmd(tgt, 'test.ping', expr_form=form)
+    client.cmd(tgt, 'test.ping', tgt_type=form)
+
+
+def get_master_key(key_user, opts, skip_perm_errors=False):
+    if key_user == 'root':
+        if opts.get('user', 'root') != 'root':
+            key_user = opts.get('user', 'root')
+    if key_user.startswith('sudo_'):
+        key_user = opts.get('user', 'root')
+    if salt.utils.platform.is_windows():
+        # The username may contain '\' if it is in Windows
+        # 'DOMAIN\username' format. Fix this for the keyfile path.
+        key_user = key_user.replace('\\', '_')
+    keyfile = os.path.join(opts['cachedir'],
+                           '.{0}_key'.format(key_user))
+    # Make sure all key parent directories are accessible
+    salt.utils.verify.check_path_traversal(opts['cachedir'],
+                                           key_user,
+                                           skip_perm_errors)
+
+    try:
+        with salt.utils.files.fopen(keyfile, 'r') as key:
+            return key.read()
+    except (OSError, IOError):
+        # Fall back to eauth
+        return ''
+
+
+def get_values_of_matching_keys(pattern_dict, user_name):
+    '''
+    Check a whitelist and/or blacklist to see if the value matches it.
+    '''
+    ret = []
+    for expr in pattern_dict:
+        if salt.utils.stringutils.expr_match(user_name, expr):
+            ret.extend(pattern_dict[expr])
+    return ret
 
 # test code for the ConCache class
 if __name__ == '__main__':

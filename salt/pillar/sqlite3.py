@@ -26,20 +26,6 @@ Note, timeout is in seconds.
     sqlite3.database: /var/lib/salt/pillar.db
     sqlite3.timeout: 5.0
 
-Legacy Compatibility
-====================
-
-SQLite3 database connection configuration previously had keys under
-pillar.
-
-.. code-block:: yaml
-
-    pillar.sqlite3.database: /var/lib/salt/pillar.db
-    pillar.sqlite3.timeout: 5.0
-
-This has been deprecated in 2016.3.0 and will be removed in Salt
-Nitrogen.
-
 
 Complete Example
 ================
@@ -60,7 +46,7 @@ Complete Example
             as_list: True
             with_lists: [1,3]
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 from contextlib import contextmanager
@@ -68,7 +54,6 @@ import logging
 import sqlite3
 
 # Import Salt libs
-import salt.utils
 from salt.pillar.sql_base import SqlBaseExtPillar
 
 # Set up logging
@@ -94,26 +79,12 @@ class SQLite3ExtPillar(SqlBaseExtPillar):
         defaults = {'database': '/var/lib/salt/pillar.db',
                     'timeout': 5.0}
         _options = {}
+        _opts = {}
         if 'sqlite3' in __opts__ and 'database' in __opts__['sqlite3']:
-            # new configuration
             _opts = __opts__.get('sqlite3', {})
-        else:
-            # legacy configuration
-            salt.utils.warn_until(
-                'Nitrogen',
-                'Configurations under the pillar key are deprecated.'
-                'See the docs for the new style of configuration.'
-                'This functionality will be removed in Salt Nitro­gen.'
-            )
-            _opts = __opts__.get('pillar', {}).get('sqlite3', {})
-            if 'database' not in _opts:
-                _sqlite3_opts = __opts__.get('pillar', {}).get('master', {})\
-                    .get('pillar', {}).get('sqlite3')
-                if _sqlite3_opts is not None:
-                    _opts = _sqlite3_opts
         for attr in defaults:
             if attr not in _opts:
-                log.debug('Using default for SQLite3 pillar {0}'.format(attr))
+                log.debug('Using default for SQLite3 pillar %s', attr)
                 _options[attr] = defaults[attr]
                 continue
             _options[attr] = _opts[attr]
@@ -131,7 +102,7 @@ class SQLite3ExtPillar(SqlBaseExtPillar):
         try:
             yield cursor
         except sqlite3.Error as err:
-            log.exception('Error in ext_pillar SQLite3: {0}'.format(err.args))
+            log.exception('Error in ext_pillar SQLite3: %s', err.args)
         finally:
             conn.close()
 

@@ -198,7 +198,7 @@ Glossary
         of runner modules <all-salt.runners>`.
 
     Runner Function
-        A function which is is called by the :command:`salt-run` command and
+        A function which is called by the :command:`salt-run` command and
         executes on the master instead of on a minion. *See also*:
         :term:`Runner Module`.
 

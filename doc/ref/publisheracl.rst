@@ -10,9 +10,10 @@ to have access to execute select salt commands on minions from the master.
 The publisher ACL system is configured in the master configuration file via the
 ``publisher_acl`` configuration option. Under the ``publisher_acl``
 configuration option the users open to send commands are specified and then a
-list of regular expressions which specify the minion functions which will be
-made available to specified user. This configuration is much like the ``peer``
-configuration:
+list of the minion functions which will be made available to specified user.
+Both users and functions could be specified by exact match, shell glob or
+regular expression. This configuration is much like the :ref:`external_auth
+<acl-eauth>` configuration:
 
 .. code-block:: yaml
 
@@ -25,10 +26,19 @@ configuration:
         - web*:
           - test.*
           - pkg.*
-
-WARNING: client_acl and client_acl_blacklist options are deprecated and will be
-removed in the future releases. Use publisher_acl and publisher_acl_blacklist
-instead.
+      # Allow admin and managers to use saltutil module functions
+      admin|manager_.*:
+        - saltutil.*
+      # Allow users to use only my_mod functions on "web*" minions with specific arguments.
+      user_.*:
+        - web*:
+          - 'my_mod.*':
+              args:
+                - 'a.*'
+                - 'b.*'
+              kwargs:
+                'kwa': 'kwa.*'
+                'kwb': 'kwb'
 
 Permission Issues
 -----------------

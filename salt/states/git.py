@@ -10,7 +10,7 @@ States to manage git repositories and git configuration
     This state module now requires git 1.6.5 (released 10 October 2009) or
     newer.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -19,12 +19,16 @@ import logging
 import os
 import re
 import string
-from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.files
 import salt.utils.url
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
+
+# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -110,24 +114,24 @@ def _get_local_rev_and_branch(target, user, password):
     '''
     Return the local revision for before/after comparisons
     '''
-    log.info('Checking local revision for {0}'.format(target))
+    log.info('Checking local revision for %s', target)
     try:
         local_rev = __salt__['git.revision'](target,
                                              user=user,
                                              password=password,
                                              ignore_retcode=True)
     except CommandExecutionError:
-        log.info('No local revision for {0}'.format(target))
+        log.info('No local revision for %s', target)
         local_rev = None
 
-    log.info('Checking local branch for {0}'.format(target))
+    log.info('Checking local branch for %s', target)
     try:
         local_branch = __salt__['git.current_branch'](target,
                                                       user=user,
                                                       password=password,
                                                       ignore_retcode=True)
     except CommandExecutionError:
-        log.info('No local branch for {0}'.format(target))
+        log.info('No local branch for %s', target)
         local_branch = None
 
     return local_rev, local_branch
@@ -254,6 +258,8 @@ def latest(name,
            https_pass=None,
            onlyif=False,
            unless=False,
+           refspec_branch='*',
+           refspec_tag='*',
            **kwargs):
     '''
     Make sure the repository is cloned to the given directory and is
@@ -388,11 +394,6 @@ def latest(name,
 
         .. versionadded:: 2015.8.3
 
-    force : False
-        .. deprecated:: 2015.8.0
-            Use ``force_clone`` instead. For earlier Salt versions, ``force``
-            must be used.
-
     force_checkout : False
         When checking out the local branch, the state will fail if there are
         unwritten changes. Set this argument to ``True`` to discard unwritten
@@ -437,11 +438,6 @@ def latest(name,
         it using this value as the initial remote name. If the repository
         already exists, and a remote by this name is not present, one will be
         added.
-
-    remote_name
-        .. deprecated:: 2015.8.0
-            Use ``remote`` instead. For earlier Salt versions, ``remote_name``
-            must be used.
 
     fetch_tags : True
         If ``True``, then when a fetch is performed all tags will be fetched,
@@ -513,6 +509,20 @@ def latest(name,
         A command to run as a check, only run the named command if the command
         passed to the ``unless`` option returns false
 
+    refspec_branch : *
+        A glob expression defining which branches to retrieve when fetching.
+        See `git-fetch(1)`_ for more information on how refspecs work.
+
+        .. versionadded:: 2017.7.0
+
+    refspec_tag : *
+        A glob expression defining which tags to retrieve when fetching. See
+        `git-fetch(1)`_ for more information on how refspecs work.
+
+        .. versionadded:: 2017.7.0
+
+    .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
+
     .. note::
         Clashing ID declarations can be avoided when including different
         branches from the same git repository in the same SLS file by using the
@@ -564,36 +574,12 @@ def latest(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
-    always_fetch = kwargs.pop('always_fetch', False)
-    force = kwargs.pop('force', False)
-    remote_name = kwargs.pop('remote_name', False)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
-
-    if always_fetch:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'always_fetch\' argument to the git.latest state no longer '
-            'has any effect, see the 2015.8.0 release notes for details.'
-        )
-    if force:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'force\' argument to the git.latest state has been '
-            'deprecated, please use \'force_clone\' instead.'
-        )
-        force_clone = force
-    if remote_name:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'remote_name\' argument to the git.latest state has been '
-            'deprecated, please use \'remote\' instead.'
-        )
-        remote = remote_name
 
     if not remote:
         return _fail(ret, '\'remote\' argument is required')
@@ -609,23 +595,23 @@ def latest(name,
 
     # Ensure that certain arguments are strings to ensure that comparisons work
     if not isinstance(rev, six.string_types):
-        rev = str(rev)
+        rev = six.text_type(rev)
     if target is not None:
         if not isinstance(target, six.string_types):
-            target = str(target)
+            target = six.text_type(target)
         if not os.path.isabs(target):
             return _fail(
                 ret,
                 'target \'{0}\' is not an absolute path'.format(target)
             )
     if branch is not None and not isinstance(branch, six.string_types):
-        branch = str(branch)
+        branch = six.text_type(branch)
     if user is not None and not isinstance(user, six.string_types):
-        user = str(user)
+        user = six.text_type(user)
     if password is not None and not isinstance(password, six.string_types):
-        password = str(password)
+        password = six.text_type(password)
     if remote is not None and not isinstance(remote, six.string_types):
-        remote = str(remote)
+        remote = six.text_type(remote)
     if identity is not None:
         if isinstance(identity, six.string_types):
             identity = [identity]
@@ -636,9 +622,7 @@ def latest(name,
                 try:
                     ident_path = __salt__['cp.cache_file'](ident_path, __env__)
                 except IOError as exc:
-                    log.error(
-                        'Failed to cache {0}: {1}'.format(ident_path, exc)
-                    )
+                    log.exception('Failed to cache %s', ident_path)
                     return _fail(
                         ret,
                         'identity \'{0}\' does not exist.'.format(
@@ -653,9 +637,9 @@ def latest(name,
                     )
                 )
     if https_user is not None and not isinstance(https_user, six.string_types):
-        https_user = str(https_user)
+        https_user = six.text_type(https_user)
     if https_pass is not None and not isinstance(https_pass, six.string_types):
-        https_pass = str(https_pass)
+        https_pass = six.text_type(https_pass)
 
     if os.path.isfile(target):
         return _fail(
@@ -698,11 +682,11 @@ def latest(name,
         return ret
 
     refspecs = [
-        'refs/heads/*:refs/remotes/{0}/*'.format(remote),
-        '+refs/tags/*:refs/tags/*'
+        'refs/heads/{0}:refs/remotes/{1}/{0}'.format(refspec_branch, remote),
+        '+refs/tags/{0}:refs/tags/{0}'.format(refspec_tag)
     ] if fetch_tags else []
 
-    log.info('Checking remote revision for {0}'.format(name))
+    log.info('Checking remote revision for %s', name)
     try:
         all_remote_refs = __salt__['git.remote_refs'](
             name,
@@ -1107,8 +1091,8 @@ def latest(name,
                 fetch_url = remotes[remote]['fetch']
             else:
                 log.debug(
-                    'Remote \'{0}\' not found in git checkout at {1}'
-                    .format(remote, target)
+                    'Remote \'%s\' not found in git checkout at %s',
+                    remote, target
                 )
                 fetch_url = None
 
@@ -1602,7 +1586,7 @@ def latest(name,
             if isinstance(exc, CommandExecutionError):
                 msg = _strip_exc(exc)
             else:
-                msg = str(exc)
+                msg = six.text_type(exc)
             return _fail(ret, msg, comments)
 
         if not bare and not _revs_equal(new_rev,
@@ -1612,8 +1596,8 @@ def latest(name,
 
         if local_rev != new_rev:
             log.info(
-                'Repository {0} updated: {1} => {2}'.format(
-                    target, local_rev, new_rev)
+                'Repository %s updated: %s => %s',
+                target, local_rev, new_rev
             )
             ret['comment'] = _format_comments(comments)
             ret['changes']['revision'] = {'old': local_rev, 'new': new_rev}
@@ -1636,15 +1620,15 @@ def latest(name,
                         'be cloned into this directory.'.format(target, name)
                     )
                 log.debug(
-                    'Removing contents of {0} to clone repository {1} in its '
-                    'place (force_clone=True set in git.latest state)'
-                    .format(target, name)
+                    'Removing contents of %s to clone repository %s in its '
+                    'place (force_clone=True set in git.latest state)',
+                    target, name
                 )
                 removal_errors = {}
                 for target_object in target_contents:
                     target_path = os.path.join(target, target_object)
                     try:
-                        salt.utils.rm_rf(target_path)
+                        salt.utils.files.rm_rf(target_path)
                     except OSError as exc:
                         if exc.errno != errno.ENOENT:
                             removal_errors[target_path] = exc
@@ -1670,9 +1654,7 @@ def latest(name,
                     'cloning the remote repository'.format(target)
                 )
 
-        log.debug(
-            'Target {0} is not found, \'git clone\' is required'.format(target)
-        )
+        log.debug('Target %s is not found, \'git clone\' is required', target)
         if __opts__['test']:
             ret['changes']['new'] = name + ' => ' + target
             return _neutral_test(
@@ -1686,7 +1668,7 @@ def latest(name,
             if remote != 'origin':
                 clone_opts.extend(['--origin', remote])
             if depth is not None:
-                clone_opts.extend(['--depth', str(depth), '--branch', rev])
+                clone_opts.extend(['--depth', six.text_type(depth), '--branch', rev])
 
             # We're cloning a fresh repo, there is no local branch or revision
             local_branch = local_rev = None
@@ -1724,11 +1706,12 @@ def latest(name,
                         # failed, since a rev was specified but no matching rev
                         # exists on the remote host.
                         msg = (
-                            '{{0}} was cloned but is empty, so {0}/{1} '
+                            '%s was cloned but is empty, so {0}/{1} '
                             'cannot be checked out'.format(remote, rev)
                         )
-                        log.error(msg.format(name))
-                        return _fail(ret, msg.format('Repository'), comments)
+                        log.error(msg, name)
+                        # Disable check for string substitution
+                        return _fail(ret, msg % 'Repository', comments)  # pylint: disable=E1321
                 else:
                     if remote_rev_type == 'tag' \
                             and rev not in __salt__['git.list_tags'](
@@ -1882,7 +1865,7 @@ def latest(name,
             if isinstance(exc, CommandExecutionError):
                 msg = _strip_exc(exc)
             else:
-                msg = str(exc)
+                msg = six.text_type(exc)
             return _fail(ret, msg, comments)
 
         msg = _format_comments(comments)
@@ -1989,15 +1972,15 @@ def present(name,
                     .format(name, 'bare ' if bare else '')
                 )
             log.debug(
-                'Removing contents of {0} to initialize {1}repository in its '
-                'place (force=True set in git.present state)'
-                .format(name, 'bare ' if bare else '')
+                'Removing contents of %s to initialize %srepository in its '
+                'place (force=True set in git.present state)',
+                name, 'bare ' if bare else ''
             )
             try:
                 if os.path.islink(name):
                     os.unlink(name)
                 else:
-                    salt.utils.rm_rf(name)
+                    salt.utils.files.rm_rf(name)
             except OSError as exc:
                 return _fail(
                     ret,
@@ -2052,7 +2035,7 @@ def present(name,
 
 
 def detached(name,
-           ref,
+           rev,
            target=None,
            remote='origin',
            user=None,
@@ -2077,10 +2060,14 @@ def detached(name,
     name
         Address of the remote repository.
 
-    ref
+    rev
         The branch, tag, or commit ID to checkout after clone.
         If a branch or tag is specified it will be resolved to a commit ID
         and checked out.
+
+    ref
+        .. deprecated:: 2017.7.0
+            Use ``rev`` instead.
 
     target
         Name of the target directory where repository is about to be cloned.
@@ -2149,40 +2136,50 @@ def detached(name,
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    ref = kwargs.pop('ref', None)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
-    if not ref:
+    if ref is not None:
+        rev = ref
+        deprecation_msg = (
+            'The \'ref\' argument has been renamed to \'rev\' for '
+            'consistency. Please update your SLS to reflect this.'
+        )
+        ret.setdefault('warnings', []).append(deprecation_msg)
+        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
+
+    if not rev:
         return _fail(
             ret,
-            '\'{0}\' is not a valid value for the \'ref\' argument'.format(ref)
+            '\'{0}\' is not a valid value for the \'rev\' argument'.format(rev)
         )
 
     if not target:
         return _fail(
             ret,
-            '\'{0}\' is not a valid value for the \'target\' argument'.format(ref)
+            '\'{0}\' is not a valid value for the \'target\' argument'.format(rev)
         )
 
     # Ensure that certain arguments are strings to ensure that comparisons work
-    if not isinstance(ref, six.string_types):
-        ref = str(ref)
+    if not isinstance(rev, six.string_types):
+        rev = six.text_type(rev)
     if target is not None:
         if not isinstance(target, six.string_types):
-            target = str(target)
+            target = six.text_type(target)
         if not os.path.isabs(target):
             return _fail(
                 ret,
                 'Target \'{0}\' is not an absolute path'.format(target)
             )
     if user is not None and not isinstance(user, six.string_types):
-        user = str(user)
+        user = six.text_type(user)
     if remote is not None and not isinstance(remote, six.string_types):
-        remote = str(remote)
+        remote = six.text_type(remote)
     if identity is not None:
         if isinstance(identity, six.string_types):
             identity = [identity]
@@ -2193,9 +2190,7 @@ def detached(name,
                 try:
                     ident_path = __salt__['cp.cache_file'](ident_path)
                 except IOError as exc:
-                    log.error(
-                        'Failed to cache {0}: {1}'.format(ident_path, exc)
-                    )
+                    log.error('Failed to cache %s: %s', ident_path, exc)
                     return _fail(
                         ret,
                         'Identity \'{0}\' does not exist.'.format(
@@ -2210,9 +2205,9 @@ def detached(name,
                     )
                 )
     if https_user is not None and not isinstance(https_user, six.string_types):
-        https_user = str(https_user)
+        https_user = six.text_type(https_user)
     if https_pass is not None and not isinstance(https_pass, six.string_types):
-        https_pass = str(https_pass)
+        https_pass = six.text_type(https_pass)
 
     if os.path.isfile(target):
         return _fail(
@@ -2246,9 +2241,9 @@ def detached(name,
 
     # Determine if supplied ref is a hash
     remote_rev_type = 'ref'
-    if len(ref) <= 40 \
-            and all(x in string.hexdigits for x in ref):
-        ref = ref.lower()
+    if len(rev) <= 40 \
+            and all(x in string.hexdigits for x in rev):
+        rev = rev.lower()
         remote_rev_type = 'hash'
 
     comments = []
@@ -2265,7 +2260,7 @@ def detached(name,
         if remote_rev_type is 'hash':
             try:
                 __salt__['git.describe'](target,
-                                         ref,
+                                         rev,
                                          user=user,
                                          password=password,
                                          ignore_retcode=True)
@@ -2309,7 +2304,7 @@ def detached(name,
                 comments.append(
                     'Remote {0} updated from \'{1}\' to \'{2}\''.format(
                         remote,
-                        str(current_fetch_url),
+                        current_fetch_url,
                         name
                     )
                 )
@@ -2330,15 +2325,15 @@ def detached(name,
                         'be cloned into this directory.'.format(target, name)
                     )
                 log.debug(
-                    'Removing contents of {0} to clone repository {1} in its '
-                    'place (force_clone=True set in git.detached state)'
-                    .format(target, name)
+                    'Removing contents of %s to clone repository %s in its '
+                    'place (force_clone=True set in git.detached state)',
+                    target, name
                 )
                 removal_errors = {}
                 for target_object in target_contents:
                     target_path = os.path.join(target, target_object)
                     try:
-                        salt.utils.rm_rf(target_path)
+                        salt.utils.files.rm_rf(target_path)
                     except OSError as exc:
                         if exc.errno != errno.ENOENT:
                             removal_errors[target_path] = exc
@@ -2364,9 +2359,7 @@ def detached(name,
                     'cloning the remote repository'.format(target)
                 )
 
-        log.debug(
-            'Target {0} is not found, \'git clone\' is required'.format(target)
-        )
+        log.debug('Target %s is not found, \'git clone\' is required', target)
         if __opts__['test']:
             return _neutral_test(
                 ret,
@@ -2388,12 +2381,7 @@ def detached(name,
                                   https_user=https_user,
                                   https_pass=https_pass,
                                   saltenv=__env__)
-            comments.append(
-                '{0} cloned to {1}'.format(
-                    name,
-                    target
-                )
-            )
+            comments.append('{0} cloned to {1}'.format(name, target))
 
         except Exception as exc:
             log.error(
@@ -2403,7 +2391,7 @@ def detached(name,
             if isinstance(exc, CommandExecutionError):
                 msg = _strip_exc(exc)
             else:
-                msg = str(exc)
+                msg = six.text_type(exc)
             return _fail(ret, msg, comments)
 
     # Repository exists and is ready for fetch/checkout
@@ -2418,9 +2406,7 @@ def detached(name,
         if __opts__['test']:
             return _neutral_test(
                 ret,
-                'Repository remote {0} would be fetched'.format(
-                    remote
-                )
+                'Repository remote {0} would be fetched'.format(remote)
             )
         try:
             fetch_changes = __salt__['git.fetch'](
@@ -2434,7 +2420,7 @@ def detached(name,
                 saltenv=__env__)
         except CommandExecutionError as exc:
             msg = 'Fetch failed'
-            msg += ':\n\n' + str(exc)
+            msg += ':\n\n' + six.text_type(exc)
             return _fail(ret, msg, comments)
         else:
             if fetch_changes:
@@ -2446,12 +2432,12 @@ def detached(name,
     #get refs and checkout
     checkout_commit_id = ''
     if remote_rev_type is 'hash':
-        if __salt__['git.describe'](target, ref, user=user, password=password):
-            checkout_commit_id = ref
+        if __salt__['git.describe'](target, rev, user=user, password=password):
+            checkout_commit_id = rev
         else:
             return _fail(
                 ret,
-                'Ref does not exist: {0}'.format(ref)
+                'Revision \'{0}\' does not exist'.format(rev)
             )
     else:
         try:
@@ -2464,14 +2450,14 @@ def detached(name,
                 https_pass=https_pass,
                 ignore_retcode=False)
 
-            if 'refs/remotes/'+remote+'/'+ref in all_remote_refs:
-                checkout_commit_id = all_remote_refs['refs/remotes/'+remote+'/'+ref]
-            elif 'refs/tags/'+ref in all_remote_refs:
-                checkout_commit_id = all_remote_refs['refs/tags/'+ref]
+            if 'refs/remotes/'+remote+'/'+rev in all_remote_refs:
+                checkout_commit_id = all_remote_refs['refs/remotes/' + remote + '/' + rev]
+            elif 'refs/tags/' + rev in all_remote_refs:
+                checkout_commit_id = all_remote_refs['refs/tags/' + rev]
             else:
                 return _fail(
                     ret,
-                    'Ref {0} does not exist'.format(ref)
+                    'Revision \'{0}\' does not exist'.format(rev)
                 )
 
         except CommandExecutionError as exc:
@@ -2484,9 +2470,7 @@ def detached(name,
         if __opts__['test']:
             return _neutral_test(
                 ret,
-                'Hard reset to HEAD would be performed on {0}'.format(
-                    target
-                )
+                'Hard reset to HEAD would be performed on {0}'.format(target)
             )
         __salt__['git.reset'](
             target,
@@ -2494,7 +2478,7 @@ def detached(name,
             user=user,
             password=password)
         comments.append(
-            'Repository was reset to HEAD before checking out ref'
+            'Repository was reset to HEAD before checking out revision'
         )
 
     # TODO: implement clean function for git module and add clean flag
@@ -2641,13 +2625,13 @@ def config_unset(name,
     # allows us to accept 'global' as an argument to this function without
     # shadowing global(), while also not allowing unwanted arguments to be
     # passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     all_ = kwargs.pop('all', False)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not global_ and not repo:
@@ -2658,10 +2642,10 @@ def config_unset(name,
         )
 
     if not isinstance(name, six.string_types):
-        name = str(name)
+        name = six.text_type(name)
     if value_regex is not None:
         if not isinstance(value_regex, six.string_types):
-            value_regex = str(value_regex)
+            value_regex = six.text_type(value_regex)
 
     # Ensure that the key regex matches the full key name
     key = '^' + name.lstrip('^').rstrip('$') + '$'
@@ -2845,11 +2829,6 @@ def config_set(name,
     global : False
         If ``True``, this will set a global git config option
 
-        .. versionchanged:: 2015.8.0
-            Option renamed from ``is_global`` to ``global``. For earlier
-            versions, use ``is_global``.
-
-
     **Local Config Example:**
 
     .. code-block:: yaml
@@ -2897,22 +2876,13 @@ def config_set(name,
     # allows us to accept 'global' as an argument to this function without
     # shadowing global(), while also not allowing unwanted arguments to be
     # passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
-    is_global = kwargs.pop('is_global', False)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
-
-    if is_global:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'is_global\' argument to the git.config_set state has been '
-            'deprecated, please use \'global\' instead.'
-        )
-        global_ = is_global
 
     if not global_ and not repo:
         return _fail(
@@ -2922,10 +2892,10 @@ def config_set(name,
         )
 
     if not isinstance(name, six.string_types):
-        name = str(name)
+        name = six.text_type(name)
     if value is not None:
         if not isinstance(value, six.string_types):
-            value = str(value)
+            value = six.text_type(value)
         value_comment = '\'' + value + '\''
         desired = [value]
     if multivar is not None:
@@ -2933,14 +2903,14 @@ def config_set(name,
             try:
                 multivar = multivar.split(',')
             except AttributeError:
-                multivar = str(multivar).split(',')
+                multivar = six.text_type(multivar).split(',')
         else:
             new_multivar = []
             for item in multivar:
                 if isinstance(item, six.string_types):
                     new_multivar.append(item)
                 else:
-                    new_multivar.append(str(item))
+                    new_multivar.append(six.text_type(item))
             multivar = new_multivar
         value_comment = multivar
         desired = multivar
@@ -3017,30 +2987,6 @@ def config_set(name,
     return ret
 
 
-def config(name,
-           value=None,
-           multivar=None,
-           repo=None,
-           user=None,
-           password=None,
-           **kwargs):
-    '''
-    Pass through to git.config_set and display a deprecation warning
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'The \'git.config\' state has been renamed to \'git.config_set\', '
-        'please update your SLS files'
-    )
-    return config_set(name=name,
-                      value=value,
-                      multivar=multivar,
-                      repo=repo,
-                      user=user,
-                      password=password,
-                      **kwargs)
-
-
 def mod_run_check(cmd_kwargs, onlyif, unless):
     '''
     Execute the onlyif and unless logic. Return a result dict if:
@@ -3054,13 +3000,13 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     cmd_kwargs['python_shell'] = True
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            return {'comment': 'onlyif execution failed',
+            return {'comment': 'onlyif condition is false',
                     'skip_watch': True,
                     'result': True}
 
     if unless:
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless execution succeeded',
+            return {'comment': 'unless condition is true',
                     'skip_watch': True,
                     'result': True}
 

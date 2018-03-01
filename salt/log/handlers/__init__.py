@@ -7,7 +7,7 @@
 
     Custom logging handlers to be used in salt.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import sys
@@ -17,6 +17,7 @@ import logging.handlers
 
 # Import salt libs
 from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
+from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
 
@@ -104,6 +105,42 @@ class SysLogHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.SysLogHandler
     '''
 
 
+class RotatingFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.RotatingFileHandler, NewStyleClassMixIn):
+    '''
+    Rotating file handler which properly handles exc_info on a per handler basis
+    '''
+    def handleError(self, record):
+        '''
+        Override the default error handling mechanism
+
+        Deal with log file rotation errors due to log file in use
+        more softly.
+        '''
+        handled = False
+
+        # Can't use "salt.utils.platform.is_windows()" in this file
+        if (sys.platform.startswith('win') and
+                logging.raiseExceptions and
+                sys.stderr):  # see Python issue 13807
+            exc_type, exc, exc_traceback = sys.exc_info()
+            try:
+                # PermissionError is used since Python 3.3.
+                # OSError is used for previous versions of Python.
+                if exc_type.__name__ in ('PermissionError', 'OSError') and exc.winerror == 32:
+                    if self.level <= logging.WARNING:
+                        sys.stderr.write('[WARNING ] Unable to rotate the log file "{0}" '
+                                         'because it is in use\n'.format(self.baseFilename)
+                        )
+                    handled = True
+            finally:
+                # 'del' recommended. See documentation of
+                # 'sys.exc_info()' for details.
+                del exc_type, exc, exc_traceback
+
+        if not handled:
+            super(RotatingFileHandler, self).handleError(record)
+
+
 if sys.version_info > (2, 6):
     class WatchedFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.WatchedFileHandler, NewStyleClassMixIn):
         '''
@@ -138,7 +175,12 @@ if sys.version_info < (3, 2):
             this method if you want to use blocking, timeouts or custom queue
             implementations.
             '''
-            self.queue.put_nowait(record)
+            try:
+                self.queue.put_nowait(record)
+            except queue.Full:
+                sys.stderr.write('[WARNING ] Message queue is full, '
+                                 'unable to write "{0}" to log'.format(record)
+                                 )
 
         def prepare(self, record):
             '''

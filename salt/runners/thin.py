@@ -8,15 +8,15 @@ system for easy consumption.
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.thin
 
 
 def generate(extra_mods='', overwrite=False, so_mods='',
-             python2_bin='python2', python3_bin='python3'):
+             python2_bin='python2', python3_bin='python3', absonly=True,
+             compress='gzip'):
     '''
     Generate the salt-thin tarball and print the location of the tarball
     Optional additional mods to include (e.g. mako) can be supplied as a comma
@@ -40,7 +40,9 @@ def generate(extra_mods='', overwrite=False, so_mods='',
                                     overwrite,
                                     so_mods,
                                     python2_bin,
-                                    python3_bin)
+                                    python3_bin,
+                                    absonly,
+                                    compress)
 
 
 def generate_min(extra_mods='', overwrite=False, so_mods='',
@@ -56,6 +58,10 @@ def generate_min(extra_mods='', overwrite=False, so_mods='',
 
         salt-run thin.generate_min
     '''
+    conf_mods = __opts__.get('min_extra_mods')
+    if conf_mods:
+        extra_mods = ','.join([conf_mods, extra_mods])
+
     return salt.utils.thin.gen_min(__opts__['cachedir'],
                                    extra_mods,
                                    overwrite,

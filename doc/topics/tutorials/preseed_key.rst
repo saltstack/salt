@@ -6,7 +6,7 @@ Preseed Minion with Accepted Key
 
 In some situations, it is not convenient to wait for a minion to start before
 accepting its key on the master. For instance, you may want the minion to
-bootstrap itself as soon as it comes online. You may also want to to let your
+bootstrap itself as soon as it comes online. You may also want to let your
 developers provision new development machines on the fly.
 
 .. seealso:: Many ways to preseed minion keys

@@ -18,19 +18,21 @@ using the existing Libcloud driver for Dimension Data.
       region: dd-na
       driver: dimensiondata
 
+:maintainer: Anthony Shaw <anthonyshaw@apache.org>
+:depends: libcloud >= 1.2.1
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import socket
 import pprint
-from distutils.version import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import libcloud
 try:
     import libcloud
-    from libcloud.compute.base import NodeState
+    from libcloud.compute.base import NodeDriver, NodeState
     from libcloud.compute.base import NodeAuthPassword
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
@@ -50,15 +52,9 @@ try:
 except ImportError:
     HAS_LIBCLOUD = False
 
-# Import generic libcloud functions
-# from salt.cloud.libcloudfuncs import *
-
-# Import salt libs
-import salt.utils
-
 # Import salt.cloud libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -207,47 +203,69 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM %s', vm_['name'])
     conn = get_conn()
-    rootPw = NodeAuthPassword(vm_['auth'])
+
+    location = conn.ex_get_location_by_id(vm_['location'])
+    images = conn.list_images(location=location)
+    image = [x for x in images if x.id == vm_['image']][0]
+    network_domains = conn.ex_list_network_domains(location=location)
+    try:
+        network_domain = [y for y in network_domains
+                          if y.name == vm_['network_domain']][0]
+    except IndexError:
+        network_domain = conn.ex_create_network_domain(
+            location=location,
+            name=vm_['network_domain'],
+            plan='ADVANCED',
+            description=''
+        )
 
     try:
-        location = conn.ex_get_location_by_id(vm_['location'])
-        images = conn.list_images(location=location)
-        image = [x for x in images if x.id == vm_['image']][0]
-        networks = conn.ex_list_network_domains(location=location)
-        network_domain = [y for y in networks if y.name ==
-                          vm_['network_domain']][0]
+        vlan = [y for y in conn.ex_list_vlans(
+            location=location,
+            network_domain=network_domain)
+                if y.name == vm_['vlan']][0]
+    except (IndexError, KeyError):
         # Use the first VLAN in the network domain
-        vlan = conn.ex_list_vlans(location=location,
-                                  network_domain=network_domain)[0]
-        kwargs = {
-            'name': vm_['name'],
-            'image': image,
-            'auth': rootPw,
-            'ex_description': vm_['description'],
-            'ex_network_domain': network_domain,
-            'ex_vlan': vlan,
-            'ex_is_started': vm_['is_started']
-        }
+        vlan = conn.ex_list_vlans(
+            location=location,
+            network_domain=network_domain)[0]
+
+    kwargs = {
+        'name': vm_['name'],
+        'image': image,
+        'ex_description': vm_['description'],
+        'ex_network_domain': network_domain,
+        'ex_vlan': vlan,
+        'ex_is_started': vm_['is_started']
+    }
+
+    event_data = _to_event_data(kwargs)
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('requesting', event_data, list(event_data)),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    # Initial password (excluded from event payload)
+    initial_password = NodeAuthPassword(vm_['auth'])
+    kwargs['auth'] = initial_password
+
+    try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
         log.error(
@@ -260,7 +278,7 @@ def create(vm_):
         return False
 
     try:
-        data = salt.utils.cloud.wait_for_ip(
+        data = __utils__['cloud.wait_for_ip'](
             _query_node_data,
             update_args=(vm_, data),
             timeout=config.get_cloud_config_value(
@@ -277,7 +295,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     log.debug('VM is now running')
     if ssh_interface(vm_) == 'private_ips':
@@ -286,7 +304,7 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address %s', ip_address)
 
-    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
+    if __utils__['cloud.get_salt_interface'](vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info('Salt interface set to: %s', salt_ip_address)
     else:
@@ -302,29 +320,24 @@ def create(vm_):
     vm_['ssh_host'] = ip_address
     vm_['password'] = vm_['auth']
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     ret.update(data.__dict__)
 
     if 'password' in data.extra:
         del data.extra['password']
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data.__dict__)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data.__dict__)
     )
 
     __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -399,11 +412,13 @@ def create_lb(kwargs=None, call=None):
     log.debug('Network Domain: %s', network_domain.id)
     lb_conn.ex_set_current_network_domain(network_domain.id)
 
+    event_data = _to_event_data(kwargs)
+
     __utils__['cloud.fire_event'](
         'event',
         'create load_balancer',
         'salt/cloud/loadbalancer/creating',
-        args=kwargs,
+        args=event_data,
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -412,11 +427,13 @@ def create_lb(kwargs=None, call=None):
         name, port, protocol, algorithm, members
     )
 
+    event_data = _to_event_data(kwargs)
+
     __utils__['cloud.fire_event'](
         'event',
         'created load_balancer',
         'salt/cloud/loadbalancer/created',
-        args=kwargs,
+        args=event_data,
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -558,3 +575,46 @@ def get_lb_conn(dd_driver=None):
             'Missing dimensiondata_driver for get_lb_conn method.'
         )
     return get_driver_lb(Provider_lb.DIMENSIONDATA)(user_id, key, region=region)
+
+
+def _to_event_data(obj):
+    '''
+    Convert the specified object into a form that can be serialised by msgpack as event data.
+
+    :param obj: The object to convert.
+    '''
+
+    if obj is None:
+        return None
+    if isinstance(obj, bool):
+        return obj
+    if isinstance(obj, int):
+        return obj
+    if isinstance(obj, float):
+        return obj
+    if isinstance(obj, str):
+        return obj
+    if isinstance(obj, bytes):
+        return obj
+    if isinstance(obj, dict):
+        return obj
+
+    if isinstance(obj, NodeDriver):  # Special case for NodeDriver (cyclic references)
+        return obj.name
+
+    if isinstance(obj, list):
+        return [_to_event_data(item) for item in obj]
+
+    event_data = {}
+    for attribute_name in dir(obj):
+        if attribute_name.startswith('_'):
+            continue
+
+        attribute_value = getattr(obj, attribute_name)
+
+        if callable(attribute_value):  # Strip out methods
+            continue
+
+        event_data[attribute_name] = _to_event_data(attribute_value)
+
+    return event_data

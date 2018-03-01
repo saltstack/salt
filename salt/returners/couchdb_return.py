@@ -53,10 +53,9 @@ otherwise multi-minion targeting can lead to losing output:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
-import json
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
@@ -70,6 +69,7 @@ from salt.ext.six.moves.urllib.request import (
 
 # Import Salt libs
 import salt.utils.jid
+import salt.utils.json
 import salt.returners
 
 log = logging.getLogger(__name__)
@@ -136,7 +136,7 @@ def _request(method, url, content_type=None, _data=None):
         handler = opener.open(request)
     except HTTPError as exc:
         return {'error': '{0}'.format(exc)}
-    return json.loads(handler.read())
+    return salt.utils.json.loads(handler.read())
 
 
 def returner(ret):
@@ -155,11 +155,10 @@ def returner(ret):
 
         # Confirm that the response back was simple 'ok': true.
         if 'ok' not in _response or _response['ok'] is not True:
-            log.error('Unable to create database "{0}"'
-                             .format(options['db']))
+            log.error('Unable to create database \'%s\'', options['db'])
             log.error('Nothing logged! Lost data.')
             return
-        log.info('Created database "{0}"'.format(options['db']))
+        log.info('Created database \'%s\'', options['db'])
 
     # Call _generate_doc to get a dict object of the document we're going to
     # shove into the database.
@@ -169,11 +168,11 @@ def returner(ret):
     _response = _request("PUT",
                          options['url'] + options['db'] + "/" + doc['_id'],
                          'application/json',
-                         json.dumps(doc))
+                         salt.utils.json.dumps(doc))
 
     # Sanity check regarding the response..
     if 'ok' not in _response or _response['ok'] is not True:
-        log.error('Unable to create document: "{0}"'.format(_response))
+        log.error('Unable to create document: \'%s\'', _response)
         log.error('Nothing logged! Lost data.')
 
 
@@ -184,7 +183,7 @@ def get_jid(jid):
     options = _get_options(ret=None)
     _response = _request("GET", options['url'] + options['db'] + '/' + jid)
     if 'error' in _response:
-        log.error('Unable to get JID "{0}" : "{1}"'.format(jid, _response))
+        log.error('Unable to get JID \'%s\' : \'%s\'', jid, _response)
         return {}
     return {_response['id']: _response}
 
@@ -198,8 +197,10 @@ def get_jids():
 
     # Make sure the 'total_rows' is returned.. if not error out.
     if 'total_rows' not in _response:
-        log.error('Didn\'t get valid response from requesting all docs: {0}'
-                  .format(_response))
+        log.error(
+            'Didn\'t get valid response from requesting all docs: %s',
+            _response
+        )
         return {}
 
     # Return the rows.
@@ -246,8 +247,10 @@ def get_fun(fun):
                                                         fun))
         # Skip the minion if we got an error..
         if 'error' in _response:
-            log.warning('Got an error when querying for last command by a '
-                        'minion: {0}'.format(_response['error']))
+            log.warning(
+                'Got an error when querying for last command by a minion: %s',
+                _response['error']
+            )
             continue
 
         # Skip the minion if we didn't get any rows back. ( IE function that
@@ -279,7 +282,7 @@ def get_minions():
 
     # Verify that we got a response back.
     if 'rows' not in _response:
-        log.error('Unable to get available minions: {0}'.format(_response))
+        log.error('Unable to get available minions: %s', _response)
         return []
 
     # Iterate over the rows to build up a list return it.
@@ -352,10 +355,12 @@ def set_salt_view():
     # Make the request to update the design doc.
     _response = _request("PUT",
                          options['url'] + options['db'] + "/_design/salt",
-                         "application/json", json.dumps(new_doc))
+                         "application/json", salt.utils.json.dumps(new_doc))
     if 'error' in _response:
-        log.warning("Unable to set the salt design document: {0}"
-                    .format(_response['error']))
+        log.warning(
+            'Unable to set the salt design document: %s',
+            _response['error']
+        )
         return False
     return True
 
@@ -364,7 +369,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument

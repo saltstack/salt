@@ -17,6 +17,7 @@ MANIFEST
 #   top of salt such as
 # - /some/path$ git clone https://github.com/thatch45/salt.git
 # - /some/path$ virtualenv --python=/usr/bin/python2.6 salt
+/env/
 /bin/
 /etc/
 /include/
@@ -87,8 +88,14 @@ tests/integration/cloud/providers/logs
 
 # Private keys from the integration tests
 tests/integration/cloud/providers/pki/minions
+/helpers/
 
-# Ignore kitchen stuff
-.kitchen
-.bundle
+# Ignore tox virtualenvs
+/.tox/
+
+# Kitchen tests files
+.kitchen.local.yml
+.kitchen/
+.bundle/
 Gemfile.lock
+/artifacts/

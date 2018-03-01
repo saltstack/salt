@@ -2,12 +2,16 @@
 '''
 Runner for SmartOS minions control vmadm
 '''
-from __future__ import absolute_import
-from __future__ import print_function
 # Import python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import salt libs
 import salt.client
 from salt.exceptions import SaltClientError
 from salt.utils.odict import OrderedDict
+
+# Import 3rd party libs
+from salt.ext import six
 
 # Function aliases
 __func_alias__ = {
@@ -44,16 +48,16 @@ def _action(action='get', search=None, one=True, force=False):
         if '=' in search:
             vmadm_args['search'] = search
         for cn in client.cmd_iter('G@virtual:physical and G@os:smartos',
-                                    'vmadm.list', kwarg=vmadm_args,
-                                    expr_form='compound'):
+                                  'vmadm.list', kwarg=vmadm_args,
+                                  tgt_type='compound'):
             if not cn:
                 continue
-            node = next(cn.iterkeys())
+            node = next(six.iterkeys(cn))
             if not isinstance(cn[node], dict) or \
-                'ret' not in cn[node] or \
-                not isinstance(cn[node]['ret'], dict):
+                    'ret' not in cn[node] or \
+                    not isinstance(cn[node]['ret'], dict):
                 continue
-            for vm in cn[node]['ret'].keys():
+            for vm in cn[node]['ret']:
                 vmcfg = cn[node]['ret'][vm]
                 vmcfg['node'] = node
                 vms[vm] = vmcfg
@@ -150,13 +154,13 @@ def nodes(verbose=False):
     ## get list of nodes
     try:
         for cn in client.cmd_iter('G@virtual:physical and G@os:smartos',
-                                    'grains.items', expr_form='compound'):
+                                  'grains.items', tgt_type='compound'):
             if not cn:
                 continue
-            node = next(cn.iterkeys())
+            node = next(six.iterkeys(cn))
             if not isinstance(cn[node], dict) or \
-                'ret' not in cn[node] or \
-                not isinstance(cn[node]['ret'], dict):
+                    'ret' not in cn[node] or \
+                    not isinstance(cn[node]['ret'], dict):
                 continue
             if verbose:
                 ret[node] = {}
@@ -166,8 +170,8 @@ def nodes(verbose=False):
                     ret[node]['version']['sdc'] = cn[node]['ret']['computenode_sdc_version']
                 ret[node]['vms'] = {}
                 if 'computenode_vm_capable' in cn[node]['ret'] and \
-                    cn[node]['ret']['computenode_vm_capable'] and \
-                    'computenode_vm_hw_virt' in cn[node]['ret']:
+                        cn[node]['ret']['computenode_vm_capable'] and \
+                        'computenode_vm_hw_virt' in cn[node]['ret']:
                     ret[node]['vms']['hw_cap'] = cn[node]['ret']['computenode_vm_hw_virt']
                 else:
                     ret[node]['vms']['hw_cap'] = False
@@ -208,16 +212,16 @@ def list_vms(search=None, verbose=False):
         if search:
             vmadm_args['search'] = search
         for cn in client.cmd_iter('G@virtual:physical and G@os:smartos',
-                                    'vmadm.list', kwarg=vmadm_args,
-                                    expr_form='compound'):
+                                  'vmadm.list', kwarg=vmadm_args,
+                                  tgt_type='compound'):
             if not cn:
                 continue
-            node = next(cn.iterkeys())
+            node = next(six.iterkeys(cn))
             if not isinstance(cn[node], dict) or \
-                'ret' not in cn[node] or \
-                not isinstance(cn[node]['ret'], dict):
+                    'ret' not in cn[node] or \
+                    not isinstance(cn[node]['ret'], dict):
                 continue
-            for vm in cn[node]['ret'].keys():
+            for vm in cn[node]['ret']:
                 vmcfg = cn[node]['ret'][vm]
                 if verbose:
                     ret[vm] = OrderedDict()

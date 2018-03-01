@@ -103,9 +103,16 @@ Multiple policy configuration
 
 '''
 
-from __future__ import absolute_import
+# Import python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
-import json
+
+# Import salt libs
+import salt.utils.dictdiffer
+import salt.utils.json
+
+# Import 3rd party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
@@ -218,9 +225,9 @@ def set_(name,
                            'requested_policy': computer_policy,
                            'policy_lookup': {}}
 
-    for p_class, p_data in pol_data.iteritems():
+    for p_class, p_data in six.iteritems(pol_data):
         if p_data['requested_policy']:
-            for policy_name, policy_setting in p_data['requested_policy'].iteritems():
+            for policy_name, policy_setting in six.iteritems(p_data['requested_policy']):
                 lookup = __salt__['lgpo.get_policy_info'](policy_name,
                                                           p_class,
                                                           adml_language=adml_language)
@@ -235,31 +242,33 @@ def set_(name,
     current_policy = __salt__['lgpo.get'](policy_class=policy_class,
                                           adml_language=adml_language,
                                           hierarchical_return=False)
-    log.debug('current policy == {0}'.format(current_policy))
+    log.debug('current policy == %s', current_policy)
 
     # compare policies
     policy_changes = []
-    for policy_section, policy_data in pol_data.iteritems():
+    for policy_section, policy_data in six.iteritems(pol_data):
         pol_id = None
         if policy_data and policy_data['output_section'] in current_policy:
-            for policy_name, policy_setting in policy_data['requested_policy'].iteritems():
+            for policy_name, policy_setting in six.iteritems(policy_data['requested_policy']):
                 currently_set = False
                 if policy_name in current_policy[policy_data['output_section']]:
                     currently_set = True
                     pol_id = policy_name
                 else:
                     for alias in policy_data['policy_lookup'][policy_name]['policy_aliases']:
-                        log.debug('checking alias {0}'.format(alias))
+                        log.debug('checking alias %s', alias)
                         if alias in current_policy[policy_data['output_section']]:
                             currently_set = True
                             pol_id = alias
                             break
                 if currently_set:
                     # compare
-                    log.debug('need to compare {0} from current/requested policy'.format(policy_name))
+                    log.debug('need to compare %s from '
+                              'current/requested policy', policy_name)
                     changes = False
-                    if json.dumps(policy_data['requested_policy'][policy_name], sort_keys=True).lower() != \
-                            json.dumps(current_policy[policy_data['output_section']][pol_id], sort_keys=True).lower():
+                    requested_policy_json = salt.utils.json.dumps(policy_data['requested_policy'][policy_name], sort_keys=True).lower()
+                    current_policy_json = salt.utils.json.dumps(current_policy[policy_data['output_section']][pol_id], sort_keys=True).lower()
+                    if requested_policy_json != current_policy_json:
                         if policy_data['policy_lookup'][policy_name]['rights_assignment'] and cumulative_rights_assignments:
                             for user in policy_data['requested_policy'][policy_name]:
                                 if user not in current_policy[policy_data['output_section']][pol_id]:
@@ -267,18 +276,21 @@ def set_(name,
                         else:
                             changes = True
                         if changes:
-                            log.debug('{0} current policy != requested policy'.format(policy_name))
-                            log.debug('we compared {0} to {1}'.format(
-                                    json.dumps(policy_data['requested_policy'][policy_name], sort_keys=True).lower(),
-                                    json.dumps(current_policy[policy_data['output_section']][pol_id], sort_keys=True).lower()))
+                            log.debug('%s current policy != requested policy',
+                                      policy_name)
+                            log.debug(
+                                'we compared %s to %s',
+                                requested_policy_json, current_policy_json
+                            )
                             policy_changes.append(policy_name)
                     else:
-                        log.debug('{0} current setting matches the requested setting'.format(policy_name))
-                        ret['comment'] = '  '.join(['"{0}" is already set.'.format(policy_name),
-                                                    ret['comment']])
+                        log.debug('%s current setting matches '
+                                  'the requested setting', policy_name)
+                        ret['comment'] = '"{0}" is already set.'.format(policy_name) + ret['comment']
                 else:
                     policy_changes.append(policy_name)
-                    log.debug('policy {0} is not set, we will configure it'.format(policy_name))
+                    log.debug('policy %s is not set, we will configure it',
+                              policy_name)
     if __opts__['test']:
         if policy_changes:
             ret['result'] = None
@@ -294,10 +306,11 @@ def set_(name,
                                         adml_language=adml_language)
             if _ret:
                 ret['result'] = _ret
-                ret['changes']['old'] = current_policy
-                ret['changes']['new'] = __salt__['lgpo.get'](policy_class=policy_class,
-                                                             adml_language=adml_language,
-                                                             hierarchical_return=False)
+                ret['changes'] = salt.utils.dictdiffer.deep_diff(
+                    current_policy,
+                    __salt__['lgpo.get'](policy_class=policy_class,
+                                         adml_language=adml_language,
+                                         hierarchical_return=False))
             else:
                 ret['result'] = False
                 ret['comment'] = 'Errors occurred while attempting to configure policies: {0}'.format(_ret)

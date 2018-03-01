@@ -143,11 +143,11 @@ Delete also accepts a VPC peering connection id.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.dictupdate as dictupdate
 
 __virtualname__ = 'boto_vpc'
@@ -960,6 +960,8 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
+        if ret['result'] is None and __opts__['test']:
+            return ret
     _ret = _routes_present(route_table_name=name, routes=routes, tags=tags,
                            region=region, key=key, keyid=keyid, profile=profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
@@ -1496,13 +1498,8 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
     '''
     log.debug('Called state to accept VPC peering connection')
     pending = __salt__['boto_vpc.is_peering_connection_pending'](
-        conn_id=conn_id,
-        conn_name=conn_name,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile
-    )
+        conn_id=conn_id, conn_name=conn_name, region=region, key=key,
+        keyid=keyid, profile=profile)
 
     ret = {
         'name': name,
@@ -1513,30 +1510,25 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
 
     if not pending:
         ret['result'] = True
-        ret['changes'].update({
-            'old': 'No pending VPC peering connection found. '
-                   'Nothing to be done.'
-        })
+        ret['changes'].update({'old':
+              'No pending VPC peering connection found. Nothing to be done.'})
         return ret
 
     if __opts__['test']:
-        ret['changes'].update({'old': 'Pending VPC peering connection found '
-                                      'and can be accepted'})
+        ret['changes'].update({'old':
+              'Pending VPC peering connection found and can be accepted'})
         return ret
-    log.debug('Calling module to accept this VPC peering connection')
-    result = __salt__['boto_vpc.accept_vpc_peering_connection'](
-            conn_id=conn_id, name=conn_name, region=region, key=key,
+    fun = 'boto_vpc.accept_vpc_peering_connection'
+    log.debug('Calling `%s()` to accept this VPC peering connection', fun)
+    result = __salt__[fun](conn_id=conn_id, name=conn_name, region=region, key=key,
             keyid=keyid, profile=profile)
 
     if 'error' in result:
-        ret['comment'] = "Failed to request VPC peering: {0}".format(result['error'])
+        ret['comment'] = "Failed to accept VPC peering: {0}".format(result['error'])
         ret['result'] = False
         return ret
 
-    ret['changes'].update({
-        'old': '',
-        'new': result['msg']
-    })
+    ret['changes'].update({'old': '', 'new': result['msg']})
 
     return ret
 

@@ -165,7 +165,7 @@
 # strip_colors: False
 
 # Backup files that are replaced by file.managed and file.recurse under
-# 'cachedir'/file_backups relative to their original location and appended
+# 'cachedir'/file_backup relative to their original location and appended
 # with a timestamp. The only valid setting is "minion". Disabled by default.
 #
 # Alternatively this can be specified for each file in state files:
@@ -500,6 +500,11 @@
 # as the environment setting, but for pillar instead of states.
 #pillarenv: None
 #
+# Set this option to True to force the pillarenv to be the same as the
+# effective saltenv when running states. Note that if pillarenv is specified,
+# this option will be ignored.
+#pillarenv_from_saltenv: False
+#
 # Set this option to 'True' to force a 'KeyError' to be raised whenever an
 # attempt to retrieve a named value from pillar fails. When this option is set
 # to 'False', the failed attempt returns an empty string. Default is 'False'.
@@ -630,9 +635,12 @@
 # all data that has a result of True and no changes will be suppressed.
 #state_verbose: True
 
-# The state_output setting changes if the output is the full multi line
-# output for each changed state if set to 'full', but if set to 'terse'
-# the output will be shortened to a single line.
+# The state_output setting controls which results will be output full multi line
+# full, terse - each state will be full/terse
+# mixed - only states with errors will be full
+# changes - states with changes and errors will be full
+# full_id, mixed_id, changes_id and terse_id are also allowed;
+# when set, the state ID will be used as name in the output
 #state_output: full
 
 # The state_output_diff setting changes whether or not the output from
@@ -657,6 +665,12 @@
 #    keyfile: <path_to_keyfile>
 #    certfile: <path_to_certfile>
 #    ssl_version: PROTOCOL_TLSv1_2
+
+# Grains to be sent to the master on authentication to check if the minion's key
+# will be accepted automatically. Needs to be configured on the master.
+#autosign_grains:
+#  - uuid
+#  - server_id
 
 
 ######        Reactor Settings        #####
@@ -683,6 +697,12 @@
 # when processing large pillars. See https://github.com/saltstack/salt/issues/38758
 # for a full explanation.
 #multiprocessing: True
+
+# Limit the maximum amount of processes or threads created by salt-minion.
+# This is useful to avoid resource exhaustion in case the minion receives more
+# publications than it is able to handle, as it limits the number of spawned
+# processes or threads. -1 is the default and disables the limit.
+#process_count_max: -1
 
 
 #####         Logging settings       #####

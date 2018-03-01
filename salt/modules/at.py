@@ -4,8 +4,12 @@ Wrapper module for at(1)
 
 Also, a 'tag' feature has been added to more
 easily tag jobs.
+
+:platform:      linux,openbsd,freebsd
+
+.. versionchanged:: 2017.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import re
@@ -17,9 +21,12 @@ import datetime
 from salt.ext.six.moves import map
 # pylint: enable=import-error,redefined-builtin
 from salt.exceptions import CommandNotFoundError
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.path
+import salt.utils.platform
 
 # OS Families that should work (Ubuntu and Debian are the default)
 # TODO: Refactor some of this module to remove the checks for binaries
@@ -27,21 +34,25 @@ import salt.utils
 # Tested on OpenBSD 5.0
 BSD = ('OpenBSD', 'FreeBSD')
 
+__virtualname__ = 'at'
+
 
 def __virtual__():
     '''
     Most everything has the ability to support at(1)
     '''
-    if salt.utils.is_windows() or salt.utils.which('at') is None:
+    if salt.utils.platform.is_windows() or salt.utils.platform.is_sunos():
+        return (False, 'The at module could not be loaded: unsupported platform')
+    if salt.utils.path.which('at') is None:
         return (False, 'The at module could not be loaded: at command not found')
-    return True
+    return __virtualname__
 
 
 def _cmd(binary, *args):
     '''
     Wrapper to run at(1) or return None.
     '''
-    binary = salt.utils.which(binary)
+    binary = salt.utils.path.which(binary)
     if not binary:
         raise CommandNotFoundError('{0}: command not found'.format(binary))
     cmd = [binary] + list(args)
@@ -79,15 +90,15 @@ def atq(tag=None):
     if output == '':
         return {'jobs': jobs}
 
+    # Jobs created with at.at() will use the following
+    # comment to denote a tagged job.
+    job_kw_regex = re.compile(r'^### SALT: (\w+)')
+
     # Split each job into a dictionary and handle
     # pulling out tags or only listing jobs with a certain
     # tag
     for line in output.splitlines():
         job_tag = ''
-
-        # Jobs created with at.at() will use the following
-        # comment to denote a tagged job.
-        job_kw_regex = re.compile(r'^### SALT: (\w+)')
 
         # Redhat/CentOS
         if __grains__['os_family'] == 'RedHat':
@@ -122,7 +133,7 @@ def atq(tag=None):
                 job_tag = tmp.groups()[0]
 
         if __grains__['os'] in BSD:
-            job = str(job)
+            job = six.text_type(job)
         else:
             job = int(job)
 
@@ -155,11 +166,14 @@ def atrm(*args):
     '''
 
     # Need to do this here also since we use atq()
-    if not salt.utils.which('at'):
+    if not salt.utils.path.which('at'):
         return '\'at.atrm\' is not available.'
 
     if not args:
         return {'jobs': {'removed': [], 'tag': None}}
+
+    # Convert all to strings
+    args = salt.utils.data.stringify(args)
 
     if args[0] == 'all':
         if len(args) > 1:
@@ -170,7 +184,7 @@ def atrm(*args):
             ret = {'jobs': {'removed': opts, 'tag': None}}
     else:
         opts = list(list(map(str, [i['job'] for i in atq()['jobs']
-            if i['job'] in args])))
+            if six.text_type(i['job']) in args])))
         ret = {'jobs': {'removed': opts, 'tag': None}}
 
     # Shim to produce output similar to what __virtual__() should do
@@ -203,7 +217,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
 
     # Shim to produce output similar to what __virtual__() should do
     # but __salt__ isn't available in __virtual__()
-    binary = salt.utils.which('at')
+    binary = salt.utils.path.which('at')
     if not binary:
         return '\'at.at\' is not available.'
 
@@ -233,7 +247,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     output = output.split()[1]
 
     if __grains__['os'] in BSD:
-        return atq(str(output))
+        return atq(six.text_type(output))
     else:
         return atq(int(output))
 
@@ -252,7 +266,7 @@ def atc(jobid):
     '''
     # Shim to produce output similar to what __virtual__() should do
     # but __salt__ isn't available in __virtual__()
-    output = _cmd('at', '-c', str(jobid))
+    output = _cmd('at', '-c', six.text_type(jobid))
 
     if output is None:
         return '\'at.atc\' is not available.'
@@ -276,7 +290,7 @@ def _atq(**kwargs):
     day = kwargs.get('day', None)
     month = kwargs.get('month', None)
     year = kwargs.get('year', None)
-    if year and len(str(year)) == 2:
+    if year and len(six.text_type(year)) == 2:
         year = '20{0}'.format(year)
 
     jobinfo = atq()['jobs']

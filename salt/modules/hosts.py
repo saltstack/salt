@@ -3,16 +3,17 @@
 Manage the information in the hosts file
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 import salt.utils.odict as odict
+import salt.utils.stringutils
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
@@ -33,7 +34,7 @@ def _get_or_create_hostfile():
     if hfn is None:
         hfn = ''
     if not os.path.exists(hfn):
-        with salt.utils.fopen(hfn, 'w'):
+        with salt.utils.files.fopen(hfn, 'w'):
             pass
     return hfn
 
@@ -47,9 +48,9 @@ def _list_hosts():
     ret = odict.OrderedDict()
     if not os.path.isfile(hfn):
         return ret
-    with salt.utils.fopen(hfn) as ifile:
+    with salt.utils.files.fopen(hfn) as ifile:
         for line in ifile:
-            line = line.strip()
+            line = salt.utils.stringutils.to_unicode(line).strip()
             if not line:
                 continue
             if line.startswith('#'):
@@ -156,33 +157,36 @@ def set_host(ip, alias):
     if not os.path.isfile(hfn):
         return False
 
-    line_to_add = ip + '\t\t' + alias + os.linesep
+    line_to_add = salt.utils.stringutils.to_bytes(
+        ip + '\t\t' + alias + os.linesep
+    )
     # support removing a host entry by providing an empty string
     if not alias.strip():
-        line_to_add = ''
+        line_to_add = b''
 
-    with salt.utils.fopen(hfn) as fp_:
+    with salt.utils.files.fopen(hfn, 'rb') as fp_:
         lines = fp_.readlines()
-    for ind, line in enumerate(lines):
-        tmpline = line.strip()
+    for ind, _ in enumerate(lines):
+        tmpline = lines[ind].strip()
         if not tmpline:
             continue
-        if tmpline.startswith('#'):
+        if tmpline.startswith(b'#'):
             continue
         comps = tmpline.split()
-        if comps[0] == ip:
+        if comps[0] == salt.utils.stringutils.to_bytes(ip):
             if not ovr:
                 lines[ind] = line_to_add
                 ovr = True
             else:  # remove other entries
-                lines[ind] = ''
+                lines[ind] = b''
+    linesep_bytes = salt.utils.stringutils.to_bytes(os.linesep)
     if not ovr:
         # make sure there is a newline
-        if lines and not lines[-1].endswith(os.linesep):
-            lines[-1] += os.linesep
+        if lines and not lines[-1].endswith(linesep_bytes):
+            lines[-1] += linesep_bytes
         line = line_to_add
         lines.append(line)
-    with salt.utils.fopen(hfn, 'w+') as ofile:
+    with salt.utils.files.fopen(hfn, 'wb') as ofile:
         ofile.writelines(lines)
     return True
 
@@ -200,15 +204,15 @@ def rm_host(ip, alias):
     if not has_pair(ip, alias):
         return True
     hfn = _get_or_create_hostfile()
-    with salt.utils.fopen(hfn) as fp_:
+    with salt.utils.files.fopen(hfn, 'rb') as fp_:
         lines = fp_.readlines()
-    for ind in range(len(lines)):
+    for ind, _ in enumerate(lines):
         tmpline = lines[ind].strip()
         if not tmpline:
             continue
-        if tmpline.startswith('#'):
+        if tmpline.startswith(b'#'):
             continue
-        comps = tmpline.split()
+        comps = salt.utils.stringutils.to_unicode(tmpline).split()
         if comps[0] == ip:
             newline = '{0}\t\t'.format(comps[0])
             for existing in comps[1:]:
@@ -217,11 +221,11 @@ def rm_host(ip, alias):
                 newline += ' {0}'.format(existing)
             if newline.strip() == ip:
                 # No aliases exist for the line, make it empty
-                lines[ind] = ''
+                lines[ind] = b''
             else:
                 # Only an alias was removed
                 lines[ind] = newline + os.linesep
-    with salt.utils.fopen(hfn, 'w+') as ofile:
+    with salt.utils.files.fopen(hfn, 'wb') as ofile:
         ofile.writelines(lines)
     return True
 
@@ -271,9 +275,11 @@ def _write_hosts(hosts):
         lines.append(line)
 
     hfn = _get_or_create_hostfile()
-    with salt.utils.fopen(hfn, 'w+') as ofile:
+    with salt.utils.files.fopen(hfn, 'w+') as ofile:
         for line in lines:
             if line.strip():
-                # /etc/hosts needs to end with EOL so that some utils that read
-                # it do not break
-                ofile.write(line.strip() + os.linesep)
+                # /etc/hosts needs to end with a newline so that some utils
+                # that read it do not break
+                ofile.write(salt.utils.stringutils.to_str(
+                    line.strip() + six.text_type(os.linesep)
+                ))

@@ -10,9 +10,10 @@ import re
 
 # Import Salt libs
 import salt.loader
-import salt.utils
+import salt.utils.event
 import salt.utils.minion
 from salt.ext.six.moves import map
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -30,10 +31,13 @@ class Beacon(object):
     def process(self, config, grains):
         '''
         Process the configured beacons
+
         The config must be a list and looks like this in yaml
-        code_block:: yaml
+
+        .. code_block:: yaml
             beacons:
-                inotify:
+              inotify:
+                - files:
                     - /etc/fstab: {}
                     - /var/cache/foo: {}
         '''
@@ -51,15 +55,11 @@ class Beacon(object):
                 current_beacon_config = {}
                 list(map(current_beacon_config.update, config[mod]))
             elif isinstance(config[mod], dict):
-                salt.utils.warn_until(
-                    'Nitrogen',
-                    'Beacon configuration should be a list instead of a dictionary.'
-                )
                 current_beacon_config = config[mod]
 
             if 'enabled' in current_beacon_config:
                 if not current_beacon_config['enabled']:
-                    log.trace('Beacon {0} disabled'.format(mod))
+                    log.trace('Beacon %s disabled', mod)
                     continue
                 else:
                     # remove 'enabled' item before processing the beacon
@@ -68,18 +68,19 @@ class Beacon(object):
                     else:
                         self._remove_list_item(config[mod], 'enabled')
 
-            log.trace('Beacon processing: {0}'.format(mod))
+            log.trace('Beacon processing: %s', mod)
             fun_str = '{0}.beacon'.format(mod)
+            validate_str = '{0}.validate'.format(mod)
             if fun_str in self.beacons:
                 runonce = self._determine_beacon_config(current_beacon_config, 'run_once')
                 interval = self._determine_beacon_config(current_beacon_config, 'interval')
                 if interval:
                     b_config = self._trim_config(b_config, mod, 'interval')
                     if not self._process_interval(mod, interval):
-                        log.trace('Skipping beacon {0}. Interval not reached.'.format(mod))
+                        log.trace('Skipping beacon %s. Interval not reached.', mod)
                         continue
                 if self._determine_beacon_config(current_beacon_config, 'disable_during_state_run'):
-                    log.trace('Evaluting if beacon {0} should be skipped due to a state run.'.format(mod))
+                    log.trace('Evaluting if beacon %s should be skipped due to a state run.', mod)
                     b_config = self._trim_config(b_config, mod, 'disable_during_state_run')
                     is_running = False
                     running_jobs = salt.utils.minion.running(self.opts)
@@ -89,13 +90,24 @@ class Beacon(object):
                     if is_running:
                         close_str = '{0}.close'.format(mod)
                         if close_str in self.beacons:
-                            log.info('Closing beacon {0}. State run in progress.'.format(mod))
+                            log.info('Closing beacon %s. State run in progress.', mod)
                             self.beacons[close_str](b_config[mod])
                         else:
-                            log.info('Skipping beacon {0}. State run in progress.'.format(mod))
+                            log.info('Skipping beacon %s. State run in progress.', mod)
                         continue
                 # Update __grains__ on the beacon
                 self.beacons[fun_str].__globals__['__grains__'] = grains
+
+                # Run the validate function if it's available,
+                # otherwise there is a warning about it being missing
+                if validate_str in self.beacons:
+                    valid, vcomment = self.beacons[validate_str](b_config[mod])
+
+                    if not valid:
+                        log.info('Beacon %s configuration invalid, '
+                                 'not running.\n%s', mod, vcomment)
+                        continue
+
                 # Fire the beacon!
                 raw = self.beacons[fun_str](b_config[mod])
                 for data in raw:
@@ -108,7 +120,7 @@ class Beacon(object):
                 if runonce:
                     self.disable_beacon(mod)
             else:
-                log.debug('Unable to process beacon {0}'.format(mod))
+                log.warning('Unable to process beacon %s', mod)
         return ret
 
     def _trim_config(self, b_config, mod, key):
@@ -137,19 +149,19 @@ class Beacon(object):
         Process beacons with intervals
         Return True if a beacon should be run on this loop
         '''
-        log.trace('Processing interval {0} for beacon mod {1}'.format(interval, mod))
+        log.trace('Processing interval %s for beacon mod %s', interval, mod)
         loop_interval = self.opts['loop_interval']
         if mod in self.interval_map:
             log.trace('Processing interval in map')
             counter = self.interval_map[mod]
-            log.trace('Interval counter: {0}'.format(counter))
+            log.trace('Interval counter: %s', counter)
             if counter * loop_interval >= interval:
                 self.interval_map[mod] = 1
                 return True
             else:
                 self.interval_map[mod] += 1
         else:
-            log.trace('Interval process inserting mod: {0}'.format(mod))
+            log.trace('Interval process inserting mod: %s', mod)
             self.interval_map[mod] = 1
         return False
 
@@ -187,16 +199,82 @@ class Beacon(object):
             else:
                 self.opts['beacons'][name].append({'enabled': enabled_value})
 
-    def list_beacons(self):
+    def _get_beacons(self,
+                     include_opts=True,
+                     include_pillar=True):
+        '''
+        Return the beacons data structure
+        '''
+        beacons = {}
+        if include_pillar:
+            pillar_beacons = self.opts.get('pillar', {}).get('beacons', {})
+            if not isinstance(pillar_beacons, dict):
+                raise ValueError('Beacons must be of type dict.')
+            beacons.update(pillar_beacons)
+        if include_opts:
+            opts_beacons = self.opts.get('beacons', {})
+            if not isinstance(opts_beacons, dict):
+                raise ValueError('Beacons must be of type dict.')
+            beacons.update(opts_beacons)
+        return beacons
+
+    def list_beacons(self,
+                     include_pillar=True,
+                     include_opts=True):
         '''
         List the beacon items
+
+        include_pillar: Whether to include beacons that are
+                        configured in pillar, default is True.
+
+        include_opts:   Whether to include beacons that are
+                        configured in opts, default is True.
         '''
+        beacons = self._get_beacons(include_pillar, include_opts)
+
         # Fire the complete event back along with the list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
-        b_conf = self.functions['config.merge']('beacons')
-        self.opts['beacons'].update(b_conf)
-        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+        evt.fire_event({'complete': True, 'beacons': beacons},
                        tag='/salt/minion/minion_beacons_list_complete')
+
+        return True
+
+    def list_available_beacons(self):
+        '''
+        List the available beacons
+        '''
+        _beacons = ['{0}'.format(_beacon.replace('.beacon', ''))
+                    for _beacon in self.beacons if '.beacon' in _beacon]
+
+        # Fire the complete event back along with the list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'beacons': _beacons},
+                       tag='/salt/minion/minion_beacons_list_available_complete')
+
+        return True
+
+    def validate_beacon(self, name, beacon_data):
+        '''
+        Return available beacon functions
+        '''
+        validate_str = '{}.validate'.format(name)
+        # Run the validate function if it's available,
+        # otherwise there is a warning about it being missing
+        if validate_str in self.beacons:
+            if 'enabled' in beacon_data:
+                del beacon_data['enabled']
+            valid, vcomment = self.beacons[validate_str](beacon_data)
+        else:
+            vcomment = 'Beacon {0} does not have a validate' \
+                       ' function, skipping validation.'.format(name)
+            valid = True
+
+        # Fire the complete event back along with the list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True,
+                        'vcomment': vcomment,
+                        'valid': valid},
+                       tag='/salt/minion/minion_beacon_validation_complete')
 
         return True
 
@@ -208,16 +286,23 @@ class Beacon(object):
         data = {}
         data[name] = beacon_data
 
-        if name in self.opts['beacons']:
-            log.info('Updating settings for beacon '
-                     'item: {0}'.format(name))
+        if name in self._get_beacons(include_opts=False):
+            comment = 'Cannot update beacon item {0}, ' \
+                      'because it is configured in pillar.'.format(name)
+            complete = False
         else:
-            log.info('Added new beacon item {0}'.format(name))
-        self.opts['beacons'].update(data)
+            if name in self.opts['beacons']:
+                comment = 'Updating settings for beacon ' \
+                          'item: {0}'.format(name)
+            else:
+                comment = 'Added new beacon item: {0}'.format(name)
+            complete = True
+            self.opts['beacons'].update(data)
 
         # Fire the complete event back along with updated list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+        evt.fire_event({'complete': complete, 'comment': comment,
+                        'beacons': self.opts['beacons']},
                        tag='/salt/minion/minion_beacon_add_complete')
 
         return True
@@ -230,15 +315,21 @@ class Beacon(object):
         data = {}
         data[name] = beacon_data
 
-        log.info('Updating settings for beacon '
-                 'item: {0}'.format(name))
-        self.opts['beacons'].update(data)
+        if name in self._get_beacons(include_opts=False):
+            comment = 'Cannot modify beacon item {0}, ' \
+                      'it is configured in pillar.'.format(name)
+            complete = False
+        else:
+            comment = 'Updating settings for beacon ' \
+                      'item: {0}'.format(name)
+            complete = True
+            self.opts['beacons'].update(data)
 
         # Fire the complete event back along with updated list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+        evt.fire_event({'complete': complete, 'comment': comment,
+                        'beacons': self.opts['beacons']},
                        tag='/salt/minion/minion_beacon_modify_complete')
-
         return True
 
     def delete_beacon(self, name):
@@ -246,13 +337,22 @@ class Beacon(object):
         Delete a beacon item
         '''
 
-        if name in self.opts['beacons']:
-            log.info('Deleting beacon item {0}'.format(name))
-            del self.opts['beacons'][name]
+        if name in self._get_beacons(include_opts=False):
+            comment = 'Cannot delete beacon item {0}, ' \
+                      'it is configured in pillar.'.format(name)
+            complete = False
+        else:
+            if name in self.opts['beacons']:
+                del self.opts['beacons'][name]
+                comment = 'Deleting beacon item: {0}'.format(name)
+            else:
+                comment = 'Beacon item {0} not found.'.format(name)
+            complete = True
 
         # Fire the complete event back along with updated list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+        evt.fire_event({'complete': complete, 'comment': comment,
+                        'beacons': self.opts['beacons']},
                        tag='/salt/minion/minion_beacon_delete_complete')
 
         return True
@@ -290,11 +390,19 @@ class Beacon(object):
         Enable a beacon
         '''
 
-        self._update_enabled(name, True)
+        if name in self._get_beacons(include_opts=False):
+            comment = 'Cannot enable beacon item {0}, ' \
+                      'it is configured in pillar.'.format(name)
+            complete = False
+        else:
+            self._update_enabled(name, True)
+            comment = 'Enabling beacon item {0}'.format(name)
+            complete = True
 
         # Fire the complete event back along with updated list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+        evt.fire_event({'complete': complete, 'comment': comment,
+                        'beacons': self.opts['beacons']},
                        tag='/salt/minion/minion_beacon_enabled_complete')
 
         return True
@@ -304,11 +412,19 @@ class Beacon(object):
         Disable a beacon
         '''
 
-        self._update_enabled(name, False)
+        if name in self._get_beacons(include_opts=False):
+            comment = 'Cannot disable beacon item {0}, ' \
+                      'it is configured in pillar.'.format(name)
+            complete = False
+        else:
+            self._update_enabled(name, False)
+            comment = 'Disabling beacon item {0}'.format(name)
+            complete = True
 
         # Fire the complete event back along with updated list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+        evt.fire_event({'complete': complete, 'comment': comment,
+                        'beacons': self.opts['beacons']},
                        tag='/salt/minion/minion_beacon_disabled_complete')
 
         return True

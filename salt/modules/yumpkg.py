@@ -15,16 +15,15 @@ Support for YUM/DNF
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import contextlib
-import copy
+import datetime
 import fnmatch
 import itertools
 import logging
 import os
 import re
 import string
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 # pylint: disable=import-error,redefined-builtin
 # Import 3rd-party libs
@@ -41,21 +40,30 @@ from salt.ext.six.moves import configparser
 
 # pylint: enable=import-error,redefined-builtin
 
-# Import salt libs
-import salt.utils
-import salt.utils.pkg
-import salt.ext.six as six
+# Import Salt libs
+import salt.utils.args
+import salt.utils.data
+import salt.utils.decorators.path
+import salt.utils.files
+import salt.utils.functools
 import salt.utils.itertools
-import salt.utils.systemd
-import salt.utils.decorators as decorators
+import salt.utils.lazy
+import salt.utils.path
+import salt.utils.pkg
 import salt.utils.pkg.rpm
+import salt.utils.systemd
+import salt.utils.versions
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 
+# Import 3rd-party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
-__HOLD_PATTERN = r'\w+(?:[.-][^-]+)*'
+__HOLD_PATTERN = r'[\w+]+(?:[.-][^-]+)*'
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -73,7 +81,7 @@ def __virtual__():
     except Exception:
         return (False, "Module yumpkg: no yum based system detected")
 
-    enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux')
+    enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux', 'virtuozzo')
 
     if os_family == 'redhat' or os_grain in enabled:
         return __virtualname__
@@ -203,25 +211,29 @@ def _check_versionlock():
         )
 
 
-def _get_repo_options(**kwargs):
+def _get_options(**kwargs):
     '''
-    Returns a list of '--enablerepo' and '--disablerepo' options to be used
-    in the yum command, based on the kwargs.
+    Returns a list of options to be used in the yum/dnf command, based on the
+    kwargs passed.
     '''
     # Get repo options from the kwargs
     fromrepo = kwargs.pop('fromrepo', '')
     repo = kwargs.pop('repo', '')
     disablerepo = kwargs.pop('disablerepo', '')
     enablerepo = kwargs.pop('enablerepo', '')
+    disableexcludes = kwargs.pop('disableexcludes', '')
+    branch = kwargs.pop('branch', '')
+    get_extra_options = kwargs.pop('get_extra_options', False)
 
     # Support old 'repo' argument
     if repo and not fromrepo:
         fromrepo = repo
 
     ret = []
+
     if fromrepo:
         log.info('Restricting to repo \'%s\'', fromrepo)
-        ret.extend(['--disablerepo=*', '--enablerepo=' + fromrepo])
+        ret.extend(['--disablerepo=*', '--enablerepo={0}'.format(fromrepo)])
     else:
         if disablerepo:
             targets = [disablerepo] \
@@ -237,46 +249,30 @@ def _get_repo_options(**kwargs):
                 else enablerepo
             log.info('Enabling repo(s): %s', ', '.join(targets))
             ret.extend(['--enablerepo={0}'.format(x) for x in targets])
-    return ret
 
+    if disableexcludes:
+        log.info('Disabling excludes for \'%s\'', disableexcludes)
+        ret.append('--disableexcludes={0}'.format(disableexcludes))
 
-def _get_excludes_option(**kwargs):
-    '''
-    Returns a list of '--disableexcludes' option to be used in the yum command,
-    based on the kwargs.
-    '''
-    disable_excludes = kwargs.pop('disableexcludes', '')
-    ret = []
-    if disable_excludes:
-        log.info('Disabling excludes for \'%s\'', disable_excludes)
-        ret.append('--disableexcludes={0}'.format(disable_excludes))
-    return ret
-
-
-def _get_branch_option(**kwargs):
-    '''
-    Returns a list of '--branch' option to be used in the yum command,
-    based on the kwargs. This feature requires 'branch' plugin for YUM.
-    '''
-    branch = kwargs.pop('branch', '')
-    ret = []
     if branch:
         log.info('Adding branch \'%s\'', branch)
-        ret.append('--branch=\'{0}\''.format(branch))
-    return ret
+        ret.append('--branch={0}'.format(branch))
 
+    if get_extra_options:
+        # sorting here to make order uniform, makes unit testing more reliable
+        for key in sorted(kwargs):
+            if key.startswith('__'):
+                continue
+            value = kwargs[key]
+            if isinstance(value, six.string_types):
+                log.info('Found extra option --%s=%s', key, value)
+                ret.append('--{0}={1}'.format(key, value))
+            elif value is True:
+                log.info('Found extra option --%s', key)
+                ret.append('--{0}'.format(key))
+        if ret:
+            log.info('Adding extra options: %s', ret)
 
-def _get_extra_options(**kwargs):
-    '''
-    Returns list of extra options for yum
-    '''
-    ret = []
-    kwargs = salt.utils.clean_kwargs(**kwargs)
-    for key, value in six.iteritems(kwargs):
-        if isinstance(value, six.string_types):
-            ret.append('--{0}=\'{1}\''.format(key, value))
-        elif value is True:
-            ret.append('--{0}'.format(key))
     return ret
 
 
@@ -436,12 +432,11 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> disableexcludes=main
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
     if len(names) == 0:
         return ''
 
-    repo_arg = _get_repo_options(**kwargs)
-    exclude_arg = _get_excludes_option(**kwargs)
+    options = _get_options(**kwargs)
 
     # Refresh before looking for the latest version available
     if refresh:
@@ -451,8 +446,7 @@ def latest_version(*names, **kwargs):
 
     # Get available versions for specified package(s)
     cmd = [_yum(), '--quiet']
-    cmd.extend(repo_arg)
-    cmd.extend(exclude_arg)
+    cmd.extend(options)
     cmd.extend(['list', 'available'])
     cmd.extend(names)
     out = __salt__['cmd.run_all'](cmd,
@@ -485,7 +479,7 @@ def latest_version(*names, **kwargs):
                 # If any installed version is greater than (or equal to) the
                 # one found by yum/dnf list available, then it is not an
                 # upgrade.
-                if salt.utils.compare_versions(ver1=installed_version,
+                if salt.utils.versions.compare(ver1=installed_version,
                                                oper='>=',
                                                ver2=pkg.version,
                                                cmp_func=version_cmp):
@@ -537,10 +531,10 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -550,7 +544,7 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return latest_version(name) != ''
+    return latest_version(name, **kwargs) != ''
 
 
 def version(*names, **kwargs):
@@ -594,51 +588,89 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
 
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
-    List the packages currently installed in a dict::
+    List the packages currently installed as a dict. By default, the dict
+    contains versions as a comma separated string::
 
-        {'<package_name>': '<version>'}
+        {'<package_name>': '<version>[,<version>...]'}
+
+    versions_as_list:
+        If set to true, the versions are provided as a list
+
+        {'<package_name>': ['<version>', '<version>']}
+
+    attr:
+        If a list of package attributes is specified, returned value will
+        contain them in addition to version, eg.::
+
+        {'<package_name>': [{'version' : 'version', 'arch' : 'arch'}]}
+
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
+
+        If ``all`` is specified, all valid attributes will be returned.
+
+            .. versionadded:: Oxygen
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs attr=version,arch
+        salt '*' pkg.list_pkgs attr='["version", "arch"]'
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
-    if 'pkg.list_pkgs' in __context__:
-        if versions_as_list:
-            return __context__['pkg.list_pkgs']
-        else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
-            __salt__['pkg_resource.stringify'](ret)
-            return ret
+    attr = kwargs.get('attr')
+    if attr is not None:
+        attr = salt.utils.args.split_input(attr)
 
-    ret = {}
-    cmd = ['rpm', '-qa', '--queryformat',
-           salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', '(none)\n')]
-    output = __salt__['cmd.run'](cmd,
-                                 python_shell=False,
-                                 output_loglevel='trace')
-    for line in output.splitlines():
-        pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
-            line,
-            osarch=__grains__['osarch']
-        )
-        if pkginfo is not None:
-            __salt__['pkg_resource.add_pkg'](ret,
-                                             pkginfo.name,
-                                             pkginfo.version)
+    contextkey = 'pkg.list_pkgs'
 
-    __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
-    if not versions_as_list:
-        __salt__['pkg_resource.stringify'](ret)
-    return ret
+    if contextkey not in __context__:
+        ret = {}
+        cmd = ['rpm', '-qa', '--queryformat',
+               salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', '(none)') + '\n']
+        output = __salt__['cmd.run'](cmd,
+                                     python_shell=False,
+                                     output_loglevel='trace')
+        for line in output.splitlines():
+            pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
+                line,
+                osarch=__grains__['osarch']
+            )
+            if pkginfo is not None:
+                # see rpm version string rules available at https://goo.gl/UGKPNd
+                pkgver = pkginfo.version
+                epoch = ''
+                release = ''
+                if ':' in pkgver:
+                    epoch, pkgver = pkgver.split(":", 1)
+                if '-' in pkgver:
+                    pkgver, release = pkgver.split("-", 1)
+                all_attr = {
+                    'epoch': epoch,
+                    'version': pkgver,
+                    'release': release,
+                    'arch': pkginfo.arch,
+                    'install_date': pkginfo.install_date,
+                    'install_date_time_t': pkginfo.install_date_time_t
+                }
+                __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, all_attr)
+
+        for pkgname in ret:
+            ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+
+        __context__[contextkey] = ret
+
+    return __salt__['pkg_resource.format_pkg_list'](
+        __context__[contextkey],
+        versions_as_list,
+        attr)
 
 
 def list_repo_pkgs(*args, **kwargs):
@@ -652,6 +684,10 @@ def list_repo_pkgs(*args, **kwargs):
         <salt.modules.yumpkg.hold>` will only show the currently-installed
         version, as locking a package will make other versions appear
         unavailable to yum/dnf.
+    .. versionchanged:: 2017.7.0
+        By default, the versions for each package are no longer organized by
+        repository. To get results organized by repository, use
+        ``byrepo=True``.
 
     Returns all available packages. Optionally, package names (and name globs)
     can be passed and the results will be filtered to packages matching those
@@ -668,12 +704,31 @@ def list_repo_pkgs(*args, **kwargs):
     This function can be helpful in discovering the version or repo to specify
     in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
 
-    The return data is a dictionary of repo names, with each repo containing a
-    dictionary in which the keys are package names, and the values are a list
-    of version numbers. Here is an example of the return data:
+    The return data will be a dictionary mapping package names to a list of
+    version numbers, ordered from newest to oldest. If ``byrepo`` is set to
+    ``True``, then the return dictionary will contain repository names at the
+    top level, and each repository will map packages to lists of version
+    numbers. For example:
 
     .. code-block:: python
 
+        # With byrepo=False (default)
+        {
+            'bash': ['4.1.2-15.el6_5.2',
+                     '4.1.2-15.el6_5.1',
+                     '4.1.2-15.el6_4'],
+            'kernel': ['2.6.32-431.29.2.el6',
+                       '2.6.32-431.23.3.el6',
+                       '2.6.32-431.20.5.el6',
+                       '2.6.32-431.20.3.el6',
+                       '2.6.32-431.17.1.el6',
+                       '2.6.32-431.11.2.el6',
+                       '2.6.32-431.5.1.el6',
+                       '2.6.32-431.3.1.el6',
+                       '2.6.32-431.1.2.0.1.el6',
+                       '2.6.32-431.el6']
+        }
+        # With byrepo=True
         {
             'base': {
                 'bash': ['4.1.2-15.el6_4'],
@@ -697,22 +752,79 @@ def list_repo_pkgs(*args, **kwargs):
         Only include results from the specified repo(s). Multiple repos can be
         specified, comma-separated.
 
-    CLI Example:
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+        .. versionadded:: 2017.7.0
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+        .. versionadded:: 2017.7.0
+
+    byrepo : False
+        When ``True``, the return data for each package will be organized by
+        repository.
+
+        .. versionadded:: 2017.7.0
+
+    cacheonly : False
+        When ``True``, the repo information will be retrieved from the cached
+        repo metadata. This is equivalent to passing the ``-C`` option to
+        yum/dnf.
+
+        .. versionadded:: 2017.7.0
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pkg.list_repo_pkgs
         salt '*' pkg.list_repo_pkgs foo bar baz
         salt '*' pkg.list_repo_pkgs 'samba4*' fromrepo=base,updates
+        salt '*' pkg.list_repo_pkgs 'python2-*' byrepo=True
     '''
-    try:
-        repos = tuple(x.strip() for x in kwargs.get('fromrepo').split(','))
-    except AttributeError:
-        # Search in all enabled repos
-        repos = tuple(
-            x for x, y in six.iteritems(list_repos())
-            if str(y.get('enabled', '1')) == '1'
-        )
+    byrepo = kwargs.pop('byrepo', False)
+    cacheonly = kwargs.pop('cacheonly', False)
+    fromrepo = kwargs.pop('fromrepo', '') or ''
+    disablerepo = kwargs.pop('disablerepo', '') or ''
+    enablerepo = kwargs.pop('enablerepo', '') or ''
+
+    repo_arg = _get_options(fromrepo=fromrepo, **kwargs)
+
+    if fromrepo and not isinstance(fromrepo, list):
+        try:
+            fromrepo = [x.strip() for x in fromrepo.split(',')]
+        except AttributeError:
+            fromrepo = [x.strip() for x in six.text_type(fromrepo).split(',')]
+
+    if disablerepo and not isinstance(disablerepo, list):
+        try:
+            disablerepo = [x.strip() for x in disablerepo.split(',')
+                           if x != '*']
+        except AttributeError:
+            disablerepo = [x.strip() for x in six.text_type(disablerepo).split(',')
+                           if x != '*']
+
+    if enablerepo and not isinstance(enablerepo, list):
+        try:
+            enablerepo = [x.strip() for x in enablerepo.split(',')
+                          if x != '*']
+        except AttributeError:
+            enablerepo = [x.strip() for x in six.text_type(enablerepo).split(',')
+                          if x != '*']
+
+    if fromrepo:
+        repos = fromrepo
+    else:
+        repos = [
+            repo_name for repo_name, repo_info in six.iteritems(list_repos())
+            if repo_name in enablerepo
+            or (repo_name not in disablerepo
+                and six.text_type(repo_info.get('enabled', '1')) == '1')
+        ]
 
     ret = {}
 
@@ -726,21 +838,6 @@ def list_repo_pkgs(*args, **kwargs):
                 return True
         return False
 
-    def _no_repository_packages():
-        '''
-        Check yum version, the repository-packages subcommand is only in
-        3.4.3 and newer.
-        '''
-        if _yum() == 'yum':
-            yum_version = _LooseVersion(
-                __salt__['cmd.run'](
-                    ['yum', '--version'],
-                    python_shell=False
-                ).splitlines()[0].strip()
-            )
-            return yum_version < _LooseVersion('3.4.3')
-        return False
-
     def _parse_output(output, strict=False):
         for pkg in _yum_pkginfo(output):
             if strict and (pkg.repoid not in repos
@@ -750,8 +847,35 @@ def list_repo_pkgs(*args, **kwargs):
             version_list = repo_dict.setdefault(pkg.name, set())
             version_list.add(pkg.version)
 
-    if _no_repository_packages():
-        cmd_prefix = ['yum', '--quiet', 'list']
+    yum_version = None if _yum() != 'yum' else _LooseVersion(
+                __salt__['cmd.run'](
+                    ['yum', '--version'],
+                    python_shell=False
+                ).splitlines()[0].strip()
+            )
+    # Really old version of yum; does not even have --showduplicates option
+    if yum_version and yum_version < _LooseVersion('3.2.13'):
+        cmd_prefix = ['yum', '--quiet']
+        if cacheonly:
+            cmd_prefix.append('-C')
+        cmd_prefix.append('list')
+        for pkg_src in ('installed', 'available'):
+            # Check installed packages first
+            out = __salt__['cmd.run_all'](
+                cmd_prefix + [pkg_src],
+                output_loglevel='trace',
+                ignore_retcode=True,
+                python_shell=False
+            )
+            if out['retcode'] == 0:
+                _parse_output(out['stdout'], strict=True)
+    # The --showduplicates option is added in 3.2.13, but the
+    # repository-packages subcommand is only in 3.4.3 and newer
+    elif yum_version and yum_version < _LooseVersion('3.4.3'):
+        cmd_prefix = ['yum', '--quiet', '--showduplicates']
+        if cacheonly:
+            cmd_prefix.append('-C')
+        cmd_prefix.append('list')
         for pkg_src in ('installed', 'available'):
             # Check installed packages first
             out = __salt__['cmd.run_all'](
@@ -766,6 +890,8 @@ def list_repo_pkgs(*args, **kwargs):
         for repo in repos:
             cmd = [_yum(), '--quiet', '--showduplicates',
                    'repository-packages', repo, 'list']
+            if cacheonly:
+                cmd.append('-C')
             # Can't concatenate because args is a tuple, using list.extend()
             cmd.extend(args)
 
@@ -777,15 +903,28 @@ def list_repo_pkgs(*args, **kwargs):
                 continue
             _parse_output(out['stdout'])
 
-    for reponame in ret:
-        # Sort versions newest to oldest
-        for pkgname in ret[reponame]:
+    if byrepo:
+        for reponame in ret:
+            # Sort versions newest to oldest
+            for pkgname in ret[reponame]:
+                sorted_versions = sorted(
+                    [_LooseVersion(x) for x in ret[reponame][pkgname]],
+                    reverse=True
+                )
+                ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
+        return ret
+    else:
+        byrepo_ret = {}
+        for reponame in ret:
+            for pkgname in ret[reponame]:
+                byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
+        for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                [_LooseVersion(x) for x in ret[reponame][pkgname]],
+                [_LooseVersion(x) for x in byrepo_ret[pkgname]],
                 reverse=True
             )
-            ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
-    return ret
+            byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
+        return byrepo_ret
 
 
 def list_upgrades(refresh=True, **kwargs):
@@ -805,15 +944,13 @@ def list_upgrades(refresh=True, **kwargs):
 
         salt '*' pkg.list_upgrades
     '''
-    repo_arg = _get_repo_options(**kwargs)
-    exclude_arg = _get_excludes_option(**kwargs)
+    options = _get_options(**kwargs)
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db(check_update=False, **kwargs)
 
     cmd = [_yum(), '--quiet']
-    cmd.extend(repo_arg)
-    cmd.extend(exclude_arg)
+    cmd.extend(options)
     cmd.extend(['list', 'upgrades' if _yum() == 'dnf' else 'updates'])
     out = __salt__['cmd.run_all'](cmd,
                                   output_loglevel='trace',
@@ -825,7 +962,36 @@ def list_upgrades(refresh=True, **kwargs):
     return dict([(x.name, x.version) for x in _yum_pkginfo(out['stdout'])])
 
 # Preserve expected CLI usage (yum list updates)
-list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
+list_updates = salt.utils.functools.alias_function(list_upgrades, 'list_updates')
+
+
+def list_downloaded():
+    '''
+    .. versionadded:: 2017.7.0
+
+    List prefetched packages downloaded by Yum in the local disk.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_downloaded
+    '''
+    CACHE_DIR = os.path.join('/var/cache/', _yum())
+
+    ret = {}
+    for root, dirnames, filenames in salt.utils.path.os_walk(CACHE_DIR):
+        for filename in fnmatch.filter(filenames, '*.rpm'):
+            package_path = os.path.join(root, filename)
+            pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+            pkg_timestamp = int(os.path.getctime(package_path))
+            ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = {
+                'path': package_path,
+                'size': os.path.getsize(package_path),
+                'creation_date_time_t': pkg_timestamp,
+                'creation_date_time': datetime.datetime.fromtimestamp(pkg_timestamp).isoformat(),
+            }
+    return ret
 
 
 def info_installed(*names):
@@ -902,21 +1068,19 @@ def refresh_db(**kwargs):
 
     check_update_ = kwargs.pop('check_update', True)
 
-    repo_arg = _get_repo_options(**kwargs)
-    exclude_arg = _get_excludes_option(**kwargs)
-    branch_arg = _get_branch_option(**kwargs)
+    options = _get_options(**kwargs)
 
-    clean_cmd = [_yum(), '--quiet', 'clean', 'expire-cache']
-    update_cmd = [_yum(), '--quiet', 'check-update']
+    clean_cmd = [_yum(), '--quiet', '--assumeyes', 'clean', 'expire-cache']
+    update_cmd = [_yum(), '--quiet', '--assumeyes', 'check-update']
 
-    if __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '7':
-        # This feature is disable because it is not used by Salt and lasts a lot with using large repo like EPEL
+    if __grains__.get('os_family') == 'RedHat' \
+            and __grains__.get('osmajorrelease') == 7:
+        # This feature is disabled because it is not used by Salt and adds a
+        # lot of extra time to the command with large repos like EPEL
         update_cmd.append('--setopt=autocheck_running_kernel=false')
 
-    for args in (repo_arg, exclude_arg, branch_arg):
-        if args:
-            clean_cmd.extend(args)
-            update_cmd.extend(args)
+    clean_cmd.extend(options)
+    update_cmd.extend(options)
 
     __salt__['cmd.run'](clean_cmd, python_shell=False)
     if check_update_:
@@ -944,6 +1108,21 @@ def clean_metadata(**kwargs):
     return refresh_db(**kwargs)
 
 
+class AvailablePackages(salt.utils.lazy.LazyDict):
+    def __init__(self, *args, **kwargs):
+        super(AvailablePackages, self).__init__()
+        self._args = args
+        self._kwargs = kwargs
+
+    def _load(self, key):
+        self._load_all()
+        return True
+
+    def _load_all(self):
+        self._dict = list_repo_pkgs(*self._args, **self._kwargs)
+        self.loaded = True
+
+
 def install(name=None,
             refresh=False,
             skip_verify=False,
@@ -953,6 +1132,8 @@ def install(name=None,
             reinstall=False,
             normalize=True,
             update_holds=False,
+            saltenv='base',
+            ignore_epoch=False,
             **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1015,6 +1196,10 @@ def install(name=None,
         Install a specific version of the package, e.g. 1.2.3-4.el5. Ignored
         if "pkgs" or "sources" is passed.
 
+        .. versionchanged:: Oxygen
+            version can now contain comparison operators (e.g. ``>1.2.3``,
+            ``<=2.0``, etc.)
+
     update_holds : False
         If ``True``, and this function would update the package version, any
         packages held using the yum/dnf "versionlock" plugin will be unheld so
@@ -1044,6 +1229,14 @@ def install(name=None,
         (e.g., ``yum --disableexcludes='main'``)
 
         .. versionadded:: 2014.7.0
+
+    ignore_epoch : False
+        Only used when the version of a package is specified using a comparison
+        operator (e.g. ``>4.1``). If set to ``True``, then the epoch will be
+        ignored when comparing the currently-installed version to the desired
+        version.
+
+        .. versionadded:: Oxygen
 
 
     Multiple Package Installation Options:
@@ -1084,23 +1277,52 @@ def install(name=None,
 
         .. versionadded:: 2014.7.0
 
+    diff_attr:
+        If a list of package attributes is specified, returned value will
+        contain them, eg.::
+
+            {'<package>': {
+                'old': {
+                    'version': '<old-version>',
+                    'arch': '<old-arch>'},
+
+                'new': {
+                    'version': '<new-version>',
+                    'arch': '<new-arch>'}}}
+
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
+
+        If ``all`` is specified, all valid attributes will be returned.
+
+        .. versionadded:: Oxygen
 
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
-    '''
-    repo_arg = _get_repo_options(**kwargs)
-    exclude_arg = _get_excludes_option(**kwargs)
-    branch_arg = _get_branch_option(**kwargs)
 
-    if salt.utils.is_true(refresh):
+    If an attribute list in diff_attr is specified, the dict will also contain
+    any specified attribute, eg.::
+
+        {'<package>': {
+            'old': {
+                'version': '<old-version>',
+                'arch': '<old-arch>'},
+
+            'new': {
+                'version': '<new-version>',
+                'arch': '<new-arch>'}}}
+    '''
+    options = _get_options(**kwargs)
+
+    if salt.utils.data.is_true(refresh):
         refresh_db(**kwargs)
-    reinstall = salt.utils.is_true(reinstall)
+    reinstall = salt.utils.data.is_true(reinstall)
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, pkgs, sources, normalize=normalize, **kwargs
+            name, pkgs, sources, saltenv=saltenv, normalize=normalize
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -1108,14 +1330,18 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    old = list_pkgs(versions_as_list=False)
+    version_num = kwargs.get('version')
+
+    diff_attr = kwargs.get('diff_attr')
+    old = list_pkgs(versions_as_list=False, attr=diff_attr) if not downloadonly else list_downloaded()
     # Use of __context__ means no duplicate work here, just accessing
     # information already in __context__ from the previous call to list_pkgs()
-    old_as_list = list_pkgs(versions_as_list=True)
+    old_as_list = list_pkgs(versions_as_list=True) if not downloadonly else list_downloaded()
 
     to_install = []
     to_downgrade = []
     to_reinstall = []
+    _available = {}
     # The above three lists will be populated with tuples containing the
     # package name and the string being used for this particular package
     # modification. The reason for this method is that the string we use for
@@ -1131,9 +1357,32 @@ def install(name=None,
     #
     # The reason that we need both items is to be able to modify the installed
     # version of held packages.
-
     if pkg_type == 'repository':
+        has_wildcards = []
+        has_comparison = []
+        for pkgname, pkgver in six.iteritems(pkg_params):
+            try:
+                if '*' in pkgver:
+                    has_wildcards.append(pkgname)
+                elif pkgver.startswith('<') or pkgver.startswith('>'):
+                    has_comparison.append(pkgname)
+            except (TypeError, ValueError):
+                continue
+        _available = AvailablePackages(
+            *has_wildcards + has_comparison,
+            byrepo=False,
+            **kwargs)
         pkg_params_items = six.iteritems(pkg_params)
+    elif pkg_type == 'advisory':
+        pkg_params_items = []
+        cur_patches = list_patches()
+        for advisory_id in pkg_params:
+            if advisory_id not in cur_patches:
+                raise CommandExecutionError(
+                    'Advisory id "{0}" not found'.format(advisory_id)
+                )
+            else:
+                pkg_params_items.append(advisory_id)
     else:
         pkg_params_items = []
         for pkg_source in pkg_params:
@@ -1143,10 +1392,9 @@ def install(name=None,
                 rpm_info = None
             if rpm_info is None:
                 log.error(
-                    'pkg.install: Unable to get rpm information for {0}. '
+                    'pkg.install: Unable to get rpm information for %s. '
                     'Version comparisons will be unavailable, and return '
-                    'data may be inaccurate if reinstall=True.'
-                    .format(pkg_source)
+                    'data may be inaccurate if reinstall=True.', pkg_source
                 )
                 pkg_params_items.append([pkg_source])
             else:
@@ -1154,9 +1402,13 @@ def install(name=None,
                     [rpm_info['name'], pkg_source, rpm_info['version']]
                 )
 
+    errors = []
     for pkg_item_list in pkg_params_items:
         if pkg_type == 'repository':
             pkgname, version_num = pkg_item_list
+        elif pkg_type == 'advisory':
+            pkgname = pkg_item_list
+            version_num = None
         else:
             try:
                 pkgname, pkgpath, version_num = pkg_item_list
@@ -1171,6 +1423,8 @@ def install(name=None,
                     to_reinstall.append((pkgname, pkgname))
                 else:
                     to_install.append((pkgname, pkgname))
+            elif pkg_type == 'advisory':
+                to_install.append((pkgname, pkgname))
             else:
                 to_install.append((pkgname, pkgpath))
         else:
@@ -1179,6 +1433,29 @@ def install(name=None,
             # not None, since the only way version_num is not None is if RPM
             # metadata parsing was successful.
             if pkg_type == 'repository':
+                # yum/dnf does not support comparison operators. If the version
+                # starts with an equals sign, ignore it.
+                version_num = version_num.lstrip('=')
+                if pkgname in has_comparison:
+                    candidates = _available.get(pkgname, [])
+                    target = salt.utils.pkg.match_version(
+                        version_num,
+                        candidates,
+                        cmp_func=version_cmp,
+                        ignore_epoch=ignore_epoch,
+                    )
+                    if target is None:
+                        errors.append(
+                            'No version matching \'{0}{1}\' could be found '
+                            '(available: {2})'.format(
+                                pkgname,
+                                version_num,
+                                ', '.join(candidates) if candidates else None
+                            )
+                        )
+                        continue
+                    else:
+                        version_num = target
                 if _yum() == 'yum':
                     # yum install does not support epoch without the arch, and
                     # we won't know what the arch will be when it's not
@@ -1196,6 +1473,23 @@ def install(name=None,
                         arch = '.' + archpart
                         pkgname = namepart
 
+                if '*' in version_num:
+                    # Resolve wildcard matches
+                    candidates = _available.get(pkgname, [])
+                    match = salt.utils.itertools.fnmatch_multiple(candidates, version_num)
+                    if match is not None:
+                        version_num = match
+                    else:
+                        errors.append(
+                            'No version matching \'{0}\' found for package '
+                            '\'{1}\' (available: {2})'.format(
+                                version_num,
+                                pkgname,
+                                ', '.join(candidates) if candidates else 'none'
+                            )
+                        )
+                        continue
+
                 pkgstr = '{0}-{1}{2}'.format(pkgname, version_num, arch)
             else:
                 pkgstr = pkgpath
@@ -1209,7 +1503,7 @@ def install(name=None,
             if reinstall and cver:
                 for ver in cver:
                     ver = norm_epoch(ver, version_num)
-                    if salt.utils.compare_versions(ver1=version_num,
+                    if salt.utils.versions.compare(ver1=version_num,
                                                    oper='==',
                                                    ver2=ver,
                                                    cmp_func=version_cmp):
@@ -1223,7 +1517,7 @@ def install(name=None,
                 else:
                     for ver in cver:
                         ver = norm_epoch(ver, version_num)
-                        if salt.utils.compare_versions(ver1=version_num,
+                        if salt.utils.versions.compare(ver1=version_num,
                                                        oper='>=',
                                                        ver2=ver,
                                                        cmp_func=version_cmp):
@@ -1231,8 +1525,8 @@ def install(name=None,
                             break
                     else:
                         if pkgname is not None:
-                            if re.match('kernel(-.+)?', pkgname):
-                                # kernel and its subpackages support multiple
+                            if re.match('^kernel(|-devel)$', pkgname):
+                                # kernel and kernel-devel support multiple
                                 # installs as their paths do not conflict.
                                 # Performing a yum/dnf downgrade will be a
                                 # no-op so just do an install instead. It will
@@ -1255,9 +1549,7 @@ def install(name=None,
         '''
         DRY function to add args common to all yum/dnf commands
         '''
-        for args in (repo_arg, exclude_arg, branch_arg):
-            if args:
-                cmd.extend(args)
+        cmd.extend(options)
         if skip_verify:
             cmd.append('--nogpgcheck')
         if downloadonly:
@@ -1272,7 +1564,6 @@ def install(name=None,
             'installed'
         )
     unhold_prevented = []
-    errors = []
 
     @contextlib.contextmanager
     def _temporarily_unhold(pkgs, targets):
@@ -1294,7 +1585,7 @@ def install(name=None,
         if not to_unhold:
             yield
         else:
-            log.debug('Unholding packages: {0}'.format(', '.join(to_unhold)))
+            log.debug('Unholding packages: %s', ', '.join(to_unhold))
             try:
                 # Using list() here for python3 compatibility, dict.keys() no
                 # longer returns a list in python3.
@@ -1319,6 +1610,8 @@ def install(name=None,
     targets = []
     with _temporarily_unhold(to_install, targets):
         if targets:
+            if pkg_type == 'advisory':
+                targets = ["--advisory={0}".format(t) for t in targets]
             cmd = []
             if salt.utils.systemd.has_scope(__context__) \
                 and __salt__['config.get']('systemd.scope', True):
@@ -1327,7 +1620,7 @@ def install(name=None,
             if _yum() == 'dnf':
                 cmd.extend(['--best', '--allowerasing'])
             _add_common_args(cmd)
-            cmd.append('install')
+            cmd.append('install' if pkg_type is not 'advisory' else 'update')
             cmd.extend(targets)
             out = __salt__['cmd.run_all'](
                 cmd,
@@ -1379,9 +1672,9 @@ def install(name=None,
                 errors.append(out['stdout'])
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs(versions_as_list=False)
+    new = list_pkgs(versions_as_list=False, attr=diff_attr) if not downloadonly else list_downloaded()
 
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     for pkgname, _ in to_reinstall:
         if pkgname not in ret or pkgname in old:
@@ -1470,6 +1763,7 @@ def upgrade(name=None,
         (e.g., ``yum --disableexcludes='main'``)
 
         .. versionadded:: 2014.7
+
     name
         The name of the package to be upgraded. Note that this parameter is
         ignored if "pkgs" is passed.
@@ -1488,6 +1782,7 @@ def upgrade(name=None,
             salt '*' pkg.upgrade name=openssl
 
         .. versionadded:: 2016.3.0
+
     pkgs
         A list of packages to upgrade from a software repository. Must be
         passed as a python list. A specific version number can be specified
@@ -1516,23 +1811,19 @@ def upgrade(name=None,
 
         .. versionadded:: 2016.3.0
 
-
     .. note::
 
-        To add extra arguments to the `yum upgrade` command, pass them as key
-        word arguments.  For arguments without assignments, pass `True`
+        To add extra arguments to the ``yum upgrade`` command, pass them as key
+        word arguments. For arguments without assignments, pass ``True``
 
     .. code-block:: bash
 
         salt '*' pkg.upgrade security=True exclude='kernel*'
 
     '''
-    repo_arg = _get_repo_options(**kwargs)
-    exclude_arg = _get_excludes_option(**kwargs)
-    branch_arg = _get_branch_option(**kwargs)
-    extra_args = _get_extra_options(**kwargs)
+    options = _get_options(get_extra_options=True, **kwargs)
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db(**kwargs)
 
     old = list_pkgs()
@@ -1559,9 +1850,7 @@ def upgrade(name=None,
             and __salt__['config.get']('systemd.scope', True):
         cmd.extend(['systemd-run', '--scope'])
     cmd.extend([_yum(), '--quiet', '-y'])
-    for args in (repo_arg, exclude_arg, branch_arg, extra_args):
-        if args:
-            cmd.extend(args)
+    cmd.extend(options)
     if skip_verify:
         cmd.append('--nogpgcheck')
     cmd.append('upgrade')
@@ -1572,7 +1861,7 @@ def upgrade(name=None,
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -1653,7 +1942,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1844,7 +2133,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     targets = []
     if pkgs:
-        for pkg in salt.utils.repack_dictlist(pkgs):
+        for pkg in salt.utils.data.repack_dictlist(pkgs):
             targets.append(pkg)
     elif sources:
         for source in sources:
@@ -1948,7 +2237,7 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
             ret.append(match)
     return ret
 
-get_locked_packages = salt.utils.alias_function(list_holds, 'get_locked_packages')
+get_locked_packages = salt.utils.functools.alias_function(list_holds, 'get_locked_packages')
 
 
 def verify(*names, **kwargs):
@@ -2255,7 +2544,7 @@ def group_install(name,
 
     return install(pkgs=pkgs, **kwargs)
 
-groupinstall = salt.utils.alias_function(group_install, 'groupinstall')
+groupinstall = salt.utils.functools.alias_function(group_install, 'groupinstall')
 
 
 def list_repos(basedir=None):
@@ -2282,7 +2571,7 @@ def list_repos(basedir=None):
             if not repofile.endswith('.repo'):
                 continue
             filerepos = _parse_repo_file(repopath)[1]
-            for reponame in filerepos.keys():
+            for reponame in filerepos:
                 repo = filerepos[reponame]
                 repo['file'] = repopath
                 repos[reponame] = repo
@@ -2377,8 +2666,8 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
             content += '\n{0}={1}'.format(line, filerepos[stanza][line])
         content += '\n{0}\n'.format(comments)
 
-    with salt.utils.fopen(repofile, 'w') as fileout:
-        fileout.write(content)
+    with salt.utils.files.fopen(repofile, 'w') as fileout:
+        fileout.write(salt.utils.stringutils.to_str(content))
 
     return 'Repo {0} has been removed from {1}'.format(repo, repofile)
 
@@ -2518,8 +2807,8 @@ def mod_repo(repo, basedir=None, **kwargs):
             )
         content += '\n{0}\n'.format(comments)
 
-    with salt.utils.fopen(repofile, 'w') as fileout:
-        fileout.write(content)
+    with salt.utils.files.fopen(repofile, 'w') as fileout:
+        fileout.write(salt.utils.stringutils.to_str(content))
 
     return {repofile: filerepos}
 
@@ -2535,7 +2824,8 @@ def _parse_repo_file(filename):
         parsed.read(filename)
     except configparser.MissingSectionHeaderError as err:
         log.error(
-            'Failed to parse file {0}, error: {1}'.format(filename, err.message)
+            'Failed to parse file %s, error: %s',
+            filename, err.message
         )
         return ('', {})
 
@@ -2546,14 +2836,15 @@ def _parse_repo_file(filename):
 
     # Try to extract leading comments
     headers = ''
-    with salt.utils.fopen(filename, 'r') as rawfile:
+    with salt.utils.files.fopen(filename, 'r') as rawfile:
         for line in rawfile:
+            line = salt.utils.stringutils.to_unicode(line)
             if line.strip().startswith('#'):
                 headers += '{0}\n'.format(line.strip())
             else:
                 break
 
-    return (headers, config)
+    return (headers, salt.utils.data.decode(config))
 
 
 def file_list(*packages):
@@ -2681,7 +2972,7 @@ def modified(*packages, **flags):
     return __salt__['lowpkg.modified'](*packages, **flags)
 
 
-@decorators.which('yumdownloader')
+@salt.utils.decorators.path.which('yumdownloader')
 def download(*packages):
     '''
     .. versionadded:: 2015.5.0
@@ -2789,3 +3080,64 @@ def diff(*paths):
                     local_pkgs[pkg]['path'], path) or 'Unchanged'
 
     return ret
+
+
+def _get_patches(installed_only=False):
+    '''
+    List all known patches in repos.
+    '''
+    patches = {}
+
+    cmd = [_yum(), '--quiet', 'updateinfo', 'list', 'all']
+    ret = __salt__['cmd.run_stdout'](
+        cmd,
+        python_shell=False
+    )
+    for line in salt.utils.itertools.split(ret, os.linesep):
+        inst, advisory_id, sev, pkg = re.match(r'([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)',
+                                               line).groups()
+        if inst != 'i' and installed_only:
+            continue
+        patches[advisory_id] = {
+            'installed': True if inst == 'i' else False,
+            'summary': pkg
+        }
+    return patches
+
+
+def list_patches(refresh=False):
+    '''
+    .. versionadded:: 2017.7.0
+
+    List all known advisory patches from available repos.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on yum if a refresh is
+        executed.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_patches
+    '''
+    if refresh:
+        refresh_db()
+
+    return _get_patches()
+
+
+def list_installed_patches():
+    '''
+    .. versionadded:: 2017.7.0
+
+    List installed advisory patches on the system.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_installed_patches
+    '''
+    return _get_patches(installed_only=True)

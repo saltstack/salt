@@ -10,12 +10,11 @@ Runner to interact with DNS server and create/delete/update DNS records
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 import logging
-import json
 
 # Import third party libs
 HAS_LIBS = False
@@ -28,7 +27,8 @@ except ImportError:
     HAS_LIBS = False
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.json
 
 log = logging.getLogger(__name__)
 
@@ -47,8 +47,8 @@ def __virtual__():
 def _get_keyring(keyfile):
     keyring = None
     if keyfile and os.path.isfile(os.path.expanduser(keyfile)):
-        with salt.utils.fopen(keyfile) as _f:
-            keyring = dns.tsigkeyring.from_text(json.load(_f))
+        with salt.utils.files.fopen(keyfile) as _f:
+            keyring = dns.tsigkeyring.from_text(salt.utils.json.load(_f))
 
     return keyring
 

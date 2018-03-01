@@ -21,13 +21,12 @@ Module for interop with the Splunk API
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
-import yaml
 import urllib
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 HAS_LIBS = False
 try:
     import splunklib.client
@@ -37,6 +36,7 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.utils.yaml
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -239,12 +239,6 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
     '''
     client = _get_splunk(profile)
 
-    # yaml magic to output OrderedDict
-    def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(six.iteritems(data))
-    yaml.add_representer(
-        OrderedDict, ordered_dict_presenter, Dumper=yaml.dumper.SafeDumper)
-
     # splunklib doesn't provide the default settings for saved searches.
     # so, in order to get the defaults, we create a search with no
     # configuration, get that search, and then delete it. We use its contents
@@ -306,4 +300,4 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
             continue
         results["manage splunk search " + name] = {"splunk_search.present": d}
 
-    return yaml.safe_dump(results, default_flow_style=False, width=120)
+    return salt.utils.yaml.safe_dump(results, default_flow_style=False, width=120)

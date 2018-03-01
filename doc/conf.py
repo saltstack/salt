@@ -46,6 +46,8 @@ class Mock(object):
             data = self.__mapping.get(name)
         elif name in ('__file__', '__path__'):
             data = '/dev/null'
+        elif name == '__qualname__':
+            raise AttributeError("'Mock' object has no attribute '__qualname__'")
         else:
             data = Mock(mapping=self.__mapping)
         return data
@@ -158,6 +160,7 @@ MOCK_MODULES = [
     'jnpr.junos.utils.sw',
     'dns',
     'dns.resolver',
+    'keyring',
     'netaddr',
     'netaddr.IPAddress',
     'netaddr.core',
@@ -166,6 +169,11 @@ MOCK_MODULES = [
     'pyroute2.ipdb',
     'avahi',
     'dbus',
+    'twisted',
+    'twisted.internet',
+    'twisted.internet.protocol',
+    'twisted.internet.protocol.DatagramProtocol',
+    'msgpack',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -194,6 +202,8 @@ def mock_decorator_with_params(*oargs, **okwargs):
 
 # Define a fake version attribute for the following libs.
 sys.modules['libcloud'].__version__ = '0.0.0'
+sys.modules['msgpack'].version = (1, 0, 0)
+sys.modules['psutil'].version_info = (3, 0, 0)
 sys.modules['pymongo'].version = '0.0.0'
 sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
 sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
@@ -253,8 +263,8 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'previous'  # latest, previous, develop, next
-release = previous_release # version, latest_release, previous_release
+build_type = 'develop'  # latest, previous, develop, next
+release = version  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -315,11 +325,21 @@ rst_prolog = """\
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 .. |windownload| raw:: html
 
-     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>Python2 x86: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
-     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>Python2 AMD64: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>Python3 x86: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+
+     <p>Python3 AMD64: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+
 
 .. |osxdownload| raw:: html
 
@@ -500,6 +520,7 @@ epub_copyright = copyright
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.com/'
 
+epub_tocdup = False
 #epub_tocdepth = 3
 
 

@@ -193,15 +193,15 @@ Overriding the alarm values on the resource:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 import logging
 import copy
 
 # Import Salt libs
 import salt.utils.dictupdate as dictupdate
-import salt.ext.six as six
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+import salt.utils.stringutils
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -462,17 +462,17 @@ def present(
             profile
         )
         vpc_id = vpc_id.get('vpc_id')
-        log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
-                  .format(name, vpc_id))
+        log.debug('Auto Scaling Group %s is associated with VPC ID %s',
+                  name, vpc_id)
     else:
         vpc_id = None
-        log.debug('Auto Scaling Group {0} has no VPC Association'
-                  .format(name))
+        log.debug('Auto Scaling Group %s has no VPC Association', name)
     # if launch_config is defined, manage the launch config first.
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
     if launch_config:
-        launch_config_name = launch_config_name + '-' + hashlib.md5(str(launch_config)).hexdigest()
+        launch_config_bytes = salt.utils.stringutils.to_bytes(str(launch_config))  # future lint: disable=blacklisted-function
+        launch_config_name = launch_config_name + '-' + hashlib.md5(launch_config_bytes).hexdigest()
         args = {
             'name': launch_config_name,
             'region': region,
@@ -616,6 +616,7 @@ def present(
                 asg_action = asg['scheduled_actions'].get(s_name, {})
                 if 'start_time' in asg_action:
                     del asg_action['start_time']
+        proposed = {}
         # note: do not loop using "key, value" - this can modify the value of
         # the aws access key
         for asg_property, value in six.iteritems(config):
@@ -624,18 +625,20 @@ def present(
             # always be returned from AWS.
             if value is None:
                 continue
+            value = __utils__['boto3.ordered'](value)
             if asg_property in asg:
-                _value = asg[asg_property]
-                if not _recursive_compare(value, _value):
-                    log_msg = '{0} asg_property differs from {1}'
-                    log.debug(log_msg.format(value, _value))
+                _value = __utils__['boto3.ordered'](asg[asg_property])
+                if not value == _value:
+                    log.debug('%s asg_property differs from %s', value, _value)
+                    proposed.setdefault('old', {}).update({asg_property: _value})
+                    proposed.setdefault('new', {}).update({asg_property: value})
                     need_update = True
-                    break
         if need_update:
             if __opts__['test']:
                 msg = 'Autoscale group set to be updated.'
                 ret['comment'] = msg
                 ret['result'] = None
+                ret['changes'] = proposed
                 return ret
             # add in alarms
             notification_arn, notification_types = _determine_notification_info(
@@ -813,32 +816,6 @@ def _alarms_present(name, min_size_equals_max_size, alarms, alarms_from_pillar, 
         if 'comment' in results:
             merged_return_value['comment'] += results['comment']
     return merged_return_value
-
-
-def _recursive_compare(v1, v2):
-    '''
-    return v1 == v2.  compares list, dict, OrderedDict, recursively
-    '''
-    if isinstance(v1, list):
-        if len(v1) != len(v2):
-            return False
-        v1.sort()
-        v2.sort()
-        for x, y in zip(v1, v2):
-            if not _recursive_compare(x, y):
-                return False
-        return True
-    elif isinstance(v1, dict):
-        v1 = dict(v1)
-        v2 = dict(v2)
-        if sorted(v1) != sorted(v2):
-            return False
-        for k in v1:
-            if not _recursive_compare(v1[k], v2[k]):
-                return False
-        return True
-    else:
-        return v1 == v2
 
 
 def absent(

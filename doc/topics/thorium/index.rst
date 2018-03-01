@@ -57,7 +57,23 @@ Writing Thorium Formulas
 ========================
 Like some other Salt subsystems, Thorium uses its own directory structure. The
 default location for this structure is ``/srv/thorium/``, but it can be changed
-using the ``thorium_roots_dir`` setting in the ``master`` configuration file.
+using the ``thorium_roots`` setting in the ``master`` configuration file.
+
+This would explicitly set the roots to the default:
+
+.. code-block:: yaml
+
+    thorium_roots:
+      base:
+        - /srv/thorium
+
+Example ``thorium_roots`` configuration:
+
+.. code-block:: yaml
+
+    thorium_roots:
+      base:
+        - /etc/salt/thorium
 
 
 The Thorium top.sls File
@@ -98,17 +114,17 @@ the key from the master when the minion has been gone for 60 seconds:
 
 .. code-block:: yaml
 
-    startreg:
+    statreg:
       status.reg
 
     keydel:
       key.timeout:
         - delete: 60
         - require:
-          - status: startreg
+          - status: statreg
 
-There are two stanzas in this formula, whose IDs are ``startreg`` and
-``keydel``. The first stanza, ``startreg``, tells Thorium to keep track of
+There are two stanzas in this formula, whose IDs are ``statreg`` and
+``keydel``. The first stanza, ``statreg``, tells Thorium to keep track of
 minion status beacons in its *register*. We'll talk more about the register in
 a moment.
 
@@ -122,7 +138,7 @@ of deleted if it does not check in within the specified time period.
 
 There is also a ``require`` requisite in this stanza. It states that the
 ``key.timeout`` function will not be called unless the ``status.reg`` function
-in the ``startreg`` codeblock has been successfully called first.
+in the ``statreg`` codeblock has been successfully called first.
 
 
 Thorium Links to Beacons

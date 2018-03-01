@@ -18,7 +18,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import os.path
 
@@ -30,13 +30,14 @@ try:
     # installation time.
     import salt._syspaths as __generated_syspaths  # pylint: disable=no-name-in-module
 except ImportError:
-    import imp
-    __generated_syspaths = imp.new_module('salt._syspaths')
+    import types
+    __generated_syspaths = types.ModuleType(str('salt._syspaths'))  # future lint: blacklisted-function
     for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
-                'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR',
+                'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
                 'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
                 'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
-                'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH'):
+                'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH',
+                'SHARE_DIR'):
         setattr(__generated_syspaths, key, None)
 
 
@@ -73,6 +74,19 @@ if CONFIG_DIR is None:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'opt', 'local', 'etc', 'salt')
     else:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
+
+SHARE_DIR = __generated_syspaths.SHARE_DIR
+if SHARE_DIR is None:
+    if __PLATFORM.startswith('win'):
+        SHARE_DIR = os.path.join(ROOT_DIR, 'share')
+    elif 'freebsd' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'share', 'salt')
+    elif 'netbsd' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
+    elif 'sunos5' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
+    else:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
 
 CACHE_DIR = __generated_syspaths.CACHE_DIR
 if CACHE_DIR is None:
@@ -122,9 +136,14 @@ SPM_REACTOR_PATH = __generated_syspaths.SPM_REACTOR_PATH
 if SPM_REACTOR_PATH is None:
     SPM_REACTOR_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'reactor')
 
+HOME_DIR = __generated_syspaths.HOME_DIR
+if HOME_DIR is None:
+    HOME_DIR = os.path.expanduser('~')
+
 
 __all__ = [
     'ROOT_DIR',
+    'SHARE_DIR',
     'CONFIG_DIR',
     'CACHE_DIR',
     'SOCK_DIR',

@@ -7,14 +7,16 @@ and the like, but also useful for basic HTTP testing.
 '''
 
 # Import python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, unicode_literals, print_function
+import cgi
 import logging
-import os.path
+import os
 import pprint
 import socket
-import urllib
-import yaml
+import io
+import zlib
+import gzip
+import re
 
 import ssl
 try:
@@ -35,24 +37,32 @@ except ImportError:
             HAS_MATCHHOSTNAME = False
 
 # Import salt libs
-import salt.utils
-import salt.utils.xmlutil as xml
-import salt.utils.args
-import salt.loader
 import salt.config
+import salt.loader
+import salt.syspaths
+import salt.utils.args
+import salt.utils.data
+import salt.utils.files
+import salt.utils.json
+import salt.utils.network
+import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.yaml
 import salt.version
+import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.template import compile_template
-from salt import syspaths
+from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.parse import splitquery
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module
 
 # Don't need a try/except block, since Salt depends on tornado
@@ -88,6 +98,38 @@ log = logging.getLogger(__name__)
 USERAGENT = 'Salt/{0}'.format(salt.version.__version__)
 
 
+def __decompressContent(coding, pgctnt):
+    '''
+    Decompress returned HTTP content depending on the specified encoding.
+    Currently supports identity/none, deflate, and gzip, which should
+    cover 99%+ of the content on the internet.
+    '''
+
+    log.trace("Decompressing %s byte content with compression type: %s", len(pgctnt), coding)
+
+    if coding == 'deflate':
+        pgctnt = zlib.decompress(pgctnt, -zlib.MAX_WBITS)
+
+    elif coding == 'gzip':
+        buf = io.BytesIO(pgctnt)
+        f = gzip.GzipFile(fileobj=buf)
+        pgctnt = f.read()
+
+    elif coding == "sdch":
+        raise ValueError("SDCH compression is not currently supported")
+    elif coding == "br":
+        raise ValueError("Brotli compression is not currently supported")
+    elif coding == "compress":
+        raise ValueError("LZW compression is not currently supported")
+
+    elif coding == 'identity':
+        pass
+
+    log.trace("Content size after decompression: %s", len(pgctnt))
+    return pgctnt
+
+
+@jinja_filter('http_query')
 def query(url,
           method='GET',
           params=None,
@@ -120,7 +162,6 @@ def query(url,
           port=80,
           opts=None,
           backend=None,
-          requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
           cert=None,
@@ -143,28 +184,21 @@ def query(url,
     if opts is None:
         if node == 'master':
             opts = salt.config.master_config(
-                os.path.join(syspaths.CONFIG_DIR, 'master')
+                os.path.join(salt.syspaths.CONFIG_DIR, 'master')
             )
         elif node == 'minion':
             opts = salt.config.minion_config(
-                os.path.join(syspaths.CONFIG_DIR, 'minion')
+                os.path.join(salt.syspaths.CONFIG_DIR, 'minion')
             )
         else:
             opts = {}
 
     if not backend:
-        if requests_lib is not None or 'requests_lib' in opts:
-            salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                            'please change your config')
-            # beware the named arg above
-            if 'backend' in opts:
-                backend = opts['backend']
-            elif requests_lib or opts.get('requests_lib', False):
-                backend = 'requests'
-            else:
-                backend = 'tornado'
-        else:
-            backend = opts.get('backend', 'tornado')
+        backend = opts.get('backend', 'tornado')
+
+    match = re.match(r'https?://((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)($|/)', url)
+    if not match:
+        salt.utils.network.refresh_dns()
 
     if backend == 'requests':
         if HAS_REQUESTS is False:
@@ -197,7 +231,9 @@ def query(url,
     # Make sure no secret fields show up in logs
     log_url = sanitize_url(url_full, hide_fields)
 
-    log.debug('Requesting URL {0} using {1} method'.format(log_url, method))
+    log.debug('Requesting URL %s using %s method', log_url, method)
+    log.debug("Using backend: %s", backend)
+
     if method == 'POST' and log.isEnabledFor(logging.TRACE):
         # Make sure no secret fields show up in logs
         if isinstance(data, dict):
@@ -207,9 +243,9 @@ def query(url,
                     for field in hide_fields:
                         if item == field:
                             log_data[item] = 'XXXXXXXXXX'
-            log.trace('Request POST Data: {0}'.format(pprint.pformat(log_data)))
+            log.trace('Request POST Data: %s', pprint.pformat(log_data))
         else:
-            log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))
+            log.trace('Request POST Data: %s', pprint.pformat(data))
 
     if header_file is not None:
         header_tpl = _render(
@@ -227,9 +263,9 @@ def query(url,
         header_list = []
 
     if cookie_jar is None:
-        cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.txt')
+        cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.txt')
     if session_cookie_jar is None:
-        session_cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.session.p')
+        session_cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.session.p')
 
     if persist_session is True and HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
@@ -237,12 +273,12 @@ def query(url,
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
-            with salt.utils.fopen(session_cookie_jar, 'rb') as fh_:
+            with salt.utils.files.fopen(session_cookie_jar, 'rb') as fh_:
                 session_cookies = msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
-            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
+            with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 msgpack.dump('', fh_)
 
     for header in header_list:
@@ -263,7 +299,7 @@ def query(url,
         sess = requests.Session()
         sess.auth = auth
         sess.headers.update(header_dict)
-        log.trace('Request Headers: {0}'.format(sess.headers))
+        log.trace('Request Headers: %s', sess.headers)
         sess_cookies = sess.cookies
         sess.verify = verify_ssl
     elif backend == 'urllib2':
@@ -302,12 +338,12 @@ def query(url,
             if isinstance(cert, six.string_types):
                 if os.path.exists(cert):
                     req_kwargs['cert'] = cert
-            elif isinstance(cert, tuple):
+            elif isinstance(cert, list):
                 if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                     req_kwargs['cert'] = cert
             else:
-                log.error('The client-side certificate path that was passed is '
-                          'not valid: {0}'.format(cert))
+                log.error('The client-side certificate path that'
+                          ' was passed is not valid: %s', cert)
 
         result = sess.request(
             method, url, params=params, data=data, **req_kwargs
@@ -328,13 +364,17 @@ def query(url,
                 'body': result.content,
             }
 
-        log.debug('Final URL location of Response: {0}'.format(sanitize_url(result.url, hide_fields)))
+        log.debug('Final URL location of Response: %s',
+                  sanitize_url(result.url, hide_fields))
 
         result_status_code = result.status_code
         result_headers = result.headers
         result_text = result.content
         result_cookies = result.cookies
-        ret['body'] = result.content
+        body = result.content
+        if not isinstance(body, six.text_type):
+            body = body.decode(result.encoding or 'utf-8')
+        ret['body'] = body
     elif backend == 'urllib2':
         request = urllib_request.Request(url_full, data)
         handlers = [
@@ -347,10 +387,10 @@ def query(url,
             handlers[0] = urllib_request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
                 log.warning('match_hostname() not available, SSL hostname checking '
-                         'not available. THIS CONNECTION MAY NOT BE SECURE!')
+                            'not available. THIS CONNECTION MAY NOT BE SECURE!')
             elif verify_ssl is False:
                 log.warning('SSL certificate verification has been explicitly '
-                         'disabled. THIS CONNECTION MAY NOT BE SECURE!')
+                            'disabled. THIS CONNECTION MAY NOT BE SECURE!')
             else:
                 if ':' in hostname:
                     hostname, port = hostname.split(':')
@@ -368,10 +408,9 @@ def query(url,
                 except CertificateError as exc:
                     ret['error'] = (
                         'The certificate was invalid. '
-                        'Error returned was: {0}'.format(
-                            pprint.pformat(exc)
+                        'Error returned was: %s',
+                        pprint.pformat(exc)
                         )
-                    )
                     return ret
 
                 # Client-side cert handling
@@ -380,12 +419,12 @@ def query(url,
                     if isinstance(cert, six.string_types):
                         if os.path.exists(cert):
                             cert_chain = (cert)
-                    elif isinstance(cert, tuple):
+                    elif isinstance(cert, list):
                         if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                             cert_chain = cert
                     else:
                         log.error('The client-side certificate path that was '
-                                  'passed is not valid: {0}'.format(cert))
+                                  'passed is not valid: %s', cert)
                         return
                     if hasattr(ssl, 'SSLContext'):
                         # Python >= 2.7.9
@@ -409,7 +448,7 @@ def query(url,
         try:
             result = opener.open(request)
         except URLError as exc:
-            return {'Error': str(exc)}
+            return {'Error': six.text_type(exc)}
         if stream is True or handle is True:
             return {
                 'handle': result,
@@ -417,8 +456,16 @@ def query(url,
             }
 
         result_status_code = result.code
-        result_headers = result.headers.headers
+        result_headers = dict(result.info())
         result_text = result.read()
+        if 'Content-Type' in result_headers:
+            res_content_type, res_params = cgi.parse_header(result_headers['Content-Type'])
+            if res_content_type.startswith('text/') and \
+                    'charset' in res_params and \
+                    not isinstance(result_text, six.text_type):
+                result_text = result_text.decode(res_params['charset'])
+        if six.PY3 and isinstance(result_text, bytes):
+            result_text = result.body.decode('utf-8')
         ret['body'] = result_text
     else:
         # Tornado
@@ -429,21 +476,22 @@ def query(url,
             if isinstance(cert, six.string_types):
                 if os.path.exists(cert):
                     req_kwargs['client_cert'] = cert
-            elif isinstance(cert, tuple):
+            elif isinstance(cert, list):
                 if os.path.exists(cert[0]) and os.path.exists(cert[1]):
                     req_kwargs['client_cert'] = cert[0]
                     req_kwargs['client_key'] = cert[1]
             else:
-                log.error('The client-side certificate path that was passed is '
-                          'not valid: {0}'.format(cert))
+                log.error('The client-side certificate path that '
+                          'was passed is not valid: %s', cert)
 
         if isinstance(data, dict):
-            data = urllib.urlencode(data)
+            data = _urlencode(data)
 
         if verify_ssl:
             req_kwargs['ca_certs'] = ca_bundle
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
+        connect_timeout = opts.get('http_connect_timeout', salt.config.DEFAULT_MINION_OPTS['http_connect_timeout'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
         client_argspec = None
@@ -485,6 +533,7 @@ def query(url,
                 allow_nonstandard_methods=True,
                 streaming_callback=streaming_callback,
                 header_callback=header_callback,
+                connect_timeout=connect_timeout,
                 request_timeout=timeout,
                 proxy_host=proxy_host,
                 proxy_port=proxy_port,
@@ -496,12 +545,12 @@ def query(url,
             )
         except tornado.httpclient.HTTPError as exc:
             ret['status'] = exc.code
-            ret['error'] = str(exc)
+            ret['error'] = six.text_type(exc)
             return ret
         except socket.gaierror as exc:
             if status is True:
                 ret['status'] = 0
-            ret['error'] = str(exc)
+            ret['error'] = six.text_type(exc)
             return ret
 
         if stream is True or handle is True:
@@ -513,8 +562,14 @@ def query(url,
         result_status_code = result.code
         result_headers = result.headers
         result_text = result.body
-        ret['body'] = result.body
-        if 'Set-Cookie' in result_headers.keys() and cookies is not None:
+        if 'Content-Type' in result_headers:
+            res_content_type, res_params = cgi.parse_header(result_headers['Content-Type'])
+            if res_content_type.startswith('text/') and \
+                    'charset' in res_params and \
+                    not isinstance(result_text, six.text_type):
+                result_text = result_text.decode(res_params['charset'])
+        ret['body'] = result_text
+        if 'Set-Cookie' in result_headers and cookies is not None:
             result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
             for item in result_cookies:
                 sess_cookies.set_cookie(item)
@@ -528,21 +583,29 @@ def query(url,
             result_headers_dict[comps[0].strip()] = ':'.join(comps[1:]).strip()
         result_headers = result_headers_dict
 
-    log.debug('Response Status Code: {0}'.format(result_status_code))
-    log.trace('Response Headers: {0}'.format(result_headers))
-    log.trace('Response Cookies: {0}'.format(sess_cookies))
+    log.debug('Response Status Code: %s', result_status_code)
+    log.trace('Response Headers: %s', result_headers)
+    log.trace('Response Cookies: %s', sess_cookies)
+    # log.trace("Content: %s", result_text)
+
+    coding = result_headers.get('Content-Encoding', "identity")
+
+    # Requests will always decompress the content, and working around that is annoying.
+    if backend != 'requests':
+        result_text = __decompressContent(coding, result_text)
+
     try:
-        log.trace('Response Text: {0}'.format(result_text))
+        log.trace('Response Text: %s', result_text)
     except UnicodeEncodeError as exc:
-        log.trace(('Cannot Trace Log Response Text: {0}. This may be due to '
-                  'incompatibilities between requests and logging.').format(exc))
+        log.trace('Cannot Trace Log Response Text: %s. This may be due to '
+                  'incompatibilities between requests and logging.', exc)
 
     if text_out is not None:
-        with salt.utils.fopen(text_out, 'w') as tof:
+        with salt.utils.files.fopen(text_out, 'w') as tof:
             tof.write(result_text)
 
     if headers_out is not None and os.path.exists(headers_out):
-        with salt.utils.fopen(headers_out, 'w') as hof:
+        with salt.utils.files.fopen(headers_out, 'w') as hof:
             hof.write(result_headers)
 
     if cookies is not None:
@@ -551,7 +614,7 @@ def query(url,
     if persist_session is True and HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
-            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
+            with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
                     msgpack.dump({'Cookie': session_cookies}, fh_)
@@ -590,19 +653,19 @@ def query(url,
             return ret
 
         if decode_type == 'json':
-            ret['dict'] = json.loads(salt.utils.to_str(result_text))
+            ret['dict'] = salt.utils.json.loads(result_text)
         elif decode_type == 'xml':
             ret['dict'] = []
             items = ET.fromstring(result_text)
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
         elif decode_type == 'yaml':
-            ret['dict'] = yaml.safe_load(result_text)
+            ret['dict'] = salt.utils.data.decode(salt.utils.yaml.safe_load(result_text))
         else:
             text = True
 
         if decode_out:
-            with salt.utils.fopen(decode_out, 'w') as dof:
+            with salt.utils.files.fopen(decode_out, 'w') as dof:
                 dof.write(result_text)
 
     if text is True:
@@ -627,7 +690,7 @@ def get_ca_bundle(opts=None):
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
 
-    file_roots = opts.get('file_roots', {'base': [syspaths.SRV_ROOT_DIR]})
+    file_roots = opts.get('file_roots', {'base': [salt.syspaths.SRV_ROOT_DIR]})
 
     # Please do not change the order without good reason
 
@@ -655,7 +718,7 @@ def get_ca_bundle(opts=None):
         if os.path.exists(path):
             return path
 
-    if salt.utils.is_windows() and HAS_CERTIFI:
+    if salt.utils.platform.is_windows() and HAS_CERTIFI:
         return certifi.where()
 
     return None
@@ -698,7 +761,7 @@ def update_ca_bundle(
     if source is None:
         source = opts.get('ca_bundle_url', 'http://curl.haxx.se/ca/cacert.pem')
 
-    log.debug('Attempting to download {0} to {1}'.format(source, target))
+    log.debug('Attempting to download %s to %s', source, target)
     query(
         source,
         text=True,
@@ -722,31 +785,28 @@ def update_ca_bundle(
         for cert_file in merge_files:
             if os.path.exists(cert_file):
                 log.debug(
-                    'Queueing up {0} to be appended to {1}'.format(
-                        cert_file, target
-                    )
+                    'Queueing up %s to be appended to %s',
+                    cert_file, target
                 )
                 try:
-                    with salt.utils.fopen(cert_file, 'r') as fcf:
+                    with salt.utils.files.fopen(cert_file, 'r') as fcf:
                         merge_content = '\n'.join((merge_content, fcf.read()))
                 except IOError as exc:
                     log.error(
-                        'Reading from {0} caused the following error: {1}'.format(
-                            cert_file, exc
-                        )
+                        'Reading from %s caused the following error: %s',
+                        cert_file, exc
                     )
 
         if merge_content:
-            log.debug('Appending merge_files to {0}'.format(target))
+            log.debug('Appending merge_files to %s', target)
             try:
-                with salt.utils.fopen(target, 'a') as tfp:
+                with salt.utils.files.fopen(target, 'a') as tfp:
                     tfp.write('\n')
                     tfp.write(merge_content)
             except IOError as exc:
                 log.error(
-                    'Writing to {0} caused the following error: {1}'.format(
-                        target, exc
-                    )
+                    'Writing to %s caused the following error: %s',
+                    target, exc
                 )
 
 
@@ -765,10 +825,10 @@ def _render(template, render, renderer, template_dict, opts):
         ret = compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
         if salt.utils.stringio.is_readable(ret):
             ret = ret.read()
-        if str(ret).startswith('#!') and not str(ret).startswith('#!/'):
-            ret = str(ret).split('\n', 1)[1]
+        if six.text_type(ret).startswith('#!') and not six.text_type(ret).startswith('#!/'):
+            ret = six.text_type(ret).split('\n', 1)[1]
         return ret
-    with salt.utils.fopen(template, 'r') as fh_:
+    with salt.utils.files.fopen(template, 'r') as fh_:
         return fh_.read()
 
 
@@ -839,12 +899,10 @@ def parse_cookie_header(header):
     for cookie in cookies:
         name = None
         value = None
-        for item in cookie.keys():
+        for item in list(cookie):
             if item in attribs:
                 continue
-            name = item
-            value = cookie[item]
-            del cookie[name]
+            value = cookie.pop(item)
 
         # cookielib.Cookie() requires an epoch
         if 'expires' in cookie:
@@ -852,7 +910,7 @@ def parse_cookie_header(header):
 
         # Fill in missing required fields
         for req in reqd:
-            if req not in cookie.keys():
+            if req not in cookie:
                 cookie[req] = ''
         if cookie['version'] == '':
             cookie['version'] = 0
@@ -889,7 +947,7 @@ def sanitize_url(url, hide_fields):
             log_url += url_tmp
         return log_url.rstrip('&')
     else:
-        return str(url)
+        return six.text_type(url)
 
 
 def _sanitize_url_components(comp_list, field):

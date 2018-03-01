@@ -69,7 +69,7 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
         server:    ldap.company.tld
         port:      389
         tls:       true
-        dn:        'dc=company,dc=tld
+        dn:        'dc=company,dc=tld'
         binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
         bindpw:    bi7ieBai5Ano
         referrals: false
@@ -109,12 +109,11 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
 List Mode
 ---------
 
-TODO: see also `_result_to_dict()` documentation
+TODO: see also ``_result_to_dict()`` documentation
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 
@@ -122,7 +121,6 @@ import logging
 from salt.exceptions import SaltInvocationError
 
 # Import third party libs
-import yaml
 from jinja2 import Environment, FileSystemLoader
 try:
     import ldap  # pylint: disable=W0611
@@ -203,8 +201,11 @@ def _result_to_dict(data, result, conf, source):
         data[source] = []
         for record in result:
             ret = {}
+            if 'dn' in attrs or 'distinguishedName' in attrs:
+                log.debug('dn: %s', record[0])
+                ret['dn'] = record[0]
             record = record[1]
-            log.debug('record: {0}'.format(record))
+            log.debug('record: %s', record)
             for key in record:
                 if key in attrs:
                     for item in record.get(key):
@@ -226,7 +227,6 @@ def _result_to_dict(data, result, conf, source):
                             data[skey] = [sval]
                         else:
                             data[skey].append(sval)
-    print('Returning data {0}'.format(data))
     return data
 
 
@@ -258,11 +258,7 @@ def _do_search(conf):
         result = __salt__['ldap.search'](_filter, _dn, scope, attrs,
                                          **connargs)['results']
     except IndexError:  # we got no results for this search
-        log.debug(
-            'LDAP search returned no results for filter {0}'.format(
-                _filter
-            )
-        )
+        log.debug('LDAP search returned no results for filter %s', _filter)
         result = {}
     except Exception:
         log.critical(
@@ -279,26 +275,27 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     Execute LDAP searches and return the aggregated data
     '''
     if os.path.isfile(config_file):
+        import salt.utils.yaml
         try:
             #open(config_file, 'r') as raw_config:
             config = _render_template(config_file) or {}
-            opts = yaml.safe_load(config) or {}
+            opts = salt.utils.yaml.safe_load(config) or {}
             opts['conf_file'] = config_file
         except Exception as err:
             import salt.log
-            msg = 'Error parsing configuration file: {0} - {1}'
+            msg = 'Error parsing configuration file: {0} - {1}'.format(config_file, err)
             if salt.log.is_console_configured():
-                log.warning(msg.format(config_file, err))
+                log.warning(msg)
             else:
-                print(msg.format(config_file, err))
+                print(msg)
     else:
-        log.debug('Missing configuration file: {0}'.format(config_file))
+        log.debug('Missing configuration file: %s', config_file)
 
     data = {}
     for source in opts['search_order']:
         config = opts[source]
         result = _do_search(config)
-        print('source {0} got result {1}'.format(source, result))
+        log.debug('source %s got result %s', source, result)
         if result:
             data = _result_to_dict(data, result, config, source)
     return data

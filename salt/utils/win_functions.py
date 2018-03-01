@@ -3,17 +3,22 @@
 Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import platform
+import re
+import ctypes
+
+# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd Party Libs
 try:
-    import ntsecuritycon
     import psutil
     import pywintypes
     import win32api
     import win32net
     import win32security
+    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE, SMTO_ABORTIFHUNG
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
@@ -101,33 +106,17 @@ def get_sid_from_name(name):
     Returns:
         str: The corresponding SID
     '''
+    # If None is passed, use the Universal Well-known SID "Null SID"
+    if name is None:
+        name = 'NULL SID'
+
     try:
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'User {0} found: {1}'.format(name, exc[2]))
+            'User {0} not found: {1}'.format(name, exc))
 
     return win32security.ConvertSidToStringSid(sid)
-
-
-def get_name_from_sid(sid):
-    '''
-    This gets the name from the specified SID. Opposite of get_sid_from_name
-
-    Args:
-        sid (str): The SID for which to find the name
-
-    Returns:
-        str: The name that corresponds to the passed SID
-    '''
-    try:
-        sid_obj = win32security.ConvertStringSidToSid(sid)
-        name = win32security.LookupAccountSid(None, sid_obj)[0]
-    except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'User {0} found: {1}'.format(sid, exc[2]))
-
-    return name
 
 
 def get_current_user():
@@ -149,7 +138,7 @@ def get_current_user():
                 user_name = 'SYSTEM'
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed to get current user: {0}'.format(exc[2]))
+            'Failed to get current user: {0}'.format(exc))
 
     if not user_name:
         return False
@@ -157,87 +146,147 @@ def get_current_user():
     return user_name
 
 
-def get_path_owner(path):
+def get_sam_name(username):
+    r'''
+    Gets the SAM name for a user. It basically prefixes a username without a
+    backslash with the computer name. If the user does not exist, a SAM
+    compatible name will be returned using the local hostname as the domain.
+
+    i.e. salt.utils.get_same_name('Administrator') would return 'DOMAIN.COM\Administrator'
+
+    .. note:: Long computer names are truncated to 15 characters
     '''
-    Gets the owner of the file or directory passed
-
-    Args:
-        path (str): The path for which to obtain owner information
-
-    Returns:
-        str: The owner (group or user)
-    '''
-    # Return owner
-    security_descriptor = win32security.GetFileSecurity(
-        path, win32security.OWNER_SECURITY_INFORMATION)
-    owner_sid = security_descriptor.GetSecurityDescriptorOwner()
-
-    return get_name_from_sid(win32security.ConvertSidToStringSid(owner_sid))
-
-
-def set_path_owner(path):
-    '''
-    Sets the owner of a file or directory to be Administrator
-
-    Args:
-        path (str): The path to the file or directory
-
-    Returns:
-        bool: True if successful, Otherwise CommandExecutionError
-    '''
-    # Must use the SID here to be locale agnostic
-    admins = win32security.ConvertStringSidToSid('S-1-5-32-544')
     try:
-        win32security.SetNamedSecurityInfo(
-            path,
-            win32security.SE_FILE_OBJECT,
-            win32security.OWNER_SECURITY_INFORMATION |
-            win32security.PROTECTED_DACL_SECURITY_INFORMATION,
-            admins,
-            None, None, None)
-    except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'Failed to set owner: {0}'.format(exc[2]))
-
-    return True
+        sid_obj = win32security.LookupAccountName(None, username)[0]
+    except pywintypes.error:
+        return '\\'.join([platform.node()[:15].upper(), username])
+    username, domain, _ = win32security.LookupAccountSid(None, sid_obj)
+    return '\\'.join([domain, username])
 
 
-def set_path_permissions(path):
+def enable_ctrl_logoff_handler():
+    if HAS_WIN32:
+        ctrl_logoff_event = 5
+        win32api.SetConsoleCtrlHandler(
+            lambda event: True if event == ctrl_logoff_event else False,
+            1
+        )
+
+
+def escape_argument(arg):
     '''
-    Gives Administrators, System, and Owner full control over the specified
-    directory
+    Escape the argument for the cmd.exe shell.
+    See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
+
+    First we escape the quote chars to produce a argument suitable for
+    CommandLineToArgvW. We don't need to do this for simple arguments.
 
     Args:
-        path (str): The path to the file or directory
+        arg (str): a single command line argument to escape for the cmd.exe shell
 
     Returns:
-        bool: True if successful, Otherwise CommandExecutionError
+        str: an escaped string suitable to be passed as a program argument to the cmd.exe shell
     '''
-    # TODO: Need to make this more generic, maybe a win_dacl utility
-    admins = win32security.ConvertStringSidToSid('S-1-5-32-544')
-    system = win32security.ConvertStringSidToSid('S-1-5-18')
-    owner = win32security.ConvertStringSidToSid('S-1-3-4')
+    if not arg or re.search(r'(["\s])', arg):
+        arg = '"' + arg.replace('"', r'\"') + '"'
 
-    dacl = win32security.ACL()
+    return escape_for_cmd_exe(arg)
 
-    revision = win32security.ACL_REVISION_DS
-    inheritance = win32security.CONTAINER_INHERIT_ACE |\
-        win32security.OBJECT_INHERIT_ACE
-    full_access = ntsecuritycon.GENERIC_ALL
 
-    dacl.AddAccessAllowedAceEx(revision, inheritance, full_access, admins)
-    dacl.AddAccessAllowedAceEx(revision, inheritance, full_access, system)
-    dacl.AddAccessAllowedAceEx(revision, inheritance, full_access, owner)
+def escape_for_cmd_exe(arg):
+    '''
+    Escape an argument string to be suitable to be passed to
+    cmd.exe on Windows
 
-    try:
-        win32security.SetNamedSecurityInfo(
-            path,
-            win32security.SE_FILE_OBJECT,
-            win32security.DACL_SECURITY_INFORMATION |
-            win32security.PROTECTED_DACL_SECURITY_INFORMATION,
-            None, None, dacl, None)
-    except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'Failed to set permissions: {0}'.format(exc[2]))
+    This method takes an argument that is expected to already be properly
+    escaped for the receiving program to be properly parsed. This argument
+    will be further escaped to pass the interpolation performed by cmd.exe
+    unchanged.
 
-    return True
+    Any meta-characters will be escaped, removing the ability to e.g. use
+    redirects or variables.
+
+    Args:
+        arg (str): a single command line argument to escape for cmd.exe
+
+    Returns:
+        str: an escaped string suitable to be passed as a program argument to cmd.exe
+    '''
+    meta_chars = '()%!^"<>&|'
+    meta_re = re.compile('(' + '|'.join(re.escape(char) for char in list(meta_chars)) + ')')
+    meta_map = {char: "^{0}".format(char) for char in meta_chars}
+
+    def escape_meta_chars(m):
+        char = m.group(1)
+        return meta_map[char]
+
+    return meta_re.sub(escape_meta_chars, arg)
+
+
+def broadcast_setting_change(message='Environment'):
+    '''
+    Send a WM_SETTINGCHANGE Broadcast to all Windows
+
+    Args:
+
+        message (str):
+            A string value representing the portion of the system that has been
+            updated and needs to be refreshed. Default is ``Environment``. These
+            are some common values:
+
+            - "Environment" : to effect a change in the environment variables
+            - "intl" : to effect a change in locale settings
+            - "Policy" : to effect a change in Group Policy Settings
+            - a leaf node in the registry
+            - the name of a section in the ``Win.ini`` file
+
+            See lParam within msdn docs for
+            `WM_SETTINGCHANGE <https://msdn.microsoft.com/en-us/library/ms725497%28VS.85%29.aspx>`_
+            for more information on Broadcasting Messages.
+
+            See GWL_WNDPROC within msdn docs for
+            `SetWindowLong <https://msdn.microsoft.com/en-us/library/windows/desktop/ms633591(v=vs.85).aspx>`_
+            for information on how to retrieve those messages.
+
+    .. note::
+        This will only affect new processes that aren't launched by services. To
+        apply changes to the path or registry to services, the host must be
+        restarted. The ``salt-minion``, if running as a service, will not see
+        changes to the environment until the system is restarted. Services
+        inherit their environment from ``services.exe`` which does not respond
+        to messaging events. See
+        `MSDN Documentation <https://support.microsoft.com/en-us/help/821761/changes-that-you-make-to-environment-variables-do-not-affect-services>`_
+        for more information.
+
+    CLI Example:
+
+    ... code-block:: python
+
+        import salt.utils.win_functions
+        salt.utils.win_functions.broadcast_setting_change('Environment')
+    '''
+    # Listen for messages sent by this would involve working with the
+    # SetWindowLong function. This can be accessed via win32gui or through
+    # ctypes. You can find examples on how to do this by searching for
+    # `Accessing WGL_WNDPROC` on the internet. Here are some examples of how
+    # this might work:
+    #
+    # # using win32gui
+    # import win32con
+    # import win32gui
+    # old_function = win32gui.SetWindowLong(window_handle, win32con.GWL_WNDPROC, new_function)
+    #
+    # # using ctypes
+    # import ctypes
+    # import win32con
+    # from ctypes import c_long, c_int
+    # user32 = ctypes.WinDLL('user32', use_last_error=True)
+    # WndProcType = ctypes.WINFUNCTYPE(c_int, c_long, c_int, c_int)
+    # new_function = WndProcType
+    # old_function = user32.SetWindowLongW(window_handle, win32con.GWL_WNDPROC, new_function)
+    broadcast_message = ctypes.create_unicode_buffer(message)
+    user32 = ctypes.WinDLL('user32', use_last_error=True)
+    result = user32.SendMessageTimeoutW(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
+                                        broadcast_message, SMTO_ABORTIFHUNG,
+                                        5000, 0)
+    return result == 1

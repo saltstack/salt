@@ -3,13 +3,16 @@
 the locale utils used by salt
 '''
 
-from __future__ import absolute_import
-
+# Import Python libs
+from __future__ import absolute_import, unicode_literals
 import sys
 
-import salt.utils
+# Import Salt libs
+import salt.utils.stringutils
 from salt.utils.decorators import memoize as real_memoize
-from salt.ext.six import string_types
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 @real_memoize
@@ -37,16 +40,17 @@ def sdecode(string_):
     '''
     Since we don't know where a string is coming from and that string will
     need to be safely decoded, this function will attempt to decode the string
-    until if has a working string that does not stack trace
+    until it has a working string that does not stack trace
     '''
     encodings = get_encodings()
     for encoding in encodings:
         try:
-            decoded = salt.utils.to_unicode(string_, encoding)
-            # Make sure unicode string ops work
-            u' ' + decoded  # pylint: disable=W0104
+            decoded = salt.utils.stringutils.to_unicode(string_, encoding)
+            if isinstance(decoded, six.string_types):
+                # Make sure unicode string ops work
+                u' ' + decoded  # pylint: disable=W0104
             return decoded
-        except UnicodeDecodeError:
+        except (TypeError, UnicodeDecodeError):
             continue
     return string_
 
@@ -56,7 +60,7 @@ def sdecode_if_string(value_):
     If the value is a string, run sdecode() on it to ensure it is parsed
     properly. If it is not a string, return it as-is
     '''
-    if isinstance(value_, string_types):
+    if isinstance(value_, six.string_types):
         value_ = sdecode(value_)
     return value_
 

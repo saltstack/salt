@@ -4,22 +4,22 @@ Helpful decorators for module writing
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import inspect
 import logging
+import sys
 import time
 from functools import wraps
 from collections import defaultdict
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
-from salt.exceptions import CommandNotFoundError, CommandExecutionError
-from salt.version import SaltStackVersion, __saltstack_version__
+import salt.utils.data
+from salt.exceptions import CommandExecutionError, SaltConfigurationError
 from salt.log import LOG_LEVELS
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -52,9 +52,8 @@ class Depends(object):
         '''
 
         log.trace(
-            'Depends decorator instantiated with dep list of {0}'.format(
-                dependencies
-            )
+            'Depends decorator instantiated with dep list of %s',
+            dependencies
         )
         self.dependencies = dependencies
         self.fallback_function = kwargs.get('fallback_function')
@@ -78,8 +77,10 @@ class Depends(object):
                 self.dependency_dict[kind][dep][(mod_name, fun_name)] = \
                         (frame, self.fallback_function)
         except Exception as exc:
-            log.error('Exception encountered when attempting to inspect frame in '
-                      'dependency decorator: {0}'.format(exc))
+            log.error(
+                'Exception encountered when attempting to inspect frame in '
+                'dependency decorator: %s', exc
+            )
         return function
 
     @classmethod
@@ -95,30 +96,21 @@ class Depends(object):
                 # check if dependency is loaded
                 if dependency is True:
                     log.trace(
-                        'Dependency for {0}.{1} exists, not unloading'.format(
-                            mod_name,
-                            func_name
-                        )
+                        'Dependency for %s.%s exists, not unloading',
+                        mod_name, func_name
                     )
                     continue
                 # check if you have the dependency
                 if dependency in frame.f_globals \
                         or dependency in frame.f_locals:
                     log.trace(
-                        'Dependency ({0}) already loaded inside {1}, '
-                        'skipping'.format(
-                            dependency,
-                            mod_name
-                        )
+                        'Dependency (%s) already loaded inside %s, skipping',
+                        dependency, mod_name
                     )
                     continue
                 log.trace(
-                    'Unloading {0}.{1} because dependency ({2}) is not '
-                    'imported'.format(
-                        mod_name,
-                        func_name,
-                        dependency
-                    )
+                    'Unloading %s.%s because dependency (%s) is not imported',
+                    mod_name, func_name, dependency
                 )
                 # if not, unload the function
                 if frame:
@@ -140,7 +132,7 @@ class Depends(object):
                             del functions[mod_key]
                     except AttributeError:
                         # we already did???
-                        log.trace('{0} already removed, skipping'.format(mod_key))
+                        log.trace('%s already removed, skipping', mod_key)
                         continue
 
 
@@ -154,96 +146,45 @@ def timing(function):
     @wraps(function)
     def wrapped(*args, **kwargs):
         start_time = time.time()
-        ret = function(*args, **salt.utils.clean_kwargs(**kwargs))
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
         end_time = time.time()
         if function.__module__.startswith('salt.loaded.int.'):
             mod_name = function.__module__[16:]
         else:
             mod_name = function.__module__
-        log.profile(
-            'Function {0}.{1} took {2:.20f} seconds to execute'.format(
-                mod_name,
-                function.__name__,
-                end_time - start_time
-            )
+        fstr = 'Function %s.%s took %.{0}f seconds to execute'.format(
+            sys.float_info.dig
         )
+        log.profile(fstr, mod_name, function.__name__, end_time - start_time)
         return ret
     return wrapped
-
-
-def which(exe):
-    '''
-    Decorator wrapper for salt.utils.which
-    '''
-    def wrapper(function):
-        def wrapped(*args, **kwargs):
-            if salt.utils.which(exe) is None:
-                raise CommandNotFoundError(
-                    'The \'{0}\' binary was not found in $PATH.'.format(exe)
-                )
-            return function(*args, **kwargs)
-        return identical_signature_wrapper(function, wrapped)
-    return wrapper
-
-
-def which_bin(exes):
-    '''
-    Decorator wrapper for salt.utils.which_bin
-    '''
-    def wrapper(function):
-        def wrapped(*args, **kwargs):
-            if salt.utils.which_bin(exes) is None:
-                raise CommandNotFoundError(
-                    'None of provided binaries({0}) was not found '
-                    'in $PATH.'.format(
-                        ['\'{0}\''.format(exe) for exe in exes]
-                    )
-                )
-            return function(*args, **kwargs)
-        return identical_signature_wrapper(function, wrapped)
-    return wrapper
-
-
-def identical_signature_wrapper(original_function, wrapped_function):
-    '''
-    Return a function with identical signature as ``original_function``'s which
-    will call the ``wrapped_function``.
-    '''
-    context = {'__wrapped__': wrapped_function}
-    function_def = compile(
-        'def {0}({1}):\n'
-        '    return __wrapped__({2})'.format(
-            # Keep the original function name
-            original_function.__name__,
-            # The function signature including defaults, i.e., 'timeout=1'
-            inspect.formatargspec(
-                *salt.utils.args.get_function_argspec(original_function)
-            )[1:-1],
-            # The function signature without the defaults
-            inspect.formatargspec(
-                formatvalue=lambda val: '',
-                *salt.utils.args.get_function_argspec(original_function)
-            )[1:-1]
-        ),
-        '<string>',
-        'exec'
-    )
-    six.exec_(function_def, context)
-    return wraps(original_function)(context[original_function.__name__])
 
 
 def memoize(func):
     '''
     Memoize aka cache the return output of a function
     given a specific set of arguments
+
+    .. versionedited:: 2016.3.4
+
+    Added **kwargs support.
     '''
     cache = {}
 
     @wraps(func)
-    def _memoize(*args):
-        if args not in cache:
-            cache[args] = func(*args)
-        return cache[args]
+    def _memoize(*args, **kwargs):
+        str_args = []
+        for arg in args:
+            if not isinstance(arg, six.string_types):
+                str_args.append(six.text_type(arg))
+            else:
+                str_args.append(arg)
+
+        args_ = ','.join(list(str_args) + ['{0}={1}'.format(k, kwargs[k]) for k in sorted(kwargs)])
+        if args_ not in cache:
+            cache[args_] = func(*args, **kwargs)
+        return cache[args_]
+
     return _memoize
 
 
@@ -253,6 +194,9 @@ class _DeprecationDecorator(object):
     Takes care of a common functionality, used in its derivatives.
     '''
 
+    OPT_IN = 1
+    OPT_OUT = 2
+
     def __init__(self, globals, version):
         '''
         Constructor.
@@ -261,12 +205,11 @@ class _DeprecationDecorator(object):
         :param version: Expiration version
         :return:
         '''
-
+        from salt.version import SaltStackVersion, __saltstack_version__
         self._globals = globals
         self._exp_version_name = version
         self._exp_version = SaltStackVersion.from_name(self._exp_version_name)
         self._curr_version = __saltstack_version__.info
-        self._options = self._globals['__opts__']
         self._raise_later = None
         self._function = None
         self._orig_f_name = None
@@ -281,11 +224,15 @@ class _DeprecationDecorator(object):
         _args = list()
         _kwargs = dict()
 
-        for arg_item in kwargs.get('__pub_arg', list()):
-            if type(arg_item) == dict:
-                _kwargs.update(arg_item.copy())
-            else:
-                _args.append(arg_item)
+        if '__pub_arg' in kwargs:  # For modules
+            for arg_item in kwargs.get('__pub_arg', list()):
+                if type(arg_item) == dict:
+                    _kwargs.update(arg_item.copy())
+                else:
+                    _args.append(arg_item)
+        else:
+            _kwargs = kwargs.copy()  # For states
+
         return _args, _kwargs
 
     def _call_function(self, kwargs):
@@ -302,14 +249,17 @@ class _DeprecationDecorator(object):
             try:
                 return self._function(*args, **kwargs)
             except TypeError as error:
-                error = str(error).replace(self._function.__name__, self._orig_f_name)  # Hide hidden functions
-                log.error('Function "{f_name}" was not properly called: {error}'.format(f_name=self._orig_f_name,
-                                                                                        error=error))
+                error = six.text_type(error).replace(self._function, self._orig_f_name)  # Hide hidden functions
+                log.error(
+                    'Function "%s" was not properly called: %s',
+                    self._orig_f_name, error
+                )
                 return self._function.__doc__
             except Exception as error:
-                log.error('Unhandled exception occurred in '
-                          'function "{f_name}: {error}'.format(f_name=self._function.__name__,
-                                                               error=error))
+                log.error(
+                    'Unhandled exception occurred in function "%s: %s',
+                    self._function.__name__, error
+                )
                 raise error
         else:
             raise CommandExecutionError("Function is deprecated, but the successor function was not found.")
@@ -492,33 +442,52 @@ class _WithDeprecated(_DeprecationDecorator):
 
     '''
     MODULE_NAME = '__virtualname__'
-    CFG_KEY = 'use_deprecated'
+    CFG_USE_DEPRECATED = 'use_deprecated'
+    CFG_USE_SUPERSEDED = 'use_superseded'
 
-    def __init__(self, globals, version, with_name=None):
+    def __init__(self, globals, version, with_name=None, policy=_DeprecationDecorator.OPT_OUT):
         '''
         Constructor of the decorator 'with_deprecated'
 
         :param globals:
         :param version:
         :param with_name:
+        :param policy:
         :return:
         '''
         _DeprecationDecorator.__init__(self, globals, version)
         self._with_name = with_name
+        self._policy = policy
 
     def _set_function(self, function):
         '''
         Based on the configuration, set to execute an old or a new function.
         :return:
         '''
-        full_name = "{m_name}.{f_name}".format(m_name=self._globals.get(self.MODULE_NAME, ''),
-                                               f_name=function.__name__)
+        full_name = "{m_name}.{f_name}".format(
+            m_name=self._globals.get(self.MODULE_NAME, '') or self._globals['__name__'].split('.')[-1],
+            f_name=function.__name__)
         if full_name.startswith("."):
             self._raise_later = CommandExecutionError('Module not found for function "{f_name}"'.format(
                 f_name=function.__name__))
 
-        if full_name in self._options.get(self.CFG_KEY, list()):
-            self._function = self._globals.get(self._with_name or "_{0}".format(function.__name__))
+        opts = self._globals.get('__opts__', '{}')
+        pillar = self._globals.get('__pillar__', '{}')
+
+        use_deprecated = (full_name in opts.get(self.CFG_USE_DEPRECATED, list()) or
+                          full_name in pillar.get(self.CFG_USE_DEPRECATED, list()))
+
+        use_superseded = (full_name in opts.get(self.CFG_USE_SUPERSEDED, list()) or
+                          full_name in pillar.get(self.CFG_USE_SUPERSEDED, list()))
+
+        if use_deprecated and use_superseded:
+            raise SaltConfigurationError("Function '{0}' is mentioned both in deprecated "
+                                         "and superseded sections. Please remove any of that.".format(full_name))
+        old_function = self._globals.get(self._with_name or "_{0}".format(function.__name__))
+        if self._policy == self.OPT_IN:
+            self._function = function if use_superseded else old_function
+        else:
+            self._function = old_function if use_deprecated else function
 
     def _is_used_deprecated(self):
         '''
@@ -527,8 +496,17 @@ class _WithDeprecated(_DeprecationDecorator):
 
         :return:
         '''
-        return "{m_name}.{f_name}".format(m_name=self._globals.get(self.MODULE_NAME, ''),
-                                          f_name=self._orig_f_name) in self._options.get(self.CFG_KEY, list())
+        func_path = "{m_name}.{f_name}".format(
+            m_name=self._globals.get(self.MODULE_NAME, '') or self._globals['__name__'].split('.')[-1],
+            f_name=self._orig_f_name)
+
+        return func_path in self._globals.get('__opts__').get(
+            self.CFG_USE_DEPRECATED, list()) or func_path in self._globals.get('__pillar__').get(
+            self.CFG_USE_DEPRECATED, list()) or (self._policy == self.OPT_IN
+                                                 and not (func_path in self._globals.get('__opts__', {}).get(
+                                                          self.CFG_USE_SUPERSEDED, list()))
+                                                 and not (func_path in self._globals.get('__pillar__', {}).get(
+                                                          self.CFG_USE_SUPERSEDED, list()))), func_path
 
     def __call__(self, function):
         '''
@@ -549,7 +527,8 @@ class _WithDeprecated(_DeprecationDecorator):
             :return:
             '''
             self._set_function(function)
-            if self._is_used_deprecated():
+            is_deprecated, func_path = self._is_used_deprecated()
+            if is_deprecated:
                 if self._curr_version < self._exp_version:
                     msg = list()
                     if self._with_name:
@@ -557,10 +536,11 @@ class _WithDeprecated(_DeprecationDecorator):
                                    'expire in version "{version_name}".'.format(
                                        f_name=self._with_name.startswith("_") and self._orig_f_name or self._with_name,
                                        version_name=self._exp_version_name))
+                        msg.append('Use its successor "{successor}" instead.'.format(successor=self._orig_f_name))
                     else:
-                        msg.append('The function is using its deprecated version and will '
-                                   'expire in version "{version_name}".'.format(version_name=self._exp_version_name))
-                    msg.append('Use its successor "{successor}" instead.'.format(successor=self._orig_f_name))
+                        msg.append('The function "{f_name}" is using its deprecated version and will '
+                                   'expire in version "{version_name}".'.format(f_name=func_path,
+                                                                                version_name=self._exp_version_name))
                     log.warning(' '.join(msg))
                 else:
                     msg_patt = 'The lifetime of the function "{f_name}" expired.'
@@ -582,3 +562,37 @@ class _WithDeprecated(_DeprecationDecorator):
 
 
 with_deprecated = _WithDeprecated
+
+
+def ignores_kwargs(*kwarg_names):
+    '''
+    Decorator to filter out unexpected keyword arguments from the call
+
+    kwarg_names:
+        List of argument names to ignore
+    '''
+    def _ignores_kwargs(fn):
+        def __ignores_kwargs(*args, **kwargs):
+            kwargs_filtered = kwargs.copy()
+            for name in kwarg_names:
+                if name in kwargs_filtered:
+                    del kwargs_filtered[name]
+            return fn(*args, **kwargs_filtered)
+        return __ignores_kwargs
+    return _ignores_kwargs
+
+
+def ensure_unicode_args(function):
+    '''
+    Decodes all arguments passed to the wrapped function
+    '''
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        if six.PY2:
+            return function(
+                *salt.utils.data.decode_list(args),
+                **salt.utils.data.decode_dict(kwargs)
+            )
+        else:
+            return function(*args, **kwargs)
+    return wrapped

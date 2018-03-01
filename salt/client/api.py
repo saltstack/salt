@@ -14,8 +14,9 @@ client applications.
     http://docs.saltstack.com/ref/clients/index.html
 
 '''
-from __future__ import absolute_import
+
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt libs
@@ -24,9 +25,9 @@ import salt.auth
 import salt.client
 import salt.runner
 import salt.wheel
-import salt.utils
+import salt.utils.args
+import salt.utils.event
 import salt.syspaths as syspaths
-from salt.utils.event import tagify
 from salt.exceptions import EauthAuthenticationError
 
 
@@ -77,7 +78,7 @@ class APIClient(object):
             'fun' : 'modulefunctionstring',
             'kwarg': functionkeywordargdictionary,
             'tgt' : 'targetpatternstring',
-            'expr_form' : 'targetpatterntype',
+            'tgt_type' : 'targetpatterntype',
             'ret' : 'returner namestring',
             'timeout': 'functiontimeout',
             'arg' : 'functionpositionalarg sequence',
@@ -106,7 +107,7 @@ class APIClient(object):
         kwarg: A dictionary of keyword function parameters to be passed to the eventual
                salt function specified by fun:
         tgt: Pattern string specifying the targeted minions when the implied client is local
-        expr_form: Optional target pattern type string when client is local minion.
+        tgt_type: Optional target pattern type string when client is local minion.
             Defaults to 'glob' if missing
         ret: Optional name string of returner when local minion client.
         arg: Optional positional argument string when local minion client
@@ -181,7 +182,7 @@ class APIClient(object):
         {
             'module' : 'modulestring',
             'tgt' : 'targetpatternstring',
-            'expr_form' : 'targetpatterntype',
+            'tgt_type' : 'targetpatterntype',
             'token': 'salttokenstring',
             'username': 'usernamestring',
             'password': 'passwordstring',
@@ -194,7 +195,7 @@ class APIClient(object):
             the specified client.
         tgt: Optional pattern string specifying the targeted minions when client
           is 'minion'
-        expr_form: Optional target pattern type string when client is 'minion'.
+        tgt_type: Optional target pattern type string when client is 'minion'.
             Example: 'glob' defaults to 'glob' if missing
         token: the salt token. Either token: is required or the set of username:,
             password: , and eauth:
@@ -229,7 +230,7 @@ class APIClient(object):
                 functions = self.wheelClient.functions
             elif client == 'runner':
                 functions = self.runnerClient.functions
-            result = {'master': salt.utils.argspec_report(functions, module)}
+            result = {'master': salt.utils.args.argspec_report(functions, module)}
         return result
 
     def create_token(self, creds):
@@ -322,4 +323,4 @@ class APIClient(object):
         Need to convert this to a master call with appropriate authentication
 
         '''
-        return self.event.fire_event(data, tagify(tag, 'wui'))
+        return self.event.fire_event(data, salt.utils.event.tagify(tag, 'wui'))

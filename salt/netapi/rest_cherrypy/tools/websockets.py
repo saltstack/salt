@@ -1,9 +1,13 @@
 # encoding: utf-8
-from __future__ import absolute_import
-import cherrypy
+from __future__ import absolute_import, print_function, unicode_literals
 
-from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
-from ws4py.websocket import WebSocket
+try:
+    import cherrypy
+
+    from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
+    from ws4py.websocket import WebSocket
+except ImportError:
+    raise
 
 cherrypy.tools.websocket = WebSocketTool()
 WebSocketPlugin(cherrypy.engine).subscribe()
@@ -50,6 +54,6 @@ class SynchronizingWebsocket(WebSocket):
         This ensures completion of the underlying websocket connection
         and can be used to synchronize parallel senders.
         '''
-        if message.data == 'websocket client ready':
+        if message.data.decode('utf-8') == 'websocket client ready':
             self.pipe.send(message)
         self.send('server received message', False)

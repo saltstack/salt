@@ -27,12 +27,13 @@ in the master configuration file and uses the :ref:`access control system
           - 'web*':
             - test.*
             - network.*
-        steve:
+        steve|admin.*:
           - .*
 
-The above configuration allows the user ``thatch`` to execute functions
-in the test and network modules on the minions that match the web* target.
-User ``steve`` is given unrestricted access to minion commands.
+The above configuration allows the user ``thatch`` to execute functions in the
+test and network modules on the minions that match the web* target.  User
+``steve`` and the users whose logins start with ``admin``, are granted
+unrestricted access to minion commands.
 
 Salt respects the current PAM configuration in place, and uses the 'login'
 service to authenticate.
@@ -71,8 +72,8 @@ Matching syntax
 ---------------
 
 The structure of the ``external_auth`` dictionary can take the following
-shapes. Function matches are regular expressions; minion matches are compound
-targets.
+shapes. User and function matches are exact matches, shell glob patterns or
+regular expressions; minion matches are compound targets.
 
 By user:
 
@@ -92,6 +93,26 @@ By user, by minion:
         <user or group%>:
           <minion compound target>:
             - <regex to match function>
+
+By user, by runner/wheel:
+
+.. code-block:: yaml
+
+    external_auth:
+      <eauth backend>:
+        <user or group%>:
+          <@runner or @wheel>:
+            - <regex to match function>
+
+By user, by runner+wheel module:
+
+.. code-block:: yaml
+
+    external_auth:
+      <eauth backend>:
+        <user or group%>:
+          <@module_name>:
+            - <regex to match function without module_name>
 
 Groups
 ------
@@ -121,6 +142,14 @@ Positional arguments or keyword arguments to functions can also be whitelisted.
         my_user:
           - '*':
             - 'my_mod.*':
+                args:
+                  - 'a.*'
+                  - 'b.*'
+                kwargs:
+                  'kwa': 'kwa.*'
+                  'kwb': 'kwb'
+          - '@runner':
+            - 'runner_mod.*':
                 args:
                 - 'a.*'
                 - 'b.*'
@@ -243,6 +272,13 @@ Server configuration values and their defaults:
     auth.ldap.persontype: 'person'
 
     auth.ldap.minion_stripdomains: []
+    
+    # Redhat Identity Policy Audit
+    auth.ldap.freeipa: False
+
+
+Authenticating to the LDAP Server
++++++++++++++++++++++++++++++++++
 
 There are two phases to LDAP authentication.  First, Salt authenticates to search for a users' Distinguished Name
 and group membership.  The user it authenticates as in this phase is often a special LDAP system user with
@@ -278,6 +314,10 @@ substitutes the ``{{ username }}`` value for the username when querying LDAP
 
     auth.ldap.filter: uid={{ username }}
 
+
+Determining Group Memberships (OpenLDAP / non-Active Directory)
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 For OpenLDAP, to determine group membership, one can specify an OU that contains
 group data. This is prepended to the basedn to create a search path.  Then
 the results are filtered against ``auth.ldap.groupclass``, default
@@ -287,7 +327,16 @@ the results are filtered against ``auth.ldap.groupclass``, default
 
     auth.ldap.groupou: Groups
 
-When using the `ldap('DC=domain,DC=com')` eauth operator, sometimes the records returned
+Note that as of 2017.7, auth.ldap.groupclass can refer to either a groupclass or an objectClass.
+For some LDAP servers (notably OpenLDAP without the ``memberOf`` overlay enabled) to determine group
+membership we need to know both the ``objectClass`` and the ``memberUid`` attributes.  Usually for these
+servers you will want a ``auth.ldap.groupclass`` of ``posixGroup`` and an ``auth.ldap.groupattribute`` of
+``memberUid``.
+
+LDAP servers with the ``memberOf`` overlay will have entries similar to ``auth.ldap.groupclass: person`` and
+``auth.ldap.groupattribute: memberOf``.
+
+When using the ``ldap('DC=domain,DC=com')`` eauth operator, sometimes the records returned
 from LDAP or Active Directory have fully-qualified domain names attached, while minion IDs
 instead are simple hostnames.  The parameter below allows the administrator to strip
 off a certain set of domain names so the hostnames looked up in the directory service
@@ -297,8 +346,9 @@ can match the minion IDs.
 
    auth.ldap.minion_stripdomains: ['.external.bigcorp.com', '.internal.bigcorp.com']
 
-Active Directory
-----------------
+
+Determining Group Memberships (Active Directory)
+++++++++++++++++++++++++++++++++++++++++++++++++
 
 Active Directory handles group membership differently, and does not utilize the
 ``groupou`` configuration variable.  AD needs the following options in
@@ -363,5 +413,5 @@ be part of the eAuth definition, they can be specified like this:
           - ldap('DC=corp,DC=example,DC=com'):
             - test.echo
 
-The string inside `ldap()` above is any valid LDAP/AD tree limiter.  `OU=` in
+The string inside ``ldap()`` above is any valid LDAP/AD tree limiter.  ``OU=`` in
 particular is permitted as long as it would return a list of computer objects.

@@ -2,13 +2,13 @@
 '''
 Module for managing ext2/3/4 file systems
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -17,8 +17,12 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if salt.utils.is_windows():
-        return (False, 'The extfs execution module cannot be loaded: only available on non-Windows systems.')
+    if salt.utils.platform.is_windows():
+        return (
+            False,
+            'The extfs execution module cannot be loaded: only available on '
+            'non-Windows systems.'
+        )
     return True
 
 

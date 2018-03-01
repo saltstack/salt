@@ -8,10 +8,11 @@
 
     This utility allows parsing a file in chunks.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt libs
-import salt.utils
+from salt.ext import six
+import salt.utils.files
 from salt.exceptions import SaltException
 
 
@@ -56,7 +57,7 @@ class BufferedReader(object):
         if 'a' in mode or 'w' in mode:
             raise InvalidFileMode("Cannot open file in write or append mode")
         self.__path = path
-        self.__file = salt.utils.fopen(self.__path, mode)
+        self.__file = salt.utils.files.fopen(self.__path, mode)  # pylint: disable=resource-leakage
         self.__max_in_mem = max_in_mem
         self.__chunk_size = chunk_size
         self.__buffered = None
@@ -77,13 +78,21 @@ class BufferedReader(object):
         to be read.
         '''
         if self.__buffered is None:
-            multiplier = self.__max_in_mem / self.__chunk_size
+            # Use floor division to force multiplier to an integer
+            multiplier = self.__max_in_mem // self.__chunk_size
             self.__buffered = ""
         else:
             multiplier = 1
             self.__buffered = self.__buffered[self.__chunk_size:]
 
-        data = self.__file.read(self.__chunk_size * multiplier)
+        if six.PY3:
+            # Data is a byte object in Python 3
+            # Decode it in order to append to self.__buffered str later
+            data = self.__file.read(self.__chunk_size * multiplier).decode(
+                __salt_system_encoding__
+            )
+        else:
+            data = self.__file.read(self.__chunk_size * multiplier)
 
         if not data:
             self.__file.close()
@@ -92,9 +101,13 @@ class BufferedReader(object):
         self.__buffered += data
         return self.__buffered
 
+    # Alias next to __next__ for Py3 compatibility
+    __next__ = next
+
     # Support with statements
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        pass
+        if self.__file.closed is False:
+            self.__file.close()

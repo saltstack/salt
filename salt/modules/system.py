@@ -1,18 +1,29 @@
 # -*- coding: utf-8 -*-
 '''
-Support for reboot, shutdown, etc
-'''
-from __future__ import absolute_import
+Support for reboot, shutdown, etc on POSIX-like systems.
 
-# Import python libs
+.. note::
+
+    If you have configured a wrapper such as ``molly-guard`` to
+    intercept *interactive* shutdown commands, be aware that calling
+    ``system.halt``, ``system.poweroff``, ``system.reboot``, and
+    ``system.shutdown`` with ``salt-call`` will hang indefinitely
+    while the wrapper script waits for user input. Calling them with
+    ``salt`` will work as expected.
+
+'''
+from __future__ import absolute_import, unicode_literals, print_function
+
+# Import Python libs
 from datetime import datetime, timedelta, tzinfo
 import re
 import os.path
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
 
 __virtualname__ = 'system'
 
@@ -22,13 +33,13 @@ def __virtual__():
     Only supported on POSIX-like systems
     Windows, Solaris, and Mac have their own modules
     '''
-    if salt.utils.is_windows():
-        return (False, 'This module is not available on windows')
+    if salt.utils.platform.is_windows():
+        return (False, 'This module is not available on Windows')
 
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return (False, 'This module is not available on Mac OS')
 
-    if salt.utils.is_sunos():
+    if salt.utils.platform.is_sunos():
         return (False, 'This module is not available on SunOS')
 
     return __virtualname__
@@ -157,6 +168,35 @@ def _date_bin_set_datetime(new_date):
     return True
 
 
+def has_settable_hwclock():
+    '''
+    Returns True if the system has a hardware clock capable of being
+    set from software.
+
+    CLI Example:
+
+    salt '*' system.has_settable_hwclock
+    '''
+    if salt.utils.path.which_bin(['hwclock']) is not None:
+        res = __salt__['cmd.run_all'](
+            ['hwclock', '--test', '--systohc'], python_shell=False,
+            output_loglevel='quiet', ignore_retcode=True
+        )
+        return res['retcode'] == 0
+    return False
+
+
+def _swclock_to_hwclock():
+    '''
+    Set hardware clock to value of software clock.
+    '''
+    res = __salt__['cmd.run_all'](['hwclock', '--systohc'], python_shell=False)
+    if res['retcode'] != 0:
+        msg = 'hwclock failed to set hardware clock from software clock: {0}'.format(res['stderr'])
+        raise CommandExecutionError(msg)
+    return True
+
+
 def _try_parse_datetime(time_str, fmts):
     '''
     Attempts to parse the input time_str as a date.
@@ -219,7 +259,7 @@ def get_system_time(utc_offset=None):
     timezone. To set the time based off of UTC use "'+0000'". Note: if being
     passed through the command line will need to be quoted twice to allow
     negative offsets.
-    :return: Returns the system time in HH:MM AM/PM format.
+    :return: Returns the system time in HH:MM:SS AM/PM format.
     :rtype: str
 
     CLI Example:
@@ -229,7 +269,7 @@ def get_system_time(utc_offset=None):
         salt '*' system.get_system_time
     '''
     offset_time = _get_offset_time(utc_offset)
-    return datetime.strftime(offset_time, "%I:%M %p")
+    return datetime.strftime(offset_time, "%I:%M:%S %p")
 
 
 def set_system_time(newtime, utc_offset=None):
@@ -307,6 +347,9 @@ def set_system_date_time(years=None,
     current system year will be used. (Used by set_system_date and
     set_system_time)
 
+    Updates hardware clock, if present, in addition to software
+    (kernel) clock.
+
     :param int years: Years digit, ie: 2015
     :param int months: Months digit: 1 - 12
     :param int days: Days digit: 1 - 31
@@ -350,7 +393,15 @@ def set_system_date_time(years=None,
     except ValueError as err:
         raise SaltInvocationError(err.message)
 
-    return _date_bin_set_datetime(new_datetime)
+    if not _date_bin_set_datetime(new_datetime):
+        return False
+
+    if has_settable_hwclock():
+        # Now that we've successfully set the software clock, we should
+        # update hardware clock for time to persist though reboot.
+        return _swclock_to_hwclock()
+
+    return True
 
 
 def get_system_date(utc_offset=None):
@@ -377,7 +428,7 @@ def get_system_date(utc_offset=None):
 
 def set_system_date(newdate, utc_offset=None):
     '''
-    Set the Windows system date. Use <mm-dd-yy> format for the date.
+    Set the system date. Use <mm-dd-yy> format for the date.
 
     :param str newdate:
         The date to set. Can be any of the following formats
@@ -455,23 +506,31 @@ def get_computer_desc():
 
         salt '*' system.get_computer_desc
     '''
-    desc = None
-    hostname_cmd = salt.utils.which('hostnamectl')
+    hostname_cmd = salt.utils.path.which('hostnamectl')
     if hostname_cmd:
-        desc = __salt__['cmd.run']('{0} status --pretty'.format(hostname_cmd))
+        desc = __salt__['cmd.run'](
+            [hostname_cmd, 'status', '--pretty'],
+            python_shell=False
+        )
     else:
+        desc = None
         pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
         try:
-            with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+            with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                 for line in mach_info.readlines():
+                    line = salt.utils.stringutils.to_unicode(line)
                     match = pattern.match(line)
                     if match:
                         # get rid of whitespace then strip off quotes
-                        desc = _strip_quotes(match.group(1).strip()).replace('\\"', '"')
+                        desc = _strip_quotes(match.group(1).strip())
                         # no break so we get the last occurance
         except IOError:
+            pass
+
+        if desc is None:
             return False
-    return desc
+
+    return desc.replace(r'\"', r'"').replace(r'\n', '\n').replace(r'\t', '\t')
 
 
 def set_computer_desc(desc):
@@ -489,31 +548,63 @@ def set_computer_desc(desc):
 
         salt '*' system.set_computer_desc "Michael's laptop"
     '''
-    hostname_cmd = salt.utils.which('hostnamectl')
+    desc = salt.utils.stringutils.to_unicode(
+        desc).replace('"', r'\"').replace('\n', r'\n').replace('\t', r'\t')
+
+    hostname_cmd = salt.utils.path.which('hostnamectl')
     if hostname_cmd:
-        result = __salt__['cmd.retcode']('{0} set-hostname --pretty {1}'.format(hostname_cmd, desc))
+        result = __salt__['cmd.retcode'](
+            [hostname_cmd, 'set-hostname', '--pretty', desc],
+            python_shell=False
+        )
         return True if result == 0 else False
 
     if not os.path.isfile('/etc/machine-info'):
-        f = salt.utils.fopen('/etc/machine-info', 'a')
-        f.close()
+        with salt.utils.files.fopen('/etc/machine-info', 'w'):
+            pass
 
-    is_pretty_hostname_found = False
     pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
-    new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc.replace('"', '\\"'))
+    new_line = salt.utils.stringutils.to_str('PRETTY_HOSTNAME="{0}"'.format(desc))
     try:
-        with salt.utils.fopen('/etc/machine-info', 'r+') as mach_info:
+        with salt.utils.files.fopen('/etc/machine-info', 'r+') as mach_info:
             lines = mach_info.readlines()
             for i, line in enumerate(lines):
-                if pattern.match(line):
-                    is_pretty_hostname_found = True
+                if pattern.match(salt.utils.stringutils.to_unicode(line)):
                     lines[i] = new_line
-            if not is_pretty_hostname_found:
+                    break
+            else:
+                # PRETTY_HOSTNAME line was not found, add it to the end
                 lines.append(new_line)
             # time to write our changes to the file
             mach_info.seek(0, 0)
-            mach_info.write(''.join(lines))
-            mach_info.write('\n')
+            mach_info.truncate()
+            mach_info.writelines(lines)
             return True
     except IOError:
         return False
+
+
+def set_computer_name(hostname):
+    '''
+    Modify hostname.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_computer_name master.saltstack.com
+    '''
+    return __salt__['network.mod_hostname'](hostname)
+
+
+def get_computer_name():
+    '''
+    Get hostname.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.get_hostname
+    '''
+    return __salt__['network.get_hostname']()

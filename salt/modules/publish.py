@@ -2,7 +2,7 @@
 '''
 Publish a command from a minion to a target
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import time
@@ -13,6 +13,7 @@ import salt.crypt
 import salt.payload
 import salt.transport
 import salt.utils.args
+import salt.utils.versions
 from salt.exceptions import SaltReqTimeoutError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ def _publish(
         tgt,
         fun,
         arg=None,
-        expr_form='glob',
+        tgt_type='glob',
         returner='',
         timeout=5,
         form='clean',
@@ -95,28 +96,30 @@ def _publish(
             if len(matching_master_uris) > 1:
                 # If we have multiple matches, consider this a non-fatal error
                 # and continue with whatever we found first.
-                log.warning('The `via_master` flag found \
-                        more than one possible match found for {0} when evaluating \
-                        list {1}'.format(via_master, __opts__['master_uri_list']))
+                log.warning('The `via_master` flag found '
+                            'more than one possible match found for %s when '
+                            'evaluating list %s',
+                            via_master, __opts__['master_uri_list'])
             master_uri = matching_master_uris.pop()
     else:
         # If no preference is expressed by the user, just publish to the first master
         # in the list.
         master_uri = __opts__['master_uri']
 
-    log.info('Publishing \'{0}\' to {1}'.format(fun, master_uri))
+    log.info('Publishing \'%s\' to %s', fun, master_uri)
     auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token('salt')
+    tok = auth.gen_token(b'salt')
     load = {'cmd': 'minion_pub',
             'fun': fun,
             'arg': arg,
             'tgt': tgt,
-            'tgt_type': expr_form,
+            'tgt_type': tgt_type,
             'ret': returner,
             'tok': tok,
             'tmo': timeout,
             'form': form,
-            'id': __opts__['id']}
+            'id': __opts__['id'],
+            'no_parse': __opts__.get('no_parse', [])}
 
     channel = salt.transport.Channel.factory(__opts__, master_uri=master_uri)
     try:
@@ -174,7 +177,14 @@ def _publish(
             return ret
 
 
-def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5, via_master=None):
+def publish(tgt,
+            fun,
+            arg=None,
+            tgt_type='glob',
+            returner='',
+            timeout=5,
+            via_master=None,
+            expr_form=None):
     '''
     Publish a command from the minion out to other minions.
 
@@ -184,7 +194,7 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5, via_ma
     minion cannot command another minion to command another minion as
     that would create an infinite command loop.
 
-    The expr_form argument is used to pass a target other than a glob into
+    The ``tgt_type`` argument is used to pass a target other than a glob into
     the execution, the available options are:
 
     - glob
@@ -196,6 +206,10 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5, via_ma
     - ipcidr
     - range
     - compound
+
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
 
     Note that for pillar matches must be exact, both in the pillar matcher
     and the compound matcher. No globbing is supported.
@@ -237,10 +251,21 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5, via_ma
     master the publication should be sent to. Only one master may be specified. If
     unset, the publication will be sent only to the first master in minion configuration.
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     return _publish(tgt,
                     fun,
                     arg=arg,
-                    expr_form=expr_form,
+                    tgt_type=tgt_type,
                     returner=returner,
                     timeout=timeout,
                     form='clean',
@@ -248,7 +273,13 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5, via_ma
                     via_master=via_master)
 
 
-def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
+def full_data(tgt,
+              fun,
+              arg=None,
+              tgt_type='glob',
+              returner='',
+              timeout=5,
+              expr_form=None):
     '''
     Return the full data about the publication, this is invoked in the same
     way as the publish function
@@ -270,10 +301,21 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
             salt '*' publish.full_data test.kwarg arg='cheese=spam'
 
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     return _publish(tgt,
                     fun,
                     arg=arg,
-                    expr_form=expr_form,
+                    tgt_type=tgt_type,
                     returner=returner,
                     timeout=timeout,
                     form='full',
@@ -295,15 +337,16 @@ def runner(fun, arg=None, timeout=5):
 
     if 'master_uri' not in __opts__:
         return 'No access to master. If using salt-call with --local, please remove.'
-    log.info('Publishing runner \'{0}\' to {master_uri}'.format(fun, **__opts__))
+    log.info('Publishing runner \'%s\' to %s', fun, __opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token('salt')
+    tok = auth.gen_token(b'salt')
     load = {'cmd': 'minion_runner',
             'fun': fun,
             'arg': arg,
             'tok': tok,
             'tmo': timeout,
-            'id': __opts__['id']}
+            'id': __opts__['id'],
+            'no_parse': __opts__.get('no_parse', [])}
 
     channel = salt.transport.Channel.factory(__opts__)
     try:

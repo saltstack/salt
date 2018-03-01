@@ -7,7 +7,7 @@ ret_port: 54506
 worker_threads: 3
 pidfile: syndic_master.pid
 sock_dir: syndic_master_sock
-timeout: 1
+timeout: 10
 open_mode: True
 fileserver_list_cache_time: 0
 pillar_opts: True

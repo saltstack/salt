@@ -45,7 +45,7 @@ Connection module for Amazon DynamoDB
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -53,9 +53,11 @@ logger = logging.getLogger(__name__)
 logging.getLogger('boto').setLevel(logging.INFO)
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
+import salt.utils.versions
+
 try:
     #pylint: disable=unused-import
     import boto
@@ -74,10 +76,10 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The module boto_dynamodb could not be loaded: boto libraries not found')
-    __utils__['boto.assign_funcs'](__name__, 'dynamodb2', pack=__salt__)
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'dynamodb2', pack=__salt__)
+    return has_boto_reqs
 
 
 def create_table(table_name, region=None, key=None, keyid=None, profile=None,
@@ -123,12 +125,12 @@ def create_table(table_name, region=None, key=None, keyid=None, profile=None,
     local_table_indexes = []
     if local_indexes:
         for index in local_indexes:
-            local_table_indexes.append(_extract_index(index))
+            local_table_indexes.append(extract_index(index))
     global_table_indexes = []
     if global_indexes:
         for index in global_indexes:
             global_table_indexes.append(
-                _extract_index(index, global_index=True)
+                extract_index(index, global_index=True)
             )
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -220,6 +222,38 @@ def update(table_name, throughput=None, global_indexes=None,
     return table.update(throughput=throughput, global_indexes=global_indexes)
 
 
+def create_global_secondary_index(table_name, global_index, region=None,
+                                  key=None, keyid=None, profile=None):
+    '''
+    Creates a single global secondary index on a DynamoDB table.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt myminion boto_dynamodb.create_global_secondary_index table_name /
+        index_name
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    table = Table(table_name, connection=conn)
+    return table.create_global_secondary_index(global_index)
+
+
+def update_global_secondary_index(table_name, global_indexes, region=None,
+                                  key=None, keyid=None, profile=None):
+    '''
+    Updates the throughput of the given global secondary indexes.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt myminion boto_dynamodb.update_global_secondary_index table_name /
+        indexes
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    table = Table(table_name, connection=conn)
+    return table.update_global_secondary_index(global_indexes)
+
+
 def describe(table_name, region=None, key=None, keyid=None, profile=None):
     '''
     Describe a DynamoDB table.
@@ -233,10 +267,13 @@ def describe(table_name, region=None, key=None, keyid=None, profile=None):
     return table.describe()
 
 
-def _extract_index(index_data, global_index=False):
+def extract_index(index_data, global_index=False):
     '''
     Instantiates and returns an AllIndex object given a valid index
     configuration
+
+    CLI Example:
+        salt myminion boto_dynamodb.extract_index index
     '''
     parsed_data = {}
     keys = []

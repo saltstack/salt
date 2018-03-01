@@ -9,7 +9,7 @@
 
     Context managers used throughout Salt's source code.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -17,7 +17,7 @@ import threading
 import collections
 from contextlib import contextmanager
 
-import salt.ext.six as six
+from salt.ext import six
 
 
 @contextmanager
@@ -125,6 +125,22 @@ class ContextDict(collections.MutableMapping):
         else:
             return iter(self.global_data)
 
+    def __copy__(self):
+        new_obj = type(self)(threadsafe=self._threadsafe)
+        if self.active:
+            new_obj.global_data = copy.copy(self._state.data)
+        else:
+            new_obj.global_data = copy.copy(self.global_data)
+        return new_obj
+
+    def __deepcopy__(self, memo):
+        new_obj = type(self)(threadsafe=self._threadsafe)
+        if self.active:
+            new_obj.global_data = copy.deepcopy(self._state.data, memo)
+        else:
+            new_obj.global_data = copy.deepcopy(self.global_data, memo)
+        return new_obj
+
 
 class ChildContextDict(collections.MutableMapping):
     '''An overrideable child of ContextDict
@@ -189,7 +205,8 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
             self.pre_keys = pre_keys
         if override_name:
             self.__class__.__module__ = 'salt'
-            self.__class__.__name__ = override_name
+            # __name__ can't be assigned a unicode
+            self.__class__.__name__ = str(override_name)  # future lint: disable=blacklisted-function
         super(NamespacedDictWrapper, self).__init__(self._dict())
 
     def _dict(self):

@@ -4,13 +4,13 @@ Module for managing IIS SMTP server configuration on Windows servers.
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
 
 _DEFAULT_SERVER = 'SmtpSvc/1'
 
@@ -39,7 +39,7 @@ def _normalize_server_settings(**settings):
     Convert setting values that has been improperly converted to a dict back to a string.
     '''
     ret = dict()
-    settings = salt.utils.clean_kwargs(**settings)
+    settings = salt.utils.args.clean_kwargs(**settings)
 
     for setting in settings:
         if isinstance(settings[setting], dict):
@@ -77,7 +77,7 @@ def server_setting(name, settings=None, server=_DEFAULT_SERVER):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': six.text_type(),
            'result': None}
 
     if not settings:
@@ -96,7 +96,7 @@ def server_setting(name, settings=None, server=_DEFAULT_SERVER):
         # automatically on input, so convert them back to the proper format.
         settings = _normalize_server_settings(**settings)
 
-        if str(settings[key]) != str(current_settings[key]):
+        if six.text_type(settings[key]) != six.text_type(current_settings[key]):
             ret_settings['changes'][key] = {'old': current_settings[key],
                                             'new': settings[key]}
     if not ret_settings['changes']:
@@ -112,7 +112,7 @@ def server_setting(name, settings=None, server=_DEFAULT_SERVER):
     new_settings = __salt__['win_smtp_server.get_server_setting'](settings=settings.keys(),
                                                                   server=server)
     for key in settings:
-        if str(new_settings[key]) != str(settings[key]):
+        if six.text_type(new_settings[key]) != six.text_type(settings[key]):
             ret_settings['failures'][key] = {'old': current_settings[key],
                                              'new': new_settings[key]}
             ret_settings['changes'].pop(key, None)
@@ -145,7 +145,7 @@ def active_log_format(name, log_format, server=_DEFAULT_SERVER):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': six.text_type(),
            'result': None}
     current_log_format = __salt__['win_smtp_server.get_log_format'](server)
 
@@ -206,7 +206,7 @@ def connection_ip_list(name, addresses=None, grant_by_default=False, server=_DEF
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': six.text_type(),
            'result': None}
     if not addresses:
         addresses = dict()
@@ -302,7 +302,7 @@ def relay_ip_list(name, addresses=None, server=_DEFAULT_SERVER):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': six.text_type(),
            'result': None}
     current_addresses = __salt__['win_smtp_server.get_relay_ip_list'](server=server)
 

@@ -46,7 +46,7 @@ value to ``consul``:
 .. _`python-consul documentation`: https://python-consul.readthedocs.io/en/latest/#consul
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 try:
     import consul
@@ -63,7 +63,7 @@ api = None
 # Define the module's virtual name
 __virtualname__ = 'consul'
 
-__func_alias__ = {'list': 'ls'}
+__func_alias__ = {'list_': 'list'}
 
 
 def __virtual__():
@@ -144,7 +144,7 @@ def flush(bank, key=None):
         )
 
 
-def ls(bank):
+def list_(bank):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''

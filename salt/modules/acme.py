@@ -5,11 +5,12 @@ ACME / Let's Encrypt module
 
 .. versionadded: 2016.3
 
-This module currently uses letsencrypt-auto, which needs to be available in the path or in /opt/letsencrypt/.
-
-.. note::
-
-    Currently only the webroot authentication is tested/implemented.
+This module currently looks for certbot script in the $PATH as
+- certbot,
+- lestsencrypt,
+- certbot-auto,
+- letsencrypt-auto
+eventually falls back to /opt/letsencrypt/letsencrypt-auto
 
 .. note::
 
@@ -24,17 +25,19 @@ Most parameters will fall back to cli.ini defaults if None is given.
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import datetime
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
-LEA = salt.utils.which_bin(['letsencrypt-auto', '/opt/letsencrypt/letsencrypt-auto'])
+LEA = salt.utils.path.which_bin(['certbot', 'letsencrypt',
+                                 'certbot-auto', 'letsencrypt-auto',
+                                 '/opt/letsencrypt/letsencrypt-auto'])
 LE_LIVE = '/etc/letsencrypt/live/'
 
 
@@ -97,20 +100,39 @@ def cert(name,
          keysize=None,
          server=None,
          owner='root',
-         group='root'):
+         group='root',
+         certname=None,
+         preferred_challenges=None,
+         tls_sni_01_port=None,
+         tls_sni_01_address=None,
+         http_01_port=None,
+         http_01_address=None):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
     :param name: Common Name of the certificate (DNS name of certificate)
     :param aliases: subjectAltNames (Additional DNS names on certificate)
     :param email: e-mail address for interaction with ACME provider
-    :param webroot: True or full path to webroot used for authentication
+    :param webroot: True or a full path to use to use webroot. Otherwise use standalone mode
     :param test_cert: Request a certificate from the Happy Hacker Fake CA (mutually exclusive with 'server')
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
     :param owner: owner of private key
     :param group: group of private key
+    :param certname: Name of the certificate to save
+    :param preferred_challenges: A sorted, comma delimited list of the preferred
+                                 challenge to use during authorization with the
+                                 most preferred challenge listed first.
+    :param tls_sni_01_port: Port used during tls-sni-01 challenge. This only affects
+                            the port Certbot listens on. A conforming ACME server
+                            will still attempt to connect on port 443.
+    :param tls_sni_01_address: The address the server listens to during tls-sni-01
+                               challenge.
+    :param http_01_port: Port used in the http-01 challenge. This only affects
+                         the port Certbot listens on. A conforming ACME server
+                         will still attempt to connect on port 80.
+    :param https_01_address: The address the server listens to during http-01 challenge.
     :return: dict with 'result' True/False/None, 'comment' and certificate's expiry date ('not_after')
 
     CLI example:
@@ -120,25 +142,21 @@ def cert(name,
         salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
     '''
 
-    cmd = [LEA, 'certonly']
+    cmd = [LEA, 'certonly', '--non-interactive', '--agree-tos']
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):
-        log.debug('Certificate {0} does not exist (yet)'.format(cert_file))
+        log.debug('Certificate %s does not exist (yet)', cert_file)
         renew = False
     elif needs_renewal(name, renew):
-        log.debug('Certificate {0} will be renewed'.format(cert_file))
+        log.debug('Certificate %s will be renewed', cert_file)
         cmd.append('--renew-by-default')
         renew = True
-    else:
-        return {
-            'result': None,
-            'comment': 'Certificate {0} does not need renewal'.format(cert_file),
-            'not_after': expires(name)
-        }
-
     if server:
         cmd.append('--server {0}'.format(server))
+
+    if certname:
+        cmd.append('--cert-name {0}'.format(certname))
 
     if test_cert:
         if server:
@@ -149,6 +167,8 @@ def cert(name,
         cmd.append('--authenticator webroot')
         if webroot is not True:
             cmd.append('--webroot-path {0}'.format(webroot))
+    else:
+        cmd.append('--authenticator standalone')
 
     if email:
         cmd.append('--email {0}'.format(email))
@@ -161,10 +181,29 @@ def cert(name,
         for dns in aliases:
             cmd.append('--domains {0}'.format(dns))
 
+    if preferred_challenges:
+        cmd.append('--preferred-challenges {}'.format(preferred_challenges))
+
+    if tls_sni_01_port:
+        cmd.append('--tls-sni-01-port {}'.format(tls_sni_01_port))
+    if tls_sni_01_address:
+        cmd.append('--tls-sni-01-address {}'.format(tls_sni_01_address))
+    if http_01_port:
+        cmd.append('--http-01-port {}'.format(http_01_port))
+    if http_01_address:
+        cmd.append('--http-01-address {}'.format(http_01_address))
+
     res = __salt__['cmd.run_all'](' '.join(cmd))
 
     if res['retcode'] != 0:
-        return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+        return {'result': False,
+                'comment': 'Certificate {0} renewal failed with:\n{1}{2}'
+                           ''.format(name, res['stdout'], res['stderr'])}
+
+    if 'no action taken' in res['stdout']:
+        return {'result': None,
+                'comment': 'No action taken on certificate {0}'.format(cert_file),
+                'not_after': expires(name)}
 
     if renew:
         comment = 'Certificate {0} renewed'.format(name)
@@ -218,16 +257,15 @@ def info(name):
     cert_file = _cert_file(name, 'cert')
     # Use the salt module if available
     if 'tls.cert_info' in __salt__:
-        info = __salt__['tls.cert_info'](cert_file)
+        cert_info = __salt__['tls.cert_info'](cert_file)
         # Strip out the extensions object contents;
         # these trip over our poor state output
         # and they serve no real purpose here anyway
-        info['extensions'] = info['extensions'].keys()
-        return info
+        cert_info['extensions'] = cert_info['extensions'].keys()
+        return cert_info
     # Cobble it together using the openssl binary
-    else:
-        openssl_cmd = 'openssl x509 -in {0} -noout -text'.format(cert_file)
-        return __salt__['cmd.run'](openssl_cmd, output_loglevel='quiet')
+    openssl_cmd = 'openssl x509 -in {0} -noout -text'.format(cert_file)
+    return __salt__['cmd.run'](openssl_cmd, output_loglevel='quiet')
 
 
 def expires(name):

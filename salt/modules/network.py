@@ -4,7 +4,7 @@ Module for gathering and managing network information
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import hashlib
 import logging
@@ -13,14 +13,18 @@ import os
 import socket
 
 # Import salt libs
-import salt.utils
-import salt.utils.decorators as decorators
+import salt.utils.decorators.path
+import salt.utils.functools
+import salt.utils.files
 import salt.utils.network
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 if six.PY3:
     import ipaddress
@@ -36,7 +40,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     # Disable on Windows, a specific file module exists:
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The network execution module cannot be loaded on Windows: use win_network instead.')
     return True
 
@@ -53,7 +57,7 @@ def wol(mac, bcast='255.255.255.255', destport=9):
         salt '*' network.wol 080027136977 255.255.255.255 7
         salt '*' network.wol 08:00:27:13:69:77 255.255.255.255 7
     '''
-    dest = salt.utils.mac_str_to_bytes(mac)
+    dest = salt.utils.network.mac_str_to_bytes(mac)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.sendto(b'\xff' * 6 + dest * 16, (bcast, int(destport)))
@@ -760,7 +764,7 @@ def netstat():
         salt '*' network.netstat
     '''
     if __grains__['kernel'] == 'Linux':
-        if not salt.utils.which('netstat'):
+        if not salt.utils.path.which('netstat'):
             return _ss_linux()
         else:
             return _netstat_linux()
@@ -840,7 +844,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    if not salt.utils.which('traceroute'):
+    if not salt.utils.path.which('traceroute'):
         log.info('This minion does not have traceroute installed')
         return ret
 
@@ -849,7 +853,7 @@ def traceroute(host):
     out = __salt__['cmd.run'](cmd)
 
     # Parse version of traceroute
-    if salt.utils.is_sunos() or salt.utils.is_aix():
+    if salt.utils.platform.is_sunos() or salt.utils.platform.is_aix():
         traceroute_version = [0, 0, 0]
     else:
         cmd2 = 'traceroute --version'
@@ -860,7 +864,7 @@ def traceroute(host):
             # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
 
             traceroute_version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
-            log.debug('traceroute_version_raw: {0}'.format(traceroute_version_raw))
+            log.debug('traceroute_version_raw: %s', traceroute_version_raw)
             traceroute_version = []
             for t in traceroute_version_raw:
                 try:
@@ -871,7 +875,7 @@ def traceroute(host):
             if len(traceroute_version) < 3:
                 traceroute_version.append(0)
 
-            log.debug('traceroute_version: {0}'.format(traceroute_version))
+            log.debug('traceroute_version: %s', traceroute_version)
 
         except IndexError:
             traceroute_version = [0, 0, 0]
@@ -882,7 +886,7 @@ def traceroute(host):
         if line.startswith('traceroute'):
             continue
 
-        if salt.utils.is_aix():
+        if salt.utils.platform.is_aix():
             if line.startswith('trying to get source for'):
                 continue
 
@@ -895,15 +899,16 @@ def traceroute(host):
             if line.startswith('fragmentation required'):
                 continue
 
-        if 'Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1]) or \
-            __grains__['kernel'] in ('SunOS', 'AIX'):
+        if 'Darwin' in six.text_type(traceroute_version[1]) or \
+            'FreeBSD' in six.text_type(traceroute_version[1]) or \
+                __grains__['kernel'] in ('SunOS', 'AIX'):
             try:
                 traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
             except IndexError:
                 traceline = re.findall(r'\s*(\d*)\s+(\*\s+\*\s+\*)', line)[0]
 
-            log.debug('traceline: {0}'.format(traceline))
-            delays = re.findall(r'(\d+\.\d+)\s*ms', str(traceline))
+            log.debug('traceline: %s', traceline)
+            delays = re.findall(r'(\d+\.\d+)\s*ms', six.text_type(traceline))
 
             try:
                 if traceline[1] == '* * *':
@@ -955,7 +960,7 @@ def traceroute(host):
     return ret
 
 
-@decorators.which('dig')
+@salt.utils.decorators.path.which('dig')
 def dig(host):
     '''
     Performs a DNS lookup with dig
@@ -970,7 +975,7 @@ def dig(host):
     return __salt__['cmd.run'](cmd)
 
 
-@decorators.which('arp')
+@salt.utils.decorators.path.which('arp')
 def arp():
     '''
     Return the arp table from the minion
@@ -1034,7 +1039,7 @@ def hw_addr(iface):
     return salt.utils.network.hw_addr(iface)
 
 # Alias hwaddr to preserve backward compat
-hwaddr = salt.utils.alias_function(hw_addr, 'hwaddr')
+hwaddr = salt.utils.functools.alias_function(hw_addr, 'hwaddr')
 
 
 def interface(iface):
@@ -1136,8 +1141,8 @@ def convert_cidr(cidr):
            'netmask': None}
     cidr = calc_net(cidr)
     network_info = salt.ext.ipaddress.ip_network(cidr)
-    ret['network'] = str(network_info.network_address)
-    ret['netmask'] = str(network_info.netmask)
+    ret['network'] = six.text_type(network_info.network_address)
+    ret['netmask'] = six.text_type(network_info.netmask)
     return ret
 
 
@@ -1187,7 +1192,7 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
             return addrs
 
 
-ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
+ipaddrs = salt.utils.functools.alias_function(ip_addrs, 'ipaddrs')
 
 
 def ip_addrs6(interface=None, include_loopback=False, cidr=None):
@@ -1211,7 +1216,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     else:
         return addrs
 
-ipaddrs6 = salt.utils.alias_function(ip_addrs6, 'ipaddrs6')
+ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, 'ipaddrs6')
 
 
 def get_hostname():
@@ -1225,8 +1230,21 @@ def get_hostname():
         salt '*' network.get_hostname
     '''
 
-    from socket import gethostname
-    return gethostname()
+    return socket.gethostname()
+
+
+def get_fqdn():
+    '''
+    Get fully qualified domain name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.get_fqdn
+    '''
+
+    return socket.getfqdn()
 
 
 def mod_hostname(hostname):
@@ -1254,20 +1272,25 @@ def mod_hostname(hostname):
     if hostname is None:
         return False
 
-    hostname_cmd = salt.utils.which('hostnamectl') or salt.utils.which('hostname')
-    if salt.utils.is_sunos():
-        uname_cmd = '/usr/bin/uname' if salt.utils.is_smartos() else salt.utils.which('uname')
-        check_hostname_cmd = salt.utils.which('check-hostname')
+    hostname_cmd = salt.utils.path.which('hostnamectl') or salt.utils.path.which('hostname')
+    if salt.utils.platform.is_sunos():
+        uname_cmd = '/usr/bin/uname' if salt.utils.platform.is_smartos() else salt.utils.path.which('uname')
+        check_hostname_cmd = salt.utils.path.which('check-hostname')
 
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
     if hostname_cmd.endswith('hostnamectl'):
-        out = __salt__['cmd.run']('{0} status'.format(hostname_cmd))
-        for line in out.splitlines():
-            line = line.split(':')
-            if 'Static hostname' in line[0]:
-                o_hostname = line[1].strip()
-    elif not salt.utils.is_sunos():
+        result = __salt__['cmd.run_all']('{0} status'.format(hostname_cmd))
+        if 0 == result['retcode']:
+            out = result['stdout']
+            for line in out.splitlines():
+                line = line.split(':')
+                if 'Static hostname' in line[0]:
+                    o_hostname = line[1].strip()
+        else:
+            log.debug('{0} was unable to get hostname'.format(hostname_cmd))
+            o_hostname = __salt__['network.get_hostname']()
+    elif not salt.utils.platform.is_sunos():
         # don't run hostname -f because -f is not supported on all platforms
         o_hostname = socket.getfqdn()
     else:
@@ -1275,59 +1298,76 @@ def mod_hostname(hostname):
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
     if hostname_cmd.endswith('hostnamectl'):
-        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
-    elif not salt.utils.is_sunos():
+        result = __salt__['cmd.run_all']('{0} set-hostname {1}'.format(
+            hostname_cmd,
+            hostname,
+            ))
+        if result['retcode'] != 0:
+            log.debug('{0} was unable to set hostname. Error: {1}'.format(
+                hostname_cmd,
+                result['stderr'],
+                ))
+            return False
+    elif not salt.utils.platform.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
     else:
         __salt__['cmd.run']('{0} -S {1}'.format(uname_cmd, hostname.split('.')[0]))
 
     # Modify the /etc/hosts file to replace the old hostname with the
     # new hostname
-    with salt.utils.fopen('/etc/hosts', 'r') as fp_:
-        host_c = fp_.readlines()
+    with salt.utils.files.fopen('/etc/hosts', 'r') as fp_:
+        host_c = [salt.utils.stringutils.to_unicode(_l)
+                  for _l in fp_.readlines()]
 
-    with salt.utils.fopen('/etc/hosts', 'w') as fh_:
+    with salt.utils.files.fopen('/etc/hosts', 'w') as fh_:
         for host in host_c:
             host = host.split()
 
             try:
                 host[host.index(o_hostname)] = hostname
-                if salt.utils.is_sunos():
+                if salt.utils.platform.is_sunos():
                     # also set a copy of the hostname
                     host[host.index(o_hostname.split('.')[0])] = hostname.split('.')[0]
             except ValueError:
                 pass
 
-            fh_.write('\t'.join(host) + '\n')
+            fh_.write(salt.utils.stringutils.to_str('\t'.join(host) + '\n'))
 
     # Modify the /etc/sysconfig/network configuration file to set the
     # new hostname
     if __grains__['os_family'] == 'RedHat':
-        with salt.utils.fopen('/etc/sysconfig/network', 'r') as fp_:
-            network_c = fp_.readlines()
+        with salt.utils.files.fopen('/etc/sysconfig/network', 'r') as fp_:
+            network_c = [salt.utils.stringutils.to_unicode(_l)
+                         for _l in fp_.readlines()]
 
-        with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh_:
+        with salt.utils.files.fopen('/etc/sysconfig/network', 'w') as fh_:
             for net in network_c:
                 if net.startswith('HOSTNAME'):
                     old_hostname = net.split('=', 1)[1].rstrip()
-                    quote_type = salt.utils.is_quoted(old_hostname)
-                    fh_.write('HOSTNAME={1}{0}{1}\n'.format(
-                        salt.utils.dequote(hostname), quote_type))
+                    quote_type = salt.utils.stringutils.is_quoted(old_hostname)
+                    fh_.write(salt.utils.stringutils.to_str(
+                        'HOSTNAME={1}{0}{1}\n'.format(
+                            salt.utils.stringutils.dequote(hostname),
+                            quote_type)))
                 else:
-                    fh_.write(net)
+                    fh_.write(salt.utils.stringutils.to_str(net))
     elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
-        with salt.utils.fopen('/etc/hostname', 'w') as fh_:
-            fh_.write(hostname + '\n')
+        with salt.utils.files.fopen('/etc/hostname', 'w') as fh_:
+            fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))
     elif __grains__['os_family'] == 'OpenBSD':
-        with salt.utils.fopen('/etc/myname', 'w') as fh_:
-            fh_.write(hostname + '\n')
+        with salt.utils.files.fopen('/etc/myname', 'w') as fh_:
+            fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))
 
     # Update /etc/nodename and /etc/defaultdomain on SunOS
-    if salt.utils.is_sunos():
-        with salt.utils.fopen('/etc/nodename', 'w') as fh_:
-            fh_.write(hostname.split('.')[0] + '\n')
-        with salt.utils.fopen('/etc/defaultdomain', 'w') as fh_:
-            fh_.write(".".join(hostname.split('.')[1:]) + '\n')
+    if salt.utils.platform.is_sunos():
+        with salt.utils.files.fopen('/etc/nodename', 'w') as fh_:
+            fh_.write(salt.utils.stringutils.to_str(
+                hostname.split('.')[0] + '\n')
+            )
+        with salt.utils.files.fopen('/etc/defaultdomain', 'w') as fh_:
+            fh_.write(salt.utils.stringutils.to_str(
+                ".".join(hostname.split('.')[1:]) + '\n')
+            )
 
     return True
 
@@ -1532,13 +1572,14 @@ def _mod_bufsize_linux(iface, *args, **kwargs):
     if not kwargs:
         return ret
     if args:
-        ret['comment'] = 'Unknown arguments: ' + ' '.join([str(item) for item in args])
+        ret['comment'] = 'Unknown arguments: ' + ' '.join([six.text_type(item)
+                                                           for item in args])
         return ret
     eargs = ''
     for kw in ['rx', 'tx', 'rx-mini', 'rx-jumbo']:
         value = kwargs.get(kw)
         if value is not None:
-            eargs += ' ' + kw + ' ' + str(value)
+            eargs += ' ' + kw + ' ' + six.text_type(value)
     if not eargs:
         return ret
     cmd += eargs
@@ -1588,7 +1629,7 @@ def routes(family=None):
         raise CommandExecutionError('Invalid address family {0}'.format(family))
 
     if __grains__['kernel'] == 'Linux':
-        if not salt.utils.which('netstat'):
+        if not salt.utils.path.which('netstat'):
             routes_ = _ip_route_linux()
         else:
             routes_ = _netstat_route_linux()
@@ -1808,7 +1849,7 @@ def ifacestartswith(cidr):
     '''
     net_list = interfaces()
     intfnames = []
-    pattern = str(cidr)
+    pattern = six.text_type(cidr)
     size = len(pattern)
     for ifname, ifval in six.iteritems(net_list):
         if 'inet' in ifval:
@@ -1823,7 +1864,7 @@ def ifacestartswith(cidr):
 
 def iphexval(ip):
     '''
-    Retrieve the interface name from a specific CIDR
+    Retrieve the hexadecimal representation of an IP address
 
     .. versionadded:: 2016.11.0
 
@@ -1834,7 +1875,5 @@ def iphexval(ip):
         salt '*' network.iphexval 10.0.0.1
     '''
     a = ip.split('.')
-    hexval = ""
-    for val in a:
-        hexval = hexval.join(hex(int(val))[2:])
-    return hexval.upper()
+    hexval = ['%02X' % int(x) for x in a]  # pylint: disable=E1321
+    return ''.join(hexval)

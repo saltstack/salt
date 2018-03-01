@@ -4,11 +4,11 @@ Salt-specific interface for calling Salt Cloud directly
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import copy
-import salt.utils
+import salt.utils.data
 
 # Import salt libs
 try:
@@ -17,11 +17,10 @@ try:
 except ImportError:
     HAS_SALTCLOUD = False
 
-import salt.utils
 from salt.exceptions import SaltCloudConfigError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +57,7 @@ def list_sizes(provider='all'):
 
     .. code-block:: bash
 
-        salt '*' cloud.list_sizes my-gce-config
+        salt minionname cloud.list_sizes my-gce-config
     '''
     client = _get_client()
     sizes = client.list_sizes(provider)
@@ -73,7 +72,7 @@ def list_images(provider='all'):
 
     .. code-block:: bash
 
-        salt '*' cloud.list_images my-gce-config
+        salt minionname cloud.list_images my-gce-config
     '''
     client = _get_client()
     images = client.list_images(provider)
@@ -88,7 +87,7 @@ def list_locations(provider='all'):
 
     .. code-block:: bash
 
-        salt '*' cloud.list_locations my-gce-config
+        salt minionname cloud.list_locations my-gce-config
     '''
     client = _get_client()
     locations = client.list_locations(provider)
@@ -103,9 +102,9 @@ def query(query_type='list_nodes'):
 
     .. code-block:: bash
 
-        salt '*' cloud.query
-        salt '*' cloud.query list_nodes_full
-        salt '*' cloud.query list_nodes_select
+        salt minionname cloud.query
+        salt minionname cloud.query list_nodes_full
+        salt minionname cloud.query list_nodes_select
     '''
     client = _get_client()
     info = client.query(query_type)
@@ -120,7 +119,7 @@ def full_query(query_type='list_nodes_full'):
 
     .. code-block:: bash
 
-        salt '*' cloud.full_query
+        salt minionname cloud.full_query
     '''
     return query(query_type=query_type)
 
@@ -133,7 +132,7 @@ def select_query(query_type='list_nodes_select'):
 
     .. code-block:: bash
 
-        salt '*' cloud.select_query
+        salt minionname cloud.select_query
     '''
     return query(query_type=query_type)
 
@@ -146,7 +145,7 @@ def has_instance(name, provider=None):
 
     .. code-block:: bash
 
-        salt '*' cloud.has_instance myinstance
+        salt minionname cloud.has_instance myinstance
     '''
     data = get_instance(name, provider)
     if data is None:
@@ -165,7 +164,7 @@ def get_instance(name, provider=None):
 
     .. code-block:: bash
 
-        salt '*' cloud.get_instance myinstance
+        salt minionname cloud.get_instance myinstance
 
     SLS Example:
 
@@ -175,7 +174,7 @@ def get_instance(name, provider=None):
 
     '''
     data = action(fun='show_instance', names=[name], provider=provider)
-    info = salt.utils.simple_types_filter(data)
+    info = salt.utils.data.simple_types_filter(data)
     try:
         # get the first: [alias][driver][vm_name]
         info = next(six.itervalues(next(six.itervalues(next(six.itervalues(info))))))
@@ -192,12 +191,28 @@ def profile_(profile, names, vm_overrides=None, opts=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' cloud.profile my-gce-config myinstance
+        salt minionname cloud.profile my-gce-config myinstance
     '''
     client = _get_client()
     if isinstance(opts, dict):
         client.opts.update(opts)
     info = client.profile(profile, names, vm_overrides=vm_overrides, **kwargs)
+    return info
+
+
+def map_run(path=None, **kwargs):
+    '''
+    Execute a salt cloud map file
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt minionname cloud.map_run /path/to/cloud.map
+        salt minionname cloud.map_run map_data='<actual map data>'
+    '''
+    client = _get_client()
+    info = client.map_run(path, **kwargs)
     return info
 
 
@@ -209,7 +224,7 @@ def destroy(names):
 
     .. code-block:: bash
 
-        salt '*' cloud.destroy myinstance
+        salt minionname cloud.destroy myinstance
     '''
     client = _get_client()
     info = client.destroy(names)
@@ -230,9 +245,9 @@ def action(
 
     .. code-block:: bash
 
-        salt '*' cloud.action start instance=myinstance
-        salt '*' cloud.action stop instance=myinstance
-        salt '*' cloud.action show_image provider=my-ec2-config image=ami-1624987f
+        salt minionname cloud.action start instance=myinstance
+        salt minionname cloud.action stop instance=myinstance
+        salt minionname cloud.action show_image provider=my-ec2-config image=ami-1624987f
     '''
     client = _get_client()
     try:

@@ -6,12 +6,13 @@ This module allows you to manage extended attributes on files or directories
 
     salt '*' xattr.list /path/to/file
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python Libs
 import logging
 
 # Import salt libs
+import salt.utils.args
 import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
 
@@ -53,10 +54,10 @@ def list_(path, **kwargs):
         salt '*' xattr.list /path/to/file
         salt '*' xattr.list /path/to/file hex=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     hex_ = kwargs.pop('hex', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cmd = ['xattr', path]
     try:
@@ -101,10 +102,10 @@ def read(path, attribute, **kwargs):
         salt '*' xattr.read /path/to/file com.test.attr
         salt '*' xattr.read /path/to/file com.test.attr hex=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     hex_ = kwargs.pop('hex', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cmd = ['xattr', '-p']
     if hex_:
@@ -147,10 +148,10 @@ def write(path, attribute, value, **kwargs):
         salt '*' xattr.write /path/to/file "com.test.attr" "value"
 
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     hex_ = kwargs.pop('hex', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cmd = ['xattr', '-w']
     if hex_:

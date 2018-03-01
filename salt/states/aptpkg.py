@@ -3,13 +3,13 @@
 Package management operations specific to APT- and DEB-based systems
 ====================================================================
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ def held(name):
     )
     if not state:
         ret.update(comment='Package {0} does not have a state'.format(name))
-    elif not salt.utils.is_true(state.get('hold', False)):
+    elif not salt.utils.data.is_true(state.get('hold', False)):
         if not __opts__['test']:
             result = __salt__['pkg.set_selections'](
                 selection={'hold': [name]}

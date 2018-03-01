@@ -7,22 +7,18 @@ https://www.consul.io
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
-
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-import salt.ext.six
-import salt.ext.six.moves.http_client
-# pylint: enable=import-error,no-name-in-module
+from __future__ import absolute_import, print_function, unicode_literals
+import base64
+import logging
 
 # Import salt libs
 import salt.utils.http
+import salt.utils.json
 
-import base64
-import json
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import http_client, urllib
 
-import logging
 log = logging.getLogger(__name__)
 
 from salt.exceptions import SaltInvocationError
@@ -43,8 +39,17 @@ def _get_config():
         __salt__['config.get']('consul:url')
 
 
+def _get_token():
+    '''
+    Retrieve Consul configuration
+    '''
+    return __salt__['config.get']('consul.token') or \
+        __salt__['config.get']('consul:token')
+
+
 def _query(function,
            consul_url,
+           token=None,
            method='GET',
            api_version='v1',
            data=None,
@@ -59,19 +64,23 @@ def _query(function,
     :param data:        The data to be sent for POST method.
     :return:            The json response from the API call or False.
     '''
-    headers = {}
+
     if not query_params:
         query_params = {}
 
     ret = {'data': '',
            'res': True}
 
-    base_url = _urljoin(consul_url, '{0}/'.format(api_version))
-    url = _urljoin(base_url, function, False)
+    if not token:
+        token = _get_token()
+
+    headers = {"X-Consul-Token": token, "Content-Type": "application/json"}
+    base_url = urllib.parse.urljoin(consul_url, '{0}/'.format(api_version))
+    url = urllib.parse.urljoin(base_url, function, False)
 
     if data is None:
         data = {}
-    data = json.dumps(data)
+    data = salt.utils.json.dumps(data)
 
     result = salt.utils.http.query(
         url,
@@ -84,12 +93,12 @@ def _query(function,
         opts=__opts__,
     )
 
-    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
+    if result.get('status', None) == http_client.OK:
         ret['data'] = result.get('dict', result)
         ret['res'] = True
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
+    elif result.get('status', None) == http_client.NO_CONTENT:
         ret['res'] = False
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NOT_FOUND:
+    elif result.get('status', None) == http_client.NOT_FOUND:
         ret['data'] = 'Key not found.'
         ret['res'] = False
     else:
@@ -101,7 +110,7 @@ def _query(function,
     return ret
 
 
-def list_(consul_url=None, key=None, **kwargs):
+def list_(consul_url=None, token=None, key=None, **kwargs):
     '''
     List keys in Consul
 
@@ -119,6 +128,7 @@ def list_(consul_url=None, key=None, **kwargs):
 
     '''
     ret = {}
+
     if not consul_url:
         consul_url = _get_config()
         if not consul_url:
@@ -140,14 +150,15 @@ def list_(consul_url=None, key=None, **kwargs):
         function = 'kv/{0}'.format(key)
 
     query_params['keys'] = 'True'
-
+    query_params['separator'] = '/'
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     return ret
 
 
-def get(consul_url=None, key=None, recurse=False, decode=False, raw=False):
+def get(consul_url=None, key=None, token=None, recurse=False, decode=False, raw=False):
     '''
     Get key from Consul
 
@@ -200,16 +211,20 @@ def get(consul_url=None, key=None, recurse=False, decode=False, raw=False):
         query_params['raw'] = True
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
 
     if ret['res']:
         if decode:
             for item in ret['data']:
-                item['Value'] = base64.b64decode(item['Value'])
+                if item['Value'] != None:
+                    item['Value'] = base64.b64decode(item['Value'])
+                else:
+                    item['Value'] = ""
     return ret
 
 
-def put(consul_url=None, key=None, value=None, **kwargs):
+def put(consul_url=None, token=None, key=None, value=None, **kwargs):
     '''
     Put values into Consul
 
@@ -252,13 +267,21 @@ def put(consul_url=None, key=None, value=None, **kwargs):
     if not key:
         raise SaltInvocationError('Required argument "key" is missing.')
 
+    # Invalid to specified these together
+    conflicting_args = ['cas', 'release', 'acquire']
+    for _l1 in conflicting_args:
+        for _l2 in conflicting_args:
+            if _l1 in kwargs and _l2 in kwargs and _l1 != _l2:
+                raise SaltInvocationError('Using arguments `{0}` and `{1}`'
+                                          ' together is invalid.'.format(_l1, _l2))
+
     query_params = {}
 
     available_sessions = session_list(consul_url=consul_url, return_list=True)
     _current = get(consul_url=consul_url, key=key)
 
     if 'flags' in kwargs:
-        if not kwargs['flags'] >= 0 and not kwargs['flags'] <= 2**64:
+        if kwargs['flags'] >= 0 and kwargs['flags'] <= 2**64:
             query_params['flags'] = kwargs['flags']
 
     if 'cas' in kwargs:
@@ -280,8 +303,6 @@ def put(consul_url=None, key=None, value=None, **kwargs):
                               'CAS argument can not be used.'.format(key))
             ret['res'] = False
             return ret
-    else:
-        log.error('Key {0} does not exist. Skipping release.')
 
     if 'acquire' in kwargs:
         if kwargs['acquire'] not in available_sessions:
@@ -311,6 +332,7 @@ def put(consul_url=None, key=None, value=None, **kwargs):
     function = 'kv/{0}'.format(key)
     method = 'PUT'
     ret = _query(consul_url=consul_url,
+                 token=token,
                  function=function,
                  method=method,
                  data=data,
@@ -325,7 +347,7 @@ def put(consul_url=None, key=None, value=None, **kwargs):
     return ret
 
 
-def delete(consul_url=None, key=None, **kwargs):
+def delete(consul_url=None, token=None, key=None, **kwargs):
     '''
     Delete values from Consul
 
@@ -373,6 +395,7 @@ def delete(consul_url=None, key=None, **kwargs):
 
     function = 'kv/{0}'.format(key)
     ret = _query(consul_url=consul_url,
+                 token=token,
                  function=function,
                  method='DELETE',
                  query_params=query_params)
@@ -386,7 +409,7 @@ def delete(consul_url=None, key=None, **kwargs):
     return ret
 
 
-def agent_checks(consul_url=None):
+def agent_checks(consul_url=None, token=None):
     '''
     Returns the checks the local agent is managing
 
@@ -412,11 +435,12 @@ def agent_checks(consul_url=None):
     function = 'agent/checks'
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='GET')
     return ret
 
 
-def agent_services(consul_url=None):
+def agent_services(consul_url=None, token=None):
     '''
     Returns the services the local agent is managing
 
@@ -442,11 +466,12 @@ def agent_services(consul_url=None):
     function = 'agent/services'
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='GET')
     return ret
 
 
-def agent_members(consul_url=None, **kwargs):
+def agent_members(consul_url=None, token=None, **kwargs):
     '''
     Returns the members as seen by the local serf agent
 
@@ -476,12 +501,13 @@ def agent_members(consul_url=None, **kwargs):
     function = 'agent/members'
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='GET',
                  query_params=query_params)
     return ret
 
 
-def agent_self(consul_url=None):
+def agent_self(consul_url=None, token=None):
     '''
     Returns the local node configuration
 
@@ -508,12 +534,13 @@ def agent_self(consul_url=None):
     function = 'agent/self'
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='GET',
                  query_params=query_params)
     return ret
 
 
-def agent_maintenance(consul_url=None, **kwargs):
+def agent_maintenance(consul_url=None, token=None, **kwargs):
     '''
     Manages node maintenance mode
 
@@ -557,6 +584,7 @@ def agent_maintenance(consul_url=None, **kwargs):
     function = 'agent/maintenance'
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='PUT',
                  query_params=query_params)
     if res['res']:
@@ -569,7 +597,7 @@ def agent_maintenance(consul_url=None, **kwargs):
     return ret
 
 
-def agent_join(consul_url=None, address=None, **kwargs):
+def agent_join(consul_url=None, token=None, address=None, **kwargs):
     '''
     Triggers the local agent to join a node
 
@@ -604,6 +632,7 @@ def agent_join(consul_url=None, address=None, **kwargs):
     function = 'agent/join/{0}'.format(address)
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='GET',
                  query_params=query_params)
     if res['res']:
@@ -615,7 +644,7 @@ def agent_join(consul_url=None, address=None, **kwargs):
     return ret
 
 
-def agent_leave(consul_url=None, node=None):
+def agent_leave(consul_url=None, token=None, node=None):
     '''
     Used to instruct the agent to force a node into the left state.
 
@@ -646,6 +675,7 @@ def agent_leave(consul_url=None, node=None):
     function = 'agent/force-leave/{0}'.format(node)
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='GET',
                  query_params=query_params)
     if res['res']:
@@ -657,7 +687,7 @@ def agent_leave(consul_url=None, node=None):
     return ret
 
 
-def agent_check_register(consul_url=None, **kwargs):
+def agent_check_register(consul_url=None, token=None, **kwargs):
     '''
     The register endpoint is used to add a new check to the local agent.
 
@@ -700,7 +730,7 @@ def agent_check_register(consul_url=None, **kwargs):
     else:
         raise SaltInvocationError('Required argument "name" is missing.')
 
-    if True not in [True for item in ('script', 'http') if item in kwargs]:
+    if True not in [True for item in ('script', 'http', 'ttl') if item in kwargs]:
         ret['message'] = 'Required parameter "script" or "http" is missing.'
         ret['res'] = False
         return ret
@@ -727,11 +757,16 @@ def agent_check_register(consul_url=None, **kwargs):
         data['HTTP'] = kwargs['http']
         data['Interval'] = kwargs['interval']
 
+    if 'ttl' in kwargs:
+        data['TTL'] = kwargs['ttl']
+
     function = 'agent/check/register'
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='PUT',
                  data=data)
+
     if res['res']:
         ret['res'] = True
         ret['message'] = ('Check {0} added to agent.'.format(kwargs['name']))
@@ -741,7 +776,7 @@ def agent_check_register(consul_url=None, **kwargs):
     return ret
 
 
-def agent_check_deregister(consul_url=None, checkid=None):
+def agent_check_deregister(consul_url=None, token=None, checkid=None):
     '''
     The agent will take care of deregistering the check from the Catalog.
 
@@ -771,6 +806,7 @@ def agent_check_deregister(consul_url=None, checkid=None):
     function = 'agent/check/deregister/{0}'.format(checkid)
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='GET')
     if res['res']:
         ret['res'] = True
@@ -781,7 +817,7 @@ def agent_check_deregister(consul_url=None, checkid=None):
     return ret
 
 
-def agent_check_pass(consul_url=None, checkid=None, **kwargs):
+def agent_check_pass(consul_url=None, token=None, checkid=None, **kwargs):
     '''
     This endpoint is used with a check that is of the TTL type. When this
     is called, the status of the check is set to passing and the TTL
@@ -819,6 +855,7 @@ def agent_check_pass(consul_url=None, checkid=None, **kwargs):
     function = 'agent/check/pass/{0}'.format(checkid)
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params,
                  method='GET')
     if res['res']:
@@ -830,7 +867,7 @@ def agent_check_pass(consul_url=None, checkid=None, **kwargs):
     return ret
 
 
-def agent_check_warn(consul_url=None, checkid=None, **kwargs):
+def agent_check_warn(consul_url=None, token=None, checkid=None, **kwargs):
     '''
     This endpoint is used with a check that is of the TTL type. When this
     is called, the status of the check is set to warning and the TTL
@@ -868,6 +905,7 @@ def agent_check_warn(consul_url=None, checkid=None, **kwargs):
     function = 'agent/check/warn/{0}'.format(checkid)
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params,
                  method='GET')
     if res['res']:
@@ -879,7 +917,7 @@ def agent_check_warn(consul_url=None, checkid=None, **kwargs):
     return ret
 
 
-def agent_check_fail(consul_url=None, checkid=None, **kwargs):
+def agent_check_fail(consul_url=None, token=None, checkid=None, **kwargs):
     '''
     This endpoint is used with a check that is of the TTL type. When this
     is called, the status of the check is set to critical and the
@@ -917,6 +955,7 @@ def agent_check_fail(consul_url=None, checkid=None, **kwargs):
     function = 'agent/check/fail/{0}'.format(checkid)
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params,
                  method='GET')
     if res['res']:
@@ -928,7 +967,7 @@ def agent_check_fail(consul_url=None, checkid=None, **kwargs):
     return ret
 
 
-def agent_service_register(consul_url=None, **kwargs):
+def agent_service_register(consul_url=None, token=None, **kwargs):
     '''
     The used to add a new service, with an optional
     health check, to the local agent.
@@ -973,7 +1012,7 @@ def agent_service_register(consul_url=None, **kwargs):
             return ret
 
     lc_kwargs = dict()
-    for k, v in salt.ext.six.iteritems(kwargs):
+    for k, v in six.iteritems(kwargs):
         lc_kwargs[k.lower()] = v
 
     if 'name' in lc_kwargs:
@@ -1001,7 +1040,7 @@ def agent_service_register(consul_url=None, **kwargs):
 
     if 'check' in lc_kwargs:
         dd = dict()
-        for k, v in salt.ext.six.iteritems(lc_kwargs['check']):
+        for k, v in six.iteritems(lc_kwargs['check']):
             dd[k.lower()] = v
         interval_required = False
         check_dd = dict()
@@ -1026,12 +1065,13 @@ def agent_service_register(consul_url=None, **kwargs):
             if 'Interval' in check_dd:
                 del check_dd['Interval']  # not required, so ignore it
 
-        if len(check_dd) > 0:
+        if check_dd > 0:
             data['Check'] = check_dd  # if empty, ignore it
 
     function = 'agent/service/register'
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='PUT',
                  data=data)
     if res['res']:
@@ -1043,7 +1083,7 @@ def agent_service_register(consul_url=None, **kwargs):
     return ret
 
 
-def agent_service_deregister(consul_url=None, serviceid=None):
+def agent_service_deregister(consul_url=None, token=None, serviceid=None):
     '''
     Used to remove a service.
 
@@ -1074,6 +1114,7 @@ def agent_service_deregister(consul_url=None, serviceid=None):
     function = 'agent/service/deregister/{0}'.format(serviceid)
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='PUT',
                  data=data)
     if res['res']:
@@ -1085,7 +1126,7 @@ def agent_service_deregister(consul_url=None, serviceid=None):
     return ret
 
 
-def agent_service_maintenance(consul_url=None, serviceid=None, **kwargs):
+def agent_service_maintenance(consul_url=None, token=None, serviceid=None, **kwargs):
     '''
     Used to place a service into maintenance mode.
 
@@ -1129,6 +1170,7 @@ def agent_service_maintenance(consul_url=None, serviceid=None, **kwargs):
 
     function = 'agent/service/maintenance/{0}'.format(serviceid)
     res = _query(consul_url=consul_url,
+                 token=token,
                  function=function,
                  query_params=query_params)
 
@@ -1143,7 +1185,7 @@ def agent_service_maintenance(consul_url=None, serviceid=None, **kwargs):
     return ret
 
 
-def session_create(consul_url=None, **kwargs):
+def session_create(consul_url=None, token=None, **kwargs):
     '''
     Used to create a session.
 
@@ -1209,7 +1251,7 @@ def session_create(consul_url=None, **kwargs):
 
     if 'ttl' in kwargs:
         _ttl = kwargs['ttl']
-        if str(_ttl).endswith('s'):
+        if six.text_type(_ttl).endswith('s'):
             _ttl = _ttl[:-1]
 
         if int(_ttl) < 0 or int(_ttl) > 3600:
@@ -1222,6 +1264,7 @@ def session_create(consul_url=None, **kwargs):
     function = 'session/create'
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='PUT',
                  data=data)
 
@@ -1234,7 +1277,7 @@ def session_create(consul_url=None, **kwargs):
     return ret
 
 
-def session_list(consul_url=None, return_list=False, **kwargs):
+def session_list(consul_url=None, token=None, return_list=False, **kwargs):
     '''
     Used to list sessions.
 
@@ -1270,6 +1313,7 @@ def session_list(consul_url=None, return_list=False, **kwargs):
     function = 'session/list'
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
 
     if return_list:
@@ -1280,7 +1324,7 @@ def session_list(consul_url=None, return_list=False, **kwargs):
     return ret
 
 
-def session_destroy(consul_url=None, session=None, **kwargs):
+def session_destroy(consul_url=None, token=None, session=None, **kwargs):
     '''
     Destroy session
 
@@ -1317,6 +1361,7 @@ def session_destroy(consul_url=None, session=None, **kwargs):
     function = 'session/destroy/{0}'.format(session)
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     if res['res']:
         ret['res'] = True
@@ -1327,7 +1372,7 @@ def session_destroy(consul_url=None, session=None, **kwargs):
     return ret
 
 
-def session_info(consul_url=None, session=None, **kwargs):
+def session_info(consul_url=None, token=None, session=None, **kwargs):
     '''
     Information about a session
 
@@ -1364,11 +1409,12 @@ def session_info(consul_url=None, session=None, **kwargs):
     function = 'session/info/{0}'.format(session)
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     return ret
 
 
-def catalog_register(consul_url=None, **kwargs):
+def catalog_register(consul_url=None, token=None, **kwargs):
     '''
     Registers a new node, service, or check
 
@@ -1402,6 +1448,7 @@ def catalog_register(consul_url=None, **kwargs):
     '''
     ret = {}
     data = {}
+    data['NodeMeta'] = {}
     if not consul_url:
         consul_url = _get_config()
         if not consul_url:
@@ -1421,11 +1468,21 @@ def catalog_register(consul_url=None, **kwargs):
         return ret
 
     if 'address' in kwargs:
-        data['Address'] = kwargs['address']
+        if isinstance(kwargs['address'], list):
+            _address = kwargs['address'][0]
+        else:
+            _address = kwargs['address']
+        data['Address'] = _address
     else:
         ret['message'] = 'Required argument address argument is missing.'
         ret['res'] = False
         return ret
+
+    if 'ip_interfaces' in kwargs:
+        data['TaggedAddresses'] = {}
+        for k in kwargs['ip_interfaces']:
+            if kwargs['ip_interfaces'].get(k):
+                data['TaggedAddresses'][k] = kwargs['ip_interfaces'][k][0]
 
     if 'service' in kwargs:
         data['Service'] = {}
@@ -1445,6 +1502,42 @@ def catalog_register(consul_url=None, **kwargs):
             if not isinstance(_tags, list):
                 _tags = [_tags]
             data['Service']['Tags'] = _tags
+
+    if 'cpu' in kwargs:
+        data['NodeMeta']['Cpu'] = kwargs['cpu']
+
+    if 'num_cpus' in kwargs:
+        data['NodeMeta']['Cpu_num'] = kwargs['num_cpus']
+
+    if 'mem' in kwargs:
+        data['NodeMeta']['Memory'] = kwargs['mem']
+
+    if 'oscode' in kwargs:
+        data['NodeMeta']['Os'] = kwargs['oscode']
+
+    if 'osarch' in kwargs:
+        data['NodeMeta']['Osarch'] = kwargs['osarch']
+
+    if 'kernel' in kwargs:
+        data['NodeMeta']['Kernel'] = kwargs['kernel']
+
+    if 'kernelrelease' in kwargs:
+        data['NodeMeta']['Kernelrelease'] = kwargs['kernelrelease']
+
+    if 'localhost' in kwargs:
+        data['NodeMeta']['localhost'] = kwargs['localhost']
+
+    if 'nodename' in kwargs:
+        data['NodeMeta']['nodename'] = kwargs['nodename']
+
+    if 'os_family' in kwargs:
+        data['NodeMeta']['os_family'] = kwargs['os_family']
+
+    if 'lsb_distrib_description' in kwargs:
+        data['NodeMeta']['lsb_distrib_description'] = kwargs['lsb_distrib_description']
+
+    if 'master' in kwargs:
+        data['NodeMeta']['master'] = kwargs['master']
 
     if 'check' in kwargs:
         data['Check'] = {}
@@ -1469,6 +1562,7 @@ def catalog_register(consul_url=None, **kwargs):
     function = 'catalog/register'
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='PUT',
                  data=data)
     if res['res']:
@@ -1479,10 +1573,11 @@ def catalog_register(consul_url=None, **kwargs):
         ret['res'] = False
         ret['message'] = ('Catalog registration '
                           'for {0} failed.'.format(kwargs['node']))
+    ret['data'] = data
     return ret
 
 
-def catalog_deregister(consul_url=None, **kwargs):
+def catalog_deregister(consul_url=None, token=None, **kwargs):
     '''
     Deregisters a node, service, or check
 
@@ -1531,8 +1626,10 @@ def catalog_deregister(consul_url=None, **kwargs):
     function = 'catalog/deregister'
     res = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  method='PUT',
                  data=data)
+
     if res['res']:
         ret['res'] = True
         ret['message'] = 'Catalog item {0} removed.'.format(kwargs['node'])
@@ -1543,7 +1640,7 @@ def catalog_deregister(consul_url=None, **kwargs):
     return ret
 
 
-def catalog_datacenters(consul_url=None):
+def catalog_datacenters(consul_url=None, token=None):
     '''
     Return list of available datacenters from catalog.
 
@@ -1568,11 +1665,12 @@ def catalog_datacenters(consul_url=None):
 
     function = 'catalog/datacenters'
     ret = _query(consul_url=consul_url,
-                 function=function)
+                 function=function,
+                 token=token)
     return ret
 
 
-def catalog_nodes(consul_url=None, **kwargs):
+def catalog_nodes(consul_url=None, token=None, **kwargs):
     '''
     Return list of available nodes from catalog.
 
@@ -1604,11 +1702,12 @@ def catalog_nodes(consul_url=None, **kwargs):
     function = 'catalog/nodes'
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     return ret
 
 
-def catalog_services(consul_url=None, **kwargs):
+def catalog_services(consul_url=None, token=None, **kwargs):
     '''
     Return list of available services rom catalog.
 
@@ -1640,11 +1739,12 @@ def catalog_services(consul_url=None, **kwargs):
     function = 'catalog/services'
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     return ret
 
 
-def catalog_service(consul_url=None, service=None, **kwargs):
+def catalog_service(consul_url=None, token=None, service=None, **kwargs):
     '''
     Information about the registered service.
 
@@ -1683,11 +1783,12 @@ def catalog_service(consul_url=None, service=None, **kwargs):
     function = 'catalog/service/{0}'.format(service)
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     return ret
 
 
-def catalog_node(consul_url=None, node=None, **kwargs):
+def catalog_node(consul_url=None, token=None, node=None, **kwargs):
     '''
     Information about the registered node.
 
@@ -1723,11 +1824,12 @@ def catalog_node(consul_url=None, node=None, **kwargs):
     function = 'catalog/node/{0}'.format(node)
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     return ret
 
 
-def health_node(consul_url=None, node=None, **kwargs):
+def health_node(consul_url=None, token=None, node=None, **kwargs):
     '''
     Health information about the registered node.
 
@@ -1763,11 +1865,12 @@ def health_node(consul_url=None, node=None, **kwargs):
     function = 'health/node/{0}'.format(node)
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     return ret
 
 
-def health_checks(consul_url=None, service=None, **kwargs):
+def health_checks(consul_url=None, token=None, service=None, **kwargs):
     '''
     Health information about the registered service.
 
@@ -1803,11 +1906,12 @@ def health_checks(consul_url=None, service=None, **kwargs):
     function = 'health/checks/{0}'.format(service)
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     return ret
 
 
-def health_service(consul_url=None, service=None, **kwargs):
+def health_service(consul_url=None, token=None, service=None, **kwargs):
     '''
     Health information about the registered service.
 
@@ -1854,11 +1958,12 @@ def health_service(consul_url=None, service=None, **kwargs):
     function = 'health/service/{0}'.format(service)
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     return ret
 
 
-def health_state(consul_url=None, state=None, **kwargs):
+def health_state(consul_url=None, token=None, state=None, **kwargs):
     '''
     Returns the checks in the state provided on the path.
 
@@ -1904,11 +2009,12 @@ def health_state(consul_url=None, state=None, **kwargs):
     function = 'health/state/{0}'.format(state)
     ret = _query(consul_url=consul_url,
                  function=function,
+                 token=token,
                  query_params=query_params)
     return ret
 
 
-def status_leader(consul_url=None):
+def status_leader(consul_url=None, token=None):
     '''
     Returns the current Raft leader
 
@@ -1933,17 +2039,18 @@ def status_leader(consul_url=None):
 
     function = 'status/leader'
     ret = _query(consul_url=consul_url,
-                 function=function)
+                 function=function,
+                 token=token)
     return ret
 
 
-def status_peers(consul_url):
+def status_peers(consul_url, token=None):
     '''
     Returns the current Raft peer set
 
     :param consul_url: The Consul server URL.
     :return: Retrieves the Raft peers for the
-             datacenter in which the the agent is running.
+             datacenter in which the agent is running.
 
     CLI Example:
 
@@ -1963,17 +2070,16 @@ def status_peers(consul_url):
 
     function = 'status/peers'
     ret = _query(consul_url=consul_url,
-                 function=function)
+                 function=function,
+                 token=token)
     return ret
 
 
-def acl_create(consul_url=None, **kwargs):
+def acl_create(consul_url=None, token=None, **kwargs):
     '''
     Create a new ACL token.
 
     :param consul_url: The Consul server URL.
-    :param id: Unique identifier for the ACL to create
-               leave it blank to let consul server generate one
     :param name: Meaningful indicator of the ACL's purpose.
     :param type: Type is either client or management. A management
                  token is comparable to a root user and has the
@@ -2004,9 +2110,6 @@ def acl_create(consul_url=None, **kwargs):
     else:
         raise SaltInvocationError('Required argument "name" is missing.')
 
-    if 'id' in kwargs:
-        data['ID'] = kwargs['id']
-
     if 'type' in kwargs:
         data['Type'] = kwargs['type']
 
@@ -2015,6 +2118,7 @@ def acl_create(consul_url=None, **kwargs):
 
     function = 'acl/create'
     res = _query(consul_url=consul_url,
+                 token=token,
                  data=data,
                  method='PUT',
                  function=function)
@@ -2029,7 +2133,7 @@ def acl_create(consul_url=None, **kwargs):
     return ret
 
 
-def acl_update(consul_url=None, **kwargs):
+def acl_update(consul_url=None, token=None, **kwargs):
     '''
     Update an ACL token.
 
@@ -2080,6 +2184,7 @@ def acl_update(consul_url=None, **kwargs):
 
     function = 'acl/update'
     res = _query(consul_url=consul_url,
+                 token=token,
                  data=data,
                  method='PUT',
                  function=function)
@@ -2095,7 +2200,7 @@ def acl_update(consul_url=None, **kwargs):
     return ret
 
 
-def acl_delete(consul_url=None, **kwargs):
+def acl_delete(consul_url=None, token=None, **kwargs):
     '''
     Delete an ACL token.
 
@@ -2125,8 +2230,9 @@ def acl_delete(consul_url=None, **kwargs):
         ret['res'] = False
         return ret
 
-    function = 'acl/destroy/{0}'.format(kwargs['id'])
+    function = 'acl/delete/{0}'.format(kwargs['id'])
     res = _query(consul_url=consul_url,
+                 token=token,
                  data=data,
                  method='PUT',
                  function=function)
@@ -2180,7 +2286,7 @@ def acl_info(consul_url=None, **kwargs):
     return ret
 
 
-def acl_clone(consul_url=None, **kwargs):
+def acl_clone(consul_url=None, token=None, **kwargs):
     '''
     Information about an ACL token.
 
@@ -2213,6 +2319,7 @@ def acl_clone(consul_url=None, **kwargs):
 
     function = 'acl/clone/{0}'.format(kwargs['id'])
     res = _query(consul_url=consul_url,
+                 token=token,
                  data=data,
                  method='PUT',
                  function=function)
@@ -2227,7 +2334,7 @@ def acl_clone(consul_url=None, **kwargs):
     return ret
 
 
-def acl_list(consul_url=None, **kwargs):
+def acl_list(consul_url=None, token=None, **kwargs):
     '''
     List the ACL tokens.
 
@@ -2258,13 +2365,14 @@ def acl_list(consul_url=None, **kwargs):
 
     function = 'acl/list'
     ret = _query(consul_url=consul_url,
+                 token=token,
                  data=data,
                  method='PUT',
                  function=function)
     return ret
 
 
-def event_fire(consul_url=None, name=None, **kwargs):
+def event_fire(consul_url=None, token=None, name=None, **kwargs):
     '''
     List the ACL tokens.
 
@@ -2311,6 +2419,7 @@ def event_fire(consul_url=None, name=None, **kwargs):
 
     function = 'event/fire/{0}'.format(name)
     res = _query(consul_url=consul_url,
+                 token=token,
                  query_params=query_params,
                  method='PUT',
                  function=function)
@@ -2326,7 +2435,7 @@ def event_fire(consul_url=None, name=None, **kwargs):
     return ret
 
 
-def event_list(consul_url=None, **kwargs):
+def event_list(consul_url=None, token=None, **kwargs):
     '''
     List the recent events.
 
@@ -2358,6 +2467,7 @@ def event_list(consul_url=None, **kwargs):
 
     function = 'event/list/'
     ret = _query(consul_url=consul_url,
+                 token=token,
                  query_params=query_params,
                  function=function)
     return ret

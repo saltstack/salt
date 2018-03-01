@@ -10,6 +10,7 @@ grains modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cimc
     chronos
     core
     disks
@@ -19,6 +20,9 @@ grains modules
     junos
     marathon
     mdadm
+    metadata
+    napalm
     opts
+    panos
     philips_hue
     rest_sample

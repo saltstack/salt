@@ -10,19 +10,23 @@ Watch files and translate the changes into salt events
             setting the `disable_during_state_run` flag to `True` in
             the beacon configuration.
 
-:note: The `inotify` beacon only works on OSes that have `inotify` kernel support.
-       Currently this excludes FreeBSD, macOS, and Windows.
+:note: The `inotify` beacon only works on OSes that have `inotify`
+       kernel support.  Currently this excludes FreeBSD, macOS, and Windows.
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import collections
 import fnmatch
+import logging
 import os
 import re
 
 # Import salt libs
 import salt.ext.six
+# pylint: disable=import-error
+from salt.ext.six.moves import map
+# pylint: enable=import-error
 
 # Import third party libs
 try:
@@ -40,7 +44,6 @@ except ImportError:
 
 __virtualname__ = 'inotify'
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -64,7 +67,7 @@ def _enqueue(revent):
     __context__['inotify.queue'].append(revent)
 
 
-def _get_notifier():
+def _get_notifier(config):
     '''
     Check the context for the notifier and construct it if not present
     '''
@@ -72,10 +75,14 @@ def _get_notifier():
         __context__['inotify.queue'] = collections.deque()
         wm = pyinotify.WatchManager()
         __context__['inotify.notifier'] = pyinotify.Notifier(wm, _enqueue)
+        if ('coalesce' in config and
+                isinstance(config['coalesce'], bool) and
+                config['coalesce']):
+            __context__['inotify.notifier'].coalesce_events()
     return __context__['inotify.notifier']
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
@@ -101,37 +108,45 @@ def __validate__(config):
     ]
 
     # Configuration for inotify beacon should be a dict of dicts
-    log.debug('config {0}'.format(config))
-    if not isinstance(config, dict):
-        return False, 'Configuration for inotify beacon must be a dictionary.'
+    if not isinstance(config, list):
+        return False, 'Configuration for inotify beacon must be a list.'
     else:
-        for config_item in config:
-            if not isinstance(config[config_item], dict):
-                return False, ('Configuration for inotify beacon must '
-                               'be a dictionary of dictionaries.')
-            else:
-                if not any(j in ['mask', 'recurse', 'auto_add'] for j in config[config_item]):
+        _config = {}
+        list(map(_config.update, config))
+
+        if 'files' not in _config:
+            return False, 'Configuration for inotify beacon must include files.'
+        else:
+            for path in _config.get('files'):
+
+                if not isinstance(_config['files'][path], dict):
                     return False, ('Configuration for inotify beacon must '
-                                   'contain mask, recurse or auto_add items.')
+                                   'be a list of dictionaries.')
+                else:
+                    if not any(j in ['mask',
+                                     'recurse',
+                                     'auto_add'] for j in _config['files'][path]):
+                        return False, ('Configuration for inotify beacon must '
+                                       'contain mask, recurse or auto_add items.')
 
-            if 'auto_add' in config[config_item]:
-                if not isinstance(config[config_item]['auto_add'], bool):
-                    return False, ('Configuration for inotify beacon '
-                                   'auto_add must be boolean.')
+                    if 'auto_add' in _config['files'][path]:
+                        if not isinstance(_config['files'][path]['auto_add'], bool):
+                            return False, ('Configuration for inotify beacon '
+                                           'auto_add must be boolean.')
 
-            if 'recurse' in config[config_item]:
-                if not isinstance(config[config_item]['recurse'], bool):
-                    return False, ('Configuration for inotify beacon '
-                                   'recurse must be boolean.')
+                    if 'recurse' in _config['files'][path]:
+                        if not isinstance(_config['files'][path]['recurse'], bool):
+                            return False, ('Configuration for inotify beacon '
+                                           'recurse must be boolean.')
 
-            if 'mask' in config[config_item]:
-                if not isinstance(config[config_item]['mask'], list):
-                    return False, ('Configuration for inotify beacon '
-                                   'mask must be list.')
-                for mask in config[config_item]['mask']:
-                    if mask not in VALID_MASK:
-                        return False, ('Configuration for inotify beacon '
-                                       'invalid mask option {0}.'.format(mask))
+                    if 'mask' in _config['files'][path]:
+                        if not isinstance(_config['files'][path]['mask'], list):
+                            return False, ('Configuration for inotify beacon '
+                                           'mask must be list.')
+                        for mask in _config['files'][path]['mask']:
+                            if mask not in VALID_MASK:
+                                return False, ('Configuration for inotify beacon '
+                                               'invalid mask option {0}.'.format(mask))
     return True, 'Valid beacon configuration'
 
 
@@ -145,18 +160,20 @@ def beacon(config):
 
         beacons:
           inotify:
-            /path/to/file/or/dir:
-              mask:
-                - open
-                - create
-                - close_write
-              recurse: True
-              auto_add: True
-              exclude:
-                - /path/to/file/or/dir/exclude1
-                - /path/to/file/or/dir/exclude2
-                - /path/to/file/or/dir/regex[a-m]*$:
-                    regex: True
+            - files:
+                /path/to/file/or/dir:
+                  mask:
+                    - open
+                    - create
+                    - close_write
+                  recurse: True
+                  auto_add: True
+                  exclude:
+                    - /path/to/file/or/dir/exclude1
+                    - /path/to/file/or/dir/exclude2
+                    - /path/to/file/or/dir/regex[a-m]*$:
+                        regex: True
+            - coalesce: True
 
     The mask list can contain the following events (the default mask is create,
     delete, and modify):
@@ -188,9 +205,21 @@ def beacon(config):
     exclude:
       Exclude directories or files from triggering events in the watched directory.
       Can use regex if regex is set to True
+    coalesce:
+      If this coalescing option is enabled, events are filtered based on
+      their unicity, only unique events are enqueued, doublons are discarded.
+      An event is unique when the combination of its fields (wd, mask,
+      cookie, name) is unique among events of a same batch. After a batch of
+      events is processed any events are accepted again.
+      This option is top-level (at the same level as the path) and therefore
+      affects all paths that are being watched. This is due to this option
+      being at the Notifier level in pyinotify.
     '''
+    _config = {}
+    list(map(_config.update, config))
+
     ret = []
-    notifier = _get_notifier()
+    notifier = _get_notifier(_config)
     wm = notifier._watch_manager
 
     # Read in existing events
@@ -205,22 +234,25 @@ def beacon(config):
             # Find the matching path in config
             path = event.path
             while path != '/':
-                if path in config:
+                if path in _config.get('files', {}):
                     break
                 path = os.path.dirname(path)
 
-            excludes = config[path].get('exclude', '')
+            for path in _config.get('files', {}):
+                excludes = _config['files'][path].get('exclude', '')
+
             if excludes and isinstance(excludes, list):
                 for exclude in excludes:
                     if isinstance(exclude, dict):
                         if exclude.values()[0].get('regex', False):
                             try:
-                                if re.search(exclude.keys()[0], event.pathname):
+                                if re.search(list(exclude)[0], event.pathname):
                                     _append = False
                             except Exception:
-                                log.warning('Failed to compile regex: {0}'.format(exclude.keys()[0]))
+                                log.warning('Failed to compile regex: %s',
+                                            list(exclude)[0])
                         else:
-                            exclude = exclude.keys()[0]
+                            exclude = list(exclude)[0]
                     elif '*' in exclude:
                         if fnmatch.fnmatch(event.pathname, exclude):
                             _append = False
@@ -234,7 +266,7 @@ def beacon(config):
                        'change': event.maskname}
                 ret.append(sub)
             else:
-                log.info('Excluding {0} from event for {1}'.format(event.pathname, path))
+                log.info('Excluding %s from event for %s', event.pathname, path)
 
     # Get paths currently being watched
     current = set()
@@ -243,9 +275,10 @@ def beacon(config):
 
     # Update existing watches and add new ones
     # TODO: make the config handle more options
-    for path in config:
-        if isinstance(config[path], dict):
-            mask = config[path].get('mask', DEFAULT_MASK)
+    for path in _config.get('files', ()):
+
+        if isinstance(_config['files'][path], dict):
+            mask = _config['files'][path].get('mask', DEFAULT_MASK)
             if isinstance(mask, list):
                 r_mask = 0
                 for sub in mask:
@@ -255,8 +288,8 @@ def beacon(config):
             else:
                 r_mask = mask
             mask = r_mask
-            rec = config[path].get('recurse', False)
-            auto_add = config[path].get('auto_add', False)
+            rec = _config['files'][path].get('recurse', False)
+            auto_add = _config['files'][path].get('auto_add', False)
         else:
             mask = DEFAULT_MASK
             rec = False
@@ -273,7 +306,7 @@ def beacon(config):
                     if update:
                         wm.update_watch(wd, mask=mask, rec=rec, auto_add=auto_add)
         elif os.path.exists(path):
-            excludes = config[path].get('exclude', '')
+            excludes = _config['files'][path].get('exclude', '')
             excl = None
             if isinstance(excludes, list):
                 excl = []

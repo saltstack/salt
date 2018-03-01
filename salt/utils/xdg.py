@@ -2,7 +2,7 @@
 '''
 Create an XDG function to get the config dir
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 

@@ -4,12 +4,13 @@ Module for viewing and modifying sysctl parameters
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'sysctl'
@@ -66,7 +67,7 @@ def show(config_file=False):
 
     if config_file:
         try:
-            with salt.utils.fopen(config_file, 'r') as f:
+            with salt.utils.files.fopen(config_file, 'r') as f:
                 for line in f.readlines():
                     l = line.strip()
                     if l != "" and not l.startswith("#"):
@@ -139,10 +140,11 @@ def persist(name, value, config='/etc/sysctl.conf'):
     '''
     nlines = []
     edited = False
-    value = str(value)
+    value = six.text_type(value)
 
-    with salt.utils.fopen(config, 'r') as ifile:
+    with salt.utils.files.fopen(config, 'r') as ifile:
         for line in ifile:
+            line = salt.utils.stringutils.to_unicode(line).rstrip('\n')
             if not line.startswith('{0}='.format(name)):
                 nlines.append(line)
                 continue
@@ -162,7 +164,8 @@ def persist(name, value, config='/etc/sysctl.conf'):
                 edited = True
     if not edited:
         nlines.append("{0}\n".format(_formatfor(name, value, config)))
-    with salt.utils.fopen(config, 'w+') as ofile:
+    with salt.utils.files.fopen(config, 'w+') as ofile:
+        nlines = [salt.utils.stringutils.to_str(_l) for _l in nlines]
         ofile.writelines(nlines)
     if config != '/boot/loader.conf':
         assign(name, value)

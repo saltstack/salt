@@ -12,11 +12,15 @@ This renderer requires `Dogeon`__ (installable via pip)
 .. __: https://github.com/soasme/dogeon
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import dson
 import logging
+
+try:
+    import dson
+except ImportError:
+    raise
 
 # Import salt libs
 from salt.ext import six

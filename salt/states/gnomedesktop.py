@@ -24,10 +24,13 @@ Control the GNOME settings
             - clock_show_date: true
             - clock_format: 12h
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import re
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +40,7 @@ def _check_current_value(gnome_kwargs, value):
     Check the current value with the passed value
     '''
     current_value = __salt__['gnome.get'](**gnome_kwargs)
-    return str(current_value) == str(value)
+    return six.text_type(current_value) == six.text_type(value)
 
 
 def _do(name, gnome_kwargs, preferences):
@@ -61,11 +64,11 @@ def _do(name, gnome_kwargs, preferences):
 
             # need to convert boolean values to strings and make lowercase to
             # pass to gsettings
-            value = str(value).lower()
+            value = six.text_type(value).lower()
 
         elif isinstance(value, int):
             ftype = 'int'
-        elif isinstance(value, str):
+        elif isinstance(value, six.string_types):
             ftype = 'string'
         else:
             ftype = 'string'

@@ -5,7 +5,7 @@ minion modules.
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
@@ -21,17 +21,17 @@ import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
+import salt.utils.files
 import salt.utils.jid
+import salt.utils.kinds as kinds
 import salt.utils.minion
+import salt.utils.profile
+import salt.utils.stringutils
 import salt.defaults.exitcodes
-from salt.log import LOG_LEVELS
-from salt.utils import is_windows
-from salt.utils import print_cli
-from salt.utils import kinds
-from salt.utils import activate_profile
-from salt.utils import output_profile
-from salt.utils.process import MultiprocessingProcess
 from salt.cli import daemons
+from salt.log import LOG_LEVELS
+from salt.utils.platform import is_windows
+from salt.utils.process import MultiprocessingProcess
 
 try:
     from raet import raeting, nacling
@@ -46,7 +46,7 @@ except ImportError:
     pass
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Custom exceptions
 from salt.exceptions import (
@@ -101,7 +101,7 @@ class BaseCaller(object):
         try:
             self.minion = salt.minion.SMinion(opts)
         except SaltClientError as exc:
-            raise SystemExit(str(exc))
+            raise SystemExit(six.text_type(exc))
 
     def print_docs(self):
         '''
@@ -114,7 +114,7 @@ class BaseCaller(object):
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts.get('fun', '')):
-                print_cli('{0}:\n{1}\n'.format(name, docs[name]))
+                salt.utils.stringutils.print_cli('{0}:\n{1}\n'.format(name, docs[name]))
 
     def print_grains(self):
         '''
@@ -129,24 +129,26 @@ class BaseCaller(object):
         '''
         profiling_enabled = self.opts.get('profiling_enabled', False)
         try:
-            pr = activate_profile(profiling_enabled)
+            pr = salt.utils.profile.activate_profile(profiling_enabled)
             try:
                 ret = self.call()
             finally:
-                output_profile(pr,
-                               stats_path=self.opts.get('profiling_path',
-                                                        '/tmp/stats'),
-                               stop=True)
+                salt.utils.profile.output_profile(
+                    pr,
+                    stats_path=self.opts.get('profiling_path', '/tmp/stats'),
+                    stop=True)
             out = ret.get('out', 'nested')
-            if self.opts['metadata']:
+            if self.opts['print_metadata']:
                 print_ret = ret
                 out = 'nested'
             else:
                 print_ret = ret.get('return', {})
             salt.output.display_output(
                     {'local': print_ret},
-                    out,
-                    self.opts)
+                    out=out,
+                    opts=self.opts,
+                    _retcode=ret.get('retcode', 0))
+            # _retcode will be available in the kwargs of the outputter function
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
         except SaltInvocationError as err:
@@ -158,12 +160,18 @@ class BaseCaller(object):
         '''
         ret = {}
         fun = self.opts['fun']
-        ret['jid'] = salt.utils.jid.gen_jid()
+        ret['jid'] = salt.utils.jid.gen_jid(self.opts)
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
             ret['jid']
         )
         if fun not in self.minion.functions:
+            docs = self.minion.functions['sys.doc']('{0}*'.format(fun))
+            if docs:
+                docs[fun] = self.minion.functions.missing_fun_string(fun)
+                ret['out'] = 'nested'
+                ret['return'] = docs
+                return ret
             sys.stderr.write(self.minion.functions.missing_fun_string(fun))
             mod_name = fun.split('.')[0]
             if mod_name in self.minion.function_errors:
@@ -171,18 +179,25 @@ class BaseCaller(object):
             else:
                 sys.stderr.write('\n')
             sys.exit(-1)
+        metadata = self.opts.get('metadata')
+        if metadata is not None:
+            metadata = salt.utils.args.yamlify_arg(metadata)
         try:
             sdata = {
                 'fun': fun,
                 'pid': os.getpid(),
                 'jid': ret['jid'],
                 'tgt': 'salt-call'}
+            if metadata is not None:
+                sdata['metadata'] = metadata
             args, kwargs = salt.minion.load_args_and_kwargs(
                 self.minion.functions[fun],
-                salt.utils.args.parse_input(self.opts['arg']),
+                salt.utils.args.parse_input(
+                    self.opts['arg'],
+                    no_parse=self.opts.get('no_parse', [])),
                 data=sdata)
             try:
-                with salt.utils.fopen(proc_fn, 'w+b') as fp_:
+                with salt.utils.files.fopen(proc_fn, 'w+b') as fp_:
                     fp_.write(self.serial.dumps(sdata))
             except NameError:
                 # Don't require msgpack with local
@@ -197,7 +212,7 @@ class BaseCaller(object):
                 ret['return'] = func(*args, **kwargs)
             except TypeError as exc:
                 sys.stderr.write('\nPassed invalid arguments: {0}.\n\nUsage:\n'.format(exc))
-                print_cli(func.__doc__)
+                salt.utils.stringutils.print_cli(func.__doc__)
                 active_level = LOG_LEVELS.get(
                     self.opts['log_level'].lower(), logging.ERROR)
                 if active_level <= logging.DEBUG:
@@ -215,11 +230,11 @@ class BaseCaller(object):
                 self.opts['log_level'].lower(), logging.ERROR)
             if active_level <= logging.DEBUG:
                 sys.stderr.write(traceback.format_exc())
-            sys.stderr.write(msg.format(fun, str(exc)))
+            sys.stderr.write(msg.format(fun, exc))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except CommandNotFoundError as exc:
             msg = 'Command required for \'{0}\' not found: {1}\n'
-            sys.stderr.write(msg.format(fun, str(exc)))
+            sys.stderr.write(msg.format(fun, exc))
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         try:
             os.remove(proc_fn)
@@ -237,6 +252,8 @@ class BaseCaller(object):
             ret['id'] = self.opts['id']
             ret['fun'] = fun
             ret['fun_args'] = self.opts['arg']
+            if metadata is not None:
+                ret['metadata'] = metadata
 
         for returner in returners:
             if not returner:  # if we got an empty returner somehow, skip
@@ -349,7 +366,7 @@ class RAETCaller(BaseCaller):
                 self.stack.server.close()
                 salt.transport.jobber_stack = None
 
-            if self.opts['metadata']:
+            if self.opts['print_metadata']:
                 print_ret = ret
             else:
                 print_ret = ret.get('return', {})
@@ -357,8 +374,10 @@ class RAETCaller(BaseCaller):
                 self.process.terminate()
             salt.output.display_output(
                     {'local': print_ret},
-                    ret.get('out', 'nested'),
-                    self.opts)
+                    out=ret.get('out', 'nested'),
+                    opts=self.opts,
+                    _retcode=ret.get('retcode', 0))
+            # _retcode will be available in the kwargs of the outputter function
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
 
@@ -401,7 +420,7 @@ class RAETCaller(BaseCaller):
                                    name='manor',
                                    lanename=lanename,
                                    dirpath=sockdirpath))
-        log.debug("Created Caller Jobber Stack {0}\n".format(stack.name))
+        log.debug("Created Caller Jobber Stack %s\n", stack.name)
 
         return stack
 

@@ -50,15 +50,14 @@ Module for handling openstack keystone calls.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt Libs
-import salt.ext.six as six
 import salt.utils.http
-from salt.ext import six
 
-# Import third party libs
+# Import 3rd-party libs
+from salt.ext import six
 HAS_KEYSTONE = False
 try:
     # pylint: disable=import-error
@@ -66,6 +65,9 @@ try:
     import keystoneclient.exceptions
     HAS_KEYSTONE = True
     from keystoneclient.v3 import client as client3
+    from keystoneclient import discover
+    from keystoneauth1 import session
+    from keystoneauth1.identity import generic
     # pylint: enable=import-error
 except ImportError:
     pass
@@ -112,7 +114,8 @@ def _get_kwargs(profile=None, **connection_args):
     insecure = get('insecure', False)
     token = get('token')
     endpoint = get('endpoint', 'http://127.0.0.1:35357/v2.0')
-
+    user_domain_name = get('user_domain_name', 'Default')
+    project_domain_name = get('project_domain_name', 'Default')
     if token:
         kwargs = {'token': token,
                   'endpoint': endpoint}
@@ -121,7 +124,9 @@ def _get_kwargs(profile=None, **connection_args):
                   'password': password,
                   'tenant_name': tenant,
                   'tenant_id': tenant_id,
-                  'auth_url': auth_url}
+                  'auth_url': auth_url,
+                  'user_domain_name': user_domain_name,
+                  'project_domain_name': project_domain_name}
         # 'insecure' keyword not supported by all v2.0 keystone clients
         #   this ensures it's only passed in when defined
         if insecure:
@@ -160,14 +165,23 @@ def auth(profile=None, **connection_args):
     '''
     kwargs = _get_kwargs(profile=profile, **connection_args)
 
-    if float(api_version(profile=profile, **connection_args).strip('v')) >= 3:
+    disc = discover.Discover(auth_url=kwargs['auth_url'])
+    v2_auth_url = disc.url_for('v2.0')
+    v3_auth_url = disc.url_for('v3.0')
+    if v3_auth_url:
         global _OS_IDENTITY_API_VERSION
         global _TENANTS
         _OS_IDENTITY_API_VERSION = 3
         _TENANTS = 'projects'
-        return client3.Client(**kwargs)
+        kwargs['auth_url'] = v3_auth_url
     else:
-        return client.Client(**kwargs)
+        kwargs['auth_url'] = v2_auth_url
+        kwargs.pop('user_domain_name')
+        kwargs.pop('project_domain_name')
+    auth = generic.Password(**kwargs)
+    sess = session.Session(auth=auth)
+    ks_cl = disc.create_client(session=sess)
+    return ks_cl
 
 
 def ec2_credentials_create(user_id=None, name=None,
@@ -343,7 +357,7 @@ def endpoint_list(profile=None, **connection_args):
     for endpoint in kstone.endpoints.list():
         ret[endpoint.id] = dict((value, getattr(endpoint, value)) for value in dir(endpoint)
                                 if not value.startswith('_') and
-                                isinstance(getattr(endpoint, value), (six.text_type, dict, bool, str)))
+                                isinstance(getattr(endpoint, value), (six.string_types, dict, bool)))
     return ret
 
 
@@ -496,7 +510,7 @@ def role_list(profile=None, **connection_args):
     for role in kstone.roles.list():
         ret[role.name] = dict((value, getattr(role, value)) for value in dir(role)
                               if not value.startswith('_') and
-                              isinstance(getattr(role, value), (six.text_type, dict, bool, str)))
+                              isinstance(getattr(role, value), (six.string_types, dict, bool)))
     return ret
 
 
@@ -560,7 +574,7 @@ def service_get(service_id=None, name=None, profile=None, **connection_args):
     service = kstone.services.get(service_id)
     ret[service.name] = dict((value, getattr(service, value)) for value in dir(service)
                              if not value.startswith('_') and
-                             isinstance(getattr(service, value), (six.text_type, dict, bool, str)))
+                             isinstance(getattr(service, value), (six.string_types, dict, bool)))
     return ret
 
 
@@ -579,7 +593,7 @@ def service_list(profile=None, **connection_args):
     for service in kstone.services.list():
         ret[service.name] = dict((value, getattr(service, value)) for value in dir(service)
                                  if not value.startswith('_') and
-                                 isinstance(getattr(service, value), (six.text_type, dict, bool, str)))
+                                 isinstance(getattr(service, value), (six.string_types, dict, bool)))
     return ret
 
 
@@ -722,7 +736,7 @@ def tenant_get(tenant_id=None, name=None, profile=None,
     tenant = getattr(kstone, _TENANTS, None).get(tenant_id)
     ret[tenant.name] = dict((value, getattr(tenant, value)) for value in dir(tenant)
                             if not value.startswith('_') and
-                            isinstance(getattr(tenant, value), (six.text_type, dict, bool, str)))
+                            isinstance(getattr(tenant, value), (six.string_types, dict, bool)))
     return ret
 
 
@@ -775,7 +789,7 @@ def tenant_list(profile=None, **connection_args):
     for tenant in getattr(kstone, _TENANTS, None).list():
         ret[tenant.name] = dict((value, getattr(tenant, value)) for value in dir(tenant)
                                 if not value.startswith('_') and
-                                isinstance(getattr(tenant, value), (six.text_type, dict, bool, str)))
+                                isinstance(getattr(tenant, value), (six.string_types, dict, bool)))
     return ret
 
 
@@ -839,7 +853,7 @@ def tenant_update(tenant_id=None, name=None, description=None,
 
     return dict((value, getattr(updated, value)) for value in dir(updated)
                 if not value.startswith('_') and
-                isinstance(getattr(updated, value), (six.text_type, dict, bool, str)))
+                isinstance(getattr(updated, value), (six.string_types, dict, bool)))
 
 
 def project_update(project_id=None, name=None, description=None,
@@ -918,7 +932,7 @@ def user_list(profile=None, **connection_args):
     for user in kstone.users.list():
         ret[user.name] = dict((value, getattr(user, value, None)) for value in dir(user)
                               if not value.startswith('_') and
-                              isinstance(getattr(user, value, None), (six.text_type, dict, bool, str)))
+                              isinstance(getattr(user, value, None), (six.string_types, dict, bool)))
         tenant_id = getattr(user, 'tenantId', None)
         if tenant_id:
             ret[user.name]['tenant_id'] = tenant_id
@@ -955,7 +969,7 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
 
     ret[user.name] = dict((value, getattr(user, value, None)) for value in dir(user)
                           if not value.startswith('_') and
-                          isinstance(getattr(user, value, None), (six.text_type, dict, bool, str)))
+                          isinstance(getattr(user, value, None), (six.string_types, dict, bool)))
 
     tenant_id = getattr(user, 'tenantId', None)
     if tenant_id:
@@ -1058,7 +1072,7 @@ def user_update(user_id=None, name=None, email=None, enabled=None,
         if description is None:
             description = getattr(user, 'description', None)
         else:
-            description = str(description)
+            description = six.text_type(description)
 
         project_id = None
         if project:
@@ -1317,7 +1331,7 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b
         for role in kstone.roles.list(user=user_id, project=tenant_id):
             ret[role.name] = dict((value, getattr(role, value)) for value in dir(role)
                                   if not value.startswith('_') and
-                                  isinstance(getattr(role, value), (six.text_type, dict, bool, str)))
+                                  isinstance(getattr(role, value), (six.string_types, dict, bool)))
     else:
         for role in kstone.roles.roles_for_user(user=user_id, tenant=tenant_id):
             ret[role.name] = {'id': role.id,

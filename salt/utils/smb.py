@@ -5,9 +5,10 @@ Utility functions for SMB connections
 :depends: impacket
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import salt.utils.files
 import logging
 
 log = logging.getLogger(__name__)
@@ -77,8 +78,8 @@ def mkdirs(path, share='C$', conn=None, host=None, username=None, password=None)
         cwd = '\\'.join(comps[0:pos])
         try:
             conn.listPath(share, cwd)
-        except (smbSessionError, smb3SessionError) as exc:
-            log.debug('Exception: {0}'.format(exc))
+        except (smbSessionError, smb3SessionError):
+            log.exception('Encountered error running conn.listPath')
             conn.createDirectory(share, cwd)
         pos += 1
 
@@ -96,3 +97,24 @@ def put_str(content, path, share='C$', conn=None, host=None, username=None, pass
 
     fh_ = StrHandle(content)
     conn.putFile(share, path, fh_.string)
+
+
+def put_file(local_path, path, share='C$', conn=None, host=None, username=None, password=None):
+    '''
+    Wrapper around impacket.smbconnection.putFile() that allows a file to be
+    uploaded
+
+    Example usage:
+
+        import salt.utils.smb
+        smb_conn = salt.utils.smb.get_conn('10.0.0.45', 'vagrant', 'vagrant')
+        salt.utils.smb.put_file('/root/test.pdf', 'temp\\myfiles\\test1.pdf', conn=smb_conn)
+    '''
+    if conn is None:
+        conn = get_conn(host, username, password)
+
+    if conn is False:
+        return False
+
+    with salt.utils.files.fopen(local_path, 'rb') as fh_:
+        conn.putFile(share, path, fh_.read)

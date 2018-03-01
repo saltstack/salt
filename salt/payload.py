@@ -6,7 +6,7 @@ in here
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # import sys  # Use if sys is commented out below
 import logging
 import gc
@@ -16,11 +16,11 @@ import datetime
 import salt.log
 import salt.crypt
 import salt.transport.frame
+import salt.utils.immutabletypes as immutabletypes
 from salt.exceptions import SaltReqTimeoutError
-from salt.utils import immutabletypes
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import zmq
 except ImportError:
@@ -35,8 +35,12 @@ try:
     import msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it
-    if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
-        raise ImportError
+    if msgpack.version >= (0, 4, 0):
+        if msgpack.loads(msgpack.dumps([1, 2, 3], use_bin_type=False), use_list=True) is None:
+            raise ImportError
+    else:
+        if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
+            raise ImportError
     HAS_MSGPACK = True
 except ImportError:
     # Fall back to msgpack_pure
@@ -105,7 +109,7 @@ class Serial(object):
     def __init__(self, opts):
         if isinstance(opts, dict):
             self.serial = opts.get('serial', 'msgpack')
-        elif isinstance(opts, str):
+        elif isinstance(opts, six.string_types):
             self.serial = opts
         else:
             self.serial = 'msgpack'
@@ -140,10 +144,13 @@ class Serial(object):
             if six.PY3 and encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:
-            log.critical('Could not deserialize msgpack message.'
-                         'This often happens when trying to read a file not in binary mode'
-                         'To see message payload, enable debug logging and retry. Exception: {0}'.format(exc))
-            log.debug('Msgpack deserialization failure on message: {0}'.format(msg))
+            log.critical(
+                'Could not deserialize msgpack message. This often happens '
+                'when trying to read a file not in binary mode. '
+                'To see message payload, enable debug logging and retry. '
+                'Exception: %s', exc
+            )
+            log.debug('Msgpack deserialization failure on message: %s', msg)
             gc.collect()
             raise
         finally:
@@ -172,120 +179,149 @@ class Serial(object):
                              Since this changes the wire protocol, this
                              option should not be used outside of IPC.
         '''
-        try:
-            if msgpack.version >= (0, 4, 0):
-                # msgpack only supports 'use_bin_type' starting in 0.4.0.
-                # Due to this, if we don't need it, don't pass it at all so
-                # that under Python 2 we can still work with older versions
-                # of msgpack.
-                return msgpack.dumps(msg, use_bin_type=use_bin_type)
-            else:
-                return msgpack.dumps(msg)
-        except (OverflowError, msgpack.exceptions.PackValueError):
-            # msgpack can't handle the very long Python longs for jids
-            # Convert any very long longs to strings
-            # We borrow the technique used by TypeError below
-            def verylong_encoder(obj):
-                if isinstance(obj, dict):
-                    for key, value in six.iteritems(obj.copy()):
-                        obj[key] = verylong_encoder(value)
-                    return dict(obj)
-                elif isinstance(obj, (list, tuple)):
-                    obj = list(obj)
-                    for idx, entry in enumerate(obj):
-                        obj[idx] = verylong_encoder(entry)
-                    return obj
-                # This is a spurious lint failure as we are gating this check
-                # behind a check for six.PY2.
-                if six.PY2 and isinstance(obj, long) and long > pow(2, 64):  # pylint: disable=incompatible-py3-code
-                    return str(obj)
-                elif six.PY3 and isinstance(obj, int) and int > pow(2, 64):
-                    return str(obj)
-                else:
-                    return obj
-            if msgpack.version >= (0, 4, 0):
-                return msgpack.dumps(verylong_encoder(msg), use_bin_type=use_bin_type)
-            else:
-                return msgpack.dumps(verylong_encoder(msg))
-        except TypeError as e:
-            # msgpack doesn't support datetime.datetime datatype
-            # So here we have converted datetime.datetime to custom datatype
-            # This is msgpack Extended types numbered 78
-            def default(obj):
-                return msgpack.ExtType(78, obj)
-
-            def dt_encode(obj):
-                datetime_str = obj.strftime("%Y%m%dT%H:%M:%S.%f")
+        # Got this trick from msgpack.fallback._pack
+        while True:
+            try:
                 if msgpack.version >= (0, 4, 0):
-                    return msgpack.packb(datetime_str, default=default, use_bin_type=use_bin_type)
+                    # msgpack only supports 'use_bin_type' starting in 0.4.0.
+                    # Due to this, if we don't need it, don't pass it at all so
+                    # that under Python 2 we can still work with older versions
+                    # of msgpack.
+                    return msgpack.dumps(msg, use_bin_type=use_bin_type)
                 else:
-                    return msgpack.packb(datetime_str, default=default)
-
-            def datetime_encoder(obj):
-                if isinstance(obj, dict):
-                    for key, value in six.iteritems(obj.copy()):
-                        obj[key] = datetime_encoder(value)
-                    return dict(obj)
-                elif isinstance(obj, (list, tuple)):
-                    obj = list(obj)
-                    for idx, entry in enumerate(obj):
-                        obj[idx] = datetime_encoder(entry)
-                    return obj
-                if isinstance(obj, datetime.datetime):
-                    return dt_encode(obj)
-                else:
-                    return obj
-
-            def immutable_encoder(obj):
-                log.debug('IMMUTABLE OBJ: {0}'.format(obj))
-                if isinstance(obj, immutabletypes.ImmutableDict):
-                    return dict(obj)
-                if isinstance(obj, immutabletypes.ImmutableList):
-                    return list(obj)
-                if isinstance(obj, immutabletypes.ImmutableSet):
-                    return set(obj)
-
-            if "datetime.datetime" in str(e):
+                    return msgpack.dumps(msg)
+            except (OverflowError, msgpack.exceptions.PackValueError):
+                # msgpack can't handle the very long Python longs for jids
+                # Convert any very long longs to strings
+                # We borrow the technique used by TypeError below
+                def verylong_encoder(obj):
+                    if isinstance(obj, dict):
+                        for key, value in six.iteritems(obj.copy()):
+                            obj[key] = verylong_encoder(value)
+                        return dict(obj)
+                    elif isinstance(obj, (list, tuple)):
+                        obj = list(obj)
+                        for idx, entry in enumerate(obj):
+                            obj[idx] = verylong_encoder(entry)
+                        return obj
+                    # This is a spurious lint failure as we are gating this check
+                    # behind a check for six.PY2.
+                    if six.PY2 and isinstance(obj, long) and long > pow(2, 64):  # pylint: disable=incompatible-py3-code
+                        return six.text_type(obj)
+                    elif six.PY3 and isinstance(obj, int) and int > pow(2, 64):
+                        return six.text_type(obj)
+                    else:
+                        return obj
                 if msgpack.version >= (0, 4, 0):
-                    return msgpack.dumps(datetime_encoder(msg), use_bin_type=use_bin_type)
+                    return msgpack.dumps(verylong_encoder(msg), use_bin_type=use_bin_type)
                 else:
-                    return msgpack.dumps(datetime_encoder(msg))
-            elif "Immutable" in str(e):
-                if msgpack.version >= (0, 4, 0):
-                    return msgpack.dumps(msg, default=immutable_encoder, use_bin_type=use_bin_type)
-                else:
-                    return msgpack.dumps(msg, default=immutable_encoder)
+                    return msgpack.dumps(verylong_encoder(msg))
+            except TypeError as exc:
+                # msgpack doesn't support datetime.datetime or datetime.date datatype
+                # So here we convert it to a string.
+                # Note that if you want to be able to decode data, you will have to wrap
+                # the object in a msgpack.ExtType-object. The typenumber is not predefined,
+                # (I couldn't find a list anywhere), so keep a list somewhere!
+                # Also, if you wrap objects as msgpack.ExtType, you HAVE TO provide
+                # an ext_hook callable when unpacking (decoding) the msgpack.ExtType object.
+                # See also: https://pypi.python.org/pypi/msgpack-python
+                def datetime_encode(obj):
+                    '''
+                    Convert datetime.datetime object to formatted string
+                    '''
+                    return obj.strftime('%Y%m%dT%H:%M:%S.%f')
 
-            if msgpack.version >= (0, 2, 0):
-                # Should support OrderedDict serialization, so, let's
-                # raise the exception
-                raise
+                def date_encode(obj):
+                    '''
+                    Convert datetime.date object to formatted string
+                    '''
+                    return obj.strftime('%Y%m%d')
 
-            # msgpack is < 0.2.0, let's make its life easier
-            # Since OrderedDict is identified as a dictionary, we can't
-            # make use of msgpack custom types, we will need to convert by
-            # hand.
-            # This means iterating through all elements of a dictionary or
-            # list/tuple
-            def odict_encoder(obj):
-                if isinstance(obj, dict):
-                    for key, value in six.iteritems(obj.copy()):
-                        obj[key] = odict_encoder(value)
-                    return dict(obj)
-                elif isinstance(obj, (list, tuple)):
-                    obj = list(obj)
-                    for idx, entry in enumerate(obj):
-                        obj[idx] = odict_encoder(entry)
+                def recursive_encoder(obj, datatype, fn_encode):
+                    '''
+                    Recursively encodes every instance of datatype found in obj,
+                    which can be a dict, list or value of type datatype.
+                    Uses fn_encode to do the encoding.
+                    '''
+                    if datatype in [list, dict, tuple]:
+                        raise TypeError('Recursive_encoder called with '
+                                        'unsupported datatype: {}'
+                                        .format(datatype))
+                    if isinstance(obj, dict):
+                        for key, value in six.iteritems(obj.copy()):
+                            encodedkey = recursive_encoder(key, datatype, fn_encode)
+                            if key != encodedkey:
+                                del obj[key]
+                                key = encodedkey
+                            obj[key] = recursive_encoder(value, datatype, fn_encode)
+                        return dict(obj)
+                    elif isinstance(obj, (list, tuple)):
+                        obj = list(obj)
+                        for idx, entry in enumerate(obj):
+                            obj[idx] = recursive_encoder(entry, datatype, fn_encode)
+                        return obj
+                    if isinstance(obj, datatype):
+                        return fn_encode(obj)
+                    else:
+                        return obj
+
+                def immutable_encoder(obj):
+                    '''
+                    Convert immutable dict,list,set to regular dict,list,set
+                    '''
+                    log.debug('IMMUTABLE OBJ: %s', obj)
+                    if isinstance(obj, immutabletypes.ImmutableDict):
+                        return dict(obj)
+                    if isinstance(obj, immutabletypes.ImmutableList):
+                        return list(obj)
+                    if isinstance(obj, immutabletypes.ImmutableSet):
+                        return set(obj)
+
+                fixed_message_data = None
+
+                if 'datetime.datetime' in six.text_type(exc):
+                    fixed_message_data = recursive_encoder(msg, datetime.datetime, datetime_encode)
+                elif 'datetime.date' in six.text_type(exc):
+                    fixed_message_data = recursive_encoder(msg, datetime.date, date_encode)
+                elif 'Immutable' in six.text_type(exc):
+                    fixed_message_data = immutable_encoder(msg)
+
+                if fixed_message_data is not None:
+                    msg = fixed_message_data
+                    # Retry packing the data, just in case it contains multiple
+                    # unsupported types
+                    continue
+
+                if msgpack.version >= (0, 2, 0):
+                    # Should support OrderedDict serialization, so, let's
+                    # raise the exception
+                    raise
+
+                # msgpack is < 0.2.0, let's make its life easier
+                # Since OrderedDict is identified as a dictionary, we can't
+                # make use of msgpack custom types, we will need to convert by
+                # hand.
+                # This means iterating through all elements of a dictionary or
+                # list/tuple
+                def odict_encoder(obj):
+                    if isinstance(obj, dict):
+                        for key, value in six.iteritems(obj.copy()):
+                            obj[key] = odict_encoder(value)
+                        return dict(obj)
+                    elif isinstance(obj, (list, tuple)):
+                        obj = list(obj)
+                        for idx, entry in enumerate(obj):
+                            obj[idx] = odict_encoder(entry)
+                        return obj
                     return obj
-                return obj
-            if msgpack.version >= (0, 4, 0):
-                return msgpack.dumps(odict_encoder(msg), use_bin_type=use_bin_type)
-            else:
+                # We're on < 0.2.0, so no use_bin_type is possible
                 return msgpack.dumps(odict_encoder(msg))
-        except (SystemError, TypeError) as exc:  # pylint: disable=W0705
-            log.critical('Unable to serialize message! Consider upgrading msgpack. '
-                         'Message which failed was {failed_message} '
-                         'with exception {exception_message}').format(msg, exc)
+            except (SystemError, TypeError) as exc:  # pylint: disable=W0705
+                log.critical(
+                    'Unable to serialize message! Consider upgrading msgpack. '
+                    'Message which failed was %s, with exception %s', msg, exc
+                )
+                break
 
     def dump(self, msg, fn_):
         '''
@@ -367,11 +403,11 @@ class SREQ(object):
             if isinstance(self.poller.sockets, dict):
                 sockets = list(self.poller.sockets.keys())
                 for socket in sockets:
-                    log.trace('Unregistering socket: {0}'.format(socket))
+                    log.trace('Unregistering socket: %s', socket)
                     self.poller.unregister(socket)
             else:
                 for socket in self.poller.sockets:
-                    log.trace('Unregistering socket: {0}'.format(socket))
+                    log.trace('Unregistering socket: %s', socket)
                     self.poller.unregister(socket[0])
             del self._socket
 
@@ -391,12 +427,15 @@ class SREQ(object):
             if polled:
                 break
             if tries > 1:
-                log.info('SaltReqTimeoutError: after {0} seconds. (Try {1} of {2})'.format(
-                  timeout, tried, tries))
+                log.info(
+                    'SaltReqTimeoutError: after %s seconds. (Try %s of %s)',
+                    timeout, tried, tries
+                )
             if tried >= tries:
                 self.clear_socket()
                 raise SaltReqTimeoutError(
-                    'SaltReqTimeoutError: after {0} seconds, ran {1} tries'.format(timeout * tried, tried)
+                    'SaltReqTimeoutError: after {0} seconds, ran {1} '
+                    'tries'.format(timeout * tried, tried)
                 )
         return self.serial.loads(self.socket.recv())
 

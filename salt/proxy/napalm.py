@@ -16,44 +16,116 @@ Dependencies
 The ``napalm`` proxy module requires NAPALM_ library to be installed:  ``pip install napalm``
 Please check Installation_ for complete details.
 
-.. _NAPALM: https://napalm.readthedocs.io
-.. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
+.. _NAPALM: https://napalm-automation.net/
+.. _Installation: http://napalm.readthedocs.io/en/latest/installation/index.html
 
+.. note::
+
+    Beginning with Salt release 2017.7.3, it is recommended to use
+    ``napalm`` >= ``2.0.0``. The library has been unified into a monolithic
+    package, as in opposite to separate packages per driver. For more details
+    you can check `this document <https://napalm-automation.net/reunification/>`_.
+    While it will still work with the old packages, bear in mind that the NAPALM
+    core team will maintain only the main ``napalm`` package.
+
+    Moreover, for additional capabilities, the users can always define a
+    library that extends NAPALM's base capabilities and configure the
+    ``provider`` option (see below).
 
 Pillar
 ------
 
-The napalm proxy configuration requires four mandatory parameters in order to connect to the network device:
+The napalm proxy configuration requires the following parameters in order to connect to the network device:
 
-* driver: specifies the network device operating system. For a complete list of the supported operating systems \
-please refer to the `NAPALM Read the Docs page`_.
-* host: hostname
-* username: username to be used when connecting to the device
-* passwd: the password needed to establish the connection
-* optional_args: dictionary with the optional arguments. Check the complete list of supported `optional arguments`_
+driver
+    Specifies the network device operating system.
+    For a complete list of the supported operating systems please refer to the
+    `NAPALM Read the Docs page`_.
+
+host
+    The IP Address or FQDN to use when connecting to the device. Alternatively,
+    the following field names can be used instead: ``hostname``, ``fqdn``, ``ip``.
+
+username
+    The username to be used when connecting to the device.
+
+passwd
+    The password needed to establish the connection.
+
+    .. note::
+
+        This field may not be mandatory when working with SSH-based drivers, and
+        the username has a SSH key properly configured on the device targeted to
+        be managed.
+
+optional_args
+    Dictionary with the optional arguments.
+    Check the complete list of supported `optional arguments`_.
+
+always_alive: ``True``
+    In certain less dynamic environments, maintaining the remote connection permanently
+    open with the network device is not always beneficial. In that case, the user can
+    select to initialize the connection only when needed, by specifying this field to ``false``.
+    Default: ``true`` (maintains the connection with the remote network device).
+
+    .. versionadded:: 2017.7.0
+
+provider: ``napalm_base``
+    The library that provides the ``get_network_device`` function.
+    This option is useful when the user has more specific needs and requires
+    to extend the NAPALM capabilities using a private library implementation.
+    The only constraint is that the alternative library needs to have the
+    ``get_network_device`` function available.
+
+    .. versionadded:: 2017.7.1
+
+multiprocessing: ``False``
+    Overrides the :conf_minion:`multiprocessing` option, per proxy minion.
+    The ``multiprocessing`` option must be turned off for SSH-based proxies.
+    However, some NAPALM drivers (e.g. Arista, NX-OS) are not SSH-based.
+    As multiple proxy minions may share the same configuration file,
+    this option permits the configuration of the ``multiprocessing`` option
+    more specifically, for some proxy minions.
+
+    .. versionadded:: 2017.7.2
+
 
 .. _`NAPALM Read the Docs page`: https://napalm.readthedocs.io/en/latest/#supported-network-operating-systems
 .. _`optional arguments`: http://napalm.readthedocs.io/en/latest/support/index.html#list-of-supported-optional-arguments
 
-
-Example:
+Proxy pillar file example:
 
 .. code-block:: yaml
 
     proxy:
-        proxytype: napalm
-        driver: junos
-        host: core05.nrt02
-        username: my_username
-        passwd: my_password
-        optional_args:
-            port: 12201
-            config_format: set
+      proxytype: napalm
+      driver: junos
+      host: core05.nrt02
+      username: my_username
+      passwd: my_password
+      optional_args:
+        port: 12201
+
+Example using a user-specific library, extending NAPALM's capabilities, e.g. ``custom_napalm_base``:
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: napalm
+      driver: ios
+      fqdn: cr1.th2.par.as1234.net
+      username: salt
+      password: ''
+      provider: custom_napalm_base
 
 .. seealso::
 
     - :mod:`NAPALM grains: select network devices based on their characteristics <salt.grains.napalm>`
     - :mod:`NET module: network basic features <salt.modules.napalm_network>`
+    - :mod:`Network config state: Manage the configuration using arbitrary templates <salt.states.netconfig>`
+    - :mod:`NAPALM YANG state: Manage the configuration according to the YANG models (OpenConfig/IETF) <salt.states.netyang>`
+    - :mod:`Network ACL module: Generate and load ACL (firewall) configuration <salt.modules.napalm_acl>`
+    - :mod:`Network ACL state: Manage the firewall configuration <salt.states.netacl>`
     - :mod:`NTP operational and configuration management module <salt.modules.napalm_ntp>`
     - :mod:`BGP operational and configuration management module <salt.modules.napalm_bgp>`
     - :mod:`Routes details <salt.modules.napalm_route>`
@@ -63,25 +135,15 @@ Example:
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python lib
-import traceback
 import logging
 log = logging.getLogger(__file__)
 
-# Import third party lib
-try:
-    # will try to import NAPALM
-    # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
-    import napalm_base
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
-
-from salt.ext import six as six
+# Import Salt modules
+from salt.ext import six
+import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
 # proxy properties
@@ -103,7 +165,7 @@ DETAILS = {}
 
 
 def __virtual__():
-    return HAS_NAPALM or (False, 'Please install NAPALM library: `pip install napalm`')
+    return salt.utils.napalm.virtual(__opts__, 'napalm', __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -118,72 +180,62 @@ def init(opts):
     '''
     Opens the connection with the network device.
     '''
-    proxy_dict = opts.get('proxy', {})
-    NETWORK_DEVICE['HOSTNAME'] = proxy_dict.get('host') or proxy_dict.get('hostname')
-    NETWORK_DEVICE['USERNAME'] = proxy_dict.get('username') or proxy_dict.get('user')
-    NETWORK_DEVICE['DRIVER_NAME'] = proxy_dict.get('driver') or proxy_dict.get('os')
-    NETWORK_DEVICE['PASSWORD'] = proxy_dict.get('passwd') or proxy_dict.get('password') or proxy_dict.get('pass')
-    NETWORK_DEVICE['TIMEOUT'] = proxy_dict.get('timeout', 60)
-    NETWORK_DEVICE['OPTIONAL_ARGS'] = proxy_dict.get('optional_args', {})
-
-    NETWORK_DEVICE['UP'] = False
-
-    _driver_ = napalm_base.get_network_driver(NETWORK_DEVICE.get('DRIVER_NAME'))
-    # get driver object form NAPALM
-
-    if 'config_lock' not in NETWORK_DEVICE['OPTIONAL_ARGS'].keys():
-        NETWORK_DEVICE['OPTIONAL_ARGS']['config_lock'] = False
-
-    try:
-        NETWORK_DEVICE['DRIVER'] = _driver_(
-            NETWORK_DEVICE.get('HOSTNAME', ''),
-            NETWORK_DEVICE.get('USERNAME', ''),
-            NETWORK_DEVICE.get('PASSWORD', ''),
-            timeout=NETWORK_DEVICE['TIMEOUT'],
-            optional_args=NETWORK_DEVICE['OPTIONAL_ARGS']
-        )
-        NETWORK_DEVICE.get('DRIVER').open()
-        # no exception raised here, means connection established
-        NETWORK_DEVICE['UP'] = True
-        DETAILS['initialized'] = True
-    except napalm_base.exceptions.ConnectionException as error:
-        log.error(
-            "Cannot connect to {hostname}{port} as {username}. Please check error: {error}".format(
-                hostname=NETWORK_DEVICE.get('HOSTNAME', ''),
-                port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
-                      if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
-                username=NETWORK_DEVICE.get('USERNAME', ''),
-                error=error
-            )
-        )
-
+    NETWORK_DEVICE.update(salt.utils.napalm.get_device(opts))
+    DETAILS['initialized'] = True
     return True
 
 
-def ping():
+def alive(opts):
+    '''
+    Return the connection status with the remote device.
 
+    .. versionadded:: 2017.7.0
+    '''
+    if salt.utils.napalm.not_always_alive(opts):
+        return True  # don't force reconnection for not-always alive proxies
+        # or regular minion
+    is_alive_ret = call('is_alive', **{})
+    if not is_alive_ret.get('result', False):
+        log.debug(
+            '[%s] Unable to execute `is_alive`: %s',
+            opts.get('id'), is_alive_ret.get('comment')
+        )
+        # if `is_alive` is not implemented by the underneath driver,
+        # will consider the connection to be still alive
+        # we don't want overly request connection reestablishment
+        # NOTE: revisit this if IOS is still not stable
+        #       and return False to force reconnection
+        return True
+    flag = is_alive_ret.get('out', {}).get('is_alive', False)
+    log.debug('Is %s still alive? %s', opts.get('id'), 'Yes.' if flag else 'No.')
+    return flag
+
+
+def ping():
     '''
     Connection open successfully?
     '''
-
     return NETWORK_DEVICE.get('UP', False)
 
 
 def initialized():
-
     '''
     Connection finished initializing?
     '''
-
     return DETAILS.get('initialized', False)
 
 
-def grains():
+def get_device():
+    '''
+    Returns the network device object.
+    '''
+    return NETWORK_DEVICE
 
+
+def get_grains():
     '''
     Retrieve facts from the network device.
     '''
-
     refresh_needed = False
     refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}))
     refresh_needed = refresh_needed or (not DETAILS.get('grains_cache', {}).get('result', False))
@@ -197,21 +249,17 @@ def grains():
 
 
 def grains_refresh():
-
     '''
     Refresh the grains.
     '''
-
     DETAILS['grains_cache'] = {}
-    return grains()
+    return get_grains()
 
 
 def fns():
-
     '''
     Method called by NAPALM grains module.
     '''
-
     return {
         'details': 'Network device grains.'
     }
@@ -226,13 +274,12 @@ def shutdown(opts):
             raise Exception('not connected!')
         NETWORK_DEVICE.get('DRIVER').close()
     except Exception as error:
+        port = NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port')
         log.error(
-            'Cannot close connection with {hostname}{port}! Please check error: {error}'.format(
-                hostname=NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
-                port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
-                      if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
-                error=error
-            )
+            'Cannot close connection with %s%s! Please check error: %s',
+            NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
+            ':{0}'.format(port) if port else '',
+            error
         )
 
     return True
@@ -242,8 +289,7 @@ def shutdown(opts):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def call(method, **params):
-
+def call(method, *args, **kwargs):
     '''
     Calls a specific method from the network driver instance.
     Please check the readthedocs_ page for the updated list of getters.
@@ -261,7 +307,7 @@ def call(method, **params):
         on the `correct driver repo`_ and make sure to read the FAQ_
 
     .. _`correct driver repo`: https://github.com/napalm-automation/napalm/issues/new
-    .. FAQ_: https://github.com/napalm-automation/napalm#faq
+    .. _FAQ: https://github.com/napalm-automation/napalm#faq
 
     Example:
 
@@ -275,53 +321,11 @@ def call(method, **params):
                                     ]
                                  })
     '''
-
-    result = False
-    out = None
-
-    try:
-        if not NETWORK_DEVICE.get('UP', False):
-            raise Exception('not connected')
-        # if connected will try to execute desired command
-        # but lets clean the kwargs first
-        params_copy = {}
-        params_copy.update(params)
-        for karg, warg in six.iteritems(params_copy):
-            # will remove None values
-            # thus the NAPALM methods will be called with their defaults
-            if warg is None:
-                params.pop(karg)
-        out = getattr(NETWORK_DEVICE.get('DRIVER'), method)(**params)  # calls the method with the specified parameters
-        result = True
-    except Exception as error:
-        # either not connected
-        # either unable to execute the command
-        err_tb = traceback.format_exc()  # let's get the full traceback and display for debugging reasons.
-        if isinstance(error, NotImplementedError):
-            comment = '{method} is not implemented for the NAPALM {driver} driver!'.format(
-                method=method,
-                driver=NETWORK_DEVICE.get('DRIVER_NAME')
-            )
-        else:
-            comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
-                device=NETWORK_DEVICE.get('HOSTNAME', '[unspecified hostname]'),
-                port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
-                      if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
-                user=NETWORK_DEVICE.get('USERNAME', ''),
-                method=method,
-                error=error
-            )
-        log.error(comment)
-        log.error(err_tb)
-        return {
-            'out': {},
-            'result': False,
-            'comment': comment,
-            'traceback': err_tb
-        }
-
-    return {
-        'out': out,
-        'result': result,
-        'comment': ''
-    }
+    kwargs_copy = {}
+    kwargs_copy.update(kwargs)
+    for karg, warg in six.iteritems(kwargs_copy):
+        # will remove None values
+        # thus the NAPALM methods will be called with their defaults
+        if warg is None:
+            kwargs.pop(karg)
+    return salt.utils.napalm.call(NETWORK_DEVICE, method, *args, **kwargs)

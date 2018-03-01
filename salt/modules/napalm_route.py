@@ -17,21 +17,14 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
 log = logging.getLogger(__file__)
 
-
-try:
-    # will try to import NAPALM
-    # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
-    from napalm_base import get_network_driver
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
+# import NAPALM utils
+import salt.utils.napalm
+from salt.utils.napalm import proxy_napalm_wrap
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -47,17 +40,10 @@ __proxyenabled__ = ['napalm']
 
 
 def __virtual__():
-
     '''
-    NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
-
-    if HAS_NAPALM and 'proxy' in __opts__:
-        return __virtualname__
-    else:
-        return (False, 'The module napalm_route cannot be loaded: \
-                napalm or proxy could not be loaded.')
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -68,18 +54,35 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def show(destination, protocol=None):
+@proxy_napalm_wrap
+def show(destination, protocol=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
     Displays all details for a certain route learned via a specific protocol.
+    If the protocol is not specified, will return all possible routes.
 
-    :param destination: destination prefix.
-    :param protocol: protocol used to learn the routes to the destination.
+    .. note::
+
+        This function return the routes from the RIB.
+        In case the destination prefix is too short,
+        there may be too many routes matched.
+        Therefore in cases of devices having a very high number of routes
+        it may be necessary to adjust the prefix lenght and request
+        using a longer prefix.
+
+    destination
+        destination prefix.
+
+    protocol (optional)
+        protocol used to learn the routes to the destination.
+
+    .. versionchanged:: 2017.7.0
 
     CLI Example:
 
     .. code-block:: bash
 
+        salt 'my_router' route.show 172.16.0.0/25
         salt 'my_router' route.show 172.16.0.0/25 bgp
 
     Output example:
@@ -144,7 +147,8 @@ def show(destination, protocol=None):
         }
     '''
 
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
         'get_route_to',
         **{
             'destination': destination,

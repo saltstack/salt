@@ -2,15 +2,15 @@
 '''
 The networking module for Windows based systems
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
 import logging
 import time
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.network
+import salt.utils.platform
 import salt.utils.validate.net
 from salt.exceptions import (
     CommandExecutionError,
@@ -29,7 +29,7 @@ def __virtual__():
     '''
     Confine this module to Windows systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return __virtualname__
     return (False, "Module win_ip: module only works on Windows systems")
 
@@ -62,7 +62,7 @@ def _interface_configs():
             if current_ip_list:
                 current_ip_list.append(line)
             else:
-                log.warning('Cannot parse "{0}"'.format(line))
+                log.warning('Cannot parse "%s"', line)
             continue
 
         key, val = line.split(':', 1)

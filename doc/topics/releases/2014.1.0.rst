@@ -132,7 +132,7 @@ GitFS Improvements
 
 Several performance improvements have been made to the :mod:`Git fileserver
 backend <salt.fileserver.gitfs>`. Additionally, file states can now use any
-any SHA1 commit hash as a fileserver environment:
+SHA1 commit hash as a fileserver environment:
 
 .. code-block:: yaml
 

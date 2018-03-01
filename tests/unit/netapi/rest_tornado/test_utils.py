@@ -5,9 +5,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../..')
+from tests.support.unit import skipIf
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -33,7 +31,8 @@ except ImportError:
     HAS_TORNADO = False
 
 # Import utility lib from tests
-from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
+import salt.utils.event
+from tests.unit.utils.test_event import eventpublisher_process, SOCK_DIR  # pylint: disable=import-error
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
@@ -87,7 +86,7 @@ class TestEventListener(AsyncTestCase):
         Test getting a few events
         '''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR)
+            me = salt.utils.event.MasterEvent(SOCK_DIR)
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
                                                     {'sock_dir': SOCK_DIR,
                                                      'transport': 'zeromq'})
@@ -107,7 +106,7 @@ class TestEventListener(AsyncTestCase):
         Test subscribing events using set_event_handler
         '''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR)
+            me = salt.utils.event.MasterEvent(SOCK_DIR)
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
                                                     {'sock_dir': SOCK_DIR,
                                                      'transport': 'zeromq'})

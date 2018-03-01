@@ -24,6 +24,11 @@ booleans can be set.
     Use of these states require that the :mod:`selinux <salt.modules.selinux>`
     execution module is available.
 '''
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
+
+# Import 3rd party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -37,7 +42,7 @@ def _refine_mode(mode):
     '''
     Return a mode value that is predictable
     '''
-    mode = str(mode).lower()
+    mode = six.text_type(mode).lower()
     if any([mode.startswith('e'),
             mode == '1',
             mode == 'on']):
@@ -55,7 +60,7 @@ def _refine_value(value):
     '''
     Return a yes/no value, or None if the input is invalid
     '''
-    value = str(value).lower()
+    value = six.text_type(value).lower()
     if value in ('1', 'on', 'yes', 'true'):
         return 'on'
     if value in ('0', 'off', 'no', 'false'):
@@ -68,7 +73,7 @@ def _refine_module_state(module_state):
     Return a predictable value, or allow us to error out
     .. versionadded:: 2016.3.0
     '''
-    module_state = str(module_state).lower()
+    module_state = six.text_type(module_state).lower()
     if module_state in ('1', 'on', 'yes', 'true', 'enabled'):
         return 'enabled'
     if module_state in ('0', 'off', 'no', 'false', 'disabled'):
@@ -171,8 +176,14 @@ def boolean(name, value, persist=False):
                 name, rvalue)
         return ret
 
-    if __salt__['selinux.setsebool'](name, rvalue, persist):
+    ret['result'] = __salt__['selinux.setsebool'](name, rvalue, persist)
+    if ret['result']:
         ret['comment'] = 'Boolean {0} has been set to {1}'.format(name, rvalue)
+        ret['changes'].update({'State': {'old': bools[name]['State'],
+                                         'new': rvalue}})
+        if persist and not default:
+            ret['changes'].update({'Default': {'old': bools[name]['Default'],
+                                               'new': rvalue}})
         return ret
     ret['comment'] = 'Failed to set the boolean {0} to {1}'.format(name, rvalue)
     return ret
@@ -299,4 +310,173 @@ def module_remove(name):
         return ret
     ret['result'] = False
     ret['comment'] = 'Failed to remove module {0}'.format(name)
+    return ret
+
+
+def fcontext_policy_present(name, sel_type, filetype='a', sel_user=None, sel_level=None):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Makes sure a SELinux policy for a given filespec (name), filetype
+    and SELinux context type is present.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    sel_type
+        SELinux context type. There are many.
+
+    filetype
+        The SELinux filetype specification. Use one of [a, f, d, c, b,
+        s, l, p]. See also `man semanage-fcontext`. Defaults to 'a'
+        (all files).
+
+    sel_user
+        The SELinux user.
+
+    sel_level
+        The SELinux MLS range.
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    new_state = {}
+    old_state = {}
+    filetype_str = __salt__['selinux.filetype_id_to_string'](filetype)
+    current_state = __salt__['selinux.fcontext_get_policy'](
+            name=name,
+            filetype=filetype,
+            sel_type=sel_type,
+            sel_user=sel_user,
+            sel_level=sel_level)
+    if not current_state:
+        new_state = {name: {'filetype': filetype_str, 'sel_type': sel_type}}
+        if __opts__['test']:
+            ret.update({'result': None})
+        else:
+            add_ret = __salt__['selinux.fcontext_add_or_delete_policy'](
+                    action='add',
+                    name=name,
+                    filetype=filetype,
+                    sel_type=sel_type,
+                    sel_user=sel_user,
+                    sel_level=sel_level)
+            if add_ret['retcode'] != 0:
+                ret.update({'comment': 'Error adding new rule: {0}'.format(add_ret)})
+            else:
+                ret.update({'result': True})
+    else:
+        if current_state['sel_type'] != sel_type:
+            old_state.update({name: {'sel_type': current_state['sel_type']}})
+            new_state.update({name: {'sel_type': sel_type}})
+        else:
+            ret.update({'result': True,
+                        'comment': 'SELinux policy for "{0}" already present '.format(name) +
+                                   'with specified filetype "{0}" and sel_type "{1}".'.format(
+                                            filetype_str,
+                                            sel_type)})
+            return ret
+
+        # Removal of current rule is not neccesary, since adding a new rule for the same
+        # filespec and the same filetype automatically overwrites
+        if __opts__['test']:
+            ret.update({'result': None})
+        else:
+            change_ret = __salt__['selinux.fcontext_add_or_delete_policy'](
+                    action='add',
+                    name=name,
+                    filetype=filetype,
+                    sel_type=sel_type,
+                    sel_user=sel_user,
+                    sel_level=sel_level)
+            if change_ret['retcode'] != 0:
+                ret.update({'comment': 'Error adding new rule: {0}'.format(change_ret)})
+            else:
+                ret.update({'result': True})
+    if ret['result'] and (new_state or old_state):
+        ret['changes'].update({'old': old_state, 'new': new_state})
+    return ret
+
+
+def fcontext_policy_absent(name, filetype='a', sel_type=None, sel_user=None, sel_level=None):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Makes sure an SELinux file context policy for a given filespec
+    (name), filetype and SELinux context type is absent.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    filetype
+        The SELinux filetype specification. Use one of [a, f, d, c, b,
+        s, l, p]. See also `man semanage-fcontext`. Defaults to 'a'
+        (all files).
+
+    sel_type
+        The SELinux context type. There are many.
+
+    sel_user
+        The SELinux user.
+
+    sel_level
+        The SELinux MLS range.
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    new_state = {}
+    old_state = {}
+    current_state = __salt__['selinux.fcontext_get_policy'](
+            name=name,
+            filetype=filetype,
+            sel_type=sel_type,
+            sel_user=sel_user,
+            sel_level=sel_level)
+    if not current_state:
+        ret.update({'result': True,
+                    'comment': 'SELinux policy for "{0}" already absent '.format(name) +
+                               'with specified filetype "{0}" and sel_type "{1}".'.format(
+                                        filetype,
+                                        sel_type)})
+        return ret
+    else:
+        old_state.update({name: current_state})
+    ret['changes'].update({'old': old_state, 'new': new_state})
+    if __opts__['test']:
+        ret.update({'result': None})
+    else:
+        remove_ret = __salt__['selinux.fcontext_add_or_delete_policy'](
+                action='delete',
+                name=name,
+                filetype=filetype,
+                sel_type=sel_type or current_state['sel_type'],
+                sel_user=sel_user,
+                sel_level=sel_level)
+        if remove_ret['retcode'] != 0:
+            ret.update({'comment': 'Error removing policy: {0}'.format(remove_ret)})
+        else:
+            ret.update({'result': True})
+    return ret
+
+
+def fcontext_policy_applied(name, recursive=False):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Checks and makes sure the SELinux policies for a given filespec are
+    applied.
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+
+    changes_text = __salt__['selinux.fcontext_policy_is_applied'](name, recursive)
+    if changes_text == '':
+        ret.update({'result': True,
+                    'comment': 'SElinux policies are already applied for filespec "{0}"'.format(name)})
+        return ret
+    if __opts__['test']:
+        ret.update({'result': None})
+    else:
+        apply_ret = __salt__['selinux.fcontext_apply_policy'](name, recursive)
+        if apply_ret['retcode'] != 0:
+            ret.update({'comment': apply_ret})
+        else:
+            ret.update({'result': True})
+            ret.update({'changes': apply_ret.get('changes')})
     return ret

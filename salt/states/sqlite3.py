@@ -77,13 +77,26 @@ Here is an example of removing a row from a table:
         - where_sql: email="john.doe@companyabc.com"
         - require:
           - sqlite3: users
+
+Note that there is no explicit state to perform random queries, however, this
+can be approximated with sqlite3's module functions and module.run:
+
+  .. code-block:: yaml
+
+    zone-delete:
+      module.run:
+        - name: sqlite3.modify
+        - db: {{ db }}
+        - sql: "DELETE FROM records WHERE id > {{ count[0] }} AND domain_id = {{ domain_id }}"
+        - watch:
+          - sqlite3: zone-insert-12
 """
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     import sqlite3
@@ -168,7 +181,7 @@ def row_absent(name, db, table, where_sql, where_args=None):
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -308,7 +321,7 @@ def row_present(name,
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -357,7 +370,7 @@ def table_absent(name, db):
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -397,7 +410,7 @@ def table_present(name, db, schema, force=False):
 
         if len(tables) == 1:
             sql = None
-            if isinstance(schema, str):
+            if isinstance(schema, six.string_types):
                 sql = schema.strip()
             else:
                 sql = _get_sql_from_schema(name, schema)
@@ -428,7 +441,7 @@ def table_present(name, db, schema, force=False):
         elif len(tables) == 0:
             # Create the table
             sql = None
-            if isinstance(schema, str):
+            if isinstance(schema, six.string_types):
                 sql = schema
             else:
                 sql = _get_sql_from_schema(name, schema)

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 r'''
-===========================
 Manage the Windows registry
 ===========================
+
 Many python developers think of registry keys as if they were python keys in a
 dictionary which is not the case. The windows registry is broken down into the
 following components:
@@ -55,11 +55,11 @@ Value:
     - There are 3 value names: `RTHDVCPL`, `NvBackend`, and `BTMTrayAgent`
     - Each value name has a corresponding value
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
-import salt.utils
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -187,18 +187,18 @@ def present(name,
                                              use_32bit_registry=use_32bit_registry)
 
     if vdata == reg_current['vdata'] and reg_current['success']:
-        ret['comment'] = u'{0} in {1} is already configured' \
-                         ''.format(salt.utils.to_unicode(vname, 'utf-8') if vname else u'(Default)',
-                                   salt.utils.to_unicode(name, 'utf-8'))
+        ret['comment'] = '{0} in {1} is already configured' \
+                         ''.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)',
+                                   salt.utils.stringutils.to_unicode(name, 'utf-8'))
         return ret
 
     try:
-        vdata_decoded = salt.utils.to_unicode(vdata, 'utf-8')
+        vdata_decoded = salt.utils.stringutils.to_unicode(vdata, 'utf-8')
     except UnicodeDecodeError:
         # vdata contains binary data that can't be decoded
         vdata_decoded = vdata
     add_change = {'Key': r'{0}\{1}'.format(hive, key),
-                  'Entry': u'{0}'.format(salt.utils.to_unicode(vname, 'utf-8') if vname else u'(Default)'),
+                  'Entry': '{0}'.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)'),
                   'Value': vdata_decoded}
 
     # Check for test option

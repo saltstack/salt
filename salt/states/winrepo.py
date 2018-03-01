@@ -2,7 +2,7 @@
 '''
 Manage Windows Package Repository
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Python Libs
 import os
@@ -11,9 +11,9 @@ import itertools
 
 # Salt Modules
 import salt.runner
-import salt.utils
 import salt.config
 import salt.syspaths
+import salt.utils.path
 
 
 def __virtual__():
@@ -50,25 +50,8 @@ def genrepo(name, force=False, allow_empty=False):
         os.path.join(salt.syspaths.CONFIG_DIR, 'master')
     )
 
-    if 'win_repo' in master_config:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo\' config option is deprecated, please use '
-            '\'winrepo_dir\' instead.'
-        )
-        winrepo_dir = master_config['win_repo']
-    else:
-        winrepo_dir = master_config['winrepo_dir']
-
-    if 'win_repo_mastercachefile' in master_config:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo_mastercachefile\' config option is deprecated, '
-            'please use \'winrepo_cachefile\' instead.'
-        )
-        winrepo_cachefile = master_config['win_repo_mastercachefile']
-    else:
-        winrepo_cachefile = master_config['winrepo_cachefile']
+    winrepo_dir = master_config['winrepo_dir']
+    winrepo_cachefile = master_config['winrepo_cachefile']
 
     # We're actually looking for the full path to the cachefile here, so
     # prepend the winrepo_dir
@@ -87,7 +70,7 @@ def genrepo(name, force=False, allow_empty=False):
             ret['comment'] = '{0} is missing'.format(winrepo_cachefile)
         else:
             winrepo_cachefile_mtime = os.stat(winrepo_cachefile)[stat.ST_MTIME]
-            for root, dirs, files in os.walk(winrepo_dir):
+            for root, dirs, files in salt.utils.path.os_walk(winrepo_dir):
                 for name in itertools.chain(files, dirs):
                     full_path = os.path.join(root, name)
                     if os.stat(full_path)[stat.ST_MTIME] > winrepo_cachefile_mtime:
