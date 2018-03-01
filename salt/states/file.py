@@ -5782,7 +5782,10 @@ def serialize(name,
                 existing_data = __serializers__[deserializer_name](fhr)
 
             if existing_data is not None:
-                merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
+                if isinstance(existing_data, (list, tuple)):
+                    merged_data = salt.utils.dictupdate.merge_list(existing_data, dataset)
+                else:
+                    merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
                 if existing_data == merged_data:
                     ret['result'] = True
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)

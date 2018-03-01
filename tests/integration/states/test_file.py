@@ -1471,27 +1471,75 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         both serialized and formatted properly
         '''
         path_test = os.path.join(TMP, 'test_serialize')
-        ret = self.run_state('file.serialize',
-                name=path_test,
-                dataset={'name': 'naive',
-                    'description': 'A basic test',
-                    'a_list': ['first_element', 'second_element'],
-                    'finally': 'the last item'},
-                formatter='json')
+
+        serialize_tests = [{
+            'formatter': 'json',
+            'dataset': {
+                'name': 'naive',
+                'description': 'A basic test',
+                'a_list': ['first_element', 'second_element'],
+                'finally': {'item': 'the last item'},
+            },
+            'expected': textwrap.dedent('''
+                {
+                  "a_list": [
+                    "first_element",
+                    "second_element"
+                  ],
+                  "description": "A basic test",
+                  "finally": {
+                    "item": "the last item"
+                  }
+                  "name": "naive"
+                }
+            ''')
+        }, {
+            'formatter': 'json',
+            'merge_if_exists': True,
+            'dataset': {
+                'comment': 'some more testing',
+                'description': 'A basic test',
+                'a_list': ['third_element'],
+                'finally': 'the last item'
+            },
+            'expected': textwrap.dedent('''
+                {
+                  "a_list": [
+                    "first_element",
+                    "second_element"
+                  ],
+                  "description": "A basic test",
+                  "finally": {
+                    "item": "the last item"
+                  }
+                  "name": "naive"
+                }
+            ''')
+        }, {
+            'formatter': 'json',
+            'dataset': ['tea', 'pot', 'kettle'],
+            'expected': textwrap.dedent('''
+                [ "tea", "pot", "kettle" ]
+            ''')
+        }, {
+            'merge_if_exists': True,
+            'formatter': 'json',
+            'dataset': ['coffee', 'cup', 'cake'],
+            'expected': textwrap.dedent('''
+                [ "tea", "pot", "kettle", "coffee", "cup", "cake" ]
+            ''')
+        }]
+
+        for stest in serialize_tests:
+            expected_file = stest.pop('expected')
+            self.run_state(
+                'file.serialize',
+                 name=path_test,
+                 **stest
+            )
 
         with salt.utils.fopen(path_test, 'r') as fp_:
             serialized_file = fp_.read()
-
-        expected_file = '''{
-  "a_list": [
-    "first_element",
-    "second_element"
-  ],
-  "description": "A basic test",
-  "finally": "the last item",
-  "name": "naive"
-}
-'''
         self.assertEqual(serialized_file, expected_file)
 
     def test_replace_issue_18841_omit_backup(self):
