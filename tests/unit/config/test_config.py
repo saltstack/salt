@@ -605,28 +605,30 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
         self.assertEqual(syndic_opts['_minion_conf_file'], syndic_conf_path)
 
-    def test_conf_file_strings_are_unicode(self):
+    def _get_tally(self, conf_func):
         '''
         This ensures that any strings which are loaded are unicode strings
         '''
-        def _count_strings(tally, config):
+        tally = {}
+
+        def _count_strings(config):
             if isinstance(config, dict):
                 for key, val in six.iteritems(config):
                     log.debug('counting strings in dict key: %s', key)
                     log.debug('counting strings in dict val: %s', val)
-                    _count_strings(tally, key)
-                    _count_strings(tally, val)
+                    _count_strings(key)
+                    _count_strings(val)
             elif isinstance(config, list):
                 log.debug('counting strings in list: %s', config)
                 for item in config:
-                    _count_strings(tally, item)
+                    _count_strings(item)
             else:
                 if isinstance(config, six.string_types):
                     if isinstance(config, six.text_type):
                         tally['unicode'] = tally.get('unicode', 0) + 1
                     else:
                         # We will never reach this on PY3
-                        tally['non-unicode'] = tally.get('non-unicode', 0) + 1
+                        tally.setdefault('non_unicode', []).append(config)
 
         fpath = salt.utils.files.mkstemp(dir=TMP)
         try:
@@ -654,14 +656,39 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                           - foo
                           - bar
                           - baz'''))
-            config = sconfig.minion_config(fpath)
-            tally = {'unicode': 0, 'non-unicode': 0}
-            _count_strings(tally, config)
-            self.assertEqual(tally['non-unicode'], 0)
-            self.assertTrue(tally['unicode'] > 0)
+                if conf_func is sconfig.master_config:
+                    wfh.write('\n\n')
+                    wfh.write(textwrap.dedent('''
+                        rest_cherrypy:
+                          port: 8000
+                          disable_ssl: True
+                          app_path: /beacon_demo
+                          app: /srv/web/html/index.html
+                          static: /srv/web/static'''))
+            config = conf_func(fpath)
+            _count_strings(config)
+            return tally
         finally:
             if os.path.isfile(fpath):
                 os.unlink(fpath)
+
+    def test_conf_file_strings_are_unicode_for_master(self):
+        '''
+        This ensures that any strings which are loaded are unicode strings
+        '''
+        tally = self._get_tally(sconfig.master_config)
+        non_unicode = tally.get('non_unicode', [])
+        self.assertEqual(len(non_unicode), 8, non_unicode)
+        self.assertTrue(tally['unicode'] > 0)
+
+    def test_conf_file_strings_are_unicode_for_minion(self):
+        '''
+        This ensures that any strings which are loaded are unicode strings
+        '''
+        tally = self._get_tally(sconfig.minion_config)
+        non_unicode = tally.get('non_unicode', [])
+        self.assertEqual(len(non_unicode), 0, non_unicode)
+        self.assertTrue(tally['unicode'] > 0)
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
