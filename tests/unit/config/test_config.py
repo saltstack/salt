@@ -27,6 +27,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.yaml
+from salt.ext import six
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
@@ -603,6 +604,64 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # are not merged with syndic ones
         self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
         self.assertEqual(syndic_opts['_minion_conf_file'], syndic_conf_path)
+
+    def test_conf_file_strings_are_unicode(self):
+        '''
+        This ensures that any strings which are loaded are unicode strings
+        '''
+        def _count_strings(tally, config):
+            if isinstance(config, dict):
+                for key, val in six.iteritems(config):
+                    log.debug('counting strings in dict key: %s', key)
+                    log.debug('counting strings in dict val: %s', val)
+                    _count_strings(tally, key)
+                    _count_strings(tally, val)
+            elif isinstance(config, list):
+                log.debug('counting strings in list: %s', config)
+                for item in config:
+                    _count_strings(tally, item)
+            else:
+                if isinstance(config, six.string_types):
+                    if isinstance(config, six.text_type):
+                        tally['unicode'] = tally.get('unicode', 0) + 1
+                    else:
+                        # We will never reach this on PY3
+                        tally['non-unicode'] = tally.get('non-unicode', 0) + 1
+
+        fpath = salt.utils.files.mkstemp(dir=TMP)
+        try:
+            with salt.utils.files.fopen(fpath, 'w') as wfh:
+                wfh.write(textwrap.dedent('''
+                    foo: bar
+                    mylist:
+                      - somestring
+                      - 9
+                      - 123.456
+                      - True
+                      - nested:
+                        - key: val
+                        - nestedlist:
+                          - foo
+                          - bar
+                          - baz
+                    mydict:
+                      - somestring: 9
+                      - 123.456: 789
+                      - True: False
+                      - nested:
+                        - key: val
+                        - nestedlist:
+                          - foo
+                          - bar
+                          - baz'''))
+            config = sconfig.minion_config(fpath)
+            tally = {'unicode': 0, 'non-unicode': 0}
+            _count_strings(tally, config)
+            self.assertEqual(tally['non-unicode'], 0)
+            self.assertTrue(tally['unicode'] > 0)
+        finally:
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
