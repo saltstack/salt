@@ -34,7 +34,7 @@ class FdPopen(subprocess.Popen):
             :return:
             '''
             maxfds = len(os.listdir('/proc/{}/fd'.format(os.getpid())))
-            log.trace('Closing {} file descriptors'.format(maxfds))
+            log.debug('Closing {} file descriptors'.format(maxfds))
             if hasattr(os, 'closerange'):
                 os.closerange(3, but)
                 os.closerange(but + 1, maxfds)
