@@ -18,7 +18,7 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import PIPE, STDOUT
 import logging
 
 # Import Salt Libs
@@ -33,6 +33,7 @@ import salt.utils.files
 import salt.utils.fsutils
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.subprocess
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -78,8 +79,8 @@ class Inspector(EnvLoader):
         '''
         Call an external system command.
         '''
-        return Popen([command] + list(params), stdout=PIPE, stdin=PIPE, stderr=STDOUT,
-                     env=env or os.environ).communicate(input=input)
+        return salt.utils.subprocess.FdPopen([command] + list(params), stdout=PIPE, stdin=PIPE,
+                                             stderr=STDOUT, env=env or os.environ).communicate(input=input)
 
     def _get_cfg_pkgs(self):
         '''

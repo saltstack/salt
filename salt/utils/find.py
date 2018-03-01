@@ -92,7 +92,7 @@ import stat
 import shutil
 import sys
 import time
-from subprocess import Popen, PIPE
+from subprocess import PIPE
 try:
     import grp
     import pwd
@@ -110,6 +110,7 @@ import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.stringutils
 import salt.defaults.exitcodes
+import salt.utils.subprocess
 from salt.utils.filebuffer import BufferedReader
 
 # Set up logger
@@ -565,7 +566,7 @@ class ExecOption(Option):
         try:
             command = self.command.replace('{}', fullpath)
             print(salt.utils.args.shlex_split(command))
-            p = Popen(salt.utils.args.shlex_split(command),
+            p = salt.utils.subprocess.FdPopen(salt.utils.args.shlex_split(command),
                       stdout=PIPE,
                       stderr=PIPE)
             (out, err) = p.communicate()
