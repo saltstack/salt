@@ -104,22 +104,11 @@ def _setup_conn(**kwargs):
     '''
     Setup kubernetes API connection singleton
     '''
-    kubeconfig = __salt__['config.option']('kubernetes.kubeconfig')
-    kubeconfig_data = __salt__['config.option']('kubernetes.kubeconfig-data')
-    context = __salt__['config.option']('kubernetes.context')
+    kubeconfig = kwargs.get('kubeconfig') or __salt__['config.option']('kubernetes.kubeconfig')
+    kubeconfig_data = kwargs.get('kubeconfig_data') or __salt__['config.option']('kubernetes.kubeconfig-data')
+    context = kwargs.get('context') or __salt__['config.option']('kubernetes.context')
 
-    kubeconfig_data_overwrite = False
-    # Override default API settings when settings are provided
-    if 'kubeconfig' in kwargs:
-        kubeconfig = kwargs.get('kubeconfig')
-    elif 'kubeconfig_data' in kwargs:
-        kubeconfig_data = kwargs.get('kubeconfig_data')
-        kubeconfig_data_overwrite = True
-
-    if 'context' in kwargs:
-        context = kwargs.get('context')
-
-    if (kubeconfig_data and not kubeconfig) or (kubeconfig_data and kubeconfig_data_overwrite):
+    if (kubeconfig_data and not kubeconfig) or (kubeconfig_data and kwargs.get('kubeconfig_data')):
         with tempfile.NamedTemporaryFile(prefix='salt-kubeconfig-', delete=False) as kcfg:
             kcfg.write(base64.b64decode(kubeconfig_data))
             kubeconfig = kcfg.name
