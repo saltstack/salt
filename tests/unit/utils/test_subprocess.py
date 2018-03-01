@@ -67,3 +67,24 @@ class SubprocessTestCase(TestCase, LoaderModuleMockMixin):
         salt.utils.subprocess.log.debug.assert_called()
         msg, val = salt.utils.subprocess.log.debug.call_args[0]
         assert (msg % val) == 'Closing 5 file descriptors'
+
+    @patch('salt.utils.subprocess.log', MagicMock())
+    @patch('salt.utils.subprocess.subprocess.MAXFD', 100)
+    @patch('sys.platform', 'linux2')
+    @patch('salt.utils.subprocess.six.PY2', True)
+    @patch('os.getpid', MagicMock(return_value=111))
+    @patch('os.listdir', MagicMock(return_value=[0, 1, 2, 3, 4]))
+    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch('os.closerange', MagicMock())
+    @patch('os.fdopen', MagicMock(return_value=''))
+    @patch.object(salt.utils.subprocess.FdPopen, '_execute_child', MagicMock())
+    @patch.object(salt.utils.subprocess.FdPopen, '_get_handles',
+                  MagicMock(return_value=((None, None, None, None, None, None), None,)))
+
+    def test_close_fds_proc_fallback(self):
+        '''
+        Should fall-back to the standard way, once /proc is not mounted.
+        :return:
+        '''
+        subprocess.FdPopen(None)._close_fds(0)
+        assert salt.utils.subprocess.log.debug.call_args[0][1] == 100
