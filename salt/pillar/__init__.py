@@ -145,8 +145,8 @@ class AsyncRemotePillar(RemotePillarMixin):
         self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
-        self.pillar_override = pillar_override or OrderedDict()
-        if not isinstance(self.pillar_override, dict) and not isinstance(self.pillar_override, OrderedDict):
+        self.pillar_override =  OrderedDict(pillar_override or {})
+        if not isinstance(self.pillar_override, dict):
             self.pillar_override = OrderedDict()
             log.error('Pillar data must be a dictionary or OrderedDict')
         self.extra_minion_data = extra_minion_data or {}
@@ -205,8 +205,8 @@ class RemotePillar(RemotePillarMixin):
         self.channel = salt.transport.Channel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
-        self.pillar_override = pillar_override or OrderedDict()
-        if not isinstance(self.pillar_override, dict) and not isinstance(self.pillar_override, OrderedDict):
+        self.pillar_override = OrderedDict(pillar_override or {})
+        if not isinstance(self.pillar_override, dict):
             self.pillar_override = OrderedDict()
             log.error('Pillar data must be a dictionary or OrderedDict')
         self.extra_minion_data = extra_minion_data or {}
@@ -381,8 +381,8 @@ class Pillar(object):
 
         self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
         self.ignored_pillars = {}
-        self.pillar_override = pillar_override or OrderedDict()
-        if not isinstance(self.pillar_override, dict) and not isinstance(self.pillar_override, OrderedDict()):
+        self.pillar_override = OrderedDict(pillar_override or {})
+        if not isinstance(self.pillar_override, dict):
             self.pillar_override = OrderedDict()
             log.error('Pillar data must be a dictionary or OrderedDict')
         self.extra_minion_data = extra_minion_data or {}
