@@ -99,6 +99,7 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.subprocess
 from salt.roster import get_roster_file
 
 # Import 3rd-party libs
@@ -246,7 +247,8 @@ class Script(Target):
     def __init__(self, tgt, tgt_type='glob', inventory_file='/etc/salt/roster'):
         self.tgt = tgt
         self.tgt_type = tgt_type
-        inventory, error = subprocess.Popen([inventory_file], shell=True, stdout=subprocess.PIPE).communicate()
+        inventory, error = salt.utils.subprocess.FdPopen([inventory_file], shell=True,
+                                                         stdout=subprocess.PIPE).communicate()
         self.inventory = salt.utils.json.loads(salt.utils.stringutils.to_str(inventory))
         self.meta = self.inventory.get('_meta', {})
         self.groups = dict()

@@ -16,6 +16,7 @@ import ctypes
 import subprocess
 import fcntl
 import termios
+import salt.utils.subprocess
 
 __all__ = ['getTerminalSize']
 
@@ -63,12 +64,12 @@ def _getTerminalSize_tput():
     # get terminal width
     # src: http://stackoverflow.com/questions/263890/how-do-i-find-the-width-height-of-a-terminal-window
     try:
-        proc = subprocess.Popen(
+        proc = salt.utils.subprocess.FdPopen(
             ['tput', 'cols'], stdin=subprocess.PIPE, stdout=subprocess.PIPE
         )
         output = proc.communicate(input=None)
         cols = int(output[0])
-        proc = subprocess.Popen(
+        proc = salt.utils.subprocess.FdPopen(
             ['tput', 'lines'], stdin=subprocess.PIPE, stdout=subprocess.PIPE
         )
         output = proc.communicate(input=None)

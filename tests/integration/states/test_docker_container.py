@@ -23,6 +23,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
+import salt.utils.subprocess
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -89,7 +90,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             os.path.join(FILES, 'file/base/mkimage-busybox-static')
         cmd = [script_path, cls.image_build_rootdir, cls.image]
         log.debug('Running \'%s\' to build busybox image', ' '.join(cmd))
-        process = subprocess.Popen(
+        process = salt.utils.subprocess.FdPopen(
             cmd,
             close_fds=True,
             stdout=subprocess.PIPE,
@@ -110,7 +111,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     def tearDownClass(cls):
         cmd = ['docker', 'rmi', '--force', cls.image]
         log.debug('Running \'%s\' to destroy busybox image', ' '.join(cmd))
-        process = subprocess.Popen(
+        process = salt.utils.subprocess.FdPopen(
             cmd,
             close_fds=True,
             stdout=subprocess.PIPE,

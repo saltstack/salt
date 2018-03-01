@@ -84,7 +84,7 @@ class SystemdTestCase(TestCase):
         Test that salt.utils.systemd.booted() returns True when minion is
         systemd-booted.
         '''
-        with patch('subprocess.Popen') as popen_mock:
+        with patch('salt.utils.subprocess.FdPopen') as popen_mock:
             _version = 231
             output = 'systemd {0}\n-SYSVINIT'.format(_version)
             popen_mock.return_value = Mock(
@@ -124,7 +124,7 @@ class SystemdTestCase(TestCase):
         Test with invalid context data. The context value must be a dict, so
         this should raise a SaltInvocationError.
         '''
-        with patch('subprocess.Popen') as popen_mock:
+        with patch('salt.utils.subprocess.FdPopen') as popen_mock:
             popen_mock.return_value = Mock(
                 communicate=lambda *args, **kwargs: ('invalid', None),
                 pid=lambda: 12345,
@@ -146,7 +146,7 @@ class SystemdTestCase(TestCase):
         versions 204 through 206 because mock doesn't like us altering the
         return_value in a loop.
         '''
-        with patch('subprocess.Popen') as popen_mock:
+        with patch('salt.utils.subprocess.FdPopen') as popen_mock:
             _expected = False
             _version = 204
             _output = 'systemd {0}\n-SYSVINIT'.format(_version)
@@ -178,7 +178,7 @@ class SystemdTestCase(TestCase):
         versions 204 through 206 because mock doesn't like us altering the
         return_value in a loop.
         '''
-        with patch('subprocess.Popen') as popen_mock:
+        with patch('salt.utils.subprocess.FdPopen') as popen_mock:
             _expected = True
             _version = 205
             _output = 'systemd {0}\n-SYSVINIT'.format(_version)
@@ -210,7 +210,7 @@ class SystemdTestCase(TestCase):
         versions 204 through 206 because mock doesn't like us altering the
         return_value in a loop.
         '''
-        with patch('subprocess.Popen') as popen_mock:
+        with patch('salt.utils.subprocess.FdPopen') as popen_mock:
             _expected = True
             _version = 206
             _output = 'systemd {0}\n-SYSVINIT'.format(_version)
@@ -256,7 +256,7 @@ class SystemdTestCase(TestCase):
         Test the case where the system is systemd-booted, but we failed to
         parse the "systemctl --version" output.
         '''
-        with patch('subprocess.Popen') as popen_mock:
+        with patch('salt.utils.subprocess.FdPopen') as popen_mock:
             popen_mock.return_value = Mock(
                 communicate=lambda *args, **kwargs: ('invalid', None),
                 pid=lambda: 12345,

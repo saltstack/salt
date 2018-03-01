@@ -18,6 +18,7 @@ from tests.support.helpers import destructiveTest, skip_if_not_root
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.subprocess
 import salt.states.file
 from salt.ext.six.moves import range
 from salt.ext import six
@@ -113,7 +114,7 @@ class SystemModuleTest(ModuleCase):
                 with os.fdopen(rpipeFd, "r") as rpipe:
                     with os.fdopen(wpipeFd, "w") as wpipe:
                         with salt.utils.files.fopen(os.devnull, "r") as nulFd:
-                            p = subprocess.Popen(args=['hwclock', '--compare'],
+                            p = salt.utils.subprocess.FdPopen(args=['hwclock', '--compare'],
                                 stdin=nulFd, stdout=wpipeFd, stderr=subprocess.PIPE)
                             p.communicate()
 

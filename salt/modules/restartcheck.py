@@ -21,6 +21,7 @@ import sys
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.subprocess
 
 # Import 3rd partylibs
 from salt.ext import six
@@ -420,7 +421,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
 
     for package in packages:
         cmd = cmd_pkg_query + package
-        paths = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        paths = salt.utils.subprocess.FdPopen(cmd, shell=True, stdout=subprocess.PIPE)
 
         while True:
             line = paths.stdout.readline()

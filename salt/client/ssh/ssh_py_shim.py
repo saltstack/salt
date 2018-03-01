@@ -16,6 +16,7 @@ import sys
 import os
 import stat
 import subprocess
+import salt.utils.subprocess
 
 THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
@@ -211,7 +212,7 @@ def main(argv):  # pylint: disable=W0613
         # Salt thin now is available to use
     else:
         if not sys.platform.startswith('win'):
-            scpstat = subprocess.Popen(['/bin/sh', '-c', 'command -v scp']).wait()
+            scpstat = salt.utils.subprocess.FdPopen(['/bin/sh', '-c', 'command -v scp']).wait()
             if scpstat != 0:
                 sys.exit(EX_SCP_NOT_FOUND)
 
@@ -302,7 +303,7 @@ def main(argv):  # pylint: disable=W0613
         old_umask = os.umask(OPTIONS.cmd_umask)
     if OPTIONS.tty:
         # Returns bytes instead of string on python 3
-        stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+        stdout, _ = salt.utils.subprocess.FdPopen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
         sys.stdout.write(stdout.decode(encoding=get_system_encoding(), errors="replace"))
         sys.stdout.flush()
         if OPTIONS.wipe:
@@ -314,6 +315,7 @@ def main(argv):  # pylint: disable=W0613
         subprocess.call(salt_argv)
     if OPTIONS.cmd_umask is not None:
         os.umask(old_umask)
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

@@ -34,6 +34,7 @@ from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 # Import 3rd-party libs
 from salt.ext import six
 import salt.utils.platform
+import salt.utils.subprocess
 try:
     from tests.support.ext import console
     WIDTH, HEIGHT = console.getTerminalSize()
@@ -677,7 +678,7 @@ class SaltTestingParser(optparse.OptionParser):
             print_header('', inline=True, width=self.options.output_columns)
 
             # Let's check if, in fact, the container is stopped
-            scode_call = subprocess.Popen(
+            scode_call = salt.utils.subprocess.FdPopen(
                 [self.options.docker_binary, 'inspect', '--format={{.State.Running}}', cid],
                 env=os.environ.copy(),
                 close_fds=True,
@@ -693,7 +694,7 @@ class SaltTestingParser(optparse.OptionParser):
                 sys.stdout.write(' * Making sure the container is stopped. CID: ')
                 sys.stdout.flush()
 
-                stop_call = subprocess.Popen(
+                stop_call = salt.utils.subprocess.FdPopen(
                     [self.options.docker_binary, 'stop', '--time=15', cid],
                     env=os.environ.copy(),
                     close_fds=True,
@@ -712,7 +713,7 @@ class SaltTestingParser(optparse.OptionParser):
             # haven't narrowed it down why.
             sys.stdout.write(' * Container exit code: ')
             sys.stdout.flush()
-            rcode_call = subprocess.Popen(
+            rcode_call = salt.utils.subprocess.FdPopen(
                 [self.options.docker_binary, 'inspect', '--format={{.State.ExitCode}}', cid],
                 env=os.environ.copy(),
                 close_fds=True,
@@ -734,7 +735,7 @@ class SaltTestingParser(optparse.OptionParser):
                      (self.options.docked_skip_delete_on_error and returncode == 0)):
                 sys.stdout.write(' * Cleaning Up Temporary Docker Container. CID: ')
                 sys.stdout.flush()
-                cleanup_call = subprocess.Popen(
+                cleanup_call = salt.utils.subprocess.FdPopen(
                     [self.options.docker_binary, 'rm', cid],
                     env=os.environ.copy(),
                     close_fds=True,
@@ -812,7 +813,7 @@ class SaltTestingParser(optparse.OptionParser):
             'DOCKER_CIDFILE',
             tempfile.mktemp(prefix='docked-testsuite-', suffix='.cid')
         )
-        call = subprocess.Popen(
+        call = salt.utils.subprocess.FdPopen(
             [self.options.docker_binary,
              'run',
              # '--rm=true', Do not remove the container automatically, we need

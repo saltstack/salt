@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 from optparse import OptionParser, OptionGroup
+import salt.utils.subprocess
 
 logging.QUIET = 0
 logging.GARBAGE = 1
@@ -178,7 +179,7 @@ def _move(src, dst):
 
 def _run_command(args):
     log.info('Running command: {0}'.format(args))
-    proc = subprocess.Popen(args,
+    proc = salt.utils.subprocess.FdPopen(args,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()

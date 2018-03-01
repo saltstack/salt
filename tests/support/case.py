@@ -36,6 +36,7 @@ from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR,
 
 # Import 3rd-party libs
 import salt.utils.json
+import salt.utils.subprocess
 from salt.ext import six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
@@ -279,7 +280,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         elif sys.platform.lower().startswith('win') and timeout is not None:
             raise RuntimeError('Timeout is not supported under windows')
 
-        process = subprocess.Popen(cmd, **popen_kwargs)
+        process = salt.utils.subprocess.FdPopen(cmd, **popen_kwargs)
 
         if timeout is not None:
             stop_at = datetime.now() + timedelta(seconds=timeout)

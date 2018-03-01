@@ -23,6 +23,7 @@ import salt.utils.files
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.utils.yaml
+import salt.utils.subprocess
 import salt.defaults.exitcodes as exitcodes
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -419,7 +420,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         self.argv = [self.program]
         self.argv.extend(args)
         log.debug('TestProgram.run: %s Environment %s', self.argv, env_delta)
-        process = subprocess.Popen(self.argv, **popen_kwargs)
+        process = salt.utils.subprocess.FdPopen(self.argv, **popen_kwargs)
         self.process = process
 
         if timeout is not None:

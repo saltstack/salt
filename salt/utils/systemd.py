@@ -11,6 +11,7 @@ import subprocess
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
 import salt.utils.stringutils
+import salt.utils.subprocess
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ def version(context=None):
             return context[contextkey]
     elif context is not None:
         raise SaltInvocationError('context must be a dictionary if passed')
-    stdout = subprocess.Popen(
+    stdout = salt.utils.subprocess.FdPopen(
         ['systemctl', '--version'],
         close_fds=True,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]

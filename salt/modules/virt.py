@@ -41,6 +41,7 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
+import salt.utils.subprocess
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -196,14 +197,14 @@ def _libvirt_creds():
     g_cmd = 'grep ^\\s*group /etc/libvirt/qemu.conf'
     u_cmd = 'grep ^\\s*user /etc/libvirt/qemu.conf'
     try:
-        stdout = subprocess.Popen(g_cmd,
+        stdout = salt.utils.subprocess.FdPopen(g_cmd,
                     shell=True,
                     stdout=subprocess.PIPE).communicate()[0]
         group = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         group = 'root'
     try:
-        stdout = subprocess.Popen(u_cmd,
+        stdout = salt.utils.subprocess.FdPopen(u_cmd,
                     shell=True,
                     stdout=subprocess.PIPE).communicate()[0]
         user = salt.utils.stringutils.to_str(stdout).split('"')[1]
@@ -1084,7 +1085,7 @@ def get_disks(vm_):
                 break
 
             output = []
-            stdout = subprocess.Popen(
+            stdout = salt.utils.subprocess.FdPopen(
                         ['qemu-img', 'info', disks[dev]['file']],
                         shell=False,
                         stdout=subprocess.PIPE).communicate()[0]
@@ -1532,7 +1533,7 @@ def migrate_non_shared(vm_, target, ssh=False):
     cmd = _get_migrate_command() + ' --copy-storage-all ' + vm_\
         + _get_target(target, ssh)
 
-    stdout = subprocess.Popen(cmd,
+    stdout = salt.utils.subprocess.FdPopen(cmd,
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]
     return salt.utils.stringutils.to_str(stdout)
@@ -1551,7 +1552,7 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
     cmd = _get_migrate_command() + ' --copy-storage-inc ' + vm_\
         + _get_target(target, ssh)
 
-    stdout = subprocess.Popen(cmd,
+    stdout = salt.utils.subprocess.FdPopen(cmd,
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]
     return salt.utils.stringutils.to_str(stdout)
@@ -1570,7 +1571,7 @@ def migrate(vm_, target, ssh=False):
     cmd = _get_migrate_command() + ' ' + vm_\
         + _get_target(target, ssh)
 
-    stdout = subprocess.Popen(cmd,
+    stdout = salt.utils.subprocess.FdPopen(cmd,
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]
     return salt.utils.stringutils.to_str(stdout)
@@ -1594,7 +1595,7 @@ def seed_non_shared_migrate(disks, force=False):
         size = data['virtual size'].split()[1][1:]
         if os.path.isfile(fn_) and not force:
             # the target exists, check to see if it is compatible
-            pre = salt.utils.yaml.safe_load(subprocess.Popen('qemu-img info arch',
+            pre = salt.utils.yaml.safe_load(salt.utils.subprocess.FdPopen('qemu-img info arch',
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0])
             if pre['file format'] != data['file format']\

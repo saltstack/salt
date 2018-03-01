@@ -29,6 +29,7 @@ from tests.support.helpers import skip_if_binaries_missing
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.subprocess
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
@@ -39,7 +40,7 @@ log = logging.getLogger(__name__)
 
 def _git_version():
     try:
-        git_version = subprocess.Popen(
+        git_version = salt.utils.subprocess.FdPopen(
             ['git', '--version'],
             shell=False,
             close_fds=False if salt.utils.platform.is_windows() else True,
@@ -106,7 +107,7 @@ class GitModuleTest(ModuleCase):
         for key, value in (('user.name', 'Jenkins'),
                            ('user.email', 'qa@saltstack.com')):
             # Check if key is missing
-            keycheck = subprocess.Popen(
+            keycheck = salt.utils.subprocess.FdPopen(
                 ['git', 'config', '--get', '--global', key],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)

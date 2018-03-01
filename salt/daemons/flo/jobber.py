@@ -25,7 +25,9 @@ import salt.utils.json
 import salt.utils.kinds as kinds
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.subprocess
 import salt.transport
+
 from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
@@ -129,7 +131,7 @@ def shell_jobber(self):
             cmd.append('{0}={1}'.format(key, kwargs[key]))
         que = {'pub': data,
                'msg': msg}
-        que['proc'] = subprocess.Popen(
+        que['proc'] = salt.utils.subprocess.FdPopen(
                 cmd,
                 shell=False,
                 stderr=subprocess.PIPE,

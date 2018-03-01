@@ -299,7 +299,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         that specifies runas.
         '''
         with patch('pwd.getpwnam') as getpwnam_mock:
-            with patch('subprocess.Popen') as popen_mock:
+            with patch('salt.utils.subprocess.FdPopen') as popen_mock:
                 environment = os.environ.copy()
 
                 popen_mock.return_value = Mock(

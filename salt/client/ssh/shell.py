@@ -17,6 +17,7 @@ import salt.defaults.exitcodes
 import salt.utils.json
 import salt.utils.nb_popen
 import salt.utils.vt
+import salt.utils.subprocess
 
 from salt.ext import six
 
@@ -268,7 +269,7 @@ class Shell(object):
         Cleanly execute the command string
         '''
         try:
-            proc = subprocess.Popen(
+            proc = salt.utils.subprocess.FdPopen(
                 cmd,
                 shell=True,
                 stderr=subprocess.PIPE,

@@ -35,6 +35,7 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.user
 import salt.utils.versions
+import salt.utils.subprocess
 import salt.fileserver
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.utils.odict import OrderedDict
@@ -577,7 +578,7 @@ class GitProvider(object):
         '''
         cleaned = []
         cmd_str = 'git remote prune origin'
-        cmd = subprocess.Popen(
+        cmd = salt.utils.subprocess.FdPopen(
             shlex.split(cmd_str),
             close_fds=not salt.utils.platform.is_windows(),
             cwd=os.path.dirname(self.gitdir),

@@ -21,6 +21,8 @@ import msgpack
 import salt.ext.six as _six
 import tornado
 
+import salt.utils.subprocess
+
 # pylint: disable=import-error,no-name-in-module
 try:
     import certifi
@@ -208,7 +210,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             python2_bin + ' -c \'from __future__ import print_function; import sys; '
             'print("{0}.{1}".format(*(sys.version_info[:2])));\''
         )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        cmd = salt.utils.subprocess.FdPopen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
         stdout, _ = cmd.communicate()
         if cmd.returncode == 0:
             py2_version = tuple(int(n) for n in stdout.decode('utf-8').strip().split('.'))
@@ -242,7 +244,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);\' '
             '\'{0}\''.format(salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        cmd = salt.utils.subprocess.FdPopen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:
@@ -258,7 +260,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);\' '
             '\'{0}\''.format(salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        cmd = salt.utils.subprocess.FdPopen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:
@@ -393,7 +395,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
             python2_bin + ' -c \'from __future__ import print_function; import sys; '
             'print("{0}.{1}".format(*(sys.version_info[:2])));\''
         )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        cmd = salt.utils.subprocess.FdPopen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
         stdout, _ = cmd.communicate()
         if cmd.returncode == 0:
             py2_version = tuple(int(n) for n in stdout.decode('utf-8').strip().split('.'))
@@ -427,7 +429,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
             'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);\' '
             '\'{0}\''.format(salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        cmd = salt.utils.subprocess.FdPopen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:
@@ -443,7 +445,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
             'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);\' '
             '\'{0}\''.format(salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        cmd = salt.utils.subprocess.FdPopen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:

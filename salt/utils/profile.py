@@ -17,6 +17,7 @@ import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.subprocess
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
             if pyprof:
                 failed = False
                 try:
-                    pro = subprocess.Popen(
+                    pro = salt.utils.subprocess.FdPopen(
                         cmd, shell=False,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 except OSError:

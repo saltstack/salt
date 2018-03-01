@@ -54,6 +54,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.subprocess
 import salt.utils.yaml
 import salt.log.setup as salt_log_setup
 from salt.utils.verify import verify_env
@@ -545,7 +546,7 @@ class TestDaemon(object):
             os.remove(pub_key_test_file)
         if os.path.exists(priv_key_test_file):
             os.remove(priv_key_test_file)
-        keygen_process = subprocess.Popen(
+        keygen_process = salt.utils.subprocess.FdPopen(
             [keygen, '-t',
                      'ecdsa',
                      '-b',
@@ -588,7 +589,7 @@ class TestDaemon(object):
             if os.path.exists(server_key_file):
                 os.remove(server_key_file)
 
-        keygen_process_dsa = subprocess.Popen(
+        keygen_process_dsa = salt.utils.subprocess.FdPopen(
             [keygen, '-t',
                      'dsa',
                      '-b',
@@ -608,7 +609,7 @@ class TestDaemon(object):
         if keygen_dsa_err:
             print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_dsa_err)))
 
-        keygen_process_ecdsa = subprocess.Popen(
+        keygen_process_ecdsa = salt.utils.subprocess.FdPopen(
             [keygen, '-t',
                      'ecdsa',
                      '-b',
@@ -628,7 +629,7 @@ class TestDaemon(object):
         if keygen_escda_err:
             print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_escda_err)))
 
-        keygen_process_ed25519 = subprocess.Popen(
+        keygen_process_ed25519 = salt.utils.subprocess.FdPopen(
             [keygen, '-t',
                      'ed25519',
                      '-b',
@@ -658,7 +659,7 @@ class TestDaemon(object):
                 ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
 
         self.sshd_pidfile = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd.pid')
-        self.sshd_process = subprocess.Popen(
+        self.sshd_process = salt.utils.subprocess.FdPopen(
             [sshd, '-f', 'sshd_config', '-oPidFile={0}'.format(self.sshd_pidfile)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

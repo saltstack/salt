@@ -129,9 +129,10 @@ With Python:
 
 .. code-block:: python
 
+    import salt.utils.subprocess
     import subprocess
 
-    secret, stderr = subprocess.Popen(
+    secret, stderr = salt.utils.subprocess.FdPopen(
         ['gpg', '--armor', '--batch', '--trust-model', 'always', '--encrypt',
          '-r', 'user@domain.com'],
         stdin=subprocess.PIPE,
@@ -180,11 +181,12 @@ With Python:
 .. code-block:: python
 
     import subprocess
+    import salt.utils.subprocess
 
     pillar_data = {'secret_a': 'CorrectHorseBatteryStaple',
                    'secret_b': 'GPG is fun!'}
 
-    secret, stderr = subprocess.Popen(
+    secret, stderr = salt.utils.subprocess.FdPopen(
         ['gpg', '--armor', '--batch', '--trust-model', 'always', '--encrypt',
          '-r', 'user@domain.com'],
         stdin=subprocess.PIPE,
@@ -213,11 +215,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import logging
-from subprocess import Popen, PIPE
+import subprocess
 
 # Import salt libs
 import salt.utils.path
 import salt.utils.stringio
+import salt.utils.subprocess
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
@@ -274,7 +277,8 @@ def _decrypt_ciphertext(matchobj):
         cipher = cipher.encode(__salt_system_encoding__)
     cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '--status-fd', '2',
            '--no-tty', '-d']
-    proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
+    proc = salt.utils.subprocess.FdPopen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE, shell=False)
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
         if six.PY3:
