@@ -66,7 +66,7 @@ def get_modules():
     # __salt__ is not available from salt.utils... need to create a salt.util
     # for the registry to avoid loading powershell to get the version
     # not sure how to get the powershell version in linux outside of powershell
-    # if running powershell to get version need to use subprocess.Popen
+    # if running powershell to get version need to use salt.utils.subprocess.FdPopen
     # That information will be loaded here
     # ps_version = info()['version_raw']
     root_paths = []
