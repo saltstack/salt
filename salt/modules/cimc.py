@@ -260,6 +260,8 @@ def get_hostname():
     '''
     Retrieves the hostname from the device.
 
+    .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -392,6 +394,8 @@ def get_power_configuration():
     Get the configuration of the power settings from the device. This is only available
     on some C-Series servers.
 
+    .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -455,6 +459,8 @@ def get_syslog():
 def get_syslog_settings():
     '''
     Get the Syslog configuration settings from the system.
+
+    .. versionadded:: Fluorine
 
     CLI Example:
 
@@ -626,6 +632,8 @@ def set_hostname(hostname=None):
     '''
     Sets the hostname on the server.
 
+    .. versionadded:: Fluorine
+
     Args:
         hostname(str): The new hostname to set.
 
@@ -658,6 +666,8 @@ def set_logging_levels(remote=None, local=None):
     Sets the logging levels of the CIMC devices. The logging levels must match 
     the following options: emergency, alert, critical, error, warning, notice,
     informational, debug.
+
+    .. versionadded:: Fluorine
 
     Args:
         remote(str): The logging level for SYSLOG logs.
@@ -739,6 +749,8 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
     '''
     Sets the power configuration on the device. This is only available for some
     C-Series servers.
+
+    .. versionadded:: Fluorine
 
     Args:
         policy(str): The action to be taken when chassis power is restored after
@@ -847,6 +859,8 @@ def set_syslog_server(server=None, type="primary"):
 def set_user(uid=None, username=None, password=None, priv=None, status=None):
     '''
     Sets a CIMC user with specified configurations.
+
+    .. versionadded:: Fluorine
 
     Args:
         uid(int): The user ID slot to create the user account in.
