@@ -1882,8 +1882,8 @@ def line(path, content=None, match=None, mode=None, location=None,
         match = content
 
     with salt.utils.files.fopen(path, mode='r') as fp_:
-        body = salt.utils.stringutils.to_unicode(fp_.read())
-    body_before = hashlib.sha256(salt.utils.stringutils.to_bytes(body)).hexdigest()
+        body = [salt.utils.stringutils.to_unicode(line) for line in fp_.readlines()]
+    body_before = hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
     after = _regex_to_static(body, after)
     before = _regex_to_static(body, before)
     match = _regex_to_static(body, match)
@@ -1892,11 +1892,11 @@ def line(path, content=None, match=None, mode=None, location=None,
         log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
         body = ''
     elif mode == 'delete':
-        body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
+        body = [line for line in body if line.find(match) < 0]
     elif mode == 'replace':
-        body = os.linesep.join([(_set_line_indent(file_line, content, indent)
-                                if (file_line.find(match) > -1 and not file_line == content) else file_line)
-                                for file_line in body.split(os.linesep)])
+        body = [(_set_line_indent(file_line, content, indent)
+                if (file_line.find(match) > -1 and not file_line == content) else file_line)
+                for file_line in body]
     elif mode == 'insert':
         if not location and not before and not after:
             raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
@@ -1906,48 +1906,45 @@ def line(path, content=None, match=None, mode=None, location=None,
                 _assert_occurrence(body, before, 'before')
                 _assert_occurrence(body, after, 'after')
                 out = []
-                lines = body.split(os.linesep)
                 in_range = False
-                for line in lines:
+                for line in body:
                     if line.find(after) > -1:
                         in_range = True
                     elif line.find(before) > -1 and in_range:
                         out.append(_set_line_indent(line, content, indent))
                     out.append(line)
-                body = os.linesep.join(out)
+                body = out
 
             if before and not after:
                 _assert_occurrence(body, before, 'before')
                 out = []
-                lines = body.split(os.linesep)
-                for idx in range(len(lines)):
-                    _line = lines[idx]
+                for idx in range(len(body)):
+                    _line = body[idx]
                     if _line.find(before) > -1:
                         cnd = _set_line_indent(_line, content, indent)
-                        if not idx or (idx and _starts_till(lines[idx - 1], cnd) < 0):  # Job for replace instead
+                        if not idx or (idx and _starts_till(body[idx - 1], cnd) < 0):  # Job for replace instead
                             out.append(cnd)
                     out.append(_line)
-                body = os.linesep.join(out)
+                body = out
 
             elif after and not before:
                 _assert_occurrence(body, after, 'after')
                 out = []
-                lines = body.split(os.linesep)
-                for idx, _line in enumerate(lines):
+                for idx, _line in enumerate(body):
                     out.append(_line)
                     cnd = _set_line_indent(_line, content, indent)
                     # No duplicates or append, if "after" is the last line
                     if (_line.find(after) > -1 and
-                            (lines[((idx + 1) < len(lines)) and idx + 1 or idx].strip() != cnd or
-                             idx + 1 == len(lines))):
+                            (body[((idx + 1) < len(body)) and idx + 1 or idx].strip() != cnd or
+                             idx + 1 == len(body))):
                         out.append(cnd)
-                body = os.linesep.join(out)
+                body = out
 
         else:
             if location == 'start':
-                body = os.linesep.join((content, body))
+                body.insert(0, content + os.linesep)
             elif location == 'end':
-                body = os.linesep.join((body, _set_line_indent(body[-1], content, indent) if body else content))
+                body.append(_set_line_indent(body[-1], content, indent) if body else content)
 
     elif mode == 'ensure':
         after = after and after.strip()
@@ -1960,7 +1957,6 @@ def line(path, content=None, match=None, mode=None, location=None,
             is_there = bool(body.count(content))
             if not is_there:
                 out = []
-                body = body.split(os.linesep)
                 for idx, line in enumerate(body):
                     out.append(line)
                     if line.find(content) > -1:
@@ -1971,11 +1967,10 @@ def line(path, content=None, match=None, mode=None, location=None,
                         elif line.find(after) > -1:
                             raise CommandExecutionError('Found more than one line between '
                                                         'boundaries "before" and "after".')
-                body = os.linesep.join(out)
+                body = out
 
         elif before and not after:
             _assert_occurrence(body, before, 'before')
-            body = body.split(os.linesep)
             out = []
             for idx in range(len(body)):
                 if body[idx].find(before) > -1:
@@ -1984,11 +1979,10 @@ def line(path, content=None, match=None, mode=None, location=None,
                     if _starts_till(out[prev], content) > -1:
                         del out[prev]
                 out.append(body[idx])
-            body = os.linesep.join(out)
+            body = out
 
         elif not before and after:
             _assert_occurrence(body, after, 'after')
-            body = body.split(os.linesep)
             skip = None
             out = []
             for idx in range(len(body)):
@@ -2000,14 +1994,14 @@ def line(path, content=None, match=None, mode=None, location=None,
                     if next_line is not None and _starts_till(next_line, content) > -1:
                         skip = next_line
                     out.append(_set_line_indent(body[idx], content, indent))
-            body = os.linesep.join(out)
+            body = out
 
         else:
             raise CommandExecutionError("Wrong conditions? "
                                         "Unable to ensure line without knowing "
                                         "where to put it before and/or after.")
 
-    changed = body_before != hashlib.sha256(salt.utils.stringutils.to_bytes(body)).hexdigest()
+    changed = body_before != hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
 
     if backup and changed and __opts__['test'] is False:
         try:
@@ -2024,9 +2018,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                 path_content = [salt.utils.stringutils.to_unicode(x)
                                 for x in fp_.read().splitlines(True)]
             changes_diff = ''.join(difflib.unified_diff(
-                path_content,
-                [salt.utils.stringutils.to_unicode(x)
-                 for x in body.splitlines(True)]
+                path_content, body
             ))
         if __opts__['test'] is False:
             fh_ = None
@@ -2034,7 +2026,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                 # Make sure we match the file mode from salt.utils.files.fopen
                 mode = 'wb' if six.PY2 and salt.utils.platform.is_windows() else 'w'
                 fh_ = salt.utils.atomicfile.atomic_open(path, mode)
-                fh_.write(body)
+                fh_.write(''.join(body))
             finally:
                 if fh_:
                     fh_.close()
