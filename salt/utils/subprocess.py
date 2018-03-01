@@ -35,7 +35,11 @@ class FdPopen(subprocess.Popen):
             :return:
             '''
             proc_path = '/proc/{}/fd'.format(os.getpid())
-            maxfds = len(os.listdir(proc_path)) if os.path.exists(proc_path) else subprocess.MAXFD
+            try:
+                maxfds = len(os.listdir(proc_path))
+            except OSError:
+                maxfds = subprocess.MAXFD
+
             log.debug('Closing %s file descriptors', maxfds)
             if hasattr(os, 'closerange'):
                 os.closerange(3, but)
