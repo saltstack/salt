@@ -1718,11 +1718,12 @@ def _regex_to_static(src, regex):
         return None
 
     try:
-        src = re.search(regex, src, re.M)
+        compiled = re.compile(regex, re.DOTALL)
+        src = [res.group() for res in map(compiled.search, src) if res]
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
-    return src and src.group().rstrip('\r') or regex
+    return src and src[0] or regex
 
 
 def _assert_occurrence(src, probe, target, amount=1):
