@@ -1912,7 +1912,7 @@ def line(path, content=None, match=None, mode=None, location=None,
 
     if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
         log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
-        body = ''
+        body = []
     elif mode == 'delete':
         body = [line for line in body if line.find(match) < 0]
     elif mode == 'replace':
@@ -1954,12 +1954,16 @@ def line(path, content=None, match=None, mode=None, location=None,
                 out = []
                 for idx, _line in enumerate(body):
                     out.append(_line)
-                    cnd = _set_line_indent(_line, content, indent)
-                    cnd = _set_line_eol(_line, cnd)
                     # No duplicates or append, if "after" is the last line
                     if (_line.find(after) > -1 and
                             (body[((idx + 1) < len(body)) and idx + 1 or idx].strip() != content or
                              idx + 1 == len(body))):
+                        if not _get_eol(_line) and idx > 0:
+                            out[-1] = _set_line_eol(body[-2], _line)
+                        elif not _get_eol(_line):
+                            out[-1] += os.linesep
+                        cnd = _set_line_indent(_line, content, indent)
+                        cnd = _set_line_eol(_line, cnd)
                         out.append(cnd)
                 body = out
 
@@ -1975,17 +1979,16 @@ def line(path, content=None, match=None, mode=None, location=None,
                     body[-1] = _set_line_eol(body[-2], body[-1])
                 elif not _get_eol(body[-1]):
                     body[-1] += os.linesep
+                #body = os.linesep.join((body, _get_line_indent(body[-1], content, indent) if body else content))
                 body.append(_set_line_indent(body[-1], content, indent) if body else content)
 
     elif mode == 'ensure':
-        after = after and after.strip()
-        before = before and before.strip()
 
         if before and after:
             _assert_occurrence(body, before, 'before')
             _assert_occurrence(body, after, 'after')
 
-            is_there = bool(body.count(content))
+            is_there = bool(len([l for l in body if l.count(content)]))
             if not is_there:
                 out = []
                 for idx, line in enumerate(body):
@@ -2024,6 +2027,10 @@ def line(path, content=None, match=None, mode=None, location=None,
                     next_line = idx + 1 < len(body) and body[idx + 1] or None
                     if next_line is not None and _starts_till(next_line, content) > -1:
                         skip = next_line
+                    if not _get_eol(body[idx]) and idx > 0:
+                        out[-1] = _set_line_eol(out[-2], body[idx])
+                    elif not _get_eol(body[idx]):
+                        out[-1] += os.linesep
                     out.append(_set_line_indent(body[idx], _set_line_eol(body[idx], content), indent))
             body = out
 
@@ -2031,6 +2038,8 @@ def line(path, content=None, match=None, mode=None, location=None,
             raise CommandExecutionError("Wrong conditions? "
                                         "Unable to ensure line without knowing "
                                         "where to put it before and/or after.")
+
+    if body: body.append(body.pop().rstrip('\r\n'))
 
     changed = body_before != hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
 
