@@ -40,12 +40,11 @@ class FdPopen(subprocess.Popen):
                 os.closerange(but + 1, maxfds)
             else:
                 for i in range(3, maxfds):
-                    if i == but:
-                        continue
-                    try:
-                        os.close(i)
-                    except:
-                        pass
+                    if i != but:
+                        try:
+                            os.close(i)
+                        except Exception:
+                            pass
 
 
 class TimedProc(object):
