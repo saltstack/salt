@@ -7,7 +7,7 @@ Management of Mongodb users
     This module requires PyMongo to be installed.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.versions
 
@@ -116,7 +116,7 @@ def present(name,
         #    users= (False, 'not authorized on admin to execute command { usersInfo: "root" }')
         if not users[0]:
             ret['result'] = False
-            ret['comment'] = "Mongo Err: "+str(users[1])
+            ret['comment'] = "Mongo Err: {0}".format(users[1])
             return ret
 
         # check each user occurrence

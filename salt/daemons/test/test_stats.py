@@ -5,6 +5,7 @@ Raet Ioflo Behavior Unittests
 from __future__ import absolute_import, print_function, unicode_literals
 import sys
 from salt.ext.six.moves import map
+import importlib
 # pylint: disable=blacklisted-import
 if sys.version_info < (2, 7):
     import unittest2 as unittest
@@ -22,6 +23,7 @@ from raet.abiding import ns2u
 from raet.lane.stacking import LaneStack
 from raet.road.stacking import RoadStack
 
+import salt.utils.stringutils
 from salt.utils.event import tagify
 
 
@@ -42,6 +44,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         '''
         Call super if override so House Framer and Frame are setup correctly
         '''
+        behaviors = ['salt.daemons.flo', 'salt.daemons.test.plan']
+        for behavior in behaviors:
+            mod = importlib.import_module(behavior)
         super(StatsEventerTestCase, self).setUp()
 
     def tearDown(self):
@@ -77,11 +82,12 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         self.resolve()  # resolve House, Framer, Frame, Acts, Actors
 
         self.frame.enter()
-        self.assertDictEqual(act.actor.Ioinits,
-                             {'opts': '.salt.opts',
-                              'stats_req': '.salt.stats.event_req',
-                              'lane_stack': '.salt.lane.manor.stack',
-                              'road_stack': '.salt.road.manor.stack'})
+        self.assertDictEqual(
+                act.actor.Ioinits,
+                {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),
+                 'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+                 'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack')})
 
         self.assertTrue(hasattr(act.actor, 'opts'))
         self.assertTrue(hasattr(act.actor, 'stats_req'))
@@ -384,11 +390,12 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         self.resolve()  # resolve House, Framer, Frame, Acts, Actors
 
         self.frame.enter()
-        self.assertDictEqual(act.actor.Ioinits,
-                             {'opts': '.salt.opts',
-                              'stats_req': '.salt.stats.event_req',
-                              'lane_stack': '.salt.lane.manor.stack',
-                              'road_stack': '.salt.road.manor.stack'})
+        self.assertDictEqual(
+                act.actor.Ioinits,
+                {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),
+                 'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+                 'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack')})
 
         self.assertTrue(hasattr(act.actor, 'opts'))
         self.assertTrue(hasattr(act.actor, 'stats_req'))
@@ -720,8 +727,8 @@ if __name__ == '__main__' and __package__ is None:
 
     # console.reinit(verbosity=console.Wordage.concise)
 
-    #runAll()  # run all unittests
+    runAll()  # run all unittests
 
-    runSome()  # only run some
+    #runSome()  # only run some
 
     #runOne('testMasterLaneStats')

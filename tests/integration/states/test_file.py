@@ -428,7 +428,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         name = os.path.join(TMP, 'grail_not_scene33')
         with salt.utils.files.fopen(name, 'wb') as fp_:
-            fp_.write(six.b('test_managed_show_changes_false\n'))
+            fp_.write(b'test_managed_show_changes_false\n')
 
         ret = self.run_state(
             'file.managed', name=name, source='salt://grail/scene33',
@@ -1167,6 +1167,27 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             actual_dir_mode = oct(stat.S_IMODE(os.stat(name).st_mode))[-4:]
             self.assertEqual(dir_mode, actual_dir_mode)
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
+    def test_recurse_issue_40578(self):
+        '''
+        This ensures that the state doesn't raise an exception when it
+        encounters a file with a unicode filename in the process of invoking
+        file.source_list.
+        '''
+        issue_dir = 'issue-40578'
+        name = os.path.join(TMP, issue_dir)
+
+        try:
+            ret = self.run_state('file.recurse',
+                                 name=name,
+                                 source='salt://соль')
+            self.assertSaltTrueReturn(ret)
+            self.assertEqual(
+                sorted(salt.utils.data.decode(os.listdir(name))),
+                sorted(['foo.txt', 'спам.txt', 'яйца.txt'])
+            )
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
@@ -2214,8 +2235,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 '+마지막 행\n'
             )
             diff = salt.utils.stringutils.to_str(diff)
-            # using unicode.encode('utf-8') we should get the same as
-            # an utf-8 string
             # future_lint: disable=blacklisted-function
             expected = {
                 str('file_|-some-utf8-file-create_|-{0}_|-managed').format(test_file_encoded): {
@@ -2471,6 +2490,46 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.run_function('state.sls', mods=state_file)
         self.assertSaltTrueReturn(ret)
+
+    @skip_if_not_root
+    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
+    @skipIf(not HAS_GRP, "grp not available. Skipping test")
+    @with_system_user_and_group('test_setuid_user', 'test_setuid_group',
+                                on_existing='delete', delete=True)
+    def test_owner_after_setuid(self, user, group):
+
+        '''
+        Test to check file user/group after setting setuid or setgid.
+        Because Python os.chown() does reset the setuid/setgid to 0.
+        https://github.com/saltstack/salt/pull/45257
+        '''
+
+        # Desired configuration.
+        desired = {
+            'file': os.path.join(TMP, 'file_with_setuid'),
+            'user': user,
+            'group': group,
+            'mode': '4750'
+        }
+
+        # Run the state.
+        ret = self.run_state(
+            'file.managed', name=desired['file'],
+            user=desired['user'], group=desired['group'], mode=desired['mode']
+        )
+
+        # Check result.
+        file_stat = os.stat(desired['file'])
+        result = {
+            'user': pwd.getpwuid(file_stat.st_uid).pw_name,
+            'group': grp.getgrgid(file_stat.st_gid).gr_name,
+            'mode': oct(stat.S_IMODE(file_stat.st_mode))
+        }
+
+        self.assertSaltTrueReturn(ret)
+        self.assertEqual(desired['user'], result['user'])
+        self.assertEqual(desired['group'], result['group'])
+        self.assertEqual(desired['mode'], result['mode'].lstrip('0Oo'))
 
     def tearDown(self):
         '''

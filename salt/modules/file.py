@@ -3669,7 +3669,7 @@ def path_exists_glob(path):
     Expansion allows usage of ? * and character ranges []. Tilde expansion
     is not supported. Returns True/False.
 
-    .. versionadded:: Hellium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -4453,6 +4453,9 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
                 group = perms['lgroup']
             try:
                 chown_func(name, user, group)
+                # Python os.chown() does reset the suid and sgid,
+                # that's why setting the right mode again is needed here.
+                set_mode(name, mode)
             except OSError:
                 ret['result'] = False
 

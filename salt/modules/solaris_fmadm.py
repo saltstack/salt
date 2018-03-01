@@ -8,7 +8,7 @@ Module for running fmadm and fmdump on Solaris
 
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging

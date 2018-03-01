@@ -34,11 +34,8 @@ from salt.utils.jinja import (
     ensure_sequence_filter
 )
 from salt.utils.odict import OrderedDict
-from salt.utils.templates import (
-    get_context,
-    JINJA,
-    render_jinja_tmpl
-)
+from salt.utils.templates import JINJA, render_jinja_tmpl
+
 # dateutils is needed so that the strftime jinja filter is loaded
 import salt.utils.dateutils  # pylint: disable=unused-import
 import salt.utils.files
@@ -310,7 +307,7 @@ class TestGetTemplate(TestCase):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
             with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
-                    salt.utils.stringutils.to_unicode(fp_.read()),
+                    salt.utils.stringutils.to_unicode(fp_.read(), 'utf-8'),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
@@ -376,38 +373,8 @@ class TestGetTemplate(TestCase):
             salt=self.local_salt
         )
         with salt.utils.files.fopen(out['data']) as fp:
-            result = salt.utils.stringutils.to_unicode(fp.read())
+            result = salt.utils.stringutils.to_unicode(fp.read(), 'utf-8')
             self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
-
-    def test_get_context_has_enough_context(self):
-        template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
-        context = get_context(template, 8)
-        expected = '---\n[...]\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\n[...]\n---'
-        self.assertEqual(expected, context)
-
-    def test_get_context_at_top_of_file(self):
-        template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
-        context = get_context(template, 1)
-        expected = '---\n1\n2\n3\n4\n5\n6\n[...]\n---'
-        self.assertEqual(expected, context)
-
-    def test_get_context_at_bottom_of_file(self):
-        template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
-        context = get_context(template, 15)
-        expected = '---\n[...]\na\nb\nc\nd\ne\nf\n---'
-        self.assertEqual(expected, context)
-
-    def test_get_context_2_context_lines(self):
-        template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
-        context = get_context(template, 8, num_lines=2)
-        expected = '---\n[...]\n6\n7\n8\n9\na\n[...]\n---'
-        self.assertEqual(expected, context)
-
-    def test_get_context_with_marker(self):
-        template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
-        context = get_context(template, 8, num_lines=2, marker=' <---')
-        expected = '---\n[...]\n6\n7\n8 <---\n9\na\n[...]\n---'
-        self.assertEqual(expected, context)
 
     def test_render_with_syntax_error(self):
         template = 'hello\n\n{{ bad\n\nfoo'
@@ -1021,7 +988,7 @@ class TestCustomExtensions(TestCase):
         Test the `http_query` Jinja filter.
         '''
         for backend in ('requests', 'tornado', 'urllib2'):
-            rendered = render_jinja_tmpl("{{ 'http://www.google.com' | http_query(backend='" + backend + "') }}",
+            rendered = render_jinja_tmpl("{{ 'http://icanhazip.com' | http_query(backend='" + backend + "') }}",
                                          dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
             self.assertIsInstance(rendered, six.text_type, 'Failed with backend: {}'.format(backend))
             dict_reply = ast.literal_eval(rendered)

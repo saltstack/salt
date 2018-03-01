@@ -5,7 +5,7 @@ lack of support for reading NTFS links.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import errno
 import logging
@@ -14,7 +14,6 @@ import posixpath
 import re
 import string
 import struct
-import sys
 
 # Import Salt libs
 import salt.utils.args
@@ -202,7 +201,9 @@ def which(exe=None):
             # executable in cwd or fullpath
             return exe
 
-        ext_list = os.environ.get('PATHEXT', '.EXE').split(';')
+        ext_list = salt.utils.stringutils.to_str(
+            os.environ.get('PATHEXT', str('.EXE'))
+        ).split(str(';'))
 
         @real_memoize
         def _exe_has_ext():
@@ -212,8 +213,13 @@ def which(exe=None):
             '''
             for ext in ext_list:
                 try:
-                    pattern = r'.*\.' + ext.lstrip('.') + r'$'
-                    re.match(pattern, exe, re.I).groups()
+                    pattern = r'.*\.{0}$'.format(
+                        salt.utils.stringutils.to_unicode(ext).lstrip('.')
+                    )
+                    re.match(
+                        pattern,
+                        salt.utils.stringutils.to_unicode(exe),
+                        re.I).groups()
                     return True
                 except AttributeError:
                     continue
@@ -221,13 +227,17 @@ def which(exe=None):
 
         # Enhance POSIX path for the reliability at some environments, when $PATH is changing
         # This also keeps order, where 'first came, first win' for cases to find optional alternatives
-        search_path = os.environ.get('PATH') and os.environ['PATH'].split(os.pathsep) or list()
-        for default_path in ['/bin', '/sbin', '/usr/bin', '/usr/sbin', '/usr/local/bin']:
-            if default_path not in search_path:
-                search_path.append(default_path)
-        os.environ['PATH'] = os.pathsep.join(search_path)
+        system_path = salt.utils.stringutils.to_unicode(os.environ.get('PATH', ''))
+        search_path = system_path.split(os.pathsep)
+        if not salt.utils.platform.is_windows():
+            search_path.extend([
+                x for x in ('/bin', '/sbin', '/usr/bin',
+                            '/usr/sbin', '/usr/local/bin')
+                if x not in search_path
+            ])
+
         for path in search_path:
-            full_path = os.path.join(path, exe)
+            full_path = join(path, exe)
             if _is_executable_file_or_link(full_path):
                 return full_path
             elif salt.utils.platform.is_windows() and not _exe_has_ext():
@@ -238,7 +248,10 @@ def which(exe=None):
                     # safely rely on that behavior
                     if _is_executable_file_or_link(full_path + ext):
                         return full_path + ext
-        log.trace('\'{0}\' could not be found in the following search path: \'{1}\''.format(exe, search_path))
+        log.trace(
+            '\'%s\' could not be found in the following search path: \'%s\'',
+            exe, search_path
+        )
     else:
         log.error('No executable was passed to be searched by salt.utils.path.which()')
 
@@ -293,27 +306,12 @@ def join(*parts, **kwargs):
         # No args passed to func
         return ''
 
+    root = salt.utils.stringutils.to_unicode(root)
     if not parts:
         ret = root
     else:
         stripped = [p.lstrip(os.sep) for p in parts]
-        try:
-            ret = pathlib.join(root, *stripped)
-        except UnicodeDecodeError:
-            # This is probably Python 2 and one of the parts contains unicode
-            # characters in a bytestring. First try to decode to the system
-            # encoding.
-            try:
-                enc = __salt_system_encoding__
-            except NameError:
-                enc = sys.stdin.encoding or sys.getdefaultencoding()
-            try:
-                ret = pathlib.join(root.decode(enc),
-                                   *[x.decode(enc) for x in stripped])
-            except UnicodeDecodeError:
-                # Last resort, try UTF-8
-                ret = pathlib.join(root.decode('UTF-8'),
-                                   *[x.decode('UTF-8') for x in stripped])
+        ret = pathlib.join(root, *salt.utils.data.decode(stripped))
     return pathlib.normpath(ret)
 
 
@@ -405,11 +403,8 @@ def safe_path(path, allow_path=None):
 
 def os_walk(top, *args, **kwargs):
     '''
-    This is a helper to ensure that we get unicode paths when walking a
-    filesystem. The reason for this is that when using os.walk, the paths in
-    the generator which is returned are all the same type as the top directory
-    passed in. This can cause problems when a str path is passed and the
-    filesystem underneath that path contains files with unicode characters in
-    the filename.
+    This is a helper than ensures that all paths returned from os.walk are
+    unicode.
     '''
-    return os.walk(salt.utils.stringutils.to_unicode(top), *args, **kwargs)
+    for item in os.walk(top, *args, **kwargs):
+        yield salt.utils.data.decode(item, preserve_tuples=True)

@@ -46,6 +46,8 @@ class Mock(object):
             data = self.__mapping.get(name)
         elif name in ('__file__', '__path__'):
             data = '/dev/null'
+        elif name == '__qualname__':
+            raise AttributeError("'Mock' object has no attribute '__qualname__'")
         else:
             data = Mock(mapping=self.__mapping)
         return data
@@ -158,6 +160,7 @@ MOCK_MODULES = [
     'jnpr.junos.utils.sw',
     'dns',
     'dns.resolver',
+    'keyring',
     'netaddr',
     'netaddr.IPAddress',
     'netaddr.core',
@@ -199,6 +202,8 @@ def mock_decorator_with_params(*oargs, **okwargs):
 
 # Define a fake version attribute for the following libs.
 sys.modules['libcloud'].__version__ = '0.0.0'
+sys.modules['msgpack'].version = (1, 0, 0)
+sys.modules['psutil'].version_info = (3, 0, 0)
 sys.modules['pymongo'].version = '0.0.0'
 sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
 sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
@@ -245,8 +250,8 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2017.7.2'  # latest release
-previous_release = '2016.11.8'  # latest release from previous branch
+latest_release = '2017.7.4'  # latest release
+previous_release = '2016.11.9'  # latest release from previous branch
 previous_release_dir = '2016.11'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch

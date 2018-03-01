@@ -14,6 +14,7 @@ from collections import defaultdict
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.data
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
 from salt.log import LOG_LEVELS
 
@@ -579,3 +580,19 @@ def ignores_kwargs(*kwarg_names):
             return fn(*args, **kwargs_filtered)
         return __ignores_kwargs
     return _ignores_kwargs
+
+
+def ensure_unicode_args(function):
+    '''
+    Decodes all arguments passed to the wrapped function
+    '''
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        if six.PY2:
+            return function(
+                *salt.utils.data.decode_list(args),
+                **salt.utils.data.decode_dict(kwargs)
+            )
+        else:
+            return function(*args, **kwargs)
+    return wrapped

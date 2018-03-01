@@ -79,7 +79,7 @@ with release Neon.
 
 The functions have been moved as follows:
 
-- ``salt.utils.appendproctitle``: use ``salt.utils.process.appendproctitle`` 
+- ``salt.utils.appendproctitle``: use ``salt.utils.process.appendproctitle``
   instead.
 - ``salt.utils.daemonize``: use ``salt.utils.process.daemonize`` instead.
 - ``salt.utils.daemonize_if``: use ``salt.utils.process.daemonize_if`` instead.
@@ -94,22 +94,22 @@ The functions have been moved as follows:
 - ``salt.utils.is_hex``: use ``salt.utils.stringutils.is_hex`` instead.
 - ``salt.utils.is_bin_str``: use ``salt.utils.stringutils.is_bin_str`` instead.
 - ``salt.utils.rand_string``: use ``salt.utils.stringutils.random`` instead.
-- ``salt.utils.contains_whitespace``: use 
+- ``salt.utils.contains_whitespace``: use
   ``salt.utils.stringutils.contains_whitespace`` instead.
-- ``salt.utils.build_whitespace_split_regex``: use 
+- ``salt.utils.build_whitespace_split_regex``: use
   ``salt.utils.stringutils.build_whitespace_split_regex`` instead.
 - ``salt.utils.expr_match``: use ``salt.utils.stringutils.expr_match`` instead.
-- ``salt.utils.check_whitelist_blacklist``: use 
+- ``salt.utils.check_whitelist_blacklist``: use
   ``salt.utils.stringutils.check_whitelist_blacklist`` instead.
-- ``salt.utils.check_include_exclude``: use 
+- ``salt.utils.check_include_exclude``: use
   ``salt.utils.stringutils.check_include_exclude`` instead.
 - ``salt.utils.print_cli``: use ``salt.utils.stringutils.print_cli`` instead.
 - ``salt.utils.clean_kwargs``: use ``salt.utils.args.clean_kwargs`` instead.
-- ``salt.utils.invalid_kwargs``: use ``salt.utils.args.invalid_kwargs`` 
+- ``salt.utils.invalid_kwargs``: use ``salt.utils.args.invalid_kwargs``
   instead.
 - ``salt.utils.shlex_split``: use ``salt.utils.args.shlex_split`` instead.
 - ``salt.utils.arg_lookup``: use ``salt.utils.args.arg_lookup`` instead.
-- ``salt.utils.argspec_report``: use ``salt.utils.args.argspec_report`` 
+- ``salt.utils.argspec_report``: use ``salt.utils.args.argspec_report``
   instead.
 - ``salt.utils.split_input``: use ``salt.utils.args.split_input`` instead.
 - ``salt.utils.test_mode``: use ``salt.utils.args.test_mode`` instead.
@@ -118,7 +118,7 @@ The functions have been moved as follows:
 - ``salt.utils.which_bin``: use ``salt.utils.path.which_bin`` instead.
 - ``salt.utils.path_join``: use ``salt.utils.path.join`` instead.
 - ``salt.utils.check_or_die``: use ``salt.utils.path.check_or_die`` instead.
-- ``salt.utils.sanitize_win_path_string``: use 
+- ``salt.utils.sanitize_win_path_string``: use
   ``salt.utils.path.sanitize_win_path`` instead.
 - ``salt.utils.rand_str``: use ``salt.utils.hashutils.random_hash`` instead.
 - ``salt.utils.get_hash``: use ``salt.utils.hashutils.get_hash`` instead.
@@ -128,9 +128,9 @@ The functions have been moved as follows:
 - ``salt.utils.is_darwin``: use ``salt.utils.platform.is_darwin`` instead.
 - ``salt.utils.is_sunos``: use ``salt.utils.platform.is_sunos`` instead.
 - ``salt.utils.is_smartos``: use ``salt.utils.platform.is_smartos`` instead.
-- ``salt.utils.is_smartos_globalzone``: use 
+- ``salt.utils.is_smartos_globalzone``: use
   ``salt.utils.platform.is_smartos_globalzone`` instead.
-- ``salt.utils.is_smartos_zone``: use ``salt.utils.platform.is_smartos_zone`` 
+- ``salt.utils.is_smartos_zone``: use ``salt.utils.platform.is_smartos_zone``
   instead.
 - ``salt.utils.is_freebsd``: use ``salt.utils.platform.is_freebsd`` instead.
 - ``salt.utils.is_netbsd``: use ``salt.utils.platform.is_netbsd`` instead.
@@ -147,59 +147,59 @@ The functions have been moved as follows:
 - ``salt.utils.is_bin_file``: use ``salt.utils.files.is_binary`` instead.
 - ``salt.utils.list_files``: use ``salt.utils.files.list_files`` instead.
 - ``salt.utils.safe_walk``: use ``salt.utils.files.safe_walk`` instead.
-- ``salt.utils.st_mode_to_octal``: use ``salt.utils.files.st_mode_to_octal`` 
+- ``salt.utils.st_mode_to_octal``: use ``salt.utils.files.st_mode_to_octal``
   instead.
-- ``salt.utils.normalize_mode``: use ``salt.utils.files.normalize_mode`` 
+- ``salt.utils.normalize_mode``: use ``salt.utils.files.normalize_mode``
   instead.
-- ``salt.utils.human_size_to_bytes``: use 
+- ``salt.utils.human_size_to_bytes``: use
   ``salt.utils.files.human_size_to_bytes`` instead.
 - ``salt.utils.backup_minion``: use ``salt.utils.files.backup_minion`` instead.
 - ``salt.utils.str_version_to_evr``: use ``salt.utils.pkg.rpm.version_to_evr``
   instead.
-- ``salt.utils.parse_docstring``: use ``salt.utils.doc.parse_docstring`` 
+- ``salt.utils.parse_docstring``: use ``salt.utils.doc.parse_docstring``
   instead.
 - ``salt.utils.compare_versions``: use ``salt.utils.versions.compare`` instead.
 - ``salt.utils.version_cmp``: use ``salt.utils.versions.version_cmp`` instead.
 - ``salt.utils.warn_until``: use ``salt.utils.versions.warn_until`` instead.
-- ``salt.utils.kwargs_warn_until``: use 
+- ``salt.utils.kwargs_warn_until``: use
   ``salt.utils.versions.kwargs_warn_until`` instead.
-- ``salt.utils.get_color_theme``: use ``salt.utils.color.get_color_theme`` 
+- ``salt.utils.get_color_theme``: use ``salt.utils.color.get_color_theme``
   instead.
 - ``salt.utils.get_colors``: use ``salt.utils.color.get_colors`` instead.
 - ``salt.utils.gen_state_tag``: use ``salt.utils.state.gen_tag`` instead.
-- ``salt.utils.search_onfail_requisites``: use 
+- ``salt.utils.search_onfail_requisites``: use
   ``salt.utils.state.search_onfail_requisites`` instead.
-- ``salt.utils.check_state_result``: use ``salt.utils.state.check_result`` 
+- ``salt.utils.check_state_result``: use ``salt.utils.state.check_result``
   instead.
 - ``salt.utils.get_user``: use ``salt.utils.user.get_user`` instead.
 - ``salt.utils.get_uid``: use ``salt.utils.user.get_uid`` instead.
-- ``salt.utils.get_specific_user``: use ``salt.utils.user.get_specific_user`` 
+- ``salt.utils.get_specific_user``: use ``salt.utils.user.get_specific_user``
   instead.
 - ``salt.utils.chugid``: use ``salt.utils.user.chugid`` instead.
-- ``salt.utils.chugid_and_umask``: use ``salt.utils.user.chugid_and_umask`` 
+- ``salt.utils.chugid_and_umask``: use ``salt.utils.user.chugid_and_umask``
   instead.
-- ``salt.utils.get_default_group``: use ``salt.utils.user.get_default_group`` 
+- ``salt.utils.get_default_group``: use ``salt.utils.user.get_default_group``
   instead.
-- ``salt.utils.get_group_list``: use ``salt.utils.user.get_group_list`` 
+- ``salt.utils.get_group_list``: use ``salt.utils.user.get_group_list``
   instead.
-- ``salt.utils.get_group_dict``: use ``salt.utils.user.get_group_dict`` 
+- ``salt.utils.get_group_dict``: use ``salt.utils.user.get_group_dict``
   instead.
 - ``salt.utils.get_gid_list``: use ``salt.utils.user.get_gid_list`` instead.
 - ``salt.utils.get_gid``: use ``salt.utils.user.get_gid`` instead.
-- ``salt.utils.enable_ctrl_logoff_handler``: use 
+- ``salt.utils.enable_ctrl_logoff_handler``: use
   ``salt.utils.win_functions.enable_ctrl_logoff_handler`` instead.
 - ``salt.utils.traverse_dict``: use ``salt.utils.data.traverse_dict`` instead.
-- ``salt.utils.traverse_dict_and_list``: use 
+- ``salt.utils.traverse_dict_and_list``: use
   ``salt.utils.data.traverse_dict_and_list`` instead.
 - ``salt.utils.filter_by``: use ``salt.utils.data.filter_by`` instead.
 - ``salt.utils.subdict_match``: use ``salt.utils.data.subdict_match`` instead.
 - ``salt.utils.substr_in_list``: use ``salt.utils.data.substr_in_list`` instead.
 - ``salt.utils.is_dictlist``: use ``salt.utils.data.is_dictlist``.
-- ``salt.utils.repack_dictlist``: use ``salt.utils.data.repack_dictlist`` 
+- ``salt.utils.repack_dictlist``: use ``salt.utils.data.repack_dictlist``
   instead.
 - ``salt.utils.compare_dicts``: use ``salt.utils.data.compare_dicts`` instead.
 - ``salt.utils.compare_lists``: use ``salt.utils.data.compare_lists`` instead.
-- ``salt.utils.decode_dict``: use ``salt.utils.data.decode_dict`` instead.
+- ``salt.utils.decode_dict``: use ``salt.utils.data.encode_dict`` instead.
 - ``salt.utils.decode_list``: use ``salt.utils.data.encode_list`` instead.
 - ``salt.utils.exactly_n``: use ``salt.utils.data.exactly_n`` instead.
 - ``salt.utils.exactly_one``: use ``salt.utils.data.exactly_one`` instead.
@@ -208,33 +208,33 @@ The functions have been moved as follows:
 - ``salt.utils.isorted``: use ``salt.utils.data.sorted_ignorecase`` instead.
 - ``salt.utils.is_true``: use ``salt.utils.data.is_true`` instead.
 - ``salt.utils.mysql_to_dict``: use ``salt.utils.data.mysql_to_dict`` instead.
-- ``salt.utils.simple_types_filter``: use 
+- ``salt.utils.simple_types_filter``: use
   ``salt.utils.data.simple_types_filter`` instead.
 - ``salt.utils.ip_bracket``: use ``salt.utils.zeromq.ip_bracket`` instead.
 - ``salt.utils.gen_mac``: use ``salt.utils.network.gen_mac`` instead.
-- ``salt.utils.mac_str_to_bytes``: use ``salt.utils.network.mac_str_to_bytes`` 
+- ``salt.utils.mac_str_to_bytes``: use ``salt.utils.network.mac_str_to_bytes``
   instead.
 - ``salt.utils.refresh_dns``: use ``salt.utils.network.refresh_dns`` instead.
 - ``salt.utils.dns_check``: use ``salt.utils.network.dns_check`` instead.
-- ``salt.utils.get_context``: use ``salt.utils.templates.get_context`` instead.
-- ``salt.utils.get_master_key``: use ``salt.utils.master.get_master_key`` 
+- ``salt.utils.get_context``: use ``salt.utils.stringutils.get_context`` instead.
+- ``salt.utils.get_master_key``: use ``salt.utils.master.get_master_key``
   instead.
-- ``salt.utils.get_values_of_matching_keys``: use 
+- ``salt.utils.get_values_of_matching_keys``: use
   ``salt.utils.master.get_values_of_matching_keys`` instead.
 - ``salt.utils.date_cast``: use ``salt.utils.dateutils.date_cast`` instead.
 - ``salt.utils.date_format``: use ``salt.utils.dateutils.strftime`` instead.
-- ``salt.utils.total_seconds``: use ``salt.utils.dateutils.total_seconds`` 
+- ``salt.utils.total_seconds``: use ``salt.utils.dateutils.total_seconds``
   instead.
 - ``salt.utils.find_json``: use ``salt.utils.json.find_json`` instead.
 - ``salt.utils.import_json``: use ``salt.utils.json.import_json`` instead.
-- ``salt.utils.namespaced_function``: use 
+- ``salt.utils.namespaced_function``: use
   ``salt.utils.functools.namespaced_function`` instead.
-- ``salt.utils.alias_function``: use ``salt.utils.functools.alias_function`` 
+- ``salt.utils.alias_function``: use ``salt.utils.functools.alias_function``
   instead.
 - ``salt.utils.profile_func``: use ``salt.utils.profile.profile_func`` instead.
-- ``salt.utils.activate_profile``: use ``salt.utils.profile.activate_profile`` 
+- ``salt.utils.activate_profile``: use ``salt.utils.profile.activate_profile``
   instead.
-- ``salt.utils.output_profile``: use ``salt.utils.profile.output_profile`` 
+- ``salt.utils.output_profile``: use ``salt.utils.profile.output_profile``
   instead.
 
 State and Execution Module Support for ``docker run`` Functionality
@@ -283,6 +283,16 @@ the master using ZeroMQ.  By setting `enable_ssh_minions: True` in the the
 master config file, the master will create a SaltSSH client process which
 connects to the minion and returns the output for the `salt` commandline to use
 like a regular minion. This can be used anywhere the LocalClient is used.
+
+Exceptions Raised for Authentication/Authorization Errors
+---------------------------------------------------------
+
+When sending ``publish`` commands via ``master.py`` and ``masterapi.py`` and an
+authorization or authentication problem is encountered, Salt will now raise the
+appropriate exceptions instead of returning an empty string: ``''``.
+
+The reasoning behind this change is to make it easier to debug various scenarios
+surrounding authentication and authorization issues more effectively.
 
 Comparison Operators in Package Installation
 --------------------------------------------
@@ -441,13 +451,76 @@ The new grains added are:
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
 * ``swap_total``: Show the configured swap_total for Linux, \*BSD, OS X and Solaris/SunOS
 
-Salt Minion Autodiscovery
+Salt Minion Auto-discovery
 ------------------------
 
-Salt Minion now no longer need to be configured against a specifig DNS name or IP address of a Master.
+Using auto-discovery, the Salt Minion now no longer needs to be configured
+against a specific DNS name or IP address of a Master.
 
 For this feature Salt Master now requires port 4520 for UDP broadcast packets to be opened
 and the Salt Minion be able to send UDP packets to the same port.
+
+Configuration
+=============
+
+By default, automatic discovery is disabled.
+
+..warning::
+   Due to the current limitations that will be changing in a future, before you turn on auto-discovery,
+   make sure your network is secured and trusted.
+
+Auto-discovery is configured on Master and Minion. Both of them are configured via the ``discovery`` option
+as follows:
+
+**Master configuration**
+
+To use the default configuration, which accepts any minion, simply set ``discovery`` to True:
+
+.. code-block:: yaml
+
+       discovery: true
+
+A sub-option called `mapping` allows auto-discovery to help find the proper
+Master. The mapping contains an arbitrary set of key/value pairs, which the
+Minion configuration can target. By default, no mappings are set.
+
+Example:
+
+.. code-block:: yaml
+
+       discovery:
+         mapping:
+           description: SES 5.0
+           node: 1
+
+It is also possible to change the port used from the default of ``4520``, by
+setting a ``port`` option under the Master's ``discovery`` configuration:
+
+.. code-block:: yaml
+
+    discovery:
+      port: 4567
+
+.. note::
+    When using a port number other than the default, the Minion's ``discovery``
+    configuraton must *also* have a port specified, otherwise the Minion will
+    still attempt to contact the Master on port ``4520``.
+
+**Minion configuration**
+
+In addition to the ``mapping`` and ``port`` options, the following additional options are available to Minions:
+
+- ``attempts`` - This option specifies how many broadcast requests should be
+  sent to the network, waiting for any Master response. Each attempt takes a
+  couple of seconds, so raising this value may result in a slower Minion
+  startup. Note that, on a properly-configured network, autodiscovery should
+  succeed on the first attempt. By default, this value is set to ``3``.
+- ``match`` - This option can be set to either ``all`` or ``any``, and it
+  determines how the values configured in ``mapping`` are matched. If set to
+  ``all``, then all of the key/value pairs in the Minion's ``mapping`` must
+  match a given Master. If set to ``any`` (the default), then any match to a
+  key/value mapping will constitute a match.
+- ``pause`` - The interval in seconds between attempts (default: 5).
 
 Connection to a type instead of DNS
 ===================================
@@ -458,7 +531,7 @@ Masters, each corresponds for a particular niche or environment or specific role
 is supposed to connect only to one of those Masters that is described approriately.
 
 To achieve such an effect, each `/etc/salt/master` configuration should have a `discovery` option,
-which should have a `mapping` element with arbitrary key/value pairs. The same configuration shoul
+which should have a `mapping` element with arbitrary key/value pairs. The same configuration should
 be on the Minion, so then when mapping matches, Minion recognises Master as its connection target.
 
 Example for Master configuration (`/etc/salt/master`):
@@ -1475,6 +1548,15 @@ Slot syntax looks close to the simple python function call. Here is a simple exa
 
 Read more :ref:`here <slots-subsystem>`.
 
+Cryptographic layer changes
+---------------------------
+
+M2Crypto is coming back. We are making the crypto backend modular but in this
+release M2Crypto is enabled if it's importable by Python. If not Cryptodome or
+PyCrypto is used as it was in the previous releases. M2Crypto is used in the
+same way as PyCrypto so there would be no compatibility issues, different nodes
+could use different backends.
+
 Deprecations
 ------------
 
@@ -1618,3 +1700,11 @@ Sentry Log Handler
 Configuring sentry raven python client via ``project``, ``servers``, ``public_key
 and ``secret_key`` is deprecated and won't work with sentry clients > 3.0.
 Instead, the ``dsn`` config param must be used.
+
+RAET transport
+--------------
+
+We haven't been doing development on RAET for quite some time and decided that
+Oxygen is the time to announce the deprecation. RAET support will be removed in
+Neon. Please consider to move to ``zeromq`` or ``tcp`` transport instead of
+``raet``.

@@ -88,11 +88,13 @@ def dump(obj, fp, **kwargs):
     '''
     .. versionadded:: Oxygen
 
-    Wraps json.dump and encodes the result to the system encoding. Also assumes
-    that ensure_ascii is False (unless explicitly passed as True) for unicode
-    compatibility. Note that setting it to True will mess up any unicode
-    characters, as they will be dumped as the string literal version of the
-    unicode code point.
+    Wraps json.dump, and assumes that ensure_ascii is False (unless explicitly
+    passed as True) for unicode compatibility. Note that setting it to True
+    will mess up any unicode characters, as they will be dumped as the string
+    literal version of the unicode code point.
+
+    On Python 2, encodes the result to a str since json.dump does not want
+    unicode types.
 
     You can pass an alternate json module (loaded via import_json() above)
     using the _json_module argument)
@@ -100,19 +102,22 @@ def dump(obj, fp, **kwargs):
     json_module = kwargs.pop('_json_module', json)
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False
-    obj = salt.utils.data.encode(obj)
-    return json.dump(obj, fp, **kwargs)  # future lint: blacklisted-function
+    if six.PY2:
+        obj = salt.utils.data.encode(obj)
+    return json_module.dump(obj, fp, **kwargs)  # future lint: blacklisted-function
 
 
 def dumps(obj, **kwargs):
     '''
     .. versionadded:: Oxygen
 
-    Wraps json.dumps and encodes the result to the system encoding. Also
-    assumes that ensure_ascii is False (unless explicitly passed as True) for
-    unicode compatibility. Note that setting it to True will mess up any
-    unicode characters, as they will be dumped as the string literal version of
-    the unicode code point.
+    Wraps json.dumps, and assumes that ensure_ascii is False (unless explicitly
+    passed as True) for unicode compatibility. Note that setting it to True
+    will mess up any unicode characters, as they will be dumped as the string
+    literal version of the unicode code point.
+
+    On Python 2, encodes the result to a str since json.dumps does not want
+    unicode types.
 
     You can pass an alternate json module (loaded via import_json() above)
     using the _json_module argument)
@@ -121,5 +126,6 @@ def dumps(obj, **kwargs):
     json_module = kwargs.pop('_json_module', json)
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False
-    obj = salt.utils.data.encode(obj)
+    if six.PY2:
+        obj = salt.utils.data.encode(obj)
     return json_module.dumps(obj, **kwargs)  # future lint: blacklisted-function

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-The module used to execute states in salt. A state is unlike a module
-execution in that instead of just executing a command it ensure that a
-certain state is present on the system.
+The State Compiler is used to execute states in Salt. A state is unlike
+an execution module in that instead of just executing a command, it
+ensures that a certain state is present on the system.
 
 The data sent to the state calls is as follows:
     { 'state': '<state module name>',
@@ -33,6 +33,7 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.args
 import salt.utils.crypt
+import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
@@ -43,7 +44,6 @@ import salt.utils.url
 import salt.syspaths as syspaths
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
-    SaltException,
     SaltRenderError,
     SaltReqTimeoutError
 )
@@ -165,6 +165,23 @@ def _l_tag(name, id_):
            'state': 'Listen_Error',
            'fun': 'Listen_Error'}
     return _gen_tag(low)
+
+
+def _calculate_fake_duration():
+    '''
+    Generate a NULL duration for when states do not run
+    but we want the results to be consistent.
+    '''
+    utc_start_time = datetime.datetime.utcnow()
+    local_start_time = utc_start_time - \
+        (datetime.datetime.utcnow() - datetime.datetime.now())
+    utc_finish_time = datetime.datetime.utcnow()
+    start_time = local_start_time.time().isoformat()
+    delta = (utc_finish_time - utc_start_time)
+    # duration in milliseconds.microseconds
+    duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+
+    return start_time, duration
 
 
 def get_accumulator_dir(cachedir):
@@ -1020,66 +1037,6 @@ class State(object):
         elif data['state'] in ('pkg', 'ports'):
             self.module_refresh()
 
-    @staticmethod
-    def verify_ret(ret):
-        '''
-        Perform basic verification of the raw state return data
-        '''
-        if not isinstance(ret, dict):
-            raise SaltException(
-                'Malformed state return, return must be a dict'
-            )
-        bad = []
-        for val in ['name', 'result', 'changes', 'comment']:
-            if val not in ret:
-                bad.append(val)
-        if bad:
-            m = 'The following keys were not present in the state return: {0}'
-            raise SaltException(m.format(','.join(bad)))
-
-    @staticmethod
-    def munge_ret_for_export(ret):
-        '''
-        Process raw state return data to make it suitable for export,
-        to ensure consistency of the data format seen by external systems
-        '''
-        # We support lists of strings for ret['comment'] internal
-        # to the state system for improved ergonomics.
-        # However, to maintain backwards compatability with external tools,
-        # the list representation is not allowed to leave the state system,
-        # and should be converted like this at external boundaries.
-        if isinstance(ret['comment'], list):
-            ret['comment'] = '\n'.join(ret['comment'])
-
-    @staticmethod
-    def verify_ret_for_export(ret):
-        '''
-        Verify the state return data for export outside the state system
-        '''
-        State.verify_ret(ret)
-
-        for key in ['name', 'comment']:
-            if not isinstance(ret[key], six.string_types):
-                msg = (
-                    'The value for the {0} key in the state return '
-                    'must be a string, found {1}'
-                )
-                raise SaltException(msg.format(key, repr(ret[key])))
-
-        if ret['result'] not in [True, False, None]:
-            msg = (
-                'The value for the result key in the state return '
-                'must be True, False, or None, found {0}'
-            )
-            raise SaltException(msg.format(repr(ret['result'])))
-
-        if not isinstance(ret['changes'], dict):
-            msg = (
-                'The value for the changes key in the state return '
-                'must be a dict, found {0}'
-            )
-            raise SaltException(msg.format(repr(ret['changes'])))
-
     def verify_data(self, data):
         '''
         Verify the data, return an error statement if something is wrong
@@ -1835,6 +1792,7 @@ class State(object):
                 'proc': proc}
         return ret
 
+    @salt.utils.decorators.state.OutputUnifier('content_check', 'unify')
     def call(self, low, chunks=None, running=None, retries=1):
         '''
         Call a state directly with the low data structure, verify data
@@ -1961,12 +1919,10 @@ class State(object):
                     else:
                         self.format_slots(cdata)
                         ret = self.states[cdata['full']](*cdata['args'],
-                                                          **cdata['kwargs'])
+                                                         **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
-            self.verify_ret(ret)
-            self.munge_ret_for_export(ret)
         except Exception:
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
@@ -1989,12 +1945,13 @@ class State(object):
             }
         finally:
             if low.get('__prereq__'):
-                sys.modules[self.states[cdata['full']].__module__].__opts__[
-                    'test'] = test
+                sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = test
 
             self.state_con.pop('runas', None)
             self.state_con.pop('runas_password', None)
-            self.verify_ret_for_export(ret)
+
+        if not isinstance(ret, dict):
+            return ret
 
         # If format_call got any warnings, let's show them to the user
         if 'warnings' in cdata:
@@ -2564,8 +2521,11 @@ class State(object):
                     run_dict = self.pre
                 else:
                     run_dict = running
+                start_time, duration = _calculate_fake_duration()
                 run_dict[tag] = {'changes': {},
                                  'result': False,
+                                 'duration': duration,
+                                 'start_time': start_time,
                                  'comment': comment,
                                  '__run_num__': self.__run_num,
                                  '__sls__': low['__sls__']}
@@ -2648,9 +2608,12 @@ class State(object):
                 _cmt = 'One or more requisite failed: {0}'.format(
                     ', '.join(six.text_type(i) for i in failed_requisites)
                 )
+                start_time, duration = _calculate_fake_duration()
                 running[tag] = {
                     'changes': {},
                     'result': False,
+                    'duration': duration,
+                    'start_time': start_time,
                     'comment': _cmt,
                     '__run_num__': self.__run_num,
                     '__sls__': low['__sls__']
@@ -2666,8 +2629,11 @@ class State(object):
                 ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == 'pre':
+            start_time, duration = _calculate_fake_duration()
             pre_ret = {'changes': {},
                        'result': True,
+                       'duration': duration,
+                       'start_time': start_time,
                        'comment': 'No changes detected',
                        '__run_num__': self.__run_num,
                        '__sls__': low['__sls__']}
@@ -2675,15 +2641,21 @@ class State(object):
             self.pre[tag] = pre_ret
             self.__run_num += 1
         elif status == 'onfail':
+            start_time, duration = _calculate_fake_duration()
             running[tag] = {'changes': {},
                             'result': True,
+                            'duration': duration,
+                            'start_time': start_time,
                             'comment': 'State was not run because onfail req did not change',
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
             self.__run_num += 1
         elif status == 'onchanges':
+            start_time, duration = _calculate_fake_duration()
             running[tag] = {'changes': {},
                             'result': True,
+                            'duration': duration,
+                            'start_time': start_time,
                             'comment': 'State was not run because none of the onchanges reqs changed',
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}

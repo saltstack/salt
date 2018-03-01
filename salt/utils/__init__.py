@@ -1740,15 +1740,15 @@ def dns_check(addr, port, safe=False, ipv6=None):
 def get_context(template, line, num_lines=5, marker=None):
     # Late import to avoid circular import.
     import salt.utils.versions
-    import salt.utils.templates
+    import salt.utils.stringutils
     salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.get_context\' detected. This function '
-        'has been moved to \'salt.utils.templates.get_context\' as of '
+        'has been moved to \'salt.utils.stringutils.get_context\' as of '
         'Salt Oxygen. This warning will be removed in Salt Neon.',
         stacklevel=3
     )
-    return salt.utils.templates.get_context(template, line, num_lines, marker)
+    return salt.utils.stringutils.get_context(template, line, num_lines, marker)
 
 
 def get_master_key(key_user, opts, skip_perm_errors=False):

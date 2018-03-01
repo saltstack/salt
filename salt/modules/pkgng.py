@@ -36,7 +36,7 @@ file, in order to use this module to manage packages, like so:
       pkg: pkgng
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -50,6 +50,7 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.pkg
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
@@ -132,11 +133,11 @@ def _contextkey(jail=None, chroot=None, root=None, prefix='pkg.list_pkgs'):
     unique to that jail/chroot is used.
     '''
     if jail:
-        return str(prefix) + '.jail_{0}'.format(jail)
+        return six.text_type(prefix) + '.jail_{0}'.format(jail)
     elif chroot:
-        return str(prefix) + '.chroot_{0}'.format(chroot)
+        return six.text_type(prefix) + '.chroot_{0}'.format(chroot)
     elif root:
-        return str(prefix) + '.root_{0}'.format(root)
+        return six.text_type(prefix) + '.root_{0}'.format(root)
     return prefix
 
 
@@ -158,6 +159,7 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
 
     with salt.utils.files.fopen(file_name) as ifile:
         for line in ifile:
+            line = salt.utils.stringutils.to_unicode(line)
             if line.startswith('#') or line.startswith('\n'):
                 pass
             else:

@@ -24,6 +24,7 @@ import salt.loader
 import salt.payload
 import salt.transport
 import salt.fileserver
+import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
@@ -359,13 +360,16 @@ class Client(object):
                 )
                 return states
             for path in self.opts['file_roots'][saltenv]:
-                for root, dirs, files in salt.utils.path.os_walk(path, topdown=True):
+                for root, dirs, files in os.walk(path, topdown=True):  # future lint: disable=blacklisted-function
+                    root = salt.utils.data.decode(root)
+                    files = salt.utils.data.decode(files)
                     log.debug(
                         'Searching for states in dirs %s and files %s',
-                        dirs, files
+                        salt.utils.data.decode(dirs), files
                     )
                     if not [filename.endswith('.sls') for filename in files]:
-                        #  Use shallow copy so we don't disturb the memory used by os.walk. Otherwise this breaks!
+                        #  Use shallow copy so we don't disturb the memory used
+                        #  by os.walk. Otherwise this breaks!
                         del dirs[:]
                     else:
                         for found_file in files:
@@ -737,7 +741,7 @@ class Client(object):
             if no_cache:
                 if write_body[2]:
                     return ''.join(result)
-                return six.b('').join(result)
+                return b''.join(result)
             else:
                 destfp.close()
                 destfp = None
@@ -1270,8 +1274,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list'}
-
-        return [sdecode(fn_) for fn_ in self.channel.send(load)]
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def file_list_emptydirs(self, saltenv='base', prefix=''):
         '''
@@ -1280,7 +1284,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
-        self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def dir_list(self, saltenv='base', prefix=''):
         '''
@@ -1289,7 +1294,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_dir_list'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def symlink_list(self, saltenv='base', prefix=''):
         '''
@@ -1298,7 +1304,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_symlink_list'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def __hash_and_stat_file(self, path, saltenv='base'):
         '''
@@ -1364,21 +1371,24 @@ class RemoteClient(Client):
         '''
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def envs(self):
         '''
         Return a list of available environments
         '''
         load = {'cmd': '_file_envs'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def master_opts(self):
         '''
         Return the master opts data
         '''
         load = {'cmd': '_master_opts'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def master_tops(self):
         '''
@@ -1388,8 +1398,9 @@ class RemoteClient(Client):
                 'id': self.opts['id'],
                 'opts': self.opts}
         if self.auth:
-            load['tok'] = self.auth.gen_token('salt')
-        return self.channel.send(load)
+            load['tok'] = self.auth.gen_token(b'salt')
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
 
 class FSClient(RemoteClient):

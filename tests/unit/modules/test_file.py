@@ -522,7 +522,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-    @skipIf(salt.utils.is_windows(), 'lsattr is not available on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'lsattr is not available on Windows')
     def test_check_file_meta_no_lsattr(self):
         '''
         Ensure that we skip attribute comparison if lsattr(1) is not found
@@ -569,7 +569,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # File ending with a newline
         with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tfile:
-            tfile.write(salt.utils.stringutils.to_str('foo' + os.linesep))
+            tfile.write(salt.utils.stringutils.to_bytes('foo' + os.linesep))
             tfile.flush()
         filemod.append(tfile.name, 'bar')
         expected = os.linesep.join(['foo', 'bar', ''])
@@ -579,7 +579,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         # File not ending with a newline
         with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tfile:
-            tfile.write(salt.utils.stringutils.to_str('foo'))
+            tfile.write(salt.utils.stringutils.to_bytes('foo'))
             tfile.flush()
         filemod.append(tfile.name, 'bar')
         with salt.utils.files.fopen(tfile.name) as tfile2:

@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import grp
-import os
 import random
 import string
 
@@ -12,8 +11,10 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt libs
+from salt.ext import six
 from salt.ext.six.moves import range
 import salt.utils.files
+import salt.utils.stringutils
 
 
 @skip_if_not_root
@@ -64,14 +65,20 @@ class GroupModuleTest(ModuleCase):
         '''
         Returns (SYS_GID_MIN, SYS_GID_MAX)
         '''
-        defs_file = '/etc/login.defs'
-        if os.path.exists(defs_file):
-            with salt.utils.files.fopen(defs_file) as defs_fd:
-                login_defs = dict([x.split()
-                                   for x in defs_fd.readlines()
-                                   if x.strip()
-                                   and not x.strip().startswith('#')])
-        else:
+        try:
+            login_defs = {}
+            with salt.utils.files.fopen('/etc/login.defs') as defs_fd:
+                for line in defs_fd:
+                    line = salt.utils.stringutils.to_unicode(line).strip()
+                    if line.startswith('#'):
+                        continue
+                    try:
+                        key, val = line.split()
+                    except ValueError:
+                        pass
+                    else:
+                        login_defs[key] = val
+        except OSError:
             login_defs = {'SYS_GID_MIN': 101,
                           'SYS_GID_MAX': 999}
 
@@ -229,7 +236,7 @@ class GroupModuleTest(ModuleCase):
         self.run_function('user.add', [self._user])
         self.run_function('group.adduser', [self._group, self._user])
         ginfo = self.run_function('user.getent')
-        self.assertIn(self._group, str(ginfo))
-        self.assertIn(self._user, str(ginfo))
-        self.assertNotIn(self._no_group, str(ginfo))
-        self.assertNotIn(self._no_user, str(ginfo))
+        self.assertIn(self._group, six.text_type(ginfo))
+        self.assertIn(self._user, six.text_type(ginfo))
+        self.assertNotIn(self._no_group, six.text_type(ginfo))
+        self.assertNotIn(self._no_user, six.text_type(ginfo))

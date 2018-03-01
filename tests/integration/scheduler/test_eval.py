@@ -52,6 +52,11 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
 
+        self.schedule.opts['grains']['whens'] = {'tea time': '11/29/2017 12:00pm'}
+
+    def tearDown(self):
+        del self.schedule
+
     def test_eval(self):
         '''
         verify that scheduled job runs
@@ -110,6 +115,28 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time2)
+
+    def test_eval_whens(self):
+        '''
+        verify that scheduled job runs
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'when': 'tea time'
+            }
+          }
+        }
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 12:00pm').timetuple()))
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate run time1
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time)
 
     def test_eval_loop_interval(self):
         '''
@@ -247,6 +274,30 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['_last_run'], run_time)
 
     @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
+    def test_eval_cron_invalid(self):
+        '''
+        verify that scheduled job runs
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'cron': '0 16 29 13 *'
+            }
+          }
+        }
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+        with patch('croniter.croniter.get_next', MagicMock(return_value=run_time)):
+            self.schedule.eval(now=run_time)
+
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_error'], 'Invalid cron string. Ignoring.')
+
+    @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
     def test_eval_cron_loop_interval(self):
         '''
         verify that scheduled job runs
@@ -272,3 +323,54 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_when_invalid_date(self):
+        '''
+        verify that scheduled job does not run
+        and returns the right error
+        '''
+        run_time = int(time.mktime(dateutil_parser.parse('11/29/2017 4:00pm').timetuple()))
+
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'when': '13/29/2017 1:00pm',
+            }
+          }
+        }
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate 1 second before the run time
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_error'], 'Invalid date string. Ignoring.')
+
+    def test_eval_once_invalid_datestring(self):
+        '''
+        verify that scheduled job does not run
+        and returns the right error
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'once': '2017-13-13T13:00:00',
+            }
+          }
+        }
+        run_time = int(time.mktime(dateutil_parser.parse('12/13/2017 1:00pm').timetuple()))
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate 1 second at the run time
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        _expected = ('Date string could not ',
+                     'be parsed: %s, %s',
+                     '2017-13-13T13:00:00',
+                     '%Y-%m-%dT%H:%M:%S')
+        self.assertEqual(ret['_error'], _expected)

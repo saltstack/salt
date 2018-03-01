@@ -219,7 +219,11 @@ from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
-from salt.exceptions import EauthAuthenticationError
+from salt.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    EauthAuthenticationError
+)
 
 json = salt.utils.json.import_json()
 log = logging.getLogger(__name__)
@@ -242,28 +246,6 @@ def _json_dumps(obj, **kwargs):
 # # master side
 #  - "runner" (done)
 #  - "wheel" (need async api...)
-
-
-class SaltClientsMixIn(object):
-    '''
-    MixIn class to container all of the salt clients that the API needs
-    '''
-    # TODO: load this proactively, instead of waiting for a request
-    __saltclients = None
-
-    @property
-    def saltclients(self):
-        if SaltClientsMixIn.__saltclients is None:
-            local_client = salt.client.get_local_client(mopts=self.application.opts)
-            # TODO: refreshing clients using cachedict
-            SaltClientsMixIn.__saltclients = {
-                'local': local_client.run_job_async,
-                # not the actual client we'll use.. but its what we'll use to get args
-                'local_async': local_client.run_job_async,
-                'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
-                'runner_async': None,  # empty, since we use the same client as `runner`
-                }
-        return SaltClientsMixIn.__saltclients
 
 
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -396,7 +378,7 @@ class EventListener(object):
                         del self.timeout_map[future]
 
 
-class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylint: disable=W0223
+class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
     ct_out_map = (
         ('application/json', _json_dumps),
         ('application/x-yaml', salt.utils.yaml.safe_dump),
@@ -423,6 +405,16 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
                 self.application.mod_opts,
                 self.application.opts,
             )
+
+        if not hasattr(self, 'saltclients'):
+            local_client = salt.client.get_local_client(mopts=self.application.opts)
+            self.saltclients = {
+                'local': local_client.run_job_async,
+                # not the actual client we'll use.. but its what we'll use to get args
+                'local_async': local_client.run_job_async,
+                'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
+                'runner_async': None,  # empty, since we use the same client as `runner`
+                }
 
     @property
     def token(self):
@@ -755,7 +747,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         self.write(self.serialize(ret))
 
 
-class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W0223
+class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     Main API handler for base "/"
     '''
@@ -899,7 +891,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
             try:
                 chunk_ret = yield getattr(self, '_disbatch_{0}'.format(low['client']))(low)
                 ret.append(chunk_ret)
-            except EauthAuthenticationError as exc:
+            except (AuthenticationError, AuthorizationError, EauthAuthenticationError):
                 ret.append('Failed to authenticate')
                 break
             except Exception as ex:

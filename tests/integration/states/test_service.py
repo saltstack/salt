@@ -3,7 +3,7 @@
 Tests for the service state
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import Salt Testing libs
@@ -26,15 +26,18 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         self.service_name = 'cron'
         cmd_name = 'crontab'
         os_family = self.run_function('grains.get', ['os_family'])
+        os_release = self.run_function('grains.get', ['osrelease'])
         self.stopped = False
         self.running = True
         if os_family == 'RedHat':
             self.service_name = 'crond'
         elif os_family == 'Arch':
-            self.service_name = 'systemd-journald'
+            self.service_name = 'sshd'
             cmd_name = 'systemctl'
         elif os_family == 'MacOS':
             self.service_name = 'org.ntp.ntpd'
+            if int(os_release.split('.')[1]) >= 13:
+                self.service_name = 'com.apple.AirPlayXPCHelper'
             self.stopped = ''
             self.running = '[0-9]'
 

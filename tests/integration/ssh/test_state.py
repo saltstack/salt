@@ -4,14 +4,17 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
+import threading
 import time
 
 # Import Salt Testing Libs
 from tests.support.case import SSHCase
+from tests.support.helpers import flaky
 from tests.support.paths import TMP
 
 # Import Salt Libs
 from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 SSH_SLS = 'ssh_state_tests'
 SSH_SLS_FILE = '/tmp/test'
@@ -160,23 +163,39 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
+    @flaky
     def test_state_running(self):
         '''
         test state.running with salt-ssh
         '''
-        start_sls = self.run_function('state.sls', ['running', '&'],
-                                      wipe=False)
-        time.sleep(8)
-        get_sls = self.run_function('state.running', wipe=False)
-        ret = 'The function "state.pkg" is running as'
-        self.assertIn(ret, ' '.join(get_sls))
+        def _run_in_background():
+            self.run_function('state.sls', ['running'], wipe=False)
+
+        bg_thread = threading.Thread(target=_run_in_background)
+        bg_thread.start()
+
+        expected = 'The function "state.pkg" is running as'
+        for _ in range(3):
+            time.sleep(5)
+            get_sls = self.run_function('state.running', wipe=False)
+            try:
+                self.assertIn(expected, ' '.join(get_sls))
+            except AssertionError:
+                pass
+            else:
+                # We found the expected return
+                break
+        else:
+            self.fail(
+                'Did not find \'{0}\' in state.running return'.format(expected)
+            )
 
         # make sure we wait until the earlier state is complete
         future = time.time() + 120
         while True:
             if time.time() > future:
                 break
-            if ret not in ' '.join(self.run_function('state.running', wipe=False)):
+            if expected not in ' '.join(self.run_function('state.running', wipe=False)):
                 break
 
     def tearDown(self):

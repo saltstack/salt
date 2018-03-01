@@ -32,7 +32,7 @@ Module to provide Postgres compatibility to salt.
 # pylint: disable=E8203
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import logging
 import hashlib
@@ -174,12 +174,12 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
         with salt.utils.files.fopen(pgpassfile, 'w') as fp_:
-            fp_.write('{0}:{1}:*:{2}:{3}'.format(
+            fp_.write(salt.utils.stringutils.to_str('{0}:{1}:*:{2}:{3}'.format(
                 'localhost' if not host or host.startswith('/') else host,
                 port if port else '*',
                 user if user else '*',
                 password,
-            ))
+            )))
             __salt__['file.chown'](pgpassfile, runas, '')
             kwargs['env'] = {'PGPASSFILE': pgpassfile}
 
@@ -230,7 +230,7 @@ def _run_initdb(name,
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
         with salt.utils.files.fopen(pgpassfile, 'w') as fp_:
-            fp_.write('{0}'.format(password))
+            fp_.write(salt.utils.stringutils.to_str('{0}'.format(password)))
             __salt__['file.chown'](pgpassfile, runas, '')
         cmd.extend([
             '--pwfile={0}'.format(pgpassfile),
@@ -346,7 +346,7 @@ def _psql_cmd(*args, **kwargs):
     if host:
         cmd += ['--host', host]
     if port:
-        cmd += ['--port', str(port)]
+        cmd += ['--port', six.text_type(port)]
     if not maintenance_db:
         maintenance_db = 'postgres'
     cmd.extend(['--dbname', maintenance_db])
@@ -433,7 +433,9 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
 
     csv_file = StringIO(cmdret['stdout'])
     header = {}
-    for row in csv.reader(csv_file, delimiter=',', quotechar='"'):
+    for row in csv.reader(csv_file,
+                          delimiter=salt.utils.stringutils.to_str(','),
+                          quotechar=salt.utils.stringutils.to_str('"')):
         if not row:
             continue
         if not header:
@@ -850,6 +852,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'pg_roles.rolcanlogin as "can login", '
         '{1} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
+        '(SELECT array_agg(pg_roles2.rolname)'
+        '    FROM pg_catalog.pg_auth_members'
+        '    JOIN pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)'
+        '    WHERE pg_auth_members.member = pg_roles.oid) as "groups",'
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
         'pg_roles.rolconfig  as "defaults variables" '
         , _x(', COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
@@ -892,37 +898,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         retrow['defaults variables'] = row['defaults variables']
         if return_password:
             retrow['password'] = row['password']
+        # use csv reader to handle quoted roles correctly
+        retrow['groups'] = list(csv.reader([row['groups'].strip('{}')]))[0]
         ret[row['name']] = retrow
 
-    # for each role, determine the inherited roles
-    for role in six.iterkeys(ret):
-        rdata = ret[role]
-        groups = rdata.setdefault('groups', [])
-        query = (
-            'select rolname'
-            ' from pg_user'
-            ' join pg_auth_members'
-            '      on (pg_user.usesysid=pg_auth_members.member)'
-            ' join pg_roles '
-            '      on (pg_roles.oid=pg_auth_members.roleid)'
-            ' where pg_user.usename=\'{0}\''
-        ).format(role)
-        try:
-            rows = psql_query(query,
-                              runas=runas,
-                              host=host,
-                              user=user,
-                              port=port,
-                              maintenance_db=maintenance_db,
-                              password=password)
-            for row in rows:
-                if row['rolname'] not in groups:
-                    groups.append(row['rolname'])
-        except Exception:
-            # do not fail here, it is just a bonus
-            # to try to determine groups, but the query
-            # is not portable amongst all pg versions
-            continue
     return ret
 
 
@@ -1004,7 +983,7 @@ def _maybe_encrypt_password(role,
     pgsql passwords are md5 hashes of the string: 'md5{password}{rolename}'
     '''
     if password is not None:
-        password = str(password)
+        password = six.text_type(password)
     if encrypted and password and not password.startswith('md5'):
         password = "md5{0}".format(
             hashlib.md5(salt.utils.stringutils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
@@ -1077,7 +1056,7 @@ def _role_cmd_args(name,
         {'flag': 'LOGIN', 'test': login},
         {'flag': 'CONNECTION LIMIT',
          'test': bool(connlimit),
-         'addtxt': str(connlimit),
+         'addtxt': six.text_type(connlimit),
          'skip': connlimit is None},
         {'flag': 'ENCRYPTED',
          'test': (encrypted is not None and bool(rolepassword)),
@@ -1132,7 +1111,7 @@ def _role_create(name,
     # check if role exists
     if user_exists(name, user, host, port, maintenance_db,
                    password=password, runas=runas):
-        log.info('{0} \'{1}\' already exists'.format(typ_.capitalize(), name))
+        log.info('%s \'%s\' already exists', typ_.capitalize(), name)
         return False
 
     sub_cmd = 'CREATE ROLE "{0}" WITH'.format(name)
@@ -1247,7 +1226,7 @@ def _role_update(name,
     # check if user exists
     if not bool(role):
         log.info(
-            '{0} \'{1}\' could not be found'.format(typ_.capitalize(), name)
+            '%s \'%s\' could not be found', typ_.capitalize(), name
         )
         return False
 
@@ -1337,7 +1316,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
     # check if user exists
     if not user_exists(name, user, host, port, maintenance_db,
                        password=password, runas=runas):
-        log.info('User \'{0}\' does not exist'.format(name))
+        log.info('User \'%s\' does not exist', name)
         return False
 
     # user exists, proceed
@@ -1351,7 +1330,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
                        password=password, runas=runas):
         return True
     else:
-        log.info('Failed to delete user \'{0}\'.'.format(name))
+        log.info('Failed to delete user \'%s\'.', name)
         return False
 
 
@@ -1636,7 +1615,7 @@ def drop_extension(name,
                                      password=password,
                                      runas=runas)
     if not ret:
-        log.info('Failed to drop ext: {0}'.format(name))
+        log.info('Failed to drop ext: %s', name)
     return ret
 
 
@@ -1726,7 +1705,7 @@ def create_extension(name,
         if (i in mtdata) and (i != _EXTENSION_INSTALLED):
             ret = False
     if not ret:
-        log.info('Failed to create ext: {0}'.format(name))
+        log.info('Failed to create ext: %s', name)
     return ret
 
 
@@ -1977,7 +1956,7 @@ def schema_create(dbname, name, owner=None,
     if schema_exists(dbname, name, user=user,
                      db_user=db_user, db_password=db_password,
                      db_host=db_host, db_port=db_port):
-        log.info('\'{0}\' already exists in \'{1}\''.format(name, dbname))
+        log.info('\'%s\' already exists in \'%s\'', name, dbname)
         return False
 
     sub_cmd = 'CREATE SCHEMA "{0}"'.format(name)
@@ -2032,7 +2011,7 @@ def schema_remove(dbname, name,
     if not schema_exists(dbname, name, user=None,
                          db_user=db_user, db_password=db_password,
                          db_host=db_host, db_port=db_port):
-        log.info('Schema \'{0}\' does not exist in \'{1}\''.format(name, dbname))
+        log.info('Schema \'%s\' does not exist in \'%s\'', name, dbname)
         return False
 
     # schema exists, proceed
@@ -2048,7 +2027,7 @@ def schema_remove(dbname, name,
                          db_host=db_host, db_port=db_port):
         return True
     else:
-        log.info('Failed to delete schema \'{0}\'.'.format(name))
+        log.info('Failed to delete schema \'%s\'.', name)
         return False
 
 

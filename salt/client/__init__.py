@@ -45,8 +45,13 @@ import salt.utils.versions
 import salt.utils.zeromq
 import salt.syspaths as syspaths
 from salt.exceptions import (
-    EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError,
-    SaltClientError, PublishError
+    AuthenticationError,
+    AuthorizationError,
+    EauthAuthenticationError,
+    PublishError,
+    SaltInvocationError,
+    SaltReqTimeoutError,
+    SaltClientError
 )
 
 # Import third party libs
@@ -189,11 +194,11 @@ class LocalClient(object):
             # The username may contain '\' if it is in Windows
             # 'DOMAIN\username' format. Fix this for the keyfile path.
             key_user = key_user.replace('\\', '_')
-        keyfile = os.path.join(self.opts['key_dir'],
+        keyfile = os.path.join(self.opts['cachedir'],
                                '.{0}_key'.format(key_user))
         try:
             # Make sure all key parent directories are accessible
-            salt.utils.verify.check_path_traversal(self.opts['key_dir'],
+            salt.utils.verify.check_path_traversal(self.opts['cachedir'],
                                                    key_user,
                                                    self.skip_perm_errors)
             with salt.utils.files.fopen(keyfile, 'r') as key:
@@ -1830,6 +1835,14 @@ class LocalClient(object):
 
         error = payload.pop('error', None)
         if error is not None:
+            if isinstance(error, dict):
+                err_name = error.get('name', '')
+                err_msg = error.get('message', '')
+                if err_name == 'AuthenticationError':
+                    raise AuthenticationError(err_msg)
+                elif err_name == 'AuthorizationError':
+                    raise AuthorizationError(err_msg)
+
             raise PublishError(error)
 
         if not payload:
@@ -1939,6 +1952,14 @@ class LocalClient(object):
 
         error = payload.pop('error', None)
         if error is not None:
+            if isinstance(error, dict):
+                err_name = error.get('name', '')
+                err_msg = error.get('message', '')
+                if err_name == 'AuthenticationError':
+                    raise AuthenticationError(err_msg)
+                elif err_name == 'AuthorizationError':
+                    raise AuthorizationError(err_msg)
+
             raise PublishError(error)
 
         if not payload:
