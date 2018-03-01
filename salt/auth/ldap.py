@@ -276,12 +276,17 @@ def auth(username, password):
     '''
     Simple LDAP auth
     '''
-    #If bind credentials are configured, use them instead of user's
+    if not HAS_LDAP:
+        log.error('LDAP authentication requires python-ldap module')
+        return False
+
+    # If bind credentials are configured, use them instead of user's
     if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
         bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
     else:
-        bind = _bind(username, password, anonymous=_config('auth_by_group_membership_only', mandatory=False) and
-                                        _config('anonymous', mandatory=False))
+        bind = _bind(username, password,
+                     anonymous=_config('auth_by_group_membership_only', mandatory=False)
+                     and _config('anonymous', mandatory=False))
 
     if bind:
         log.debug('LDAP authentication successful')
@@ -308,8 +313,13 @@ def groups(username, **kwargs):
     '''
     group_list = []
 
-    # Perform un-authenticated bind to determine group membership
-    bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+    # If bind credentials are configured, use them instead of user's
+    if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
+        bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+    else:
+        bind = _bind(username, kwargs.get('password', ''),
+                     anonymous=_config('auth_by_group_membership_only', mandatory=False)
+                     and _config('anonymous', mandatory=False))
 
     if bind:
         log.debug('ldap bind to determine group membership succeeded!')
@@ -352,10 +362,10 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [_config('accountattributename'), 'cn'])
+                                           [_config('accountattributename'), 'cn', _config('groupattribute'), 'cn'])
 
             for entry, result in search_results:
-                for user in result[_config('accountattributename')]:
+                for user in result[_config('accountattributename'), _config('groupattribute')]:
                     if username == user.split(',')[0].split('=')[-1]:
                         group_list.append(entry.split(',')[0].split('=')[-1])
 

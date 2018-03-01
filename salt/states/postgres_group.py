@@ -10,7 +10,7 @@ The postgres_group module is used to create and manage Postgres groups.
     frank:
       postgres_group.present
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 

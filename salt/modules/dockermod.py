@@ -630,7 +630,6 @@ def _client_wrapper(attr, *args, **kwargs):
         )
         ret = func(*args, **kwargs)
     except docker.errors.APIError as exc:
-        log.exception('Encountered error running API function %s', attr)
         if catch_api_errors:
             # Generic handling of Docker API errors
             raise CommandExecutionError(
@@ -5805,7 +5804,7 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
         Container name or ID
 
     ignore_already_stopped
-        Boolean flag that prevent execution to fail, if a container
+        Boolean flag that prevents execution to fail, if a container
         is already stopped.
 
     fail_on_exit_status
