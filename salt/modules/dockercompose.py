@@ -272,7 +272,7 @@ def __dump_docker_compose(path, content, already_existed):
     :return:
     '''
     try:
-        dumped = yaml.dump(content, indent=2, default_flow_style=False)
+        dumped = yaml.safe_dump(content, indent=2, default_flow_style=False)
         return __write_docker_compose(path, dumped, already_existed)
     except TypeError as t_err:
         msg = 'Could not dump {0} {1}'.format(content, t_err)
@@ -1019,7 +1019,7 @@ def service_set_tag(path, service_name, tag):
                                     'Service {0} did not contain the variable "image"'.format(service_name),
                                     None, None)
     image = services[service_name]['image'].split(':')[0]
-    services[service_name]['image'] = str('{0}:{1}'.format(image, tag))
+    services[service_name]['image'] = '{0}:{1}'.format(image, tag)
     return __dump_compose_file(path, compose_result,
                                'Service {0} is set to tag "{1}"'.format(service_name, tag),
                                already_existed=True)
