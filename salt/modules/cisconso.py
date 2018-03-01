@@ -7,17 +7,17 @@ Execution module for Cisco Network Services Orchestrator Proxy minions
 For documentation on setting up the cisconso proxy minion look in the documentation
 for :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-import salt.utils
-import salt.ext.six as six
+import salt.utils.platform
+from salt.ext import six
 
 __proxyenabled__ = ['cisconso']
 __virtualname__ = 'cisconso'
 
 
 def __virtual__():
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return __virtualname__
     return (False, 'The cisconso execution module failed to load: '
             'only available on proxy minions.')
@@ -60,7 +60,7 @@ def get_data(datastore, path):
 
 def set_data_value(datastore, path, data):
     '''
-    Get a data entry in a datastore
+    Set a data entry in a datastore
 
     :param datastore: The datastore, e.g. running, operational.
         One of the NETCONF store IETF types
@@ -149,7 +149,7 @@ def _proxy_cmd(command, *args, **kwargs):
     proxy_cmd = '.'.join([proxy_prefix, command])
     if proxy_cmd not in __proxy__:
         return False
-    for k in kwargs.keys():
+    for k in kwargs:
         if k.startswith('__pub_'):
             kwargs.pop(k)
     return __proxy__[proxy_cmd](*args, **kwargs)

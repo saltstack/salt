@@ -12,17 +12,30 @@ Execute calls on selinux
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.decorators as decorators
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
+
+
+_SELINUX_FILETYPES = {
+        'a': 'all files',
+        'f': 'regular file',
+        'd': 'directory',
+        'c': 'character device',
+        'b': 'block device',
+        's': 'socket',
+        'l': 'symbolic link',
+        'p': 'named pipe'}
 
 
 def __virtual__():
@@ -35,7 +48,7 @@ def __virtual__():
     # Iterate over all of the commands this module uses and make sure
     # each of them are available in the standard PATH to prevent breakage
     for cmd in required_cmds:
-        if not salt.utils.which(cmd):
+        if not salt.utils.path.which(cmd):
             return (False, cmd + ' is not in the path')
     # SELinux only makes sense on Linux *obviously*
     if __grains__['kernel'] == 'Linux':
@@ -63,8 +76,8 @@ def selinux_fs_path():
                 if os.path.isfile(os.path.join(directory, 'enforce')):
                     return directory
         return None
-    #If selinux is Disabled, the path does not exist.
-    except (AttributeError) as exc:
+    # If selinux is Disabled, the path does not exist.
+    except AttributeError:
         return None
 
 
@@ -78,14 +91,17 @@ def getenforce():
 
         salt '*' selinux.getenforce
     '''
+    _selinux_fs_path = selinux_fs_path()
+    if _selinux_fs_path is None:
+        return 'Disabled'
     try:
-        enforce = os.path.join(selinux_fs_path(), 'enforce')
-        with salt.utils.fopen(enforce, 'r') as _fp:
-            if _fp.readline().strip() == '0':
+        enforce = os.path.join(_selinux_fs_path, 'enforce')
+        with salt.utils.files.fopen(enforce, 'r') as _fp:
+            if salt.utils.stringutils.to_unicode(_fp.readline()).strip() == '0':
                 return 'Permissive'
             else:
                 return 'Enforcing'
-    except (IOError, OSError, AttributeError) as exc:
+    except (IOError, OSError, AttributeError):
         return 'Disabled'
 
 
@@ -101,8 +117,9 @@ def getconfig():
     '''
     try:
         config = '/etc/selinux/config'
-        with salt.utils.fopen(config, 'r') as _fp:
+        with salt.utils.files.fopen(config, 'r') as _fp:
             for line in _fp:
+                line = salt.utils.stringutils.to_unicode(line)
                 if line.strip().startswith('SELINUX='):
                     return line.split('=')[1].capitalize().strip()
     except (IOError, OSError, AttributeError):
@@ -140,29 +157,30 @@ def setenforce(mode):
     else:
         return 'Invalid mode {0}'.format(mode)
 
-    if getenforce() != 'Disabled':  # enforce file does not exist if currently disabled.  Only for toggling enforcing/permissive
+    # enforce file does not exist if currently disabled.  Only for toggling enforcing/permissive
+    if getenforce() != 'Disabled':
         enforce = os.path.join(selinux_fs_path(), 'enforce')
         try:
-            with salt.utils.fopen(enforce, 'w') as _fp:
-                _fp.write(mode)
+            with salt.utils.files.fopen(enforce, 'w') as _fp:
+                _fp.write(salt.utils.stringutils.to_str(mode))
         except (IOError, OSError) as exc:
             msg = 'Could not write SELinux enforce file: {0}'
-            raise CommandExecutionError(msg.format(str(exc)))
+            raise CommandExecutionError(msg.format(exc))
 
     config = '/etc/selinux/config'
     try:
-        with salt.utils.fopen(config, 'r') as _cf:
+        with salt.utils.files.fopen(config, 'r') as _cf:
             conf = _cf.read()
         try:
-            with salt.utils.fopen(config, 'w') as _cf:
+            with salt.utils.files.fopen(config, 'w') as _cf:
                 conf = re.sub(r"\nSELINUX=.*\n", "\nSELINUX=" + modestring + "\n", conf)
-                _cf.write(conf)
+                _cf.write(salt.utils.stringutils.to_str(conf))
         except (IOError, OSError) as exc:
             msg = 'Could not write SELinux config file: {0}'
-            raise CommandExecutionError(msg.format(str(exc)))
+            raise CommandExecutionError(msg.format(exc))
     except (IOError, OSError) as exc:
         msg = 'Could not read SELinux config file: {0}'
-        raise CommandExecutionError(msg.format(str(exc)))
+        raise CommandExecutionError(msg.format(exc))
 
     return getenforce()
 
@@ -354,4 +372,235 @@ def list_semod():
             else:
                 ret[comps[0]] = {'Enabled': True,
                                  'Version': comps[1]}
+    return ret
+
+
+def _validate_filetype(filetype):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Checks if the given filetype is a valid SELinux filetype
+    specification. Throws an SaltInvocationError if it isn't.
+    '''
+    if filetype not in _SELINUX_FILETYPES.keys():
+        raise SaltInvocationError('Invalid filetype given: {0}'.format(filetype))
+    return True
+
+
+def _context_dict_to_string(context):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Converts an SELinux file context from a dict to a string.
+    '''
+    return '{sel_user}:{sel_role}:{sel_type}:{sel_level}'.format(**context)
+
+
+def _context_string_to_dict(context):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Converts an SELinux file context from string to dict.
+    '''
+    if not re.match('[^:]+:[^:]+:[^:]+:[^:]+$', context):
+        raise SaltInvocationError('Invalid SELinux context string: {0}. ' +
+                                  'Expected "sel_user:sel_role:sel_type:sel_level"')
+    context_list = context.split(':', 3)
+    ret = {}
+    for index, value in enumerate(['sel_user', 'sel_role', 'sel_type', 'sel_level']):
+        ret[value] = context_list[index]
+    return ret
+
+
+def filetype_id_to_string(filetype='a'):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Translates SELinux filetype single-letter representation to a more
+    human-readable version (which is also used in `semanage fcontext
+    -l`).
+    '''
+    _validate_filetype(filetype)
+    return _SELINUX_FILETYPES.get(filetype, 'error')
+
+
+def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Returns the current entry in the SELinux policy list as a
+    dictionary. Returns None if no exact match was found.
+
+    Returned keys are:
+
+    * filespec (the name supplied and matched)
+    * filetype (the descriptive name of the filetype supplied)
+    * sel_user, sel_role, sel_type, sel_level (the selinux context)
+
+    For a more in-depth explanation of the selinux context, go to
+    https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Security-Enhanced_Linux/chap-Security-Enhanced_Linux-SELinux_Contexts.html
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    filetype
+        The SELinux filetype specification. Use one of [a, f, d, c, b,
+        s, l, p]. See also `man semanage-fcontext`. Defaults to 'a'
+        (all files).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.fcontext_get_policy my-policy
+    '''
+    if filetype:
+        _validate_filetype(filetype)
+    re_spacer = '[ ]+'
+    cmd_kwargs = {'spacer': re_spacer,
+                  'filespec': re.escape(name),
+                  'sel_user': sel_user or '[^:]+',
+                  'sel_role': '[^:]+',  # se_role for file context is always object_r
+                  'sel_type': sel_type or '[^:]+',
+                  'sel_level': sel_level or '[^:]+'}
+    cmd_kwargs['filetype'] = '[[:alpha:] ]+' if filetype is None else filetype_id_to_string(filetype)
+    cmd = 'semanage fcontext -l | egrep ' + \
+          "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(**cmd_kwargs)
+    current_entry_text = __salt__['cmd.shell'](cmd, ignore_retcode=True)
+    if current_entry_text == '':
+        return None
+
+    parts = re.match(r'^({filespec}) +([a-z ]+) (.*)$'.format(**{'filespec': re.escape(name)}), current_entry_text)
+    ret = {
+        'filespec': parts.group(1).strip(),
+        'filetype': parts.group(2).strip(),
+    }
+    ret.update(_context_string_to_dict(parts.group(3).strip()))
+
+    return ret
+
+
+def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Sets or deletes the SELinux policy for a given filespec and other
+    optional parameters.
+
+    Returns the result of the call to semanage.
+
+    Note that you don't have to remove an entry before setting a new
+    one for a given filespec and filetype, as adding one with semanage
+    automatically overwrites a previously configured SELinux context.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    file_type
+        The SELinux filetype specification. Use one of [a, f, d, c, b,
+        s, l, p]. See also ``man semanage-fcontext``. Defaults to 'a'
+        (all files).
+
+    sel_type
+        SELinux context type. There are many.
+
+    sel_user
+        SELinux user. Use ``semanage login -l`` to determine which ones
+        are available to you.
+
+    sel_level
+        The MLS range of the SELinux context.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.fcontext_add_or_delete_policy add my-policy
+    '''
+    if action not in ['add', 'delete']:
+        raise SaltInvocationError('Actions supported are "add" and "delete", not "{0}".'.format(action))
+    cmd = 'semanage fcontext --{0}'.format(action)
+    # "semanage --ftype a" isn't valid on Centos 6,
+    # don't pass --ftype since "a" is the default filetype.
+    if filetype is not None and filetype != 'a':
+        _validate_filetype(filetype)
+        cmd += ' --ftype {0}'.format(filetype)
+    if sel_type is not None:
+        cmd += ' --type {0}'.format(sel_type)
+    if sel_user is not None:
+        cmd += ' --seuser {0}'.format(sel_user)
+    if sel_level is not None:
+        cmd += ' --range {0}'.format(sel_level)
+    cmd += ' ' + re.escape(name)
+    return __salt__['cmd.run_all'](cmd)
+
+
+def fcontext_policy_is_applied(name, recursive=False):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Returns an empty string if the SELinux policy for a given filespec
+    is applied, returns string with differences in policy and actual
+    situation otherwise.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.fcontext_policy_is_applied my-policy
+    '''
+    cmd = 'restorecon -n -v '
+    if recursive:
+        cmd += '-R '
+    cmd += re.escape(name)
+    return __salt__['cmd.run_all'](cmd).get('stdout')
+
+
+def fcontext_apply_policy(name, recursive=False):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Applies SElinux policies to filespec using `restorecon [-R]
+    filespec`. Returns dict with changes if succesful, the output of
+    the restorecon command otherwise.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    recursive
+        Recursively apply SELinux policies.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.fcontext_apply_policy my-policy
+    '''
+    ret = {}
+    changes_text = fcontext_policy_is_applied(name, recursive)
+    cmd = 'restorecon -v -F '
+    if recursive:
+        cmd += '-R '
+    cmd += re.escape(name)
+    apply_ret = __salt__['cmd.run_all'](cmd)
+    ret.update(apply_ret)
+    if apply_ret['retcode'] == 0:
+        changes_list = re.findall('restorecon reset (.*) context (.*)->(.*)$', changes_text, re.M)
+        if len(changes_list) > 0:
+            ret.update({'changes': {}})
+        for item in changes_list:
+            filespec = item[0]
+            old = _context_string_to_dict(item[1])
+            new = _context_string_to_dict(item[2])
+            intersect = {}
+            for key, value in six.iteritems(old):
+                if new.get(key) == value:
+                    intersect.update({key: value})
+            for key in intersect:
+                del old[key]
+                del new[key]
+            ret['changes'].update({filespec: {'old': old, 'new': new}})
     return ret

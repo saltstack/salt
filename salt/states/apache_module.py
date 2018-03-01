@@ -18,11 +18,10 @@ Enable and disable apache modules.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-from salt.ext.six import string_types
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
-import salt.utils
+from salt.ext import six
 
 
 def __virtual__():
@@ -53,38 +52,19 @@ def enabled(name):
             ret['result'] = None
             return ret
         status = __salt__['apache.a2enmod'](name)['Status']
-        if isinstance(status, string_types) and 'enabled' in status:
+        if isinstance(status, six.string_types) and 'enabled' in status:
             ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = name
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to enable {0} Apache module'.format(name)
-            if isinstance(status, string_types):
+            if isinstance(status, six.string_types):
                 ret['comment'] = ret['comment'] + ' ({0})'.format(status)
             return ret
     else:
         ret['comment'] = '{0} already enabled.'.format(name)
     return ret
-
-
-def enable(name):
-    '''
-    Ensure an Apache module is enabled. This function is deprecated and will be
-    removed in Salt Nitrogen. Please use the ``enabled`` state function instead.
-
-    .. deprecated:: 2016.3.0
-
-    name
-        Name of the Apache module
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'This functionality has been deprecated; use "apache_module.enabled" '
-        'instead.'
-    )
-
-    return enabled(name)
 
 
 def disabled(name):
@@ -108,34 +88,16 @@ def disabled(name):
             ret['result'] = None
             return ret
         status = __salt__['apache.a2dismod'](name)['Status']
-        if isinstance(status, string_types) and 'disabled' in status:
+        if isinstance(status, six.string_types) and 'disabled' in status:
             ret['result'] = True
             ret['changes']['old'] = name
             ret['changes']['new'] = None
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to disable {0} Apache module'.format(name)
-            if isinstance(status, string_types):
+            if isinstance(status, six.string_types):
                 ret['comment'] = ret['comment'] + ' ({0})'.format(status)
             return ret
     else:
         ret['comment'] = '{0} already disabled.'.format(name)
     return ret
-
-
-def disable(name):
-    '''
-    Ensure an Apache module is disabled.
-
-    .. deprecated:: 2016.3.0
-
-    name
-        Name of the Apache module
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'This functionality has been deprecated; use "apache_module.disabled" '
-        'instead.'
-    )
-
-    return disabled(name)

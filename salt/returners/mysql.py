@@ -138,22 +138,23 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return mysql --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
 # Import python libs
 from contextlib import contextmanager
 import sys
-import json
 import logging
 
 # Import salt libs
 import salt.returners
 import salt.utils.jid
+import salt.utils.json
 import salt.exceptions
 
-# Import third party libs
+# Import 3rd-party libs
+from salt.ext import six
 try:
     import MySQLdb
     HAS_MYSQL = True
@@ -201,9 +202,15 @@ def _get_options(ret=None):
                                                    __salt__=__salt__,
                                                    __opts__=__opts__,
                                                    defaults=defaults)
-    # Ensure port is an int
-    if 'port' in _options:
-        _options['port'] = int(_options['port'])
+    # post processing
+    for k, v in six.iteritems(_options):
+        if isinstance(v, six.string_types) and v.lower() == 'none':
+            # Ensure 'None' is rendered as None
+            _options[k] = None
+        if k == 'port':
+            # Ensure port is an int
+            _options[k] = int(v)
+
     return _options
 
 
@@ -222,7 +229,7 @@ def _get_serv(ret=None, commit=False):
             conn.ping()
             connect = False
         except MySQLdb.connections.OperationalError as exc:
-            log.debug('OperationalError on ping: {0}'.format(exc))
+            log.debug('OperationalError on ping: %s', exc)
 
     if connect:
         log.debug('Generating new MySQL connection pool')
@@ -256,7 +263,7 @@ def _get_serv(ret=None, commit=False):
         yield cursor
     except MySQLdb.DatabaseError as err:
         error = err.args
-        sys.stderr.write(str(error))
+        sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
         raise err
     else:
@@ -278,14 +285,14 @@ def returner(ret):
     try:
         with _get_serv(ret, commit=True) as cur:
             sql = '''INSERT INTO `salt_returns`
-                    (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
-                    VALUES (%s, %s, %s, %s, %s, %s)'''
+                     (`fun`, `jid`, `return`, `id`, `success`, `full_ret`)
+                     VALUES (%s, %s, %s, %s, %s, %s)'''
 
             cur.execute(sql, (ret['fun'], ret['jid'],
-                              json.dumps(ret['return']),
+                              salt.utils.json.dumps(ret['return']),
                               ret['id'],
                               ret.get('success', False),
-                              json.dumps(ret)))
+                              salt.utils.json.dumps(ret)))
     except salt.exceptions.SaltMasterError as exc:
         log.critical(exc)
         log.critical('Could not store return with MySQL returner. MySQL server unavailable.')
@@ -302,9 +309,9 @@ def event_return(events):
         for event in events:
             tag = event.get('tag', '')
             data = event.get('data', '')
-            sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id` )
+            sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id`)
                      VALUES (%s, %s, %s)'''
-            cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
+            cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__['id']))
 
 
 def save_load(jid, load, minions=None):
@@ -313,12 +320,10 @@ def save_load(jid, load, minions=None):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''INSERT INTO `jids`
-               (`jid`, `load`)
-                VALUES (%s, %s)'''
+        sql = '''INSERT INTO `jids` (`jid`, `load`) VALUES (%s, %s)'''
 
         try:
-            cur.execute(sql, (jid, json.dumps(load)))
+            cur.execute(sql, (jid, salt.utils.json.dumps(load)))
         except MySQLdb.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
             # Without this try:except: we get tons of duplicate entry errors
@@ -343,7 +348,7 @@ def get_load(jid):
         cur.execute(sql, (jid,))
         data = cur.fetchone()
         if data:
-            return json.loads(data[0])
+            return salt.utils.json.loads(data[0])
         return {}
 
 
@@ -361,7 +366,7 @@ def get_jid(jid):
         ret = {}
         if data:
             for minion, full_ret in data:
-                ret[minion] = json.loads(full_ret)
+                ret[minion] = salt.utils.json.loads(full_ret)
         return ret
 
 
@@ -385,7 +390,7 @@ def get_fun(fun):
         ret = {}
         if data:
             for minion, _, full_ret in data:
-                ret[minion] = json.loads(full_ret)
+                ret[minion] = salt.utils.json.loads(full_ret)
         return ret
 
 
@@ -402,8 +407,9 @@ def get_jids():
         data = cur.fetchall()
         ret = {}
         for jid in data:
-            ret[jid[0]] = salt.utils.jid.format_jid_instance(jid[0],
-                                                             json.loads(jid[1]))
+            ret[jid[0]] = salt.utils.jid.format_jid_instance(
+                jid[0],
+                salt.utils.json.loads(jid[1]))
         return ret
 
 
@@ -427,8 +433,9 @@ def get_jids_filter(count, filter_find_job=True):
         data = cur.fetchall()
         ret = []
         for jid in data:
-            ret.append(salt.utils.jid.format_jid_instance_ext(jid[0],
-                                                              json.loads(jid[1])))
+            ret.append(salt.utils.jid.format_jid_instance_ext(
+                jid[0],
+                salt.utils.json.loads(jid[1])))
         return ret
 
 
@@ -453,7 +460,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
 
 
 def _purge_jobs(timestamp):
@@ -469,8 +476,8 @@ def _purge_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to delete contents of table \'jids\'')
-            log.error(str(e))
-            raise salt.exceptions.SaltRunnerError(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
             sql = 'delete from `salt_returns` where alter_time < %s'
@@ -478,8 +485,8 @@ def _purge_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to delete contents of table \'salt_returns\'')
-            log.error(str(e))
-            raise salt.exceptions.SaltRunnerError(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
             sql = 'delete from `salt_events` where alter_time < %s'
@@ -487,8 +494,8 @@ def _purge_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to delete contents of table \'salt_events\'')
-            log.error(str(e))
-            raise salt.exceptions.SaltRunnerError(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
     return True
 
@@ -514,8 +521,8 @@ def _archive_jobs(timestamp):
                 target_tables[table_name] = tmp_table_name
             except MySQLdb.Error as e:
                 log.error('mysql returner archiver was unable to create the archive tables.')
-                log.error(str(e))
-                raise salt.exceptions.SaltRunnerError(str(e))
+                log.error(six.text_type(e))
+                raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
             sql = 'insert into `{0}` select * from `{1}` where jid in (select distinct jid from salt_returns where alter_time < %s)'.format(target_tables['jids'], 'jids')
@@ -523,8 +530,8 @@ def _archive_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to copy contents of table \'jids\'')
-            log.error(str(e))
-            raise salt.exceptions.SaltRunnerError(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
         except Exception as e:
             log.error(e)
             raise
@@ -535,8 +542,8 @@ def _archive_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to copy contents of table \'salt_returns\'')
-            log.error(str(e))
-            raise salt.exceptions.SaltRunnerError(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
             sql = 'insert into `{0}` select * from `{1}` where alter_time < %s'.format(target_tables['salt_events'], 'salt_events')
@@ -544,8 +551,8 @@ def _archive_jobs(timestamp):
             cur.execute('COMMIT')
         except MySQLdb.Error as e:
             log.error('mysql returner archiver was unable to copy contents of table \'salt_events\'')
-            log.error(str(e))
-            raise salt.exceptions.SaltRunnerError(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
     return _purge_jobs(timestamp)
 
@@ -570,5 +577,5 @@ def clean_old_jobs():
                 _purge_jobs(stamp)
         except MySQLdb.Error as e:
             log.error('Mysql returner was unable to get timestamp for purge/archive of jobs')
-            log.error(str(e))
-            raise salt.exceptions.SaltRunnerError(str(e))
+            log.error(six.text_type(e))
+            raise salt.exceptions.SaltRunnerError(six.text_type(e))

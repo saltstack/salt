@@ -2,15 +2,19 @@
 '''
 Work with incron
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 import os
 
 # Import salt libs
-import salt.utils
+from salt.ext import six
 from salt.ext.six.moves import range
+import salt.utils.data
+import salt.utils.files
+import salt.utils.functools
+import salt.utils.stringutils
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -100,9 +104,9 @@ def _write_incron_lines(user, lines):
         ret['retcode'] = _write_file(_INCRON_SYSTEM_TAB, 'salt', ''.join(lines))
         return ret
     else:
-        path = salt.utils.mkstemp()
-        with salt.utils.fopen(path, 'w+') as fp_:
-            fp_.writelines(lines)
+        path = salt.utils.files.mkstemp()
+        with salt.utils.files.fopen(path, 'wb') as fp_:
+            fp_.writelines(salt.utils.data.encode(lines))
         if __grains__['os_family'] == 'Solaris' and user != "root":
             __salt__['cmd.run']('chown {0} {1}'.format(user, path), python_shell=False)
         ret = __salt__['cmd.run_all'](_get_incron_cmdstr(path), runas=user, python_shell=False)
@@ -116,12 +120,11 @@ def _write_file(folder, filename, data):
     '''
     path = os.path.join(folder, filename)
     if not os.path.exists(folder):
-        msg = '{0} cannot be written. {1} does not exist'
-        msg = msg.format(filename, folder)
+        msg = '{0} cannot be written. {1} does not exist'.format(filename, folder)
         log.error(msg)
-        raise AttributeError(msg)
-    with salt.utils.fopen(path, 'w') as fp_:
-        fp_.write(data)
+        raise AttributeError(six.text_type(msg))
+    with salt.utils.files.fopen(path, 'w') as fp_:
+        fp_.write(salt.utils.stringutils.to_str(data))
 
     return 0
 
@@ -132,8 +135,8 @@ def _read_file(folder, filename):
     '''
     path = os.path.join(folder, filename)
     try:
-        with salt.utils.fopen(path, 'rb') as contents:
-            return contents.readlines()
+        with salt.utils.files.fopen(path, 'rb') as contents:
+            return salt.utils.data.decode(contents.readlines())
     except (OSError, IOError):
         return ''
 
@@ -210,7 +213,7 @@ def list_tab(user):
     return ret
 
 # For consistency's sake
-ls = salt.utils.alias_function(list_tab, 'ls')
+ls = salt.utils.functools.alias_function(list_tab, 'ls')
 
 
 def set_job(user, path, mask, cmd):
@@ -224,7 +227,7 @@ def set_job(user, path, mask, cmd):
         salt '*' incron.set_job root '/root' 'IN_MODIFY' 'echo "$$ $@ $# $% $&"'
     '''
     # Scrub the types
-    mask = str(mask).upper()
+    mask = six.text_type(mask).upper()
 
     # Check for valid mask types
     for item in mask.split(','):
@@ -287,7 +290,7 @@ def rm_job(user,
     '''
 
     # Scrub the types
-    mask = str(mask).upper()
+    mask = six.text_type(mask).upper()
 
     # Check for valid mask types
     for item in mask.split(','):
@@ -314,4 +317,4 @@ def rm_job(user,
 
     return ret
 
-rm = salt.utils.alias_function(rm_job, 'rm')
+rm = salt.utils.functools.alias_function(rm_job, 'rm')

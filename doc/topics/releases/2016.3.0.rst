@@ -175,6 +175,10 @@ they are being loaded for the correct proxytype, example below:
 
         return False
 
+.. note::
+    ``salt.utils.is_proxy()`` has been renamed to
+    ``salt.utils.platform.is_proxy`` as of the Oxygen release.
+
 The try/except block above exists because grains are processed very early
 in the proxy minion startup process, sometimes earlier than the proxy
 key in the ``__opts__`` dictionary is populated.
@@ -251,7 +255,7 @@ Module Changes
   previous behavior (:pull:`30275`). A ``bind`` function was also added that allows
   binding zones to interfaces and sources (:pull:`29497`).
 - :mod:`journald beacon module <salt.beacons.journald>`: The event string was updated
-  to include a tag. Note this this might impact existing reactors based on this beacon.
+  to include a tag. Note this might impact existing reactors based on this beacon.
   (:pull:`30116`).
 - :mod:`postgres_privileges state module <salt.states.postgres_privileges>`:
   The default value of the ``prepend`` argument was changed from ``None`` to
@@ -274,7 +278,7 @@ Module Changes
   :mod:`apache_site state module <salt.states.apache_site>`: the ``enable`` and
   ``disable`` functions were renamed to ``enabled`` and ``disabled``,
   respectively.  In :pull:`33562`, these functions were readded and properly
-  deprecated and will be removed in Salt Nitrogen.  This fix will be available
+  deprecated and will be removed in Salt 2017.7.0.  This fix will be available
   in 2016.3.1.  As a workaround, try
 
   .. code-block:: sls

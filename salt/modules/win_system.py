@@ -3,18 +3,31 @@
 Module for managing windows systems.
 
 :depends:
+    - pythoncom
+    - pywintypes
+    - win32api
+    - win32con
     - win32net
+    - wmi
 
 Support for reboot, shutdown, etc
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
+import ctypes
 import logging
 import time
 from datetime import datetime
 
-# Import 3rd Party Libs
+# Import salt libs
+import salt.utils.functools
+import salt.utils.locales
+import salt.utils.platform
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party Libs
+from salt.ext import six
 try:
     import pythoncom
     import wmi
@@ -22,16 +35,10 @@ try:
     import win32api
     import win32con
     import pywintypes
-    import ctypes
     from ctypes import windll
     HAS_WIN32NET_MODS = True
 except ImportError:
     HAS_WIN32NET_MODS = False
-
-# Import salt libs
-import salt.utils
-import salt.utils.locales
-import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -42,11 +49,15 @@ __virtualname__ = 'system'
 
 def __virtual__():
     '''
-    Set the system module of the kernel is Windows
+    Only works on Windows Systems with Win32 Modules
     '''
-    if HAS_WIN32NET_MODS and salt.utils.is_windows():
-        return __virtualname__
-    return (False, "Module win_system: module only works on Windows systems")
+    if not salt.utils.platform.is_windows():
+        return False, 'Module win_system: Requires Windows'
+
+    if not HAS_WIN32NET_MODS:
+        return False, 'Module win_system: Missing win32 modules'
+
+    return __virtualname__
 
 
 def _convert_minutes_seconds(timeout, in_seconds=False):
@@ -65,6 +76,18 @@ def _convert_date_time_string(dt_string):
     return dt_obj.strftime('%Y-%m-%d %H:%M:%S')
 
 
+def _to_unicode(instr):
+    '''
+    Converts from current users character encoding to unicode.
+    When instr has a value of None, the return value of the function
+    will also be None.
+    '''
+    if instr is None or isinstance(instr, six.text_type):
+        return instr
+    else:
+        return six.text_type(instr, 'utf8')
+
+
 def halt(timeout=5, in_seconds=False):
     '''
     Halt a running system.
@@ -74,11 +97,10 @@ def halt(timeout=5, in_seconds=False):
         timeout (int):
             Number of seconds before halting the system. Default is 5 seconds.
 
-
         in_seconds (bool):
             Whether to treat timeout as seconds or minutes.
 
-        .. versionadded:: 2015.8.0
+            .. versionadded:: 2015.8.0
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -167,7 +189,7 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
             .. versionadded:: 2015.8.0
 
         only_on_pending_reboot (bool):
-            If this is set to ``True``, then then the reboot will only proceed
+            If this is set to ``True``, then the reboot will only proceed
             if the system reports a pending reboot. Setting this parameter to
             ``True`` could be useful when calling this function from a final
             housekeeping state intended to be executed at the end of a state run
@@ -247,6 +269,11 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
             ``True`` restarts the computer immediately after shutdown. ``False``
             powers down the system. Default is ``False``.
 
+        only_on_pending_reboot (bool): If this is set to True, then the shutdown
+            will only proceed if the system reports a pending reboot. To
+            optionally shutdown in a highstate, consider using the shutdown
+            state instead of this module.
+
         only_on_pending_reboot (bool):
             If ``True`` the shutdown will only proceed if there is a reboot
             pending. ``False`` will shutdown the system. Default is ``False``.
@@ -262,12 +289,15 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
 
         salt '*' system.shutdown "System will shutdown in 5 minutes"
     '''
+    if six.PY2:
+        message = _to_unicode(message)
+
     timeout = _convert_minutes_seconds(timeout, in_seconds)
 
     if only_on_pending_reboot and not get_pending_reboot():
         return False
 
-    if message and not isinstance(message, str):
+    if message and not isinstance(message, six.string_types):
         message = message.decode('utf-8')
     try:
         win32api.InitiateSystemShutdown('127.0.0.1', message, timeout,
@@ -276,9 +306,9 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     except pywintypes.error as exc:
         (number, context, message) = exc
         log.error('Failed to shutdown the system')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
 
@@ -301,7 +331,8 @@ def shutdown_hard():
 def shutdown_abort():
     '''
     Abort a shutdown. Only available while the dialog box is being
-    displayed to the user. Once the shutdown has initiated, it cannot be aborted
+    displayed to the user. Once the shutdown has initiated, it cannot be
+    aborted.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -318,9 +349,9 @@ def shutdown_abort():
     except pywintypes.error as exc:
         (number, context, message) = exc
         log.error('Failed to abort system shutdown')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
 
@@ -360,16 +391,17 @@ def set_computer_name(name):
 
         salt 'minion-id' system.set_computer_name 'DavesComputer'
     '''
-    if name and six.PY2:
-        name = name.decode('utf-8')
+    if six.PY2:
+        name = _to_unicode(name)
 
-    if windll.kernel32.SetComputerNameExW(win32con.ComputerNamePhysicalDnsHostname,
-                                          name):
+    if windll.kernel32.SetComputerNameExW(
+            win32con.ComputerNamePhysicalDnsHostname, name):
         ret = {'Computer Name': {'Current': get_computer_name()}}
         pending = get_pending_computer_name()
         if pending not in (None, False):
             ret['Computer Name']['Pending'] = pending
         return ret
+
     return False
 
 
@@ -407,7 +439,7 @@ def get_computer_name():
     Get the Windows computer name
 
     Returns:
-        str: Returns the computer name if found. Otherwise returns ``False``
+        str: Returns the computer name if found. Otherwise returns ``False``.
 
     CLI Example:
 
@@ -437,6 +469,9 @@ def set_computer_desc(desc=None):
 
         salt 'minion-id' system.set_computer_desc 'This computer belongs to Dave!'
     '''
+    if six.PY2:
+        desc = _to_unicode(desc)
+
     # Make sure the system exists
     # Return an object containing current information array for the computer
     system_info = win32net.NetServerGetInfo(None, 101)
@@ -444,8 +479,7 @@ def set_computer_desc(desc=None):
     # If desc is passed, decode it for unicode
     if desc is None:
         return False
-    if not isinstance(desc, str):
-        desc = desc.decode('utf-8')
+
     system_info['comment'] = desc
 
     # Apply new settings
@@ -454,15 +488,15 @@ def set_computer_desc(desc=None):
     except win32net.error as exc:
         (number, context, message) = exc
         log.error('Failed to update system')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
     return {'Computer Description': get_computer_desc()}
 
 
-set_computer_description = salt.utils.alias_function(set_computer_desc, 'set_computer_description')  # pylint: disable=invalid-name
+set_computer_description = salt.utils.functools.alias_function(set_computer_desc, 'set_computer_description')  # pylint: disable=invalid-name
 
 
 def get_system_info():
@@ -525,7 +559,7 @@ def get_computer_desc():
 
     Returns:
         str: Returns the computer description if found. Otherwise returns
-        ``False``
+        ``False``.
 
     CLI Example:
 
@@ -537,7 +571,7 @@ def get_computer_desc():
     return False if desc is None else desc
 
 
-get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
+get_computer_description = salt.utils.functools.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
 
 
 def get_hostname():
@@ -638,6 +672,12 @@ def join_domain(domain,
                          account_ou='ou=clients,ou=org,dc=domain,dc=tld' \\
                          account_exists=False, restart=True
     '''
+    if six.PY2:
+        domain = _to_unicode(domain)
+        username = _to_unicode(username)
+        password = _to_unicode(password)
+        account_ou = _to_unicode(account_ou)
+
     status = get_domain_workgroup()
     if 'Domain' in status:
         if status['Domain'] == domain:
@@ -650,10 +690,60 @@ def join_domain(domain,
         return 'Must specify a password if you pass a username'
 
     # remove any escape characters
-    if isinstance(account_ou, str):
+    if isinstance(account_ou, six.string_types):
         account_ou = account_ou.split('\\')
         account_ou = ''.join(account_ou)
 
+    err = _join_domain(domain=domain, username=username, password=password,
+                       account_ou=account_ou, account_exists=account_exists)
+
+    if not err:
+        ret = {'Domain': domain,
+               'Restart': False}
+        if restart:
+            ret['Restart'] = reboot()
+        return ret
+
+    raise CommandExecutionError(win32api.FormatMessage(err).rstrip())
+
+
+def _join_domain(domain,
+                 username=None,
+                 password=None,
+                 account_ou=None,
+                 account_exists=False):
+    '''
+    Helper function to join the domain.
+
+    Args:
+        domain (str): The domain to which the computer should be joined, e.g.
+            ``example.com``
+
+        username (str): Username of an account which is authorized to join
+            computers to the specified domain. Need to be either fully qualified
+            like ``user@domain.tld`` or simply ``user``
+
+        password (str): Password of the specified user
+
+        account_ou (str): The DN of the OU below which the account for this
+            computer should be created when joining the domain, e.g.
+            ``ou=computers,ou=departm_432,dc=my-company,dc=com``
+
+        account_exists (bool): If set to ``True`` the computer will only join
+            the domain if the account already exists. If set to ``False`` the
+            computer account will be created if it does not exist, otherwise it
+            will use the existing account. Default is False.
+
+    Returns:
+        int:
+
+    :param domain:
+    :param username:
+    :param password:
+    :param account_ou:
+    :param account_exists:
+    :return:
+    '''
     NETSETUP_JOIN_DOMAIN = 0x1  # pylint: disable=invalid-name
     NETSETUP_ACCOUNT_CREATE = 0x2  # pylint: disable=invalid-name
     NETSETUP_DOMAIN_JOIN_IF_JOINED = 0x20  # pylint: disable=invalid-name
@@ -669,23 +759,13 @@ def join_domain(domain,
     pythoncom.CoInitialize()
     conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
-    err = comp.JoinDomainOrWorkgroup(Name=domain,
-                                     Password=password,
-                                     UserName=username,
-                                     AccountOU=account_ou,
-                                     FJoinOptions=join_options)
 
-    # you have to do this because JoinDomainOrWorkgroup returns a strangely
-    # formatted value that looks like (0,)
-    if not err[0]:
-        ret = {'Domain': domain,
-               'Restart': False}
-        if restart:
-            ret['Restart'] = reboot()
-        return ret
-
-    log.error(win32api.FormatMessage(err[0]).rstrip())
-    return False
+    # Return the results of the command as an error
+    # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
+    # (0,) so return the first item
+    return comp.JoinDomainOrWorkgroup(
+        Name=domain, Password=password, UserName=username, AccountOU=account_ou,
+        FJoinOptions=join_options)[0]
 
 
 def unjoin_domain(username=None,
@@ -694,7 +774,8 @@ def unjoin_domain(username=None,
                   workgroup='WORKGROUP',
                   disable=False,
                   restart=False):
-    r'''
+    # pylint: disable=anomalous-backslash-in-string
+    '''
     Unjoin a computer from an Active Directory Domain. Requires a restart.
 
     Args:
@@ -702,7 +783,7 @@ def unjoin_domain(username=None,
         username (str):
             Username of an account which is authorized to manage computer
             accounts on the domain. Needs to be a fully qualified name like
-            ``user@domain.tld`` or ``domain.tld\user``. If the domain is not
+            ``user@domain.tld`` or ``domain.tld\\user``. If the domain is not
             specified, the passed domain will be used. If the computer account
             doesn't need to be disabled after the computer is unjoined, this can
             be ``None``.
@@ -741,6 +822,12 @@ def unjoin_domain(username=None,
                          password='unjoinpassword' disable=True \\
                          restart=True
     '''
+    # pylint: enable=anomalous-backslash-in-string
+    if six.PY2:
+        username = _to_unicode(username)
+        password = _to_unicode(password)
+        domain = _to_unicode(domain)
+
     status = get_domain_workgroup()
     if 'Workgroup' in status:
         if status['Workgroup'] == workgroup:
@@ -755,7 +842,7 @@ def unjoin_domain(username=None,
     if username and password is None:
         return 'Must specify a password if you pass a username'
 
-    NETSETUP_ACCT_DELETE = 0x2  # pylint: disable=invalid-name
+    NETSETUP_ACCT_DELETE = 0x4  # pylint: disable=invalid-name
 
     unjoin_options = 0x0
     if disable:
@@ -781,11 +868,11 @@ def unjoin_domain(username=None,
             return ret
         else:
             log.error(win32api.FormatMessage(err[0]).rstrip())
-            log.error('Failed to join the computer to {0}'.format(workgroup))
+            log.error('Failed to join the computer to %s', workgroup)
             return False
     else:
         log.error(win32api.FormatMessage(err[0]).rstrip())
-        log.error('Failed to unjoin computer from {0}'.format(status['Domain']))
+        log.error('Failed to unjoin computer from %s', status['Domain'])
         return False
 
 
@@ -804,7 +891,6 @@ def get_domain_workgroup():
     .. code-block:: bash
 
         salt 'minion-id' system.get_domain_workgroup
-
     '''
     pythoncom.CoInitialize()
     conn = wmi.WMI()
@@ -872,6 +958,7 @@ def set_system_time(newtime):
 
         newtime (str):
             The time to set. Can be any of the following formats:
+
             - HH:MM:SS AM/PM
             - HH:MM AM/PM
             - HH:MM:SS (24 hour)
@@ -934,9 +1021,9 @@ def set_system_date_time(years=None,
     except win32api.error as exc:
         (number, context, message) = exc
         log.error('Failed to get local time')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
     # Check for passed values. If not passed, use current values
@@ -973,12 +1060,15 @@ def set_system_date_time(years=None,
         system_time.wSecond = int(seconds)
         system_time_ptr = ctypes.pointer(system_time)
         succeeded = ctypes.windll.kernel32.SetLocalTime(system_time_ptr)
-        return succeeded is not 0
-    except OSError:
+        if succeeded is not 0:
+            return True
+        else:
+            log.error('Failed to set local time')
+            raise CommandExecutionError(
+                win32api.FormatMessage(succeeded).rstrip())
+    except OSError as err:
         log.error('Failed to set local time')
-        return False
-
-    return True
+        raise CommandExecutionError(err)
 
 
 def get_system_date():
@@ -1005,6 +1095,7 @@ def set_system_date(newdate):
     Args:
         newdate (str):
             The date to set. Can be any of the following formats
+
             - YYYY-MM-DD
             - MM-DD-YYYY
             - MM-DD-YY
@@ -1276,7 +1367,6 @@ def set_reboot_required_witnessed():
     .. code-block:: bash
 
         salt '*' system.set_reboot_required_witnessed
-
     '''
     return __salt__['reg.set_value'](hive='HKLM',
                                      key=MINION_VOLATILE_KEY,

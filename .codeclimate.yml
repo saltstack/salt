@@ -1,5 +1,13 @@
 languages:
-   Ruby: false
-   JavaScript: false
-   Python: true
-   PHP: false
+  Ruby: false
+  JavaScript: false
+  Python: true
+  PHP: false
+
+engines:
+  radon:
+    enabled: true
+    exclude_paths:
+      - "templates/"
+    config:
+      threshold: "D"

@@ -16,7 +16,7 @@ Useful documentation:
 . https://github.com/xapi-project/xen-api/tree/master/scripts/examples/python
 . http://xenbits.xen.org/gitweb/?p=xen.git;a=tree;f=tools/python/xen/xm;hb=HEAD
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import sys
@@ -33,9 +33,11 @@ except ImportError:
     HAS_IMPORTLIB = False
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 import salt.modules.cmdmod
+from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
 __virtualname__ = 'virt'
@@ -114,7 +116,7 @@ def _get_xtool():
     Internal, returns xl or xm command line path
     '''
     for xtool in ['xl', 'xm']:
-        path = salt.utils.which(xtool)
+        path = salt.utils.path.which(xtool)
         if path is not None:
             return path
 
@@ -773,8 +775,8 @@ def is_hyper():
         # virtual_subtype isn't set everywhere.
         return False
     try:
-        with salt.utils.fopen('/proc/modules') as fp_:
-            if 'xen_' not in fp_.read():
+        with salt.utils.files.fopen('/proc/modules') as fp_:
+            if 'xen_' not in salt.utils.stringutils.to_unicode(fp_.read()):
                 return False
     except (OSError, IOError):
         return False
@@ -926,55 +928,3 @@ def vm_diskstats(vm_=None):
             for vm_ in list_domains():
                 info[vm_] = _info(vm_)
         return info
-
-
-# Deprecated aliases
-def create(domain):
-    '''
-    .. deprecated:: 2016.3.0
-       Use :py:func:`~salt.modules.virt.start` instead.
-
-    Start a defined domain
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.create <domain>
-    '''
-    salt.utils.warn_until('Nitrogen', 'Use "virt.start" instead.')
-    return start(domain)
-
-
-def destroy(domain):
-    '''
-    .. deprecated:: 2016.3.0
-       Use :py:func:`~salt.modules.virt.stop` instead.
-
-    Power off a defined domain
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.destroy <domain>
-    '''
-    salt.utils.warn_until('Nitrogen', 'Use "virt.stop" instead.')
-    return stop(domain)
-
-
-def list_vms():
-    '''
-    .. deprecated:: 2016.3.0
-       Use :py:func:`~salt.modules.virt.list_domains` instead.
-
-    List all virtual machines.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.list_vms <domain>
-    '''
-    salt.utils.warn_until('Nitrogen', 'Use "virt.list_domains" instead.')
-    return list_domains()

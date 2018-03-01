@@ -78,6 +78,22 @@ same way as in the above example, only without a top-level ``grains:`` key:
     cabinet: 13
     cab_u: 14-15
 
+.. note::
+
+    Grains in ``/etc/salt/grains`` are ignored if you specify the same grains in the minion config.
+
+.. note::
+
+    Grains are static, and since they are not often changed, they will need a grains refresh when they are updated. You can do this by calling: ``salt minion saltutil.refresh_modules``
+
+.. note::
+
+    You can equally configure static grains for Proxy Minions.
+    As multiple Proxy Minion processes can run on the same machine, you need
+    to index the files using the Minion ID, under ``/etc/salt/proxy.d/<minion ID>/grains``.
+    For example, the grains for the Proxy Minion ``router1`` can be defined
+    under ``/etc/salt/proxy.d/router1/grains``, while the grains for the
+    Proxy Minion ``switch7`` can be put in ``/etc/salt/proxy.d/switch7/grains``.
 
 Matching Grains in the Top File
 ===============================
@@ -88,44 +104,17 @@ the following configuration:
 
 .. code-block:: yaml
 
-    'node_type:webserver':
+    'roles:webserver':
       - match: grain
-      - webserver
+      - state0
 
-    'node_type:postgres':
+    'roles:memcache':
       - match: grain
-      - postgres
-
-    'node_type:redis':
-      - match: grain
-      - redis
-
-    'node_type:lb':
-      - match: grain
-      - lb
+      - state1
+      - state2
 
 For this example to work, you would need to have defined the grain
-``node_type`` for the minions you wish to match. This simple example is nice,
-but too much of the code is similar. To go one step further, Jinja templating
-can be used to simplify the :term:`top file`.
-
-.. code-block:: yaml
-
-    {% set the_node_type = salt['grains.get']('node_type', '') %}
-
-    {% if the_node_type %}
-      'node_type:{{ the_node_type }}':
-        - match: grain
-        - {{ the_node_type }}
-    {% endif %}
-
-Using Jinja templating, only one match entry needs to be defined.
-
-.. note::
-
-    The example above uses the :mod:`grains.get <salt.modules.grains.get>`
-    function to account for minions which do not have the ``node_type`` grain
-    set.
+``role`` for the minions you wish to match.
 
 .. _writing-grains:
 

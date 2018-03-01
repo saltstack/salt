@@ -50,15 +50,14 @@ The dependencies listed above can be installed via package or pip.
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.boto3
 import salt.utils.compat
-import salt.utils
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -83,17 +82,12 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto3_version = '1.2.5'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_cloudtrial module could not be loaded: boto libraries not found')
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_cloudtrial module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto3_ver='1.2.5'
+    )
 
 
 def __init__(opts):
@@ -166,7 +160,7 @@ def create(Name,
                                   S3BucketName=S3BucketName,
                                   **kwargs)
         if trail:
-            log.info('The newly created trail name is {0}'.format(trail['Name']))
+            log.info('The newly created trail name is %s', trail['Name'])
 
             return {'created': True, 'name': trail['Name']}
         else:
@@ -339,7 +333,7 @@ def update(Name,
                                   S3BucketName=S3BucketName,
                                   **kwargs)
         if trail:
-            log.info('The updated trail name is {0}'.format(trail['Name']))
+            log.info('The updated trail name is %s', trail['Name'])
 
             return {'updated': True, 'name': trail['Name']}
         else:
@@ -431,9 +425,9 @@ def add_tags(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         conn.add_tags(ResourceId=_get_trail_arn(Name,
                       region=region, key=key, keyid=keyid,
                       profile=profile), TagsList=tagslist)
@@ -462,9 +456,9 @@ def remove_tags(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         conn.remove_tags(ResourceId=_get_trail_arn(Name,
                               region=region, key=key, keyid=keyid,
                               profile=profile), TagsList=tagslist)

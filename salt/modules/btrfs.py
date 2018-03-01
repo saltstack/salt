@@ -19,29 +19,26 @@ Module for managing BTRFS file systems.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import uuid
-import logging
 
 
 # Import Salt libs
-import salt.utils
 import salt.utils.fsutils
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
-
-log = logging.getLogger(__name__)
+from salt.ext import six
 
 
 def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return not salt.utils.is_windows() and __grains__.get('kernel') == 'Linux'
+    return not salt.utils.platform.is_windows() and __grains__.get('kernel') == 'Linux'
 
 
 def version():

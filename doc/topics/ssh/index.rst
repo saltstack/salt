@@ -111,6 +111,17 @@ Calling Salt SSH
 
         salt-ssh centos-5-minion -r 'yum -y install epel-release ; yum -y install python26'
 
+.. note:: ``salt-ssh`` on systems with Python 3.x
+
+    Salt, before the 2017.7.0 release, does not support Python 3.x which is the
+    default on for example the popular 16.04 LTS release of Ubuntu. An easy
+    workaround for this scenario is to use the ``-r`` option similar to the
+    example above:
+
+    .. code-block:: bash
+
+        salt-ssh ubuntu-1604-minion -r 'apt update ; apt install -y python-minimal'
+
 The ``salt-ssh`` command can be easily executed in the same way as a salt
 command:
 
@@ -241,7 +252,7 @@ flag and look for a line containing the string, ``SALT_ARGV``. This contains the
 command that ``salt-ssh`` attempted to execute.
 
 It is recommended that one modify this command a bit by removing the ``-l quiet``,
-``--metadata`` and ``--output json`` to get a better idea of what's going on on the target system.
+``--metadata`` and ``--output json`` to get a better idea of what's going on the target system.
 
 .. toctree::
 

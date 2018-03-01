@@ -37,13 +37,16 @@ Connection module for Amazon Cloud Formation
             - name: mystack
 '''
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import json
 
-# Import 3rd party libs
+# Import Salt libs
+import salt.utils.compat
+import salt.utils.json
+from salt.ext import six
+
+# Import 3rd-party libs
 try:
     from salt._compat import ElementTree as ET
     HAS_ELEMENT_TREE = True
@@ -146,21 +149,21 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
             return i
 
     _valid = _validate(template_body, template_url, region, key, keyid, profile)
-    log.debug('Validate is : {0}.'.format(_valid))
+    log.debug('Validate is : %s.', _valid)
     if _valid is not True:
         code, message = _valid
         ret['result'] = False
         ret['comment'] = 'Template could not be validated.\n{0} \n{1}'.format(code, message)
         return ret
-    log.debug('Template {0} is valid.'.format(name))
+    log.debug('Template %s is valid.', name)
     if __salt__['boto_cfn.exists'](name, region, key, keyid, profile):
         template = __salt__['boto_cfn.get_template'](name, region, key, keyid, profile)
         template = template['GetTemplateResponse']['GetTemplateResult']['TemplateBody'].encode('ascii', 'ignore')
-        template = json.loads(template)
-        _template_body = json.loads(template_body)
-        compare = cmp(template, _template_body)
+        template = salt.utils.json.loads(template)
+        _template_body = salt.utils.json.loads(template_body)
+        compare = salt.utils.compat.cmp(template, _template_body)
         if compare != 0:
-            log.debug('Templates are not the same. Compare value is {0}'.format(compare))
+            log.debug('Templates are not the same. Compare value is %s', compare)
             # At this point we should be able to run update safely since we already validated the template
             if __opts__['test']:
                 ret['comment'] = 'Stack {0} is set to be updated.'.format(name)
@@ -173,9 +176,9 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
                                                         stack_policy_during_update_url, stack_policy_body,
                                                         stack_policy_url,
                                                         region, key, keyid, profile)
-            if isinstance(updated, str):
+            if isinstance(updated, six.string_types):
                 code, message = _get_error(updated)
-                log.debug('Update error is {0} and message is {1}'.format(code, message))
+                log.debug('Update error is %s and message is %s', code, message)
                 ret['result'] = False
                 ret['comment'] = 'Stack {0} could not be updated.\n{1} \n{2}.'.format(name, code, message)
                 return ret
@@ -225,7 +228,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
         ret['result'] = None
         return ret
     deleted = __salt__['boto_cfn.delete'](name, region, key, keyid, profile)
-    if isinstance(deleted, str):
+    if isinstance(deleted, six.string_types):
         code, message = _get_error(deleted)
         ret['comment'] = 'Stack {0} could not be deleted.\n{1}\n{2}'.format(name, code, message)
         ret['result'] = False
@@ -254,10 +257,10 @@ def _get_template(template, name):
 def _validate(template_body=None, template_url=None, region=None, key=None, keyid=None, profile=None):
     # Validates template. returns true if template syntax is correct.
     validate = __salt__['boto_cfn.validate_template'](template_body, template_url, region, key, keyid, profile)
-    log.debug('Validate result is {0}.'.format(str(validate)))
-    if isinstance(validate, str):
+    log.debug('Validate result is %s.', validate)
+    if isinstance(validate, six.string_types):
         code, message = _get_error(validate)
-        log.debug('Validate error is {0} and message is {1}.'.format(code, message))
+        log.debug('Validate error is %s and message is %s.', code, message)
         return code, message
     return True
 

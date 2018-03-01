@@ -18,7 +18,7 @@ Dependencies
 .. versionadded: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)
@@ -27,10 +27,14 @@ from json import loads, dumps
 
 # salt lib
 from salt.ext import six
+# import NAPALM utils
+import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
 # ----------------------------------------------------------------------------------------------------------------------
+
+__virtualname__ = 'netsnmp'
 
 _COMMUNITY_MODE_MAP = {
     'read-only': 'ro',
@@ -49,7 +53,10 @@ _COMMUNITY_MODE_MAP = {
 
 
 def __virtual__():
-    return 'netsnmp'
+    '''
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
+    '''
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported

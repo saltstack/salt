@@ -6,7 +6,7 @@ Getting Started With Azure ARM
 
 Azure is a cloud service by Microsoft providing virtual machines, SQL services,
 media services, and more. Azure ARM (aka, the Azure Resource Manager) is a next
-generatiom version of the Azure portal and API. This document describes how to
+generation version of the Azure portal and API. This document describes how to
 use Salt Cloud to create a virtual machine on Azure ARM, with Salt installed.
 
 More information about Azure is located at `http://www.windowsazure.com/
@@ -17,7 +17,7 @@ Dependencies
 ============
 * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc6
 * `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32
-* The python-requests library, for Python < 2.7.9.
+* `AutoRest swagger generator Python client runtime (Azure-specific module) <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4
 * A Microsoft Azure account
 * `Salt <https://github.com/saltstack/salt>`_
 
@@ -76,15 +76,14 @@ Set up the provider config at ``/etc/salt/cloud.providers.d/azurearm.conf``:
       cleanup_vhds: True
       cleanup_data_disks: True
       cleanup_interfaces: True
-      custom_data: 'This is a Joseph test'
-      expire_publisher_cache: 604800  # 1 week
-      expire_offer_cache: 604800  # 1 week
-      expire_sku_cache: 604800  # 1 week
-      expire_version_cache: 604800  # 1 week
-      expire_group_cache: 86400  # 1 day
+      custom_data: 'This is custom data'
+      expire_publisher_cache: 604800  # 7 days
+      expire_offer_cache: 518400  # 6 days
+      expire_sku_cache: 432000  # 5 days
+      expire_version_cache: 345600  # 4 days
+      expire_group_cache: 14400  # 4 hours
       expire_interface_cache: 3600  # 1 hour
       expire_network_cache: 3600  # 1 hour
-      expire_subnet_cache: 3600  # 1 hour
 
 Cloud Profiles
 ==============
@@ -92,13 +91,21 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
 
-    azure-ubuntu:
+    azure-ubuntu-pass:
       provider: my-azure-config
       image: Canonical|UbuntuServer|14.04.5-LTS|14.04.201612050
       size: Standard_D1_v2
       location: eastus
       ssh_username: azureuser
       ssh_password: verybadpass
+
+    azure-ubuntu-key:
+      provider: my-azure-config
+      image: Canonical|UbuntuServer|14.04.5-LTS|14.04.201612050
+      size: Standard_D1_v2
+      location: eastus
+      ssh_username: azureuser
+      ssh_publickeyfile: /path/to/ssh_public_key.pub
 
     azure-win2012:
       provider: my-azure-config
@@ -182,13 +189,23 @@ be viewed using the following command:
 
 ssh_username
 ------------
-Required for Linux. The user to use to log into the newly-created Linux VM to
-install Salt.
+Required for Linux. The admin user to add on the instance. It is also used to log
+into the newly-created VM to install Salt.
+
+ssh_keyfile
+-----------
+Required if using SSH key authentication. The path on the Salt master to the SSH private
+key used during the minion bootstrap process.
+
+ssh_publickeyfile
+-----------------
+Use either ``ssh_publickeyfile`` or ``ssh_password``. The path on the Salt master to the
+SSH public key which will be pushed to the Linux VM.
 
 ssh_password
 ------------
-Required for Linux. The password to use to log into the newly-created Linux VM
-to install Salt.
+Use either ``ssh_publickeyfile`` or ``ssh_password``. The password for the admin user on
+the newly-created Linux virtual machine.
 
 win_username
 ------------
@@ -224,10 +241,38 @@ subnet
 Optional. The subnet inside the virtual network that the VM will be spun up in.
 Default is ``default``.
 
+load_balancer
+-------------
+Optional. The load-balancer for the VM's network interface to join. If
+specified the backend_pool option need to be set.
+
+backend_pool
+------------
+Optional. Required if the load_balancer option is set. The load-balancer's
+Backend Pool the VM's network interface will join.
+
 iface_name
 ----------
 Optional. The name to apply to the VM's network interface. If not supplied, the
 value will be set to ``<VM name>-iface0``.
+
+dns_servers
+-----------
+Optional. A **list** of the DNS servers to configure for the network interface
+(will be set on the VM by the DHCP of the VNET).
+
+.. code-block:: yaml
+
+    my-azurearm-profile:
+      provider: azurearm-provider
+      network: mynetwork
+      dns_servers:
+        - 10.1.1.4
+        - 10.1.1.5
+
+availability_set
+----------------
+Optional. If set, the VM will be added to the specified availability set.
 
 cleanup_disks
 -------------
@@ -300,41 +345,41 @@ cache.
 
 expire_offer_cache
 ------------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``518400``. See ``expire_publisher_cache`` for details on
 why this exists.
 
-By default, the offer data will be cached, and only updated every ``604800``
-seconds (7 days). If you need the offer cache to be updated at a different
+By default, the offer data will be cached, and only updated every ``518400``
+seconds (6 days). If you need the offer cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the publiser
 cache.
 
 expire_sku_cache
 ----------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``432000``. See ``expire_publisher_cache`` for details on
 why this exists.
 
-By default, the sku data will be cached, and only updated every ``604800``
-seconds (7 days). If you need the sku cache to be updated at a different
+By default, the sku data will be cached, and only updated every ``432000``
+seconds (5 days). If you need the sku cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the sku
 cache.
 
 expire_version_cache
 --------------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``345600``. See ``expire_publisher_cache`` for details on
 why this exists.
 
-By default, the version data will be cached, and only updated every ``604800``
-seconds (7 days). If you need the version cache to be updated at a different
+By default, the version data will be cached, and only updated every ``345600``
+seconds (4 days). If you need the version cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the version
 cache.
 
 expire_group_cache
 ------------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``14400``. See ``expire_publisher_cache`` for details on
 why this exists.
 
 By default, the resource group data will be cached, and only updated every
-``604800`` seconds (7 days). If you need the resource group cache to be updated
+``14400`` seconds (4 hours). If you need the resource group cache to be updated
 at a different frequency, change this setting. Setting it to ``0`` will turn
 off the resource group cache.
 
@@ -358,15 +403,6 @@ seconds (1 hour). If you need the network cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the network
 cache.
 
-expire_subnet_cache
--------------------
-Optional. Default is ``3600``. See ``expire_publisher_cache`` for details on
-why this exists.
-
-By default, the subnet data will be cached, and only updated every ``3600``
-seconds (1 hour). If you need the subnet cache to be updated at a different
-frequency, change this setting. Setting it to ``0`` will turn off the subnet
-cache.
 
 Other Options
 =============
@@ -379,6 +415,7 @@ Required for actions involving an Azure storage account.
 storage_key
 -----------
 Required for actions involving an Azure storage account.
+
 
 Show Instance
 =============

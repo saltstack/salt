@@ -253,13 +253,18 @@ all interfaces are ignored unless specified.
     When managing bridged interfaces on a Debian or Ubuntu based system, the
     ports argument is required.  Red Hat systems will ignore the argument.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
 import difflib
-import salt.utils
+
+# Import Salt libs
 import salt.utils.network
+import salt.utils.platform
 import salt.loader
+
+# Import 3rd party libs
+from salt.ext import six
 
 # Set up logging
 import logging
@@ -271,7 +276,7 @@ def __virtual__():
     Confine this module to non-Windows systems with the required execution
     module available.
     '''
-    if not salt.utils.is_windows() and 'ip.get_interface' in __salt__:
+    if not salt.utils.platform.is_windows() and 'ip.get_interface' in __salt__:
         return True
     return False
 
@@ -339,7 +344,7 @@ def managed(name, type, enabled=True, **kwargs):
                 apply_ranged_setting = True
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
         return ret
 
     # Debian based system can have a type of source
@@ -377,7 +382,7 @@ def managed(name, type, enabled=True, **kwargs):
         except AttributeError as error:
             #TODO Add a way of reversing the interface changes.
             ret['result'] = False
-            ret['comment'] = str(error)
+            ret['comment'] = six.text_type(error)
             return ret
 
     if kwargs['test']:
@@ -392,7 +397,7 @@ def managed(name, type, enabled=True, **kwargs):
                 return ret
             except Exception as error:
                 ret['result'] = False
-                ret['comment'] = str(error)
+                ret['comment'] = six.text_type(error)
                 return ret
         ret['result'] = True
         ret['comment'] = "no change, passing it"
@@ -409,7 +414,7 @@ def managed(name, type, enabled=True, **kwargs):
             for iface in interfaces:
                 if 'secondary' in interfaces[iface]:
                     for second in interfaces[iface]['secondary']:
-                        if second.get('label', '') == 'name':
+                        if second.get('label', '') == name:
                             interface_status = True
         if enabled:
             if 'noifupdown' not in kwargs:
@@ -419,7 +424,6 @@ def managed(name, type, enabled=True, **kwargs):
                         __salt__['ip.down'](name, type)
                         __salt__['ip.up'](name, type)
                         ret['changes']['status'] = 'Interface {0} restart to validate'.format(name)
-                        return ret
                 else:
                     __salt__['ip.up'](name, type)
                     ret['changes']['status'] = 'Interface {0} is up'.format(name)
@@ -430,7 +434,39 @@ def managed(name, type, enabled=True, **kwargs):
                     ret['changes']['status'] = 'Interface {0} down'.format(name)
     except Exception as error:
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
+        return ret
+
+    # Try to enslave bonding interfaces after master was created
+    if type == 'bond' and 'noifupdown' not in kwargs:
+
+        if 'slaves' in kwargs and kwargs['slaves']:
+            # Check that there are new slaves for this master
+            present_slaves = __salt__['cmd.run'](
+                ['cat', '/sys/class/net/{0}/bonding/slaves'.format(name)]).split()
+            desired_slaves = kwargs['slaves'].split()
+            missing_slaves = set(desired_slaves) - set(present_slaves)
+
+            # Enslave only slaves missing in master
+            if missing_slaves:
+                ifenslave_path = __salt__['cmd.run'](['which', 'ifenslave']).strip()
+                if ifenslave_path:
+                    log.info("Adding slaves '%s' to the master %s",
+                             ' '.join(missing_slaves), name)
+                    cmd = [ifenslave_path, name] + list(missing_slaves)
+                    __salt__['cmd.run'](cmd, python_shell=False)
+                else:
+                    log.error("Command 'ifenslave' not found")
+                ret['changes']['enslave'] = (
+                    "Added slaves '{0}' to master '{1}'"
+                    .format(' '.join(missing_slaves), name))
+            else:
+                log.info("All slaves '%s' are already added to the master %s"
+                         ", no actions required",
+                         ' '.join(missing_slaves), name)
+
+    if enabled and interface_status:
+        # Interface was restarted, return
         return ret
 
     # TODO: create saltutil.refresh_grains that fires events to the minion daemon
@@ -488,7 +524,7 @@ def routes(name, **kwargs):
             ret['changes']['network_routes'] = '\n'.join(diff)
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
         return ret
 
     # Apply interface routes
@@ -497,7 +533,7 @@ def routes(name, **kwargs):
             __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
-            ret['comment'] = str(error)
+            ret['comment'] = six.text_type(error)
             return ret
 
     return ret
@@ -548,11 +584,11 @@ def system(name, **kwargs):
             ret['changes']['network_settings'] = '\n'.join(diff)
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
         return ret
     except KeyError as error:
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
         return ret
 
     # Apply global network settings
@@ -561,7 +597,7 @@ def system(name, **kwargs):
             __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
-            ret['comment'] = str(error)
+            ret['comment'] = six.text_type(error)
             return ret
 
     return ret

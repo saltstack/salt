@@ -102,7 +102,7 @@ a few examples:
       size: m3.large
 
 Notice that the ``provider`` in our profile matches the provider name that we
-defined? That is how Salt Cloud knows how to connect to to a cloud host to
+defined? That is how Salt Cloud knows how to connect to a cloud host to
 create a VM with these attributes.
 
 Create VMs

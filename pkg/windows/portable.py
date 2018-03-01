@@ -1,7 +1,10 @@
 #!/usr/bin/python
 from __future__ import print_function
 
-import sys, getopt
+import sys
+import os
+import getopt
+
 
 def display_help():
     print('####################################################################')
@@ -13,7 +16,9 @@ def display_help():
     print('# Parameters:                                                      #')
     print('#   -f, --file    :  target file                                   #')
     print('#   -s, --search  :  term to search for                            #')
-    print('#                    default is "C:\Python"                        #')
+    print('#                    Default is the base path for the python       #')
+    print('#                    executable that is running this script.       #')
+    print('#                    In Py2 that would be C:\\Python27             #')
     print('#   -r, --replace :  replace with this                             #')
     print('#                    default is ".."                               #')
     print('#                                                                  #')
@@ -23,12 +28,15 @@ def display_help():
     print('####################################################################')
     sys.exit(2)
 
+
 def main(argv):
     target = ''
-    search = 'C:\Python27'
+    search = os.path.dirname(sys.executable)
     replace = '..'
     try:
-        opts, args = getopt.getopt(argv,"hf:s:r:",["file=","search=", "replace="])
+        opts, args = getopt.getopt(argv,
+                                   "hf:s:r:",
+                                   ["file=", "search=", "replace="])
     except getopt.GetoptError:
         display_help()
     for opt, arg in opts:
@@ -42,10 +50,15 @@ def main(argv):
             replace = arg
     if target == '':
         display_help()
-    f = open( target, 'rb' ).read()
-    f = f.replace( search, replace )
-    f = f.replace( search.lower(), replace )
-    open( target, 'wb' ).write(f)
+
+    if sys.version_info >= (3, 0):
+        search = search.encode('utf-8')
+        replace = replace.encode('utf-8')
+    f = open(target, 'rb').read()
+    f = f.replace(search, replace)
+    f = f.replace(search.lower(), replace)
+    open(target, 'wb').write(f)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -2,7 +2,7 @@
 '''
 Publish a command from a minion to a target
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import time
@@ -12,7 +12,11 @@ import logging
 import salt.payload
 import salt.transport
 import salt.utils.args
+import salt.utils.versions
 from salt.exceptions import SaltReqTimeoutError
+
+# Import 3rd party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +45,7 @@ def _publish(
         tgt,
         fun,
         arg=None,
-        expr_form='glob',
+        tgt_type='glob',
         returner='',
         timeout=5,
         form='clean'):
@@ -74,7 +78,7 @@ def _publish(
             'fun': fun,
             'arg': arg,
             'tgt': tgt,
-            'tgt_type': expr_form,
+            'tgt_type': tgt_type,
             'ret': returner,
             'tmo': timeout,
             'form': form,
@@ -91,7 +95,7 @@ def _publish(
     time.sleep(float(timeout))
     load = {'cmd': 'pub_ret',
             'id': __opts__['id'],
-            'jid': str(peer_data['jid'])}
+            'jid': six.text_type(peer_data['jid'])}
     ret = channel.send(load)
     if form == 'clean':
         cret = {}
@@ -102,7 +106,13 @@ def _publish(
         return ret
 
 
-def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
+def publish(tgt,
+            fun,
+            arg=None,
+            tgt_type='glob',
+            returner='',
+            timeout=5,
+            expr_form=None):
     '''
     Publish a command from the minion out to other minions.
 
@@ -112,7 +122,7 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     minion cannot command another minion to command another minion as
     that would create an infinite command loop.
 
-    The expr_form argument is used to pass a target other than a glob into
+    The ``tgt_type`` argument is used to pass a target other than a glob into
     the execution, the available options are:
 
     - glob
@@ -124,6 +134,10 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     - ipcidr
     - range
     - compound
+
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
 
     The arguments sent to the minion publish function are separated with
     commas. This means that for a minion executing a command with multiple
@@ -153,16 +167,33 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
 
 
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     return _publish(tgt,
                     fun,
                     arg=arg,
-                    expr_form=expr_form,
+                    tgt_type=tgt_type,
                     returner=returner,
                     timeout=timeout,
                     form='clean')
 
 
-def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
+def full_data(tgt,
+              fun,
+              arg=None,
+              tgt_type='glob',
+              returner='',
+              timeout=5,
+              expr_form=None):
     '''
     Return the full data about the publication, this is invoked in the same
     way as the publish function
@@ -184,10 +215,21 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
             salt '*' publish.full_data test.kwarg arg='cheese=spam'
 
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     return _publish(tgt,
                     fun,
                     arg=arg,
-                    expr_form=expr_form,
+                    tgt_type=tgt_type,
                     returner=returner,
                     timeout=timeout,
                     form='full')

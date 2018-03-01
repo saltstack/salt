@@ -9,15 +9,16 @@ You can add and edit existing tasks.
 You can add and clear triggers and actions.
 You can list all tasks, folders, triggers, and actions.
 '''
-
-# Import python libs
-from __future__ import absolute_import
-import salt.utils
-from datetime import datetime
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import time
+from datetime import datetime
 
-# Import 3rd Party Libraries
+# Import Salt libs
+import salt.utils.platform
+
+# Import 3rd-party libraries
 try:
     import pythoncom
     import win32com.client
@@ -161,9 +162,9 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if not HAS_DEPENDENCIES:
-            log.warning('Could not load dependencies for {0}'.format(__virtualname__))
+            log.warning('Could not load dependencies for %s', __virtualname__)
         return __virtualname__
     return (False, "Module win_task: module only works on Windows systems")
 
@@ -308,7 +309,7 @@ def _save_task_definition(name,
         except KeyError:
             failure_code = 'Unknown Failure: {0}'.format(error)
 
-        log.debug('Failed to modify task: {0}'.format(failure_code))
+        log.debug('Failed to modify task: %s', failure_code)
 
         return 'Failed to modify task: {0}'.format(failure_code)
 
@@ -625,7 +626,7 @@ def create_task_from_xml(name,
         except KeyError:
             failure_code = 'Unknown Failure: {0}'.format(error)
 
-        log.debug('Failed to create task: {0}'.format(failure_code))
+        log.debug('Failed to create task: %s', failure_code)
 
     # Verify creation
     if name in list_tasks(location):

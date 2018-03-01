@@ -5,12 +5,12 @@ like, but also useful for basic http testing.
 
 .. versionadded:: 2015.5.0
 '''
-from __future__ import absolute_import
 
-# Import system libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 
-# Import salt libs
+# Import Salt libs
 import salt.utils.http
 
 
@@ -30,7 +30,12 @@ def query(url, **kwargs):
         salt '*' http.query http://somelink.com/ method=POST \
             data='<xml>somecontent</xml>'
     '''
-    return salt.utils.http.query(url=url, opts=__opts__, **kwargs)
+    opts = __opts__.copy()
+    if 'opts' in kwargs:
+        opts.update(kwargs['opts'])
+        del kwargs['opts']
+
+    return salt.utils.http.query(url=url, opts=opts, **kwargs)
 
 
 def wait_for_successful_query(url, wait_for=300, **kwargs):

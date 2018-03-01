@@ -13,7 +13,7 @@ Module to manage filesystem snapshots with snapper
 :platform:      Linux
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
 import os
@@ -26,8 +26,10 @@ except ImportError:
     HAS_PWD = False
 
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.files
 
+# import 3rd party libs
+from salt.ext import six
 
 try:
     import dbus  # pylint: disable=wrong-import-order
@@ -64,7 +66,7 @@ if HAS_DBUS:
     try:
         bus = dbus.SystemBus()
     except dbus.DBusException as exc:
-        log.error(exc)
+        log.warning(exc)
         system_bus_error = exc
     else:
         if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
@@ -73,7 +75,7 @@ if HAS_DBUS:
                                                         SNAPPER_DBUS_PATH),
                                          dbus_interface=SNAPPER_DBUS_INTERFACE)
             except (dbus.DBusException, ValueError) as exc:
-                log.error(exc)
+                log.warning(exc)
                 snapper_error = exc
         else:
             snapper_error = 'snapper is missing'
@@ -229,6 +231,7 @@ def set_config(name='root', **kwargs):
     snapper convention. The above example is equivalent to:
 
     .. code-block:: bash
+
         salt '*' snapper.set_config sync_acl=True
     '''
     try:
@@ -445,7 +448,7 @@ def delete_snapshot(snapshots_ids=None, config="root"):
         if not set(snapshots_ids).issubset(set(current_snapshots_ids)):
             raise CommandExecutionError(
                 "Error: Snapshots '{0}' not found".format(", ".join(
-                    [str(x) for x in set(snapshots_ids).difference(
+                    [six.text_type(x) for x in set(snapshots_ids).difference(
                         set(current_snapshots_ids))]))
             )
         snapper.DeleteSnapshots(config, snapshots_ids)
@@ -588,7 +591,7 @@ def run(function, *args, **kwargs):
     try:
         ret = __salt__[function](*args, **func_kwargs)
     except CommandExecutionError as exc:
-        ret = "\n".join([str(exc), __salt__[function].__doc__])
+        ret = "\n".join([six.text_type(exc), __salt__[function].__doc__])
 
     __salt__['snapper.create_snapshot'](
         config=config,
@@ -796,14 +799,18 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
 
             if os.path.isfile(pre_file):
                 pre_file_exists = True
-                pre_file_content = salt.utils.fopen(pre_file).readlines()
+                with salt.utils.files.fopen(pre_file) as rfh:
+                    pre_file_content = [salt.utils.stringutils.to_unicode(_l)
+                                        for _l in rfh.readlines()]
             else:
                 pre_file_content = []
                 pre_file_exists = False
 
             if os.path.isfile(post_file):
                 post_file_exists = True
-                post_file_content = salt.utils.fopen(post_file).readlines()
+                with salt.utils.files.fopen(post_file) as rfh:
+                    post_file_content = [salt.utils.stringutils.to_unicode(_l)
+                                         for _l in rfh.readlines()]
             else:
                 post_file_content = []
                 post_file_exists = False

@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from salt.ext.six.moves import map
-
 '''
 CSF Ip tables management
 ========================
@@ -17,6 +14,14 @@ CSF Ip tables management
         ip: 1.2.3.4
         method: allow
 '''  # pylint: disable=W0105
+# Import Python Libs
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
+
+# Import Salt Libs
+from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -231,7 +236,7 @@ def ports_open(name, ports, proto='tcp', direction='in'):
         traffic, or both.
     '''
 
-    ports = list(map(str, ports))
+    ports = list(six.moves.map(six.text_type, ports))
     diff = False
     ret = {'name': ','.join(ports),
            'changes': {},
@@ -242,8 +247,8 @@ def ports_open(name, ports, proto='tcp', direction='in'):
     direction = direction.upper()
     directions = __salt__['csf.build_directions'](direction)
     for direction in directions:
-        print(current_ports[direction])  # pylint: disable=C0325
-        print(ports)  # pylint: disable=C0325
+        log.trace('current_ports[direction]: %s', current_ports[direction])
+        log.trace('ports: %s', ports)
         if current_ports[direction] != ports:
             diff = True
     if diff:

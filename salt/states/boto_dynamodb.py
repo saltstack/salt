@@ -155,7 +155,7 @@ Setting the alarms in a pillar:
                   period: 900
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import math
 import sys
@@ -163,7 +163,7 @@ import logging
 import copy
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.dictupdate as dictupdate
 
 logging.basicConfig(
@@ -172,6 +172,11 @@ logging.basicConfig(
     stream=sys.stdout
 )
 log = logging.getLogger()
+
+
+class GsiNotUpdatableError(Exception):
+    '''Raised when a global secondary index cannot be updated.'''
+    pass
 
 
 def __virtual__():
@@ -200,9 +205,17 @@ def present(name=None,
             global_indexes=None,
             backup_configs_from_pillars='boto_dynamodb_backup_configs'):
     '''
-    Ensure the DynamoDB table exists.  Note: all properties of the table
-    can only be set during table creation.  Adding or changing
-    indexes or key schema cannot be done after table creation
+    Ensure the DynamoDB table exists. Table throughput can be updated after
+    table creation.
+
+    Global secondary indexes (GSIs) are managed with some exceptions:
+    * If a GSI deletion is detected, a failure will occur (deletes should be
+      done manually in the AWS console).
+    * If multiple GSIs are added in a single Salt call, a failure will occur
+      (boto supports one creation at a time). Note that this only applies after
+      table creation; multiple GSIs can be created during table creation.
+    * Updates to existing GSIs are limited to read/write capacity only
+      (DynamoDB limitation).
 
     name
         Name of the DynamoDB table
@@ -247,7 +260,7 @@ def present(name=None,
         The local indexes you would like to create
 
     global_indexes
-        The local indexes you would like to create
+        The global indexes you would like to create
 
     backup_configs_from_pillars
         Pillars to use to configure DataPipeline backups
@@ -274,39 +287,40 @@ def present(name=None,
     if not table_exists:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'DynamoDB table {0} is set to be created.'.format(name)
+            ret['comment'] = 'DynamoDB table {0} would be created.'.format(name)
             return ret
+        else:
+            is_created = __salt__['boto_dynamodb.create_table'](
+                name,
+                region,
+                key,
+                keyid,
+                profile,
+                read_capacity_units,
+                write_capacity_units,
+                hash_key,
+                hash_key_data_type,
+                range_key,
+                range_key_data_type,
+                local_indexes,
+                global_indexes
+            )
+            if not is_created:
+                ret['result'] = False
+                ret['comment'] = 'Failed to create table {0}'.format(name)
+                _add_changes(ret, changes_old, changes_new)
+                return ret
 
-        is_created = __salt__['boto_dynamodb.create_table'](
-            name,
-            region,
-            key,
-            keyid,
-            profile,
-            read_capacity_units,
-            write_capacity_units,
-            hash_key,
-            hash_key_data_type,
-            range_key,
-            range_key_data_type,
-            local_indexes,
-            global_indexes
-        )
-        if not is_created:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create table {0}'.format(name)
-            return ret
-
-        comments.append('DynamoDB table {0} was successfully created'.format(name))
-        changes_new['table'] = name
-        changes_new['read_capacity_units'] = read_capacity_units
-        changes_new['write_capacity_units'] = write_capacity_units
-        changes_new['hash_key'] = hash_key
-        changes_new['hash_key_data_type'] = hash_key_data_type
-        changes_new['range_key'] = range_key
-        changes_new['range_key_data_type'] = range_key_data_type
-        changes_new['local_indexes'] = local_indexes
-        changes_new['global_indexes'] = global_indexes
+            comments.append('DynamoDB table {0} was successfully created'.format(name))
+            changes_new['table'] = name
+            changes_new['read_capacity_units'] = read_capacity_units
+            changes_new['write_capacity_units'] = write_capacity_units
+            changes_new['hash_key'] = hash_key
+            changes_new['hash_key_data_type'] = hash_key_data_type
+            changes_new['range_key'] = range_key
+            changes_new['range_key_data_type'] = range_key_data_type
+            changes_new['local_indexes'] = local_indexes
+            changes_new['global_indexes'] = global_indexes
     else:
         comments.append('DynamoDB table {0} exists'.format(name))
 
@@ -326,41 +340,56 @@ def present(name=None,
     if not throughput_matches:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'DynamoDB table {0} is set to be updated.'.format(name)
-            return ret
+            comments.append('DynamoDB table {0} is set to be updated.'.format(name))
+        else:
+            is_updated = __salt__['boto_dynamodb.update'](
+                name,
+                throughput={
+                    'read': read_capacity_units,
+                    'write': write_capacity_units,
+                },
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
+            if not is_updated:
+                ret['result'] = False
+                ret['comment'] = 'Failed to update table {0}'.format(name)
+                _add_changes(ret, changes_old, changes_new)
+                return ret
 
-        is_updated = __salt__['boto_dynamodb.update'](
-            name,
-            throughput={
-                'read': read_capacity_units,
-                'write': write_capacity_units,
-            },
-            region=region,
-            key=key,
-            keyid=keyid,
-            profile=profile,
-        )
-        if not is_updated:
-            ret['result'] = False
-            ret['comment'] = 'Failed to update table {0}'.format(name)
-            return ret
-
-        comments.append('DynamoDB table {0} was successfully updated'.format(name))
-        changes_old['read_capacity_units'] = current_read_capacity_units,
-        changes_old['write_capacity_units'] = current_write_capacity_units,
-        changes_new['read_capacity_units'] = read_capacity_units,
-        changes_new['write_capacity_units'] = write_capacity_units,
+            comments.append('DynamoDB table {0} was successfully updated'.format(name))
+            changes_old['read_capacity_units'] = current_read_capacity_units,
+            changes_old['write_capacity_units'] = current_write_capacity_units,
+            changes_new['read_capacity_units'] = read_capacity_units,
+            changes_new['write_capacity_units'] = write_capacity_units,
     else:
         comments.append('DynamoDB table {0} throughput matches'.format(name))
+
+    provisioned_indexes = description.get('Table', {}).get('GlobalSecondaryIndexes', [])
+
+    _ret = _global_indexes_present(provisioned_indexes, global_indexes, changes_old,
+                                   changes_new, comments, name, region, key, keyid,
+                                   profile)
+    if not _ret['result']:
+        comments.append(_ret['comment'])
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            ret['comment'] = ',\n'.join(comments)
+            _add_changes(ret, changes_old, changes_new)
+            return ret
 
     _ret = _alarms_present(name, alarms, alarms_from_pillar,
                            write_capacity_units, read_capacity_units,
                            region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    comments.append(_ret['comment'])
     if not _ret['result']:
         ret['result'] = _ret['result']
         if ret['result'] is False:
+            ret['comment'] = ',\n'.join(comments)
+            _add_changes(ret, changes_old, changes_new)
             return ret
 
     # Ensure backup datapipeline is present
@@ -375,21 +404,211 @@ def present(name=None,
             utc_hour=config['utc_hour'],
             s3_base_location=config['s3_base_location'],
         )
-        if datapipeline_ret['result']:
+        # Add comments and changes if successful changes were made (True for live mode,
+        # None for test mode).
+        if datapipeline_ret['result'] in [True, None]:
+            ret['result'] = datapipeline_ret['result']
             comments.append(datapipeline_ret['comment'])
             if datapipeline_ret.get('changes'):
                 ret['changes']['backup_datapipeline_{0}'.format(config['name'])] = \
                     datapipeline_ret.get('changes'),
         else:
-            ret['comment'] = datapipeline_ret['comment']
+            ret['comment'] = ',\n'.join([ret['comment'], datapipeline_ret['comment']])
+            _add_changes(ret, changes_old, changes_new)
             return ret
 
+    ret['comment'] = ',\n'.join(comments)
+    _add_changes(ret, changes_old, changes_new)
+    return ret
+
+
+def _add_changes(ret, changes_old, changes_new):
     if changes_old:
         ret['changes']['old'] = changes_old
     if changes_new:
         ret['changes']['new'] = changes_new
-    ret['comment'] = ',\n'.join(comments)
+
+
+def _global_indexes_present(provisioned_indexes, global_indexes, changes_old,
+                            changes_new, comments, name, region, key, keyid,
+                            profile):
+    '''Handles global secondary index for the table present state.'''
+    ret = {'result': True}
+    if provisioned_indexes:
+        provisioned_gsi_config = dict((index['IndexName'], index) for index in provisioned_indexes)
+    else:
+        provisioned_gsi_config = {}
+    provisioned_index_names = set(provisioned_gsi_config.keys())
+
+    # Map of index name to given Salt config for this run. This loop is complicated
+    # because global_indexes is made up of OrderedDicts and lists.
+    gsi_config = {}
+    if global_indexes:
+        for index in global_indexes:
+            # Each index config is a key that maps to a list of OrderedDicts.
+            index_config = index.values()[0]
+            index_name = None
+            for entry in index_config:
+                # Key by the name field in the index config.
+                if entry.keys() == ['name']:
+                    index_name = entry.values()[0]
+            if not index_name:
+                ret['result'] = False
+                ret['comment'] = 'Index name not found for table {0}'.format(name)
+                return ret
+            gsi_config[index_name] = index
+
+    existing_index_names, new_index_names, index_names_to_be_deleted = _partition_index_names(
+        provisioned_index_names, set(gsi_config.keys()))
+
+    if index_names_to_be_deleted:
+        ret['result'] = False
+        ret['comment'] = ('Deletion of GSIs ({0}) is not supported! Please do this '
+                          'manually in the AWS console.'.format(', '.join(index_names_to_be_deleted)))
+        return ret
+    elif len(new_index_names) > 1:
+        ret['result'] = False
+        ret['comment'] = ('Creation of multiple GSIs ({0}) is not supported due to API '
+                          'limitations. Please create them one at a time.'.format(new_index_names))
+        return ret
+
+    if new_index_names:
+        # Given the length check above, new_index_names should have a single element here.
+        index_name = next(iter(new_index_names))
+        _add_global_secondary_index(ret, name, index_name, changes_old, changes_new, comments,
+                                    gsi_config, region, key, keyid, profile)
+        if not ret['result']:
+            return ret
+
+    if existing_index_names:
+        _update_global_secondary_indexes(ret, changes_old, changes_new, comments,
+                                         existing_index_names, provisioned_gsi_config, gsi_config,
+                                         name, region, key, keyid, profile)
+        if not ret['result']:
+            return ret
+
+    if 'global_indexes' not in changes_old and 'global_indexes' not in changes_new:
+        comments.append('All global secondary indexes match')
     return ret
+
+
+def _partition_index_names(provisioned_index_names, index_names):
+    '''Returns 3 disjoint sets of indexes: existing, to be created, and to be deleted.'''
+    existing_index_names = set()
+    new_index_names = set()
+    for name in index_names:
+        if name in provisioned_index_names:
+            existing_index_names.add(name)
+        else:
+            new_index_names.add(name)
+    index_names_to_be_deleted = provisioned_index_names - existing_index_names
+    return existing_index_names, new_index_names, index_names_to_be_deleted
+
+
+def _add_global_secondary_index(ret, name, index_name, changes_old, changes_new, comments,
+                                gsi_config, region, key, keyid, profile):
+    '''Updates ret iff there was a failure or in test mode.'''
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Dynamo table {0} will have a GSI added: {1}'.format(
+            name, index_name)
+        return
+    changes_new.setdefault('global_indexes', {})
+    success = __salt__['boto_dynamodb.create_global_secondary_index'](
+        name,
+        __salt__['boto_dynamodb.extract_index'](
+            gsi_config[index_name], global_index=True),
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+
+    if success:
+        comments.append('Created GSI {0}'.format(index_name))
+        changes_new['global_indexes'][index_name] = gsi_config[index_name]
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Failed to create GSI {0}'.format(index_name)
+
+
+def _update_global_secondary_indexes(ret, changes_old, changes_new, comments, existing_index_names,
+                                     provisioned_gsi_config, gsi_config, name, region, key,
+                                     keyid, profile):
+    '''Updates ret iff there was a failure or in test mode.'''
+    try:
+        provisioned_throughputs, index_updates = _determine_gsi_updates(
+            existing_index_names, provisioned_gsi_config, gsi_config)
+    except GsiNotUpdatableError as e:
+        ret['result'] = False
+        ret['comment'] = six.text_type(e)
+        return
+
+    if index_updates:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Dynamo table {0} will have GSIs updated: {1}'.format(
+                name, ', '.join(index_updates.keys()))
+            return
+        changes_old.setdefault('global_indexes', {})
+        changes_new.setdefault('global_indexes', {})
+        success = __salt__['boto_dynamodb.update_global_secondary_index'](
+            name,
+            index_updates,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+
+        if success:
+            comments.append(
+                'Updated GSIs with new throughputs {0}'.format(index_updates))
+            for index_name in index_updates:
+                changes_old['global_indexes'][index_name] = provisioned_throughputs[index_name]
+                changes_new['global_indexes'][index_name] = index_updates[index_name]
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to update GSI throughputs {0}'.format(index_updates)
+
+
+def _determine_gsi_updates(existing_index_names, provisioned_gsi_config, gsi_config):
+    # index name -> {'read': <read throughput>, 'write': <write throughput>}
+    provisioned_throughputs = {}
+    index_updates = {}
+    for index_name in existing_index_names:
+        current_config = provisioned_gsi_config[index_name]
+        new_config = __salt__['boto_dynamodb.extract_index'](
+            gsi_config[index_name], global_index=True).schema()
+
+        # The provisioned config will have more fields than the new config, so only consider
+        # fields in new_config.
+        for key in new_config:
+            if key in current_config and key != 'ProvisionedThroughput':
+                new_value = new_config[key]
+                current_value = current_config[key]
+                # This is a special case since the Projection value can contain a list (not
+                # correctly comparable with == as order doesn't matter).
+                if key == 'Projection':
+                    if new_value['ProjectionType'] != current_value['ProjectionType']:
+                        raise GsiNotUpdatableError('GSI projection types do not match')
+                    elif set(new_value.get('NonKeyAttributes', [])) != set(current_value.get('NonKeyAttributes', [])):
+                        raise GsiNotUpdatableError('NonKeyAttributes do not match for GSI projection')
+                elif new_value != current_value:
+                    raise GsiNotUpdatableError(
+                        'GSI property {0} cannot be updated for index {1}'.format(key, index_name))
+
+        current_throughput = current_config.get('ProvisionedThroughput')
+        current_read = current_throughput.get('ReadCapacityUnits')
+        current_write = current_throughput.get('WriteCapacityUnits')
+        provisioned_throughputs[index_name] = {'read': current_read, 'write': current_write}
+        new_throughput = new_config.get('ProvisionedThroughput')
+        new_read = new_throughput.get('ReadCapacityUnits')
+        new_write = new_throughput.get('WriteCapacityUnits')
+        if current_read != new_read or current_write != new_write:
+            index_updates[index_name] = {'read': new_read, 'write': new_write}
+
+    return provisioned_throughputs, index_updates
 
 
 def _alarms_present(name, alarms, alarms_from_pillar,
@@ -457,7 +676,7 @@ def _ensure_backup_datapipeline_present(name, schedule_name, period,
                 'fields': {
                     'period': period,
                     'type': 'Schedule',
-                    'startDateTime': _next_datetime_with_utc_hour(utc_hour).isoformat(),
+                    'startDateTime': _next_datetime_with_utc_hour(name, utc_hour).isoformat(),
                 }
             },
         },
@@ -469,14 +688,34 @@ def _ensure_backup_datapipeline_present(name, schedule_name, period,
     return __states__['boto_datapipeline.present'](**kwargs)
 
 
-def _next_datetime_with_utc_hour(utc_hour):
-    '''Return the next future utc datetime where hour == utc_hour'''
+def _get_deterministic_value_for_table_name(table_name, max_value):
+    '''
+    For a given table_name, returns hash of the table_name limited by max_value.
+    '''
+    return hash(table_name) % max_value
+
+
+def _next_datetime_with_utc_hour(table_name, utc_hour):
+    '''
+    Datapipeline API is throttling us, as all the pipelines are started at the same time.
+    We would like to uniformly distribute the startTime over a 60 minute window.
+
+    Return the next future utc datetime where
+        hour == utc_hour
+        minute = A value between 0-59 (depending on table name)
+        second = A value between 0-59 (depending on table name)
+    '''
     today = datetime.date.today()
+
+    # The minute and second values generated are deterministic, as we do not want
+    # pipeline definition to change for every run.
     start_date_time = datetime.datetime(
         year=today.year,
         month=today.month,
         day=today.day,
         hour=utc_hour,
+        minute=_get_deterministic_value_for_table_name(table_name, 60),
+        second=_get_deterministic_value_for_table_name(table_name, 60)
     )
 
     if start_date_time < datetime.datetime.utcnow():
@@ -523,8 +762,7 @@ def absent(name,
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'DynamoDB table {0} is set to be deleted \
-                         '.format(name)
+        ret['comment'] = 'DynamoDB table {0} is set to be deleted'.format(name)
         ret['result'] = None
         return ret
 
@@ -534,7 +772,6 @@ def absent(name,
         ret['changes'].setdefault('old', 'Table {0} exists'.format(name))
         ret['changes'].setdefault('new', 'Table {0} deleted'.format(name))
     else:
-        ret['comment'] = 'Failed to delete DynamoDB table {0} \
-                         '.format(name)
+        ret['comment'] = 'Failed to delete DynamoDB table {0}'.format(name)
         ret['result'] = False
     return ret

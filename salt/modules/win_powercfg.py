@@ -12,7 +12,7 @@ powercfg.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import re
 import logging
 
@@ -41,6 +41,9 @@ def _get_powercfg_minute_values(scheme, guid, subguid, safe_name):
     '''
     Returns the AC/DC values in an array for a guid and subguid for a the given scheme
     '''
+    if scheme is None:
+        scheme = _get_current_scheme()
+
     if __grains__['osrelease'] == '7':
         cmd = "powercfg /q {0} {1}".format(scheme, guid)
     else:
@@ -60,18 +63,21 @@ def _get_powercfg_minute_values(scheme, guid, subguid, safe_name):
     return {"ac": int(raw_settings[0], 0) / 60, "dc": int(raw_settings[1], 0) / 60}
 
 
-def _set_powercfg_value(setting, power, value):
+def _set_powercfg_value(scheme, sub_group, setting_guid, power, value):
     '''
     Sets the value of a setting with a given power (ac/dc) to
-    the current scheme
+    the given scheme
     '''
-    cmd = "powercfg /x {0}-{1} {2}".format(setting, power, value)
+    if scheme is None:
+        scheme = _get_current_scheme()
+
+    cmd = "powercfg /set{0}valueindex {1} {2} {3} {4}".format(power, scheme, sub_group, setting_guid, value)
     return __salt__['cmd.run'](cmd, python_shell=False)
 
 
-def set_monitor_timeout(timeout, power="ac"):
+def set_monitor_timeout(timeout, power="ac", scheme=None):
     '''
-    Set the monitor timeout in minutes for the current power scheme
+    Set the monitor timeout in minutes for the given power scheme
 
     CLI Example:
 
@@ -85,26 +91,32 @@ def set_monitor_timeout(timeout, power="ac"):
     power
         Should we set the value for AC or DC (battery)? Valid options ac,dc.
 
+    scheme
+        The scheme to use, leave as None to use the current.
+
     '''
-    return _set_powercfg_value("monitor-timeout", power, timeout)
+    return _set_powercfg_value(scheme, "SUB_VIDEO", "VIDEOIDLE", power, timeout)
 
 
-def get_monitor_timeout():
+def get_monitor_timeout(scheme=None):
     '''
-    Get the current monitor timeout of the current scheme
+    Get the current monitor timeout of the given scheme
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' powercfg.get_monitor_timeout
+
+    scheme
+        The scheme to use, leave as None to use the current.
     '''
-    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_VIDEO", "VIDEOIDLE", "Turn off display after")
+    return _get_powercfg_minute_values(scheme, "SUB_VIDEO", "VIDEOIDLE", "Turn off display after")
 
 
-def set_disk_timeout(timeout, power="ac"):
+def set_disk_timeout(timeout, power="ac", scheme=None):
     '''
-    Set the disk timeout in minutes for the current power scheme
+    Set the disk timeout in minutes for the given power scheme
 
     CLI Example:
 
@@ -118,26 +130,32 @@ def set_disk_timeout(timeout, power="ac"):
     power
         Should we set the value for AC or DC (battery)? Valid options ac,dc.
 
+    scheme
+        The scheme to use, leave as None to use the current.
+
     '''
-    return _set_powercfg_value("disk-timeout", power, timeout)
+    return _set_powercfg_value(scheme, "SUB_DISK", "DISKIDLE", power, timeout)
 
 
-def get_disk_timeout():
+def get_disk_timeout(scheme=None):
     '''
-    Get the current disk timeout of the current scheme
+    Get the current disk timeout of the given scheme
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' powercfg.get_disk_timeout
+
+    scheme
+        The scheme to use, leave as None to use the current.
     '''
-    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_DISK", "DISKIDLE", "Turn off hard disk after")
+    return _get_powercfg_minute_values(scheme, "SUB_DISK", "DISKIDLE", "Turn off hard disk after")
 
 
-def set_standby_timeout(timeout, power="ac"):
+def set_standby_timeout(timeout, power="ac", scheme=None):
     '''
-    Set the standby timeout in minutes for the current power scheme
+    Set the standby timeout in minutes for the given power scheme
 
     CLI Example:
 
@@ -151,26 +169,32 @@ def set_standby_timeout(timeout, power="ac"):
     power
         Should we set the value for AC or DC (battery)? Valid options ac,dc.
 
+    scheme
+        The scheme to use, leave as None to use the current.
+
     '''
-    return _set_powercfg_value("standby-timeout", power, timeout)
+    return _set_powercfg_value(scheme, "SUB_SLEEP", "STANDBYIDLE", power, timeout)
 
 
-def get_standby_timeout():
+def get_standby_timeout(scheme=None):
     '''
-    Get the current standby timeout of the current scheme
+    Get the current standby timeout of the given scheme
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' powercfg.get_standby_timeout
+
+    scheme
+        The scheme to use, leave as None to use the current.
     '''
-    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_SLEEP", "STANDBYIDLE", "Sleep after")
+    return _get_powercfg_minute_values(scheme, "SUB_SLEEP", "STANDBYIDLE", "Sleep after")
 
 
-def set_hibernate_timeout(timeout, power="ac"):
+def set_hibernate_timeout(timeout, power="ac", scheme=None):
     '''
-    Set the hibernate timeout in minutes for the current power scheme
+    Set the hibernate timeout in minutes for the given power scheme
 
     CLI Example:
 
@@ -184,18 +208,23 @@ def set_hibernate_timeout(timeout, power="ac"):
     power
         Should we set the value for AC or DC (battery)? Valid options ac,dc.
 
+    scheme
+        The scheme to use, leave as None to use the current.
     '''
-    return _set_powercfg_value("hibernate-timeout", power, timeout)
+    return _set_powercfg_value(scheme, "SUB_SLEEP", "HIBERNATEIDLE", power, timeout)
 
 
-def get_hibernate_timeout():
+def get_hibernate_timeout(scheme=None):
     '''
-    Get the current hibernate timeout of the current scheme
+    Get the current hibernate timeout of the given scheme
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' powercfg.get_hibernate_timeout
+
+    scheme
+        The scheme to use, leave as None to use the current.
     '''
-    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_SLEEP", "HIBERNATEIDLE", "Hibernate after")
+    return _get_powercfg_minute_values(scheme, "SUB_SLEEP", "HIBERNATEIDLE", "Hibernate after")

@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for interacting with the job cache
+'''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Import Salt libs
@@ -18,7 +21,7 @@ def store_job(opts, load, event=None, mminion=None):
     Store job information using the configured master_job_cache
     '''
     # Generate EndTime
-    endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid())
+    endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid(opts))
     # If the return data is invalid, just ignore it
     if any(key not in load for key in ('return', 'jid', 'id')):
         return False
@@ -62,7 +65,7 @@ def store_job(opts, load, event=None, mminion=None):
 
     if event:
         # If the return data is invalid, just ignore it
-        log.info('Got return from {id} for job {jid}'.format(**load))
+        log.info('Got return from %s for job %s', load['id'], load['jid'])
         event.fire_event(load,
                          salt.utils.event.tagify([load['jid'], 'ret', load['id']], 'job'))
         event.fire_ret_load(load)
@@ -74,35 +77,41 @@ def store_job(opts, load, event=None, mminion=None):
 
     # do not cache job results if explicitly requested
     if load.get('jid') == 'nocache':
-        log.debug('Ignoring job return with jid for caching {jid} from {id}'.format(**load))
+        log.debug('Ignoring job return with jid for caching %s from %s',
+                  load['jid'], load['id'])
         return
 
     # otherwise, write to the master cache
     savefstr = '{0}.save_load'.format(job_cache)
     getfstr = '{0}.get_load'.format(job_cache)
     fstr = '{0}.returner'.format(job_cache)
+    updateetfstr = '{0}.update_endtime'.format(job_cache)
     if 'fun' not in load and load.get('return', {}):
         ret_ = load.get('return', {})
         if 'fun' in ret_:
             load.update({'fun': ret_['fun']})
         if 'user' in ret_:
             load.update({'user': ret_['user']})
+
+    # Try to reach returner methods
     try:
-        if 'jid' in load \
-                and 'get_load' in mminion.returners \
-                and not mminion.returners[getfstr](load.get('jid', '')):
-            mminion.returners[savefstr](load['jid'], load)
-        mminion.returners[fstr](load)
-
-        updateetfstr = '{0}.update_endtime'.format(job_cache)
-        if (opts.get('job_cache_store_endtime')
-                and updateetfstr in mminion.returners):
-            mminion.returners[updateetfstr](load['jid'], endtime)
-
-    except KeyError:
-        emsg = "Returner '{0}' does not support function returner".format(job_cache)
+        savefstr_func = mminion.returners[savefstr]
+        getfstr_func = mminion.returners[getfstr]
+        fstr_func = mminion.returners[fstr]
+    except KeyError as error:
+        emsg = "Returner '{0}' does not support function {1}".format(job_cache, error)
         log.error(emsg)
         raise KeyError(emsg)
+
+    try:
+        mminion.returners[savefstr](load['jid'], load)
+    except KeyError as e:
+        log.error("Load does not contain 'jid': %s", e)
+    mminion.returners[fstr](load)
+
+    if (opts.get('job_cache_store_endtime')
+            and updateetfstr in mminion.returners):
+        mminion.returners[updateetfstr](load['jid'], endtime)
 
 
 def store_minions(opts, jid, minions, mminion=None, syndic_id=None):

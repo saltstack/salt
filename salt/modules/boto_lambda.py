@@ -77,21 +77,20 @@ The dependencies listed above can be installed via package or pip.
 
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import json
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 import random
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils.boto3
+from salt.ext import six
 import salt.utils.compat
-import salt.utils
+import salt.utils.files
+import salt.utils.json
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
@@ -101,11 +100,12 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
-    #pylint: disable=unused-import
+    # pylint: disable=unused-import
     import boto
     import boto3
-    #pylint: enable=unused-import
+    # pylint: enable=unused-import
     from botocore.exceptions import ClientError
+    from botocore import __version__ as found_botocore_version
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -119,22 +119,15 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.8.0'
-    required_boto3_version = '1.2.5'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto_version))
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    # botocore version >= 1.5.2 is required due to lambda environment variables
+    return salt.utils.versions.check_boto_reqs(
+        boto_ver='2.8.0',
+        boto3_ver='1.2.5',
+        botocore_ver='1.5.2'
+    )
 
 
 def __init__(opts):
@@ -144,14 +137,13 @@ def __init__(opts):
 
 
 def _find_function(name,
-               region=None, key=None, keyid=None, profile=None):
-
+                   region=None, key=None, keyid=None, profile=None):
     '''
     Given function name, find and return matching Lambda information.
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    for funcs in salt.utils.boto3.paged_call(conn.list_functions):
+    for funcs in __utils__['boto3.paged_call'](conn.list_functions):
         for func in funcs['Functions']:
             if func['FunctionName'] == name:
                 return func
@@ -159,7 +151,7 @@ def _find_function(name,
 
 
 def function_exists(FunctionName, region=None, key=None,
-           keyid=None, profile=None):
+                    keyid=None, profile=None):
     '''
     Given a function name, check to see if the given function name exists.
 
@@ -176,10 +168,10 @@ def function_exists(FunctionName, region=None, key=None,
 
     try:
         func = _find_function(FunctionName,
-                             region=region, key=key, keyid=keyid, profile=profile)
+                              region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(func)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
@@ -197,17 +189,45 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 
 def _filedata(infile):
-    with salt.utils.fopen(infile, 'rb') as f:
+    with salt.utils.files.fopen(infile, 'rb') as f:
         return f.read()
+
+
+def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
+    if isinstance(conf, six.string_types):
+        conf = salt.utils.json.loads(conf)
+    if not conf:
+        return None
+    if not isinstance(conf, dict):
+        raise SaltInvocationError('VpcConfig must be a dict.')
+    sns = [__salt__['boto_vpc.get_resource_id']('subnet', s, region=region, key=key,
+            keyid=keyid, profile=profile).get('id') for s in conf.pop('SubnetNames', [])]
+    sgs = [__salt__['boto_secgroup.get_group_id'](s, region=region, key=key, keyid=keyid,
+            profile=profile) for s in conf.pop('SecurityGroupNames', [])]
+    conf.setdefault('SubnetIds', []).extend(sns)
+    conf.setdefault('SecurityGroupIds', []).extend(sgs)
+    return conf
 
 
 def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
                     S3Bucket=None, S3Key=None, S3ObjectVersion=None,
                     Description="", Timeout=3, MemorySize=128, Publish=False,
                     WaitForRole=False, RoleRetries=5,
-            region=None, key=None, keyid=None, profile=None, VpcConfig=None):
+                    region=None, key=None, keyid=None, profile=None,
+                    VpcConfig=None, Environment=None):
     '''
     Given a valid config, create a function.
+
+    Environment
+        The parent object that contains your environment's configuration
+        settings.  This is a dictionary of the form:
+        {
+            'Variables': {
+                'VariableName': 'VariableValue'
+            }
+        }
+
+        .. versionadded:: 2017.7.0
 
     Returns {created: true} if the function was created and returns
     {created: False} if the function was not created.
@@ -220,29 +240,32 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
 
     '''
 
-    role_arn = _get_role_arn(Role, region=region, key=key, keyid=keyid, profile=profile)
+    role_arn = _get_role_arn(Role, region=region, key=key,
+                             keyid=keyid, profile=profile)
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if ZipFile:
             if S3Bucket or S3Key or S3ObjectVersion:
                 raise SaltInvocationError('Either ZipFile must be specified, or '
-                                'S3Bucket and S3Key must be provided.')
+                                          'S3Bucket and S3Key must be provided.')
             code = {
-               'ZipFile': _filedata(ZipFile),
+                'ZipFile': _filedata(ZipFile),
             }
         else:
             if not S3Bucket or not S3Key:
                 raise SaltInvocationError('Either ZipFile must be specified, or '
-                                'S3Bucket and S3Key must be provided.')
+                                          'S3Bucket and S3Key must be provided.')
             code = {
-               'S3Bucket': S3Bucket,
-               'S3Key': S3Key,
+                'S3Bucket': S3Bucket,
+                'S3Key': S3Key,
             }
             if S3ObjectVersion:
                 code['S3ObjectVersion'] = S3ObjectVersion
         kwargs = {}
         if VpcConfig is not None:
-            kwargs['VpcConfig'] = VpcConfig
+            kwargs['VpcConfig'] = _resolve_vpcconfig(VpcConfig, region=region, key=key, keyid=keyid, profile=profile)
+        if Environment is not None:
+            kwargs['Environment'] = Environment
         if WaitForRole:
             retrycount = RoleRetries
         else:
@@ -250,27 +273,29 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
         for retry in range(retrycount, 0, -1):
             try:
                 func = conn.create_function(FunctionName=FunctionName, Runtime=Runtime, Role=role_arn, Handler=Handler,
-                                   Code=code, Description=Description, Timeout=Timeout, MemorySize=MemorySize,
-                                   Publish=Publish, **kwargs)
+                                            Code=code, Description=Description, Timeout=Timeout, MemorySize=MemorySize,
+                                            Publish=Publish, **kwargs)
             except ClientError as e:
                 if retry > 1 and e.response.get('Error', {}).get('Code') == 'InvalidParameterValueException':
-                    log.info('Function not created but IAM role may not have propagated, will retry')
+                    log.info(
+                        'Function not created but IAM role may not have propagated, will retry')
                     # exponential backoff
-                    time.sleep((2 ** (RoleRetries - retry)) + (random.randint(0, 1000) / 1000))
+                    time.sleep((2 ** (RoleRetries - retry)) +
+                               (random.randint(0, 1000) / 1000))
                     continue
                 else:
                     raise
             else:
                 break
         if func:
-            log.info('The newly created function name is {0}'.format(func['FunctionName']))
+            log.info('The newly created function name is %s', func['FunctionName'])
 
             return {'created': True, 'name': func['FunctionName']}
         else:
             log.warning('Function was not created')
             return {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def delete_function(FunctionName, Qualifier=None, region=None, key=None, keyid=None, profile=None):
@@ -291,16 +316,17 @@ def delete_function(FunctionName, Qualifier=None, region=None, key=None, keyid=N
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if Qualifier:
-            conn.delete_function(FunctionName=FunctionName, Qualifier=Qualifier)
+            conn.delete_function(
+                FunctionName=FunctionName, Qualifier=Qualifier)
         else:
             conn.delete_function(FunctionName=FunctionName)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def describe_function(FunctionName, region=None, key=None,
-             keyid=None, profile=None):
+                      keyid=None, profile=None):
     '''
     Given a function name describe its properties.
 
@@ -316,24 +342,36 @@ def describe_function(FunctionName, region=None, key=None,
 
     try:
         func = _find_function(FunctionName,
-                             region=region, key=key, keyid=keyid, profile=profile)
+                              region=region, key=key, keyid=keyid, profile=profile)
         if func:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
-                'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified', 'VpcConfig')
+                    'CodeSize', 'Description', 'Timeout', 'MemorySize',
+                    'FunctionArn', 'LastModified', 'VpcConfig', 'Environment')
             return {'function': dict([(k, func.get(k)) for k in keys])}
         else:
             return {'function': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def update_function_config(FunctionName, Role=None, Handler=None,
-            Description=None, Timeout=None, MemorySize=None,
-            region=None, key=None, keyid=None, profile=None, VpcConfig=None,
-            WaitForRole=False, RoleRetries=5):
+                           Description=None, Timeout=None, MemorySize=None,
+                           region=None, key=None, keyid=None, profile=None,
+                           VpcConfig=None, WaitForRole=False, RoleRetries=5,
+                           Environment=None):
     '''
     Update the named lambda function to the configuration.
+
+    Environment
+        The parent object that contains your environment's configuration
+        settings.  This is a dictionary of the form:
+        {
+            'Variables': {
+                'VariableName': 'VariableValue'
+            }
+        }
+
+        .. versionadded:: 2017.7.0
 
     Returns {updated: true} if the function was updated and returns
     {updated: False} if the function was not updated.
@@ -351,16 +389,18 @@ def update_function_config(FunctionName, Role=None, Handler=None,
                'Description': Description,
                'Timeout': Timeout,
                'MemorySize': MemorySize,
-               'VpcConfig': VpcConfig}
+               'VpcConfig': VpcConfig,
+               'Environment': Environment}
 
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     for val, var in six.iteritems(options):
         if var:
             args[val] = var
     if Role:
-        role_arn = _get_role_arn(Role, region, key, keyid, profile)
-        args['Role'] = role_arn
+        args['Role'] = _get_role_arn(Role, region, key, keyid, profile)
+    if VpcConfig:
+        args['VpcConfig'] = _resolve_vpcconfig(VpcConfig, region=region, key=key, keyid=keyid, profile=profile)
     try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if WaitForRole:
             retrycount = RoleRetries
         else:
@@ -370,9 +410,11 @@ def update_function_config(FunctionName, Role=None, Handler=None,
                 r = conn.update_function_configuration(**args)
             except ClientError as e:
                 if retry > 1 and e.response.get('Error', {}).get('Code') == 'InvalidParameterValueException':
-                    log.info('Function not updated but IAM role may not have propagated, will retry')
+                    log.info(
+                        'Function not updated but IAM role may not have propagated, will retry')
                     # exponential backoff
-                    time.sleep((2 ** (RoleRetries - retry)) + (random.randint(0, 1000) / 1000))
+                    time.sleep((2 ** (RoleRetries - retry)) +
+                               (random.randint(0, 1000) / 1000))
                     continue
                 else:
                     raise
@@ -380,19 +422,19 @@ def update_function_config(FunctionName, Role=None, Handler=None,
                 break
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
-                'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified', 'VpcConfig')
+                    'CodeSize', 'Description', 'Timeout', 'MemorySize',
+                    'FunctionArn', 'LastModified', 'VpcConfig', 'Environment')
             return {'updated': True, 'function': dict([(k, r.get(k)) for k in keys])}
         else:
             log.warning('Function was not updated')
             return {'updated': False}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
-            S3ObjectVersion=None, Publish=False,
-            region=None, key=None, keyid=None, profile=None):
+                         S3ObjectVersion=None, Publish=False,
+                         region=None, key=None, keyid=None, profile=None):
     '''
     Upload the given code to the named lambda function.
 
@@ -412,14 +454,14 @@ def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
         if ZipFile:
             if S3Bucket or S3Key or S3ObjectVersion:
                 raise SaltInvocationError('Either ZipFile must be specified, or '
-                                'S3Bucket and S3Key must be provided.')
+                                          'S3Bucket and S3Key must be provided.')
             r = conn.update_function_code(FunctionName=FunctionName,
-                                   ZipFile=_filedata(ZipFile),
-                                   Publish=Publish)
+                                          ZipFile=_filedata(ZipFile),
+                                          Publish=Publish)
         else:
             if not S3Bucket or not S3Key:
                 raise SaltInvocationError('Either ZipFile must be specified, or '
-                                'S3Bucket and S3Key must be provided.')
+                                          'S3Bucket and S3Key must be provided.')
             args = {
                 'S3Bucket': S3Bucket,
                 'S3Key': S3Key,
@@ -427,17 +469,17 @@ def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
             if S3ObjectVersion:
                 args['S3ObjectVersion'] = S3ObjectVersion
             r = conn.update_function_code(FunctionName=FunctionName,
-                                   Publish=Publish, **args)
+                                          Publish=Publish, **args)
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
-                'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified', 'VpcConfig')
+                    'CodeSize', 'Description', 'Timeout', 'MemorySize',
+                    'FunctionArn', 'LastModified', 'VpcConfig', 'Environment')
             return {'updated': True, 'function': dict([(k, r.get(k)) for k in keys])}
         else:
             log.warning('Function was not updated')
             return {'updated': False}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def add_permission(FunctionName, StatementId, Action, Principal, SourceArn=None,
@@ -464,17 +506,17 @@ def add_permission(FunctionName, StatementId, Action, Principal, SourceArn=None,
         kwargs = {}
         for key in ('SourceArn', 'SourceAccount', 'Qualifier'):
             if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
+                kwargs[key] = str(locals()[key])  # future lint: disable=blacklisted-function
         conn.add_permission(FunctionName=FunctionName, StatementId=StatementId,
-                                   Action=Action, Principal=str(Principal),
-                                   **kwargs)
+                            Action=Action, Principal=str(Principal),  # future lint: disable=blacklisted-function
+                            **kwargs)
         return {'updated': True}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def remove_permission(FunctionName, StatementId, Qualifier=None,
-                   region=None, key=None, keyid=None, profile=None):
+                      region=None, key=None, keyid=None, profile=None):
     '''
     Remove a permission from a lambda function.
 
@@ -495,10 +537,10 @@ def remove_permission(FunctionName, StatementId, Qualifier=None,
         if Qualifier is not None:
             kwargs['Qualifier'] = Qualifier
         conn.remove_permission(FunctionName=FunctionName, StatementId=StatementId,
-                                   **kwargs)
+                               **kwargs)
         return {'updated': True}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def get_permissions(FunctionName, Qualifier=None,
@@ -525,10 +567,10 @@ def get_permissions(FunctionName, Qualifier=None,
         # The get_policy call is not symmetric with add/remove_permissions. So
         # massage it until it is, for better ease of use.
         policy = conn.get_policy(FunctionName=FunctionName,
-                                   **kwargs)
+                                 **kwargs)
         policy = policy.get('Policy', {})
         if isinstance(policy, six.string_types):
-            policy = json.loads(policy)
+            policy = salt.utils.json.loads(policy)
         if policy is None:
             policy = {}
         permissions = {}
@@ -544,20 +586,41 @@ def get_permissions(FunctionName, Qualifier=None,
                 'Principal': principal,
             }
             if 'ArnLike' in condition:
-                permission['SourceArn'] = condition['ArnLike'].get('AWS:SourceArn')
+                permission['SourceArn'] = condition[
+                    'ArnLike'].get('AWS:SourceArn')
             if 'StringEquals' in condition:
-                permission['SourceAccount'] = condition['StringEquals'].get('AWS:SourceAccount')
+                permission['SourceAccount'] = condition[
+                    'StringEquals'].get('AWS:SourceAccount')
             permissions[statement.get('Sid')] = permission
         return {'permissions': permissions}
     except ClientError as e:
-        err = salt.utils.boto3.get_error(e)
+        err = __utils__['boto3.get_error'](e)
         if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
             return {'permissions': None}
         return {'permissions': None, 'error': err}
 
 
+def list_functions(region=None, key=None, keyid=None, profile=None):
+    '''
+    List all Lambda functions visible in the current scope.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.list_functions
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    ret = []
+    for funcs in __utils__['boto3.paged_call'](conn.list_functions):
+        ret += funcs['Functions']
+    return ret
+
+
 def list_function_versions(FunctionName,
-            region=None, key=None, keyid=None, profile=None):
+                           region=None, key=None, keyid=None, profile=None):
     '''
     List the versions available for the given function.
 
@@ -575,18 +638,18 @@ def list_function_versions(FunctionName,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vers = []
-        for ret in salt.utils.boto3.paged_call(conn.list_versions_by_function,
-                                 FunctionName=FunctionName):
+        for ret in __utils__['boto3.paged_call'](conn.list_versions_by_function,
+                                                 FunctionName=FunctionName):
             vers.extend(ret['Versions'])
         if not bool(vers):
             log.warning('No versions found')
         return {'Versions': vers}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_alias(FunctionName, Name, FunctionVersion, Description="",
-            region=None, key=None, keyid=None, profile=None):
+                 region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid config, create an alias to a function.
 
@@ -603,16 +666,16 @@ def create_alias(FunctionName, Name, FunctionVersion, Description="",
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         alias = conn.create_alias(FunctionName=FunctionName, Name=Name,
-                                   FunctionVersion=FunctionVersion, Description=Description)
+                                  FunctionVersion=FunctionVersion, Description=Description)
         if alias:
-            log.info('The newly created alias name is {0}'.format(alias['Name']))
+            log.info('The newly created alias name is %s', alias['Name'])
 
             return {'created': True, 'name': alias['Name']}
         else:
             log.warning('Alias was not created')
             return {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def delete_alias(FunctionName, Name, region=None, key=None, keyid=None, profile=None):
@@ -635,12 +698,11 @@ def delete_alias(FunctionName, Name, region=None, key=None, keyid=None, profile=
         conn.delete_alias(FunctionName=FunctionName, Name=Name)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def _find_alias(FunctionName, Name, FunctionVersion=None,
-               region=None, key=None, keyid=None, profile=None):
-
+                region=None, key=None, keyid=None, profile=None):
     '''
     Given function name and alias name, find and return matching alias information.
     '''
@@ -652,7 +714,7 @@ def _find_alias(FunctionName, Name, FunctionVersion=None,
     if FunctionVersion:
         args['FunctionVersion'] = FunctionVersion
 
-    for aliases in salt.utils.boto3.paged_call(conn.list_aliases, **args):
+    for aliases in __utils__['boto3.paged_call'](conn.list_aliases, **args):
         for alias in aliases.get('Aliases'):
             if alias['Name'] == Name:
                 return alias
@@ -660,7 +722,7 @@ def _find_alias(FunctionName, Name, FunctionVersion=None,
 
 
 def alias_exists(FunctionName, Name, region=None, key=None,
-           keyid=None, profile=None):
+                 keyid=None, profile=None):
     '''
     Given a function name and alias name, check to see if the given alias exists.
 
@@ -677,14 +739,14 @@ def alias_exists(FunctionName, Name, region=None, key=None,
 
     try:
         alias = _find_alias(FunctionName, Name,
-                             region=region, key=key, keyid=keyid, profile=profile)
+                            region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(alias)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def describe_alias(FunctionName, Name, region=None, key=None,
-             keyid=None, profile=None):
+                   keyid=None, profile=None):
     '''
     Given a function name and alias name describe the properties of the alias.
 
@@ -700,18 +762,18 @@ def describe_alias(FunctionName, Name, region=None, key=None,
 
     try:
         alias = _find_alias(FunctionName, Name,
-                             region=region, key=key, keyid=keyid, profile=profile)
+                            region=region, key=key, keyid=keyid, profile=profile)
         if alias:
             keys = ('AliasArn', 'Name', 'FunctionVersion', 'Description')
             return {'alias': dict([(k, alias.get(k)) for k in keys])}
         else:
             return {'alias': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def update_alias(FunctionName, Name, FunctionVersion=None, Description=None,
-            region=None, key=None, keyid=None, profile=None):
+                 region=None, key=None, keyid=None, profile=None):
     '''
     Update the named alias to the configuration.
 
@@ -741,12 +803,12 @@ def update_alias(FunctionName, Name, FunctionVersion=None, Description=None,
             log.warning('Alias was not updated')
             return {'updated': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def create_event_source_mapping(EventSourceArn, FunctionName, StartingPosition,
-            Enabled=True, BatchSize=100,
-            region=None, key=None, keyid=None, profile=None):
+                                Enabled=True, BatchSize=100,
+                                region=None, key=None, keyid=None, profile=None):
     '''
     Identifies a stream as an event source for a Lambda function. It can be
     either an Amazon Kinesis stream or an Amazon DynamoDB stream. AWS Lambda
@@ -770,18 +832,18 @@ def create_event_source_mapping(EventSourceArn, FunctionName, StartingPosition,
                                                BatchSize=BatchSize,
                                                StartingPosition=StartingPosition)
         if obj:
-            log.info('The newly created event source mapping ID is {0}'.format(obj['UUID']))
+            log.info('The newly created event source mapping ID is %s', obj['UUID'])
 
             return {'created': True, 'id': obj['UUID']}
         else:
             log.warning('Event source mapping was not created')
             return {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def get_event_source_mapping_ids(EventSourceArn, FunctionName,
-           region=None, key=None, keyid=None, profile=None):
+                                 region=None, key=None, keyid=None, profile=None):
     '''
     Given an event source and function name, return a list of mapping IDs
 
@@ -796,29 +858,30 @@ def get_event_source_mapping_ids(EventSourceArn, FunctionName,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         mappings = []
-        for maps in salt.utils.boto3.paged_call(conn.list_event_source_mappings,
-                                               EventSourceArn=EventSourceArn,
-                                               FunctionName=FunctionName):
-            mappings.extend([mapping['UUID'] for mapping in maps['EventSourceMappings']])
+        for maps in __utils__['boto3.paged_call'](conn.list_event_source_mappings,
+                                                   EventSourceArn=EventSourceArn,
+                                                   FunctionName=FunctionName):
+            mappings.extend([mapping['UUID']
+                             for mapping in maps['EventSourceMappings']])
         return mappings
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def _get_ids(UUID=None, EventSourceArn=None, FunctionName=None,
-                                region=None, key=None, keyid=None, profile=None):
+             region=None, key=None, keyid=None, profile=None):
     if UUID:
         if EventSourceArn or FunctionName:
             raise SaltInvocationError('Either UUID must be specified, or '
-                                'EventSourceArn and FunctionName must be provided.')
+                                      'EventSourceArn and FunctionName must be provided.')
         return [UUID]
     else:
         if not EventSourceArn or not FunctionName:
             raise SaltInvocationError('Either UUID must be specified, or '
-                                'EventSourceArn and FunctionName must be provided.')
+                                      'EventSourceArn and FunctionName must be provided.')
         return get_event_source_mapping_ids(EventSourceArn=EventSourceArn,
                                             FunctionName=FunctionName,
-                       region=region, key=key, keyid=keyid, profile=profile)
+                                            region=region, key=key, keyid=keyid, profile=profile)
 
 
 def delete_event_source_mapping(UUID=None, EventSourceArn=None, FunctionName=None,
@@ -838,19 +901,19 @@ def delete_event_source_mapping(UUID=None, EventSourceArn=None, FunctionName=Non
 
     '''
     ids = _get_ids(UUID, EventSourceArn=EventSourceArn,
-                         FunctionName=FunctionName)
+                   FunctionName=FunctionName)
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         for id in ids:
             conn.delete_event_source_mapping(UUID=id)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def event_source_mapping_exists(UUID=None, EventSourceArn=None,
-           FunctionName=None,
-           region=None, key=None, keyid=None, profile=None):
+                                FunctionName=None,
+                                region=None, key=None, keyid=None, profile=None):
     '''
     Given an event source mapping ID or an event source ARN and FunctionName,
     check whether the mapping exists.
@@ -877,8 +940,8 @@ def event_source_mapping_exists(UUID=None, EventSourceArn=None,
 
 
 def describe_event_source_mapping(UUID=None, EventSourceArn=None,
-           FunctionName=None,
-           region=None, key=None, keyid=None, profile=None):
+                                  FunctionName=None,
+                                  region=None, key=None, keyid=None, profile=None):
     '''
     Given an event source mapping ID or an event source ARN and FunctionName,
     obtain the current settings of that mapping.
@@ -894,7 +957,7 @@ def describe_event_source_mapping(UUID=None, EventSourceArn=None,
     '''
 
     ids = _get_ids(UUID, EventSourceArn=EventSourceArn,
-                         FunctionName=FunctionName)
+                   FunctionName=FunctionName)
     if len(ids) < 1:
         return {'event_source_mapping': None}
 
@@ -910,12 +973,12 @@ def describe_event_source_mapping(UUID=None, EventSourceArn=None,
         else:
             return {'event_source_mapping': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def update_event_source_mapping(UUID,
-            FunctionName=None, Enabled=None, BatchSize=None,
-            region=None, key=None, keyid=None, profile=None):
+                                FunctionName=None, Enabled=None, BatchSize=None,
+                                region=None, key=None, keyid=None, profile=None):
     '''
     Update the event source mapping identified by the UUID.
 
@@ -949,4 +1012,4 @@ def update_event_source_mapping(UUID,
             log.warning('Mapping was not updated')
             return {'updated': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}

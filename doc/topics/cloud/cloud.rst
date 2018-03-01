@@ -119,7 +119,7 @@ manager. These do not need to be handled by the developer in the cloud module.
 The ``salt.utils.cloud.validate_windows_cred()`` function has been extended to
 take the number of retries and retry_delay parameters in case a specific cloud
 host has a delay between providing the Windows credentials and the
-credentials being available for use.  In their ``create()`` function, or as a
+credentials being available for use.  In their ``create()`` function, or as
 a sub-function called during the creation process, developers should use the
 ``win_deploy_auth_retries`` and ``win_deploy_auth_retry_delay`` parameters from
 the provider configuration to allow the end-user the ability to customize the
@@ -146,24 +146,24 @@ library. The following two lines set up the imports:
 .. code-block:: python
 
     from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-    from salt.utils import namespaced_function
+    import salt.utils.functools
 
 And then a series of declarations will make the necessary functions available
 within the cloud module.
 
 .. code-block:: python
 
-    get_size = namespaced_function(get_size, globals())
-    get_image = namespaced_function(get_image, globals())
-    avail_locations = namespaced_function(avail_locations, globals())
-    avail_images = namespaced_function(avail_images, globals())
-    avail_sizes = namespaced_function(avail_sizes, globals())
-    script = namespaced_function(script, globals())
-    destroy = namespaced_function(destroy, globals())
-    list_nodes = namespaced_function(list_nodes, globals())
-    list_nodes_full = namespaced_function(list_nodes_full, globals())
-    list_nodes_select = namespaced_function(list_nodes_select, globals())
-    show_instance = namespaced_function(show_instance, globals())
+    get_size = salt.utils.functools.namespaced_function(get_size, globals())
+    get_image = salt.utils.functools.namespaced_function(get_image, globals())
+    avail_locations = salt.utils.functools.namespaced_function(avail_locations, globals())
+    avail_images = salt.utils.functools.namespaced_function(avail_images, globals())
+    avail_sizes = salt.utils.functools.namespaced_function(avail_sizes, globals())
+    script = salt.utils.functools.namespaced_function(script, globals())
+    destroy = salt.utils.functools.namespaced_function(destroy, globals())
+    list_nodes = salt.utils.functools.namespaced_function(list_nodes, globals())
+    list_nodes_full = salt.utils.functools.namespaced_function(list_nodes_full, globals())
+    list_nodes_select = salt.utils.functools.namespaced_function(list_nodes_select, globals())
+    show_instance = salt.utils.functools.namespaced_function(show_instance, globals())
 
 If necessary, these functions may be replaced by removing the appropriate
 declaration line, and then adding the function as normal.
@@ -183,7 +183,7 @@ imports should be absent from the Salt Cloud module.
 
 A good example of a non-libcloud driver is the DigitalOcean driver:
 
-https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/digital_ocean.py
+https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/digitalocean.py
 
 The ``create()`` Function
 -------------------------

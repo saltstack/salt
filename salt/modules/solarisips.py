@@ -36,14 +36,15 @@ Or you can override it globally by setting the :conf_minion:`providers` paramete
 
 '''
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.functools
+import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
 
@@ -56,9 +57,9 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris 11
     '''
-    if __grains__['os'] == 'Solaris' \
+    if __grains__['os_family'] == 'Solaris' \
             and float(__grains__['kernelrelease']) > 5.10 \
-            and salt.utils.which('pkg'):
+            and salt.utils.path.which('pkg'):
         return __virtualname__
     return (False,
             'The solarisips execution module failed to load: only available '
@@ -139,7 +140,7 @@ def upgrade_available(name):
         salt '*' pkg.upgrade_available apache-22
     '''
     version = None
-    cmd = 'pkg list -Huv {0}'.format(name)
+    cmd = ['pkg', 'list', '-Huv', name]
     lines = __salt__['cmd.run_stdout'](cmd).splitlines()
     if not lines:
         return {}
@@ -149,7 +150,7 @@ def upgrade_available(name):
     return ret
 
 
-def list_upgrades(refresh=False, **kwargs):  # pylint: disable=W0613
+def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     '''
     Lists all packages available for update.
 
@@ -163,17 +164,24 @@ def list_upgrades(refresh=False, **kwargs):  # pylint: disable=W0613
     in the list of upgrades, then the global zone should be updated to get all
     possible updates. Use ``refresh=True`` to refresh the package database.
 
-    refresh : False
-        Set to ``True`` to force a full pkg DB refresh before listing
+    refresh : True
+        Runs a full package database refresh before listing. Set to ``False`` to
+        disable running the refresh.
+
+        .. versionchanged:: 2017.7.0
+
+        In previous versions of Salt, ``refresh`` defaulted to ``False``. This was
+        changed to default to ``True`` in the 2017.7.0 release to make the behavior
+        more consistent with the other package modules, which all default to ``True``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.list_upgrades
-        salt '*' pkg.list_upgrades refresh=True
+        salt '*' pkg.list_upgrades refresh=False
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db(full=True)
     upgrades = {}
     # awk is in core-os package so we can use it without checking
@@ -207,7 +215,7 @@ def upgrade(refresh=False, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     # Get a list of the packages before install so we can diff after to see
@@ -222,7 +230,7 @@ def upgrade(refresh=False, **kwargs):
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -248,7 +256,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
         for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -290,16 +298,15 @@ def version(*names, **kwargs):
         salt '*' pkg_resource.version pkg://solaris/entire
 
     '''
-    namelist = ''
-    for pkgname in names:
-        namelist += '{0} '.format(pkgname)
-    cmd = '/bin/pkg list -Hv {0}'.format(namelist)
-    lines = __salt__['cmd.run_stdout'](cmd).splitlines()
-    ret = {}
-    for line in lines:
-        ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
-    if ret:
-        return ret
+    if names:
+        cmd = ['/bin/pkg', 'list', '-Hv']
+        cmd.extend(names)
+        lines = __salt__['cmd.run_stdout'](cmd).splitlines()
+        ret = {}
+        for line in lines:
+            ret[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
+        if ret:
+            return ret
     return ''
 
 
@@ -316,7 +323,7 @@ def latest_version(name, **kwargs):
 
         salt '*' pkg.latest_version pkg://solaris/entire
     '''
-    cmd = '/bin/pkg list -Hnv {0}'.format(name)
+    cmd = ['/bin/pkg', 'list', '-Hnv', name]
     lines = __salt__['cmd.run_stdout'](cmd).splitlines()
     ret = {}
     for line in lines:
@@ -326,7 +333,7 @@ def latest_version(name, **kwargs):
     return ''
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def get_fmri(name, **kwargs):
@@ -343,7 +350,7 @@ def get_fmri(name, **kwargs):
     if name.startswith('pkg://'):
         # already full fmri
         return name
-    cmd = '/bin/pkg list -aHv {0}'.format(name)
+    cmd = ['/bin/pkg', 'list', '-aHv', name]
     # there can be more packages matching the name
     lines = __salt__['cmd.run_stdout'](cmd).splitlines()
     if not lines:
@@ -371,7 +378,7 @@ def normalize_name(name, **kwargs):
     if name.startswith('pkg://'):
         # already full fmri
         return name
-    cmd = '/bin/pkg list -aHv {0}'.format(name)
+    cmd = ['/bin/pkg', 'list', '-aHv', name]
     # there can be more packages matching the name
     lines = __salt__['cmd.run_stdout'](cmd).splitlines()
     # if we get more lines, it's multiple match (name not unique)
@@ -396,7 +403,7 @@ def is_installed(name, **kwargs):
         salt '*' pkg.is_installed bash
     '''
 
-    cmd = '/bin/pkg list -Hv {0}'.format(name)
+    cmd = ['/bin/pkg', 'list', '-Hv', name]
     return __salt__['cmd.retcode'](cmd) == 0
 
 
@@ -414,8 +421,8 @@ def search(name, versions_as_list=False, **kwargs):
     '''
 
     ret = {}
-    cmd = '/bin/pkg list -aHv {0}'.format(name)
-    out = __salt__['cmd.run_all'](cmd)
+    cmd = ['/bin/pkg', 'list', '-aHv', name]
+    out = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
     if out['retcode'] != 0:
         # error = nothing found
         return {}
@@ -472,11 +479,8 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
                                               list(pkg.items())[0][1])
             else:
                 pkg2inst += '{0} '.format(list(pkg.items())[0][0])
-        log.debug(
-            'Installing these packages instead of {0}: {1}'.format(
-                name, pkg2inst
-            )
-        )
+        log.debug('Installing these packages instead of %s: %s',
+                  name, pkg2inst)
 
     else:   # install single package
         if version:
@@ -484,9 +488,9 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         else:
             pkg2inst = "{0}".format(name)
 
-    cmd = 'pkg install -v --accept '
+    cmd = ['pkg', 'install', '-v', '--accept']
     if test:
-        cmd += '-n '
+        cmd.append('-n')
 
     # Get a list of the packages before install so we can diff after to see
     # what got installed.
@@ -494,14 +498,14 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
     # Install or upgrade the package
     # If package is already installed
-    cmd += '{0}'.format(pkg2inst)
+    cmd.append(pkg2inst)
 
     out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
     # Get a list of the packages again, including newly installed ones.
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if out['retcode'] != 0:
         raise CommandExecutionError(
@@ -547,29 +551,24 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove pkg://solaris/shell/tcsh
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pkg2rm = ''
-    if pkgs:    # multiple packages specified
-        for pkg in pkgs:
-            pkg2rm += '{0} '.format(pkg)
-        log.debug(
-            'Installing these packages instead of {0}: {1}'.format(
-                name, pkg2rm
-            )
-        )
-    else:   # remove single package
-        pkg2rm = '{0}'.format(name)
+    targets = salt.utils.args.split_input(pkgs) if pkgs else [name]
+    if not targets:
+        return {}
+
+    if pkgs:
+        log.debug('Removing these packages instead of %s: %s', name, targets)
 
     # Get a list of the currently installed pkgs.
     old = list_pkgs()
 
     # Remove the package(s)
-    cmd = '/bin/pkg uninstall -v {0}'.format(pkg2rm)
+    cmd = ['/bin/pkg', 'uninstall', '-v'] + targets
     out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
     # Get a list of the packages after the uninstall
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if out['retcode'] != 0:
         raise CommandExecutionError(

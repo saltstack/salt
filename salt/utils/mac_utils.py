@@ -3,7 +3,7 @@
 Helper functions for use by mac modules
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Python Libraries
 import logging
@@ -12,7 +12,9 @@ import os
 import time
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.args
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.timed_subprocess
 import salt.grains.extra
 from salt.ext import six
@@ -21,6 +23,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError,\
 
 # Import Third Party Libs
 from salt.ext.six.moves import range
+from salt.ext import six
 
 DEFAULT_SHELL = salt.grains.extra.shell()['shell']
 
@@ -34,7 +37,7 @@ def __virtual__():
     '''
     Load only on Mac OS
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return (False, 'The mac_utils utility could not be loaded: '
                        'utility only works on MacOS systems.')
 
@@ -51,11 +54,11 @@ def _run_all(cmd):
 
     '''
     if not isinstance(cmd, list):
-        cmd = salt.utils.shlex_split(cmd, posix=False)
+        cmd = salt.utils.args.shlex_split(cmd, posix=False)
 
     for idx, item in enumerate(cmd):
         if not isinstance(cmd[idx], six.string_types):
-            cmd[idx] = str(cmd[idx])
+            cmd[idx] = six.text_type(cmd[idx])
 
     cmd = ' '.join(cmd)
 
@@ -86,7 +89,7 @@ def _run_all(cmd):
     try:
         proc.run()
     except TimedProcTimeoutError as exc:
-        ret['stdout'] = str(exc)
+        ret['stdout'] = six.text_type(exc)
         ret['stderr'] = ''
         ret['retcode'] = 1
         ret['pid'] = proc.process.pid
@@ -95,9 +98,9 @@ def _run_all(cmd):
     out, err = proc.stdout, proc.stderr
 
     if out is not None:
-        out = salt.utils.to_str(out).rstrip()
+        out = salt.utils.stringutils.to_str(out).rstrip()
     if err is not None:
-        err = salt.utils.to_str(err).rstrip()
+        err = salt.utils.stringutils.to_str(err).rstrip()
 
     ret['pid'] = proc.process.pid
     ret['retcode'] = proc.process.returncode
@@ -190,7 +193,7 @@ def validate_enabled(enabled):
     :return: "on" or "off" or errors
     :rtype: str
     '''
-    if isinstance(enabled, str):
+    if isinstance(enabled, six.string_types):
         if enabled.lower() not in ['on', 'off', 'yes', 'no']:
             msg = '\nMac Power: Invalid String Value for Enabled.\n' \
                   'String values must be \'on\' or \'off\'/\'yes\' or \'no\'.\n' \

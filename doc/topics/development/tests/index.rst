@@ -85,8 +85,8 @@ the lines below, depending on the relevant Python version:
 
 .. code-block:: bash
 
-    pip install -r requirements/dev_python26.txt
     pip install -r requirements/dev_python27.txt
+    pip install -r requirements/dev_python34.txt
 
 To be able to run integration tests which utilizes ZeroMQ transport, you also
 need to install additional requirements for it. Make sure you have installed
@@ -219,7 +219,7 @@ the default cloud provider configuration file for DigitalOcean looks like this:
 .. code-block:: yaml
 
     digitalocean-config:
-      driver: digital_ocean
+      driver: digitalocean
       client_key: ''
       api_key: ''
       location: New York 1
@@ -230,7 +230,7 @@ must be provided:
 .. code-block:: yaml
 
     digitalocean-config:
-      driver: digital_ocean
+      driver: digitalocean
       client_key: wFGEwgregeqw3435gDger
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       location: New York 1
@@ -423,3 +423,40 @@ question if the path forward is unclear.
     there may be new functionality in the file that is present in the new release branch
     that is untested.It would be wise to see if new functionality could use additional
     testing once the test file has propagated to newer release branches.
+
+
+Test Helpers
+------------
+
+Several Salt-specific helpers are available. A full list is available by inspecting
+functions exported in `tests.support.helpers`.
+
+`@expensiveTest` -- Designates a test which typically requires a relatively costly
+external resource, like a cloud virtual machine. This decorator is not normally
+used by developers outside of the Salt core team.
+
+`@destructiveTest` -- Marks a test as potentially destructive. It will not be run
+by the test runner unles the ``-run-destructive`` test is expressly passed.
+
+`@requires_network` -- Requires a network connection for the test to operate
+successfully. If a network connection is not detected, the test will not run.
+
+`@requires_salt_modules` -- Requires all the modules in a list of modules in
+order for the test to be executed. Otherwise, the test is skipped.
+
+`@requires_system_grains` -- Loads and passes the grains on the system as an
+keyword argument to the test function with the name `grains`. 
+    
+`@skip_if_binaries_missing(['list', 'of', 'binaries'])` -- If called from inside a test,
+the test will be skipped if the binaries are not all present on the system.
+
+`@skip_if_not_root` -- If the test is not executed as root, it will be skipped.
+
+`@with_system_user` -- Creates and optionally destroys a system user within a test case.
+See implementation details in `tests.support.helpers` for details.
+
+`@with_system_group` -- Creates and optionally destroys a system group within a test case.
+See implementation details in `tests.support.helpers` for details.
+
+`@with_system_user_and_group` -- Creates and optionally destroys a system user and group
+within a test case.  See implementation details in `tests.support.helpers` for details.

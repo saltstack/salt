@@ -9,19 +9,16 @@ Please read :ref:`core config documentation <config_lxc>`.
 '''
 
 # Import python libs
-from __future__ import absolute_import
-import json
-import os
-import logging
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
+import logging
+import os
+import pprint
 import time
-from pprint import pformat
-
-# Import salt libs
-import salt.utils
 
 # Import salt cloud libs
 import salt.utils.cloud
+import salt.utils.json
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 
@@ -30,7 +27,7 @@ import salt.runner
 
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -76,11 +73,14 @@ def _minion_opts(cfg='minion'):
 
 
 def _master_opts(cfg='master'):
+    if 'conf_file' in __opts__:
+        default_dir = os.path.dirname(__opts__['conf_file'])
+    else:
+        default_dir = __opts__['config_dir'],
     cfg = os.environ.get(
-        'SALT_MASTER_CONFIG',
-        __opts__.get('conf_file',
-                     os.path.join(__opts__['config_dir'], cfg)))
+        'SALT_MASTER_CONFIG', os.path.join(default_dir, cfg))
     opts = config.master_config(cfg)
+    opts['output'] = 'quiet'
     return opts
 
 
@@ -137,15 +137,15 @@ def _salt(fun, *args, **kw):
         cache = True
         laps = laps // __CACHED_FUNS[fun]
     try:
-        sargs = json.dumps(args)
+        sargs = salt.utils.json.dumps(args)
     except TypeError:
         sargs = ''
     try:
-        skw = json.dumps(kw)
+        skw = salt.utils.json.dumps(kw)
     except TypeError:
         skw = ''
     try:
-        skwargs = json.dumps(kwargs)
+        skwargs = salt.utils.json.dumps(kwargs)
     except TypeError:
         skwargs = ''
     cache_key = (laps, target, fun, sargs, skw, skwargs)
@@ -154,8 +154,8 @@ def _salt(fun, *args, **kw):
         runner = _runner()
         rkwargs = kwargs.copy()
         rkwargs['timeout'] = timeout
-        rkwargs.setdefault('expr_form', 'list')
-        kwargs.setdefault('expr_form', 'list')
+        rkwargs.setdefault('tgt_type', 'list')
+        kwargs.setdefault('tgt_type', 'list')
         ping_retries = 0
         # the target(s) have environ one minute to respond
         # we call 60 ping request, this prevent us
@@ -185,7 +185,7 @@ def _salt(fun, *args, **kw):
             except Exception:
                 ping = False
                 ping_retries += 1
-                log.error('{0} unreachable, retrying'.format(target))
+                log.error('%s unreachable, retrying', target)
         if not ping:
             raise SaltCloudSystemExit('Target {0} unreachable'.format(target))
         jid = conn.cmd_async(tgt=target,
@@ -213,7 +213,7 @@ def _salt(fun, *args, **kw):
                 break
             if running and (time.time() > endto):
                 raise Exception('Timeout {0}s for {1} is elapsed'.format(
-                    timeout, pformat(rkwargs)))
+                    timeout, pprint.pformat(rkwargs)))
             time.sleep(poll)
         # timeout for the master to return data about a specific job
         wait_for_res = float({
@@ -434,25 +434,21 @@ def create(vm_, call=None):
         'lxc_profile',
         vm_.get('container_profile', None))
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
+    event_data = vm_.copy()
+    event_data['profile'] = profile
 
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': profile,
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', event_data, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport'])
+        transport=__opts__['transport']
+    )
+
     ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
     if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-        log.debug('Generating minion keys for {0}'.format(vm_['name']))
+        log.debug('Generating minion keys for %s', vm_['name'])
         vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
             salt.config.get_cloud_config_value(
                 'keysize', vm_, __opts__))
@@ -460,6 +456,16 @@ def create(vm_, call=None):
     kwarg = copy.deepcopy(vm_)
     kwarg['host'] = prov['target']
     kwarg['profile'] = profile
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
     cret = _runner().cmd('lxc.cloud_init', [vm_['name']], kwarg=kwarg)
     ret['runner_return'] = cret
     ret['result'] = cret['result']
@@ -483,11 +489,7 @@ def create(vm_, call=None):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -558,9 +560,11 @@ def get_configured_provider(vm_=None):
     # in all cases, verify that the linked saltmaster is alive.
     if data:
         ret = _salt('test.ping', salt_target=data['target'])
-        if not ret:
-            raise SaltCloudSystemExit(
-                'Configured provider {0} minion: {1} is unreachable'.format(
-                    __active_provider_name__, data['target']))
-        return data
+        if ret:
+            return data
+        else:
+            log.error(
+                'Configured provider %s minion: %s is unreachable',
+                __active_provider_name__, data['target']
+            )
     return False

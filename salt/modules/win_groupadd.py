@@ -8,10 +8,11 @@ Manage groups on Windows
     *'group.info' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
+import salt.utils.win_functions
 
 
 try:
@@ -30,14 +31,76 @@ def __virtual__():
     '''
     Set the group module if the kernel is Windows
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES:
+    if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
         return __virtualname__
     return (False, "Module win_groupadd: module only works on Windows systems")
 
 
-def add(name, gid=None, system=False):
+def _get_computer_object():
+    '''
+    A helper function to get the object for the local machine
+
+    Returns:
+        object: Returns the computer object for the local machine
+    '''
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+    return nt.GetObject('', 'WinNT://.,computer')
+
+
+def _get_group_object(name):
+    '''
+    A helper function to get a specified group object
+
+    Args:
+
+        name (str): The name of the object
+
+    Returns:
+        object: The specified group object
+    '''
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+    return nt.GetObject('', 'WinNT://./' + name + ',group')
+
+
+def _get_all_groups():
+    '''
+    A helper function that gets a list of group objects for all groups on the
+    machine
+
+    Returns:
+        iter: A list of objects for all groups on the machine
+    '''
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+    results = nt.GetObject('', 'WinNT://.')
+    results.Filter = ['group']
+    return results
+
+
+def _get_username(member):
+    '''
+    Resolve the username from the member object returned from a group query
+
+    Returns:
+        str: The username converted to domain\\username format
+    '''
+    return member.ADSPath.replace('WinNT://', '').replace(
+        '/', '\\').encode('ascii', 'backslashreplace')
+
+
+def add(name, **kwargs):
     '''
     Add the specified group
+
+    Args:
+
+        name (str):
+            The name of the group to add
+
+    Returns:
+        dict: A dictionary of results
 
     CLI Example:
 
@@ -51,34 +114,35 @@ def add(name, gid=None, system=False):
            'comment': ''}
 
     if not info(name):
-        pythoncom.CoInitialize()
-        nt = win32com.client.Dispatch('AdsNameSpaces')
+        compObj = _get_computer_object()
         try:
-            compObj = nt.GetObject('', 'WinNT://.,computer')
             newGroup = compObj.Create('group', name)
             newGroup.SetInfo()
-            ret['changes'].append((
-                    'Successfully created group {0}'
-                    ).format(name))
+            ret['changes'].append('Successfully created group {0}'.format(name))
         except pywintypes.com_error as com_err:
             ret['result'] = False
             if len(com_err.excepinfo) >= 2:
                 friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-            ret['comment'] = (
-                    'Failed to create group {0}.  {1}'
-                    ).format(name, friendly_error)
+            ret['comment'] = 'Failed to create group {0}. {1}' \
+                             ''.format(name, friendly_error)
     else:
         ret['result'] = None
-        ret['comment'] = (
-                'The group {0} already exists.'
-                ).format(name)
+        ret['comment'] = 'The group {0} already exists.'.format(name)
 
     return ret
 
 
-def delete(name):
+def delete(name, **kwargs):
     '''
     Remove the named group
+
+    Args:
+
+        name (str):
+            The name of the group to remove
+
+    Returns:
+        dict: A dictionary of results
 
     CLI Example:
 
@@ -92,10 +156,8 @@ def delete(name):
            'comment': ''}
 
     if info(name):
-        pythoncom.CoInitialize()
-        nt = win32com.client.Dispatch('AdsNameSpaces')
+        compObj = _get_computer_object()
         try:
-            compObj = nt.GetObject('', 'WinNT://.,computer')
             compObj.Delete('group', name)
             ret['changes'].append(('Successfully removed group {0}').format(name))
         except pywintypes.com_error as com_err:
@@ -118,23 +180,24 @@ def info(name):
     '''
     Return information about a group
 
+    Args:
+
+        name (str):
+            The name of the group for which to get information
+
+    Returns:
+        dict: A dictionary of information about the group
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.info foo
     '''
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-
     try:
-        groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
+        groupObj = _get_group_object(name)
         gr_name = groupObj.Name
-        gr_mem = []
-        for member in groupObj.members():
-            gr_mem.append(
-                    member.ADSPath.replace('WinNT://', '').replace(
-                    '/', '\\').encode('ascii', 'backslashreplace'))
+        gr_mem = [_get_username(x) for x in groupObj.members()]
     except pywintypes.com_error:
         return False
 
@@ -151,6 +214,17 @@ def getent(refresh=False):
     '''
     Return info on all groups
 
+    Args:
+
+        refresh (bool):
+            Refresh the info for all groups in ``__context__``. If False only
+            the groups in ``__context__`` wil be returned. If True the
+            ``__context__`` will be refreshed with current data and returned.
+            Default is False
+
+    Returns:
+        A list of groups and their information
+
     CLI Example:
 
     .. code-block:: bash
@@ -162,36 +236,38 @@ def getent(refresh=False):
 
     ret = []
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
+    results = _get_all_groups()
 
-    results = nt.GetObject('', 'WinNT://.')
-    results.Filter = ['group']
     for result in results:
-        member_list = []
-        for member in result.members():
-            member_list.append(
-                    member.AdsPath.replace('WinNT://', '').replace(
-                    '/', '\\').encode('ascii', 'backslashreplace'))
-        group = {'gid': __salt__['file.group_to_gid'](result.name),
-                'members': member_list,
-                'name': result.name,
+        group = {'gid': __salt__['file.group_to_gid'](result.Name),
+                'members': [_get_username(x) for x in result.members()],
+                'name': result.Name,
                 'passwd': 'x'}
         ret.append(group)
     __context__['group.getent'] = ret
     return ret
 
 
-def adduser(name, username):
+def adduser(name, username, **kwargs):
     '''
-    add a user to a group
+    Add a user to a group
+
+    Args:
+
+        name (str):
+            The name of the group to modify
+
+        username (str):
+            The name of the user to add to the group
+
+    Returns:
+        dict: A dictionary of results
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.adduser foo username
-
     '''
 
     ret = {'name': name,
@@ -199,17 +275,21 @@ def adduser(name, username):
            'changes': {'Users Added': []},
            'comment': ''}
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
-    existingMembers = []
-    for member in groupObj.members():
-        existingMembers.append(
-                member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace').lower())
+    try:
+        groupObj = _get_group_object(name)
+    except pywintypes.com_error as com_err:
+        if len(com_err.excepinfo) >= 2:
+            friendly_error = com_err.excepinfo[2].rstrip('\r\n')
+        ret['result'] = False
+        ret['comment'] = 'Failure accessing group {0}. {1}' \
+                         ''.format(name, friendly_error)
+        return ret
+
+    existingMembers = [_get_username(x) for x in groupObj.members()]
+    username = salt.utils.win_functions.get_sam_name(username)
 
     try:
-        if __fixlocaluser(username.lower()) not in existingMembers:
+        if username not in existingMembers:
             if not __opts__['test']:
                 groupObj.Add('WinNT://' + username.replace('\\', '/'))
 
@@ -231,16 +311,26 @@ def adduser(name, username):
     return ret
 
 
-def deluser(name, username):
+def deluser(name, username, **kwargs):
     '''
-    remove a user from a group
+    Remove a user from a group
+
+    Args:
+
+        name (str):
+            The name of the group to modify
+
+        username (str):
+            The name of the user to remove from the group
+
+    Returns:
+        dict: A dictionary of results
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.deluser foo username
-
     '''
 
     ret = {'name': name,
@@ -248,17 +338,20 @@ def deluser(name, username):
            'changes': {'Users Removed': []},
            'comment': ''}
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
-    existingMembers = []
-    for member in groupObj.members():
-        existingMembers.append(
-                member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace').lower())
+    try:
+        groupObj = _get_group_object(name)
+    except pywintypes.com_error as com_err:
+        if len(com_err.excepinfo) >= 2:
+            friendly_error = com_err.excepinfo[2].rstrip('\r\n')
+        ret['result'] = False
+        ret['comment'] = 'Failure accessing group {0}. {1}' \
+                         ''.format(name, friendly_error)
+        return ret
+
+    existingMembers = [_get_username(x) for x in groupObj.members()]
 
     try:
-        if __fixlocaluser(username.lower()) in existingMembers:
+        if salt.utils.win_functions.get_sam_name(username) in existingMembers:
             if not __opts__['test']:
                 groupObj.Remove('WinNT://' + username.replace('\\', '/'))
 
@@ -280,16 +373,27 @@ def deluser(name, username):
     return ret
 
 
-def members(name, members_list):
+def members(name, members_list, **kwargs):
     '''
-    remove a user from a group
+    Ensure a group contains only the members in the list
+
+    Args:
+
+        name (str):
+            The name of the group to modify
+
+        members_list (str):
+            A single user or a comma separated list of users. The group will
+            contain only the users specified in this list.
+
+    Returns:
+        dict: A dictionary of results
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.members foo 'user1,user2,user3'
-
     '''
 
     ret = {'name': name,
@@ -297,16 +401,14 @@ def members(name, members_list):
            'changes': {'Users Added': [], 'Users Removed': []},
            'comment': []}
 
-    members_list = [__fixlocaluser(thisMember) for thisMember in members_list.lower().split(",")]
+    members_list = [salt.utils.win_functions.get_sam_name(m) for m in members_list.split(",")]
     if not isinstance(members_list, list):
         ret['result'] = False
         ret['comment'].append('Members is not a list object')
         return ret
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
     try:
-        groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
+        groupObj = _get_group_object(name)
     except pywintypes.com_error as com_err:
         if len(com_err.excepinfo) >= 2:
             friendly_error = com_err.excepinfo[2].rstrip('\r\n')
@@ -315,12 +417,7 @@ def members(name, members_list):
                 'Failure accessing group {0}.  {1}'
                 ).format(name, friendly_error))
         return ret
-    existingMembers = []
-    for member in groupObj.members():
-        existingMembers.append(
-                member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace').lower())
-
+    existingMembers = [_get_username(x) for x in groupObj.members()]
     existingMembers.sort()
     members_list.sort()
 
@@ -364,41 +461,36 @@ def members(name, members_list):
     return ret
 
 
-def __fixlocaluser(username):
-    '''
-    prefixes a username w/o a backslash with the computername
-
-    i.e. __fixlocaluser('Administrator') would return 'computername\administrator'
-    '''
-    if '\\' not in username:
-        username = ('{0}\\{1}').format(__salt__['grains.get']('host'), username)
-
-    return username.lower()
-
-
 def list_groups(refresh=False):
     '''
     Return a list of groups
+
+    Args:
+
+        refresh (bool):
+            Refresh the info for all groups in ``__context__``. If False only
+            the groups in ``__context__`` wil be returned. If True, the
+            ``__context__`` will be refreshed with current data and returned.
+            Default is False
+
+    Returns:
+        list: A list of groups on the machine
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' group.getent
+        salt '*' group.list_groups
     '''
     if 'group.list_groups' in __context__ and not refresh:
-        return __context__['group.getent']
+        return __context__['group.list_groups']
+
+    results = _get_all_groups()
 
     ret = []
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-
-    results = nt.GetObject('', 'WinNT://.')
-    results.Filter = ['group']
-
     for result in results:
-        ret.append(result.name)
+        ret.append(result.Name)
 
     __context__['group.list_groups'] = ret
 

@@ -19,6 +19,8 @@ authenticated against.  This defaults to `login`
 
     auth.pam.service: login
 
+.. note:: Solaris-like (SmartOS, OmniOS, ...) systems may need ``auth.pam.service`` set to ``other``.
+
 .. note:: PAM authentication will not work for the ``root`` user.
 
     The Python interface to PAM does not support authenticating as ``root``.
@@ -34,14 +36,17 @@ authenticated against.  This defaults to `login`
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
 
 # Import Salt libs
-from salt.utils import get_group_list
+import salt.utils.user
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+# Import 3rd-party libs
+from salt.ext import six
 
 LIBC = CDLL(find_library('c'))
 
@@ -156,6 +161,13 @@ def authenticate(username, password):
     '''
     service = __opts__.get('auth.pam.service', 'login')
 
+    if isinstance(username, six.text_type):
+        username = username.encode(__salt_system_encoding__)
+    if isinstance(password, six.text_type):
+        password = password.encode(__salt_system_encoding__)
+    if isinstance(service, six.text_type):
+        service = service.encode(__salt_system_encoding__)
+
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
         '''
@@ -167,7 +179,7 @@ def authenticate(username, password):
         p_response[0] = cast(addr, POINTER(PamResponse))
         for i in range(n_messages):
             if messages[i].contents.msg_style == PAM_PROMPT_ECHO_OFF:
-                pw_copy = STRDUP(str(password))
+                pw_copy = STRDUP(password)
                 p_response.contents[i].resp = cast(pw_copy, c_char_p)
                 p_response.contents[i].resp_retcode = 0
         return 0
@@ -202,4 +214,4 @@ def groups(username, *args, **kwargs):
 
     Uses system groups
     '''
-    return get_group_list(username)
+    return salt.utils.user.get_group_list(username)

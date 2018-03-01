@@ -20,6 +20,7 @@ renderer modules
     json5
     mako
     msgpack
+    pass
     py
     pydsl
     pyobjects

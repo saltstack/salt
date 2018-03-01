@@ -6,7 +6,7 @@ Manage DACLs on Windows
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import logging
 import re
@@ -16,8 +16,8 @@ import re
 #       may also need to add the ability to take ownership of an object to set
 #       permissions if the minion is running as a user and not LOCALSYSTEM
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import string_types
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
@@ -342,7 +342,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows() and HAS_WINDOWS_MODULES:
+    if salt.utils.platform.is_windows() and HAS_WINDOWS_MODULES:
         return __virtualname__
     return (False, "Module win_dacl: module only works on Windows systems")
 
@@ -581,6 +581,18 @@ def _ace_to_text(ace, objectType):
 def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=False):
     '''
     helper function to set the inheritance
+    Args:
+
+        path (str): The path to the object
+
+        objectType (str): The type of object
+
+        inheritance (bool): True enables inheritance, False disables
+
+        copy (bool): Copy inherited ACEs to the DACL before disabling
+        inheritance
+
+        clear (bool): Remove non-inherited ACEs from the DACL
     '''
     ret = {'result': False,
            'comment': '',

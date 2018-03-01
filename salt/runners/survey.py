@@ -12,13 +12,16 @@ Useful for playing the game: *"some of these things are not like the others..."*
 when identifying discrepancies in a large infrastructure managed by salt.
 '''
 
-from __future__ import print_function
+# Import python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
-from __future__ import absolute_import
-
+# Import salt libs
 import salt.client
-from salt.ext.six.moves import range
 from salt.exceptions import SaltClientError
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import range
 
 
 def hash(*args, **kwargs):
@@ -98,7 +101,7 @@ def diff(*args, **kwargs):
         print(k['pool'])
         print('pool size :\n'
               '----------')
-        print('    ' + str(len(k['pool'])))
+        print('    ' + six.text_type(len(k['pool'])))
         if is_first_time:
             is_first_time = False
             print('pool result :\n'
@@ -153,26 +156,26 @@ def _get_pool_results(*args, **kwargs):
     sort = kwargs.pop('survey_sort', 'down')
     direction = sort != 'up'
 
-    expr_form = kwargs.pop('expr_form', 'compound')
-    if expr_form not in ['compound', 'pcre']:
-        expr_form = 'compound'
+    tgt_type = kwargs.pop('tgt_type', 'compound')
+    if tgt_type not in ['compound', 'pcre']:
+        tgt_type = 'compound'
 
-    kwargs_passthru = dict((k, kwargs[k]) for k in kwargs.iterkeys() if not k.startswith('_'))
+    kwargs_passthru = dict((k, kwargs[k]) for k in six.iterkeys(kwargs) if not k.startswith('_'))
 
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
-        minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'], expr_form=expr_form, kwarg=kwargs_passthru)
+        minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'], tgt_type=tgt_type, kwarg=kwargs_passthru)
     except SaltClientError as client_error:
         print(client_error)
         return ret
 
     # hash minion return values as a string
     for minion in sorted(minions):
-        digest = hashlib.sha256(str(minions[minion])).hexdigest()
+        digest = hashlib.sha256(six.text_type(minions[minion]).encode(__salt_system_encoding__)).hexdigest()
         if digest not in ret:
             ret[digest] = {}
             ret[digest]['pool'] = []
-            ret[digest]['result'] = str(minions[minion])
+            ret[digest]['result'] = six.text_type(minions[minion])
 
         ret[digest]['pool'].append(minion)
 

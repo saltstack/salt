@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+'''
+Lazily-evaluated data structures, primarily used by Salt's loader
+'''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import collections
 import salt.exceptions
@@ -47,7 +50,7 @@ class LazyDict(collections.MutableMapping):
         Clear the dict
         '''
         # create a dict to store loaded values in
-        self._dict = {}
+        self._dict = getattr(self, 'mod_dict_class', dict)()
 
         # have we already loded everything?
         self.loaded = False

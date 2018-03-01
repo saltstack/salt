@@ -2,14 +2,15 @@
 '''
 virst compatibility module for managing VMs on SmartOS
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
 
 # Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +22,8 @@ def __virtual__():
     '''
     Provides virt on SmartOS
     '''
-    if salt.utils.is_smartos_globalzone() and salt.utils.which('vmadm'):
+    if salt.utils.platform.is_smartos_globalzone() \
+            and salt.utils.path.which('vmadm'):
         return __virtualname__
     return (
         False,
@@ -239,55 +241,3 @@ def get_macs(domain):
         for nic in ret[0]['nics']:
             macs.append(nic['mac'])
         return macs
-
-
-# Deprecated aliases
-def create(domain):
-    '''
-    .. deprecated:: 2016.3.0
-       Use :py:func:`~salt.modules.virt.start` instead.
-
-    Start a defined domain
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.create <domain>
-    '''
-    salt.utils.warn_until('Nitrogen', 'Use "virt.start" instead.')
-    return start(domain)
-
-
-def destroy(domain):
-    '''
-    .. deprecated:: 2016.3.0
-       Use :py:func:`~salt.modules.virt.stop` instead.
-
-    Power off a defined domain
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.destroy <domain>
-    '''
-    salt.utils.warn_until('Nitrogen', 'Use "virt.stop" instead.')
-    return stop(domain)
-
-
-def list_vms():
-    '''
-    .. deprecated:: 2016.3.0
-       Use :py:func:`~salt.modules.virt.list_domains` instead.
-
-    List all virtual machines.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.list_vms <domain>
-    '''
-    salt.utils.warn_until('Nitrogen', 'Use "virt.list_domains" instead.')
-    return list_domains()

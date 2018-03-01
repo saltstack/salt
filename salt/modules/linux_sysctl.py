@@ -2,20 +2,22 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 import os
 import re
+import string
 
 # Import salt libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
+import salt.utils.data
+import salt.utils.files
 import salt.utils.systemd
-import string
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -70,8 +72,9 @@ def show(config_file=False):
     ret = {}
     if config_file:
         try:
-            with salt.utils.fopen(config_file) as fp_:
+            with salt.utils.files.fopen(config_file) as fp_:
                 for line in fp_:
+                    line = salt.utils.stringutils.to_str(line)
                     if not line.startswith('#') and '=' in line:
                         # search if we have some '=' instead of ' = ' separators
                         SPLIT = ' = '
@@ -120,9 +123,18 @@ def assign(name, value):
 
         salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
-    value = str(value)
-    trantab = ''.maketrans('./', '/.') if six.PY3 else string.maketrans('./', '/.')
-    sysctl_file = '/proc/sys/{0}'.format(name.translate(trantab))
+    value = six.text_type(value)
+
+    if six.PY3:
+        tran_tab = name.translate(''.maketrans('./', '/.'))
+    else:
+        if isinstance(name, unicode):  # pylint: disable=incompatible-py3-code
+            trans_args = ({ord(x): None for x in ''.join(['./', '/.'])},)
+        else:
+            trans_args = string.maketrans('./', '/.')
+        tran_tab = name.translate(*trans_args)
+
+    sysctl_file = '/proc/sys/{0}'.format(tran_tab)
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
@@ -137,7 +149,7 @@ def assign(name, value):
     #    net.ipv4.tcp_rmem = 4096 87380 16777216
     regex = re.compile(r'^{0}\s+=\s+{1}$'.format(re.escape(name), re.escape(value)))
 
-    if not regex.match(out) or 'Invalid argument' in str(err):
+    if not regex.match(out) or 'Invalid argument' in six.text_type(err):
         if data['retcode'] != 0 and err:
             error = err
         else:
@@ -162,7 +174,6 @@ def persist(name, value, config=None):
     '''
     if config is None:
         config = default_config()
-    running = show()
     edited = False
     # If the sysctl.conf is not present, add it
     if not os.path.isfile(config):
@@ -170,7 +181,7 @@ def persist(name, value, config=None):
         if not os.path.exists(sysctl_dir):
             os.makedirs(sysctl_dir)
         try:
-            with salt.utils.fopen(config, 'w+') as _fh:
+            with salt.utils.files.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
         except (IOError, OSError):
             msg = 'Could not write to file: {0}'
@@ -179,11 +190,11 @@ def persist(name, value, config=None):
     # Read the existing sysctl.conf
     nlines = []
     try:
-        with salt.utils.fopen(config, 'r') as _fh:
+        with salt.utils.files.fopen(config, 'r') as _fh:
             # Use readlines because this should be a small file
             # and it seems unnecessary to indent the below for
             # loop since it is a fairly large block of code.
-            config_data = _fh.readlines()
+            config_data = salt.utils.data.decode(_fh.readlines())
     except (IOError, OSError):
         msg = 'Could not read from file: {0}'
         raise CommandExecutionError(msg.format(config))
@@ -215,17 +226,13 @@ def persist(name, value, config=None):
             continue
         if name == comps[0]:
             # This is the line to edit
-            if str(comps[1]) == str(value):
+            if six.text_type(comps[1]) == six.text_type(value):
                 # It is correct in the config, check if it is correct in /proc
-                if name in running:
-                    if str(running[name]) != str(value):
-                        assign(name, value)
-                        return 'Updated'
-                    else:
-                        return 'Already set'
-                # It is missing from the running config. We can not set it.
+                if six.text_type(get(name)) != six.text_type(value):
+                    assign(name, value)
+                    return 'Updated'
                 else:
-                    raise CommandExecutionError('sysctl {0} does not exist'.format(name))
+                    return 'Already set'
 
             nlines.append('{0} = {1}\n'.format(name, value))
             edited = True
@@ -235,8 +242,8 @@ def persist(name, value, config=None):
     if not edited:
         nlines.append('{0} = {1}\n'.format(name, value))
     try:
-        with salt.utils.fopen(config, 'w+') as _fh:
-            _fh.writelines(nlines)
+        with salt.utils.files.fopen(config, 'wb') as _fh:
+            _fh.writelines(salt.utils.data.encode(nlines))
     except (IOError, OSError):
         msg = 'Could not write to file: {0}'
         raise CommandExecutionError(msg.format(config))

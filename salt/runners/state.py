@@ -3,16 +3,34 @@
 Execute orchestration functions
 '''
 # Import pytohn libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
 import salt.loader
-import salt.utils
 import salt.utils.event
+import salt.utils.functools
 from salt.exceptions import SaltInvocationError
 
 LOGGER = logging.getLogger(__name__)
+
+
+def set_pause(jid, state_id, duration=None):
+    '''
+    Set up a state id pause, this instructs a running state to pause at a given
+    state id. This needs to pass in the jid of the running state and can
+    optionally pass in a duration in seconds.
+    '''
+    minion = salt.minion.MasterMinion(__opts__)
+    minion['state.set_pause'](jid, state_id, duration)
+
+
+def rm_pause(jid, state_id, duration=None):
+    '''
+    Remove a pause from a jid, allowing it to continue
+    '''
+    minion = salt.minion.MasterMinion(__opts__)
+    minion['state.rm_pause'](jid, state_id)
 
 
 def orchestrate(mods,
@@ -21,6 +39,7 @@ def orchestrate(mods,
                 exclude=None,
                 pillar=None,
                 pillarenv=None,
+                pillar_enc=None,
                 orchestration_jid=None):
     '''
     .. versionadded:: 0.17.0
@@ -48,6 +67,21 @@ def orchestrate(mods,
     .. versionchanged:: 2014.7.0
 
         Runner uses the pillar variable
+
+    .. versionchanged:: develop
+
+        Runner uses the pillar_enc variable that allows renderers to render the pillar.
+        This is usable when supplying the contents of a file as pillar, and the file contains
+        gpg-encrypted entries.
+
+    .. seealso:: GPG renderer documentation
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+       salt-run state.orchestrate webserver pillar_enc=gpg pillar="$(cat somefile.json)"
+
     '''
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError(
@@ -55,6 +89,12 @@ def orchestrate(mods,
         )
     __opts__['file_client'] = 'local'
     minion = salt.minion.MasterMinion(__opts__)
+
+    if pillarenv is None and 'pillarenv' in __opts__:
+        pillarenv = __opts__['pillarenv']
+    if saltenv is None and 'saltenv' in __opts__:
+        saltenv = __opts__['saltenv']
+
     running = minion.functions['state.sls'](
             mods,
             test,
@@ -62,9 +102,10 @@ def orchestrate(mods,
             pillar=pillar,
             saltenv=saltenv,
             pillarenv=pillarenv,
+            pillar_enc=pillar_enc,
             orchestration_jid=orchestration_jid)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
-    res = salt.utils.check_state_result(ret['data'])
+    res = __utils__['state.check_result'](ret['data'])
     if res:
         ret['retcode'] = 0
     else:
@@ -72,8 +113,8 @@ def orchestrate(mods,
     return ret
 
 # Aliases for orchestrate runner
-orch = salt.utils.alias_function(orchestrate, 'orch')
-sls = salt.utils.alias_function(orchestrate, 'sls')
+orch = salt.utils.functools.alias_function(orchestrate, 'orch')
+sls = salt.utils.functools.alias_function(orchestrate, 'sls')
 
 
 def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs):
@@ -140,6 +181,47 @@ def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
     ret = {minion.opts['id']: running}
     __jid_event__.fire_event({'data': ret, 'outputter': 'highstate'}, 'progress')
     return ret
+
+
+def orchestrate_show_sls(mods,
+                         saltenv='base',
+                         test=None,
+                         exclude=None,
+                         pillar=None,
+                         pillarenv=None,
+                         pillar_enc=None):
+    '''
+    Display the state data from a specific sls, or list of sls files, after
+    being render using the master minion.
+
+    Note, the master minion adds a "_master" suffix to it's minion id.
+
+    .. seealso:: The state.show_sls module function
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt-run state.orch_show_sls my-orch-formula.my-orch-state 'pillar={ nodegroup: ng1 }'
+    '''
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary')
+
+    __opts__['file_client'] = 'local'
+    minion = salt.minion.MasterMinion(__opts__)
+    running = minion.functions['state.show_sls'](
+        mods,
+        saltenv,
+        test,
+        exclude,
+        pillar=pillar,
+        pillarenv=pillarenv,
+        pillar_enc=pillar_enc)
+
+    ret = {minion.opts['id']: running}
+    return ret
+
+orch_show_sls = salt.utils.functools.alias_function(orchestrate_show_sls, 'orch_show_sls')
 
 
 def event(tagmatch='*',

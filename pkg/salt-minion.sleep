@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+# Copyright (c) 2017 SUSE LINUX GmbH, Nuernberg, Germany.
+
+markerfile=/var/run/stopped-salt-minion-on-suspend
+
+if [ "$1" = pre ] ; then
+	if systemctl is-active salt-minion ; then
+		systemctl stop salt-minion
+		echo 1 > $markerfile
+	fi
+fi
+if [ "$1" = post ] && [ -e $markerfile ] ; then
+	rm -f $markerfile
+	systemctl start salt-minion
+fi

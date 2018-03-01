@@ -2,14 +2,17 @@
 '''
 Support for nftables
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 import re
 
 # Import salt libs
-import salt.utils
+from salt.ext import six
+import salt.utils.data
+import salt.utils.files
+import salt.utils.path
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import (
     CommandExecutionError
@@ -36,7 +39,7 @@ def __virtual__():
     '''
     Only load the module if nftables is installed
     '''
-    if salt.utils.which('nft'):
+    if salt.utils.path.which('nft'):
         return 'nftables'
     return (False, 'The nftables execution module failed to load: nftables is not installed.')
 
@@ -146,14 +149,14 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['connstate']
 
     if 'dport' in kwargs:
-        kwargs['dport'] = str(kwargs['dport'])
+        kwargs['dport'] = six.text_type(kwargs['dport'])
         if ':' in kwargs['dport']:
             kwargs['dport'] = kwargs['dport'].replace(':', '-')
         rule += 'dport {{ {0}}} '.format(kwargs['dport'])
         del kwargs['dport']
 
     if 'sport' in kwargs:
-        kwargs['sport'] = str(kwargs['sport'])
+        kwargs['sport'] = six.text_type(kwargs['sport'])
         if ':' in kwargs['sport']:
             kwargs['sport'] = kwargs['sport'].replace(':', '-')
         rule += 'sport {{ {0}}} '.format(kwargs['sport'])
@@ -166,7 +169,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         _dports = kwargs['dports'].split(',')
         _dports = [int(x) for x in _dports]
         _dports.sort(reverse=True)
-        kwargs['dports'] = ', '.join(str(x) for x in _dports)
+        kwargs['dports'] = ', '.join(six.text_type(x) for x in _dports)
 
         rule += 'dport {{ {0}}} '.format(kwargs['dports'])
         del kwargs['dports']
@@ -178,7 +181,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         _sports = kwargs['sports'].split(',')
         _sports = [int(x) for x in _sports]
         _sports.sort(reverse=True)
-        kwargs['sports'] = ', '.join(str(x) for x in _sports)
+        kwargs['sports'] = ', '.join(six.text_type(x) for x in _sports)
 
         rule += 'sport {{ {0} }} '.format(kwargs['sports'])
         del kwargs['sports']
@@ -260,8 +263,8 @@ def get_saved_rules(conf_file=None, family='ipv4'):
     if _conf() and not conf_file:
         conf_file = _conf()
 
-    with salt.utils.fopen(conf_file) as fp_:
-        lines = fp_.readlines()
+    with salt.utils.files.fopen(conf_file) as fp_:
+        lines = salt.utils.data.decode(fp_.readlines())
     rules = []
     for line in lines:
         tmpline = line.strip()
@@ -327,9 +330,9 @@ def save(filename=None, family='ipv4'):
     rules = rules + '\n'
 
     try:
-        with salt.utils.fopen(filename, 'w+') as _fh:
+        with salt.utils.files.fopen(filename, 'wb') as _fh:
             # Write out any changes
-            _fh.writelines(rules)
+            _fh.writelines(salt.utils.data.encode(rules))
     except (IOError, OSError) as exc:
         raise CommandExecutionError(
             'Problem writing to configuration file: {0}'.format(exc)
@@ -601,7 +604,7 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
     cmd = '{0} add chain {1} {2} {3}'.\
             format(_nftables_cmd(), nft_family, table, chain)
     if table_type or hook or priority:
-        if table_type and hook and str(priority):
+        if table_type and hook and six.text_type(priority):
             cmd = r'{0} \{{ type {1} hook {2} priority {3}\; \}}'.\
                     format(cmd, table_type, hook, priority)
         else:

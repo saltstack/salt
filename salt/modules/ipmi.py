@@ -32,7 +32,10 @@ systems hardware through IPMI drivers. It uses a python module `pyghmi`.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
 
 
 IMPORT_ERR = None
@@ -40,7 +43,7 @@ try:
     from pyghmi.ipmi import command
     from pyghmi.ipmi.private import session
 except Exception as ex:
-    IMPORT_ERR = str(ex)
+    IMPORT_ERR = six.text_type(ex)
 
 __virtualname__ = 'ipmi'
 
@@ -64,7 +67,7 @@ def _get_config(**kwargs):
     if '__salt__' in globals():
         config_key = '{0}.config'.format(__virtualname__)
         config.update(__salt__['config.get'](config_key, {}))
-    for k in set(config.keys()) & set(kwargs.keys()):
+    for k in set(config) & set(kwargs):
         config[k] = kwargs[k]
     return config
 
@@ -73,7 +76,6 @@ class _IpmiCommand(object):
     o = None
 
     def __init__(self, **kwargs):
-        #cache_key = api_host + api_user + str(api_port)
         config = _get_config(**kwargs)
         self.o = command.Command(bmc=config['api_host'], userid=config['api_user'],
                                  password=config['api_pass'], port=config['api_port'],
@@ -95,7 +97,6 @@ class _IpmiSession(object):
             raise Exception(response['error'])
 
     def __init__(self, **kwargs):
-        #cache_key = api_host + api_user + str(api_port)
         config = _get_config(**kwargs)
         self.o = session.Session(bmc=config['api_host'],
                                  userid=config['api_user'],

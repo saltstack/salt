@@ -21,11 +21,11 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from collections import Callable
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     # pylint: disable=E0611,minimum-python-version

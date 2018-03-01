@@ -2,7 +2,7 @@
 '''
 The match module allows for match routines to be run and determine target specs
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import inspect
@@ -11,9 +11,9 @@ import sys
 
 # Import salt libs
 import salt.minion
-import salt.utils
+import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext.six import string_types
+from salt.ext import six
 
 __func_alias__ = {
     'list_': 'list'
@@ -39,8 +39,8 @@ def compound(tgt, minion_id=None):
     '''
     opts = {'grains': __grains__, 'pillar': __pillar__}
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
     else:
         minion_id = __grains__['id']
     opts['id'] = minion_id
@@ -238,8 +238,8 @@ def list_(tgt, minion_id=None):
         salt '*' match.list 'server1,server2'
     '''
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
     else:
         minion_id = __grains__['id']
     matcher = salt.minion.Matcher({'id': minion_id}, __salt__)
@@ -266,8 +266,8 @@ def pcre(tgt, minion_id=None):
         salt '*' match.pcre '.*'
     '''
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
     else:
         minion_id = __grains__['id']
     matcher = salt.minion.Matcher({'id': minion_id}, __salt__)
@@ -294,8 +294,8 @@ def glob(tgt, minion_id=None):
         salt '*' match.glob '*'
     '''
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
     else:
         minion_id = __grains__['id']
     matcher = salt.minion.Matcher({'id': minion_id}, __salt__)
@@ -306,7 +306,11 @@ def glob(tgt, minion_id=None):
         return False
 
 
-def filter_by(lookup, expr_form='compound', minion_id=None):
+def filter_by(lookup,
+              tgt_type='compound',
+              minion_id=None,
+              expr_form=None,
+              default='default'):
     '''
     Return the first match in a dictionary of target patterns
 
@@ -326,6 +330,57 @@ def filter_by(lookup, expr_form='compound', minion_id=None):
         {% set roles = salt['match.filter_by']({
             'web*': ['app', 'caching'],
             'db*': ['db'],
+        }, default='web*') %}
+
+        # Make the filtered data available to Pillar:
+        roles: {{ roles | yaml() }}
+    '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
+    expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
+        predicate=inspect.isfunction))
+
+    for key in lookup:
+        params = (key, minion_id) if minion_id else (key, )
+        if expr_funcs[tgt_type](*params):
+            return lookup[key]
+
+    return lookup.get(default, None)
+
+
+def search_by(lookup, tgt_type='compound', minion_id=None):
+    '''
+    Search a dictionary of target strings for matching targets
+
+    This is the inverse of :py:func:`match.filter_by
+    <salt.modules.match.filter_by>` and allows matching values instead of
+    matching keys. A minion can be matched by multiple entries.
+
+    .. versionadded:: 2017.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' match.search_by '{web: [node1, node2], db: [node2, node]}'
+
+    Pillar Example:
+
+    .. code-block:: yaml
+
+        {% set roles = salt.match.search_by({
+            'web': ['G@os_family:Debian not nodeX'],
+            'db': ['L@node2,node3 and G@datacenter:west'],
+            'caching': ['node3', 'node4'],
         }) %}
 
         # Make the filtered data available to Pillar:
@@ -334,9 +389,11 @@ def filter_by(lookup, expr_form='compound', minion_id=None):
     expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
         predicate=inspect.isfunction))
 
-    for key in lookup:
-        params = (key, minion_id) if minion_id else (key, )
-        if expr_funcs[expr_form](*params):
-            return lookup[key]
+    matches = []
+    for key, target_list in lookup.items():
+        for target in target_list:
+            params = (target, minion_id) if minion_id else (target, )
+            if expr_funcs[tgt_type](*params):
+                matches.append(key)
 
-    return None
+    return matches or None

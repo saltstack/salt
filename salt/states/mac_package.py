@@ -22,15 +22,14 @@ Install any kind of pkg, dmg or app file on macOS:
             - target: /Applications/Xcode.app
             - version_check: xcodebuild -version=Xcode 7.1\n.*7B91b
 '''
-
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -41,7 +40,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return __virtualname__
     return False
 
@@ -92,6 +91,7 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
         The command and version that we want to check against, the version number can use regex.
 
         .. code-block:: yaml
+
             version_check: python --version_check=2.7.[0-9]
 
     '''
@@ -254,13 +254,13 @@ def _mod_run_check(cmd_kwargs, onlyif, unless):
     '''
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            return {'comment': 'onlyif execution failed',
+            return {'comment': 'onlyif condition is false',
                     'skip_watch': True,
                     'result': True}
 
     if unless:
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless execution succeeded',
+            return {'comment': 'unless condition is true',
                     'skip_watch': True,
                     'result': True}
 

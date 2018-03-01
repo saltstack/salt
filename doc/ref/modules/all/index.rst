@@ -9,6 +9,7 @@ execution modules
     .. toctree::
 
         salt.modules.group
+        salt.modules.kernelpkg
         salt.modules.pkg
         salt.modules.user
 
@@ -19,26 +20,31 @@ execution modules
     :template: autosummary.rst.tmpl
 
     acme
+    aix_group
     aliases
     alternatives
     apache
     apcups
     apf
+    apk
     aptpkg
     archive
     artifactory
     at
+    at_solaris
     augeas_cfg
     aws_sqs
     bamboohr
     bcache
     beacons
     bigip
-    blockdev
     bluez
+    boto3_elasticache
+    boto3_route53
     boto_apigateway
     boto_asg
     boto_cfn
+    boto_cloudfront
     boto_cloudtrail
     boto_cloudwatch
     boto_cloudwatch_event
@@ -46,11 +52,14 @@ execution modules
     boto_datapipeline
     boto_dynamodb
     boto_ec2
+    boto_efs
     boto_elasticache
     boto_elasticsearch_domain
     boto_elb
+    boto_elbv2
     boto_iam
     boto_iot
+    boto_kinesis
     boto_kms
     boto_lambda
     boto_rds
@@ -65,6 +74,7 @@ execution modules
     bsd_shadow
     btrfs
     cabal
+    capirca_acl
     cassandra
     cassandra_cql
     celery
@@ -73,6 +83,7 @@ execution modules
     chef
     chocolatey
     chronos
+    cimc
     cisconso
     cloud
     cmdmod
@@ -88,6 +99,7 @@ execution modules
     cytest
     daemontools
     data
+    datadog_api
     ddns
     deb_apache
     deb_postgres
@@ -103,12 +115,13 @@ execution modules
     dnsmasq
     dnsutil
     dockercompose
-    dockerio
-    dockerng
+    dockermod
     dpkg
     drac
     dracr
     drbd
+    dummyproxy_package
+    dummyproxy_service
     ebuild
     eix
     elasticsearch
@@ -122,6 +135,7 @@ execution modules
     file
     firewalld
     freebsd_sysctl
+    freebsd_update
     freebsdjail
     freebsdkmod
     freebsdpkg
@@ -137,6 +151,7 @@ execution modules
     glusterfs
     gnomedesktop
     gpg
+    grafana4
     grains
     groupadd
     grub_legacy
@@ -144,6 +159,7 @@ execution modules
     hadoop
     haproxyconn
     hashutil
+    heat
     hg
     hipchat
     hosts
@@ -151,7 +167,7 @@ execution modules
     http
     ifttt
     ilo
-    img
+    icinga2
     incron
     influx
     influx08
@@ -178,14 +194,21 @@ execution modules
     k8s
     kapacitor
     kerberos
+    kernelpkg_linux_apt
+    kernelpkg_linux_yum
     key
     keyboard
     keystone
     kmod
+    kubernetes
     launchctl
     layman
     ldap3
     ldapmod
+    libcloud_compute
+    libcloud_dns
+    libcloud_loadbalancer
+    libcloud_storage
     linux_acl
     linux_ip
     linux_lvm
@@ -193,6 +216,7 @@ execution modules
     localemod
     locate
     logadm
+    logmod
     logrotate
     lvs
     lxc
@@ -215,8 +239,10 @@ execution modules
     mac_user
     mac_xattr
     makeconf
+    mandrill
     marathon
     match
+    mattermost
     mdadm
     mdata
     memcached
@@ -229,11 +255,19 @@ execution modules
     moosefs
     mount
     mssql
+    msteams
     munin
     mysql
     nacl
     nagios
     nagios_rpc
+    namecheap_dns
+    namecheap_domains
+    namecheap_ns
+    namecheap_ssl
+    namecheap_users
+    napalm
+    napalm_acl
     napalm_bgp
     napalm_network
     napalm_ntp
@@ -241,7 +275,9 @@ execution modules
     napalm_route
     napalm_snmp
     napalm_users
+    napalm_yang_mod
     netaddress
+    netbox
     netbsd_sysctl
     netbsdservice
     netscaler
@@ -250,6 +286,8 @@ execution modules
     nfs3
     nftables
     nginx
+    nilrt_ip
+    nix
     nova
     npm
     nspawn
@@ -259,20 +297,26 @@ execution modules
     openbsdpkg
     openbsdrcctl
     openbsdservice
+    openscap
     openstack_config
     openstack_mng
     openvswitch
     opkg
+    opsgenie
     oracle
     osquery
+    out
     pacman
     pagerduty
     pagerduty_util
     pam
+    panos
     parallels
     parted
     pcs
+    pdbedit
     pecl
+    pf
     philips_hue
     pillar
     pip
@@ -289,6 +333,7 @@ execution modules
     ps
     publish
     puppet
+    purefa
     pushbullet
     pushover_notify
     pw_group
@@ -301,6 +346,7 @@ execution modules
     raet_publish
     rallydev
     random_org
+    rbac_solaris
     rbenv
     rdp
     redismod
@@ -328,6 +374,7 @@ execution modules
     sdb
     seed
     selinux
+    sensehat
     sensors
     serverdensity_device
     service
@@ -350,6 +397,7 @@ execution modules
     solarisips
     solarispkg
     solr
+    solrcloud
     splunk
     splunk_search
     sqlite3
@@ -359,9 +407,11 @@ execution modules
     snapper
     state
     status
-    stormpath
+    statuspage
     supervisord
+    suse_apache
     svn
+    swarm
     swift
     sysbench
     sysfs
@@ -371,15 +421,18 @@ execution modules
     system
     system_profiler
     systemd
+    telegram
     telemetry
     temp
     test
     testinframod
     test_virtual
+    textfsm_mod
     timezone
     tls
     tomcat
     trafficserver
+    travisci
     tuned
     twilio_notify
     udev
@@ -387,12 +440,15 @@ execution modules
     uptime
     useradd
     uwsgi
+    vagrant
     varnish
+    vault
     vbox_guest
     vboxmanage
     victorops
     virt
     virtualenv_mod
+    vmctl
     vsphere
     win_autoruns
     win_certutil
@@ -440,5 +496,7 @@ execution modules
     zfs
     zk_concurrency
     znc
+    zoneadm
+    zonecfg
     zpool
     zypper

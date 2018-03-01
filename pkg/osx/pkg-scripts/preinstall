@@ -42,6 +42,9 @@ quit_on_error() {
     exit -1
 }
 
+OSX_VERSION=$(sw_vers | grep ProductVersion | cut -f 2 -d: | tr -d '[:space:]')
+MINOR=$(echo ${OSX_VERSION} | cut -f 2 -d.)
+
 ###############################################################################
 # Stop the service
 ###############################################################################

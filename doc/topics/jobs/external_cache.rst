@@ -15,9 +15,10 @@ and others):
 * External Job Cache
 * Master Job Cache
 
-The major difference between these two
-mechanism is from where results are returned (from the Salt Master or Salt
-Minion).
+The major difference between these two mechanism is from where results are
+returned (from the Salt Master or Salt Minion). Configuring either of these
+options will also make the :py:mod:`Jobs Runner functions <salt.runners.jobs>`
+to automatically query the remote stores for infomation.
 
 External Job Cache - Minion-Side Returner
 -----------------------------------------
@@ -77,7 +78,7 @@ For example, the MySQL returner requires:
 
 * A database created using provided schema (structure is available at
   :mod:`MySQL returner <salt.returners.mysql>`)
-* A user created with with privileges to the database
+* A user created with privileges to the database
 * Optional SSL configuration
 
 A simpler returner, such as Slack or HipChat, requires:

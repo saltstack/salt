@@ -2,18 +2,19 @@
 '''
 Manage the master configuration file
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 import os
 
-# Import third party libs
-import yaml
-
 # Import salt libs
 import salt.config
-from salt.utils.yamldumper import SafeOrderedDumper
+import salt.utils.files
+import salt.utils.yaml
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -39,14 +40,8 @@ def apply(key, value):
         path = os.path.join(path, 'master')
     data = values()
     data[key] = value
-    with salt.utils.fopen(path, 'w+') as fp_:
-        fp_.write(
-            yaml.dump(
-                data,
-                default_flow_style=False,
-                Dumper=SafeOrderedDumper
-            )
-        )
+    with salt.utils.files.fopen(path, 'w+') as fp_:
+        salt.utils.yaml.safe_dump(data, default_flow_style=False)
 
 
 def update_config(file_name, yaml_contents):
@@ -80,16 +75,16 @@ def update_config(file_name, yaml_contents):
     dir_path = os.path.join(__opts__['config_dir'],
                             os.path.dirname(__opts__['default_include']))
     try:
-        yaml_out = yaml.safe_dump(yaml_contents, default_flow_style=False)
+        yaml_out = salt.utils.yaml.safe_dump(yaml_contents, default_flow_style=False)
 
         if not os.path.exists(dir_path):
-            log.debug('Creating directory {0}'.format(dir_path))
+            log.debug('Creating directory %s', dir_path)
             os.makedirs(dir_path, 0o755)
 
         file_path = os.path.join(dir_path, file_name)
-        with salt.utils.fopen(file_path, 'w') as fp_:
+        with salt.utils.files.fopen(file_path, 'w') as fp_:
             fp_.write(yaml_out)
 
         return 'Wrote {0}'.format(file_name)
-    except (IOError, OSError, yaml.YAMLError, ValueError) as err:
-        return str(err)
+    except (IOError, OSError, salt.utils.yaml.YAMLError, ValueError) as err:
+        return six.text_type(err)

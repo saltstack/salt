@@ -9,7 +9,7 @@ Manage X509 certificates
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import logging
 import hashlib
@@ -17,15 +17,15 @@ import glob
 import random
 import ctypes
 import tempfile
-import yaml
 import re
 import datetime
 import ast
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 import salt.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import range
@@ -165,7 +165,7 @@ def _parse_openssl_req(csr_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -176,7 +176,7 @@ def _parse_openssl_req(csr_filename):
     output = re.sub(r': rsaEncryption', ':', output)
     output = re.sub(r'[0-9a-f]{2}:', '', output)
 
-    return yaml.safe_load(output)
+    return salt.utils.data.decode(salt.utils.yaml.safe_load(output))
 
 
 def _get_csr_extensions(csr):
@@ -214,7 +214,7 @@ def _parse_openssl_crl(crl_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -265,7 +265,7 @@ def _parse_openssl_crl(crl_filename):
 
         rev_sn = revoked.split('\n')[0].strip()
         revoked = rev_sn + ':\n' + '\n'.join(revoked.split('\n')[1:])
-        rev_yaml = yaml.safe_load(revoked)
+        rev_yaml = salt.utils.data.decode(salt.utils.yaml.safe_load(revoked))
         # pylint: disable=unused-variable
         for rev_item, rev_values in six.iteritems(rev_yaml):
             # pylint: enable=unused-variable
@@ -315,8 +315,8 @@ def _text_or_file(input_):
     content to be parsed.
     '''
     if os.path.isfile(input_):
-        with salt.utils.fopen(input_) as fp_:
-            return fp_.read()
+        with salt.utils.files.fopen(input_) as fp_:
+            return salt.utils.stringutils.to_unicode(fp_.read())
     else:
         return input_
 
@@ -359,7 +359,7 @@ def _get_private_key_obj(private_key, passphrase=None):
     Returns a private key object based on PEM text.
     '''
     private_key = _text_or_file(private_key)
-    private_key = get_pem_entry(private_key, pem_type='RSA PRIVATE KEY')
+    private_key = get_pem_entry(private_key, pem_type='(?:RSA )?PRIVATE KEY')
     rsaprivkey = M2Crypto.RSA.load_key_string(
         private_key, callback=_passphrase_callback(passphrase))
     evpprivkey = M2Crypto.EVP.PKey()
@@ -508,7 +508,7 @@ def get_pem_entries(glob_path):
 
     .. code-block:: bash
 
-        salt '*' x509.read_pem_entries "/etc/pki/*.crt"
+        salt '*' x509.get_pem_entries "/etc/pki/*.crt"
     '''
     ret = {}
 
@@ -769,15 +769,15 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         except salt.exceptions.SaltInvocationError:
             pass
         try:
-            _private_key = get_pem_entry(_filecontents, 'RSA PRIVATE KEY')
+            _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
         except salt.exceptions.SaltInvocationError:
             pass
-    with salt.utils.fopen(path, 'w') as _fp:
+    with salt.utils.files.fopen(path, 'w') as _fp:
         if pem_type and pem_type == 'CERTIFICATE' and _private_key:
-            _fp.write(_private_key)
+            _fp.write(salt.utils.stringutils.to_str(_private_key))
         _fp.write(text)
         if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
-            _fp.write(_dhparams)
+            _fp.write(salt.utils.stringutils.to_str(_dhparams))
     os.umask(old_umask)
     return 'PEM written to {0}'.format(path)
 
@@ -846,7 +846,7 @@ def create_private_key(path=None,
         return write_pem(
             text=bio.read_all(),
             path=path,
-            pem_type='RSA PRIVATE KEY'
+            pem_type='(?:RSA )?PRIVATE KEY'
         )
     else:
         return bio.read_all()
@@ -950,7 +950,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
             rev_item['not_after'] = rev_cert['Not After']
 
         serial_number = rev_item['serial_number'].replace(':', '')
-        serial_number = str(int(serial_number, 16))
+        serial_number = six.text_type(int(serial_number, 16))
 
         if 'not_after' in rev_item and not include_expired:
             not_after = datetime.datetime.strptime(
@@ -1051,7 +1051,10 @@ def sign_remote_certificate(argdic, **kwargs):
     if 'minions' in signing_policy:
         if '__pub_id' not in kwargs:
             return 'minion sending this request could not be identified'
-        if not __salt__['match.glob'](
+        matcher = 'match.glob'
+        if '@' in signing_policy['minions']:
+            matcher = 'match.compound'
+        if not __salt__[matcher](
                 signing_policy['minions'], kwargs['__pub_id']):
             return '{0} not permitted to use signing policy {1}'.format(
                 kwargs['__pub_id'], argdic['signing_policy'])
@@ -1059,7 +1062,7 @@ def sign_remote_certificate(argdic, **kwargs):
     try:
         return create_certificate(path=None, text=True, **argdic)
     except Exception as except_:  # pylint: disable=broad-except
-        return str(except_)
+        return six.text_type(except_)
 
 
 def get_signing_policy(signing_policy_name):
@@ -1311,8 +1314,8 @@ def create_certificate(
         a minion pillar. It should be a yaml formatted list of arguments
         which will override any arguments passed to this function. If the
         ``minions`` key is included in the signing policy, only minions
-        matching that pattern will be permitted to remotely request
-        certificates from that policy.
+        matching that pattern (see match.glob and match.compound) will be
+        permitted to remotely request certificates from that policy.
 
         Example:
 
@@ -1377,10 +1380,19 @@ def create_certificate(
                 ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
-        cert_txt = __salt__['publish.publish'](
+        certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
-            arg=str(kwargs))[ca_server]
+            arg=six.text_type(kwargs))
+
+        if not any(certs):
+            raise salt.exceptions.SaltInvocationError(
+                    'ca_server did not respond'
+                    ' salt master must permit peers to'
+                    ' call the sign_remote_certificate function.')
+
+        cert_txt = certs[ca_server]
+
         if path:
             return write_pem(
                 text=cert_txt,
@@ -1525,7 +1537,7 @@ def create_certificate(
 
     if 'copypath' in kwargs:
         if 'prepend_cn' in kwargs and kwargs['prepend_cn'] is True:
-            prepend = str(kwargs['CN']) + '-'
+            prepend = six.text_type(kwargs['CN']) + '-'
         else:
             prepend = ''
         write_pem(text=cert.as_pem(), path=os.path.join(kwargs['copypath'],
@@ -1592,7 +1604,7 @@ def create_csr(path=None, text=False, **kwargs):
         log.warning(
             "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
 
-    if 'private_key' not in kwargs not in kwargs:
+    if 'private_key' not in kwargs:
         raise salt.exceptions.SaltInvocationError('private_key is required')
 
     if 'public_key' not in kwargs:
@@ -1740,7 +1752,7 @@ def verify_crl(crl, cert):
 
         salt '*' x509.verify_crl crl=/etc/pki/myca.crl cert=/etc/pki/myca.crt
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )

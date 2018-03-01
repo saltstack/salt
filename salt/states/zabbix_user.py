@@ -6,9 +6,14 @@ Management of Zabbix users.
 
 
 '''
-from __future__ import absolute_import
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 from json import loads, dumps
 from copy import deepcopy
+
+# Import Salt libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -64,6 +69,14 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
                         - sendto: '+42032132588568'
 
     '''
+    connection_args = {}
+    if '_connection_user' in kwargs:
+        connection_args['_connection_user'] = kwargs['_connection_user']
+    if '_connection_password' in kwargs:
+        connection_args['_connection_password'] = kwargs['_connection_password']
+    if '_connection_url' in kwargs:
+        connection_args['_connection_url'] = kwargs['_connection_url']
+
     ret = {'name': alias, 'changes': {}, 'result': False, 'comment': ''}
 
     # Comment and change messages
@@ -103,20 +116,20 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
         medias_list = list()
         for key, value in medias_dict.items():
             # Load media values or default values
-            active = '0' if str(value.get('active', 'true')).lower() == 'true' else '1'
-            mediatype_sls = str(value.get('mediatype', 'mail')).lower()
-            mediatypeid = str(media_type.get(mediatype_sls, 1))
+            active = '0' if six.text_type(value.get('active', 'true')).lower() == 'true' else '1'
+            mediatype_sls = six.text_type(value.get('mediatype', 'mail')).lower()
+            mediatypeid = six.text_type(media_type.get(mediatype_sls, 1))
             period = value.get('period', '1-7,00:00-24:00')
             sendto = value.get('sendto', key)
 
             severity_sls = value.get('severity', 'HD')
-            severity_bin = str()
+            severity_bin = six.text_type()
             for sev in media_severities:
                 if sev in severity_sls:
                     severity_bin += '1'
                 else:
                     severity_bin += '0'
-            severity = str(int(severity_bin, 2))
+            severity = six.text_type(int(severity_bin, 2))
 
             medias_list.append({'active': active,
                                 'mediatypeid': mediatypeid,
@@ -125,16 +138,16 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
                                 'severity': severity})
         return medias_list
 
-    user_exists = __salt__['zabbix.user_exists'](alias)
+    user_exists = __salt__['zabbix.user_exists'](alias, **connection_args)
 
     if user_exists:
-        user = __salt__['zabbix.user_get'](alias)[0]
+        user = __salt__['zabbix.user_get'](alias, **connection_args)[0]
         userid = user['userid']
 
         update_usrgrps = False
         update_medias = False
 
-        usergroups = __salt__['zabbix.usergroup_get'](userids=userid)
+        usergroups = __salt__['zabbix.usergroup_get'](userids=userid, **connection_args)
         cur_usrgrps = list()
 
         for usergroup in usergroups:
@@ -143,7 +156,7 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
         if set(cur_usrgrps) != set(usrgrps):
             update_usrgrps = True
 
-        user_medias = __salt__['zabbix.user_getmedia'](userid)
+        user_medias = __salt__['zabbix.user_getmedia'](userid, **connection_args)
         medias_formated = _media_format(medias)
 
         if user_medias:
@@ -179,8 +192,8 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
             ret['comment'] = comment_user_updated
 
             if update_usrgrps:
-                __salt__['zabbix.user_update'](userid, usrgrps=usrgrps)
-                updated_groups = __salt__['zabbix.usergroup_get'](userids=userid)
+                __salt__['zabbix.user_update'](userid, usrgrps=usrgrps, **connection_args)
+                updated_groups = __salt__['zabbix.usergroup_get'](userids=userid, **connection_args)
 
                 cur_usrgrps = list()
                 for usergroup in updated_groups:
@@ -191,10 +204,10 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
                 if usrgrp_diff:
                     error.append('Unable to update grpup(s): {0}'.format(usrgrp_diff))
 
-                ret['changes']['usrgrps'] = str(updated_groups)
+                ret['changes']['usrgrps'] = six.text_type(updated_groups)
 
             if password_reset:
-                updated_password = __salt__['zabbix.user_update'](userid, passwd=passwd)
+                updated_password = __salt__['zabbix.user_update'](userid, passwd=passwd, **connection_args)
                 if 'error' in updated_password:
                     error.append(updated_groups['error'])
                 else:
@@ -202,7 +215,7 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
 
             if update_medias:
                 for user_med in user_medias:
-                    deletedmed = __salt__['zabbix.user_deletemedia'](user_med['mediaid'])
+                    deletedmed = __salt__['zabbix.user_deletemedia'](user_med['mediaid'], **connection_args)
                     if 'error' in deletedmed:
                         error.append(deletedmed['error'])
 
@@ -212,12 +225,13 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
                                                                  mediatypeid=media['mediatypeid'],
                                                                  period=media['period'],
                                                                  sendto=media['sendto'],
-                                                                 severity=media['severity'])
+                                                                 severity=media['severity'],
+                                                                 **connection_args)
 
                     if 'error' in updatemed:
                         error.append(updatemed['error'])
 
-                ret['changes']['medias'] = str(medias_formated)
+                ret['changes']['medias'] = six.text_type(medias_formated)
 
         else:
             ret['comment'] = comment_user_exists
@@ -230,18 +244,18 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
             ret['changes'] = changes_user_created
         else:
             ret['result'] = False
-            ret['comment'] = comment_user_notcreated + str(user_create['error'])
+            ret['comment'] = comment_user_notcreated + six.text_type(user_create['error'])
 
     # error detected
     if error:
         ret['changes'] = {}
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
 
     return ret
 
 
-def absent(name):
+def absent(name, **kwargs):
     '''
     Ensures that the user does not exist, eventually delete user.
 
@@ -258,6 +272,14 @@ def absent(name):
             zabbix_user.absent
 
     '''
+    connection_args = {}
+    if '_connection_user' in kwargs:
+        connection_args['_connection_user'] = kwargs['_connection_user']
+    if '_connection_password' in kwargs:
+        connection_args['_connection_password'] = kwargs['_connection_password']
+    if '_connection_url' in kwargs:
+        connection_args['_connection_url'] = kwargs['_connection_url']
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     # Comment and change messages
@@ -269,7 +291,7 @@ def absent(name):
                                    }
                             }
 
-    user_get = __salt__['zabbix.user_get'](name)
+    user_get = __salt__['zabbix.user_get'](name, **connection_args)
 
     # Dry run, test=true mode
     if __opts__['test']:
@@ -287,7 +309,7 @@ def absent(name):
     else:
         try:
             userid = user_get[0]['userid']
-            user_delete = __salt__['zabbix.user_delete'](userid)
+            user_delete = __salt__['zabbix.user_delete'](userid, **connection_args)
         except KeyError:
             user_delete = False
 
@@ -297,6 +319,6 @@ def absent(name):
             ret['changes'] = changes_user_deleted
         else:
             ret['result'] = False
-            ret['comment'] = comment_user_notdeleted + str(user_delete['error'])
+            ret['comment'] = comment_user_notdeleted + six.text_type(user_delete['error'])
 
     return ret

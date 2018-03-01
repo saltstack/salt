@@ -7,7 +7,7 @@ module dynamically generates wrappers for the various resources by iterating
 over the values in the ``__all__`` variable exposed by the testinfra.modules
 namespace.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import inspect
 import logging
 import operator
@@ -16,6 +16,7 @@ import types
 
 log = logging.getLogger(__name__)
 
+from salt.ext import six
 try:
     import testinfra
     from testinfra import modules
@@ -235,17 +236,17 @@ def _copy_function(module_name, name=None):
             return success, pass_msgs, fail_msgs
         if hasattr(inspect, 'signature'):
             mod_sig = inspect.signature(mod)
-            parameters = mod_sig.parameters.keys()
+            parameters = mod_sig.parameters
         else:
             if isinstance(mod.__init__, types.MethodType):
                 mod_sig = inspect.getargspec(mod.__init__)
             elif hasattr(mod, '__call__'):
                 mod_sig = inspect.getargspec(mod.__call__)
             parameters = mod_sig.args
-        log.debug('Parameters accepted by module {0}: {1}'.format(module_name,
-                                                                  parameters))
+        log.debug('Parameters accepted by module %s: %s',
+                  module_name, parameters)
         additional_args = {}
-        for arg in set(parameters).intersection(set(methods.keys())):
+        for arg in set(parameters).intersection(set(methods)):
             additional_args[arg] = methods.pop(arg)
         try:
             if len(parameters) > 1:
@@ -256,11 +257,11 @@ def _copy_function(module_name, name=None):
             log.exception('Module failed to instantiate')
             raise
         valid_methods = {}
-        log.debug('Called methods are: {0}'.format(methods))
+        log.debug('Called methods are: %s', methods)
         for meth_name in methods:
             if not meth_name.startswith('_'):
                 valid_methods[meth_name] = methods[meth_name]
-        log.debug('Valid methods are: {0}'.format(valid_methods))
+        log.debug('Valid methods are: %s', valid_methods)
         for meth, arg in valid_methods.items():
             result = _get_method_result(mod, modinstance, meth, arg)
             assertion_result = _apply_assertion(arg, result)
@@ -296,8 +297,7 @@ def _register_functions():
         modules_ = [module_ for module_ in modules.modules]
 
     for mod_name in modules_:
-        mod_name = _to_snake_case(module_)
-        mod_func = _copy_function(mod_name, str(mod_name))
+        mod_func = _copy_function(mod_name, six.text_type(mod_name))
         mod_func.__doc__ = _build_doc(mod_name)
         __all__.append(mod_name)
         globals()[mod_name] = mod_func

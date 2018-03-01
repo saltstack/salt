@@ -58,10 +58,13 @@ Or delete all existing names for an address:
           - hostnames: []
 
 '''
-from __future__ import absolute_import
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
 import salt.utils.validate.net
-import salt.ext.six as six
 
 
 def present(name, ip):  # pylint: disable=C0103
@@ -131,7 +134,7 @@ def absent(name, ip):  # pylint: disable=C0103
             comments.append('Host {0} ({1}) already absent'.format(name, _ip))
         else:
             if __opts__['test']:
-                comments.append('Host {0} ({1} needs to be removed'.format(name, _ip))
+                comments.append('Host {0} ({1}) needs to be removed'.format(name, _ip))
             else:
                 if __salt__['hosts.rm_host'](_ip, name):
                     ret['changes'] = {'host': name}

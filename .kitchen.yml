@@ -1,8 +1,9 @@
 ---
 <% vagrant = system('which vagrant 2>/dev/null >/dev/null') %>
-<% version = '2016.11.8' %>
+<% version = '2017.7.1' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
+<% verifierfile = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
 
 <% if File.exists?(driverfile) %>
 <%= ERB.new(File.read(driverfile)).result %>
@@ -10,8 +11,9 @@
 driver:
   name: docker
   use_sudo: false
+  hostname: salt
   privileged: true
-  username: root
+  username: kitchen
   volume:
     - /var/run/docker.sock:/docker.sock
   cap_add:
@@ -19,20 +21,22 @@ driver:
   disable_upstart: false
   provision_command:
     - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+transport:
+  name: rsync
 <% end %>
 
-sudo: false
 provisioner:
   name: salt_solo
   salt_install: bootstrap
   salt_version: latest
   salt_bootstrap_url: https://bootstrap.saltstack.com
-  salt_bootstrap_options: -X stable <%= version %>
+  salt_bootstrap_options: -X -p rsync stable <%= version %>
   log_level: info
+  sudo: true
   require_chef: false
   remote_states:
     name: git://github.com/saltstack/salt-jenkins.git
-    branch: 2016.11
+    branch: oxygen
     repo: git
     testingdir: /testing
   salt_copy_filter:
@@ -47,9 +51,11 @@ provisioner:
     - .travis.yml
   state_top:
     base:
+      "os:Windows":
+        - match: grain
+        - prep_windows
       "*":
         - git.salt
-        - kitchen
 <% if File.exists?(platformsfile) %>
 <%= ERB.new(File.read(platformsfile)).result %>
 <% else %>
@@ -59,7 +65,7 @@ platforms:
       image: fedora:latest
       run_command: /usr/lib/systemd/systemd
     provisioner:
-      salt_bootstrap_options: -X git v<%= version %> >/dev/null
+      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
   - name: centos-7
     driver_config:
       run_command: /usr/lib/systemd/systemd
@@ -69,7 +75,7 @@ platforms:
       provision_command:
         - yum install -y upstart
     provisioner:
-      salt_bootstrap_options: -P -y -x python2.7 -X git v<%= version %> >/dev/null
+      salt_bootstrap_options: -P -p rsync -y -x python2.7 -X git v<%= version %> >/dev/null
   - name: ubuntu-rolling
     driver_config:
       image: ubuntu:rolling
@@ -103,7 +109,7 @@ platforms:
         - systemctl enable sshd
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
     provisioner:
-      salt_bootstrap_options: -X git v<%= version %> >/dev/null
+      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
   - name: opensuse
     driver_config:
       run_command: /usr/lib/systemd/systemd
@@ -111,65 +117,114 @@ platforms:
         - systemctl enable sshd.service
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
     provisioner:
-      salt_bootstrap_options: -X git v<%= version %> >/dev/null
+      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
 <% if vagrant != false %>
   - name: windows-2012r2
     driver:
       box: mwrock/Windows2012R2
-      communicator: winrm
       name: vagrant
       gui: true
-      username: administrator
-      password: Pass@word1
+      customize:
+        cpus: 4
+        memory: 8192
+    transport:
+      name: winrm
+      username: Vagrant
+      password: vagrant
     provisioner:
-      init_environment: |
-        Clear-Host
-        $AddedLocation ="c:\salt"
-        $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-        $OldPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
-        $NewPath= $OldPath + ’;’ + $AddedLocation
-        Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
-      salt_bootstrap_options: ''
+      salt_bootstrap_options: -version <%= version %>
+    verifier:
+      windows: true
+      types:
+        - unit
+      coverage_xml: false
+      save:
+        $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
+        /salt/var/log/salt/minion: artifacts/logs/minion
   - name: windows-2016
     driver:
       box: mwrock/Windows2016
-      communicator: winrm
       name: vagrant
+      gui: true
+      customize:
+        cpus: 4
+        memory: 8192
+    transport:
+      name: winrm
       username: Vagrant
       password: vagrant
-      gui: true
     provisioner:
-      init_environment: |
-        Clear-Host
-        $AddedLocation ="c:\salt;c:\salt\bin\Scripts"
-        $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-        $OldPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
-        $NewPath= $OldPath + ’;’ + $AddedLocation
-        Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
-      salt_bootstrap_options: ''
+      salt_bootstrap_options: -version <%= version %>
+    verifier:
+      windows: true
+      types:
+        - unit
+      coverage_xml: false
+      save:
+        $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
+        /salt/var/log/salt/minion: artifacts/logs/minion
 <% end %>
 <% end %>
 suites:
   - name: py2
+    verifier:
+      python_bin: python2.7
     provisioner:
       pillars:
         top.sls:
           base:
             "*":
               - jenkins
+            "os:Windows":
+              - match: grain
+              - windows
         jenkins.sls:
-          testing_dir: /tmp/kitchen/testing
+          testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
           clone_repo: false
           salttesting_namespec: salttesting==2017.6.1
-verifier:
-  name: shell
-  remote_exec: true
-  sudo: false
-  live_stream: {}
-<% if ENV['TESTOPTS'].nil? %>
-  command: '$(kitchen) /tmp/kitchen/testing/tests/runtests.py --run-destructive --sysinfo --transport=zeromq --output-columns=80 --ssh --coverage-xml=/tmp/coverage.xml --xml=/tmp/xml-unittests-output'
+        windows.sls:
+          virtualenv_path: 'c:\Python27\Scripts\pip.exe'
+  - name: py3
+    excludes:
+      - centos-6
+      - ubuntu-14.04
+    verifier:
+      python_bin: python3
+    provisioner:
+      pillars:
+        top.sls:
+          base:
+            "*":
+              - jenkins
+            "os:Windows":
+              - match: grain
+              - windows
+        jenkins.sls:
+          testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
+          clone_repo: false
+          py3: true
+          salttesting_namespec: salttesting==2017.6.1
+        windows.sls:
+          virtualenv_path: 'c:\Python35\Scripts\pip.exe'
+
+<% if File.exists?(verifierfile) %>
+<%= ERB.new(File.read(verifierfile)).result %>
 <% else %>
-  command: '$(kitchen) /tmp/kitchen/testing/tests/runtests.py --run-destructive --output-columns 80 <%= ENV["TESTOPTS"] %>'
+verifier:
+  name: runtests
+  sudo: true
+  verbose: true
+  run_destructive: true
+  transport: zeromq
+  types:
+    - ssh
+  xml: /tmp/xml-unittests-output/
+  coverage_xml: /tmp/coverage.xml
+  save:
+    /tmp/xml-unittests-output: artifacts/
+    /tmp/coverage.xml: artifacts/coverage/coverage.xml
+    /tmp/kitchen/var/log/salt/minion: artifacts/logs/minion
+    /tmp/salt-runtests.log: artifacts/logs/salt-runtests.log
 <% end %>

@@ -11,10 +11,10 @@ Manage ini files
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 __virtualname__ = 'ini'
 
@@ -26,13 +26,14 @@ def __virtual__():
     return __virtualname__ if 'ini.set_option' in __salt__ else False
 
 
-def options_present(name, sections=None, separator='='):
+def options_present(name, sections=None, separator='=', strict=False):
     '''
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
           ini.options_present:
             - separator: '='
+            - strict: True
             - sections:
                 test:
                   testkey: 'testval'
@@ -41,7 +42,8 @@ def options_present(name, sections=None, separator='='):
                   testkey1: 'testval121'
 
     options present in file and not specified in sections
-    dict will be untouched
+    dict will be untouched, unless `strict: True` flag is
+    used
 
     changes dict will contain the list of changes made
     '''
@@ -63,7 +65,7 @@ def options_present(name, sections=None, separator='='):
                 return ret
             for key in sections[section]:
                 cur_value = cur_section.get(key)
-                if cur_value == str(sections[section][key]):
+                if cur_value == six.text_type(sections[section][key]):
                     ret['comment'] += 'Key {0}{1} unchanged.\n'.format(key, section_name)
                     continue
                 ret['comment'] += 'Changed key {0}{1}.\n'.format(key, section_name)
@@ -72,8 +74,26 @@ def options_present(name, sections=None, separator='='):
             ret['comment'] = 'No changes detected.'
         return ret
     try:
-        changes = __salt__['ini.set_option'](name, sections, separator)
-    except IOError as err:
+        changes = {}
+        if sections:
+            for section_name, section_body in sections.items():
+                changes[section_name] = {}
+                if strict:
+                    original = __salt__['ini.get_section'](name, section_name, separator)
+                    for key_to_remove in set(original.keys()).difference(section_body.keys()):
+                        orig_value = __salt__['ini.get_option'](name, section_name, key_to_remove, separator)
+                        __salt__['ini.remove_option'](name, section_name, key_to_remove, separator)
+                        changes[section_name].update({key_to_remove: ''})
+                        changes[section_name].update({key_to_remove: {'before': orig_value,
+                                                                      'after': None}})
+                options_updated = __salt__['ini.set_option'](name, {section_name: section_body}, separator)
+                if options_updated:
+                    changes[section_name].update(options_updated[section_name])
+                if not changes[section_name]:
+                    del changes[section_name]
+        else:
+            changes = __salt__['ini.set_option'](name, sections, separator)
+    except (IOError, KeyError) as err:
         ret['comment'] = "{0}".format(err)
         ret['result'] = False
         return ret
@@ -82,8 +102,10 @@ def options_present(name, sections=None, separator='='):
         ret['comment'] = 'Errors encountered. {0}'.format(changes['error'])
         ret['changes'] = {}
     else:
-        ret['comment'] = 'Changes take effect'
-        ret['changes'] = changes
+        for name, body in changes.items():
+            if body:
+                ret['comment'] = 'Changes take effect'
+                ret['changes'].update({name: changes[name]})
     return ret
 
 
@@ -182,7 +204,7 @@ def sections_present(name, sections=None, separator='='):
                 ret['result'] = False
                 ret['comment'] = "{0}".format(err)
                 return ret
-            if cmp(dict(sections[section]), cur_section) == 0:
+            if dict(sections[section]) == cur_section:
                 ret['comment'] += 'Section unchanged {0}.\n'.format(section)
                 continue
             elif cur_section:

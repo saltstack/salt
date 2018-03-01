@@ -1,3 +1,5 @@
+.. _returners:
+
 =========
 Returners
 =========
@@ -45,6 +47,13 @@ test.ping command will be sent out to the three named returners.
 Writing a Returner
 ==================
 
+Returners are Salt modules that allow the redirection of results data to targets other than the Salt Master.
+
+Returners Are Easy To Write!
+----------------------------
+
+Writing a Salt returner is straightforward.
+
 A returner is a Python module containing at minimum a ``returner`` function.
 Other optional functions can be included to add support for
 :conf_master:`master_job_cache`, :ref:`external-job-cache`, and `Event Returners`_.
@@ -63,7 +72,7 @@ Other optional functions can be included to add support for
 .. code-block:: python
 
     import redis
-    import json
+    import salt.utils.json
 
     def returner(ret):
         '''
@@ -75,12 +84,52 @@ Other optional functions can be included to add support for
                     port=6379,
                     db='0')
         serv.sadd("%(id)s:jobs" % ret, ret['jid'])
-        serv.set("%(jid)s:%(id)s" % ret, json.dumps(ret['return']))
+        serv.set("%(jid)s:%(id)s" % ret, salt.utils.json.dumps(ret['return']))
         serv.sadd('jobs', ret['jid'])
         serv.sadd(ret['jid'], ret['id'])
 
 The above example of a returner set to send the data to a Redis server
 serializes the data as JSON and sets it in redis.
+
+Using Custom Returner Modules
+-----------------------------
+
+Place custom returners in a ``_returners/`` directory within the
+:conf_master:`file_roots` specified by the master config file.
+
+Custom returners are distributed when any of the following are called:
+
+- :mod:`state.apply <salt.modules.state.apply_>`
+- :mod:`saltutil.sync_returners <salt.modules.saltutil.sync_returners>`
+- :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+
+Any custom returners which have been synced to a minion that are named the
+same as one of Salt's default set of returners will take the place of the
+default returner with the same name.
+
+Naming the Returner
+-------------------
+
+Note that a returner's default name is its filename (i.e. ``foo.py`` becomes
+returner ``foo``), but that its name can be overridden by using a
+:ref:`__virtual__ function <virtual-modules>`. A good example of this can be
+found in the `redis`_ returner, which is named ``redis_return.py`` but is
+loaded as simply ``redis``:
+
+.. code-block:: python
+
+    try:
+        import redis
+        HAS_REDIS = True
+    except ImportError:
+        HAS_REDIS = False
+
+    __virtualname__ = 'redis'
+
+    def __virtual__():
+        if not HAS_REDIS:
+            return False
+        return __virtualname__
 
 Master Job Cache Support
 ------------------------
@@ -98,7 +147,7 @@ must implement the following functions:
 ``prep_jid``
     Ensures that job ids (jid) don't collide, unless passed_jid is provided.
 
-    ``nochache`` is an optional boolean that indicates if return data
+    ``nocache`` is an optional boolean that indicates if return data
     should be cached. ``passed_jid`` is a caller provided jid which should be
     returned unconditionally.
 
@@ -119,6 +168,8 @@ must implement the following functions:
 
 .. code-block:: python
 
+    import salt.utils.json
+
     def save_load(jid, load):
         '''
         Save the load to the specified jid id
@@ -127,7 +178,7 @@ must implement the following functions:
                      jid, load
                    ) VALUES (
                      '{0}', '{1}'
-                   );'''.format(jid, json.dumps(load))
+                   );'''.format(jid, salt.utils.json.dumps(load))
 
         # cassandra_cql.cql_query may raise a CommandExecutionError
         try:
@@ -136,8 +187,9 @@ must implement the following functions:
             log.critical('Could not save load in jids table.')
             raise
         except Exception as e:
-            log.critical('''Unexpected error while inserting into
-             jids: {0}'''.format(str(e)))
+            log.critical(
+                'Unexpected error while inserting into jids: {0}'.format(e)
+            )
             raise
 
 
@@ -267,6 +319,8 @@ contains the jid and therefore is guaranteed to be unique.
 
 .. code-block:: python
 
+    import salt.utils.json
+
     def event_return(events):
      '''
      Return event to mysql server
@@ -280,47 +334,7 @@ contains the jid and therefore is guaranteed to be unique.
              data = event.get('data', '')
              sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id` )
                       VALUES (%s, %s, %s)'''
-             cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
-
-Custom Returners
-----------------
-
-Place custom returners in a ``_returners`` directory within the
-:conf_master:`file_roots` specified by the master config file.
-
-Custom returners are distributed when any of the following are called:
-
-- :mod:`state.apply <salt.modules.state.apply_>`
-- :mod:`saltutil.sync_returners <salt.modules.saltutil.sync_returners>`
-- :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
-
-Any custom returners which have been synced to a minion that are named the
-same as one of Salt's default set of returners will take the place of the
-default returner with the same name.
-
-Naming the Returner
--------------------
-
-Note that a returner's default name is its filename (i.e. ``foo.py`` becomes
-returner ``foo``), but that its name can be overridden by using a
-:ref:`__virtual__ function <virtual-modules>`. A good example of this can be
-found in the `redis`_ returner, which is named ``redis_return.py`` but is
-loaded as simply ``redis``:
-
-.. code-block:: python
-
-    try:
-        import redis
-        HAS_REDIS = True
-    except ImportError:
-        HAS_REDIS = False
-
-    __virtualname__ = 'redis'
-
-    def __virtual__():
-        if not HAS_REDIS:
-            return False
-        return __virtualname__
+             cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__['id']))
 
 
 Testing the Returner
@@ -349,7 +363,7 @@ infrastructure, all events seen by a salt master may be logged to one or
 more returners.
 
 To enable event logging, set the ``event_return`` configuration option in the
-master config to the returner(s) which should be designated as the handler 
+master config to the returner(s) which should be designated as the handler
 for event returns.
 
 .. note::

@@ -265,8 +265,10 @@ Alternatively,  they can be defined the "old way",  or with multiple
         - require:
           - user: fred
 
-YAML support only plain ASCII
-=============================
+.. _yaml_plain_ascii:
+
+YAML supports only plain ASCII
+==============================
 
 According to YAML specification, only ASCII characters can be used.
 

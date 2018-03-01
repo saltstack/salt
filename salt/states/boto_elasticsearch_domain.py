@@ -41,6 +41,7 @@ config:
         boto_elasticsearch_domain.present:
             - DomainName: mydomain
             - profile='user-credentials'
+            - ElasticsearchVersion: "2.3"
             - ElasticsearchClusterConfig:
                 InstanceType": "t2.micro.elasticsearch"
                 InstanceCount: 1
@@ -77,15 +78,16 @@ config:
 
 '''
 
-# Import Python Libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
-import os.path
-import json
 
-# Import Salt Libs
-import salt.ext.six as six
+# Import Salt libs
+import salt.utils.json
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -108,7 +110,8 @@ def present(name, DomainName,
             SnapshotOptions=None,
             AdvancedOptions=None,
             Tags=None,
-            region=None, key=None, keyid=None, profile=None):
+            region=None, key=None, keyid=None, profile=None,
+            ElasticsearchVersion="1.5"):
     '''
     Ensure domain exists.
 
@@ -188,6 +191,10 @@ def present(name, DomainName,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
+
+    ElasticsearchVersion
+        String of format X.Y to specify version for the Elasticsearch domain eg.
+        "1.5" or "2.3".
     '''
     ret = {'name': DomainName,
            'result': True,
@@ -218,7 +225,7 @@ def present(name, DomainName,
         Tags = {}
     if AccessPolicies is not None and isinstance(AccessPolicies, six.string_types):
         try:
-            AccessPolicies = json.loads(AccessPolicies)
+            AccessPolicies = salt.utils.json.loads(AccessPolicies)
         except ValueError as e:
             ret['result'] = False
             ret['comment'] = 'Failed to create domain: {0}.'.format(e.message)
@@ -242,6 +249,7 @@ def present(name, DomainName,
                                                      AccessPolicies=AccessPolicies,
                                                      SnapshotOptions=SnapshotOptions,
                                                      AdvancedOptions=AdvancedOptions,
+                                                     ElasticsearchVersion=str(ElasticsearchVersion),  # future lint: disable=blacklisted-function
                                                region=region, key=key,
                                                keyid=keyid, profile=profile)
         if not r.get('created'):
@@ -258,10 +266,23 @@ def present(name, DomainName,
     ret['comment'] = os.linesep.join([ret['comment'], 'Domain {0} is present.'.format(DomainName)])
     ret['changes'] = {}
     # domain exists, ensure config matches
+    _status = __salt__['boto_elasticsearch_domain.status'](DomainName=DomainName,
+                                  region=region, key=key, keyid=keyid,
+                                  profile=profile)['domain']
+    if _status.get('ElasticsearchVersion') != str(ElasticsearchVersion):  # future lint: disable=blacklisted-function
+        ret['result'] = False
+        ret['comment'] = (
+            'Failed to update domain: version cannot be modified '
+            'from {0} to {1}.'.format(
+                _status.get('ElasticsearchVersion'),
+                str(ElasticsearchVersion)  # future lint: disable=blacklisted-function
+            )
+        )
+        return ret
     _describe = __salt__['boto_elasticsearch_domain.describe'](DomainName=DomainName,
                                   region=region, key=key, keyid=keyid,
                                   profile=profile)['domain']
-    _describe['AccessPolicies'] = json.loads(_describe['AccessPolicies'])
+    _describe['AccessPolicies'] = salt.utils.json.loads(_describe['AccessPolicies'])
 
     # When EBSEnabled is false, describe returns extra values that can't be set
     if not _describe.get('EBSOptions', {}).get('EBSEnabled'):

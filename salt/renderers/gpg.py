@@ -209,31 +209,32 @@ pillar data like so:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import logging
 from subprocess import Popen, PIPE
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
+import salt.utils.stringio
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
-import salt.ext.six as six
-
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
+GPG_CIPHERTEXT = re.compile(
+    r'-----BEGIN PGP MESSAGE-----.*?-----END PGP MESSAGE-----', re.DOTALL)
 
 
 def _get_gpg_exec():
     '''
     return the GPG executable or raise an error
     '''
-    gpg_exec = salt.utils.which('gpg')
+    gpg_exec = salt.utils.path.which('gpg')
     if gpg_exec:
         return gpg_exec
     else:
@@ -262,18 +263,22 @@ def _get_key_dir():
     return gpg_keydir
 
 
-def _decrypt_ciphertext(cipher, translate_newlines=False):
+def _decrypt_ciphertext(matchobj):
     '''
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
     '''
-    cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '-d']
+    cipher = matchobj.group()
+    if six.PY3:
+        cipher = cipher.encode(__salt_system_encoding__)
+    cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '--status-fd', '2',
+           '--no-tty', '-d']
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
-    decrypted_data, decrypt_error = proc.communicate(
-        input=cipher.replace(r'\n', '\n') if translate_newlines else cipher
-    )
+    decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
+        if six.PY3:
+            cipher = cipher.decode(__salt_system_encoding__)
         log.warning(
             'Could not decrypt cipher %s, received: %s',
             cipher,
@@ -281,7 +286,15 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
         )
         return cipher
     else:
-        return str(decrypted_data)
+        if six.PY3 and isinstance(decrypted_data, bytes):
+            decrypted_data = decrypted_data.decode(__salt_system_encoding__)
+        return six.text_type(decrypted_data)
+
+
+def _decrypt_ciphertexts(cipher, translate_newlines=False):
+    if translate_newlines:
+        cipher = cipher.replace(r'\n', '\n')
+    return GPG_CIPHERTEXT.sub(_decrypt_ciphertext, cipher)
 
 
 def _decrypt_object(obj, translate_newlines=False):
@@ -290,12 +303,10 @@ def _decrypt_object(obj, translate_newlines=False):
     (string or unicode), and it contains a valid GPG header, decrypt it,
     otherwise keep going until a string is found.
     '''
+    if salt.utils.stringio.is_readable(obj):
+        return _decrypt_object(obj.getvalue(), translate_newlines)
     if isinstance(obj, six.string_types):
-        if GPG_HEADER.search(obj):
-            return _decrypt_ciphertext(obj,
-                                       translate_newlines=translate_newlines)
-        else:
-            return obj
+        return _decrypt_ciphertexts(obj, translate_newlines=translate_newlines)
     elif isinstance(obj, dict):
         for key, value in six.iteritems(obj):
             obj[key] = _decrypt_object(value,

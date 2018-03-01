@@ -10,18 +10,19 @@ ext_pillar, simply ported to use mako instead of jinja2 for templating.
 It supports the following features:
 
 - multiple config files that are mako templates with support for ``pillar``,
-  ``__grains__``, ``__salt__``, ``__opts__`` objects
-- a config file renders as an ordered list of files (paths of these files are
-  relative to the current config file)
-- this list of files are read in ordered as mako templates with support for
-  ``stack``, ``pillar``, ``__grains__``, ``__salt__``, ``__opts__`` objects
-- all these rendered files are then parsed as ``yaml``
-- then all yaml dicts are merged in order with support for the following
+  ``__grains__``, ``__salt__``, ``__opts__`` objects.
+- a config file renders as an ordered list of files. Unless absolute, the paths
+  of these files are relative to the current config file - if absolute, they
+  will be treated literally.
+- this list of files are read in order as mako templates with support for
+  ``stack``, ``pillar``, ``__grains__``, ``__salt__``, ``__opts__`` objects.
+- all these rendered files are then parsed as ``yaml``.
+- then all yaml dicts are merged in order, with support for the following.
   merging strategies: ``merge-first``, ``merge-last``, ``remove``, and
-  ``overwrite``
+  ``overwrite``.
 - stack config files can be matched based on ``pillar``, ``grains``, or
   ``opts`` values, which make it possible to support kind of self-contained
-  environments
+  environments.
 
 Configuration in Salt
 ---------------------
@@ -40,7 +41,7 @@ MakoStack config file like below:
 .. code:: yaml
 
     ext_pillar:
-      - stack: /path/to/stack.cfg
+      - makostack: /path/to/stack.cfg
 
 List of config files
 ~~~~~~~~~~~~~~~~~~~~
@@ -50,7 +51,7 @@ You can also provide a list of config files:
 .. code:: yaml
 
     ext_pillar:
-      - stack:
+      - makostack:
           - /path/to/stack1.cfg
           - /path/to/stack2.cfg
 
@@ -66,7 +67,7 @@ Here is an example of such a configuration, which should speak by itself:
 .. code:: yaml
 
     ext_pillar:
-      - stack:
+      - makostack:
           pillar:environment:
             dev: /path/to/dev/stack.cfg
             prod: /path/to/prod/stack.cfg
@@ -76,7 +77,6 @@ Here is an example of such a configuration, which should speak by itself:
               - /path/to/stack2.cfg
           opts:custom:opt:
             value: /path/to/stack0.cfg
-
 
 Grafting data from files to arbitrary namespaces
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,8 +109,10 @@ The config files that are referenced in the above ``ext_pillar`` configuration
 are mako templates which must render as a simple ordered list of ``yaml``
 files that will then be merged to build pillar data.
 
-The path of these ``yaml`` files must be relative to the directory of the
-MakoStack config file.
+Unless an absolute path name is specified, the path of these ``yaml`` files is
+assumed to be relative to the directory containing the MakoStack config file.
+If a path begins with '/', however, it will be treated literally and can be
+anywhere on the filesystem.
 
 The following variables are available in mako templating of makostack
 configuration files:
@@ -372,14 +374,16 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import functools
 import os
 import logging
-from functools import partial
-import yaml
 
 # Import Salt libs
-import salt.ext.six as six
+import salt.utils.yaml
+
+# Import 3rd-party libs
+from salt.ext import six
 
 try:
     from mako.lookup import TemplateLookup
@@ -405,13 +409,13 @@ def __virtual__():
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
-    import salt.utils
+    import salt.utils.data
     stack = {}
     stack_config_files = list(args)
     traverse = {
-        'pillar': partial(salt.utils.traverse_dict_and_list, pillar),
-        'grains': partial(salt.utils.traverse_dict_and_list, __grains__),
-        'opts': partial(salt.utils.traverse_dict_and_list, __opts__),
+        'pillar': functools.partial(salt.utils.data.traverse_dict_and_list, pillar),
+        'grains': functools.partial(salt.utils.data.traverse_dict_and_list, __grains__),
+        'opts': functools.partial(salt.utils.data.traverse_dict_and_list, __opts__),
         }
     for matcher, matchs in six.iteritems(kwargs):
         t, matcher = matcher.split(':', 1)
@@ -428,8 +432,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         else:
             namespace = None
         if not os.path.isfile(cfg):
-            log.warning('Ignoring pillar stack cfg "{0}": '
-                        'file does not exist'.format(cfg))
+            log.warning('Ignoring Stack cfg "%s": file does not exist', cfg)
             continue
         stack = _process_stack_cfg(cfg, stack, minion_id, pillar, namespace)
     return stack
@@ -444,28 +447,34 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace):
                                                 minion_id=minion_id,
                                                 pillar=pillar, stack=stack)
     for path in _parse_top_cfg(tops):
+        dirs = [basedir]
+        if path.startswith('/'):
+            dirs += ['/']
+        lookup = TemplateLookup(directories=dirs)
         try:
             p = lookup.get_template(path).render(__opts__=__opts__,
                                                  __salt__=__salt__,
                                                  __grains__=__grains__,
                                                  minion_id=minion_id,
                                                  pillar=pillar, stack=stack)
-            obj = yaml.safe_load(p)
+            obj = salt.utils.yaml.safe_load(p)
             if not isinstance(obj, dict):
-                log.info('Ignoring pillar stack template "{0}": Can\'t parse '
-                         'as a valid yaml dictionary'.format(path))
+                log.info(
+                    'Ignoring Stack template "%s": Can\'t parse as a valid '
+                    'yaml dictionary', path
+                )
                 continue
             if namespace:
                 for sub in namespace.split(':')[::-1]:
                     obj = {sub: obj}
             stack = _merge_dict(stack, obj)
-            log.info('Stack template "{0}" parsed'.format(path))
+            log.info('Stack template "%s" parsed', path)
         except exceptions.TopLevelLookupException as e:
-            log.info('Stack template "{0}" not found.'.format(path))
+            log.info('Stack template "%s" not found.', path)
             continue
         except Exception as e:
-            log.info('Ignoring pillar stack template "{0}":'.format(path))
-            log.info('{0}'.format(exceptions.text_error_template().render()))
+            log.info('Ignoring Stack template "%s":', path)
+            log.info('%s', exceptions.text_error_template().render())
             continue
     return stack
 
@@ -502,8 +511,10 @@ def _merge_dict(stack, obj):
                     stack[k] = _cleanup(v)
                     v = stack_k
                 if type(stack[k]) != type(v):
-                    log.debug('Force overwrite, types differ: '
-                              '\'{0}\' != \'{1}\''.format(stack[k], v))
+                    log.debug(
+                        'Force overwrite, types differ: \'%s\' != \'%s\'',
+                        stack[k], v
+                    )
                     stack[k] = _cleanup(v)
                 elif isinstance(v, dict):
                     stack[k] = _merge_dict(stack[k], v)
@@ -535,9 +546,11 @@ def _merge_list(stack, obj):
 
 
 def _parse_top_cfg(content):
-    """Allow top_cfg to be YAML"""
+    '''
+    Allow top_cfg to be YAML
+    '''
     try:
-        obj = yaml.safe_load(content)
+        obj = salt.utils.yaml.safe_load(content)
         if isinstance(obj, list):
             return obj
     except Exception as e:

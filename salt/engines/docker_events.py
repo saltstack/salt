@@ -5,13 +5,13 @@ Send events from Docker events
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-import json
 import logging
 import traceback
 
-import salt.utils
+import salt.utils.json
+import salt.utils.event
 
 # pylint: disable=import-error
 try:
@@ -41,7 +41,8 @@ def __virtual__():
 
 def start(docker_url='unix://var/run/docker.sock',
           timeout=CLIENT_TIMEOUT,
-          tag='salt/engines/docker_events'):
+          tag='salt/engines/docker_events',
+          filters=None):
     '''
     Scan for Docker events and fire events
 
@@ -52,10 +53,18 @@ def start(docker_url='unix://var/run/docker.sock',
         engines:
           - docker_events:
               docker_url: unix://var/run/docker.sock
+              filters:
+                event:
+                - start
+                - stop
+                - die
+                - oom
 
     The config above sets up engines to listen
     for events from the Docker daemon and publish
     them to the Salt event bus.
+
+    For filter reference, see https://docs.docker.com/engine/reference/commandline/events/
     '''
 
     if __opts__.get('__role') == 'master':
@@ -81,9 +90,9 @@ def start(docker_url='unix://var/run/docker.sock',
         client = docker.Client(base_url=docker_url, timeout=timeout)
 
     try:
-        events = client.events()
+        events = client.events(filters=filters)
         for event in events:
-            data = json.loads(event)
+            data = salt.utils.json.loads(event.decode(__salt_system_encoding__, errors='replace'))
             # https://github.com/docker/cli/blob/master/cli/command/system/events.go#L109
             # https://github.com/docker/engine-api/blob/master/types/events/events.go
             # Each output includes the event type, actor id, name and action.

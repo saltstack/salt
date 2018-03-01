@@ -24,6 +24,9 @@ The api key can be specified in the master or minion configuration like below:
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def __virtual__():
     '''
@@ -48,7 +51,7 @@ def trigger_event(name,
             - event: TestEvent
             - value1: 'A value that we want to send.'
             - value2: 'A second value that we want to send.'
-            - value3: 'A third value that wen want to send.'
+            - value3: 'A third value that we want to send.'
 
     The following parameters are required:
 
