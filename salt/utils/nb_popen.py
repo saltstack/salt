@@ -24,7 +24,6 @@ import select
 import logging
 import tempfile
 import subprocess
-import salt.ext.six
 
 mswindows = (sys.platform == "win32")
 
@@ -36,36 +35,6 @@ except ImportError:
     import fcntl
 
 log = logging.getLogger(__name__)
-
-
-class FdPopen(subprocess.Popen):
-    '''
-    Python2 closing file descriptors in a blind way by a system's given range.
-    Therefore close_fds can significantly slow down the system in various circumstances.
-    '''
-
-    if sys.platform.startswith('linux') and salt.ext.six.PY2:
-        def _close_fds(self, but):
-            '''
-            Close only file descriptors that are needed.
-            The issue is not new: https://bugs.python.org/issue1663329
-
-            :param but:
-            :return:
-            '''
-            maxfds = len(os.listdir('/proc/{}/fd'.format(os.getpid())))
-            log.trace('Closing {} file descriptors'.format(maxfds))
-            if hasattr(os, 'closerange'):
-                os.closerange(3, but)
-                os.closerange(but + 1, maxfds)
-            else:
-                for i in range(3, maxfds):
-                    if i == but:
-                        continue
-                    try:
-                        os.close(i)
-                    except:
-                        pass
 
 
 class NonBlockingPopen(SafePopen):
