@@ -277,7 +277,7 @@ def _run(cmd,
          success_retcodes=None,
          **kwargs):
     '''
-    Do the DRY thing and only call subprocess.Popen() once
+    Do the DRY thing and only call salt.utils.subprocess.FdPopen() once
     '''
     if 'pillar' in kwargs and not pillar_override:
         pillar_override = kwargs['pillar']
