@@ -1067,7 +1067,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             '  base:',
             '    - /srv/salt',
             '    - /srv/sugar',
-            cfg_content
+            '    ' + cfg_content
         ])
         files_fopen = mock_open(read_data=file_content)
         with patch('salt.utils.files.fopen', files_fopen):
