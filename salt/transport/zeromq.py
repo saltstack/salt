@@ -23,6 +23,7 @@ import salt.crypt
 import salt.utils
 import salt.utils.verify
 import salt.utils.event
+import salt.utils.files
 import salt.payload
 import salt.transport.client
 import salt.transport.server
@@ -750,11 +751,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
 
         # Securely create socket
         log.info('Starting the Salt Puller on {0}'.format(pull_uri))
-        old_umask = os.umask(0o177)
-        try:
+        with salt.utils.files.set_umask(0o177):
             pull_sock.bind(pull_uri)
-        finally:
-            os.umask(old_umask)
 
         try:
             while True:

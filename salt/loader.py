@@ -22,6 +22,7 @@ from zipimport import zipimporter
 import salt.config
 import salt.syspaths
 import salt.utils.context
+import salt.utils.files
 import salt.utils.lazy
 import salt.utils.event
 import salt.utils.odict
@@ -781,24 +782,23 @@ def grains(opts, force_refresh=False, proxy=None):
     grains_data.update(opts['grains'])
     # Write cache if enabled
     if opts.get('grains_cache', False):
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.is_windows():
-                # Late import
-                import salt.modules.cmdmod
-                # Make sure cache file isn't read-only
-                salt.modules.cmdmod._run_quiet('attrib -R "{0}"'.format(cfn))
-            with salt.utils.fopen(cfn, 'w+b') as fp_:
-                try:
-                    serial = salt.payload.Serial(opts)
-                    serial.dump(grains_data, fp_)
-                except TypeError:
-                    # Can't serialize pydsl
-                    pass
-        except (IOError, OSError):
-            msg = 'Unable to write to grains cache file {0}'
-            log.error(msg.format(cfn))
-        os.umask(cumask)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.is_windows():
+                    # Late import
+                    import salt.modules.cmdmod
+                    # Make sure cache file isn't read-only
+                    salt.modules.cmdmod._run_quiet('attrib -R "{0}"'.format(cfn))
+                with salt.utils.fopen(cfn, 'w+b') as fp_:
+                    try:
+                        serial = salt.payload.Serial(opts)
+                        serial.dump(grains_data, fp_)
+                    except TypeError:
+                        # Can't serialize pydsl
+                        pass
+            except (IOError, OSError):
+                msg = 'Unable to write to grains cache file {0}'
+                log.error(msg.format(cfn))
 
     if grains_deep_merge:
         salt.utils.dictupdate.update(grains_data, opts['grains'])
