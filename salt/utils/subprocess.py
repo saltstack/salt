@@ -31,6 +31,8 @@ class FdPopen(subprocess.Popen):
             Close only file descriptors that are needed.
             The issue is not new: https://bugs.python.org/issue1663329
 
+            Do *not* use os.closerange (!)
+
             :param but:
             :return:
             '''
