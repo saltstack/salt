@@ -3,7 +3,7 @@
 Create/Close an alert in OpsGenie
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 This state is useful for creating or closing alerts in OpsGenie
 during state runs.

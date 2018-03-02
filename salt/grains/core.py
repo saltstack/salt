@@ -1333,19 +1333,22 @@ def _get_interfaces():
     return _INTERFACES
 
 
-def _parse_os_release():
+def _parse_os_release(os_release_files):
     '''
-    Parse /etc/os-release and return a parameter dictionary
+    Parse os-release and return a parameter dictionary
 
     See http://www.freedesktop.org/software/systemd/man/os-release.html
     for specification of the file format.
     '''
 
-    filename = '/etc/os-release'
-    if not os.path.isfile(filename):
-        filename = '/usr/lib/os-release'
-
     data = dict()
+    for filename in os_release_files:
+        if os.path.isfile(filename):
+            break
+    else:
+        # None of the specified os-release files exist
+        return data
+
     with salt.utils.files.fopen(filename) as ifile:
         regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
         for line in ifile:
@@ -1540,13 +1543,15 @@ def os_data():
                 # to be incorrectly set to "Arch".
                 grains['osfullname'] = 'Antergos Linux'
             elif 'lsb_distrib_id' not in grains:
-                if os.path.isfile('/etc/os-release') or os.path.isfile('/usr/lib/os-release'):
-                    os_release = _parse_os_release()
+                os_release = _parse_os_release(['/etc/os-release', '/usr/lib/os-release'])
+                if os_release:
                     if 'NAME' in os_release:
                         grains['lsb_distrib_id'] = os_release['NAME'].strip()
                     if 'VERSION_ID' in os_release:
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
-                    if 'PRETTY_NAME' in os_release:
+                    if 'VERSION_CODENAME' in os_release:
+                        grains['lsb_distrib_codename'] = os_release['VERSION_CODENAME']
+                    elif 'PRETTY_NAME' in os_release:
                         codename = os_release['PRETTY_NAME']
                         # https://github.com/saltstack/salt/issues/44108
                         if os_release['ID'] == 'debian':
@@ -1810,7 +1815,7 @@ def os_data():
                 grains['osrelease_info']
             )
         os_name = grains['os' if grains.get('os') in (
-            'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
+            'Debian', 'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
         grains['osfinger'] = '{0}-{1}'.format(
             os_name, grains['osrelease'] if os_name in ('Ubuntu',) else grains['osrelease_info'][0])
 
@@ -2517,13 +2522,16 @@ def _linux_iqn():
     ret = []
 
     initiator = '/etc/iscsi/initiatorname.iscsi'
-
-    if os.path.isfile(initiator):
+    try:
         with salt.utils.files.fopen(initiator, 'r') as _iscsi:
             for line in _iscsi:
                 line = line.strip()
                 if line.startswith('InitiatorName='):
                     ret.append(line.split('=', 1)[1])
+    except IOError as ex:
+        if ex.errno != os.errno.ENOENT:
+            log.debug("Error while accessing '%s': %s", initiator, ex)
+
     return ret
 
 

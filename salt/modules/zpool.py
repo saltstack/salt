@@ -239,6 +239,7 @@ def iostat(zpool=None, sample_time=5, parsable=True):
 
     zpool : string
         optional name of storage pool
+
     sample_time : int
         seconds to capture data before output
         default a sample of 5 seconds is used
@@ -346,10 +347,13 @@ def iostat(zpool=None, sample_time=5, parsable=True):
 
 def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=True):
     '''
+    .. versionadded:: 2015.5.0
+
     Return information about (all) storage pools
 
     zpool : string
         optional name of storage pool
+
     properties : string
         comma-separated list of properties to display
     parsable : boolean
@@ -361,13 +365,16 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Tru
         Added ```parsable``` parameter that defaults to True
 
     .. note::
-        the 'name' property will always be included, the 'frag' property will get removed if not available
+
+        The ``name`` property will always be included, while the ``frag``
+        property will get removed if not available
 
     zpool : string
         optional zpool
 
     .. note::
-        multiple storage pool can be provded as a space separated list
+
+        Multiple storage pool can be provded as a space separated list
 
     CLI Example:
 
@@ -442,11 +449,14 @@ def get(zpool, prop=None, show_source=False, parsable=True):
     Retrieves the given list of properties
 
     zpool : string
-        name of storage pool
+        Name of storage pool
+
     prop : string
-        optional name of property to retrieve
+        Optional name of property to retrieve
+
     show_source : boolean
-        show source of property
+        Show source of property
+
     parsable : boolean
         display data in pythonc values (True, False, Bytes,...)
 
@@ -519,11 +529,13 @@ def set(zpool, prop, value):
     Sets the given property on the specified pool
 
     zpool : string
-        name of storage pool
+        Name of storage pool
+
     prop : string
-        name of property
+        Name of property to set
+
     value : string
-        value to set property to
+        Value to set for the specified property
 
     .. versionadded:: 2016.3.0
 
@@ -555,7 +567,7 @@ def exists(zpool):
     Check if a ZFS storage pool is active
 
     zpool : string
-        name of storage pool
+        Name of storage pool
 
     CLI Example:
 
@@ -583,9 +595,10 @@ def destroy(zpool, force=False):
     Destroys a storage pool
 
     zpool : string
-        name of storage pool
+        Name of storage pool
+
     force : boolean
-        force destroy of pool
+        Force destroy of pool
 
     CLI Example:
 
@@ -612,17 +625,20 @@ def scrub(zpool, stop=False, pause=False):
     Scrub a storage pool
 
     zpool : string
-        name of storage pool
+        Name of storage pool
+
     stop : boolean
-        if true, cancel ongoing scrub
+        If ``True``, cancel ongoing scrub
+
     pause : boolean
-        if true, pause ongoing scrub
+        If ``True``, pause ongoing scrub
+
         .. versionadded:: 2018.3.0
 
         .. note::
 
-            If both pause and stop are true, stop will win.
-            Pause support was added in this PR:
+            If both ``pause`` and ``stop`` are ``True``, then ``stop`` will
+            win. Pause support was added in this PR:
             https://github.com/openzfs/openzfs/pull/407
 
     CLI Example:
@@ -666,19 +682,27 @@ def create(zpool, *vdevs, **kwargs):
     Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs, a hybrid zpool with cache, spare and log drives or a zpool with RAIDZ-1, RAIDZ-2 or RAIDZ-3
 
     zpool : string
-        name of storage pool
-    *vdevs : string
-        one or move devices
+        Name of storage pool
+
+    vdevs : string
+        One or move devices
+
     force : boolean
-        forces use of vdevs, even if they appear in use or specify a conflicting replication level.
+        Forces use of vdevs, even if they appear in use or specify a
+        conflicting replication level.
+
     mountpoint : string
-        sets the mount point for the root dataset
+        Sets the mount point for the root dataset
+
     altroot : string
-        equivalent to "-o cachefile=none,altroot=root"
+        Equivalent to "-o cachefile=none,altroot=root"
+
     properties : dict
-        additional pool properties
+        Additional pool properties
+
     filesystem_properties : dict
-        additional filesystem properties
+        Additional filesystem properties
+
     createboot : boolean
         ..versionadded:: 2018.3.0
         create a boot partition
@@ -687,15 +711,21 @@ def create(zpool, *vdevs, **kwargs):
 
     .. note::
 
-        Zpool properties can be specified at the time of creation of the pool by
-        passing an additional argument called "properties" and specifying the properties
-        with their respective values in the form of a python dictionary::
+        Zpool properties can be specified at the time of creation of the pool
+        by passing an additional argument called "properties" and specifying
+        the properties with their respective values in the form of a python
+        dictionary:
+
+        .. code-block:: text
 
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
-        Filesystem properties can be specified at the time of creation of the pool by
-        passing an additional argument called "filesystem_properties" and specifying the properties
-        with their respective values in the form of a python dictionary::
+        Filesystem properties can be specified at the time of creation of the
+        pool by passing an additional argument called "filesystem_properties"
+        and specifying the properties with their respective values in the form
+        of a python dictionary:
+
+        .. code-block:: text
 
             filesystem_properties="{'property1': 'value1', 'property2': 'value2'}"
 
@@ -768,11 +798,13 @@ def add(zpool, *vdevs, **kwargs):
     Add the specified vdev\'s to the given storage pool
 
     zpool : string
-        name of storage pool
-    *vdevs : string
-        one or more devices
+        Name of storage pool
+
+    vdevs : string
+        One or more devices
+
     force : boolean
-        forces use of device
+        Forces use of device
 
     CLI Example:
 
@@ -819,13 +851,16 @@ def attach(zpool, device, new_device, force=False):
     Attach specified device to zpool
 
     zpool : string
-        name of storage pool
+        Name of storage pool
+
     device : string
-        device to attach too
+        Existing device name too
+
     new_device : string
-        device to attach
+        New device name (to be attached to ``device``)
+
     force : boolean
-        forces use of device
+        Forces use of device
 
     CLI Example:
 
@@ -873,9 +908,10 @@ def detach(zpool, device):
     Detach specified device to zpool
 
     zpool : string
-        name of storage pool
+        Name of storage pool
+
     device : string
-        device to detach
+        Device to detach
 
     CLI Example:
 
@@ -910,28 +946,35 @@ def split(zpool, newzpool, **kwargs):
     .. note::
 
         All vdevs in pool must be mirrors.  At the time of the split,
-        newpool will be a replica of pool.
+        ``newzpool`` will be a replica of ``zpool``.
 
         After splitting, do not forget to import the new pool!
 
     zpool : string
-        name of storage pool
+        Name of storage pool
+
     newzpool : string
-        name of new storage pool
+        Name of new storage pool
+
     mountpoint : string
-        sets the mount point for the root dataset
+        Sets the mount point for the root dataset
+
     altroot : string
-        sets altroot for newzpool
+        Sets altroot for newzpool
+
     properties : dict
-        additional pool properties for newzpool
+        Additional pool properties for newzpool
 
     .. versionadded:: 2018.3.0
 
     .. note::
 
-        Zpool properties can be specified at the time of creation of the pool by
-        passing an additional argument called "properties" and specifying the properties
-        with their respective values in the form of a python dictionary::
+        Zpool properties can be specified at the time of creation of the pool
+        by passing an additional argument called "properties" and specifying
+        the properties with their respective values in the form of a python
+        dictionary:
+
+        .. code-block:: text
 
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
@@ -976,21 +1019,25 @@ def split(zpool, newzpool, **kwargs):
 
 def replace(zpool, old_device, new_device=None, force=False):
     '''
-    Replaces old_device with new_device.
+    Replaces ``old_device`` with ``new_device``
 
     .. note::
-        This is equivalent to attaching new_device,
-        waiting for it to resilver, and then detaching old_device.
 
-        The size of new_device must be greater than or equal to the minimum
+        This is equivalent to attaching ``new_device``,
+        waiting for it to resilver, and then detaching ``old_device``.
+
+        The size of ``new_device`` must be greater than or equal to the minimum
         size of all the devices in a mirror or raidz configuration.
 
     zpool : string
-        name of storage pool
+        Name of storage pool
+
     old_device : string
-        old device to replace
+        Old device to replace
+
     new_device : string
-        optional new device
+        Optional new device
+
     force : boolean
         Forces use of new_device, even if its appears to be in use.
 
@@ -1086,10 +1133,11 @@ def export(*pools, **kwargs):
     '''
     Export storage pools
 
-    *pools : string
-        one or more storage pools to export
+    pools : string
+        One or more storage pools to export
+
     force : boolean
-        force export of storage pools
+        Force export of storage pools
 
     .. versionadded:: 2015.5.0
 
@@ -1131,19 +1179,28 @@ def import_(zpool=None, new_name=None, **kwargs):
     Import storage pools or list pools available for import
 
     zpool : string
-        optional name of storage pool
+        Optional name of storage pool
+
     new_name : string
-        optional new name for the storage pool
+        Optional new name for the storage pool
+
     mntopts : string
-        comma-separated list of mount options to use when mounting datasets within the pool.
+        Comma-separated list of mount options to use when mounting datasets
+        within the pool.
+
     force : boolean
-        forces import, even if the pool appears to be potentially active.
+        Forces import, even if the pool appears to be potentially active.
+
     altroot : string
-        equivalent to "-o cachefile=none,altroot=root"
+        Equivalent to "-o cachefile=none,altroot=root"
+
     dir : string
-        searches for devices or files in dir, multiple dirs can be specified as follows:: dir="dir1,dir2"
+        Searches for devices or files in dir, multiple dirs can be specified as
+        follows: ``dir="dir1,dir2"``
+
     no_mount : boolean
-        import the pool without mounting any file systems.
+        Import the pool without mounting any file systems.
+
     only_destroyed : boolean
         imports destroyed pools only. this also sets force=True.
     recovery : bool|str
@@ -1160,13 +1217,16 @@ def import_(zpool=None, new_name=None, **kwargs):
             can be imported. The pool might also be imported if the pool was not broken to begin with.
 
     properties : dict
-        additional pool properties
+        Additional pool properties
 
     .. note::
 
-        Zpool properties can be specified at the time of creation of the pool by
-        passing an additional argument called "properties" and specifying the properties
-        with their respective values in the form of a python dictionary::
+        Zpool properties can be specified at the time of creation of the pool
+        by passing an additional argument called "properties" and specifying
+        the properties with their respective values in the form of a python
+        dictionary:
+
+        .. code-block:: text
 
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
@@ -1242,12 +1302,15 @@ def online(zpool, *vdevs, **kwargs):
 
     zpool : string
         name of storage pool
-    *vdevs : string
+
+    vdevs : string
         one or more devices
+
     expand : boolean
         Expand the device to use all available space.
 
         .. note::
+
             If the device is part of a mirror or raidz then all devices must be
             expanded before the new space will become available to the pool.
 
@@ -1304,15 +1367,18 @@ def offline(zpool, *vdevs, **kwargs):
 
     .. warning::
 
-        By default, the OFFLINE state is persistent. The device remains offline when
-        the system is rebooted. To temporarily take a device offline, use ``temporary=True``.
+        By default, the ``OFFLINE`` state is persistent. The device remains
+        offline when the system is rebooted. To temporarily take a device
+        offline, use ``temporary=True``.
 
     zpool : string
         name of storage pool
-    *vdevs : string
-        one or more devices
+
+    vdevs : string
+        One or more devices
+
     temporary : boolean
-        enable temporarily offline
+        Enable temporarily offline
 
     .. versionadded:: 2015.5.0
 
@@ -1356,7 +1422,7 @@ def labelclear(device, force=False):
     device : string
         device, must not be part of an active pool configuration.
     force : boolean
-        treat exported or foreign devices as inactive
+        Treat exported or foreign devices as inactive
 
     .. versionadded:: 2018.3.0
 
@@ -1428,8 +1494,8 @@ def reguid(zpool):
     Generates a new unique identifier for the pool
 
     .. warning::
-        You must ensure that all devices in this pool are online
-        and healthy before performing this action.
+        You must ensure that all devices in this pool are online and healthy
+        before performing this action.
 
     zpool : string
         name of storage pool
@@ -1487,9 +1553,10 @@ def upgrade(zpool=None, version=None):
     Enables all supported features on the given pool
 
     zpool : string
-        optional storage pool, applies to all otherwize
+        Optional storage pool, applies to all otherwize
+
     version : int
-        version to upgrade to, if unspecified upgrade to the highest possible
+        Version to upgrade to, if unspecified upgrade to the highest possible
 
     .. versionadded:: 2016.3.0
 
@@ -1535,11 +1602,14 @@ def history(zpool=None, internal=False, verbose=False):
     Displays the command history of the specified pools or all pools if no pool is specified
 
     zpool : string
-        optional storage pool
+        Optional storage pool
+
     internal : boolean
-        toggle display of internally logged ZFS events
+        Toggle display of internally logged ZFS events
+
     verbose : boolean
-        toggle display of the user name, the hostname, and the zone in which the operation was performed
+        Toggle display of the user name, the hostname, and the zone in which
+        the operation was performed
 
     .. versionadded:: 2016.3.0
 
@@ -1588,5 +1658,3 @@ def history(zpool=None, internal=False, verbose=False):
                 ret[pool][log_timestamp] = log_command
 
     return ret
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

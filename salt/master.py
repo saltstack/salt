@@ -24,20 +24,8 @@ import salt.serializers.msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
+from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
-
-try:
-    import zmq
-    import zmq.eventloop.ioloop
-    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
-    HAS_ZMQ = True
-except ImportError:
-    import tornado.ioloop
-    LOOP_CLASS = tornado.ioloop.IOLoop
-    HAS_ZMQ = False
 
 import tornado.gen  # pylint: disable=F0401
 
@@ -498,23 +486,13 @@ class Master(SMaster):
 
         :param dict: The salt options
         '''
-        if HAS_ZMQ:
-            # Warn if ZMQ < 3.2
-            try:
-                zmq_version_info = zmq.zmq_version_info()
-            except AttributeError:
-                # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
-                # using zmq.zmq_version() and build a version info tuple.
-                zmq_version_info = tuple(
-                    [int(x) for x in zmq.zmq_version().split('.')]
-                )
-            if zmq_version_info < (3, 2):
-                log.warning(
-                    'You have a version of ZMQ less than ZMQ 3.2! There are '
-                    'known connection keep-alive issues with ZMQ < 3.2 which '
-                    'may result in loss of contact with minions. Please '
-                    'upgrade your ZMQ!'
-                )
+        if zmq and ZMQ_VERSION_INFO < (3, 2):
+            log.warning(
+                'You have a version of ZMQ less than ZMQ 3.2! There are '
+                'known connection keep-alive issues with ZMQ < 3.2 which '
+                'may result in loss of contact with minions. Please '
+                'upgrade your ZMQ!'
+            )
         SMaster.__init__(self, opts)
 
     def __set_max_open_files(self):
@@ -993,9 +971,8 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Bind to the local port
         '''
         # using ZMQIOLoop since we *might* need zmq in there
-        if HAS_ZMQ:
-            zmq.eventloop.ioloop.install()
-        self.io_loop = LOOP_CLASS()
+        install_zmq()
+        self.io_loop = ZMQDefaultLoop()
         self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
@@ -2028,6 +2005,7 @@ class ClearFuncs(object):
         )
         minions = _res.get('minions', list())
         missing = _res.get('missing', list())
+        ssh_minions = _res.get('ssh_minions', False)
 
         # Check for external auth calls and authenticate
         auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(extra)
@@ -2095,7 +2073,7 @@ class ClearFuncs(object):
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         # Send it!
-        minions.extend(self._send_ssh_pub(payload))
+        self._send_ssh_pub(payload, ssh_minions=ssh_minions)
         self._send_pub(payload)
 
         return {
@@ -2158,20 +2136,19 @@ class ClearFuncs(object):
             chan = salt.transport.server.PubServerChannel.factory(opts)
             chan.publish(load)
 
-    def _send_ssh_pub(self, load):
+    @property
+    def ssh_client(self):
+        if not hasattr(self, '_ssh_client'):
+            self._ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts)
+        return self._ssh_client
+
+    def _send_ssh_pub(self, load, ssh_minions=False):
         '''
-        Take a load and send it across the network to connected minions
+        Take a load and send it across the network to ssh minions
         '''
-        minions = []
-        if self.opts['enable_ssh_minions'] is True and isinstance(load['tgt'], six.string_types):
-            # The isinstances makes sure that syndics work
-            log.debug('Use SSHClient for rostered minions')
-            ssh = salt.client.ssh.client.SSHClient()
-            ssh_minions = ssh._prep_ssh(**load).targets.keys()
-            if ssh_minions:
-                minions.extend(ssh_minions)
-                threading.Thread(target=ssh.cmd, kwargs=load).start()
-        return minions
+        if self.opts['enable_ssh_minions'] is True and ssh_minions is True:
+            log.debug('Send payload to ssh minions')
+            threading.Thread(target=self.ssh_client.cmd, kwargs=load).start()
 
     def _prep_pub(self, minions, jid, clear_load, extra, missing):
         '''

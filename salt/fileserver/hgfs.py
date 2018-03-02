@@ -11,7 +11,7 @@ Master config file.
       - hgfs
 
 .. note::
-    ``hg`` also works here. Prior to the Oxygen release, *only* ``hg`` would
+    ``hg`` also works here. Prior to the 2018.3.0 release, *only* ``hg`` would
     work.
 
 After enabling this backend, branches, bookmarks, and tags in a remote
