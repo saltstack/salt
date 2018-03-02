@@ -33,11 +33,13 @@ from tests.support.mock import (
 
 import salt.utils.subprocess as subprocess
 import salt.utils.platform
+import salt.ext.six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not bool(pytest), False)
 @skipIf(salt.utils.platform.is_windows(), 'Not supported on Windows')
+@skipIf(not salt.ext.six.PY2, False)
 class SubprocessTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for the salt.utils.subprocess.FdPopen
