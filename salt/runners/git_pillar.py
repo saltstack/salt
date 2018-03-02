@@ -28,7 +28,7 @@ def update(branch=None, repo=None):
         fetched, and ``False`` if there were errors or no new commits were
         fetched.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The return for a given git_pillar remote will now be ``None`` when no
         changes were fetched. ``False`` now is reserved only for instances in
         which there were errors.
