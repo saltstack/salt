@@ -19,7 +19,7 @@ developers who use Vagrant to quickly define their virtual environments.
 .. _Docker: https://www.docker.io/
 .. _VMWare: https://www.vmware.com/
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
 The configuration of each virtual machine is defined in a file named
 ``Vagrantfile`` which must exist on the VM host machine.

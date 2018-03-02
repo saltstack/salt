@@ -3,7 +3,7 @@
 Manage S3 Resources
 =================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Manage S3 resources. Be aware that this interacts with Amazon's services,
 and so may incur charges.

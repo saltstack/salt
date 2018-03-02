@@ -968,7 +968,7 @@ def postpone_job(name,
     Current time and new time should be in date string format,
     default value is %Y-%m-%dT%H:%M:%S.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1070,7 +1070,7 @@ def skip_job(name, current_time, **kwargs):
     Time to skip should be specified as date string format,
     default value is %Y-%m-%dT%H:%M:%S.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1147,7 +1147,7 @@ def show_next_fire_time(name, **kwargs):
     '''
     Show the next fire time for scheduled job
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1175,7 +1175,6 @@ def show_next_fire_time(name, **kwargs):
         ret = {}
         ret['comment'] = 'Event module not available. Schedule show next fire time failed.'
         ret['result'] = True
-        log.debug(ret['comment'])
         return ret
 
     if 'next_fire_time' in event_ret:
