@@ -67,7 +67,7 @@ class SubprocessTestCase(TestCase, LoaderModuleMockMixin):
         assert (msg % val) == 'Closing 5 file descriptors'
 
     @patch('salt.utils.subprocess.log', MagicMock())
-    @patch('salt.utils.subprocess.subprocess.MAXFD', 100)
+    @patch('salt.utils.subprocess.subprocess.MAXFD', 103)
     @patch('sys.platform', 'linux2')
     @patch('salt.utils.subprocess.six.PY2', True)
     @patch('os.getpid', MagicMock(return_value=111))
@@ -106,19 +106,20 @@ class SubprocessTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.subprocess.log', MagicMock())
     @patch('salt.utils.subprocess.subprocess.MAXFD', 100)
-    @patch('sys.platform', 'linux2')
+    @patch('salt.utils.subprocess.sys.platform', 'linux2')
     @patch('salt.utils.subprocess.six.PY2', True)
-    @patch('os.getpid', MagicMock(return_value=111))
-    @patch('os.listdir', MagicMock(return_value=[0, 1, 2, 3, 4]))
-    @patch('os.closerange', MagicMock())
-    @patch('os.fdopen', MagicMock(return_value=''))
+    @patch('salt.utils.subprocess.os.getpid', MagicMock(return_value=111))
+    @patch('salt.utils.subprocess.os.listdir', MagicMock(return_value=[0, 1, 2, 3, 4]))
+    @patch('salt.utils.subprocess.os.close', MagicMock())
+    @patch('salt.utils.subprocess.os.fdopen', MagicMock(return_value=''))
     @patch.object(salt.utils.subprocess.FdPopen, '_execute_child', MagicMock())
     @patch.object(salt.utils.subprocess.FdPopen, '_get_handles',
                   MagicMock(return_value=((None, None, None, None, None, None), None,)))
-    def test_close_fds_closerange_called_if_exists(self):
+    def test_close_fds_does_not_closes_std(self):
         '''
-        Should call closerange, if around
+        Should not close std[in/out/err].
         :return:
         '''
         subprocess.FdPopen(None)._close_fds(0)
-        assert salt.utils.subprocess.os.closerange.call_args[0] == (1, 5)
+        salt.utils.subprocess.os.close.assert_called()
+        assert salt.utils.subprocess.os.close.call_count == 2
