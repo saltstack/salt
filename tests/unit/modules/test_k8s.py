@@ -91,7 +91,7 @@ class TestK8SSecrets(TestCase):
         with salt.utils.files.fopen(filename, 'w') as f:
             salt.utils.json.dump(self.request, f)
 
-        create = salt.utils.subprocess.(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
+        create = salt.utils.subprocess.FdPopen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
         # wee need to give kubernetes time save data in etcd
         time.sleep(0.1)
         res = k8s.get_secrets("default", name, apiserver_url="http://127.0.0.1:8080")
