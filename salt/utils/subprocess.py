@@ -11,7 +11,6 @@ import logging
 import subprocess
 import threading
 import salt.exceptions
-import salt.utils.data
 from salt.ext import six
 from salt.ext.six.moves import range
 
@@ -106,6 +105,8 @@ class TimedProc(object):
                     kwargs['env'][key] = six.text_type(val)
                 if not isinstance(key, six.string_types):
                     kwargs['env'][six.text_type(key)] = kwargs['env'].pop(key)
+            # Late import to avoid circular dependency
+            import salt.utils.data
             if six.PY2 and 'env' in kwargs:
                 # Ensure no unicode in custom env dict, as it can cause
                 # problems with subprocess.
