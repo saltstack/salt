@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Configuration of the kernel using sysctl
-========================================
+Configuration of the Linux kernel using sysctl
+==============================================
 
 Control the kernel sysctl system.
 
@@ -11,16 +11,13 @@ Control the kernel sysctl system.
     sysctl.present:
       - value: 20
 '''
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import
 
 # Import python libs
 import re
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd part libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -30,7 +27,7 @@ def __virtual__():
     return 'sysctl.show' in __salt__
 
 
-def present(name, value, config=None):
+def present(name, value=None, sysctls=[], config=None):
     '''
     Ensure that the named sysctl value is set in memory and persisted to the
     named configuration file. The default sysctl configuration file is
@@ -45,6 +42,9 @@ def present(name, value, config=None):
     config
         The location of the sysctl configuration file. If not specified, the
         proper location will be detected based on platform.
+
+    sysctls
+        Namse and versions of sysctl and values
     '''
     ret = {'name': name,
            'result': True,
@@ -72,7 +72,7 @@ def present(name, value, config=None):
             return ret
         if name in current and name not in configured:
             if re.sub(' +|\t+', ' ', current[name]) != \
-                    re.sub(' +|\t+', ' ', six.text_type(value)):
+                    re.sub(' +|\t+', ' ', str(value)):
                 ret['result'] = None
                 ret['comment'] = (
                     'Sysctl option {0} set to be changed to {1}'
@@ -96,7 +96,7 @@ def present(name, value, config=None):
             )
             return ret
         elif name in configured and name in current:
-            if six.text_type(value).split() == __salt__['sysctl.get'](name).split():
+            if str(value).split() == __salt__['sysctl.get'](name).split():
                 ret['result'] = True
                 ret['comment'] = (
                     'Sysctl value {0} = {1} is already set'
@@ -111,7 +111,7 @@ def present(name, value, config=None):
         return ret
 
     try:
-        update = __salt__['sysctl.persist'](name, value, config)
+        update = __salt__['sysctl.persist'](name, value, config, sysctls)
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = (
