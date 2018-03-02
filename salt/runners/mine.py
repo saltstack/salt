@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
-import salt.utils.minions
+import salt.tgt
 
 log = logging.getLevelName(__name__)
 
@@ -24,7 +24,7 @@ def get(tgt, fun, tgt_type='glob'):
 
         salt-run mine.get '*' network.interfaces
     '''
-    ret = salt.utils.minions.mine_get(tgt, fun, tgt_type, __opts__)
+    ret = salt.tgt.mine_get(tgt, fun, tgt_type, __opts__)
     return ret
 
 

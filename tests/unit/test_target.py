@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import sys
 
 # Import Salt libs
-import salt.utils.minions
+import salt.tgt
 import salt.config
 
 # Import Salt Testing libs
@@ -22,17 +22,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class CkMinionTestCase(TestCase):
-
-    def setUp(self):
-        self.ck_ = salt.utils.minions.CkMinions(salt.config.DEFAULT_MASTER_OPTS)
-
-    def tearDown(self):
-        self.ck_ = None
-
-    #TODO This is just a stub for upcoming tests
-
-
 @skipIf(sys.version_info < (2, 7), 'Python 2.7 needed for dictionary equality assertions')
 class TargetParseTestCase(TestCase):
 
@@ -41,7 +30,7 @@ class TargetParseTestCase(TestCase):
         Ensure proper parsing for grains
         '''
         g_tgt = 'G@a:b'
-        ret = salt.utils.minions.parse_target(g_tgt)
+        ret = salt.tgt.parse_target(g_tgt)
         self.assertDictEqual(ret, {'engine': 'G', 'pattern': 'a:b', 'delimiter': None})
 
     def test_parse_grains_pcre_target(self):
@@ -49,7 +38,7 @@ class TargetParseTestCase(TestCase):
         Ensure proper parsing for grains PCRE matching
         '''
         p_tgt = 'P@a:b'
-        ret = salt.utils.minions.parse_target(p_tgt)
+        ret = salt.tgt.parse_target(p_tgt)
         self.assertDictEqual(ret, {'engine': 'P', 'pattern': 'a:b', 'delimiter': None})
 
     def test_parse_pillar_pcre_target(self):
@@ -57,7 +46,7 @@ class TargetParseTestCase(TestCase):
         Ensure proper parsing for pillar PCRE matching
         '''
         j_tgt = 'J@a:b'
-        ret = salt.utils.minions.parse_target(j_tgt)
+        ret = salt.tgt.parse_target(j_tgt)
         self.assertDictEqual(ret, {'engine': 'J', 'pattern': 'a:b', 'delimiter': None})
 
     def test_parse_list_target(self):
@@ -65,7 +54,7 @@ class TargetParseTestCase(TestCase):
         Ensure proper parsing for list matching
         '''
         l_tgt = 'L@a:b'
-        ret = salt.utils.minions.parse_target(l_tgt)
+        ret = salt.tgt.parse_target(l_tgt)
         self.assertDictEqual(ret, {'engine': 'L', 'pattern': 'a:b', 'delimiter': None})
 
     def test_parse_nodegroup_target(self):
@@ -73,7 +62,7 @@ class TargetParseTestCase(TestCase):
         Ensure proper parsing for pillar matching
         '''
         n_tgt = 'N@a:b'
-        ret = salt.utils.minions.parse_target(n_tgt)
+        ret = salt.tgt.parse_target(n_tgt)
         self.assertDictEqual(ret, {'engine': 'N', 'pattern': 'a:b', 'delimiter': None})
 
     def test_parse_subnet_target(self):
@@ -81,7 +70,7 @@ class TargetParseTestCase(TestCase):
         Ensure proper parsing for subnet matching
         '''
         s_tgt = 'S@a:b'
-        ret = salt.utils.minions.parse_target(s_tgt)
+        ret = salt.tgt.parse_target(s_tgt)
         self.assertDictEqual(ret, {'engine': 'S', 'pattern': 'a:b', 'delimiter': None})
 
     def test_parse_minion_pcre_target(self):
@@ -89,7 +78,7 @@ class TargetParseTestCase(TestCase):
         Ensure proper parsing for minion PCRE matching
         '''
         e_tgt = 'E@a:b'
-        ret = salt.utils.minions.parse_target(e_tgt)
+        ret = salt.tgt.parse_target(e_tgt)
         self.assertDictEqual(ret, {'engine': 'E', 'pattern': 'a:b', 'delimiter': None})
 
     def test_parse_range_target(self):
@@ -97,7 +86,7 @@ class TargetParseTestCase(TestCase):
         Ensure proper parsing for range matching
         '''
         r_tgt = 'R@a:b'
-        ret = salt.utils.minions.parse_target(r_tgt)
+        ret = salt.tgt.parse_target(r_tgt)
         self.assertDictEqual(ret, {'engine': 'R', 'pattern': 'a:b', 'delimiter': None})
 
     def test_parse_multiword_target(self):
@@ -107,14 +96,14 @@ class TargetParseTestCase(TestCase):
         Refs https://github.com/saltstack/salt/issues/37231
         '''
         mw_tgt = 'G@a:b c'
-        ret = salt.utils.minions.parse_target(mw_tgt)
+        ret = salt.tgt.parse_target(mw_tgt)
         self.assertEqual(ret['pattern'], 'a:b c')
 
 
 class NodegroupCompTest(TestCase):
     '''
     Test nodegroup comparisons found in
-    salt.utils.minions.nodgroup_comp()
+    salt.tgt.nodgroup_comp()
     '''
 
     def test_simple_nodegroup(self):
@@ -123,7 +112,7 @@ class NodegroupCompTest(TestCase):
         '''
         simple_nodegroup = {'group1': 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'}
 
-        ret = salt.utils.minions.nodegroup_comp('group1', simple_nodegroup)
+        ret = salt.tgt.nodegroup_comp('group1', simple_nodegroup)
         expected_ret = ['L@foo.domain.com,bar.domain.com,baz.domain.com', 'or', 'bl*.domain.com']
         self.assertListEqual(ret, expected_ret)
 
@@ -146,7 +135,7 @@ class NodegroupCompTest(TestCase):
                 'group2': 'G@os:Debian and N@group1'
                 }
 
-        ret = salt.utils.minions.nodegroup_comp('group2', referenced_nodegroups)
+        ret = salt.tgt.nodegroup_comp('group2', referenced_nodegroups)
         expected_ret = [
                 '(',
                 'G@os:Debian',
@@ -171,5 +160,5 @@ class NodegroupCompTest(TestCase):
                 }
 
         # If this works, it should also print an error to the console
-        ret = salt.utils.minions.nodegroup_comp('group1', referenced_nodegroups)
+        ret = salt.tgt.nodegroup_comp('group1', referenced_nodegroups)
         self.assertEqual(ret, [])

@@ -5,8 +5,8 @@ Functions to interact with the pillar compiler on the master
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
+import salt.tgt
 import salt.pillar
-import salt.utils.minions
 
 
 def show_top(minion=None, saltenv='base'):
@@ -20,7 +20,7 @@ def show_top(minion=None, saltenv='base'):
 
         salt-run pillar.show_top
     '''
-    id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
+    id_, grains, _ = salt.tgt.get_minion_data(minion, __opts__)
     pillar = salt.pillar.Pillar(
         __opts__,
         grains,
@@ -85,7 +85,7 @@ def show_pillar(minion='*', **kwargs):
 
     saltenv = 'base'
     pillarenv = __opts__['pillarenv'] if 'pillarenv' in __opts__ else None
-    id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
+    id_, grains, _ = salt.tgt.get_minion_data(minion, __opts__)
     if grains is None:
         grains = {'fqdn': minion}
 

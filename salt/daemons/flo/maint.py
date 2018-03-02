@@ -15,8 +15,8 @@ import ioflo.base.deeding
 import salt.daemons.masterapi
 import salt.fileserver
 import salt.loader
-import salt.utils.minions
 import salt.utils.stringutils
+import salt.tgt
 
 
 @ioflo.base.deeding.deedify(
@@ -84,7 +84,7 @@ class SaltRaetMaintSetup(ioflo.base.deeding.Deed):
                'fileserver': salt.utils.stringutils.to_str('.salt.loader.fileserver'),
                'runners': salt.utils.stringutils.to_str('.salt.loader.runners'),
                'pillargitfs': salt.utils.stringutils.to_str('.salt.loader.pillargitfs'),
-               'ckminions': salt.utils.stringutils.to_str('.salt.loader.ckminions')}
+               'tgts': salt.utils.stringutils.to_str('.salt.loader.tgt')}
 
     def action(self):
         '''
@@ -92,7 +92,7 @@ class SaltRaetMaintSetup(ioflo.base.deeding.Deed):
         '''
         self.fileserver.value = salt.fileserver.Fileserver(self.opts.value)
         self.runners.value = salt.loader.runner(self.opts.value)
-        self.ckminions.value = salt.utils.minions.CkMinions(self.opts.value)
+        self.tgts.value = salt.loader.tgt(self.opts.value)
         self.pillargitfs.value = salt.daemons.masterapi.init_git_pillar(
                 self.opts.value)
 

@@ -56,6 +56,7 @@ import salt.minion
 import salt.key
 import salt.acl
 import salt.engines
+import salt.tgt
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.transport.server
@@ -70,7 +71,6 @@ import salt.utils.gzip_util
 import salt.utils.jid
 import salt.utils.job
 import salt.utils.master
-import salt.utils.minions
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
@@ -195,7 +195,6 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.schedule = salt.utils.schedule.Schedule(self.opts,
                                                      runner_client.functions_dict(),
                                                      returners=self.returners)
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         # Init any values needed by the git ext pillar
@@ -250,16 +249,8 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         which contains a list
         '''
         if self.opts['key_cache'] == 'sched':
-            keys = []
-            #TODO DRY from CKMinions
-            if self.opts['transport'] in ('zeromq', 'tcp'):
-                acc = 'minions'
-            else:
-                acc = 'accepted'
-
-            for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], acc)):
-                if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], acc, fn_)):
-                    keys.append(fn_)
+            keys = salt.tgt.pki_dir_minions(self.opts)
+            acc = salt.tgt.pki_dir_acc_path(self.opts)
             log.debug('Writing master key cache')
             # Write a temporary file securely
             with salt.utils.atomicfile.atomic_open(os.path.join(self.opts['pki_dir'], acc, '.key_cache')) as cache_file:
@@ -334,7 +325,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Fire presence events if enabled
         '''
         if self.presence_events:
-            present = self.ckminions.connected_ids()
+            present = salt.tgt.connected_ids(self.opts)
             new = present.difference(old_present)
             lost = old_present.difference(present)
             if new or lost:
@@ -1122,7 +1113,6 @@ class AESFuncs(object):
         self.opts = opts
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         self.serial = salt.payload.Serial(opts)
-        self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make a client
         self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Create the master minion to access the external job cache
@@ -1247,7 +1237,8 @@ class AESFuncs(object):
             clear_load['arg'] = arg_
 
         # finally, check the auth of the load
-        return self.ckminions.auth_check(
+        return salt.tgt.auth_check(
+            self.opts,
             perms,
             clear_load['fun'],
             clear_load['arg'],
@@ -1839,8 +1830,6 @@ class ClearFuncs(object):
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         # Make a client
         self.local = salt.client.get_local_client(self.opts['conf_file'])
-        # Make an minion checker object
-        self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make an Auth object
         self.loadauth = salt.auth.LoadAuth(opts)
         # Stand up the master Minion to access returner data
@@ -1873,7 +1862,7 @@ class ClearFuncs(object):
         # Authorize
         username = auth_check.get('username')
         if auth_type != 'user':
-            runner_check = self.ckminions.runner_check(
+            runner_check = salt.tgt.runner_check(
                 auth_check.get('auth_list', []),
                 clear_load['fun'],
                 clear_load.get('kwarg', {})
@@ -1928,7 +1917,7 @@ class ClearFuncs(object):
         # Authorize
         username = auth_check.get('username')
         if auth_type != 'user':
-            wheel_check = self.ckminions.wheel_check(
+            wheel_check = salt.tgt.wheel_check(
                 auth_check.get('auth_list', []),
                 clear_load['fun'],
                 clear_load.get('kwarg', {})
@@ -2021,7 +2010,8 @@ class ClearFuncs(object):
 
         # Retrieve the minions list
         delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
-        _res = self.ckminions.check_minions(
+        _res = salt.tgt.check_minions(
+            self.opts,
             clear_load['tgt'],
             clear_load.get('tgt_type', 'glob'),
             delimiter
@@ -2049,7 +2039,8 @@ class ClearFuncs(object):
         # All Token, Eauth, and non-root users must pass the authorization check
         if auth_type != 'user' or (auth_type == 'user' and auth_list):
             # Authorize the request
-            authorized = self.ckminions.auth_check(
+            authorized = salt.tgt.auth_check(
+                self.opts,
                 auth_list,
                 clear_load['fun'],
                 clear_load['arg'],

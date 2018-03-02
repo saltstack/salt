@@ -84,6 +84,7 @@ except ImportError:
 
 # Import salt libs
 import salt
+import salt.tgt
 import salt.client
 import salt.crypt
 import salt.loader
@@ -100,7 +101,6 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minion
-import salt.utils.minions
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
@@ -3405,7 +3405,7 @@ class Matcher(object):
             words = tgt
 
         for word in words:
-            target_info = salt.utils.minions.parse_target(word)
+            target_info = salt.tgt.parse_target(word)
 
             # Easy check first
             if word in opers:
@@ -3470,7 +3470,7 @@ class Matcher(object):
         '''
         if tgt in nodegroups:
             return self.compound_match(
-                salt.utils.minions.nodegroup_comp(tgt, nodegroups)
+                salt.tgt.nodegroup_comp(tgt, nodegroups)
             )
         return False
 

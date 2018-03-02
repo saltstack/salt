@@ -447,6 +447,19 @@ def auth(opts, whitelist=None):
     )
 
 
+def tgt(opts):
+    '''
+    Returns the tgt modules
+
+    :param dict opts: The Salt options dictionary
+    :returns: LazyLoader
+    '''
+    return LazyLoader(
+        _module_dirs(opts, u'tgt'),
+        opts,
+        tag=u'tgt')
+
+
 def fileserver(opts, backends):
     '''
     Returns the file server modules

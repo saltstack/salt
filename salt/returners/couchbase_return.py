@@ -57,10 +57,10 @@ try:
 except ImportError:
     HAS_DEPS = False
 
-# Import Salt libs
+# Import salt libs
+import salt.tgt
 import salt.utils.jid
 import salt.utils.json
-import salt.utils.minions
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -225,9 +225,9 @@ def save_load(jid, clear_load, minion=None):
 
     # if you have a tgt, save that for the UI etc
     if 'tgt' in clear_load and clear_load['tgt'] != '':
-        ckminions = salt.utils.minions.CkMinions(__opts__)
         # Retrieve the minions list
-        _res = ckminions.check_minions(
+        _res = salt.tgt.check_minions(
+            __opts__,
             clear_load['tgt'],
             clear_load.get('tgt_type', 'glob')
             )

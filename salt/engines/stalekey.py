@@ -26,8 +26,8 @@ import logging
 # Import salt libs
 import salt.config
 import salt.key
+import salt.tgt
 import salt.utils.files
-import salt.utils.minions
 import salt.wheel
 
 # Import 3rd-party libs
@@ -50,7 +50,6 @@ def _get_keys():
 
 
 def start(interval=3600, expire=604800):
-    ck = salt.utils.minions.CkMinions(__opts__)
     presence_file = '{0}/presence.p'.format(__opts__['cachedir'])
     wheel = salt.wheel.WheelClient(__opts__)
 
@@ -68,7 +67,7 @@ def start(interval=3600, expire=604800):
 
         minion_keys = _get_keys()
         now = time.time()
-        present = ck.connected_ids()
+        present = salt.tgt.connected_ids(__opts__)
 
         # For our existing keys, check which are present
         for m in minion_keys:
