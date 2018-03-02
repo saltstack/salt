@@ -37,9 +37,9 @@ import salt.ext.six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not bool(pytest), False)
-@skipIf(salt.utils.platform.is_windows(), 'Not supported on Windows')
-@skipIf(not salt.ext.six.PY2, False)
+@skipIf(not bool(pytest), 'No PyTest available')
+@skipIf(not salt.utils.platform.is_linux(), 'Linux only')
+@skipIf(not salt.ext.six.PY2, 'Python-2 only')
 class SubprocessTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for the salt.utils.subprocess.FdPopen
