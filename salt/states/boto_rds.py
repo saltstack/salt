@@ -740,6 +740,8 @@ def db_cluster_present(name, engine, master_username, master_user_password, para
     '''
     Ensure DB cluster exists and update parameters.
 
+    .. versionadded:: Fluorine
+
     name
         The name for the cluster.
 

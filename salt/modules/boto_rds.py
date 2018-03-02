@@ -202,6 +202,7 @@ def db_cluster_exists(name, tags=None, region=None, key=None, keyid=None,
     '''
     Check to see if an RDS db cluster exists.
 
+      .. versionadded:: Fluorine
     CLI example::
 
         salt myminion boto_rds.db_cluster_exists mydbcluster \
@@ -476,6 +477,7 @@ def create_db_cluster(name, engine, master_username, master_user_password,
     '''
     Create an RDS db cluster
 
+      .. versionadded:: Fluorine
     CLI example to create an RDS db cluster::
 
         salt myminion boto_rds.create_db_cluster my-db-cluster MySQL sqlusr sqlpassw
