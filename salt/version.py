@@ -470,7 +470,6 @@ def __discover_version(saltstack_version):
     # discover the version information at runtime.
     import os
     import subprocess
-    import salt.utils.subprocess
 
     if 'SETUP_DIRNAME' in globals():
         # This is from the exec() call in Salt's setup.py
@@ -495,7 +494,8 @@ def __discover_version(saltstack_version):
             # Let's not import `salt.utils` for the above check
             kwargs['close_fds'] = True
 
-        process = salt.utils.subprocess.FdPopen(
+        # pylint: disable=blacklisted-functions
+        process = subprocess.Popen(
             ['git', 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*', '--always'], **kwargs)
 
         out, err = process.communicate()
@@ -503,9 +503,10 @@ def __discover_version(saltstack_version):
         if process.returncode != 0:
             # The git version running this might not support --first-parent
             # Revert to old command
-            process = salt.utils.subprocess.FdPopen(
+            process = subprocess.Popen(
                 ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
             out, err = process.communicate()
+        # pylint: enable=blacklisted-functions
         if six.PY3:
             out = out.decode()
             err = err.decode()
