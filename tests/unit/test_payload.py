@@ -100,13 +100,12 @@ class PayloadTestCase(TestCase):
         odata = payload.loads(sdata)
         self.assertEqual(idata, odata)
 
-    @skipIf(True, 'msgpack can not serialize sets so we have to decide how handle it first')
     def test_immutable_set_dump_load(self):
         '''
         Test immutable set encoder/decoder
         '''
         payload = salt.payload.Serial('msgpack')
-        idata = {'set': set(('red', 'green', 'blue'))}
+        idata = {'set': ['red', 'green', 'blue']}
         sdata = payload.dumps({'set': immutabletypes.ImmutableSet(idata['set'])})
         odata = payload.loads(sdata)
         self.assertEqual(idata, odata)
@@ -140,14 +139,14 @@ class PayloadTestCase(TestCase):
                  'jid': 20180227140750302662,  # long int
                  'dict': immutabletypes.ImmutableDict({'key': 'value'}),  # immutable dict
                  'list': immutabletypes.ImmutableList([1, 2, 3]),  # immutable list
-                 #'set': immutabletypes.ImmutableSet(set(('red', 'green', 'blue'))),  # immutable set
+                 'set': immutabletypes.ImmutableSet(('red', 'green', 'blue')),  # immutable set
                  'odict': od,  # odict
                  }
         edata = {dtvalue: dtvalue,  # datetime, == input
                  'jid': '20180227140750302662',  # string repr of long int
                  'dict': {'key': 'value'},  # builtin dict
                  'list': [1, 2, 3],  # builtin list
-                 #'set': set(('red', 'green', 'blue')),  # builtin set
+                 'set': ['red', 'green', 'blue'],  # builtin set
                  'odict': dict(od),  # builtin dict
                  }
         sdata = payload.dumps(idata)
