@@ -201,7 +201,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                            u'type': u'pub'}]
 
         _expected_result = [{u'uids': [u'GPG Person <person@example.com>'],
-                             u'created': u'2004-11-13',
+                             u'created': '2004-11-13',
                              u'keyLength': u'1024',
                              u'keyid': u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}]
 
