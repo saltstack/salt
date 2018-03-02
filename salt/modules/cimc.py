@@ -663,7 +663,7 @@ def set_hostname(hostname=None):
 
 def set_logging_levels(remote=None, local=None):
     '''
-    Sets the logging levels of the CIMC devices. The logging levels must match 
+    Sets the logging levels of the CIMC devices. The logging levels must match
     the following options: emergency, alert, critical, error, warning, notice,
     informational, debug.
 
