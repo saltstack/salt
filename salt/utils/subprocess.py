@@ -41,6 +41,7 @@ class FdPopen(subprocess.Popen):
                 fds = (int(fdn) for fdn in os.listdir(proc_path))
             except OSError:
                 fds = range(3, subprocess.MAXFD)
+            log.debug('Closing %s file descriptors', len(list(fds)))
 
             for i in fds:
                 if i > 2 and i != but:
