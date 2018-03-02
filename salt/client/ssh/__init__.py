@@ -659,6 +659,8 @@ class SSH(object):
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
                 id_, data = next(six.iteritems(ret))
+                if isinstance(data, six.text_type):
+                    data = {'return': data}
                 if 'id' not in data:
                     data['id'] = id_
                 data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
@@ -772,6 +774,8 @@ class SSH(object):
                         self.opts)
             if self.event:
                 id_, data = next(six.iteritems(ret))
+                if isinstance(data, six.text_type):
+                    data = {'return': data}
                 if 'id' not in data:
                     data['id'] = id_
                 data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
