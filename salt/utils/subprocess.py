@@ -38,21 +38,16 @@ class FdPopen(subprocess.Popen):
             '''
             proc_path = '/proc/{}/fd'.format(os.getpid())
             try:
-                maxfds = len(os.listdir(proc_path))
+                fds = (int(fdn) for fdn in os.listdir(proc_path))
             except OSError:
-                maxfds = subprocess.MAXFD
+                fds = range(3, subprocess.MAXFD)
 
-            log.debug('Closing %s file descriptors', maxfds)
-            if hasattr(os, 'closerange'):
-                os.closerange(3, but)
-                os.closerange(but + 1, maxfds)
-            else:
-                for i in range(3, maxfds):
-                    if i != but:
-                        try:
-                            os.close(i)
-                        except Exception:
-                            pass
+            for i in fds:
+                if i > 2 and i != but:
+                    try:
+                        os.close(i)
+                    except Exception:
+                        pass
 
 
 class TimedProc(object):
