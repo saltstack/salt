@@ -7,7 +7,7 @@ State module for Cisco NX OS Switches Proxy minions
 For documentation on setting up the nxos proxy minion look in the documentation
 for :mod:`salt.proxy.nxos<salt.proxy.nxos>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 
@@ -279,7 +279,7 @@ def config_absent(name):
     .. note::
         For certain cases extra lines could be removed based on dependencies.
         In this example, included after the example for config_present, the
-        ACLs would be removed because they depend on the existance of the
+        ACLs would be removed because they depend on the existence of the
         group.
 
     '''

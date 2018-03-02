@@ -6,13 +6,13 @@ Please note: The functions in here are SUSE-specific. Placing them in this
 separate file will allow them to load only on SUSE systems, while still
 loading under the ``apache`` namespace.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def __virtual__():
     '''
     Only load the module if apache is installed.
     '''
-    if salt.utils.which('apache2ctl') and __grains__['os_family'] == 'SUSE':
+    if salt.utils.path.which('apache2ctl') and __grains__['os_family'] == 'SUSE':
         return __virtualname__
     return (False, 'apache execution module not loaded: apache not installed.')
 

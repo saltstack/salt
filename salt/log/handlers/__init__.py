@@ -7,7 +7,7 @@
 
     Custom logging handlers to be used in salt.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import sys
@@ -17,6 +17,7 @@ import logging.handlers
 
 # Import salt libs
 from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
+from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
 
@@ -117,7 +118,7 @@ class RotatingFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.Rotatin
         '''
         handled = False
 
-        # Can't use "salt.utils.is_windows()" in this file
+        # Can't use "salt.utils.platform.is_windows()" in this file
         if (sys.platform.startswith('win') and
                 logging.raiseExceptions and
                 sys.stderr):  # see Python issue 13807
@@ -174,7 +175,12 @@ if sys.version_info < (3, 2):
             this method if you want to use blocking, timeouts or custom queue
             implementations.
             '''
-            self.queue.put_nowait(record)
+            try:
+                self.queue.put_nowait(record)
+            except queue.Full:
+                sys.stderr.write('[WARNING ] Message queue is full, '
+                                 'unable to write "{0}" to log'.format(record)
+                                 )
 
         def prepare(self, record):
             '''

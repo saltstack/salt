@@ -26,5 +26,5 @@ gathering information about instances on a provider basis:
     $ salt-cloud -f list_nodes_full linode
     $ salt-cloud -f list_nodes_select linode
 
-Another useful reference for viewing salt-cloud functions is the
+Another useful reference for viewing ``salt-cloud`` functions is the
 :ref:`Salt Cloud Feature Matrix <salt-cloud-feature-matrix>`.

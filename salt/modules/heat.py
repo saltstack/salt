@@ -2,6 +2,8 @@
 '''
 Module for handling OpenStack Heat calls
 
+.. versionadded:: 2017.7.0
+
 :depends:   - heatclient Python module
 :configuration: This module is not usable until the user, password, tenant, and
     auth URL are specified either in a pillar or in the minion's config file.
@@ -39,23 +41,22 @@ Module for handling OpenStack Heat calls
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
-import json
 import logging
-# Import third party libs
-import yaml
-# Import salt libs
-import salt.ext.six as six
-import salt.utils
-import salt.utils.files
+
+# Import Salt libs
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
+import salt.utils.files
+import salt.utils.json
+import salt.utils.stringutils
+import salt.utils.yaml
 
 # pylint: disable=import-error
 HAS_HEAT = False
 try:
-    from heatclient import client
-    from heatclient import exc
+    import heatclient
     HAS_HEAT = True
 except ImportError:
     pass
@@ -68,42 +69,14 @@ except ImportError:
     pass
 
 SECTIONS = (
-    PARAMETER_DEFAULTS, PARAMETERS, RESOURCE_REGISTRY, EVENT_SINKS
-) = (
-    'parameter_defaults', 'parameters', 'resource_registry', 'event_sinks'
-)
-
-if hasattr(yaml, 'CSafeLoader'):
-    YamlLoader = yaml.CSafeLoader
-else:
-    YamlLoader = yaml.SafeLoader
-
-if hasattr(yaml, 'CSafeDumper'):
-    YamlDumper = yaml.CSafeDumper
-else:
-    YamlDumper = yaml.SafeDumper
-
-
-def _represent_yaml_str(self, node):
-    '''
-    Represent for yaml
-    '''
-    return self.represent_scalar(node)
-YamlDumper.add_representer(u'tag:yaml.org,2002:str',
-                           _represent_yaml_str)
-YamlDumper.add_representer(u'tag:yaml.org,2002:timestamp',
-                           _represent_yaml_str)
-
-
-def _construct_yaml_str(self, node):
-    '''
-    Construct for yaml
-    '''
-    return self.construct_scalar(node)
-YamlLoader.add_constructor(u'tag:yaml.org,2002:str',
-                           _construct_yaml_str)
-YamlLoader.add_constructor(u'tag:yaml.org,2002:timestamp',
-                           _construct_yaml_str)
+    PARAMETER_DEFAULTS,
+    PARAMETERS,
+    RESOURCE_REGISTRY,
+    EVENT_SINKS) = (
+    'parameter_defaults',
+    'parameters',
+    'resource_registry',
+    'event_sinks')
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -195,7 +168,7 @@ def _auth(profile=None, api_version=1, **connection_args):
                                         kwargs))
     # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
     # but we deal with those elsewhere
-    return client.Client(api_version, endpoint=heat_endpoint, **kwargs)
+    return heatclient.client.Client(api_version, endpoint=heat_endpoint, **kwargs)
 
 
 def _parse_template(tmpl_str):
@@ -204,15 +177,12 @@ def _parse_template(tmpl_str):
     '''
     tmpl_str = tmpl_str.strip()
     if tmpl_str.startswith('{'):
-        tpl = json.loads(tmpl_str)
+        tpl = salt.utils.json.loads(tmpl_str)
     else:
         try:
-            tpl = yaml.load(tmpl_str, Loader=YamlLoader)
-        except yaml.YAMLError:
-            try:
-                tpl = yaml.load(tmpl_str, Loader=yaml.SafeLoader)
-            except yaml.YAMLError as yea:
-                raise ValueError(yea)
+            tpl = salt.utils.yaml.safe_load(tmpl_str)
+        except salt.utils.yaml.YAMLError as exc:
+            raise ValueError(six.text_type(exc))
         else:
             if tpl is None:
                 tpl = {}
@@ -228,22 +198,20 @@ def _parse_enviroment(env_str):
     Parsing template
     '''
     try:
-        env = yaml.load(env_str, Loader=YamlLoader)
-    except yaml.YAMLError:
-        try:
-            env = yaml.load(env_str, Loader=yaml.SafeLoader)
-        except yaml.YAMLError as yea:
-            raise ValueError(yea)
+        env = salt.utils.yaml.safe_load(env_str)
+    except salt.utils.yaml.YAMLError as exc:
+        raise ValueError(six.text_type(exc))
     else:
         if env is None:
             env = {}
         elif not isinstance(env, dict):
-            raise ValueError(('The environment is not a valid '
-                              'YAML mapping data type.'))
+            raise ValueError(
+                'The environment is not a valid YAML mapping data type.'
+            )
 
     for param in env:
         if param not in SECTIONS:
-            raise ValueError(('environment has wrong section "{0}"').format(param))
+            raise ValueError('environment has wrong section "{0}"'.format(param))
 
     return env
 
@@ -256,8 +224,8 @@ def _get_stack_events(h_client, stack_id, event_args):
     event_args['resource_name'] = None
     try:
         events = h_client.events.list(**event_args)
-    except exc.HTTPNotFound as ex:
-        raise exc.CommandError(str(ex))
+    except heatclient.exc.HTTPNotFound as exc:
+        raise heatclient.exc.CommandError(six.text_type(exc))
     else:
         for event in events:
             event.stack_name = stack_id.split('/')[0]
@@ -386,7 +354,7 @@ def show_stack(name=None, profile=None):
             'links': links,
         }
         ret['result'] = True
-    except exc.HTTPNotFound:
+    except heatclient.exc.HTTPNotFound:
         return {
             'result': False,
             'comment': 'No stack {0}'.format(name)
@@ -429,13 +397,13 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
         return ret
     try:
         h_client.stacks.delete(name)
-    except exc.HTTPNotFound:
+    except heatclient.exc.HTTPNotFound:
         ret['result'] = False
         ret['comment'] = 'No stack {0}'.format(name)
-    except exc.HTTPForbidden as forbidden:
-        log.exception(str(forbidden))
+    except heatclient.exc.HTTPForbidden as forbidden:
+        log.exception(forbidden)
         ret['result'] = False
-        ret['comment'] = str(forbidden)
+        ret['comment'] = six.text_type(forbidden)
     if ret['result'] is False:
         return ret
 
@@ -443,7 +411,7 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
         try:
             stack_status, msg = _poll_for_events(h_client, name, action='DELETE',
                                                  poll_period=poll, timeout=timeout)
-        except exc.CommandError:
+        except heatclient.exc.CommandError:
             ret['comment'] = 'Deleted stack {0}.'.format(name)
             return ret
         except Exception as ex:  # pylint: disable=W0703
@@ -541,12 +509,10 @@ def create_stack(name=None, template_file=None, enviroment=None,
             contents=None,
             dir_mode=None)
         if template_manage_result['result']:
-            with salt.utils.fopen(template_tmp_file, 'r') as tfp_:
-                tpl = tfp_.read()
-                salt.utils.safe_rm(template_tmp_file)
+            with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
+                tpl = salt.utils.stringutils.to_unicode(tfp_.read())
+                salt.utils.files.safe_rm(template_tmp_file)
                 try:
-                    if isinstance(tpl, six.binary_type):
-                        tpl = tpl.decode('utf-8')
                     template = _parse_template(tpl)
                 except ValueError as ex:
                     ret['result'] = False
@@ -603,9 +569,9 @@ def create_stack(name=None, template_file=None, enviroment=None,
             contents=None,
             dir_mode=None)
         if enviroment_manage_result['result']:
-            with salt.utils.fopen(enviroment_tmp_file, 'r') as efp_:
-                env_str = efp_.read()
-                salt.utils.safe_rm(enviroment_tmp_file)
+            with salt.utils.files.fopen(enviroment_tmp_file, 'r') as efp_:
+                env_str = salt.utils.stringutils.to_unicode(efp_.read())
+                salt.utils.files.safe_rm(enviroment_tmp_file)
                 try:
                     env = _parse_enviroment(env_str)
                 except ValueError as ex:
@@ -730,12 +696,10 @@ def update_stack(name=None, template_file=None, enviroment=None,
             contents=None,
             dir_mode=None)
         if template_manage_result['result']:
-            with salt.utils.fopen(template_tmp_file, 'r') as tfp_:
-                tpl = tfp_.read()
-                salt.utils.safe_rm(template_tmp_file)
+            with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
+                tpl = salt.utils.stringutils.to_unicode(tfp_.read())
+                salt.utils.files.safe_rm(template_tmp_file)
                 try:
-                    if isinstance(tpl, six.binary_type):
-                        tpl = tpl.decode('utf-8')
                     template = _parse_template(tpl)
                 except ValueError as ex:
                     ret['result'] = False
@@ -792,9 +756,9 @@ def update_stack(name=None, template_file=None, enviroment=None,
             contents=None,
             dir_mode=None)
         if enviroment_manage_result['result']:
-            with salt.utils.fopen(enviroment_tmp_file, 'r') as efp_:
-                env_str = efp_.read()
-                salt.utils.safe_rm(enviroment_tmp_file)
+            with salt.utils.files.fopen(enviroment_tmp_file, 'r') as efp_:
+                env_str = salt.utils.stringutils.to_unicode(efp_.read())
+                salt.utils.files.safe_rm(enviroment_tmp_file)
                 try:
                     env = _parse_enviroment(env_str)
                 except ValueError as ex:
@@ -859,18 +823,18 @@ def template_stack(name=None, profile=None):
             }
     try:
         get_template = h_client.stacks.template(name)
-    except exc.HTTPNotFound:
+    except heatclient.exc.HTTPNotFound:
         return {
             'result': False,
             'comment': 'No stack with {0}'.format(name)
             }
-    except exc.BadRequest:
+    except heatclient.exc.BadRequest:
         return {
             'result': False,
             'comment': 'Bad request fot stack {0}'.format(name)
             }
     if 'heat_template_version' in get_template:
-        template = yaml.dump(get_template, Dumper=YamlDumper)
+        template = salt.utils.yaml.safe_dump(get_template)
     else:
         template = jsonutils.dumps(get_template, indent=2, ensure_ascii=False)
 

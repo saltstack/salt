@@ -2,31 +2,38 @@
 '''
 Manage Grafana v4.0 data sources
 
-Token auth setup
+.. versionadded:: 2017.7.0
 
-.. code-block:: yaml
+:configuration: This state requires a configuration profile to be configured
+    in the minion config, minion pillar, or master config. The module will use
+    the 'grafana' key by default, if defined.
 
-    grafana_version: 4
-    grafana:
-      grafana_timeout: 5
-      grafana_token: qwertyuiop
-      grafana_url: 'https://url.com'
+    Example configuration using basic authentication:
 
-Basic auth setup
+    .. code-block:: yaml
 
-.. code-block:: yaml
+        grafana:
+          grafana_url: http://grafana.localhost
+          grafana_user: admin
+          grafana_password: admin
+          grafana_timeout: 3
 
-    grafana_version: 4
-    grafana:
-      grafana_timeout: 5
-      grafana_user: grafana
-      grafana_password: qwertyuiop
-      grafana_url: 'https://url.com'
+    Example configuration using token based authentication:
+
+    .. code-block:: yaml
+
+        grafana:
+          grafana_url: http://grafana.localhost
+          grafana_token: token
+          grafana_timeout: 3
+
+The bahavior of this module is to create data sources if the do not exists, and
+to update data sources if the already exists.
 
 .. code-block:: yaml
 
     Ensure influxdb data source is present:
-      grafana_datasource.present:
+      grafana4_datasource.present:
         - name: influxdb
         - type: influxdb
         - url: http://localhost:8086
@@ -36,7 +43,7 @@ Basic auth setup
         - basic_auth_password: mypass
         - is_default: true
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.ext.six import string_types
 from salt.utils.dictdiffer import deep_diff
@@ -148,6 +155,12 @@ def present(name,
         ret['comment'] = 'New data source {0} added'.format(name)
         ret['changes'] = data
         return ret
+
+    # At this stage, the datasource exists; however, the object provided by
+    # Grafana may lack some null keys compared to our "data" dict:
+    for key in data:
+        if key not in datasource:
+            datasource[key] = None
 
     if data == datasource:
         ret['changes'] = None

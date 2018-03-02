@@ -6,53 +6,75 @@ or for problem solving if your minion is having problems.
 
 .. versionadded:: 0.12.0
 
-:depends:   - pythoncom
-            - wmi
+:depends:  - wmi
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
-import logging
-
-# Import Salt Libs
-import salt.utils
-import salt.ext.six as six
-import salt.utils.event
-from salt._compat import subprocess
-from salt.utils.network import host_to_ips as _host_to_ips
-
-import os
-import ctypes
-import sys
-import time
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
-from subprocess import list2cmdline
-
+import logging
+import subprocess
 log = logging.getLogger(__name__)
 
+# Import Salt Libs
+import salt.utils.event
+import salt.utils.platform
+import salt.utils.stringutils
+from salt.utils.network import host_to_ips as _host_to_ips
+from salt.utils.functools import namespaced_function as _namespaced_function
+
+# Import 3rd party Libs
+from salt.ext import six
+
+# These imports needed for namespaced functions
+# pylint: disable=W0611
+from salt.modules.status import ping_master, time_
+import copy
+# pylint: enable=W0611
+
+# Import 3rd Party Libs
 try:
-    import wmi
-    import salt.utils.winapi
-    has_required_packages = True
+    if salt.utils.platform.is_windows():
+        import wmi
+        import salt.utils.winapi
+        HAS_WMI = True
+    else:
+        HAS_WMI = False
 except ImportError:
-    if salt.utils.is_windows():
-        log.exception('pywin32 and wmi python packages are required '
-                      'in order to use the status module.')
-    has_required_packages = False
+    HAS_WMI = False
+
+HAS_PSUTIL = False
+if salt.utils.platform.is_windows():
+    import psutil
+    HAS_PSUTIL = True
 
 __opts__ = {}
-
-# Define the module's virtual name
 __virtualname__ = 'status'
 
 
 def __virtual__():
     '''
-    Only works on Windows systems
+    Only works on Windows systems with WMI and WinAPI
     '''
-    if salt.utils.is_windows() and has_required_packages:
-        return __virtualname__
-    return (False, 'Cannot load win_status module on non-windows')
+    if not salt.utils.platform.is_windows():
+        return False, 'win_status.py: Requires Windows'
+
+    if not HAS_WMI:
+        return False, 'win_status.py: Requires WMI and WinAPI'
+
+    if not HAS_PSUTIL:
+        return False, 'win_status.py: Requires psutil'
+
+    # Namespace modules from `status.py`
+    global ping_master, time_
+    ping_master = _namespaced_function(ping_master, globals())
+    time_ = _namespaced_function(time_, globals())
+
+    return __virtualname__
+
+__func_alias__ = {
+    'time_': 'time'
+}
 
 
 def cpuload():
@@ -67,19 +89,7 @@ def cpuload():
 
        salt '*' status.cpuload
     '''
-
-    # Pull in the information from WMIC
-    cmd = list2cmdline(['wmic', 'cpu'])
-    info = __salt__['cmd.run'](cmd).split('\r\n')
-
-    # Find the location of LoadPercentage
-    column = info[0].index('LoadPercentage')
-
-    # Get the end of the number.
-    end = info[1].index(' ', column+1)
-
-    # Return pull it out of the informatin and cast it to an int
-    return int(info[1][column:end])
+    return psutil.cpu_percent()
 
 
 def diskusage(human_readable=False, path=None):
@@ -100,29 +110,22 @@ def diskusage(human_readable=False, path=None):
     if not path:
         path = 'c:/'
 
-    # Credit for the source and ideas for this function:
-    # http://code.activestate.com/recipes/577972-disk-usage/?in=user-4178764
-    _, total, free = \
-        ctypes.c_ulonglong(), ctypes.c_ulonglong(), ctypes.c_longlong()
-    if sys.version_info >= (3, ) or isinstance(path, six.text_type):
-        fun = ctypes.windll.kernel32.GetDiskFreeSpaceExw
-    else:
-        fun = ctypes.windll.kernel32.GetDiskFreeSpaceExA
-    ret = fun(path, ctypes.byref(_), ctypes.byref(total), ctypes.byref(free))
-    if ret == 0:
-        raise ctypes.WinError()
-    used = total.value - free.value
+    disk_stats = psutil.disk_usage(path)
 
-    total_val = total.value
-    used_val = used
-    free_val = free.value
+    total_val = disk_stats.total
+    used_val = disk_stats.used
+    free_val = disk_stats.free
+    percent = disk_stats.percent
 
     if human_readable:
         total_val = _byte_calc(total_val)
         used_val = _byte_calc(used_val)
         free_val = _byte_calc(free_val)
 
-    return {'total': total_val, 'used': used_val, 'free': free_val}
+    return {'total': total_val,
+            'used': used_val,
+            'free': free_val,
+            'percent': percent}
 
 
 def procs(count=False):
@@ -173,16 +176,17 @@ def saltmem(human_readable=False):
         salt '*' status.saltmem
         salt '*' status.saltmem human_readable=True
     '''
-    with salt.utils.winapi.Com():
-        wmi_obj = wmi.WMI()
-        result = wmi_obj.query(
-            'SELECT WorkingSet FROM Win32_PerfRawData_PerfProc_Process '
-            'WHERE IDProcess={0}'.format(os.getpid())
-        )
-        mem = int(result[0].wmi_property('WorkingSet').value)
-        if human_readable:
-            return _byte_calc(mem)
-        return mem
+    # psutil.Process defaults to current process (`os.getpid()`)
+    p = psutil.Process()
+
+    # Use oneshot to get a snapshot
+    with p.oneshot():
+        mem = p.memory_info().rss
+
+    if human_readable:
+        return _byte_calc(mem)
+
+    return mem
 
 
 def uptime(human_readable=False):
@@ -201,37 +205,21 @@ def uptime(human_readable=False):
        salt '*' status.uptime
        salt '*' status.uptime human_readable=True
     '''
-
-    # Open up a subprocess to get information from WMIC
-    cmd = list2cmdline(['wmic', 'os', 'get', 'lastbootuptime'])
-    outs = __salt__['cmd.run'](cmd)
-
-    # Get the line that has when the computer started in it:
-    stats_line = ''
-    # use second line from output
-    stats_line = outs.split('\r\n')[1]
-
-    # Extract the time string from the line and parse
-    #
-    # Get string, just use the leading 14 characters
-    startup_time = stats_line[:14]
-    # Convert to time struct
-    startup_time = time.strptime(startup_time, '%Y%m%d%H%M%S')
-    # Convert to datetime object
-    startup_time = datetime.datetime(*startup_time[:6])
+    # Get startup time
+    startup_time = datetime.datetime.fromtimestamp(psutil.boot_time())
 
     # Subtract startup time from current time to get the uptime of the system
     uptime = datetime.datetime.now() - startup_time
 
-    return str(uptime) if human_readable else uptime.total_seconds()
+    return six.text_type(uptime) if human_readable else uptime.total_seconds()
 
 
 def _get_process_info(proc):
     '''
     Return  process information
     '''
-    cmd = salt.utils.to_str(proc.CommandLine or '')
-    name = salt.utils.to_str(proc.Name)
+    cmd = salt.utils.stringutils.to_unicode(proc.CommandLine or '')
+    name = salt.utils.stringutils.to_unicode(proc.Name)
     info = dict(
         cmd=cmd,
         name=name,
@@ -245,34 +233,34 @@ def _get_process_owner(process):
     domain, error_code, user = None, None, None
     try:
         domain, error_code, user = process.GetOwner()
-        owner['user'] = salt.utils.to_str(user)
-        owner['user_domain'] = salt.utils.to_str(domain)
+        owner['user'] = salt.utils.stringutils.to_unicode(user)
+        owner['user_domain'] = salt.utils.stringutils.to_unicode(domain)
     except Exception as exc:
         pass
     if not error_code and all((user, domain)):
-        owner['user'] = salt.utils.to_str(user)
-        owner['user_domain'] = salt.utils.to_str(domain)
+        owner['user'] = salt.utils.stringutils.to_unicode(user)
+        owner['user_domain'] = salt.utils.stringutils.to_unicode(domain)
     elif process.ProcessId in [0, 4] and error_code == 2:
         # Access Denied for System Idle Process and System
         owner['user'] = 'SYSTEM'
         owner['user_domain'] = 'NT AUTHORITY'
     else:
-        log.warning('Error getting owner of process; PID=\'{0}\'; Error: {1}'
-                    .format(process.ProcessId, error_code))
+        log.warning('Error getting owner of process; PID=\'%s\'; Error: %s',
+                    process.ProcessId, error_code)
     return owner
 
 
 def _byte_calc(val):
     if val < 1024:
-        tstr = str(val)+'B'
+        tstr = six.text_type(val)+'B'
     elif val < 1038336:
-        tstr = str(val/1024)+'KB'
+        tstr = six.text_type(val/1024)+'KB'
     elif val < 1073741824:
-        tstr = str(val/1038336)+'MB'
+        tstr = six.text_type(val/1038336)+'MB'
     elif val < 1099511627776:
-        tstr = str(val/1073741824)+'GB'
+        tstr = six.text_type(val/1073741824)+'GB'
     else:
-        tstr = str(val/1099511627776)+'TB'
+        tstr = six.text_type(val/1099511627776)+'TB'
     return tstr
 
 
@@ -318,7 +306,7 @@ def master(master=None, connected=True):
             log.error('Failed netstat')
             raise
 
-        lines = salt.utils.to_str(data).split('\n')
+        lines = salt.utils.stringutils.to_unicode(data).split('\n')
         for line in lines:
             if 'ESTABLISHED' not in line:
                 continue

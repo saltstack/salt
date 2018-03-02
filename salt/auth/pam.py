@@ -25,19 +25,29 @@ authenticated against.  This defaults to `login`
 
     The Python interface to PAM does not support authenticating as ``root``.
 
+.. note:: Using PAM groups with SSSD groups on python2.
+
+    To use sssd with the PAM eauth module and groups the `pysss` module is
+    needed.  On RedHat/CentOS this is `python-sss`.
+
+    This should not be needed with python >= 3.3, because the `os` modules has the
+    `getgrouplist` function.
+
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
 
 # Import Salt libs
-from salt.utils import get_group_list
+import salt.utils.user
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
-LIBPAM = CDLL(find_library('pam'))
+# Import 3rd-party libs
+from salt.ext import six
+
 LIBC = CDLL(find_library('c'))
 
 CALLOC = LIBC.calloc
@@ -110,6 +120,7 @@ class PamConv(Structure):
 
 
 try:
+    LIBPAM = CDLL(find_library('pam'))
     PAM_START = LIBPAM.pam_start
     PAM_START.restype = c_int
     PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
@@ -150,6 +161,13 @@ def authenticate(username, password):
     '''
     service = __opts__.get('auth.pam.service', 'login')
 
+    if isinstance(username, six.text_type):
+        username = username.encode(__salt_system_encoding__)
+    if isinstance(password, six.text_type):
+        password = password.encode(__salt_system_encoding__)
+    if isinstance(service, six.text_type):
+        service = service.encode(__salt_system_encoding__)
+
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
         '''
@@ -161,7 +179,7 @@ def authenticate(username, password):
         p_response[0] = cast(addr, POINTER(PamResponse))
         for i in range(n_messages):
             if messages[i].contents.msg_style == PAM_PROMPT_ECHO_OFF:
-                pw_copy = STRDUP(str(password))
+                pw_copy = STRDUP(password)
                 p_response.contents[i].resp = cast(pw_copy, c_char_p)
                 p_response.contents[i].resp_retcode = 0
         return 0
@@ -196,4 +214,4 @@ def groups(username, *args, **kwargs):
 
     Uses system groups
     '''
-    return get_group_list(username)
+    return salt.utils.user.get_group_list(username)

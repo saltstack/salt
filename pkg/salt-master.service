@@ -1,9 +1,10 @@
 [Unit]
 Description=The Salt Master Server
+Documentation=man:salt-master(1) file:///usr/share/doc/salt/html/contents.html https://docs.saltstack.com/en/latest/contents.html
 After=network.target
 
 [Service]
-LimitNOFILE=16384
+LimitNOFILE=100000
 Type=notify
 NotifyAccess=all
 ExecStart=/usr/bin/salt-master

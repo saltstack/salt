@@ -6,7 +6,7 @@ State to manage monitoring in Zenoss.
 
 This state module depends on the 'zenoss' Salt execution module.
 
-Allows for setting a state of minions in Zenoss using the Zenoss API. Currently Zenoss 4.x is supported.
+Allows for setting a state of minions in Zenoss using the Zenoss API. Currently Zenoss 4.x and 5.x are supported.
 
 .. code-block:: yaml
 
@@ -18,7 +18,7 @@ Allows for setting a state of minions in Zenoss using the Zenoss API. Currently 
         - prod_state: 1000
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__name__)
@@ -30,6 +30,8 @@ def __virtual__():
     '''
     if 'zenoss.add_device' in __salt__:
         return 'zenoss'
+    else:
+        return False, "The zenoss execution module is not available"
 
 
 def monitored(name, device_class=None, collector='localhost', prod_state=None):
@@ -57,21 +59,28 @@ def monitored(name, device_class=None, collector='localhost', prod_state=None):
         ret['comment'] = '{0} is already monitored'.format(name)
 
         # if prod_state is set, ensure it matches with the current state
-        if prod_state:
-            if device['productionState'] != prod_state:
+        if prod_state is not None and device['productionState'] != prod_state:
+            if __opts__['test']:
+                ret['comment'] = '{0} is already monitored but prodState will be updated'.format(name)
+                ret['result'] = None
+            else:
                 __salt__['zenoss.set_prod_state'](prod_state, name)
-                ret['changes'] = {'old': 'prodState == {0}'.format(device['productionState']), 'new': 'prodState == {0}'.format(prod_state)}
-                ret['comment'] = '{0} is already monitored but prodState was incorrect, setting to Production'.format(name)
+                ret['comment'] = '{0} is already monitored but prodState was updated'.format(name)
 
+            ret['changes'] = {
+                'old': 'prodState == {0}'.format(device['productionState']),
+                'new': 'prodState == {0}'.format(prod_state)
+                }
         return ret
 
+    # Device not yet in Zenoss
     if __opts__['test']:
         ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
         ret['changes'] = {'old': 'monitored == False', 'new': 'monitored == True'}
         ret['result'] = None
         return ret
 
-    # Device not yet in Zenoss. Add and check result
+    # Add and check result
     if __salt__['zenoss.add_device'](name, device_class, collector, prod_state):
         ret['result'] = True
         ret['changes'] = {'old': 'monitored == False', 'new': 'monitored == True'}

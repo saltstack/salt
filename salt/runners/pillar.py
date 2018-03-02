@@ -2,7 +2,7 @@
 '''
 Functions to interact with the pillar compiler on the master
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.pillar
@@ -41,6 +41,7 @@ def show_pillar(minion='*', **kwargs):
     Returns the compiled pillar either of a specific minion
     or just the global available pillars. This function assumes
     that no minion has the id ``*``.
+    Function also accepts pillarenv as attribute in order to limit to a specific pillar branch of git
 
     CLI Example:
 
@@ -57,10 +58,18 @@ def show_pillar(minion='*', **kwargs):
         salt-run pillar.show_pillar
 
     shows global pillar for 'dev' pillar environment:
+    (note that not specifying pillarenv will merge all pillar environments
+    using the master config option pillar_source_merging_strategy.)
 
     .. code-block:: bash
 
-        salt-run pillar.show_pillar 'saltenv=dev'
+        salt-run pillar.show_pillar 'pillarenv=dev'
+
+    shows global pillar for 'dev' pillar environment and specific pillarenv = dev:
+
+    .. code-block:: bash
+
+        salt-run pillar.show_pillar 'saltenv=dev' 'pillarenv=dev'
 
     API Example:
 
@@ -73,7 +82,7 @@ def show_pillar(minion='*', **kwargs):
         pillar = runner.cmd('pillar.show_pillar', [])
         print(pillar)
     '''
-
+    pillarenv = None
     saltenv = 'base'
     id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
     if grains is None:
@@ -82,6 +91,9 @@ def show_pillar(minion='*', **kwargs):
     for key in kwargs:
         if key == 'saltenv':
             saltenv = kwargs[key]
+        elif key == 'pillarenv':
+            # pillarenv overridden on CLI
+            pillarenv = kwargs[key]
         else:
             grains[key] = kwargs[key]
 
@@ -89,7 +101,8 @@ def show_pillar(minion='*', **kwargs):
         __opts__,
         grains,
         id_,
-        saltenv)
+        saltenv,
+        pillarenv=pillarenv)
 
     compiled_pillar = pillar.compile_pillar()
     return compiled_pillar

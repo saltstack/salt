@@ -60,13 +60,12 @@ verbose : True
 '''
 
 # Import python Libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.request import (
         urlopen as _urlopen,
         HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
@@ -77,7 +76,8 @@ from salt.ext.six.moves.urllib.request import (
 # pylint: enable=no-name-in-module,import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.json
+import salt.utils.path
 
 # ######################### PRIVATE METHODS ##############################
 
@@ -89,9 +89,9 @@ def __virtual__():
 
     Return: str/bool
     '''
-    if salt.utils.which('solr'):
+    if salt.utils.path.which('solr'):
         return 'solr'
-    if salt.utils.which('apache-solr'):
+    if salt.utils.path.which('apache-solr'):
         return 'solr'
     return (False, 'The solr execution module failed to load: requires both the solr and apache-solr binaries in the path.')
 
@@ -258,7 +258,7 @@ def _auth(url):
 def _http_request(url, request_timeout=None):
     '''
     PRIVATE METHOD
-    Uses json.load to fetch the JSON results from the solr API.
+    Uses salt.utils.json.load to fetch the JSON results from the solr API.
 
     url : str
         a complete URL that can be passed to urllib.open
@@ -274,10 +274,8 @@ def _http_request(url, request_timeout=None):
     try:
 
         request_timeout = __salt__['config.option']('solr.request_timeout')
-        if request_timeout is None:
-            data = json.load(_urlopen(url))
-        else:
-            data = json.load(_urlopen(url, timeout=request_timeout))
+        kwargs = {} if request_timeout is None else {'timeout': request_timeout}
+        data = salt.utils.json.load(_urlopen(url, **kwargs))
         return _get_return_dict(True, data, [])
     except Exception as err:
         return _get_return_dict(False, {}, ["{0} : {1}".format(url, err)])
@@ -369,7 +367,7 @@ def _merge_options(options):
         defaults.update(options)
     for key, val in six.iteritems(defaults):
         if isinstance(val, bool):
-            defaults[key] = str(val).lower()
+            defaults[key] = six.text_type(val).lower()
     return defaults
 
 

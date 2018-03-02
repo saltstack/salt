@@ -5,6 +5,11 @@ Manage Apigateway Rest APIs
 
 .. versionadded:: 2016.11.0
 
+:depends:
+  - boto >= 2.8.0
+  - boto3 >= 1.2.1
+  - botocore >= 1.4.49
+
 Create and destroy rest apis depending on a swagger version 2 definition file.
 Be aware that this interacts with Amazon's services, and so may incur charges.
 
@@ -31,33 +36,35 @@ config:
 .. code-block:: yaml
 
     myprofile:
-        keyid: GKTADJGHEIQSXMKKRBJ08H
-        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 .. code-block:: yaml
 
     Ensure Apigateway API exists:
-        boto_apigateway.present:
-            - name: myfunction
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_apigateway.present:
+        - name: myfunction
+        - region: us-east-1
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import hashlib
 import logging
 import os
-import os.path
-import hashlib
 import re
-import json
-import yaml
+
 # Import Salt Libs
-import salt.ext.six as six
-import salt.utils
+import salt.utils.files
+import salt.utils.json
+import salt.utils.yaml
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -115,7 +122,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
         The canconicalization of these input parameters is done in the following order:
             1) lambda_funcname_format is formatted with the input parameters as passed,
             2) resulting string is stripped for leading/trailing spaces,
-            3) path paramter's curly braces are removed from the resource path,
+            3) path parameter's curly braces are removed from the resource path,
             4) consecutive spaces and forward slashes in the paths are replaced with '_'
             5) consecutive '_' are replaced with '_'
 
@@ -123,7 +130,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
     with the following schema.  The lambda functions should throw exceptions for any non successful responses.
     An optional pattern field can be specified in errorMessage field to aid the response mapping from Lambda
     to the proper error return status codes.
+
         .. code-block:: yaml
+
             Error:
               type: object
               properties:
@@ -224,13 +233,13 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
             '#end\n'
             '  ]\n'
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     response_template
         String value that defines the response template mapping applied in case of success (including OPTIONS method)
         If set to None, empty ({}) template is assumed, which will transfer response from the lambda function as is.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
     '''
     ret = {'name': name,
            'result': True,
@@ -431,12 +440,12 @@ def _gen_md5_filehash(fname, *args):
     and participates in the hash calculation
     '''
     _hash = hashlib.md5()
-    with salt.utils.fopen(fname, 'rb') as f:
+    with salt.utils.files.fopen(fname, 'rb') as f:
         for chunk in iter(lambda: f.read(4096), b''):
             _hash.update(chunk)
 
     for extra_arg in args:
-        _hash.update(str(extra_arg))
+        _hash.update(six.b(str(extra_arg)))
     return _hash.hexdigest()
 
 
@@ -444,7 +453,7 @@ def _dict_to_json_pretty(d, sort_keys=True):
     '''
     helper function to generate pretty printed json output
     '''
-    return json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
+    return salt.utils.json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
 
 
 # Heuristic on whether or not the property name loosely matches given set of 'interesting' factors
@@ -712,8 +721,8 @@ class _Swagger(object):
                 self._md5_filehash = _gen_md5_filehash(self._swagger_file,
                                                        error_response_template,
                                                        response_template)
-                with salt.utils.fopen(self._swagger_file, 'rb') as sf:
-                    self._cfg = yaml.load(sf)
+                with salt.utils.files.fopen(self._swagger_file, 'rb') as sf:
+                    self._cfg = salt.utils.yaml.safe_load(sf)
                 self._swagger_version = ''
             else:
                 raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
@@ -744,7 +753,7 @@ class _Swagger(object):
                 if 'responses' not in opobj:
                     raise ValueError('missing mandatory responses field in path item object')
                 for rescode, resobj in six.iteritems(opobj.get('responses')):
-                    if not self._is_http_error_rescode(str(rescode)):
+                    if not self._is_http_error_rescode(str(rescode)):  # future lint: disable=blacklisted-function
                         continue
 
                     # only check for response code from 400-599
@@ -1594,7 +1603,7 @@ class _Swagger(object):
 
         if 'responses' in method_data:
             for response, response_data in six.iteritems(method_data['responses']):
-                httpStatus = str(response)
+                httpStatus = str(response)  # future lint: disable=blacklisted-function
                 method_response = self._parse_method_response(method_name.lower(),
                                                               _Swagger.SwaggerMethodResponse(response_data), httpStatus)
 
@@ -1670,7 +1679,7 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
     '''
     Ensure the spcifieda usage plan with the corresponding metrics is deployed
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     name
         name of the state
@@ -1810,7 +1819,7 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
     '''
     Ensures usage plan identified by name is no longer present
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     name
         name of the state
@@ -1876,7 +1885,7 @@ def usage_plan_association_present(name, plan_name, api_stages, region=None, key
     '''
     Ensures usage plan identified by name is added to provided api_stages
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     name
         name of the state
@@ -1971,7 +1980,7 @@ def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=
     If a plan is associated to stages not listed in api_stages parameter,
     those associations remain intact.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     name
         name of the state

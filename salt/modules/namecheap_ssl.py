@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
- Namecheap management
+Namecheap ssl management
+
+ .. versionadded:: 2017.7.0
 
  General Notes
  -------------
@@ -38,14 +40,21 @@
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
 '''
-from __future__ import absolute_import
-CAN_USE_NAMECHEAP = True
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
+# Import Salt libs
+import salt.utils.files
+import salt.utils.stringutils
 
 try:
     import salt.utils.namecheap
+    CAN_USE_NAMECHEAP = True
 except ImportError:
     CAN_USE_NAMECHEAP = False
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -100,6 +109,12 @@ def reissue(csr_file,
 
     Other required parameters:
         please see https://www.namecheap.com/support/api/methods/ssl/reissue.aspx
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_ssl.reissue my-csr-file my-cert-id apachessl
     '''
     return __get_certificates('namecheap.ssl.reissue', "SSLReissueResult", csr_file, certificate_id, web_server_type,
                               approver_email, http_dc_validation, kwargs)
@@ -148,6 +163,12 @@ def activate(csr_file,
 
     Other required parameters:
         please see https://www.namecheap.com/support/api/methods/ssl/activate.aspx
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_ssl.activate my-csr-file my-cert-id apachessl
     '''
     return __get_certificates('namecheap.ssl.activate', 'SSLActivateResult', csr_file, certificate_id, web_server_type,
                               approver_email, http_dc_validation, kwargs)
@@ -205,9 +226,11 @@ def __get_certificates(command,
 
     opts = salt.utils.namecheap.get_opts(command)
 
-    csr_handle = open(csr_file, 'rb')
+    with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
+        opts['csr'] = salt.utils.stringutils.to_unicode(
+            csr_handle.read()
+        )
 
-    opts['csr'] = csr_handle.read()
     opts['CertificateID'] = certificate_id
     opts['WebServerType'] = web_server_type
     if approver_email is not None:
@@ -216,10 +239,8 @@ def __get_certificates(command,
     if http_dc_validation:
         opts['HTTPDCValidation'] = 'True'
 
-    for key, value in kwargs.iteritems():
+    for key, value in six.iteritems(kwargs):
         opts[key] = value
-
-    csr_handle.close()
 
     response_xml = salt.utils.namecheap.post_request(opts)
 
@@ -278,6 +299,12 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
     Optional parameters:
         promotional_code
             string  Promotional (coupon) code for the certificate
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_ssl.renew 1 my-cert-id RapidSSL
     '''
 
     valid_certs = set(['QuickSSL Premium',
@@ -316,12 +343,12 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     if years < 1 or years > 5:
-        salt.utils.namecheap.log.error('Invalid option for years=' + str(years))
-        raise Exception('Invalid option for years=' + str(years))
+        salt.utils.namecheap.log.error('Invalid option for years=' + six.text_type(years))
+        raise Exception('Invalid option for years=' + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.renew')
-    opts['Years'] = str(years)
-    opts['CertificateID'] = str(certificate_id)
+    opts['Years'] = six.text_type(years)
+    opts['CertificateID'] = six.text_type(certificate_id)
     opts['SSLType'] = certificate_type
     if promotion_code is not None:
         opts['PromotionCode'] = promotion_code
@@ -434,6 +461,12 @@ Symantec  Secure Site                      1                 25              24
 Symantec  Secure Site                      1                 25              24
           Pro
 --------------------------------------------------------------------------------
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_ssl.create 2 RapidSSL
     '''
     valid_certs = set(['QuickSSL Premium',
                        'RapidSSL',
@@ -471,8 +504,8 @@ Symantec  Secure Site                      1                 25              24
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     if years < 1 or years > 5:
-        salt.utils.namecheap.log.error('Invalid option for years=' + str(years))
-        raise Exception('Invalid option for years=' + str(years))
+        salt.utils.namecheap.log.error('Invalid option for years=' + six.text_type(years))
+        raise Exception('Invalid option for years=' + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.create')
 
@@ -525,6 +558,12 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
         http_dc_validation
             bool  True if a Comodo certificate and validation should be done with files
                   instead of emails and to return the info to do so
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_ssl.parse_csr my-csr-file PremiumSSL
     '''
     valid_certs = set(['QuickSSL Premium',
                        'RapidSSL',
@@ -562,14 +601,14 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.parseCSR')
 
-    csr_handle = open(csr_file, 'rb')
+    with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
+        opts['csr'] = salt.utils.stringutils.to_unicode(
+            csr_handle.read()
+        )
 
-    opts['csr'] = csr_handle.read()
     opts['CertificateType'] = certificate_type
     if http_dc_validation:
         opts['HTTPDCValidation'] = 'true'
-
-    csr_handle.close()
 
     response_xml = salt.utils.namecheap.post_request(opts)
 
@@ -608,9 +647,15 @@ def get_list(**kwargs):
                                         SSLTYPE,SSLTYPE_DESC,
                                         EXPIREDATETIME,EXPIREDATETIME_DESC,
                                         Host_Name,Host_Name_DESC
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_ssl.get_list Processing
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.getList')
-    for key, value in kwargs.iteritems():
+    for key, value in six.iteritems(kwargs):
         opts[key] = value
 
     response_xml = salt.utils.namecheap.get_request(opts)
@@ -646,6 +691,12 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
     returntype
         string  Type of returned certificate.  Parameter takes "Individual (for X.509 format) or PKCS7"
                 Required if returncertificate is True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_ssl.get_info my-cert-id
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.getinfo')
     opts['certificateID'] = certificate_id

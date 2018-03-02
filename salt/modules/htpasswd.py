@@ -7,14 +7,14 @@ Support for htpasswd command. Requires the apache2-utils package for Debian-base
 The functions here will load inside the webutil module. This allows other
 functions that don't use htpasswd to use the webutil module name.
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def __virtual__():
     '''
     Only load the module if htpasswd is installed
     '''
-    if salt.utils.which('htpasswd'):
+    if salt.utils.path.which('htpasswd'):
         return __virtualname__
     return (False, 'The htpasswd execution mdule cannot be loaded: htpasswd binary not in path.')
 
@@ -34,8 +34,6 @@ def useradd(pwfile, user, password, opts='', runas=None):
     '''
     Add a user to htpasswd file using the htpasswd command. If the htpasswd
     file does not exist, it will be created.
-
-    .. deprecated:: 2016.3.0
 
     pwfile
         Path to htpasswd file
@@ -145,7 +143,6 @@ def verify(pwfile, user, password, opts='', runas=None):
 
     cmd = ['htpasswd', '-bv{0}'.format(opts), pwfile, user, password]
     ret = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
-    log.debug('Result of verifying htpasswd for user {0}: {1}'.format(
-        user, ret))
+    log.debug('Result of verifying htpasswd for user %s: %s', user, ret)
 
     return ret['retcode'] == 0

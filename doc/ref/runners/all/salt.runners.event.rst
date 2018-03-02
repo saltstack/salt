@@ -1,5 +1,5 @@
-salt.runners.event module
-=========================
+salt.runners.event
+==================
 
 .. automodule:: salt.runners.event
     :members:

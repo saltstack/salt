@@ -1,8 +1,10 @@
 [Unit]
 Description=The Salt Minion
-After=network.target
+Documentation=man:salt-minion(1) file:///usr/share/doc/salt/html/contents.html https://docs.saltstack.com/en/latest/contents.html
+After=network.target salt-master.service
 
 [Service]
+KillMode=process
 Type=notify
 NotifyAccess=all
 LimitNOFILE=8192

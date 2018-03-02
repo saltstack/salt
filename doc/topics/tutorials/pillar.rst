@@ -59,16 +59,23 @@ pillar data:
     Prior to version 0.16.2, this function is named ``pillar.data``. This
     function name is still supported for backwards compatibility.
 
-By default the contents of the master configuration file are loaded into
-pillar for all minions. This enables the master configuration file to
-be used for global configuration of minions.
+By default, the contents of the master configuration file are not loaded into
+pillar for all minions. This default is stored in the ``pillar_opts`` setting,
+which defaults to ``False``.
+
+The contents of the master configuration file can be made available to minion
+pillar files. This makes global configuration of services and systems very easy,
+but note that this may not be desired or appropriate if sensitive data is stored
+in the master's configuration file. To enable the master configuration file to be
+available to a minion's pillar files, set ``pillar_opts`` to ``True`` in the
+minion configuration file.
 
 Similar to the state tree, the pillar is comprised of sls files and has a top file.
 The default location for the pillar is in /srv/pillar.
 
 .. note::
 
-    The pillar location can be configured via the `pillar_roots` option inside
+    The pillar location can be configured via the ``pillar_roots`` option inside
     the master configuration file. It must not be in a subdirectory of the state
     tree or file_roots. If the pillar is under file_roots, any pillar targeting
     can be bypassed by minions.
@@ -235,7 +242,7 @@ set in the minion's pillar, then the default of ``httpd`` will be used.
 .. note::
 
     Under the hood, pillar is just a Python dict, so Python dict methods such
-    as `get` and `items` can be used.
+    as ``get`` and ``items`` can be used.
 
 Pillar Makes Simple States Grow Easily
 ======================================
@@ -295,6 +302,18 @@ Where the vimrc source location can now be changed via pillar:
     {% endif %}
 
 Ensuring that the right vimrc is sent out to the correct minions.
+
+The pillar top file must include a reference to the new sls pillar file:
+
+``/srv/pillar/top.sls``:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - pkg
+        - edit.vim
+
 
 Setting Pillar Data on the Command Line
 =======================================

@@ -672,6 +672,12 @@ Changes:
 
 - **PR** `#27585`_: (*ryan-lane*) Fix undefined variable in cron state module
 
+.. _`#3436`: https://github.com/saltstack/salt/issues/3436
+.. _`#8646`: https://github.com/saltstack/salt/issues/8646
+.. _`#12363`: https://github.com/saltstack/salt/issues/12363
+.. _`#13513`: https://github.com/saltstack/salt/issues/13513
+.. _`#13850`: https://github.com/saltstack/salt/issues/13850
+.. _`#20678`: https://github.com/saltstack/salt/issues/20678
 .. _`#22115`: https://github.com/saltstack/salt/pull/22115
 .. _`#24314`: https://github.com/saltstack/salt/pull/24314
 .. _`#25315`: https://github.com/saltstack/salt/pull/25315
@@ -681,6 +687,7 @@ Changes:
 .. _`#25923`: https://github.com/saltstack/salt/pull/25923
 .. _`#25928`: https://github.com/saltstack/salt/pull/25928
 .. _`#25946`: https://github.com/saltstack/salt/pull/25946
+.. _`#26336`: https://github.com/saltstack/salt/issues/6336
 .. _`#26945`: https://github.com/saltstack/salt/pull/26945
 .. _`#27099`: https://github.com/saltstack/salt/pull/27099
 .. _`#27116`: https://github.com/saltstack/salt/pull/27116
@@ -789,6 +796,7 @@ Changes:
 .. _`#27809`: https://github.com/saltstack/salt/pull/27809
 .. _`#27816`: https://github.com/saltstack/salt/pull/27816
 .. _`#27824`: https://github.com/saltstack/salt/pull/27824
+.. _`#27825`: https://github.com/saltstack/salt/issues/27825
 .. _`#27826`: https://github.com/saltstack/salt/pull/27826
 .. _`#27827`: https://github.com/saltstack/salt/pull/27827
 .. _`#27833`: https://github.com/saltstack/salt/pull/27833
@@ -997,6 +1005,7 @@ Changes:
 .. _`#28465`: https://github.com/saltstack/salt/pull/28465
 .. _`#28472`: https://github.com/saltstack/salt/pull/28472
 .. _`#28473`: https://github.com/saltstack/salt/pull/28473
+.. _`#28484`: https://github.com/saltstack/salt/issues/28484
 .. _`#28485`: https://github.com/saltstack/salt/pull/28485
 .. _`#28486`: https://github.com/saltstack/salt/pull/28486
 .. _`#28487`: https://github.com/saltstack/salt/pull/28487
@@ -1013,6 +1022,8 @@ Changes:
 .. _`#28516`: https://github.com/saltstack/salt/pull/28516
 .. _`#28517`: https://github.com/saltstack/salt/pull/28517
 .. _`#28525`: https://github.com/saltstack/salt/pull/28525
+.. _`#28526`: https://github.com/saltstack/salt/issues/28526
+.. _`#28527`: https://github.com/saltstack/salt/issues/28527
 .. _`#28529`: https://github.com/saltstack/salt/pull/28529
 .. _`#28530`: https://github.com/saltstack/salt/pull/28530
 .. _`#28531`: https://github.com/saltstack/salt/pull/28531
@@ -1099,6 +1110,7 @@ Changes:
 .. _`#28744`: https://github.com/saltstack/salt/pull/28744
 .. _`#28746`: https://github.com/saltstack/salt/pull/28746
 .. _`#28752`: https://github.com/saltstack/salt/pull/28752
+.. _`#28754`: https://github.com/saltstack/salt/issues/28754
 .. _`#28755`: https://github.com/saltstack/salt/pull/28755
 .. _`#28756`: https://github.com/saltstack/salt/pull/28756
 .. _`#28757`: https://github.com/saltstack/salt/pull/28757
@@ -1114,6 +1126,7 @@ Changes:
 .. _`#28777`: https://github.com/saltstack/salt/pull/28777
 .. _`#28778`: https://github.com/saltstack/salt/pull/28778
 .. _`#28782`: https://github.com/saltstack/salt/pull/28782
+.. _`#28784`: https://github.com/saltstack/salt/pull/issues/28784
 .. _`#28786`: https://github.com/saltstack/salt/pull/28786
 .. _`#28787`: https://github.com/saltstack/salt/pull/28787
 .. _`#28789`: https://github.com/saltstack/salt/pull/28789
@@ -1199,6 +1212,7 @@ Changes:
 .. _`#29095`: https://github.com/saltstack/salt/pull/29095
 .. _`#29096`: https://github.com/saltstack/salt/pull/29096
 .. _`#29097`: https://github.com/saltstack/salt/pull/29097
+.. _`#29107`: https://github.com/saltstack/salt/issues/29107
 .. _`#29108`: https://github.com/saltstack/salt/pull/29108
 .. _`#29113`: https://github.com/saltstack/salt/pull/29113
 .. _`#29118`: https://github.com/saltstack/salt/pull/29118

@@ -194,6 +194,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         guestinfo.foo: bar
         guestinfo.domain: foobar.com
         guestinfo.customVariable: customValue
+      annotation: Created by Salt-Cloud
 
       deploy: True
       customization: True
@@ -282,6 +283,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         thin_provision
             Specifies whether the disk should be thin provisioned or not. Default is ``thin_provision: False``.
             .. versionadded:: 2016.3.0
+        eagerly_scrub
+            Specifies whether the disk should be rewrite with zeros during thick provisioning or not.
+            Default is ``eagerly_scrub: False``.
+            .. versionadded:: 2018.3.0
         controller
             Specify the SCSI controller label to which this disk should be attached.
             This should be specified only when creating both the specified SCSI
@@ -451,10 +456,23 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     present, it will be reset with the new value provided. Otherwise, a new option is
     added. Keys with empty values will be removed.
 
+``annotation``
+    User-provided description of the virtual machine. This will store a message in the
+    vSphere interface, under the annotations section in the Summary view of the virtual
+    machine.
+
 ``deploy``
     Specifies if salt should be installed on the newly created VM. Default is ``True``
     so salt will be installed using the bootstrap script. If ``template: True`` or
     ``power_on: False`` is set, this field is ignored and salt will not be installed.
+
+``wait_for_ip_timeout``
+    When ``deploy: True``, this timeout determines the maximum time to wait for
+    VMware tools to be installed on the virtual machine. If this timeout is
+    reached, an attempt to determine the client's IP will be made by resolving
+    the VM's name.  By lowering this value a salt bootstrap can be fully
+    automated for systems that are not built with VMware tools.  Default is
+    ``wait_for_ip_timeout: 1200``.
 
 ``customization``
     Specify whether the new virtual machine should be customized or not. If
@@ -678,8 +696,8 @@ Example of a complete profile:
           SCSI controller 0:
             type: lsilogic_sas
         ide:
-          IDE 0
-          IDE 1
+          IDE 0: {}
+          IDE 1: {}
         disk:
           Hard disk 0:
             controller: 'SCSI controller 0'

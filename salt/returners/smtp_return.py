@@ -106,14 +106,14 @@ This configuration enables Salt Master to send an email when accepting or reject
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import smtplib
 from email.utils import formatdate
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.jid
 import salt.returners
 import salt.loader
@@ -132,9 +132,7 @@ __virtualname__ = 'smtp'
 
 
 def __virtual__():
-    if HAS_GNUPG:
-        return __virtualname__
-    return False, 'Could not import smtp returner; gnupg is not installed.'
+    return __virtualname__
 
 
 def _get_options(ret=None):
@@ -186,7 +184,7 @@ def returner(ret):
 
     if not port:
         port = 25
-    log.debug('SMTP port has been set to {0}'.format(port))
+    log.debug('SMTP port has been set to %s', port)
 
     for field in fields:
         if field in ret:
@@ -200,7 +198,7 @@ def returner(ret):
                                **ret)
     if isinstance(subject, six.moves.StringIO):
         subject = subject.read()
-    log.debug("smtp_return: Subject is '{0}'".format(subject))
+    log.debug("smtp_return: Subject is '%s'", subject)
 
     template = _options.get('template')
     if template:
@@ -219,18 +217,20 @@ def returner(ret):
                                    input_data=template,
                                    **ret)
 
-    if HAS_GNUPG and gpgowner:
-        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
-                        options=['--trust-model always'])
-        encrypted_data = gpg.encrypt(content, to_addrs)
-        if encrypted_data.ok:
-            log.debug('smtp_return: Encryption successful')
-            content = str(encrypted_data)
+    if gpgowner:
+        if HAS_GNUPG:
+            gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
+                            options=['--trust-model always'])
+            encrypted_data = gpg.encrypt(content, to_addrs)
+            if encrypted_data.ok:
+                log.debug('smtp_return: Encryption successful')
+                content = six.text_type(encrypted_data)
+            else:
+                log.error('smtp_return: Encryption failed, only an error message will be sent')
+                content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
+                    encrypted_data.status, encrypted_data.stderr)
         else:
-            log.error('smtp_return: Encryption failed, only an error message will be sent')
-            content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
-                encrypted_data.status, encrypted_data.stderr)
-
+            log.error("gnupg python module is required in order to user gpgowner in smtp returner ; ignoring gpgowner configuration for now")
     if isinstance(content, six.moves.StringIO):
         content = content.read()
 
@@ -264,7 +264,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
 
 
 def event_return(events):

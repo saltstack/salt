@@ -72,7 +72,7 @@ Optionally, a root may be specified.
       - consul: my_consul_config
 
     ext_pillar:
-      - consul: my_consul_config root=/salt
+      - consul: my_consul_config root=salt
 
 Using these configuration profiles, multiple consul sources may also be used:
 
@@ -88,9 +88,9 @@ path to expose minion-specific information stored in consul.
 .. code-block:: yaml
 
     ext_pillar:
-      - consul: my_consul_config root=/salt/%(minion_id)s
-      - consul: my_consul_config root=/salt/%(role)s
-      - consul: my_consul_config root=/salt/%(environment)s
+      - consul: my_consul_config root=salt/%(minion_id)s
+      - consul: my_consul_config root=salt/%(role)s
+      - consul: my_consul_config root=salt/%(environment)s
 
 Minion-specific values may override shared values when the minion-specific root
 appears after the shared root:
@@ -98,8 +98,8 @@ appears after the shared root:
 .. code-block:: yaml
 
     ext_pillar:
-      - consul: my_consul_config root=/salt-shared
-      - consul: my_other_consul_config root=/salt-private/%(minion_id)s
+      - consul: my_consul_config root=salt-shared
+      - consul: my_other_consul_config root=salt-private/%(minion_id)s
 
 If using the ``role`` or ``environment`` grain in the consul key path, be sure to define it using
 `/etc/salt/grains`, or similar:
@@ -120,16 +120,16 @@ Matchers for more examples.
       - consul: my_consul_config root=salt target="L@salt.example.com and G@osarch:x86_64"
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 import re
-import yaml
-import salt.utils.minions
 
 from salt.exceptions import CommandExecutionError
 from salt.utils.dictupdate import update as dict_merge
+import salt.utils.minions
+import salt.utils.yaml
 
 # Import third party libs
 try:
@@ -166,7 +166,8 @@ def ext_pillar(minion_id,
         opts['target'] = match.group(1)
         temp = temp.replace(match.group(0), '')
         checker = salt.utils.minions.CkMinions(__opts__)
-        minions = checker.check_minions(opts['target'], 'compound')
+        _res = checker.check_minions(opts['target'], 'compound')
+        minions = _res['minions']
         if minion_id not in minions:
             return {}
 
@@ -188,8 +189,8 @@ def ext_pillar(minion_id,
 
     client = get_conn(__opts__, opts['profile'])
 
-    role = __salt__['grains.get']('role')
-    environment = __salt__['grains.get']('environment')
+    role = __salt__['grains.get']('role', None)
+    environment = __salt__['grains.get']('environment', None)
     # put the minion's ID in the path if necessary
     opts['root'] %= {
         'minion_id': minion_id,
@@ -223,7 +224,7 @@ def fetch_tree(client, path):
     ret = {}
     has_children = re.compile(r'/$')
 
-    log.debug('Fetched items: %r', format(items))
+    log.debug('Fetched items: %r', items)
 
     if items is None:
         return ret
@@ -231,10 +232,10 @@ def fetch_tree(client, path):
         key = re.sub(r'^' + path + '/?', '', item['Key'])
         if key != '':
             log.debug('key/path - %s: %s', path, key)
-            log.debug('has_children? %r', format(has_children.search(key)))
+            log.debug('has_children? %r', has_children.search(key))
         if has_children.search(key) is None:
             ret = pillar_format(ret, key.split('/'), item['Value'])
-            log.debug('Fetching subkeys for key: %r', format(item))
+            log.debug('Fetching subkeys for key: %r', item)
 
     return ret
 
@@ -251,7 +252,7 @@ def pillar_format(ret, keys, value):
     # If value is not None then it's a string
     # Use YAML to parse the data
     # YAML strips whitespaces unless they're surrounded by quotes
-    pillar_value = yaml.load(value)
+    pillar_value = salt.utils.yaml.safe_load(value)
 
     keyvalue = keys.pop()
     pil = {keyvalue: pillar_value}

@@ -1,0 +1,20 @@
+pillars:
+  default:
+    network:
+      sub: Geneva
+      dns:
+        srv1: 10.20.0.1
+        srv2: 10.20.0.2
+        srv3: 192.168.1.1
+        domain: gnv.example.com
+    users:
+      adm1:
+        uid: 1210
+        gid: 1210
+        gecos: 'Super user admin1'
+        homedir: /srv/app/adm1
+      adm3:
+        uid: 1203
+        gid: 1203
+        gecos: 'Super user admin3'
+        homedir: /home/adm3

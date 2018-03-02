@@ -40,7 +40,7 @@ Set up an initial profile at /etc/salt/cloud.profiles or in the /etc/salt/cloud.
 
 .. code-block:: yaml
 
-    scalewa-ubuntu:
+    scaleway-ubuntu:
       provider: my-scaleway-config
       image: Ubuntu Trusty (14.04 LTS)
 

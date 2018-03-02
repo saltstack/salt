@@ -13,7 +13,7 @@ Module to manage filesystem snapshots with snapper
 :platform:      Linux
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
 import os
@@ -26,8 +26,10 @@ except ImportError:
     HAS_PWD = False
 
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.files
 
+# import 3rd party libs
+from salt.ext import six
 
 try:
     import dbus  # pylint: disable=wrong-import-order
@@ -64,7 +66,7 @@ if HAS_DBUS:
     try:
         bus = dbus.SystemBus()
     except dbus.DBusException as exc:
-        log.error(exc)
+        log.warning(exc)
         system_bus_error = exc
     else:
         if SNAPPER_DBUS_OBJECT in bus.list_activatable_names():
@@ -73,7 +75,7 @@ if HAS_DBUS:
                                                         SNAPPER_DBUS_PATH),
                                          dbus_interface=SNAPPER_DBUS_INTERFACE)
             except (dbus.DBusException, ValueError) as exc:
-                log.error(exc)
+                log.warning(exc)
                 snapper_error = exc
         else:
             snapper_error = 'snapper is missing'
@@ -229,6 +231,7 @@ def set_config(name='root', **kwargs):
     snapper convention. The above example is equivalent to:
 
     .. code-block:: bash
+
         salt '*' snapper.set_config sync_acl=True
     '''
     try:
@@ -290,6 +293,60 @@ def get_config(name='root'):
         )
 
 
+def create_config(name=None,
+                  subvolume=None,
+                  fstype=None,
+                  template=None,
+                  extra_opts=None):
+    '''
+    Creates a new Snapper configuration
+
+    name
+        Name of the new Snapper configuration.
+    subvolume
+        Path to the related subvolume.
+    fstype
+        Filesystem type of the subvolume.
+    template
+        Configuration template to use. (Default: default)
+    extra_opts
+        Extra Snapper configuration opts dictionary. It will override the values provided
+        by the given template (if any).
+
+    CLI example:
+
+    .. code-block:: bash
+
+      salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs
+      salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs template="default"
+      salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs extra_opts='{"NUMBER_CLEANUP": False}'
+    '''
+    def raise_arg_error(argname):
+        raise CommandExecutionError(
+            'You must provide a "{0}" for the new configuration'.format(argname)
+        )
+
+    if not name:
+        raise_arg_error("name")
+    if not subvolume:
+        raise_arg_error("subvolume")
+    if not fstype:
+        raise_arg_error("fstype")
+    if not template:
+        template = ""
+
+    try:
+        snapper.CreateConfig(name, subvolume, fstype, template)
+        if extra_opts:
+            set_config(name, **extra_opts)
+        return get_config(name)
+    except dbus.DBusException as exc:
+        raise CommandExecutionError(
+            'Error encountered while creating the new configuration: {0}'
+            .format(_dbus_exception_to_reason(exc, locals()))
+        )
+
+
 def create_snapshot(config='root', snapshot_type='single', pre_number=None,
                     description=None, cleanup_algorithm='number', userdata=None,
                     **kwargs):
@@ -309,14 +366,14 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
     cleanup_algorithm
         Set the cleanup algorithm for the snapshot.
 
-        number
-            Deletes old snapshots when a certain number of snapshots
-            is reached.
-        timeline
-            Deletes old snapshots but keeps a number of hourly,
-            daily, weekly, monthly and yearly snapshots.
-        empty-pre-post
-            Deletes pre/post snapshot pairs with empty diffs.
+    number
+        Deletes old snapshots when a certain number of snapshots
+        is reached.
+    timeline
+        Deletes old snapshots but keeps a number of hourly,
+        daily, weekly, monthly and yearly snapshots.
+    empty-pre-post
+        Deletes pre/post snapshot pairs with empty diffs.
     userdata
         Set userdata for the snapshot (key-value pairs).
 
@@ -362,6 +419,95 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
             .format(_dbus_exception_to_reason(exc, locals()))
         )
     return new_nr
+
+
+def delete_snapshot(snapshots_ids=None, config="root"):
+    '''
+    Deletes an snapshot
+
+    config
+        Configuration name. (Default: root)
+
+    snapshots_ids
+        List of the snapshots IDs to be deleted.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.delete_snapshot 54
+        salt '*' snapper.delete_snapshot config=root 54
+        salt '*' snapper.delete_snapshot config=root snapshots_ids=[54,55,56]
+    '''
+    if not snapshots_ids:
+        raise CommandExecutionError('Error: No snapshot ID has been provided')
+    try:
+        current_snapshots_ids = [x['id'] for x in list_snapshots(config)]
+        if not isinstance(snapshots_ids, list):
+            snapshots_ids = [snapshots_ids]
+        if not set(snapshots_ids).issubset(set(current_snapshots_ids)):
+            raise CommandExecutionError(
+                "Error: Snapshots '{0}' not found".format(", ".join(
+                    [six.text_type(x) for x in set(snapshots_ids).difference(
+                        set(current_snapshots_ids))]))
+            )
+        snapper.DeleteSnapshots(config, snapshots_ids)
+        return {config: {"ids": snapshots_ids, "status": "deleted"}}
+    except dbus.DBusException as exc:
+        raise CommandExecutionError(_dbus_exception_to_reason(exc, locals()))
+
+
+def modify_snapshot(snapshot_id=None,
+                    description=None,
+                    userdata=None,
+                    cleanup=None,
+                    config="root"):
+    '''
+    Modify attributes of an existing snapshot.
+
+    config
+        Configuration name. (Default: root)
+
+    snapshot_id
+        ID of the snapshot to be modified.
+
+    cleanup
+        Change the cleanup method of the snapshot. (str)
+
+    description
+        Change the description of the snapshot. (str)
+
+    userdata
+        Change the userdata dictionary of the snapshot. (dict)
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' snapper.modify_snapshot 54 description="my snapshot description"
+        salt '*' snapper.modify_snapshot 54 description="my snapshot description"
+        salt '*' snapper.modify_snapshot 54 userdata='{"foo": "bar"}'
+        salt '*' snapper.modify_snapshot snapshot_id=54 cleanup="number"
+    '''
+    if not snapshot_id:
+        raise CommandExecutionError('Error: No snapshot ID has been provided')
+
+    snapshot = get_snapshot(config=config, number=snapshot_id)
+    try:
+        # Updating only the explicitly provided attributes by the user
+        updated_opts = {
+            'description': description if description is not None else snapshot['description'],
+            'cleanup': cleanup if cleanup is not None else snapshot['cleanup'],
+            'userdata': userdata if userdata is not None else snapshot['userdata'],
+        }
+        snapper.SetSnapshot(config,
+                            snapshot_id,
+                            updated_opts['description'],
+                            updated_opts['cleanup'],
+                            updated_opts['userdata'])
+        return get_snapshot(config=config, number=snapshot_id)
+    except dbus.DBusException as exc:
+        raise CommandExecutionError(_dbus_exception_to_reason(exc, locals()))
 
 
 def _get_num_interval(config, num_pre, num_post):
@@ -445,7 +591,7 @@ def run(function, *args, **kwargs):
     try:
         ret = __salt__[function](*args, **func_kwargs)
     except CommandExecutionError as exc:
-        ret = "\n".join([str(exc), __salt__[function].__doc__])
+        ret = "\n".join([six.text_type(exc), __salt__[function].__doc__])
 
     __salt__['snapper.create_snapshot'](
         config=config,
@@ -526,7 +672,7 @@ def undo(config='root', files=None, num_pre=None, num_post=None):
     the files into the state of num_pre.
 
     .. warning::
-        If one of the files has changes after num_post, they will be overwriten
+        If one of the files has changes after num_post, they will be overwritten
         The snapshots are used to determine the file list, but the current
         version of the files will be overwritten by the versions in num_pre.
 
@@ -647,20 +793,24 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
             if filepath.startswith(SUBVOLUME):
                 _filepath = filepath[len(SUBVOLUME):]
 
-            # Just in case, removing posible double '/' from the final file paths
+            # Just in case, removing possible double '/' from the final file paths
             pre_file = os.path.normpath(pre_mount + "/" + _filepath).replace("//", "/")
             post_file = os.path.normpath(post_mount + "/" + _filepath).replace("//", "/")
 
             if os.path.isfile(pre_file):
                 pre_file_exists = True
-                pre_file_content = salt.utils.fopen(pre_file).readlines()
+                with salt.utils.files.fopen(pre_file) as rfh:
+                    pre_file_content = [salt.utils.stringutils.to_unicode(_l)
+                                        for _l in rfh.readlines()]
             else:
                 pre_file_content = []
                 pre_file_exists = False
 
             if os.path.isfile(post_file):
                 post_file_exists = True
-                post_file_content = salt.utils.fopen(post_file).readlines()
+                with salt.utils.files.fopen(post_file) as rfh:
+                    post_file_content = [salt.utils.stringutils.to_unicode(_l)
+                                         for _l in rfh.readlines()]
             else:
                 post_file_content = []
                 post_file_exists = False

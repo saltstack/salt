@@ -31,13 +31,41 @@ Minion Primary Configuration
 
 Default: ``salt``
 
-The hostname or ipv4 of the master.
+The hostname or IP address of the master. See :conf_minion:`ipv6` for IPv6
+connections to the master.
 
 Default: ``salt``
 
 .. code-block:: yaml
 
     master: salt
+
+master:port Syntax
+~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+The ``master`` config option can also be set to use the master's IP in
+conjunction with a port number by default.
+
+.. code-block:: yaml
+
+    master: localhost:1234
+
+For IPv6 formatting with a port, remember to add brackets around the IP address
+before adding the port and enclose the line in single quotes to make it a string:
+
+.. code-block:: yaml
+
+    master: '[2001:db8:85a3:8d3:1319:8a2e:370:7348]:1234'
+
+.. note::
+
+    If a port is specified in the ``master`` as well as :conf_minion:`master_port`,
+    the ``master_port`` setting will be overridden by the ``master`` configuration.
+
+List of Masters Syntax
+~~~~~~~~~~~~~~~~~~~~~~
 
 The option can also be set to a list of masters, enabling
 :ref:`multi-master <tutorial-multi-master>` mode.
@@ -74,6 +102,54 @@ The option can also be set to a list of masters, enabling
           - address1
           - address2
         master_type: failover
+
+.. conf_minion:: ipv6
+
+``ipv6``
+--------
+
+Default: ``None``
+
+Whether the master should be connected over IPv6. By default salt minion
+will try to automatically detect IPv6 connectivity to master.
+
+.. code-block:: yaml
+
+    ipv6: True
+
+.. conf_minion:: master_uri_format
+
+``master_uri_format``
+---------------------
+
+.. versionadded:: 2015.8.0
+
+Specify the format in which the master address will be evaluated. Valid options
+are ``default`` or ``ip_only``. If ``ip_only`` is specified, then the master
+address will not be split into IP and PORT, so be sure that only an IP (or domain
+name) is set in the :conf_minion:`master` configuration setting.
+
+.. code-block:: yaml
+
+    master_uri_format: ip_only
+
+.. conf_minion:: master_tops_first
+
+``master_tops_first``
+---------------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``False``
+
+SLS targets defined using the :ref:`Master Tops <master-tops-system>` system
+are normally executed *after* any matches defined in the :ref:`Top File
+<states-top>`. Set this option to ``True`` to have the minion execute the
+:ref:`Master Tops <master-tops-system>` states first.
+
+.. code-block:: yaml
+
+    master_tops_first: True
 
 .. conf_minion:: master_type
 
@@ -191,9 +267,10 @@ to the next master in the list if it finds the existing one is dead.
 
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses and :conf_minion`master_type` is ``failover``, shuffle them before trying to
-connect to distribute the minions over all available masters. This uses
-Python's :func:`random.shuffle <python2:random.shuffle>` method.
+If :conf_minion:`master` is a list of addresses and :conf_minion`master_type`
+is ``failover``, shuffle them before trying to connect to distribute the
+minions over all available masters. This uses Python's :func:`random.shuffle
+<python2:random.shuffle>` method.
 
 .. code-block:: yaml
 
@@ -206,9 +283,10 @@ Python's :func:`random.shuffle <python2:random.shuffle>` method.
 
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses, shuffle them before trying to
-connect to distribute the minions over all available masters. This uses
-Python's :func:`random.randint <python2:random.randint>` method.
+If :conf_minion:`master` is a list of addresses, and :conf_minion`master_type`
+is set to ``failover`` shuffle them before trying to connect to distribute the
+minions over all available masters. This uses Python's :func:`random.shuffle
+<python2:random.shuffle>` method.
 
 .. code-block:: yaml
 
@@ -243,6 +321,131 @@ option on the Salt master.
 
     master_port: 4506
 
+.. conf_minion:: publish_port
+
+``publish_port``
+---------------
+
+Default: ``4505``
+
+The port of the master publish server, this needs to coincide with the publish_port
+option on the Salt master.
+
+.. code-block:: yaml
+
+    publish_port: 4505
+
+.. conf_minion:: source_interface_name
+
+``source_interface_name``
+-------------------------
+
+.. versionadded:: 2018.3.0
+
+The name of the interface to use when establishing the connection to the Master.
+
+.. note::
+
+    If multiple IP addresses are configured on the named interface,
+    the first one will be selected. In that case, for a better selection,
+    consider using the :conf_minion:`source_address` option.
+
+.. note::
+
+    To use an IPv6 address from the named interface, make sure the option
+    :conf_minion:`ipv6` is enabled, i.e., ``ipv6: true``.
+
+.. note::
+
+    If the interface is down, it will avoid using it, and the Minion
+    will bind to ``0.0.0.0`` (all interfaces).
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_interface_name: bond0.1234
+
+.. conf_minion:: source_address
+
+``source_address``
+------------------
+
+.. versionadded:: 2018.3.0
+
+The source IP address or the domain name to be used when connecting the Minion
+to the Master.
+See :conf_minion:`ipv6` for IPv6 connections to the Master.
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_address: if-bond0-1234.sjc.us-west.internal
+
+.. conf_minion:: source_ret_port
+
+``source_ret_port``
+-------------------
+
+.. versionadded:: 2018.3.0
+
+The source port to be used when connecting the Minion to the Master ret server.
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_ret_port: 49017
+
+.. conf_minion:: source_publish_port
+
+``source_publish_port``
+-----------------------
+
+.. versionadded:: 2018.3.0
+
+The source port to be used when connecting the Minion to the Master publish
+server.
+
+.. warning::
+
+    This option requires modern version of the underlying libraries used by
+    the selected transport:
+
+    - ``zeromq`` requires ``pyzmq`` >= 16.0.1 and ``libzmq`` >= 4.1.6
+    - ``tcp`` requires ``tornado`` >= 4.5
+
+Configuration example:
+
+.. code-block:: yaml
+
+    source_publish_port: 49018
+
 .. conf_minion:: user
 
 ``user``
@@ -259,7 +462,7 @@ The user to run the Salt processes
 .. conf_minion:: sudo_user
 
 ``sudo_user``
---------------
+-------------
 
 Default: ``''``
 
@@ -388,6 +591,20 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
+.. conf_minion:: minion_id_lowercase
+
+``minion_id_lowercase``
+-----------------------
+
+Default: ``False``
+
+Convert minion id to lowercase when it is being generated. Helpful when some hosts
+get the minion id in uppercase. Cached ids will remain the same and not converted.
+
+.. code-block:: yaml
+
+    minion_id_lowercase: True
+
 .. conf_minion:: cachedir
 
 ``cachedir``
@@ -402,6 +619,19 @@ This directory may contain sensitive data and should be protected accordingly.
 .. code-block:: yaml
 
     cachedir: /var/cache/salt/minion
+
+.. conf_master:: color_theme
+
+``color_theme``
+---------
+
+Default: ``""``
+
+Specifies a path to the color theme to use for colored command line output.
+
+.. code-block:: yaml
+
+    color_theme: /etc/salt/color_theme
 
 .. conf_minion:: append_minionid_config_dirs
 
@@ -536,6 +766,26 @@ With ``grains_deep_merge``, the result will be:
       k1: v1
       k2: v2
 
+.. conf_minion:: grains_refresh_every
+
+``grains_refresh_every``
+------------------------
+
+Default: ``0``
+
+The ``grains_refresh_every`` setting allows for a minion to periodically
+check its grains to see if they have changed and, if so, to inform the master
+of the new grains. This operation is moderately expensive, therefore care
+should be taken not to set this value too low.
+
+Note: This value is expressed in minutes.
+
+A value of 10 minutes is a reasonable default.
+
+.. code-block:: yaml
+
+    grains_refresh_every: 0
+
 .. conf_minion:: mine_enabled
 
 ``mine_enabled``
@@ -569,7 +819,7 @@ return for the job cache.
     mine_return_job: False
 
 ``mine_functions``
--------------------
+------------------
 
 Default: Empty
 
@@ -587,6 +837,18 @@ Note these can be defined in the pillar for a minion as well.
         interface: eth0
         cidr: '10.0.0.0/8'
 
+.. conf_minion:: mine_interval
+
+``mine_interval``
+-----------------
+
+Default: ``60``
+
+The number of minutes between mine updates.
+
+.. code-block:: yaml
+
+    mine_interval: 60
 
 .. conf_minion:: sock_dir
 
@@ -601,6 +863,19 @@ The directory where Unix sockets will be kept.
 
     sock_dir: /var/run/salt/minion
 
+.. conf_minion:: outputter_dirs
+
+``outputter_dirs``
+------------------
+
+Default: ``[]``
+
+A list of additional directories to search for salt outputters in.
+
+.. code-block:: yaml
+
+    outputter_dirs: []
+
 .. conf_minion:: backup_mode
 
 ``backup_mode``
@@ -608,7 +883,9 @@ The directory where Unix sockets will be kept.
 
 Default: ``''``
 
-Backup files replaced by file.managed and file.recurse under cachedir.
+Make backups of files replaced by ``file.managed`` and ``file.recurse`` state modules under
+:conf_minion:`cachedir` in ``file_backup`` subdirectory preserving original paths.
+Refer to :ref:`File State Backups documentation <file-state-backups>` for more details.
 
 .. code-block:: yaml
 
@@ -642,6 +919,20 @@ seconds each iteration.
 .. code-block:: yaml
 
     acceptance_wait_time_max: 0
+
+.. conf_minion:: rejected_retry
+
+``rejected_retry``
+------------------
+
+Default: ``False``
+
+If the master rejects the minion's public key, retry instead of exiting.
+Rejected keys will be handled the same as waiting on acceptance.
+
+.. code-block:: yaml
+
+    rejected_retry: False
 
 .. conf_minion:: random_reauth_delay
 
@@ -741,7 +1032,39 @@ restart.
 
     auth_safemode: False
 
+.. conf_minion:: ping_interval
+
+``ping_interval``
+-----------------
+
+Default: ``0``
+
+Instructs the minion to ping its master(s) every n number of minutes. Used
+primarily as a mitigation technique against minion disconnects.
+
+.. code-block:: yaml
+
+    ping_interval: 0
+
 .. conf_minion:: recon_default
+
+``random_startup_delay``
+------------------------
+
+Default: ``0``
+
+The maximum bound for an interval in which a minion will randomly sleep upon starting
+up prior to attempting to connect to a master. This can be used to splay connection attempts
+for cases where many minions starting up at once may place undue load on a master.
+
+For example, setting this to ``5`` will tell a minion to sleep for a value between ``0``
+and ``5`` seconds.
+
+.. code-block:: yaml
+
+    random_startup_delay: 5
+
+.. conf_minion:: random_startup_delay
 
 ``recon_default``
 -----------------
@@ -944,6 +1267,40 @@ talking to the intended master.
 
     syndic_finger: 'ab:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:50:10'
 
+.. conf_minion:: http_connect_timeout
+
+``http_connect_timeout``
+------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``20``
+
+HTTP connection timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_connect_timeout: 20
+
+.. conf_minion:: http_request_timeout
+
+``http_request_timeout``
+------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``3600``
+
+HTTP request timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_request_timeout: 3600
+
 .. conf_minion:: proxy_host
 
 ``proxy_host``
@@ -996,22 +1353,57 @@ The password used for HTTP proxy access.
 
     proxy_password: obolus
 
-Minion Module Management
-========================
+.. conf_minion:: docker.compare_container_networks
+
+``docker.compare_container_networks``
+-------------------------------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``{'static': ['Aliases', 'Links', 'IPAMConfig'], 'automatic': ['IPAddress', 'Gateway', 'GlobalIPv6Address', 'IPv6Gateway']}``
+
+Specifies which keys are examined by
+:py:func:`docker.compare_container_networks
+<salt.modules.dockermod.compare_container_networks>`.
+
+.. note::
+    This should not need to be modified unless new features added to Docker
+    result in new keys added to the network configuration which must be
+    compared to determine if two containers have different network configs.
+    This config option exists solely as a way to allow users to continue using
+    Salt to manage their containers after an API change, without waiting for a
+    new Salt release to catch up to the changes in the Docker API.
+
+.. code-block:: yaml
+
+    docker.compare_container_networks:
+      static:
+        - Aliases
+        - Links
+        - IPAMConfig
+      automatic:
+        - IPAddress
+        - Gateway
+        - GlobalIPv6Address
+        - IPv6Gateway
+
+Minion Execution Module Management
+==================================
 
 .. conf_minion:: disable_modules
 
 ``disable_modules``
 -------------------
 
-Default: ``[]`` (all modules are enabled by default)
+Default: ``[]`` (all execution modules are enabled by default)
 
 The event may occur in which the administrator desires that a minion should not
-be able to execute a certain module. The ``sys`` module is built into the minion
-and cannot be disabled.
+be able to execute a certain module.
+
+However, the ``sys`` module is built into the minion and cannot be disabled.
 
 This setting can also tune the minion. Because all modules are loaded into system
-memory, disabling modules will lover the minion's memory footprint.
+memory, disabling modules will lower the minion's memory footprint.
 
 Modules should be specified according to their file name on the system and not by
 their virtual name. For example, to disable ``cmd``, use the string ``cmdmod`` which
@@ -1041,13 +1433,14 @@ If certain returners should be disabled, this is the place
 .. conf_minion:: enable_whitelist_modules
 
 ``whitelist_modules``
-----------------------------
+---------------------
 
 Default: ``[]`` (Module whitelisting is disabled.  Adding anything to the config option
 will cause only the listed modules to be enabled.  Modules not in the list will
 not be loaded.)
 
-This option is the reverse of disable_modules.
+This option is the reverse of disable_modules. If enabled, only execution modules in this
+list will be loaded and executed on the minion.
 
 Note that this is a very large hammer and it can be quite difficult to keep the minion working
 the way you think it should since Salt uses many modules internally itself.  At a bare minimum
@@ -1133,6 +1526,20 @@ A list of extra directories to search for Salt renderers
     render_dirs:
       - /var/lib/salt/renderers
 
+.. conf_minion:: utils_dirs
+
+``utils_dirs``
+--------------
+
+Default: ``[]``
+
+A list of extra directories to search for Salt utilities
+
+.. code-block:: yaml
+
+    utils_dirs:
+      - /var/lib/salt/utils
+
 .. conf_minion:: cython_enable
 
 ``cython_enable``
@@ -1181,94 +1588,81 @@ below.
     providers:
       service: systemd
 
+.. conf_minion:: modules_max_memory
 
-State Management Settings
-=========================
+``modules_max_memory``
+----------------------
 
-.. conf_minion:: renderer
+Default: ``-1``
 
-``renderer``
-------------
-
-Default: ``yaml_jinja``
-
-The default renderer used for local state executions
+Specify a max size (in bytes) for modules on import. This feature is currently
+only supported on *nix operating systems and requires psutil.
 
 .. code-block:: yaml
 
-    renderer: yaml_jinja
+    modules_max_memory: -1
 
-.. conf_minion:: state_verbose
+.. conf_minion:: extmod_whitelist
+.. conf_minion:: extmod_blacklist
 
-``state_verbose``
------------------
+``extmod_whitelist/extmod_blacklist``
+-------------------------------------
 
-Default: ``True``
+.. versionadded:: 2017.7.0
 
-Controls the verbosity of state runs. By default, the results of all states are
-returned, but setting this value to ``False`` will cause salt to only display
-output for states that failed or states that have changes.
-
-.. code-block:: yaml
-
-    state_verbose: True
-
-.. conf_minion:: state_output
-
-``state_output``
-----------------
-
-Default: ``full``
-
-The state_output setting changes if the output is the full multi line
-output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.
+By using this dictionary, the modules that are synced to the minion's extmod cache using `saltutil.sync_*` can be
+limited.  If nothing is set to a specific type, then all modules are accepted.  To block all modules of a specific type,
+whitelist an empty list.
 
 .. code-block:: yaml
 
-    state_output: full
+    extmod_whitelist:
+      modules:
+        - custom_module
+      engines:
+        - custom_engine
+      pillars: []
 
-.. conf_minion:: autoload_dynamic_modules
+    extmod_blacklist:
+      modules:
+        - specific_module
 
-``autoload_dynamic_modules``
-----------------------------
+Valid options:
 
-Default: ``True``
+  - beacons
+  - clouds
+  - sdb
+  - modules
+  - states
+  - grains
+  - renderers
+  - returners
+  - proxy
+  - engines
+  - output
+  - utils
+  - pillar
 
-autoload_dynamic_modules turns on automatic loading of modules found in the
-environments on the master. This is turned on by default. To turn off
-auto-loading modules when states run, set this value to ``False``.
+
+Top File Settings
+=================
+
+These parameters only have an effect if running a masterless minion.
+
+.. conf_minion:: state_top
+
+``state_top``
+-------------
+
+Default: ``top.sls``
+
+The state system uses a "top" file to tell the minions what environment to
+use and what modules to use. The state_top file is defined relative to the
+root of the base environment.
 
 .. code-block:: yaml
 
-    autoload_dynamic_modules: True
-
-.. conf_minion:: clean_dynamic_modules
-
-Default: ``True``
-
-clean_dynamic_modules keeps the dynamic modules on the minion in sync with
-the dynamic modules on the master. This means that if a dynamic module is
-not on the master it will be deleted from the minion. By default this is
-enabled and can be disabled by changing this value to ``False``.
-
-.. code-block:: yaml
-
-    clean_dynamic_modules: True
-
-.. conf_minion:: environment
-
-``environment``
----------------
-
-Normally the minion is not isolated to any single environment on the master
-when running states, but the environment can be isolated on the minion side
-by statically setting it. Remember that the recommended way to manage
-environments is to isolate via the top file.
-
-.. code-block:: yaml
-
-    environment: dev
+    state_top: top.sls
 
 .. conf_minion:: state_top_saltenv
 
@@ -1319,7 +1713,12 @@ is a target for ``'*'`` for the ``foo`` environment in both the ``base`` and
 ``foo`` environment's top files, the one in the ``foo`` environment would be
 ignored. The environments will be evaluated in no specific order (aside from
 ``base`` coming first). For greater control over the order in which the
-environments are evaluated, use :conf_minion:`env_order`.
+environments are evaluated, use :conf_minion:`env_order`. Note that, aside from
+the ``base`` environment's top file, any sections in top files that do not
+match that top file's environment will be ignored. So, for example, a section
+for the ``qa`` environment would be ignored if it appears in the ``dev``
+environment's top file. To keep use cases like this from being ignored, use the
+``merge_all`` strategy.
 
 When set to ``same``, then for each environment, only that environment's top
 file is processed, with the others being ignored. For example, only the ``dev``
@@ -1374,6 +1773,202 @@ environment lacks one.
 .. code-block:: yaml
 
     default_top: dev
+
+.. conf_minion:: startup_states
+
+``startup_states``
+------------------
+
+Default: ``''``
+
+States to run when the minion daemon starts. To enable, set ``startup_states`` to:
+
+- ``highstate``: Execute state.highstate
+- ``sls``: Read in the sls_list option and execute the named sls files
+- ``top``: Read top_file option and execute based on that file on the Master
+
+.. code-block:: yaml
+
+    startup_states: ''
+
+.. conf_minion:: sls_list
+
+``sls_list``
+------------
+
+Default: ``[]``
+
+List of states to run when the minion starts up if ``startup_states`` is set to ``sls``.
+
+.. code-block:: yaml
+
+    sls_list:
+      - edit.vim
+      - hyper
+
+.. conf_minion:: top_file
+
+``top_file``
+------------
+
+Default: ``''``
+
+Top file to execute if ``startup_states`` is set to ``top``.
+
+.. code-block:: yaml
+
+    top_file: ''
+
+
+State Management Settings
+=========================
+
+.. conf_minion:: renderer
+
+``renderer``
+------------
+
+Default: ``yaml_jinja``
+
+The default renderer used for local state executions
+
+.. code-block:: yaml
+
+    renderer: yaml_jinja
+
+.. conf_minion:: test
+
+``test``
+--------
+
+Default: ``False``
+
+Set all state calls to only test if they are going to actually make changes
+or just post what changes are going to be made.
+
+.. code-block:: yaml
+
+    test: False
+
+.. conf_minion:: state_verbose
+
+``state_verbose``
+-----------------
+
+Default: ``True``
+
+Controls the verbosity of state runs. By default, the results of all states are
+returned, but setting this value to ``False`` will cause salt to only display
+output for states that failed or states that have changes.
+
+.. code-block:: yaml
+
+    state_verbose: True
+
+.. conf_minion:: state_output
+
+``state_output``
+----------------
+
+Default: ``full``
+
+The state_output setting controls which results will be output full multi line:
+
+* ``full``, ``terse`` - each state will be full/terse
+* ``mixed`` - only states with errors will be full
+* ``changes`` - states with changes and errors will be full
+
+``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
+when set, the state ID will be used as name in the output.
+
+.. code-block:: yaml
+
+    state_output: full
+
+.. conf_minion:: state_output_diff
+
+``state_output_diff``
+---------------------
+
+Default: ``False``
+
+The state_output_diff setting changes whether or not the output from
+successful states is returned. Useful when even the terse output of these
+states is cluttering the logs. Set it to True to ignore them.
+
+.. code-block:: yaml
+
+    state_output_diff: False
+
+.. conf_minion:: autoload_dynamic_modules
+
+``autoload_dynamic_modules``
+----------------------------
+
+Default: ``True``
+
+autoload_dynamic_modules turns on automatic loading of modules found in the
+environments on the master. This is turned on by default. To turn off
+auto-loading modules when states run, set this value to ``False``.
+
+.. code-block:: yaml
+
+    autoload_dynamic_modules: True
+
+.. conf_minion:: clean_dynamic_modules
+
+Default: ``True``
+
+clean_dynamic_modules keeps the dynamic modules on the minion in sync with
+the dynamic modules on the master. This means that if a dynamic module is
+not on the master it will be deleted from the minion. By default this is
+enabled and can be disabled by changing this value to ``False``.
+
+.. code-block:: yaml
+
+    clean_dynamic_modules: True
+
+.. note::
+
+    If ``extmod_whitelist`` is specified, modules which are not whitelisted will also be cleaned here.
+
+.. conf_minion:: environment
+.. conf_minion:: saltenv
+
+``saltenv``
+-----------
+
+.. versionchanged:: 2018.3.0
+    Renamed from ``environment`` to ``saltenv``. If ``environment`` is used,
+    ``saltenv`` will take its value. If both are used, ``environment`` will be
+    ignored and ``saltenv`` will be used.
+
+Normally the minion is not isolated to any single environment on the master
+when running states, but the environment can be isolated on the minion side
+by statically setting it. Remember that the recommended way to manage
+environments is to isolate via the top file.
+
+.. code-block:: yaml
+
+    saltenv: dev
+
+.. conf_minion:: lock_saltenv
+
+``lock_saltenv``
+----------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``False``
+
+For purposes of running states, this option prevents using the ``saltenv``
+argument to manually set the environment. This is useful to keep a minion which
+has the :conf_minion:`saltenv` option set to ``dev`` from running states from
+an environment other than ``dev``.
+
+.. code-block:: yaml
+
+    lock_saltenv: True
 
 .. conf_minion:: snapper_states
 
@@ -1567,6 +2162,109 @@ the pillar environments.
       prod:
         - /srv/pillar/prod
 
+.. conf_minion:: on_demand_ext_pillar
+
+``on_demand_ext_pillar``
+------------------------
+
+.. versionadded:: 2016.3.6,2016.11.3,2017.7.0
+
+Default: ``['libvirt', 'virtkey']``
+
+When using a local :conf_minion:`file_client`, this option controls which
+external pillars are permitted to be used on-demand using :py:func:`pillar.ext
+<salt.modules.pillar.ext>`.
+
+.. code-block:: yaml
+
+    on_demand_ext_pillar:
+      - libvirt
+      - virtkey
+      - git
+
+.. warning::
+    This will allow a masterless minion to request specific pillar data via
+    :py:func:`pillar.ext <salt.modules.pillar.ext>`, and may be considered a
+    security risk. However, pillar data generated in this way will not affect
+    the :ref:`in-memory pillar data <pillar-in-memory>`, so this risk is
+    limited to instances in which states/modules/etc. (built-in or custom) rely
+    upon pillar data generated by :py:func:`pillar.ext
+    <salt.modules.pillar.ext>`.
+
+.. conf_minion:: decrypt_pillar
+
+``decrypt_pillar``
+------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``[]``
+
+A list of paths to be recursively decrypted during pillar compilation.
+
+.. code-block:: yaml
+
+    decrypt_pillar:
+      - 'foo:bar': gpg
+      - 'lorem:ipsum:dolor'
+
+Entries in this list can be formatted either as a simple string, or as a
+key/value pair, with the key being the pillar location, and the value being the
+renderer to use for pillar decryption. If the former is used, the renderer
+specified by :conf_minion:`decrypt_pillar_default` will be used.
+
+.. conf_minion:: decrypt_pillar_delimiter
+
+``decrypt_pillar_delimiter``
+----------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``:``
+
+The delimiter used to distinguish nested data structures in the
+:conf_minion:`decrypt_pillar` option.
+
+.. code-block:: yaml
+
+    decrypt_pillar_delimiter: '|'
+    decrypt_pillar:
+      - 'foo|bar': gpg
+      - 'lorem|ipsum|dolor'
+
+.. conf_minion:: decrypt_pillar_default
+
+``decrypt_pillar_default``
+--------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``gpg``
+
+The default renderer used for decryption, if one is not specified for a given
+pillar key in :conf_minion:`decrypt_pillar`.
+
+.. code-block:: yaml
+
+    decrypt_pillar_default: my_custom_renderer
+
+.. conf_minion:: decrypt_pillar_renderers
+
+``decrypt_pillar_renderers``
+----------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``['gpg']``
+
+List of renderers which are permitted to be used for pillar decryption.
+
+.. code-block:: yaml
+
+    decrypt_pillar_renderers:
+      - gpg
+      - my_custom_renderer
+
 .. conf_minion:: pillarenv
 
 ``pillarenv``
@@ -1579,12 +2277,14 @@ the environment setting, but for pillar instead of states.
 
 .. code-block:: yaml
 
-    pillarenv: None
+    pillarenv: dev
 
 .. conf_minion:: pillarenv_from_saltenv
 
 ``pillarenv_from_saltenv``
 --------------------------
+
+.. versionadded:: 2017.7.0
 
 Default: ``False``
 
@@ -1649,6 +2349,41 @@ It will be interpreted as megabytes.
 
     file_recv_max_size: 100
 
+.. conf_minion:: pass_to_ext_pillars
+
+``pass_to_ext_pillars``
+-----------------------
+
+Specify a list of configuration keys whose values are to be passed to
+external pillar functions.
+
+Suboptions can be specified using the ':' notation (i.e. ``option:suboption``)
+
+The values are merged and included in the ``extra_minion_data`` optional
+parameter of the external pillar function.  The ``extra_minion_data`` parameter
+is passed only to the external pillar functions that have it explicitly
+specified in their definition.
+
+If the config contains
+
+.. code-block:: yaml
+
+    opt1: value1
+    opt2:
+      subopt1: value2
+      subopt2: value3
+
+    pass_to_ext_pillars:
+      - opt1
+      - opt2: subopt1
+
+the ``extra_minion_data`` parameter will be
+
+.. code-block:: python
+
+    {'opt1': 'value1',
+     'opt2': {'subopt1': 'value2'}}
+
 Security Settings
 =================
 
@@ -1681,6 +2416,35 @@ before the initial key exchange. The master fingerprint can be found by running
 .. code-block:: yaml
 
    master_finger: 'ba:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:11:13'
+
+.. conf_minion:: keysize
+
+``keysize``
+-----------
+
+Default: ``2048``
+
+The size of key that should be generated when creating new keys.
+
+.. code-block:: yaml
+
+    keysize: 2048
+
+.. conf_minion:: permissive_pki_access
+
+``permissive_pki_access``
+-------------------------
+
+Default: ``False``
+
+Enable permissive access to the salt keys. This allows you to run the
+master or minion as root, but have a non-root group be given access to
+your pki_dir. To make the access explicit, root must belong to the group
+you've given access to. This is potentially quite insecure.
+
+.. code-block:: yaml
+
+    permissive_pki_access: False
 
 .. conf_minion:: verify_master_pubkey_sign
 
@@ -1719,6 +2483,27 @@ minion's pki directory.
 .. code-block:: yaml
 
     master_sign_key_name: <filename_without_suffix>
+
+.. conf_minion:: autosign_grains
+
+``autosign_grains``
+-------------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``not defined``
+
+The grains that should be sent to the master on authentication to decide if
+the minion's key should be accepted automatically.
+
+Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
+documentation for more infomation.
+
+.. code-block:: yaml
+
+    autosign_grains:
+      - uuid
+      - server_id
 
 .. conf_minion:: always_verify_signature
 
@@ -1789,7 +2574,7 @@ blocked. If `cmd_whitelist_glob` is NOT SET, then all shell commands are permitt
       - 'cat /etc/fstab'
 
 
-.. conf_master:: ssl
+.. conf_minion:: ssl
 
 ``ssl``
 -------
@@ -1815,16 +2600,76 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         ssl_version: PROTOCOL_TLSv1_2
 
 
+Reactor Settings
+================
+
+.. conf_minion:: reactor
+
+``reactor``
+-----------
+
+Default: ``[]``
+
+Defines a salt reactor. See the :ref:`Reactor <reactor>` documentation for more
+information.
+
+.. code-block:: yaml
+
+    reactor: []
+
+.. conf_minion:: reactor_refresh_interval
+
+``reactor_refresh_interval``
+----------------------------
+
+Default: ``60``
+
+The TTL for the cache of the reactor configuration.
+
+.. code-block:: yaml
+
+    reactor_refresh_interval: 60
+
+.. conf_minion:: reactor_worker_threads
+
+``reactor_worker_threads``
+--------------------------
+
+Default: ``10``
+
+The number of workers for the runner/wheel in the reactor.
+
+.. code-block:: yaml
+
+    reactor_worker_threads: 10
+
+.. conf_minion:: reactor_worker_hwm
+
+``reactor_worker_hwm``
+----------------------
+
+Default: ``10000``
+
+The queue size for workers in the reactor.
+
+.. code-block:: yaml
+
+    reactor_worker_hwm: 10000
+
+
 Thread Settings
 ===============
 
 .. conf_minion:: multiprocessing
 
+``multiprocessing``
+-------
+
 Default: ``True``
 
-If `multiprocessing` is enabled when a minion receives a
+If ``multiprocessing`` is enabled when a minion receives a
 publication a new process is spawned and the command is executed therein.
-Conversely, if `multiprocessing` is disabled the new publication will be run
+Conversely, if ``multiprocessing`` is disabled the new publication will be run
 executed in a thread.
 
 
@@ -1832,6 +2677,23 @@ executed in a thread.
 
     multiprocessing: True
 
+.. conf_minion:: process_count_max
+
+``process_count_max``
+-------
+
+.. versionadded:: 2018.3.0
+
+Default: ``-1``
+
+Limit the maximum amount of processes or threads created by ``salt-minion``.
+This is useful to avoid resource exhaustion in case the minion receives more
+publications than it is able to handle, as it limits the number of spawned
+processes or threads. ``-1`` is the default and disables the limit.
+
+.. code-block:: yaml
+
+    process_count_max: -1
 
 .. _minion-logging-settings:
 
@@ -2009,6 +2871,20 @@ ZeroMQ is installed.
 
 .. conf_minion:: failhard
 
+``tcp_authentication_retries``
+------------------------------
+
+Default: ``5``
+
+The number of times to retry authenticating with the salt master when it comes
+back online.
+
+Zeromq does a lot to make sure when connections come back online that they
+reauthenticate. The tcp transport should try to connect with a new connection
+if the old one times out on reauthenticating.
+
+`-1` for infinite tries.
+
 ``failhard``
 ------------
 
@@ -2070,6 +2946,62 @@ option then the minion will log a warning message.
       - minion.d/*
       - /etc/roles/webserver
 
+
+Keepalive Settings
+==================
+
+.. conf_minion:: tcp_keepalive
+
+``tcp_keepalive``
+-----------------
+
+Default: ``True``
+
+The tcp keepalive interval to set on TCP ports. This setting can be used to tune Salt
+connectivity issues in messy network environments with misbehaving firewalls.
+
+.. code-block:: yaml
+
+    tcp_keepalive: True
+
+.. conf_minion:: tcp_keepalive_cnt
+
+``tcp_keepalive_cnt``
+---------------------
+
+Default: ``-1``
+
+Sets the ZeroMQ TCP keepalive count. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_cnt: -1
+
+.. conf_minion:: tcp_keepalive_idle
+
+``tcp_keepalive_idle``
+----------------------
+
+Default: ``300``
+
+Sets ZeroMQ TCP keepalive idle. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_idle: 300
+
+.. conf_minion:: tcp_keepalive_intvl
+
+``tcp_keepalive_intvl``
+-----------------------
+
+Default: ``-1``
+
+Sets ZeroMQ TCP keepalive interval. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_intvl': -1
 
 
 Frozen Build Update Settings
@@ -2146,6 +3078,27 @@ the metadata will be refreshed.
 
 .. _winrepo-minion-config-opts:
 
+Minion Windows Software Repo Settings
+=====================================
+
+.. important::
+    To use these config options, the minion can be running in master-minion or
+    masterless mode.
+
+
+.. conf_minion:: winrepo_source_dir
+
+``winrepo_source_dir``
+----------------------
+
+Default: ``salt://win/repo-ng/``
+
+The source location for the winrepo sls files.
+
+.. code-block:: yaml
+
+    winrepo_source_dir: salt://win/repo-ng/
+
 Standalone Minion Windows Software Repo Settings
 ================================================
 
@@ -2171,6 +3124,23 @@ out.
 .. code-block:: yaml
 
     winrepo_dir: 'D:\winrepo'
+
+.. conf_minion:: winrepo_dir_ng
+
+``winrepo_dir_ng``
+------------------
+
+.. versionadded:: 2015.8.0
+    A new :ref:`ng <windows-package-manager>` repo was added.
+
+Default: ``/srv/salt/win/repo-ng``
+
+Location on the minion where the :conf_minion:`winrepo_remotes_ng` are checked
+out for 2015.8.0 and later minions.
+
+.. code-block:: yaml
+
+    winrepo_dir_ng: /srv/salt/win/repo-ng
 
 .. conf_minion:: winrepo_cachefile
 .. conf_minion:: win_repo_cachefile
@@ -2220,6 +3190,36 @@ URL of the repository:
 
     winrepo_remotes:
       - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+
+Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
+ID is useful in that it allows one to revert back to a previous version in the
+event that an error is introduced in the latest revision of the repo.
+
+.. conf_minion:: winrepo_remotes_ng
+
+``winrepo_remotes_ng``
+----------------------
+
+.. versionadded:: 2015.8.0
+    A new :ref:`ng <windows-package-manager>` repo was added.
+
+Default: ``['https://github.com/saltstack/salt-winrepo-ng.git']``
+
+List of git repositories to checkout and include in the winrepo for
+2015.8.0 and later minions.
+
+.. code-block:: yaml
+
+    winrepo_remotes_ng:
+      - https://github.com/saltstack/salt-winrepo-ng.git
+
+To specify a specific revision of the repository, prepend a commit ID to the
+URL of the repository:
+
+.. code-block:: yaml
+
+    winrepo_remotes_ng:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo-ng.git'
 
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
 ID is useful in that it allows one to revert back to a previous version in the

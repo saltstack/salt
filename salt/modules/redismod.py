@@ -9,15 +9,17 @@ Module to provide redis functionality to Salt
 
 .. code-block:: yaml
 
-    redis.host: 'localhost'
+    redis.host: 'salt'
     redis.port: 6379
     redis.db: 0
     redis.password: None
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from salt.ext.six.moves import zip
+from salt.ext import six
+from datetime import datetime
 
 # Import third party libs
 try:
@@ -248,6 +250,8 @@ def hdel(key, *fields, **options):
     '''
     Delete one of more hash fields.
 
+    .. versionadded:: 2017.7.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -265,6 +269,8 @@ def hdel(key, *fields, **options):
 def hexists(key, field, host=None, port=None, db=None, password=None):
     '''
     Determine if a hash fields exists.
+
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -308,6 +314,8 @@ def hincrby(key, field, increment=1, host=None, port=None, db=None, password=Non
     '''
     Increment the integer value of a hash field by the given number.
 
+    .. versionadded:: 2017.7.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -321,6 +329,8 @@ def hincrby(key, field, increment=1, host=None, port=None, db=None, password=Non
 def hincrbyfloat(key, field, increment=1.0, host=None, port=None, db=None, password=None):
     '''
     Increment the float value of a hash field by the given number.
+
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -336,6 +346,8 @@ def hlen(key, host=None, port=None, db=None, password=None):
     '''
     Returns number of fields of a hash.
 
+    .. versionadded:: 2017.7.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -349,6 +361,8 @@ def hlen(key, host=None, port=None, db=None, password=None):
 def hmget(key, *fields, **options):
     '''
     Returns the values of all the given hash fields.
+
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -368,6 +382,8 @@ def hmset(key, **fieldsvals):
     '''
     Sets multiple hash fields to multiple values.
 
+    .. versionadded:: 2017.7.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -386,6 +402,8 @@ def hset(key, field, value, host=None, port=None, db=None, password=None):
     '''
     Set the value of a hash field.
 
+    .. versionadded:: 2017.7.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -399,6 +417,8 @@ def hset(key, field, value, host=None, port=None, db=None, password=None):
 def hsetnx(key, field, value, host=None, port=None, db=None, password=None):
     '''
     Set the value of a hash field only if the field does not exist.
+
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -414,6 +434,8 @@ def hvals(key, host=None, port=None, db=None, password=None):
     '''
     Return all the values in a hash.
 
+    .. versionadded:: 2017.7.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -427,6 +449,8 @@ def hvals(key, host=None, port=None, db=None, password=None):
 def hscan(key, cursor=0, match=None, count=None, host=None, port=None, db=None, password=None):
     '''
     Incrementally iterate hash fields and associated values.
+
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -491,8 +515,14 @@ def lastsave(host=None, port=None, db=None, password=None):
 
         salt '*' redis.lastsave
     '''
+    # Use of %s to get the timestamp is not supported by Python. The reason it
+    # works is because it's passed to the system strftime which may not support
+    # it. See: https://stackoverflow.com/a/11743262
     server = _connect(host, port, db, password)
-    return int(server.lastsave().strftime("%s"))
+    if six.PY2:
+        return int((server.lastsave() - datetime(1970, 1, 1)).total_seconds())
+    else:
+        return int(server.lastsave().timestamp())
 
 
 def llen(key, host=None, port=None, db=None, password=None):

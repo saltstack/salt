@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
- Namecheap management
+Namecheap dns management
+
+.. versionadded:: 2017.7.0
 
  General Notes
  -------------
@@ -15,6 +17,7 @@
    the namecheap API:
 
         * ``requests``
+
         .. code-block:: bash
 
             pip install requests
@@ -38,7 +41,13 @@
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
 '''
-from __future__ import absolute_import
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
+
 CAN_USE_NAMECHEAP = True
 
 
@@ -70,6 +79,12 @@ def get_hosts(sld, tld):
 
     tld
         string  tld of the domainname
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_domains_dns.get_hosts sld tld
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.dns.gethosts')
     opts['TLD'] = tld
@@ -95,6 +110,12 @@ def get_list(sld, tld):
 
     tld
         string  tld of the domain name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_domains_dns.get_list sld tld
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.dns.getlist')
     opts['TLD'] = tld
@@ -131,13 +152,19 @@ def set_hosts(sld, tld, hosts):
                                'recordtype' should be A,AAAA,CNAME,MX,MXE,TXT,URL,URL301,FRAME
                                'address' should be url or ip address
                                'ttl' should be an integer between 60 to 60000
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_domains_dns.set_hosts sld tld hosts
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.dns.setHosts')
     opts['SLD'] = sld
     opts['TLD'] = tld
     i = 1
     for hostrecord in hosts:
-        str_i = str(i)
+        str_i = six.text_type(i)
         opts['HostName' + str_i] = hostrecord['hostname']
         opts['RecordType' + str_i] = hostrecord['recordtype']
         opts['Address' + str_i] = hostrecord['address']
@@ -170,6 +197,12 @@ def set_custom(sld, tld, nameservers):
 
     nameservers
         array of strings  List of nameservers to be associated with this domain
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_domains_dns.set_custom sld tld nameserver
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.dns.setCustom')
     opts['SLD'] = sld
@@ -196,6 +229,12 @@ def set_default(sld, tld):
 
     tld
         string  tld of the domain name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'my-minion' namecheap_domains_dns.set_default sld tld
     '''
     opts = salt.utils.namecheap.get_opts('namecheap.domains.dns.setDefault')
     opts['SLD'] = sld

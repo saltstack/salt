@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-from salt.utils import parsers
-from salt.utils import activate_profile
-from salt.utils import output_profile
+import salt.utils.parsers
+import salt.utils.profile
 from salt.utils.verify import check_user, verify_log
 from salt.exceptions import SaltClientError
+from salt.ext import six
 import salt.defaults.exitcodes  # pylint: disable=W0611
 
 
-class SaltRun(parsers.SaltRunOptionParser):
+class SaltRun(salt.utils.parsers.SaltRunOptionParser):
     '''
     Used to execute Salt runners
     '''
@@ -36,16 +35,24 @@ class SaltRun(parsers.SaltRunOptionParser):
         # someone tries to use the runners via the python API
         try:
             if check_user(self.config['user']):
-                pr = activate_profile(profiling_enabled)
+                pr = salt.utils.profile.activate_profile(profiling_enabled)
                 try:
                     ret = runner.run()
-                    if isinstance(ret, dict) and 'retcode' in ret.get('data', {}):
+                    # In older versions ret['data']['retcode'] was used
+                    # for signaling the return code. This has been
+                    # changed for the orchestrate runner, but external
+                    # runners might still use it. For this reason, we
+                    # also check ret['data']['retcode'] if
+                    # ret['retcode'] is not available.
+                    if isinstance(ret, dict) and 'retcode' in ret:
+                        self.exit(ret['retcode'])
+                    elif isinstance(ret, dict) and 'retcode' in ret.get('data', {}):
                         self.exit(ret['data']['retcode'])
                 finally:
-                    output_profile(
+                    salt.utils.profile.output_profile(
                         pr,
                         stats_path=self.options.profiling_path,
                         stop=True)
 
         except SaltClientError as exc:
-            raise SystemExit(str(exc))
+            raise SystemExit(six.text_type(exc))

@@ -210,6 +210,10 @@ Changes:
 
 - **PR** `#27568`_: (*jacobhammons*) regenerated man pages
 
+.. _`#19673`: https://github.com/saltstack/salt/issues/19673
+.. _`#25775`: https://github.com/saltstack/salt/issues/25775
+.. _`#28372`: https://github.com/saltstack/salt/issues/28372
+.. _`#28783`: https://github.com/saltstack/salt/issues/28783
 .. _`#29110`: https://github.com/saltstack/salt/issues/29110
 .. _`#25521`: https://github.com/saltstack/salt/pull/25521
 .. _`#25928`: https://github.com/saltstack/salt/pull/25928

@@ -44,12 +44,15 @@ Connection module for Amazon CloudWatch Events
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
-import json
+
+# Import Salt libs
 import salt.utils.compat
+import salt.utils.json
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -67,16 +70,14 @@ except ImportError as e:
     HAS_BOTO = False
 # pylint: enable=import-error
 
-from salt.ext.six import string_types
+from salt.ext import six
 
 
 def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_cloudwatch_event module cannot be loaded: boto libraries are unavailable.')
-    return True
+    return salt.utils.versions.check_boto_reqs()
 
 
 def __init__(opts):
@@ -142,7 +143,7 @@ def create_or_update(Name,
         rule = conn.put_rule(Name=Name,
                               **kwargs)
         if rule:
-            log.info('The newly created event rule is {0}'.format(rule.get('RuleArn')))
+            log.info('The newly created event rule is %s', rule.get('RuleArn'))
 
             return {'created': True, 'arn': rule.get('RuleArn')}
         else:
@@ -209,6 +210,29 @@ def describe(Name,
         return {'error': __utils__['boto3.get_error'](e)}
 
 
+def list_rules(region=None, key=None, keyid=None, profile=None):
+    '''
+    List, with details, all Cloudwatch Event rules visible in the current scope.
+
+    CLI example::
+
+        salt myminion boto_cloudwatch_event.list_rules region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        ret = []
+        NextToken = ''
+        while NextToken is not None:
+            args = {'NextToken': NextToken} if NextToken else {}
+            r = conn.list_rules(**args)
+            ret += r.get('Rules', [])
+            NextToken = r.get('NextToken')
+        return ret
+    except ClientError as e:
+        return {'error': __utils__['boto3.get_error'](e)}
+
+
 def list_targets(Rule,
              region=None, key=None, keyid=None, profile=None):
     '''
@@ -258,8 +282,8 @@ def put_targets(Rule, Targets,
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if isinstance(Targets, string_types):
-            Targets = json.loads(Targets)
+        if isinstance(Targets, six.string_types):
+            Targets = salt.utils.json.loads(Targets)
         failures = conn.put_targets(Rule=Rule, Targets=Targets)
         if failures and failures.get('FailedEntryCount', 0) > 0:
             return {'failures': failures.get('FailedEntries')}
@@ -288,8 +312,8 @@ def remove_targets(Rule, Ids,
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if isinstance(Ids, string_types):
-            Ids = json.loads(Ids)
+        if isinstance(Ids, six.string_types):
+            Ids = salt.utils.json.loads(Ids)
         failures = conn.remove_targets(Rule=Rule, Ids=Ids)
         if failures and failures.get('FailedEntryCount', 0) > 0:
             return {'failures': failures.get('FailedEntries', 1)}

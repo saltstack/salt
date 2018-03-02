@@ -9,22 +9,21 @@ Edit ini files
 
 (for example /etc/sysctl.conf)
 '''
-
-from __future__ import absolute_import, print_function
-
 # Import Python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
-import json
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils
+import salt.utils.data
+import salt.utils.files
+import salt.utils.json
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
 
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'ini'
 
@@ -234,7 +233,7 @@ class _Section(OrderedDict):
             if indented_match:
                 indent = indented_match.group(1).replace('\t', '    ')
                 if indent > curr_indent:
-                    options = self.keys()
+                    options = list(self)
                     if options:
                         prev_opt = options[-1]
                         value = self.get(prev_opt)
@@ -280,7 +279,7 @@ class _Section(OrderedDict):
         changes = {}
         for key, value in six.iteritems(update_dict):
             # Ensure the value is either a _Section or a string
-            if hasattr(value, 'iteritems'):
+            if isinstance(value, (dict, OrderedDict)):
                 sect = _Section(
                     name=key, inicontents='',
                     separator=self.sep, commenter=self.com
@@ -289,7 +288,7 @@ class _Section(OrderedDict):
                 value = sect
                 value_plain = value.as_dict()
             else:
-                value = str(value)
+                value = six.text_type(value)
                 value_plain = value
 
             if key not in self:
@@ -297,7 +296,7 @@ class _Section(OrderedDict):
                                       'after': value_plain}})
                 # If it's not a section, it may already exist as a
                 # commented-out key/value pair
-                if not hasattr(value, 'iteritems'):
+                if not isinstance(value, _Section):
                     self._uncomment_if_commented(key)
 
                 super(_Section, self).update({key: value})
@@ -318,17 +317,18 @@ class _Section(OrderedDict):
         yield '{0}[{1}]{0}'.format(os.linesep, self.name)
         sections_dict = OrderedDict()
         for name, value in six.iteritems(self):
+            # Handle Comment Lines
             if com_regx.match(name):
                 yield '{0}{1}'.format(value, os.linesep)
+            # Handle Sections
             elif isinstance(value, _Section):
                 sections_dict.update({name: value})
+            # Key / Value pairs
+            # Adds spaces between the separator
             else:
                 yield '{0}{1}{2}{3}'.format(
                     name,
-                    (
-                        ' {0} '.format(self.sep) if self.sep != ' '
-                        else self.sep
-                    ),
+                    ' {0} '.format(self.sep) if self.sep != ' ' else self.sep,
                     value,
                     os.linesep
                 )
@@ -343,15 +343,15 @@ class _Section(OrderedDict):
         return dict(self)
 
     def dump(self):
-        print(str(self))
+        print(six.text_type(self))
 
     def __repr__(self, _repr_running=None):
         _repr_running = _repr_running or {}
         super_repr = super(_Section, self).__repr__(_repr_running)
-        return os.linesep.join((super_repr, json.dumps(self, indent=4)))
+        return os.linesep.join((super_repr, salt.utils.json.dumps(self, indent=4)))
 
     def __str__(self):
-        return json.dumps(self, indent=4)
+        return salt.utils.json.dumps(self, indent=4)
 
     def __eq__(self, item):
         return (isinstance(item, self.__class__) and
@@ -367,18 +367,21 @@ class _Ini(_Section):
         super(_Ini, self).__init__(name, inicontents, separator, commenter)
 
     def refresh(self, inicontents=None):
-        try:
-            inicontents = inicontents or salt.utils.fopen(self.name).read()
-        except (OSError, IOError) as exc:
-            raise CommandExecutionError(
-                "Unable to open file '{0}'. "
-                "Exception: {1}".format(self.name, exc)
-            )
+        if inicontents is None:
+            try:
+                with salt.utils.files.fopen(self.name) as rfh:
+                    inicontents = salt.utils.stringutils.to_unicode(rfh.read())
+            except (OSError, IOError) as exc:
+                if __opts__['test'] is False:
+                    raise CommandExecutionError(
+                        "Unable to open file '{0}'. "
+                        "Exception: {1}".format(self.name, exc)
+                    )
         if not inicontents:
             return
         # Remove anything left behind from a previous run.
-        for opt in self:
-            self.pop(opt)
+        self.clear()
+
         inicontents = ini_regx.split(inicontents)
         inicontents.reverse()
         # Pop anything defined outside of a section (ie. at the top of
@@ -393,10 +396,10 @@ class _Ini(_Section):
 
     def flush(self):
         try:
-            with salt.utils.fopen(self.name, 'w') as outfile:
+            with salt.utils.files.fopen(self.name, 'wb') as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
-                outfile.writelines(ini_gen)
+                outfile.writelines(salt.utils.data.encode(list(ini_gen)))
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
                 "Unable to write file '{0}'. "

@@ -7,10 +7,10 @@ Example Config in Master or Minion config
 .. code-block:: yaml
 
     engines:
-      reactor:
-        refresh_interval: 60
-        worker_threads: 10
-        worker_hwm: 10000
+      - reactor:
+          refresh_interval: 60
+          worker_threads: 10
+          worker_hwm: 10000
 
     reactor:
       - 'salt/cloud/*/destroyed':
@@ -18,7 +18,7 @@ Example Config in Master or Minion config
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 # Import salt libs

@@ -60,7 +60,7 @@ Also configure a user in the conf/tomcat-users.xml file:
      Tomcat Version:
          Apache Tomcat/7.0.37
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -72,6 +72,7 @@ import logging
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
+from salt.ext.six import string_types as _string_types
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.request import (
     urlopen as _urlopen,
@@ -83,7 +84,7 @@ from salt.ext.six.moves.urllib.request import (
 # pylint: enable=no-name-in-module,import-error
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
@@ -145,9 +146,10 @@ def _get_credentials():
             # Look for the config key
             # Support old-style config format and new
             for config_key in __valid_configs[item]:
-                value = salt.utils.traverse_dict_and_list(struct,
-                                                          config_key,
-                                                          None)
+                value = salt.utils.data.traverse_dict_and_list(
+                    struct,
+                    config_key,
+                    None)
                 if value:
                     ret[item] = value
                     break
@@ -176,7 +178,7 @@ def _auth(uri):
     return _build_opener(basic, digest)
 
 
-def _extract_war_version(war):
+def extract_war_version(war):
     '''
     Extract the version from the war file name.  There does not seem to be a
     standard for encoding the version into the `war file name
@@ -184,7 +186,7 @@ def _extract_war_version(war):
 
     Examples:
 
-    .. code-block::
+    .. code-block:: text
 
         /path/salt-2015.8.6.war -> 2015.8.6
         /path/V6R2013xD5.war -> None
@@ -526,7 +528,7 @@ def deploy_war(war,
                saltenv='base',
                timeout=180,
                temp_war_location=None,
-               version=''):
+               version=True):
     '''
     Deploy a WAR file
 
@@ -607,11 +609,11 @@ def deploy_war(war,
     }
 
     # If parallel versions are desired or not disabled
-    if version is True:
+    if version:
         # Set it to defined version or attempt extract
-        version = version or _extract_war_version(war)
+        version = extract_war_version(war) if version is True else version
 
-        if version != ('' or None):
+        if isinstance(version, _string_types):
             # Only pass version to Tomcat if not undefined
             opts['version'] = version
 

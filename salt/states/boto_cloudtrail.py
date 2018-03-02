@@ -8,7 +8,11 @@ Manage CloudTrail Objects
 Create and destroy CloudTrail objects. Be aware that this interacts with Amazon's services,
 and so may incur charges.
 
-This module uses ``boto3``, which can be installed via package, or pip.
+:depends:
+    - boto
+    - boto3
+
+The dependencies listed above can be installed via package or pip.
 
 This module accepts explicit vpc credentials but can also utilize
 IAM roles assigned to the instance through Instance Profiles. Dynamic
@@ -49,14 +53,14 @@ config:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import os.path
 
 # Import Salt Libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
@@ -243,7 +247,7 @@ def present(name, Name,
     r = __salt__['boto_cloudtrail.list_tags'](Name=Name,
                    region=region, key=key, keyid=keyid, profile=profile)
     _describe['Tags'] = r.get('tags', {})
-    tagchange = salt.utils.compare_dicts(_describe['Tags'], Tags)
+    tagchange = salt.utils.data.compare_dicts(_describe['Tags'], Tags)
     if bool(tagchange):
         need_update = True
         ret['changes'].setdefault('new', {})['Tags'] = Tags

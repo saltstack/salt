@@ -67,7 +67,7 @@ _su_cmd() {
 
 
 _get_pid() {
-    netstat $NS_NOTRIM -ap --protocol=unix 2>$ERROR_TO_DEVNULL \
+    netstat -n $NS_NOTRIM -ap --protocol=unix 2>$ERROR_TO_DEVNULL \
         | sed -r -e "\|\s${SOCK_DIR}/minion_event_${MINION_ID_HASH}_pub\.ipc$|"'!d; s|/.*||; s/.*\s//;' \
         | uniq
 }
@@ -85,6 +85,7 @@ _get_salt_config_value() {
             \"$SALTCALL\" \
             -c \"$CONFIG_DIR\" \
             --no-color \
+            --skip-grains \
             --local config.get \
             \"$1\" \
         " \
@@ -155,7 +156,7 @@ start() {
             printf "\nPROCESSES:\n" >&2
             ps wwwaxu | grep '[s]alt-minion' >&2
             printf "\nSOCKETS:\n" >&2
-            netstat $NS_NOTRIM -ap --protocol=unix | grep 'salt.*minion' >&2            
+            netstat -n $NS_NOTRIM -ap --protocol=unix | grep 'salt.*minion' >&2
             printf "\nLOG_FILE:\n" >&2
             tail -n 20 "$LOG_FILE" >&2
             printf "\nENVIRONMENT:\n" >&2
@@ -246,7 +247,7 @@ main() {
     fi
 
     # Check to see if --notrim is a valid netstat option
-    if netstat --notrim 2>&1 >/dev/null | grep -q 'unrecognized'; then
+    if ! ( netstat --help 2>&1 | grep -wq '\-\-notrim') ; then
         NS_NOTRIM=''
     fi
 

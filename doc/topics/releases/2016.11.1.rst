@@ -873,7 +873,7 @@ Changes:
   - **PR** `#37827`_: (*silenius*) add missing chloginclass
   - **PR** `#37826`_: (*rallytime*) Update branch refs to more relevant branch
   - **PR** `#37823`_: (*rallytime*) Add "names" option to file state docs: point users to highstate doc examples
-  - **PR** `#37822`_: (*laleocen*) add documenation for multiline encryption using nacl
+  - **PR** `#37822`_: (*laleocen*) add documentation for multiline encryption using nacl
     | refs: `#37826`_
   - **PR** `#37821`_: (*rallytime*) Clarify keystone.user_present password state docs with default behavior
   - **PR** `#37820`_: (*rallytime*) Add some dependency documentation to libvirt docs

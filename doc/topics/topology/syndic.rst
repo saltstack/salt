@@ -218,3 +218,16 @@ Syndic node.
     - :conf_master:`syndic_log_file`: path to the logfile (absolute or not)
     - :conf_master:`syndic_pidfile`: path to the pidfile (absolute or not)
     - :conf_master:`syndic_wait`: time in seconds to wait on returns from this syndic
+
+Minion Data Cache
+=================
+
+Beginning with Salt 2016.11.0, the :ref:`Pluggable Minion Data Cache <pluggable-data-cache>`
+was introduced. The minion data cache contains the Salt Mine data, minion grains, and minion
+pillar information cached on the Salt Master. By default, Salt uses the ``localfs`` cache
+module, but other external data stores can be used instead.
+
+Using a pluggable minion cache modules allows for the data stored on a Salt Master about
+Salt Minions to be replicated on other Salt Masters the Minion is connected to. Please see
+the :ref:`Minion Data Cache <cache>` documentation for more information and configuration
+examples.

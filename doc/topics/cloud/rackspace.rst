@@ -3,13 +3,7 @@ Getting Started With Rackspace
 ==============================
 
 Rackspace is a major public cloud platform which may be configured using either
-the `rackspace` or the `openstack` driver, depending on your needs.
-
-Please note that the `rackspace` driver is intended only for 1st gen instances,
-aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
-will *not* work with OpenStack-based instances. Unless you explicitly have a
-reason to use it, it is highly recommended that you use the `openstack` driver
-instead.
+the `openstack` driver.
 
 
 Dependencies
@@ -49,22 +43,6 @@ To use the `openstack` driver (recommended), set up the cloud configuration at
 
       driver: openstack
 
-
-To use the `rackspace` driver, set up the cloud configuration at
-  ``/etc/salt/cloud.providers`` or
-  ``/etc/salt/cloud.providers.d/rackspace.conf``:
-
-.. code-block:: yaml
-
-    my-rackspace-config:
-      driver: rackspace
-      # The Rackspace login user
-      user: fred
-      # The Rackspace user's apikey
-      apikey: 901d3f579h23c8v73q9
-
-The settings that follow are for using Rackspace with the `openstack` driver,
-and will not work with the `rackspace` driver.
 
 .. note::
     .. versionchanged:: 2015.8.0

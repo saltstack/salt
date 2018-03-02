@@ -599,13 +599,16 @@ Changes:
 
 - **PR** `#30625`_: (*jfindlay*) doc.topics.eauth: clarify client_acl vs eauth
 
+.. _`#27796`: https://github.com/saltstack/salt/issues/27796
 .. _`#29650`: https://github.com/saltstack/salt/pull/29650
 .. _`#29718`: https://github.com/saltstack/salt/pull/29718
 .. _`#30062`: https://github.com/saltstack/salt/pull/30062
 .. _`#30217`: https://github.com/saltstack/salt/pull/30217
 .. _`#30279`: https://github.com/saltstack/salt/pull/30279
+.. _`#30300`: https://github.com/saltstack/salt/issues/30300
 .. _`#30378`: https://github.com/saltstack/salt/pull/30378
 .. _`#30458`: https://github.com/saltstack/salt/pull/30458
+.. _`#30461`: https://github.com/saltstack/salt/issues/30461
 .. _`#30542`: https://github.com/saltstack/salt/pull/30542
 .. _`#30586`: https://github.com/saltstack/salt/pull/30586
 .. _`#30591`: https://github.com/saltstack/salt/pull/30591
@@ -664,6 +667,7 @@ Changes:
 .. _`#30813`: https://github.com/saltstack/salt/pull/30813
 .. _`#30815`: https://github.com/saltstack/salt/pull/30815
 .. _`#30818`: https://github.com/saltstack/salt/pull/30818
+.. _`#30820`: https://github.com/saltstack/salt/issues/30820
 .. _`#30822`: https://github.com/saltstack/salt/pull/30822
 .. _`#30823`: https://github.com/saltstack/salt/pull/30823
 .. _`#30826`: https://github.com/saltstack/salt/pull/30826
@@ -700,6 +704,7 @@ Changes:
 .. _`#30920`: https://github.com/saltstack/salt/pull/30920
 .. _`#30922`: https://github.com/saltstack/salt/pull/30922
 .. _`#30924`: https://github.com/saltstack/salt/pull/30924
+.. _`#30934`: https://github.com/saltstack/salt/issues/30934
 .. _`#30940`: https://github.com/saltstack/salt/pull/30940
 .. _`#30941`: https://github.com/saltstack/salt/pull/30941
 .. _`#30942`: https://github.com/saltstack/salt/pull/30942
@@ -713,10 +718,12 @@ Changes:
 .. _`#30978`: https://github.com/saltstack/salt/pull/30978
 .. _`#30987`: https://github.com/saltstack/salt/pull/30987
 .. _`#30998`: https://github.com/saltstack/salt/pull/30998
+.. _`#30999`: https://github.com/saltstack/salt/issues/30999
 .. _`#31002`: https://github.com/saltstack/salt/pull/31002
 .. _`#31004`: https://github.com/saltstack/salt/pull/31004
 .. _`#31007`: https://github.com/saltstack/salt/pull/31007
 .. _`#31012`: https://github.com/saltstack/salt/pull/31012
+.. _`#31014`: https://github.com/saltstack/salt/issues/31014
 .. _`#31015`: https://github.com/saltstack/salt/pull/31015
 .. _`#31024`: https://github.com/saltstack/salt/pull/31024
 .. _`#31026`: https://github.com/saltstack/salt/pull/31026
@@ -737,6 +744,7 @@ Changes:
 .. _`#31100`: https://github.com/saltstack/salt/pull/31100
 .. _`#31103`: https://github.com/saltstack/salt/pull/31103
 .. _`#31105`: https://github.com/saltstack/salt/pull/31105
+.. _`#31106`: https://github.com/saltstack/salt/issues/31106
 .. _`#31107`: https://github.com/saltstack/salt/pull/31107
 .. _`#31108`: https://github.com/saltstack/salt/pull/31108
 .. _`#31110`: https://github.com/saltstack/salt/pull/31110
@@ -769,6 +777,7 @@ Changes:
 .. _`#31191`: https://github.com/saltstack/salt/pull/31191
 .. _`#31196`: https://github.com/saltstack/salt/pull/31196
 .. _`#31201`: https://github.com/saltstack/salt/pull/31201
+.. _`#31223`: https://github.com/saltstack/salt/issues/31223
 .. _`#31225`: https://github.com/saltstack/salt/pull/31225
 .. _`#31226`: https://github.com/saltstack/salt/pull/31226
 .. _`#31233`: https://github.com/saltstack/salt/pull/31233
@@ -868,6 +877,7 @@ Changes:
 .. _`#31598`: https://github.com/saltstack/salt/pull/31598
 .. _`#31601`: https://github.com/saltstack/salt/pull/31601
 .. _`#31604`: https://github.com/saltstack/salt/pull/31604
+.. _`#31617`: https://github.com/saltstack/salt/issues/31617
 .. _`#31622`: https://github.com/saltstack/salt/pull/31622
 .. _`#31627`: https://github.com/saltstack/salt/pull/31627
 .. _`#31629`: https://github.com/saltstack/salt/pull/31629

@@ -3,8 +3,13 @@
 Management of Influxdb retention policies
 =========================================
 
+.. versionadded:: 2017.7.0
+
 (compatible with InfluxDB version 0.9+)
 '''
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():

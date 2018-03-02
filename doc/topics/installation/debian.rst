@@ -18,7 +18,7 @@ Installation from official Debian and Raspbian repositories is described
 Installation from the Official SaltStack Repository
 ===================================================
 
-Packages for Debian 8 (Jessie) and Debian 7 (Wheezy) are available in the
+Packages for Debian 9 (Stretch) and Debian 8 (Jessie) are available in the
 Official SaltStack repository.
 
 Instructions are at https://repo.saltstack.com/#debian.
@@ -70,7 +70,7 @@ To install fresh release of Salt minion on Jessie:
    .. code-block:: bash
 
        apt-get update
-       apt-get install python-zmq python-tornado/jessie-backports salt-common/stretch
+       apt-get install python-zmq python-systemd/jessie-backports python-tornado/jessie-backports salt-common/stretch
 
    **Raspbian**:
 

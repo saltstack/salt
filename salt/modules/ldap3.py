@@ -11,7 +11,7 @@ This is an alternative to the ``ldap`` interface provided by the
 :depends: - ``ldap`` Python module
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 available_backends = set()
 try:
@@ -23,7 +23,7 @@ try:
 except ImportError:
     pass
 import logging
-import salt.ext.six as six
+from salt.ext import six
 import sys
 
 log = logging.getLogger(__name__)
@@ -402,8 +402,7 @@ def add(connect_spec, dn, attributes):
     # are not modified)
     attributes = dict(((attr, list(vals))
                        for attr, vals in six.iteritems(attributes)))
-    log.info('adding entry: dn: {0} attributes: {1}'.format(
-        repr(dn), repr(attributes)))
+    log.info('adding entry: dn: %s attributes: %s', repr(dn), repr(attributes))
 
     if 'unicodePwd' in attributes:
         attributes['unicodePwd'] = [_format_unicode_password(x) for x in attributes['unicodePwd']]
@@ -441,7 +440,7 @@ def delete(connect_spec, dn):
         }" dn='cn=admin,dc=example,dc=com'
     '''
     l = connect(connect_spec)
-    log.info('deleting entry: dn: {0}'.format(repr(dn)))
+    log.info('deleting entry: dn: %s', repr(dn))
     try:
         l.c.delete_s(dn)
     except ldap.LDAPError as e:

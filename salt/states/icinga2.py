@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Icinga2 state
-==========================
+=============
 
-.. versionadded:: TODO
+.. versionadded:: 2017.7.0
 
 :depends:   - Icinga2 Python module
 :configuration: See :py:mod:`salt.modules.icinga2` for setup instructions.
@@ -20,11 +20,13 @@ Its output may be stored in a file or in a grain.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 
 # Import Salt libs
-import salt.utils
+from salt.ext import six
+import salt.utils.files
+import salt.utils.stringutils
 
 
 def __virtual__():
@@ -103,7 +105,7 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
     # Executing the command.
     ticket = __salt__['icinga2.generate_ticket'](name).strip()
     if ticket:
-        ret['comment'] = str(ticket)
+        ret['comment'] = six.text_type(ticket)
 
     if output == 'grain':
         if grain and not key:
@@ -119,8 +121,8 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
             ret['changes']['ticket'] = "Executed. Output into grain: {0}:{1}".format(grain, key)
     elif output:
         ret['changes']['ticket'] = "Executed. Output into {0}".format(output)
-        with salt.utils.fopen(output, 'w') as output_file:
-            output_file.write(str(ticket))
+        with salt.utils.files.fopen(output, 'w') as output_file:
+            output_file.write(salt.utils.stringutils.to_str(ticket))
     else:
         ret['changes']['ticket'] = "Executed"
 

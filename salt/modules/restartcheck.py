@@ -10,7 +10,7 @@ https://packages.debian.org/debian-goodies) and psdel by Sam Morris.
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -19,7 +19,11 @@ import subprocess
 import sys
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+
+# Import 3rd partylibs
+from salt.ext import six
 
 HAS_PSUTIL = False
 try:
@@ -126,8 +130,8 @@ def _deleted_files():
         try:
             pinfo = proc.as_dict(attrs=['pid', 'name'])
             try:
-                maps = salt.utils.fopen('/proc/{0}/maps'.format(pinfo['pid']))
-                dirpath = '/proc/' + str(pinfo['pid']) + '/fd/'
+                maps = salt.utils.files.fopen('/proc/{0}/maps'.format(pinfo['pid']))  # pylint: disable=resource-leakage
+                dirpath = '/proc/' + six.text_type(pinfo['pid']) + '/fd/'
                 listdir = os.listdir(dirpath)
             except (OSError, IOError):
                 return False
@@ -139,6 +143,7 @@ def _deleted_files():
                                  r'[\da-f]+ [\da-f]{2}:[\da-f]{2} (\d+) *(.+)( \(deleted\))?\n$')
 
             for line in maplines:
+                line = salt.utils.stringutils.to_unicode(line)
                 matched = mapline.match(line)
                 if matched:
                     path = matched.group(2)
@@ -158,7 +163,7 @@ def _deleted_files():
                     if os.path.isfile(readlink):
                         filenames.append(readlink)
                     elif os.path.isdir(readlink) and readlink != '/':
-                        for root, dummy_dirs, files in os.walk(readlink, followlinks=True):
+                        for root, dummy_dirs, files in salt.utils.path.os_walk(readlink, followlinks=True):
                             for name in files:
                                 filenames.append(os.path.join(root, name))
 
@@ -293,6 +298,23 @@ def _kernel_versions_redhat():
     return kernel_versions
 
 
+def _kernel_versions_nilrt():
+    '''
+    Last installed kernel name, for Debian based systems.
+
+    Returns:
+            List with possible names of last installed kernel
+            as they are probably interpreted in output of `uname -a` command.
+    '''
+    kernel_versions = []
+    kernel = os.readlink('/boot/bzImage')
+    kernel = os.path.basename(kernel)
+    kernel = kernel.strip('bzImage-')
+    kernel_versions.append(kernel)
+
+    return kernel_versions
+
+
 def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True):
     '''
     Analyzes files openeded by running processes and seeks for packages which need to be restarted.
@@ -326,8 +348,12 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
         systemd_folder = '/usr/lib/systemd/system/'
         systemd = '/usr/bin/systemctl'
         kernel_versions = _kernel_versions_redhat()
+    elif __grains__.get('os_family') == 'NILinuxRT':
+        cmd_pkg_query = 'opkg files '
+        systemd = ''
+        kernel_versions = _kernel_versions_nilrt()
     else:
-        return {'result': False, 'comment': 'Only available on Debian and Red Hat based systems.'}
+        return {'result': False, 'comment': 'Only available on Debian, Red Hat and NI Linux Real-Time based systems.'}
 
     # Check kernel versions
     kernel_current = __salt__['cmd.run']('uname -a')
@@ -381,7 +407,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
                 packagename = name
             owners_cache[readlink] = packagename
         if packagename and packagename not in ignorelist:
-            program = '\t' + str(pid) + ' ' + readlink + ' (file: ' + str(path) + ')'
+            program = '\t' + six.text_type(pid) + ' ' + readlink + ' (file: ' + six.text_type(path) + ')'
             if packagename not in packages:
                 packages[packagename] = {'initscripts': [], 'systemdservice': [], 'processes': [program],
                                          'process_name': name}
@@ -392,7 +418,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
     if len(packages) == 0 and not kernel_restart:
         return 'No packages seem to need to be restarted.'
 
-    for package in packages.keys():
+    for package in packages:
         cmd = cmd_pkg_query + package
         paths = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
 
@@ -408,12 +434,13 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
                pth.find('.wants') == -1:
                 is_oneshot = False
                 try:
-                    servicefile = salt.utils.fopen(pth)
+                    servicefile = salt.utils.files.fopen(pth)  # pylint: disable=resource-leakage
                 except IOError:
                     continue
                 sysfold_len = len(systemd_folder)
 
                 for line in servicefile.readlines():
+                    line = salt.utils.stringutils.to_unicode(line)
                     if line.find('Type=oneshot') > 0:
                         # scripts that does a single job and then exit
                         is_oneshot = True
@@ -427,7 +454,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
         paths.stdout.close()
 
     # Alternatively, find init.d script or service that match the process name
-    for package in packages.keys():
+    for package in packages:
         if len(packages[package]['systemdservice']) == 0 and len(packages[package]['initscripts']) == 0:
             service = __salt__['service.available'](packages[package]['process_name'])
 
@@ -442,7 +469,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
     restartinitcommands = []
     restartservicecommands = []
 
-    for package in packages.keys():
+    for package in packages:
         if len(packages[package]['initscripts']) > 0:
             restartable.append(package)
             restartinitcommands.extend(['service ' + s + ' restart' for s in packages[package]['initscripts']])

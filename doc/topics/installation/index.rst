@@ -46,6 +46,7 @@ These guides go into detail how to install Salt on a given platform.
 
     arch
     debian
+    eos
     fedora
     freebsd
     gentoo
@@ -85,7 +86,7 @@ Dependencies
 
 Salt should run on any Unix-like platform so long as the dependencies are met.
 
-* `Python 2.6`_ >= 2.6 <3.0
+* `Python 2.7`_ >= 2.7 <3.0
 * `msgpack-python`_ - High-performance message interchange format
 * `YAML`_ - Python YAML bindings
 * `Jinja2`_ - parsing Salt States (configurable in the master settings)
@@ -145,6 +146,7 @@ Optional Dependencies
 .. _`ZeroMQ`: http://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
 .. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/
+.. _`M2Crypto`: https://gitlab.com/m2crypto/m2crypto
 .. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
 .. _`YAML`: http://pyyaml.org/
 .. _`Jinja2`: http://jinja.pocoo.org/

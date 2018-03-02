@@ -16,14 +16,18 @@ description.
     This is Erik's computer, don't touch!:
       system.computer_desc: []
 '''
+from __future__ import absolute_import, unicode_literals, print_function
 
-from __future__ import absolute_import
-
-# Import python libs
+# Import Python libs
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.functools
+import salt.utils.platform
+
+# Import 3rd party libs
+from salt.ext import six
+
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +39,7 @@ def __virtual__():
     '''
     This only supports Windows
     '''
-    if salt.utils.is_windows() and 'system.get_computer_desc' in __salt__:
+    if salt.utils.platform.is_windows() and 'system.get_computer_desc' in __salt__:
         return __virtualname__
     return False
 
@@ -48,7 +52,7 @@ def computer_desc(name):
         The desired computer description
     '''
     # Just in case someone decides to enter a numeric description
-    name = str(name)
+    name = six.text_type(name)
 
     ret = {'name': name,
            'changes': {},
@@ -77,7 +81,7 @@ def computer_desc(name):
                           '\'{0}\''.format(name))
     return ret
 
-computer_description = salt.utils.alias_function(computer_desc, 'computer_description')
+computer_description = salt.utils.functools.alias_function(computer_desc, 'computer_description')
 
 
 def computer_name(name):
@@ -88,7 +92,7 @@ def computer_name(name):
         The desired computer name
     '''
     # Just in case someone decides to enter a numeric description
-    name = str(name)
+    name = six.text_type(name)
 
     ret = {'name': name,
            'changes': {},
@@ -233,4 +237,138 @@ def join_domain(name, username=None, password=None, account_ou=None,
     else:
         ret['comment'] = 'Computer failed to join \'{0}\''.format(name)
         ret['result'] = False
+    return ret
+
+
+def reboot(name, message=None, timeout=5, force_close=True, in_seconds=False,
+           only_on_pending_reboot=True):
+    '''
+    Reboot the computer
+
+    :param str message:
+        An optional message to display to users. It will also be used as a
+        comment in the event log entry.
+
+        The default value is None.
+
+    :param int timeout:
+        The number of minutes or seconds before a reboot will occur. Whether
+        this number represents minutes or seconds depends on the value of
+        ``in_seconds``.
+
+        The default value is 5.
+
+    :param bool in_seconds:
+        If this is True, the value of ``timeout`` will be treated as a number
+        of seconds. If this is False, the value of ``timeout`` will be treated
+        as a number of minutes.
+
+        The default value is False.
+
+    :param bool force_close:
+        If this is True, running applications will be forced to close without
+        warning. If this is False, running applications will not get the
+        opportunity to prompt users about unsaved data.
+
+        The default value is True.
+
+    :param bool only_on_pending_reboot:
+
+        If this is True, the reboot will only occur if the system reports a
+        pending reboot. If this is False, the reboot will always occur.
+
+        The default value is True.
+    '''
+
+    return shutdown(name, message=message, timeout=timeout,
+                    force_close=force_close, reboot=True,
+                    in_seconds=in_seconds,
+                    only_on_pending_reboot=only_on_pending_reboot)
+
+
+def shutdown(name, message=None, timeout=5, force_close=True, reboot=False,
+             in_seconds=False, only_on_pending_reboot=False):
+    '''
+    Shutdown the computer
+
+    :param str message:
+        An optional message to display to users. It will also be used as a
+        comment in the event log entry.
+
+        The default value is None.
+
+    :param int timeout:
+        The number of minutes or seconds before a shutdown will occur. Whether
+        this number represents minutes or seconds depends on the value of
+        ``in_seconds``.
+
+        The default value is 5.
+
+    :param bool in_seconds:
+        If this is True, the value of ``timeout`` will be treated as a number
+        of seconds. If this is False, the value of ``timeout`` will be treated
+        as a number of minutes.
+
+        The default value is False.
+
+    :param bool force_close:
+        If this is True, running applications will be forced to close without
+        warning. If this is False, running applications will not get the
+        opportunity to prompt users about unsaved data.
+
+        The default value is True.
+
+    :param bool reboot:
+
+        If this is True, the computer will restart immediately after shutting
+        down. If False the system flushes all caches to disk and safely powers
+        down the system.
+
+        The default value is False.
+
+    :param bool only_on_pending_reboot:
+
+        If this is True, the shutdown will only occur if the system reports a
+        pending reboot. If this is False, the shutdown will always occur.
+
+        The default value is False.
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    if reboot:
+        action = 'reboot'
+    else:
+        action = 'shutdown'
+
+    if only_on_pending_reboot and not __salt__['system.get_pending_reboot']():
+        if __opts__['test']:
+            ret['comment'] = ('System {0} will be skipped because '
+                              'no reboot is pending').format(action)
+        else:
+            ret['comment'] = ('System {0} has been skipped because '
+                              'no reboot was pending').format(action)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Will attempt to schedule a {0}'.format(action)
+        return ret
+
+    ret['result'] = __salt__['system.shutdown'](message=message,
+                                                timeout=timeout,
+                                                force_close=force_close,
+                                                reboot=reboot,
+                                                in_seconds=in_seconds,
+                                                only_on_pending_reboot=False)
+
+    if ret['result']:
+        ret['changes'] = {'old': 'No reboot or shutdown was scheduled',
+                          'new': 'A {0} has been scheduled'.format(action)}
+        ret['comment'] = 'Request to {0} was successful'.format(action)
+    else:
+        ret['comment'] = 'Request to {0} failed'.format(action)
     return ret

@@ -14,11 +14,7 @@ are available in the SaltStack repository.
 
 Instructions are at https://repo.saltstack.com/#ubuntu.
 
-Installation from the Community-Maintained Repository
-=====================================================
-
-The PPA is no longer maintained, and shouldn't be used. Please use the Official 
-Salt Stack repository instead.
+.. _ubuntu-install-pkgs:
 
 Install Packages
 ================

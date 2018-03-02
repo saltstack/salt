@@ -24,7 +24,7 @@ the chronos endpoint:
 
 .. versionadded:: 2015.8.2
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import salt.utils.http
@@ -62,7 +62,7 @@ def ping():
             decode=True,
         )
         log.debug(
-            'chronos.info returned succesfully: %s',
+            'chronos.info returned successfully: %s',
             response,
         )
         if 'dict' in response:

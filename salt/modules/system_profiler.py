@@ -9,11 +9,11 @@ information about package receipts and installed applications.
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import plistlib
 import subprocess
-import salt.utils
+import salt.utils.path
 from salt.ext import six
 
 PROFILER_BINARY = '/usr/sbin/system_profiler'
@@ -23,7 +23,7 @@ def __virtual__():
     '''
     Check to see if the system_profiler binary is available
     '''
-    PROFILER_BINARY = salt.utils.which('system_profiler')
+    PROFILER_BINARY = salt.utils.path.which('system_profiler')
 
     if PROFILER_BINARY:
         return True

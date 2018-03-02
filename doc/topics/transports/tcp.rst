@@ -13,6 +13,12 @@ to ``tcp`` on each Salt minion and Salt master.
 
    transport: tcp
 
+.. warning::
+
+    We currently recommend that when using Syndics that all Masters and Minions
+    use the same transport. We're investigating a report of an error when using
+    mixed transport types at very heavy loads.
+
 Wire Protocol
 =============
 This implementation over TCP focuses on flexibility over absolute efficiency.
@@ -30,6 +36,46 @@ Head contains header information (such as "message id"). The Body contains the
 actual message that we are sending. With this flexible wire protocol we can
 implement any message semantics that we'd like-- including multiplexed message
 passing on a single socket.
+
+TLS Support
+===========
+
+.. versionadded:: 2016.11.1
+
+The TCP transport allows for the master/minion communication to be optionally
+wrapped in a TLS connection. Enabling this is simple, the master and minion need
+to be using the tcp connection, then the `ssl` option is enabled. The `ssl`
+option is passed as a dict and corresponds to the options passed to the
+Python `ssl.wrap_socket <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`
+function.
+
+A simple setup looks like this, on the Salt Master add the `ssl` option to the
+master configuration file:
+
+.. code-block:: yaml
+
+    ssl:
+      keyfile: <path_to_keyfile>
+      certfile: <path_to_certfile>
+      ssl_version: PROTOCOL_TLSv1_2
+
+The minimal `ssl` option in the minion configuration file looks like this:
+
+.. code-block:: yaml
+
+    ssl: True
+    # Versions below 2016.11.4:
+    ssl: {}
+
+Specific options can be sent to the minion also, as defined in the Python
+`ssl.wrap_socket` function.
+
+.. note::
+
+    While setting the ssl_version is not required, we recommend it. Some older
+    versions of python do not support the latest TLS protocol and if this is
+    the case for your version of python we strongly recommend upgrading your
+    version of Python.
 
 
 Crypto

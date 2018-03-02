@@ -9,5 +9,7 @@ External Logging Handlers
     :toctree:
     :template: autosummary.rst.tmpl
 
+    fluent_mod
+    log4mongo_mod
     logstash_mod
     sentry_mod

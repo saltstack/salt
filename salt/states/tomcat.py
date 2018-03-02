@@ -55,10 +55,9 @@ Notes
       3.10.0-327.22.2.el7.x86_64
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# import salt libs
-from salt.modules.tomcat import _extract_war_version
+from salt.ext import six
 
 
 # Private
@@ -77,7 +76,7 @@ def war_deployed(name,
                  url='http://localhost:8080/manager',
                  timeout=180,
                  temp_war_location=None,
-                 version=''):
+                 version=True):
     '''
     Enforce that the WAR will be deployed and started in the context path,
     while making use of WAR versions in the filename.
@@ -108,9 +107,9 @@ def war_deployed(name,
 
         .. versionadded:: 2015.8.6
 
-        Use ``False`` to prevent guessing the version and keeping it blank.
+        Use ``False`` or blank value to prevent guessing the version and keeping it blank.
 
-        .. versionadded:: 2016.PLEASE_LET_ME_KNOW
+        .. versionadded:: 2016.11.0
 
     Example:
 
@@ -118,7 +117,7 @@ def war_deployed(name,
 
         jenkins:
           tomcat.war_deployed:
-            - name: /ran
+            - name: /salt-powered-jenkins
             - war: salt://jenkins-1.2.4.war
             - require:
               - service: application-service
@@ -126,7 +125,7 @@ def war_deployed(name,
     .. note::
 
         Be aware that in the above example the WAR ``jenkins-1.2.4.war`` will
-        be deployed to the context path ``jenkins##1.2.4``. To avoid this
+        be deployed to the context path ``salt-powered-jenkins##1.2.4``. To avoid this
         either specify a version yourself, or set version to ``False``.
 
     '''
@@ -137,12 +136,10 @@ def war_deployed(name,
            'comment': ''}
 
     # if version is defined or False, we don't want to overwrite
-    if version == '':
-        version = _extract_war_version(war) or ""
+    if version is True:
+        version = __salt__['tomcat.extract_war_version'](war) or ''
     elif not version:
         version = ''
-    else:
-        version = str(version)
 
     webapps = __salt__['tomcat.ls'](url, timeout)
     deploy = False
@@ -150,7 +147,7 @@ def war_deployed(name,
     status = True
 
     # Gathered/specified new WAR version string
-    specified_ver = 'version ' + version if version else 'no version'
+    specified_ver = 'version {0}'.format(version) if version else 'no version'
 
     # Determine what to do
     try:
@@ -215,7 +212,7 @@ def war_deployed(name,
     # Return
     if deploy_res.startswith('OK'):
         ret['result'] = True
-        ret['comment'] = str(__salt__['tomcat.ls'](url, timeout)[name])
+        ret['comment'] = six.text_type(__salt__['tomcat.ls'](url, timeout)[name])
         ret['changes']['deploy'] = ('deployed {0} with {1}'.
                                     format(name, specified_ver))
     else:

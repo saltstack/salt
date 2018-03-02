@@ -7,9 +7,10 @@ This is a thin wrapper around Pythons tempfile module
 .. versionadded:: 2015.8.0
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
+import os
 import tempfile
 
 log = logging.getLogger(__name__)
@@ -40,4 +41,6 @@ def file(suffix='', prefix='tmp', parent=None):
         salt '*' temp.file
         salt '*' temp.file prefix='mytemp-' parent='/var/run/'
     '''
-    return tempfile.mkstemp(suffix, prefix, parent)[1]
+    fh_, tmp_ = tempfile.mkstemp(suffix, prefix, parent)
+    os.close(fh_)
+    return tmp_

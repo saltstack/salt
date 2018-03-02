@@ -49,11 +49,17 @@ This driver requires Packet's client library: https://pypi.python.org/pypi/packe
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import pprint
 import time
-import packet
+
+# Import 3rd-party libs
+try:
+    import packet
+    HAS_PACKET = True
+except ImportError:
+    HAS_PACKET = False
 
 # Import Salt Libs
 import salt.config as config
@@ -69,7 +75,7 @@ from salt.exceptions import (
 import salt.utils.cloud
 
 from salt.cloud.libcloudfuncs import get_size, get_image, script, show_instance
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 
 get_size = namespaced_function(get_size, globals())
 get_image = namespaced_function(get_image, globals())
@@ -89,6 +95,8 @@ def __virtual__():
     '''
     Check for Packet configs.
     '''
+    if HAS_PACKET is False:
+        return False, 'The packet python library is not installed'
     if get_configured_provider() is False:
         return False
 
@@ -247,18 +255,11 @@ def _wait_for_status(status_type, object_id, status=None, timeout=500, quiet=Tru
             return obj
 
         time.sleep(interval)
-        if quiet:
-            log.info('Status for Packet {0} is \'{1}\', waiting for \'{2}\'.'.format(
-                object_id,
-                obj.state,
-                status)
-            )
-        else:
-            log.debug('Status for Packet {0} is \'{1}\', waiting for \'{2}\'.'.format(
-                object_id,
-                obj.state,
-                status)
-            )
+        log.log(
+            logging.INFO if not quiet else logging.DEBUG,
+            'Status for Packet %s is \'%s\', waiting for \'%s\'.',
+            object_id, obj.state, status
+        )
 
     return obj
 
@@ -282,8 +283,9 @@ def is_profile_configured(vm_):
             for key in required_keys:
                 if profile_data.get(key) is None:
                     log.error(
-                        'both storage_size and storage_tier required for profile {profile}. '
-                        'Please check your profile configuration'.format(profile=vm_['profile'])
+                        'both storage_size and storage_tier required for '
+                        'profile %s. Please check your profile configuration',
+                        vm_['profile']
                     )
                     return False
 
@@ -293,10 +295,10 @@ def is_profile_configured(vm_):
                 if location['code'] == profile_data['location']:
                     if 'storage' not in location['features']:
                         log.error(
-                            'Choosen location {location} for profile {profile} does not support storage feature. '
-                            'Please check your profile configuration'.format(
-                                location=location['code'], profile=vm_['profile']
-                            )
+                            'Chosen location %s for profile %s does not '
+                            'support storage feature. Please check your '
+                            'profile configuration',
+                            location['code'], vm_['profile']
                         )
                         return False
 
@@ -306,8 +308,10 @@ def is_profile_configured(vm_):
             for key in required_keys:
                 if profile_data.get(key) is None:
                     log.error(
-                        'both storage_snapshot_count and storage_snapshot_frequency required for profile {profile}. '
-                        'Please check your profile configuration'.format(profile=vm_['profile'])
+                        'both storage_snapshot_count and '
+                        'storage_snapshot_frequency required for profile '
+                        '%s. Please check your profile configuration',
+                        vm_['profile']
                     )
                     return False
 
@@ -330,18 +334,23 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(name),
-        args={
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
-    log.info('Creating Packet VM {0}'.format(name))
+    log.info('Creating Packet VM %s', name)
 
     manager = packet.Manager(auth_token=vm_['token'])
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     device = manager.create_device(project_id=vm_['project_id'],
                                 hostname=name,
@@ -352,9 +361,9 @@ def create(vm_):
 
     if device.state != "active":
         log.error(
-            'Error creating {0} on PACKET\n\n'
-            'while waiting for initial ready status'.format(name),
-            exc_info_on_loglevel=logging.DEBUG
+            'Error creating %s on PACKET\n\n'
+            'while waiting for initial ready status',
+            name, exc_info_on_loglevel=logging.DEBUG
         )
 
     # Define which ssh_interface to use
@@ -399,30 +408,25 @@ def create(vm_):
 
         if volume.state != "active":
             log.error(
-                'Error creating {0} on PACKET\n\n'
-                'while waiting for initial ready status'.format(name),
-                exc_info_on_loglevel=logging.DEBUG
+                'Error creating %s on PACKET\n\n'
+                'while waiting for initial ready status',
+                name, exc_info_on_loglevel=logging.DEBUG
             )
 
         ret.update({'volume': volume.__dict__})
 
-    log.info('Created Cloud VM \'{0}\''.format(name))
+    log.info('Created Cloud VM \'%s\'', name)
 
     log.debug(
-        '\'{0}\' VM creation details:\n{1}'.format(
-            name, pprint.pformat(device.__dict__)
-        )
+        '\'%s\' VM creation details:\n%s',
+        name, pprint.pformat(device.__dict__)
     )
 
     __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(name),
-        args={
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -500,7 +504,7 @@ def get_devices_by_token():
 
     devices = []
 
-    for profile_name in vm_['profiles'].keys():
+    for profile_name in vm_['profiles']:
         profile = vm_['profiles'][profile_name]
 
         devices.extend(manager.list_devices(profile['project_id']))

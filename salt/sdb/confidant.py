@@ -35,11 +35,11 @@ The module can be configured via sdb in the minion config:
 Module Documentation
 ====================
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import logging
 import copy
+import logging
 
 # Import third party libs
 try:
@@ -77,7 +77,7 @@ def get(key, profile=None):
     returns a dict of joined credential_pairs, credentials_metadata returns a
     dict of metadata relevant to the credentials mapped to the confidant
     service, and result returns a bool that can be used to determine if the sdb
-    call succeded or failed to fetch credentials from confidant (or from local
+    call succeeded or failed to fetch credentials from confidant (or from local
     cache). If result is false, the data in credentials or credentials_metadata
     can't be trusted.
     '''

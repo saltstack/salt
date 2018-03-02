@@ -30,7 +30,7 @@ Backwards-incompatible Changes
   It has been moved one directory down, into the master cachedir. On most
   platforms, this is ``/var/cache/salt/master/extmods``. Most users won't have
   to worry about this, but those who have been manually placing custom runners
-  into ``/var/cache/salt/extmods/runners``, or ouputters into
+  into ``/var/cache/salt/extmods/runners``, or outputters into
   ``/var/cache/salt/extmods/output``, etc. will be affected by this. To
   transition, it is recommended not to simply move the extmods directory into
   ``/var/cache/salt/master``, but to copy the custom modules into the salt
@@ -175,6 +175,10 @@ they are being loaded for the correct proxytype, example below:
 
         return False
 
+.. note::
+    ``salt.utils.is_proxy()`` has been renamed to
+    ``salt.utils.platform.is_proxy`` as of the Oxygen release.
+
 The try/except block above exists because grains are processed very early
 in the proxy minion startup process, sometimes earlier than the proxy
 key in the ``__opts__`` dictionary is populated.
@@ -274,7 +278,7 @@ Module Changes
   :mod:`apache_site state module <salt.states.apache_site>`: the ``enable`` and
   ``disable`` functions were renamed to ``enabled`` and ``disabled``,
   respectively.  In :pull:`33562`, these functions were readded and properly
-  deprecated and will be removed in Salt Nitrogen.  This fix will be available
+  deprecated and will be removed in Salt 2017.7.0.  This fix will be available
   in 2016.3.1.  As a workaround, try
 
   .. code-block:: sls
@@ -351,7 +355,7 @@ Documentation of the Dimension Data SaltStack integration is found on `developer
 Minion Blackout
 ---------------
 During a blackout, minions will not execute any remote execution commands,
-except for :ref:`saltutil.refresh_pillar
+except for :mod:`saltutil.refresh_pillar
 <salt.modules.saltutil.refresh_pillar>`. Blackouts are enabled using a special
 pillar key, ``minion_blackout`` set to ``True``.
 

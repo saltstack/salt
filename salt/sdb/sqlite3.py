@@ -42,7 +42,7 @@ create the table(s) and get and set values.
     get_query: "SELECT d FROM advanced WHERE a=:key"
     set_query: "INSERT OR REPLACE INTO advanced (a, d) VALUES (:key, :value)"
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -52,6 +52,9 @@ try:
     HAS_SQLITE3 = True
 except ImportError:
     HAS_SQLITE3 = False
+
+# Import salt libs
+from salt.ext import six
 
 # Import third party libs
 import msgpack
@@ -122,7 +125,10 @@ def set_(key, value, profile=None):
     if not profile:
         return False
     conn, cur, table = _connect(profile)
-    value = buffer(msgpack.packb(value))
+    if six.PY2:
+        value = buffer(msgpack.packb(value))
+    else:
+        value = memoryview(msgpack.packb(value))
     q = profile.get('set_query', ('INSERT OR REPLACE INTO {0} VALUES '
                                   '(:key, :value)').format(table))
     conn.execute(q, {'key': key, 'value': value})

@@ -5,7 +5,7 @@ The key Thorium State is used to apply changes to the accepted/rejected/pending 
 .. versionadded:: 2016.11.0
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 
 # Import salt libs
@@ -71,14 +71,10 @@ def timeout(name, delete=0, reject=0):
                     reject_set.add(id_)
     for id_ in remove:
         keyapi.delete_key(id_)
-        if id_ in __context__[ktr]:
-            del __context__[ktr][id_]
-        if id_ in __reg__['status']['val']:
-            del __reg__['status']['val'][id_]
+        __reg__['status']['val'].pop(id_, None)
+        __context__[ktr].pop(id_, None)
     for id_ in reject_set:
         keyapi.reject(id_)
-        if id_ in __context__[ktr]:
-            del __context__[ktr][id_]
-        if id_ in __reg__['status']['val']:
-            del __reg__['status']['val'][id_]
+        __reg__['status']['val'].pop(id_, None)
+        __context__[ktr].pop(id_, None)
     return ret

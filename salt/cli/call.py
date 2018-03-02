@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
-from salt.utils import parsers
+import salt.utils.parsers
 from salt.utils.verify import verify_log
 from salt.config import _expand_glob_path
 import salt.cli.caller
 import salt.defaults.exitcodes
 
 
-class SaltCall(parsers.SaltCallOptionParser):
+class SaltCall(salt.utils.parsers.SaltCallOptionParser):
     '''
     Used to locally execute a salt command
     '''

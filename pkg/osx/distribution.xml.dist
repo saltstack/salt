@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <installer-gui-script minSpecVersion="2">
-    <title>Salt @VERSION@</title>
+    <title>@TITLE@</title>
     <organization>com.saltstack.salt</organization>
     <!-- Define minimum system requirements -->
     <volume-check>
@@ -25,7 +25,7 @@
     <!-- List all component packages -->
     <pkg-ref id="com.saltstack.salt"
              version="@VERSION@"
-             auth="root">salt-src-@VERSION@-@CPUARCH@.pkg</pkg-ref>
+             auth="root">salt-src-@VERSION@-py@PYVER@-@CPUARCH@.pkg</pkg-ref>
     <!-- List them again here. They can now be organized
          as a hierarchy if you want. -->
     <choices-outline>
@@ -34,8 +34,8 @@
     <!-- Define each choice above -->
     <choice id="com.saltstack.salt"
             visible="false"
-            title="Salt @VERSION@"
-            description="Salt @VERSION@"
+            title="@TITLE@"
+            description="@DESC@"
             start_selected="true">
         <pkg-ref id="com.saltstack.salt" />
     </choice>

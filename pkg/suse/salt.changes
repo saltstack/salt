@@ -130,7 +130,7 @@ Wed Oct  7 19:15:54 UTC 2015 - mrueckert@suse.de
   2. the only part of the package which would really benefit from
      it would be the doc package. but given we only install the
      files via %doc, we can not use it for that either.
-- reenable completions on distros newer than sle11
+- re-enable completions on distros newer than sle11
 - do not use _datarootdir, use _datadir instead.
 
 -------------------------------------------------------------------

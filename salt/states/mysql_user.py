@@ -40,13 +40,13 @@ This state is not able to grant permissions for the user. See
 :py:mod:`salt.states.mysql_grants` for further instructions.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import sys
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 
 
 def __virtual__():
@@ -121,7 +121,7 @@ def present(name,
 
     # check if user exists with the same password (or passwordless login)
     if passwordless:
-        if not salt.utils.is_true(allow_passwordless):
+        if not salt.utils.data.is_true(allow_passwordless):
             ret['comment'] = 'Either password or password_hash must be ' \
                              'specified, unless allow_passwordless is True'
             ret['result'] = False
@@ -161,7 +161,7 @@ def present(name,
             ret['result'] = None
             if passwordless:
                 ret['comment'] += 'cleared'
-                if not salt.utils.is_true(allow_passwordless):
+                if not salt.utils.data.is_true(allow_passwordless):
                     ret['comment'] += ', but allow_passwordless != True'
                     ret['result'] = False
             else:
@@ -185,7 +185,7 @@ def present(name,
             err = _get_mysql_error()
             if err is not None:
                 ret['comment'] += ' ({0})'.format(err)
-            if passwordless and not salt.utils.is_true(allow_passwordless):
+            if passwordless and not salt.utils.data.is_true(allow_passwordless):
                 ret['comment'] += '. Note: allow_passwordless must be True ' \
                                   'to permit passwordless login.'
             ret['result'] = False
@@ -204,7 +204,7 @@ def present(name,
             ret['result'] = None
             if passwordless:
                 ret['comment'] += ' with passwordless login'
-                if not salt.utils.is_true(allow_passwordless):
+                if not salt.utils.data.is_true(allow_passwordless):
                     ret['comment'] += ', but allow_passwordless != True'
                     ret['result'] = False
             return ret

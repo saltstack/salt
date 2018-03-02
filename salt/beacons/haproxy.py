@@ -7,9 +7,9 @@ Fire an event when over a specified threshold.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
-
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -23,17 +23,39 @@ def __virtual__():
     if 'haproxy.get_sessions' in __salt__:
         return __virtualname__
     else:
+        log.debug('Not loading haproxy beacon')
         return False
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
-    if not isinstance(config, dict):
-        return False, ('Configuration for haproxy beacon must be a dictionary.')
-    if 'haproxy' not in config:
-        return False, ('Configuration for haproxy beacon requires a list of backends and servers')
+    if not isinstance(config, list):
+        return False, ('Configuration for haproxy beacon must '
+                       'be a list.')
+    else:
+        _config = {}
+        list(map(_config.update, config))
+
+        if 'backends' not in _config:
+            return False, ('Configuration for haproxy beacon '
+                           'requires backends.')
+        else:
+            if not isinstance(_config['backends'], dict):
+                return False, ('Backends for haproxy beacon '
+                               'must be a dictionary.')
+            else:
+                for backend in _config['backends']:
+                    log.debug('_config %s', _config['backends'][backend])
+                    if 'servers' not in _config['backends'][backend]:
+                        return False, ('Backends for haproxy beacon '
+                                       'require servers.')
+                    else:
+                        _servers = _config['backends'][backend]['servers']
+                        if not isinstance(_servers, list):
+                            return False, ('Servers for haproxy beacon '
+                                           'must be a list.')
     return True, 'Valid beacon configuration'
 
 
@@ -46,22 +68,23 @@ def beacon(config):
 
         beacons:
           haproxy:
-            - www-backend:
-                threshold: 45
-                servers:
-                  - web1
-                  - web2
+            - backends:
+                www-backend:
+                    threshold: 45
+                    servers:
+                      - web1
+                      - web2
             - interval: 120
     '''
-    log.debug('haproxy beacon starting')
     ret = []
-    _validate = __validate__(config)
-    if not _validate:
-        log.debug('haproxy beacon unable to validate')
-        return ret
-    for backend in config:
-        threshold = config[backend]['threshold']
-        for server in config[backend]['servers']:
+
+    _config = {}
+    list(map(_config.update, config))
+
+    for backend in _config.get('backends', ()):
+        backend_config = _config['backends'][backend]
+        threshold = backend_config['threshold']
+        for server in backend_config['servers']:
             scur = __salt__['haproxy.get_sessions'](server, backend)
             if scur:
                 if int(scur) > int(threshold):
@@ -69,6 +92,10 @@ def beacon(config):
                                'scur': scur,
                                'threshold': threshold,
                                }
-                    log.debug('Emit because {0} > {1} for {2} in {3}'.format(scur, threshold, server, backend))
+                    log.debug('Emit because %s > %s'
+                              ' for %s in %s', scur,
+                                               threshold,
+                                               server,
+                                               backend)
                     ret.append(_server)
     return ret

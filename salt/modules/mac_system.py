@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: 2016.3.0
+System module for sleeping, restarting, and shutting down the system on Mac OS X
 
-System module for sleeping, restarting, and shutting down the system on Mac OS
-X.
+.. versionadded:: 2016.3.0
 
 .. warning::
     Using this module will enable ``atrun`` on the system if it is disabled.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 try:  # python 3
@@ -16,9 +15,11 @@ try:  # python 3
 except ImportError:  # python 2
     from pipes import quote as _cmd_quote
 
+import getpass
+
 # Import salt libs
-import salt.utils
 import salt.utils.mac_utils
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError
 
 __virtualname__ = 'system'
@@ -28,9 +29,12 @@ def __virtual__():
     '''
     Only for MacOS with atrun enabled
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return (False, 'The mac_system module could not be loaded: '
                        'module only works on MacOS systems.')
+
+    if getpass.getuser() != 'root':
+        return False, 'The mac_system module is not useful for non-root users.'
 
     if not _atrun_enabled():
         if not _enable_atrun():

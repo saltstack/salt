@@ -50,7 +50,7 @@ Namespaced tag
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -59,23 +59,25 @@ import fnmatch
 import hashlib
 import logging
 import datetime
+import sys
 from collections import MutableMapping
 from multiprocessing.util import Finalize
 from salt.ext.six.moves import range
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 import tornado.ioloop
 import tornado.iostream
 
 # Import salt libs
 import salt.config
 import salt.payload
-import salt.utils
 import salt.utils.async
 import salt.utils.cache
 import salt.utils.dicttrim
+import salt.utils.platform
 import salt.utils.process
+import salt.utils.stringutils
 import salt.utils.zeromq
 import salt.log.setup
 import salt.defaults.exitcodes
@@ -90,8 +92,8 @@ SUB_EVENT = set([
     'state.sls',
 ])
 
-TAGEND = '\n\n'  # long tag delimiter
-TAGPARTER = '/'  # name spaced tag delimiter
+TAGEND = str('\n\n')  # long tag delimiter
+TAGPARTER = str('/')  # name spaced tag delimiter
 SALT = 'salt'  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
 TAGS = {
@@ -248,7 +250,7 @@ class SaltEvent(object):
         else:
             self.opts['sock_dir'] = sock_dir
 
-        if salt.utils.is_windows() and 'ipc_mode' not in opts:
+        if salt.utils.platform.is_windows() and 'ipc_mode' not in opts:
             self.opts['ipc_mode'] = 'tcp'
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         self.pending_tags = []
@@ -299,7 +301,7 @@ class SaltEvent(object):
                 hash_type = getattr(hashlib, self.opts['hash_type'])
                 # Only use the first 10 chars to keep longer hashes from exceeding the
                 # max socket path length.
-                id_hash = hash_type(salt.utils.to_bytes(self.opts['id'])).hexdigest()[:10]
+                id_hash = hash_type(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()[:10]
                 puburi = os.path.join(
                     sock_dir,
                     'minion_event_{0}_pub.ipc'.format(id_hash)
@@ -418,7 +420,7 @@ class SaltEvent(object):
                     self.pulluri,
                     io_loop=self.io_loop
                 )
-            # For the async case, the connect will be defered to when
+            # For the async case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True
         return self.cpush
@@ -432,8 +434,8 @@ class SaltEvent(object):
             mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
             data = serial.loads(mdata)
         else:
-            mtag, sep, mdata = raw.partition(salt.utils.to_bytes(TAGEND))  # split tag from data
-            mtag = salt.utils.to_str(mtag)
+            mtag, sep, mdata = raw.partition(salt.utils.stringutils.to_bytes(TAGEND))  # split tag from data
+            mtag = salt.utils.stringutils.to_str(mtag)
             data = serial.loads(mdata, encoding='utf-8')
         return mtag, data
 
@@ -460,13 +462,13 @@ class SaltEvent(object):
             if match_func(evt['tag'], tag):
                 if ret is None:
                     ret = evt
-                    log.trace('get_event() returning cached event = {0}'.format(ret))
+                    log.trace('get_event() returning cached event = %s', ret)
                 else:
                     self.pending_events.append(evt)
             elif any(pmatch_func(evt['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
                 self.pending_events.append(evt)
             else:
-                log.trace('get_event() discarding cached event that no longer has any subscriptions = {0}'.format(evt))
+                log.trace('get_event() discarding cached event that no longer has any subscriptions = %s', evt)
         return ret
 
     @staticmethod
@@ -554,15 +556,15 @@ class SaltEvent(object):
             if not match_func(ret['tag'], tag):
                 # tag not match
                 if any(pmatch_func(ret['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
-                    log.trace('get_event() caching unwanted event = {0}'.format(ret))
+                    log.trace('get_event() caching unwanted event = %s', ret)
                     self.pending_events.append(ret)
                 if wait:  # only update the wait timeout if we had one
                     wait = timeout_at - time.time()
                 continue
 
-            log.trace('get_event() received = {0}'.format(ret))
+            log.trace('get_event() received = %s', ret)
             return ret
-        log.trace('_get_event() waited {0} seconds and received nothing'.format(wait))
+        log.trace('_get_event() waited %s seconds and received nothing', wait)
         return None
 
     def get_event(self,
@@ -574,16 +576,17 @@ class SaltEvent(object):
                   auto_reconnect=False):
         '''
         Get a single publication.
-        IF no publication available THEN block for up to wait seconds
-        AND either return publication OR None IF no publication available.
+        If no publication is available, then block for up to ``wait`` seconds.
+        Return publication if it is available or ``None`` if no publication is
+        available.
 
-        IF wait is 0 then block forever.
+        If wait is 0, then block forever.
 
         tag
             Only return events matching the given tag. If not specified, or set
             to an empty string, all events are returned. It is recommended to
             always be selective on what is to be returned in the event that
-            multiple requests are being multiplexed
+            multiple requests are being multiplexed.
 
         match_type
             Set the function to match the search tag with event tags.
@@ -644,7 +647,8 @@ class SaltEvent(object):
             return ret['data']
 
     def get_event_noblock(self):
-        '''Get the raw event without blocking or any other niceties
+        '''
+        Get the raw event without blocking or any other niceties
         '''
         assert self._run_io_loop_sync
 
@@ -658,8 +662,9 @@ class SaltEvent(object):
         return {'data': data, 'tag': mtag}
 
     def get_event_block(self):
-        '''Get the raw event in a blocking fashion
-           Slower, but decreases the possibility of dropped events
+        '''
+        Get the raw event in a blocking fashion. This is slower, but it decreases the
+        possibility of dropped events.
         '''
         assert self._run_io_loop_sync
 
@@ -690,7 +695,7 @@ class SaltEvent(object):
 
         The default is 1000 ms
         '''
-        if not str(tag):  # no empty tags allowed
+        if not six.text_type(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
 
         if not isinstance(data, MutableMapping):  # data must be dict
@@ -724,15 +729,12 @@ class SaltEvent(object):
             is_msgpacked=True,
             use_bin_type=six.PY3
         )
-        log.debug('Sending event: tag = {0}; data = {1}'.format(tag, data))
-        if six.PY2:
-            event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
-        else:
-            event = b''.join([
-                salt.utils.to_bytes(tag),
-                salt.utils.to_bytes(tagend),
-                serialized_data])
-        msg = salt.utils.to_bytes(event, 'utf-8')
+        log.debug('Sending event: tag = %s; data = %s', tag, data)
+        event = b''.join([
+            salt.utils.stringutils.to_bytes(tag),
+            salt.utils.stringutils.to_bytes(tagend),
+            serialized_data])
+        msg = salt.utils.stringutils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
             with salt.utils.async.current_ioloop(self.io_loop):
                 try:
@@ -949,7 +951,7 @@ class AsyncEventPublisher(object):
         hash_type = getattr(hashlib, self.opts['hash_type'])
         # Only use the first 10 chars to keep longer hashes from exceeding the
         # max socket path length.
-        id_hash = hash_type(salt.utils.to_bytes(self.opts['id'])).hexdigest()[:10]
+        id_hash = hash_type(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()[:10]
         epub_sock_path = os.path.join(
             self.opts['sock_dir'],
             'minion_event_{0}_pub.ipc'.format(id_hash)
@@ -1075,7 +1077,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Bind the pub and pull sockets for events
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         self.io_loop = tornado.ioloop.IOLoop()
         with salt.utils.async.current_ioloop(self.io_loop):
             if self.opts['ipc_mode'] == 'tcp':
@@ -1159,6 +1161,16 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
     '''
+    def __new__(cls, *args, **kwargs):
+        if sys.platform.startswith('win'):
+            # This is required for Windows.  On Linux, when a process is
+            # forked, the module namespace is copied and the current process
+            # gets all of sys.modules from where the fork happens.  This is not
+            # the case for Windows.
+            import salt.minion
+        instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
+        return instance
+
     def __init__(self, opts, log_queue=None):
         '''
         Initialize the EventReturn system
@@ -1230,7 +1242,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Spin up the multiprocess event returner
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         self.event = get_event('master', opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')
@@ -1302,7 +1314,7 @@ class StateFire(object):
             'tag': tag,
             'data': data,
             'cmd': '_minion_event',
-            'tok': self.auth.gen_token('salt'),
+            'tok': self.auth.gen_token(b'salt'),
         })
 
         channel = salt.transport.Channel.factory(self.opts)
@@ -1329,7 +1341,7 @@ class StateFire(object):
             if running[stag]['result'] and not running[stag]['changes']:
                 continue
             tag = 'state_{0}_{1}'.format(
-                str(running[stag]['result']),
+                six.text_type(running[stag]['result']),
                 'True' if running[stag]['changes'] else 'False')
             load['events'].append({
                 'tag': tag,

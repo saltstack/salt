@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-This module is Alpha
-
 Module for working with Windows PowerShell DSC (Desired State Configuration)
+
+This module is Alpha
 
 This module applies DSC Configurations in the form of PowerShell scripts or
 MOF (Managed Object Format) schema files.
@@ -15,16 +15,16 @@ the Minion.
 :depends:
     - PowerShell 5.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
 import logging
-import json
 import os
-import distutils.version  # pylint: disable=no-name-in-module
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.json
+import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logging
@@ -39,16 +39,19 @@ def __virtual__():
     Set the system module of the kernel is Windows
     '''
     # Verify Windows
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
+        log.debug('Module DSC: Only available on Windows systems')
         return False, 'Module DSC: Only available on Windows systems'
 
-    # Verify PowerShell 5.0
+    # Verify PowerShell
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if not powershell_info['installed']:
-        return False, 'Module DSC: PowerShell not available'
+        log.debug('Module DSC: Requires PowerShell')
+        return False, 'Module DSC: Requires PowerShell'
 
-    if distutils.version.StrictVersion(powershell_info['version']) < \
-            distutils.version.StrictVersion('5.0'):
+    # Verify PowerShell 5.0 or greater
+    if salt.utils.versions.compare(powershell_info['version'], '<', '5.0'):
+        log.debug('Module DSC: Requires PowerShell 5 or later')
         return False, 'Module DSC: Requires PowerShell 5 or later'
 
     return __virtualname__
@@ -61,7 +64,7 @@ def _pshell(cmd, cwd=None, json_depth=2):
     '''
     if 'convertto-json' not in cmd.lower():
         cmd = '{0} | ConvertTo-Json -Depth {1}'.format(cmd, json_depth)
-    log.debug('DSC: {0}'.format(cmd))
+    log.debug('DSC: %s', cmd)
     results = __salt__['cmd.run_all'](
         cmd, shell='powershell', cwd=cwd, python_shell=True)
 
@@ -74,7 +77,7 @@ def _pshell(cmd, cwd=None, json_depth=2):
             'Issue executing PowerShell {0}'.format(cmd), info=results)
 
     try:
-        ret = json.loads(results['stdout'], strict=False)
+        ret = salt.utils.json.loads(results['stdout'], strict=False)
     except ValueError:
         raise CommandExecutionError(
             'No JSON results from PowerShell', info=results)
@@ -121,19 +124,19 @@ def run_config(path,
             file containing the proper hash table or the PowerShell code to
             create the hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         config_data_source (str): The path to the ``.psd1`` file on
             ``file_roots`` to cache at the location specified by
             ``config_data``. If this is specified, ``config_data`` must be a
             local path instead of a hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         salt_env (str): The salt environment to use when copying the source.
             Default is 'base'
@@ -203,19 +206,19 @@ def compile_config(path,
             file containing the proper hash table or the PowerShell code to
             create the hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         config_data_source (str): The path to the ``.psd1`` file on
             ``file_roots`` to cache at the location specified by
             ``config_data``. If this is specified, ``config_data`` must be a
             local path instead of a hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         salt_env (str): The salt environment to use when copying the source.
             Default is 'base'
@@ -238,7 +241,7 @@ def compile_config(path,
         salt '*' dsc.compile_config C:\\DSC\\WebsiteConfig.ps1 salt://dsc/configs/WebsiteConfig.ps1
     '''
     if source:
-        log.info('Caching {0}'.format(source))
+        log.info('Caching %s', source)
         cached_files = __salt__['cp.get_file'](path=source,
                                                dest=path,
                                                saltenv=salt_env,
@@ -249,7 +252,7 @@ def compile_config(path,
             raise CommandExecutionError(error)
 
     if config_data_source:
-        log.info('Caching {0}'.format(config_data_source))
+        log.info('Caching %s', config_data_source)
         cached_files = __salt__['cp.get_file'](path=config_data_source,
                                                dest=config_data,
                                                saltenv=salt_env,
@@ -288,7 +291,7 @@ def compile_config(path,
     if ret:
         # Script compiled, return results
         if ret.get('Exists'):
-            log.info('DSC Compile Config: {0}'.format(ret))
+            log.info('DSC Compile Config: %s', ret)
             return ret
 
     # Run the script and run the compile command
@@ -309,12 +312,12 @@ def compile_config(path,
     if ret:
         # Script compiled, return results
         if ret.get('Exists'):
-            log.info('DSC Compile Config: {0}'.format(ret))
+            log.info('DSC Compile Config: %s', ret)
             return ret
 
     error = 'Failed to compile config: {0}'.format(path)
     error += '\nReturned: {0}'.format(ret)
-    log.error('DSC Compile Config: {0}'.format(error))
+    log.error('DSC Compile Config: %s', error)
     raise CommandExecutionError(error)
 
 
@@ -366,11 +369,11 @@ def apply_config(path, source=None, salt_env='base'):
         if path_name.lower() != source_name.lower():
             # Append the Source name to the Path
             path = '{0}\\{1}'.format(path, source_name)
-            log.debug('{0} appended to the path.'.format(source_name))
+            log.debug('%s appended to the path.', source_name)
 
         # Destination path minus the basename
         dest_path = os.path.dirname(os.path.normpath(path))
-        log.info('Caching {0}'.format(source))
+        log.info('Caching %s', source)
         cached_files = __salt__['cp.get_dir'](source, dest_path, salt_env)
         if not cached_files:
             error = 'Failed to copy {0}'.format(source)
@@ -395,7 +398,7 @@ def apply_config(path, source=None, salt_env='base'):
 
     cmd = '$status = Get-DscConfigurationStatus; $status.Status'
     ret = _pshell(cmd)
-    log.info('DSC Apply Config: {0}'.format(ret))
+    log.info('DSC Apply Config: %s', ret)
 
     return ret == 'Success'
 
@@ -639,5 +642,5 @@ def set_lcm_config(config_mode=None,
         log.info('LCM config applied successfully')
         return True
     else:
-        log.error('Failed to apply LCM config. Error {0}'.format(ret))
+        log.error('Failed to apply LCM config. Error %s', ret)
         return False

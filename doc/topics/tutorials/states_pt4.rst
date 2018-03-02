@@ -144,7 +144,7 @@ And finally, the SLS to deploy the website:
 
 ``/srv/salt/prod/webserver/foobarcom.sls:``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if pillar.get('webserver_role', '') %}
     /var/www/foobarcom:

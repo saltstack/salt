@@ -11,14 +11,15 @@ Cassandra NoSQL Database Module
         cassandra.host: localhost
         cassandra.thrift_port: 9160
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
 log = logging.getLogger(__name__)
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
+from salt.ext import six
 
 HAS_PYCASSA = False
 try:
@@ -35,7 +36,7 @@ def __virtual__():
     if not HAS_PYCASSA:
         return (False, 'The cassandra execution module cannot be loaded: pycassa not installed.')
 
-    if HAS_PYCASSA and salt.utils.which('nodetool'):
+    if HAS_PYCASSA and salt.utils.path.which('nodetool'):
         return 'cassandra'
     return (False, 'The cassandra execution module cannot be loaded: nodetool not found.')
 
@@ -54,7 +55,7 @@ def _sys_mgr():
     '''
     Return a pycassa system manager connection object
     '''
-    thrift_port = str(__salt__['config.option']('cassandra.THRIFT_PORT'))
+    thrift_port = six.text_type(__salt__['config.option']('cassandra.THRIFT_PORT'))
     host = __salt__['config.option']('cassandra.host')
     return SystemManager('{0}:{1}'.format(host, thrift_port))
 

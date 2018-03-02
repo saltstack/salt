@@ -77,7 +77,7 @@
             ('x-ordering', ['host', 'port']),
             ('additionalProperties', True)]
         )
-        >>> print(json.dumps(HostConfig.serialize(), indent=2))
+        >>> print(salt.utils.json.dumps(HostConfig.serialize(), indent=2))
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "Host Configuration",
@@ -170,7 +170,7 @@
 
     .. code-block:: python
 
-        >>> print json.dumps(MyConfig.serialize(), indent=4)
+        >>> print salt.utils.json.dumps(MyConfig.serialize(), indent=4)
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "My Config",
@@ -282,7 +282,7 @@
 
     .. code-block:: python
 
-        >>> print(json.dumps(MyConfig, indent=4))
+        >>> print(salt.utils.json.dumps(MyConfig, indent=4))
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "My Config",
@@ -320,7 +320,7 @@
         }
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import inspect
 import textwrap
@@ -328,11 +328,11 @@ import functools
 
 # Import salt libs
 import salt.utils.args
+#import salt.utils.yaml
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
-#import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 BASE_SCHEMA_URL = 'https://non-existing.saltstack.com/schemas'
 RENDER_COMMENT_YAML_MAX_LINE_LENGTH = 80
@@ -515,7 +515,7 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
                 'Please pass all arguments as named arguments. Un-named '
                 'arguments are not supported'
             )
-        for key in kwargs.copy().keys():
+        for key in kwargs.copy():
             # Store the kwarg keys as the instance attributes for the
             # serialization step
             if key == 'name':
@@ -622,16 +622,20 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         if properties:
             serialized['properties'] = properties
 
-        # Update the serialized object with any items to include after properties
+        # Update the serialized object with any items to include after properties.
+        # Do not overwrite properties already existing in the serialized dict.
         if cls.after_items_update:
             after_items_update = {}
             for entry in cls.after_items_update:
-                name, data = next(six.iteritems(entry))
-                if name in after_items_update:
-                    after_items_update[name].extend(data)
-                else:
-                    after_items_update[name] = data
-            serialized.update(after_items_update)
+                for name, data in six.iteritems(entry):
+                    if name in after_items_update:
+                        if isinstance(after_items_update[name], list):
+                            after_items_update[name].extend(data)
+                    else:
+                        after_items_update[name] = data
+            if after_items_update:
+                after_items_update.update(serialized)
+                serialized = after_items_update
 
         if required:
             # Only include required if not empty
@@ -867,7 +871,7 @@ class BaseSchemaItem(SchemaItem):
     #                                          width=RENDER_COMMENT_YAML_MAX_LINE_LENGTH,
     #                                          initial_indent='# '))
     #        output += '\n'
-    #        yamled_default_value = yaml.dump(self.default, default_flow_style=False).split('\n...', 1)[0]
+    #        yamled_default_value = salt.utils.yaml.safe_dump(self.default, default_flow_style=False).split('\n...', 1)[0]
     #        output += '# Default: {0}\n'.format(yamled_default_value)
     #        output += '#{0}: {1}\n'.format(name, yamled_default_value)
     #    output += '# <---- '
@@ -1537,7 +1541,7 @@ class DefinitionsSchema(Schema):
     '''
     .. versionadded:: 2016.11.0
 
-    JSON schema classs that supports ComplexSchemaItem objects by adding
+    JSON schema class that supports ComplexSchemaItem objects by adding
     a definitions section to the JSON schema, containing the item definitions.
 
     All references to ComplexSchemaItems are built using schema inline
@@ -1551,6 +1555,11 @@ class DefinitionsSchema(Schema):
         complex_items = []
         # Augment the serializations with the definitions of all complex items
         aux_items = cls._items.values()
+
+        # Convert dict_view object to a list on Python 3
+        if six.PY3:
+            aux_items = list(aux_items)
+
         while aux_items:
             item = aux_items.pop(0)
             # Add complex attributes

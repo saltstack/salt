@@ -58,7 +58,7 @@ Unfortunately, it can lead to code that looks like the following.
     {% endfor %}
 
 This is an example from the author's salt formulae demonstrating misuse of jinja.
-Aside from being difficult to read and maintian,
+Aside from being difficult to read and maintain,
 accessing the logic it contains from a non-jinja renderer
 while probably possible is a significant barrier!
 
@@ -158,6 +158,6 @@ Conclusion
 ----------
 
 That was... surprisingly straight-forward.
-Now the logic is now available in every renderer, instead of just Jinja.
+Now the logic is available in every renderer, instead of just Jinja.
 Best of all, it can be maintained in Python,
 which is a whole lot easier than Jinja.

@@ -4,13 +4,10 @@ Commands for working with travisci.
 
 :depends: pyOpenSSL >= 16.0.0
 '''
-from __future__ import absolute_import
 
 # Import python libraries
+from __future__ import absolute_import, unicode_literals, print_function
 import base64
-import distutils.version  # pylint: disable=import-error,no-name-in-module
-import json
-
 
 try:
     import OpenSSL
@@ -20,7 +17,13 @@ except ImportError:
     HAS_OPENSSL = False
 
 # Import Salt libraries
+import salt.utils.json
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext.six.moves.urllib.parse import parse_qs  # pylint: disable=import-error,no-name-in-module
+
+# Import 3rd party libraries
+from salt.ext import six
+
 
 OPENSSL_MIN_VER = '16.0.0'
 __virtualname__ = 'travisci'
@@ -29,8 +32,8 @@ __virtualname__ = 'travisci'
 def __virtual__():
     if HAS_OPENSSL is False:
         return (False, 'The travisci module was unable to be loaded: Install pyOpenssl >= {0}'.format(OPENSSL_MIN_VER))
-    cur_version = distutils.version.LooseVersion(OpenSSL.__version__)
-    min_version = distutils.version.LooseVersion(OPENSSL_MIN_VER)
+    cur_version = _LooseVersion(OpenSSL.__version__)
+    min_version = _LooseVersion(OPENSSL_MIN_VER)
     if cur_version < min_version:
         return (False, 'The travisci module was unable to be loaded: Install pyOpenssl >= {0}'.format(OPENSSL_MIN_VER))
     return __virtualname__
@@ -65,10 +68,10 @@ def verify_webhook(signature, body):
     signature = base64.b64decode(signature)
 
     # parse the urlencoded payload from travis
-    payload = json.loads(parse_qs(body)['payload'][0])
+    payload = salt.utils.json.loads(parse_qs(body)['payload'][0])
 
     try:
-        OpenSSL.crypto.verify(certificate, signature, payload, str('sha1'))
+        OpenSSL.crypto.verify(certificate, signature, payload, six.text_type('sha1'))
     except OpenSSL.crypto.Error:
         return False
     return True

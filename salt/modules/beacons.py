@@ -7,15 +7,16 @@ Module for managing the Salt beacons on a minion
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import difflib
 import logging
 import os
-import yaml
 
 # Import Salt libs
-import salt.utils
+import salt.ext.six as six
 import salt.utils.event
+import salt.utils.files
+import salt.utils.yaml
 from salt.ext.six.moves import map
 
 # Get logging started
@@ -27,12 +28,22 @@ __func_alias__ = {
 }
 
 
-def list_(return_yaml=True):
+def list_(return_yaml=True,
+          include_pillar=True,
+          include_opts=True):
     '''
     List the beacons currently configured on the minion
 
-    :param return_yaml:     Whether to return YAML formatted output, default True
-    :return:                List of currently configured Beacons.
+    :param return_yaml:    Whether to return YAML formatted output,
+                           default True
+
+    :param include_pillar: Whether to include beacons that are
+                           configured in pillar, default is True.
+
+    :param include_opts:   Whether to include beacons that are
+                           configured in opts, default is True.
+
+    :return:               List of currently configured Beacons.
 
     CLI Example:
 
@@ -45,10 +56,13 @@ def list_(return_yaml=True):
 
     try:
         eventer = salt.utils.event.get_event('minion', opts=__opts__)
-        res = __salt__['event.fire']({'func': 'list'}, 'manage_beacons')
+        res = __salt__['event.fire']({'func': 'list',
+                                      'include_pillar': include_pillar,
+                                      'include_opts': include_opts},
+                                     'manage_beacons')
         if res:
             event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_list_complete', wait=30)
-            log.debug('event_ret {0}'.format(event_ret))
+            log.debug('event_ret %s', event_ret)
             if event_ret and event_ret['complete']:
                 beacons = event_ret['beacons']
     except KeyError:
@@ -61,8 +75,47 @@ def list_(return_yaml=True):
     if beacons:
         if return_yaml:
             tmp = {'beacons': beacons}
-            yaml_out = yaml.safe_dump(tmp, default_flow_style=False)
-            return yaml_out
+            return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
+        else:
+            return beacons
+    else:
+        return {'beacons': {}}
+
+
+def list_available(return_yaml=True):
+    '''
+    List the beacons currently available on the minion
+
+    :param return_yaml:     Whether to return YAML formatted output, default True
+    :return:                List of currently configured Beacons.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' beacons.list_available
+
+    '''
+    beacons = None
+
+    try:
+        eventer = salt.utils.event.get_event('minion', opts=__opts__)
+        res = __salt__['event.fire']({'func': 'list_available'}, 'manage_beacons')
+        if res:
+            event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_list_available_complete', wait=30)
+            if event_ret and event_ret['complete']:
+                beacons = event_ret['beacons']
+    except KeyError:
+        # Effectively a no-op, since we can't really return without an event system
+        ret = {}
+        ret['result'] = False
+        ret['comment'] = 'Event module not available. Beacon add failed.'
+        return ret
+
+    if beacons:
+        if return_yaml:
+            tmp = {'beacons': beacons}
+            return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
         else:
             return beacons
     else:
@@ -81,7 +134,7 @@ def add(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacons.add ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
+        salt '*' beacons.add ps "[{'salt-master': 'stopped', 'apache2': 'stopped'}]"
 
     '''
     ret = {'comment': 'Failed to add beacon {0}.'.format(name),
@@ -91,38 +144,40 @@ def add(name, beacon_data, **kwargs):
         ret['comment'] = 'Beacon {0} is already configured.'.format(name)
         return ret
 
+    if name not in list_available(return_yaml=False):
+        ret['comment'] = 'Beacon "{0}" is not available.'.format(name)
+        return ret
+
     if 'test' in kwargs and kwargs['test']:
         ret['result'] = True
         ret['comment'] = 'Beacon: {0} would be added.'.format(name)
     else:
-        # Attempt to load the beacon module so we have access to the validate function
         try:
-            beacon_module = __import__('salt.beacons.' + name, fromlist=['validate'])
-            log.debug('Successfully imported beacon.')
-        except ImportError:
-            ret['comment'] = 'Beacon {0} does not exist'.format(name)
-            return ret
-
-        # Attempt to validate
-        if hasattr(beacon_module, 'validate'):
-            _beacon_data = beacon_data
-            if 'enabled' in _beacon_data:
-                del _beacon_data['enabled']
-            valid, vcomment = beacon_module.validate(_beacon_data)
-        else:
-            log.info('Beacon {0} does not have a validate'
-                     ' function,  skipping validation.'.format(name))
-            valid = True
-
-        if not valid:
-            ret['result'] = False
-            ret['comment'] = ('Beacon {0} configuration invalid, '
-                              'not adding.\n{1}'.format(name, vcomment))
-            return ret
-
-        try:
+            # Attempt to load the beacon module so we have access to the validate function
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire']({'name': name, 'beacon_data': beacon_data, 'func': 'add'}, 'manage_beacons')
+            res = __salt__['event.fire']({'name': name,
+                                          'beacon_data': beacon_data,
+                                          'func': 'validate_beacon'},
+                                         'manage_beacons')
+            if res:
+                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_validation_complete', wait=30)
+                valid = event_ret['valid']
+                vcomment = event_ret['vcomment']
+
+            if not valid:
+                ret['result'] = False
+                ret['comment'] = ('Beacon {0} configuration invalid, '
+                                  'not adding.\n{1}'.format(name, vcomment))
+                return ret
+
+        except KeyError:
+            # Effectively a no-op, since we can't really return without an event system
+            ret['comment'] = 'Event module not available. Beacon add failed.'
+
+        try:
+            res = __salt__['event.fire']({'name': name,
+                                          'beacon_data': beacon_data,
+                                          'func': 'add'}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_add_complete', wait=30)
                 if event_ret and event_ret['complete']:
@@ -130,7 +185,10 @@ def add(name, beacon_data, **kwargs):
                     if name in beacons and beacons[name] == beacon_data:
                         ret['result'] = True
                         ret['comment'] = 'Added beacon: {0}.'.format(name)
-                        return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon add failed.'
@@ -149,7 +207,7 @@ def modify(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacons.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
+        salt '*' beacons.modify ps "[{'salt-master': 'stopped', 'apache2': 'stopped'}]"
     '''
 
     ret = {'comment': '',
@@ -164,29 +222,32 @@ def modify(name, beacon_data, **kwargs):
         ret['result'] = True
         ret['comment'] = 'Beacon: {0} would be added.'.format(name)
     else:
-        # Attempt to load the beacon module so we have access to the validate function
         try:
-            beacon_module = __import__('salt.beacons.' + name, fromlist=['validate'])
-            log.debug('Successfully imported beacon.')
-        except ImportError:
-            ret['comment'] = 'Beacon {0} does not exist'.format(name)
-            return ret
+            # Attempt to load the beacon module so we have access to the validate function
+            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            res = __salt__['event.fire']({'name': name,
+                                          'beacon_data': beacon_data,
+                                          'func': 'validate_beacon'},
+                                         'manage_beacons')
+            if res:
+                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_validation_complete', wait=30)
+                valid = event_ret['valid']
+                vcomment = event_ret['vcomment']
 
-        # Attempt to validate
-        if hasattr(beacon_module, 'validate'):
-            _beacon_data = beacon_data
-            if 'enabled' in _beacon_data:
-                del _beacon_data['enabled']
-            valid, vcomment = beacon_module.validate(_beacon_data)
-        else:
-            log.info('Beacon {0} does not have a validate'
-                     ' function,  skipping validation.'.format(name))
-            valid = True
+            if not valid:
+                ret['result'] = False
+                ret['comment'] = ('Beacon {0} configuration invalid, '
+                                  'not adding.\n{1}'.format(name, vcomment))
+                return ret
+
+        except KeyError:
+            # Effectively a no-op, since we can't really return without an event system
+            ret['comment'] = 'Event module not available. Beacon modify failed.'
 
         if not valid:
             ret['result'] = False
             ret['comment'] = ('Beacon {0} configuration invalid, '
-                              'not adding.\n{1}'.format(name, vcomment))
+                              'not modifying.\n{1}'.format(name, vcomment))
             return ret
 
         _current = current_beacons[name]
@@ -196,10 +257,14 @@ def modify(name, beacon_data, **kwargs):
             ret['comment'] = 'Job {0} in correct state'.format(name)
             return ret
 
-        _current_lines = ['{0}:{1}\n'.format(key, value)
-                          for (key, value) in sorted(_current.items())]
-        _new_lines = ['{0}:{1}\n'.format(key, value)
-                      for (key, value) in sorted(_new.items())]
+        _current_lines = []
+        for _item in _current:
+            _current_lines.extend(['{0}:{1}\n'.format(key, value)
+                                  for (key, value) in six.iteritems(_item)])
+        _new_lines = []
+        for _item in _new:
+            _new_lines.extend(['{0}:{1}\n'.format(key, value)
+                              for (key, value) in six.iteritems(_item)])
         _diff = difflib.unified_diff(_current_lines, _new_lines)
 
         ret['changes'] = {}
@@ -215,7 +280,10 @@ def modify(name, beacon_data, **kwargs):
                     if name in beacons and beacons[name] == beacon_data:
                         ret['result'] = True
                         ret['comment'] = 'Modified beacon: {0}.'.format(name)
-                        return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon add failed.'
@@ -257,6 +325,9 @@ def delete(name, **kwargs):
                         ret['result'] = True
                         ret['comment'] = 'Deleted beacon: {0}.'.format(name)
                         return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon add failed.'
@@ -279,19 +350,20 @@ def save():
     ret = {'comment': [],
            'result': True}
 
-    beacons = list_(return_yaml=False)
+    beacons = list_(return_yaml=False, include_pillar=False)
 
     # move this file into an configurable opt
-    sfn = '{0}/{1}/beacons.conf'.format(__opts__['config_dir'],
-                                        os.path.dirname(__opts__['default_include']))
+    sfn = os.path.join(__opts__['config_dir'],
+                       os.path.dirname(__opts__['default_include']),
+                       'beacons.conf')
     if beacons:
         tmp = {'beacons': beacons}
-        yaml_out = yaml.safe_dump(tmp, default_flow_style=False)
+        yaml_out = salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
     else:
         yaml_out = ''
 
     try:
-        with salt.utils.fopen(sfn, 'w+') as fp_:
+        with salt.utils.files.fopen(sfn, 'w+') as fp_:
             fp_.write(yaml_out)
         ret['comment'] = 'Beacons saved to {0}.'.format(sfn)
     except (IOError, OSError):
@@ -332,7 +404,7 @@ def enable(**kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enable beacons on minion.'
-                    return ret
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacons enable job failed.'
@@ -363,7 +435,7 @@ def disable(**kwargs):
             res = __salt__['event.fire']({'func': 'disable'}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_disabled_complete', wait=30)
-                log.debug('event_ret {0}'.format(event_ret))
+                log.debug('event_ret %s', event_ret)
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if 'enabled' in beacons and not beacons['enabled']:
@@ -372,7 +444,7 @@ def disable(**kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to disable beacons on minion.'
-                    return ret
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacons enable job failed.'
@@ -435,7 +507,10 @@ def enable_beacon(name, **kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enable beacon {0} on minion.'.format(name)
-                    return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon enable job failed.'
@@ -488,7 +563,10 @@ def disable_beacon(name, **kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to disable beacon on minion.'
-                    return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon disable job failed.'

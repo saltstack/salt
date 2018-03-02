@@ -14,8 +14,12 @@ Support for htpasswd module. Requires the apache2-utils package for Debian-based
         - force: true
 
 '''
-from __future__ import absolute_import
-import salt.utils
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+import salt.utils.path
 
 
 __virtualname__ = 'webutil'
@@ -26,7 +30,7 @@ def __virtual__():
     depends on webutil module
     '''
 
-    return __virtualname__ if salt.utils.which('htpasswd') else False
+    return __virtualname__ if salt.utils.path.which('htpasswd') else False
 
 
 def user_exists(name, password=None, htpasswd_file=None, options='',
@@ -75,8 +79,7 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
     if not exists or password_changed or force:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('User \'{0}\' is set to be added to htpasswd '
-                              'file').format(name)
+            ret['comment'] = 'User \'{0}\' is set to be added to htpasswd file'.format(name)
             ret['changes'] = {name: True}
             return ret
 
@@ -132,8 +135,7 @@ def user_absent(name, htpasswd_file=None, runas=None):
     else:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('User \'{0}\' is set to be removed from htpasswd '
-                              'file').format(name)
+            ret['comment'] = 'User \'{0}\' is set to be removed from htpasswd file'.format(name)
             ret['changes'] = {name: True}
         else:
             userdel_ret = __salt__['webutil.userdel'](

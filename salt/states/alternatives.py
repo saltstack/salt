@@ -26,6 +26,7 @@ Control the alternatives system
       - path: {{ my_hadoop_conf }}
 
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
@@ -224,7 +225,7 @@ def set_(name, path):
         if __opts__['test']:
             ret['comment'] = (
                 'Alternative for {0} will be set to path {1}'
-            ).format(name, current)
+            ).format(name, path)
             ret['result'] = None
             return ret
         __salt__['alternatives.set'](name, path)

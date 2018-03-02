@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
 Module for managing logrotate.
+
+.. versionadded:: 2017.7.0
+
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
+# Import Salt libs
+from salt.ext import six
 
 _DEFAULT_CONF = '/etc/logrotate.conf'
 
@@ -37,7 +42,7 @@ def _convert_if_int(value):
     :rtype: bool|int|str
     '''
     try:
-        value = int(str(value))
+        value = int(six.text_type(value))
     except ValueError:
         pass
     return value
@@ -74,7 +79,7 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
     '''
     ret = {'name': name,
            'changes': dict(),
-           'comment': str(),
+           'comment': six.text_type(),
            'result': None}
 
     try:

@@ -3,8 +3,13 @@
 Management of Influxdb continuous queries
 =========================================
 
+.. versionadded:: 2017.7.0
+
 (compatible with InfluxDB version 0.9+)
 '''
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -16,7 +21,7 @@ def __virtual__():
     return False
 
 
-def present(name, database, query, **client_args):
+def present(name, database, query, resample_time=None, coverage_period=None, **client_args):
     '''
     Ensure that given continuous query is present.
 
@@ -28,6 +33,12 @@ def present(name, database, query, **client_args):
 
     query
         The query content
+
+    resample_time : None
+        Duration between continuous query resampling.
+
+    coverage_period : None
+        Duration specifying time period per sample.
     '''
     ret = {'name': name,
            'changes': {},
@@ -43,7 +54,7 @@ def present(name, database, query, **client_args):
                 .format(name)
             return ret
         if __salt__['influxdb.create_continuous_query'](
-            database, name, query
+            database, name, query, resample_time, coverage_period
         ):
             ret['comment'] = 'continuous query {0} has been created'\
                 .format(name)

@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
 import logging
+import random
 
 # Import Salt libs
 import salt.config
+import salt.utils.versions
 import salt.syspaths as syspaths
 from salt.exceptions import SaltClientError  # Temporary
 
@@ -29,10 +31,9 @@ class SSHClient(object):
         else:
             if os.path.isdir(c_path):
                 log.warning(
-                    '{0} expects a file path not a directory path({1}) to '
-                    'it\'s \'c_path\' keyword argument'.format(
-                        self.__class__.__name__, c_path
-                    )
+                    '%s expects a file path not a directory path(%s) to '
+                    'its \'c_path\' keyword argument',
+                    self.__class__.__name__, c_path
                 )
             self.opts = salt.config.client_config(c_path)
 
@@ -52,7 +53,7 @@ class SSHClient(object):
         Prepare the arguments
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -88,7 +89,7 @@ class SSHClient(object):
         .. versionadded:: 2015.5.0
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -122,7 +123,7 @@ class SSHClient(object):
         .. versionadded:: 2015.5.0
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -196,3 +197,53 @@ class SSHClient(object):
         '''
         # TODO Not implemented
         raise SaltClientError
+
+    def cmd_subset(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            tgt_type='glob',
+            ret='',
+            kwarg=None,
+            sub=3,
+            **kwargs):
+        '''
+        Execute a command on a random subset of the targeted systems
+
+        The function signature is the same as :py:meth:`cmd` with the
+        following exceptions.
+
+        :param sub: The number of systems to execute on
+
+        .. code-block:: python
+
+            >>> import salt.client.ssh.client
+            >>> sshclient= salt.client.ssh.client.SSHClient()
+            >>> sshclient.cmd_subset('*', 'test.ping', sub=1)
+            {'jerry': True}
+
+        .. versionadded:: 2017.7.0
+        '''
+        if 'expr_form' in kwargs:
+            salt.utils.versions.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+        minion_ret = self.cmd(tgt,
+                              'sys.list_functions',
+                              tgt_type=tgt_type,
+                              **kwargs)
+        minions = list(minion_ret)
+        random.shuffle(minions)
+        f_tgt = []
+        for minion in minions:
+            if fun in minion_ret[minion]['return']:
+                f_tgt.append(minion)
+            if len(f_tgt) >= sub:
+                break
+        return self.cmd_iter(f_tgt, fun, arg, timeout, tgt_type='list', ret=ret, kwarg=kwarg, **kwargs)

@@ -2,7 +2,7 @@
 '''
 Directly manage the Salt fileserver plugins
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.fileserver
@@ -36,7 +36,7 @@ def envs(backend=None, sources=False):
         salt-run fileserver.envs git
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
-    return fileserver.envs(back=backend, sources=sources)
+    return sorted(fileserver.envs(back=backend, sources=sources))
 
 
 def clear_file_list_cache(saltenv=None, backend=None):

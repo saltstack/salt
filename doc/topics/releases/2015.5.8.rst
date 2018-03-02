@@ -242,7 +242,9 @@ Changes:
 
 - **PR** `#27568`_: (*jacobhammons*) regenerated man pages
 
+.. _`#19673`: https://github.com/saltstack/salt/issues/19673
 .. _`#25521`: https://github.com/saltstack/salt/pull/25521
+.. _`#25775`: https://github.com/saltstack/salt/issues/25775
 .. _`#25928`: https://github.com/saltstack/salt/pull/25928
 .. _`#27201`: https://github.com/saltstack/salt/pull/27201
 .. _`#27286`: https://github.com/saltstack/salt/pull/27286
@@ -321,6 +323,7 @@ Changes:
 .. _`#28358`: https://github.com/saltstack/salt/pull/28358
 .. _`#28359`: https://github.com/saltstack/salt/pull/28359
 .. _`#28366`: https://github.com/saltstack/salt/pull/28366
+.. _`#28372`: https://github.com/saltstack/salt/issues/28372
 .. _`#28373`: https://github.com/saltstack/salt/pull/28373
 .. _`#28381`: https://github.com/saltstack/salt/pull/28381
 .. _`#28400`: https://github.com/saltstack/salt/pull/28400
@@ -366,6 +369,7 @@ Changes:
 .. _`#28760`: https://github.com/saltstack/salt/pull/28760
 .. _`#28776`: https://github.com/saltstack/salt/pull/28776
 .. _`#28777`: https://github.com/saltstack/salt/pull/28777
+.. _`#28783`: https://github.com/saltstack/salt/issues/28783
 .. _`#28786`: https://github.com/saltstack/salt/pull/28786
 .. _`#28826`: https://github.com/saltstack/salt/pull/28826
 .. _`#28829`: https://github.com/saltstack/salt/pull/28829

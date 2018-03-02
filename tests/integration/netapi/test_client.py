@@ -1,12 +1,12 @@
 # encoding: utf-8
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
-from integration import TMP_CONF_DIR
-from salttesting import TestCase
+from tests.support.unit import TestCase
+from tests.support.paths import TMP_CONF_DIR
 
 # Import Salt libs
 import salt.config
@@ -27,12 +27,15 @@ class NetapiClientTest(TestCase):
         opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, 'master'))
         self.netapi = salt.netapi.NetapiClient(opts)
 
+    def tearDown(self):
+        del self.netapi
+
     def test_local(self):
         low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping'}
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
-        self.assertEqual(ret, {'minion': True, 'sub_minion': True})
+        self.assertEqual(ret, {'minion': True, 'sub_minion': True, 'localhost': True})
 
     def test_local_async(self):
         low = {'client': 'local_async', 'tgt': '*', 'fun': 'test.ping'}
@@ -44,7 +47,7 @@ class NetapiClientTest(TestCase):
         self.assertIn('jid', ret)
         ret.pop('jid', None)
         ret['minions'] = sorted(ret['minions'])
-        self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
+        self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion', 'localhost'])})
 
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
@@ -93,8 +96,3 @@ class NetapiClientTest(TestCase):
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NetapiClientTest, needs_daemon=True)

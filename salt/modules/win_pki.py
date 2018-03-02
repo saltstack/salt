@@ -1,22 +1,35 @@
 # -*- coding: utf-8 -*-
 '''
-Microsoft certificate management via the Pki PowerShell module.
+Microsoft certificate management via the PKI Client PowerShell module.
+https://technet.microsoft.com/en-us/itpro/powershell/windows/pkiclient/pkiclient
+
+The PKI Client PowerShell module is only available on Windows 8+ and Windows
+Server 2012+.
+https://technet.microsoft.com/en-us/library/hh848636(v=wps.620).aspx
 
 :platform:      Windows
 
+:depends:
+    - PowerShell 4
+    - PKI Client Module (Windows 8+ / Windows Server 2012+)
+
 .. versionadded:: 2016.11.0
 '''
-# Import python libs
-from __future__ import absolute_import
-import json
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
+import ast
 import logging
+import os
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
-import ast
-import os
-import salt.utils
+import salt.utils.json
+import salt.utils.platform
 import salt.utils.powershell
+import salt.utils.versions
+from salt.exceptions import SaltInvocationError
+
+# Import 3rd party libs
+from salt.ext import six
 
 _DEFAULT_CONTEXT = 'LocalMachine'
 _DEFAULT_FORMAT = 'cer'
@@ -29,10 +42,16 @@ __virtualname__ = 'win_pki'
 
 def __virtual__():
     '''
-    Only works on Windows systems with the PKI PowerShell module installed.
+    Requires Windows
+    Requires Windows 8+ / Windows Server 2012+
+    Requires PowerShell
+    Requires PKI Client PowerShell module installed.
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Only available on Windows Systems'
+
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '6.2.9200') == -1:
+        return False, 'Only available on Windows 8+ / Windows Server 2012 +'
 
     if not __salt__['cmd.shell_info']('powershell')['installed']:
         return False, 'Powershell not available'
@@ -56,7 +75,7 @@ def _cmd_run(cmd, as_json=False):
     else:
         cmd_full.append(cmd)
     cmd_ret = __salt__['cmd.run_all'](
-        str().join(cmd_full), shell='powershell', python_shell=True)
+        six.text_type().join(cmd_full), shell='powershell', python_shell=True)
 
     if cmd_ret['retcode'] != 0:
         _LOG.error('Unable to execute command: %s\nError: %s', cmd,
@@ -64,7 +83,7 @@ def _cmd_run(cmd, as_json=False):
 
     if as_json:
         try:
-            items = json.loads(cmd_ret['stdout'], strict=False)
+            items = salt.utils.json.loads(cmd_ret['stdout'], strict=False)
             return items
         except ValueError:
             _LOG.error('Unable to parse return data as Json.')
@@ -147,7 +166,7 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
     cmd.append(r"Get-ChildItem -Path '{0}' | Select-Object".format(store_path))
     cmd.append(' DnsNameList, SerialNumber, Subject, Thumbprint, Version')
 
-    items = _cmd_run(cmd=str().join(cmd), as_json=True)
+    items = _cmd_run(cmd=six.text_type().join(cmd), as_json=True)
 
     for item in items:
         cert_info = dict()
@@ -155,18 +174,25 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
             if key not in blacklist_keys:
                 cert_info[key.lower()] = item[key]
 
-        cert_info['dnsnames'] = [name['Unicode'] for name in item['DnsNameList']]
+        names = item.get('DnsNameList', None)
+        if isinstance(names, list):
+            cert_info['dnsnames'] = [name.get('Unicode') for name in names]
+        else:
+            cert_info['dnsnames'] = []
         ret[item['Thumbprint']] = cert_info
     return ret
 
 
-def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
+def get_cert_file(name, cert_format=_DEFAULT_FORMAT, password=''):
     '''
     Get the details of the certificate file.
 
     :param str name: The filesystem path of the certificate file.
     :param str cert_format: The certificate format. Specify 'cer' for X.509, or
         'pfx' for PKCS #12.
+    :param str password: The password of the certificate. Only applicable to pfx
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
 
     :return: A dictionary of the certificate thumbprints and properties.
     :rtype: dict
@@ -189,9 +215,18 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
         return ret
 
     if cert_format == 'pfx':
-        cmd.append(r"Get-PfxCertificate -FilePath '{0}'".format(name))
-        cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
-                   'Thumbprint, Version')
+        if password:
+            cmd.append('$CertObject = New-Object')
+            cmd.append(' System.Security.Cryptography.X509Certificates.X509Certificate2;')
+            cmd.append(r" $CertObject.Import('{0}'".format(name))
+            cmd.append(",'{0}'".format(password))
+            cmd.append(",'DefaultKeySet') ; $CertObject")
+            cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
+                    'Thumbprint, Version')
+        else:
+            cmd.append(r"Get-PfxCertificate -FilePath '{0}'".format(name))
+            cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
+                    'Thumbprint, Version')
     else:
         cmd.append('$CertObject = New-Object')
         cmd.append(' System.Security.Cryptography.X509Certificates.X509Certificate2;')
@@ -199,7 +234,7 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
         cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
                    'Thumbprint, Version')
 
-    items = _cmd_run(cmd=str().join(cmd), as_json=True)
+    items = _cmd_run(cmd=six.text_type().join(cmd), as_json=True)
 
     for item in items:
         for key in item:
@@ -233,7 +268,8 @@ def import_cert(name,
     :param bool exportable: Mark the certificate as exportable. Only applicable
         to pfx format.
     :param str password: The password of the certificate. Only applicable to pfx
-        format.
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
     :param str saltenv: The environment the file resides in.
 
     :return: A boolean representing whether all changes succeeded.
@@ -258,7 +294,10 @@ def import_cert(name,
         _LOG.error('Unable to get cached copy of file: %s', name)
         return False
 
-    cert_props = get_cert_file(name=cached_source_path)
+    if password:
+        cert_props = get_cert_file(name=cached_source_path, cert_format=cert_format, password=password)
+    else:
+        cert_props = get_cert_file(name=cached_source_path, cert_format=cert_format)
 
     current_certs = get_certs(context=context, store=store)
 
@@ -290,7 +329,7 @@ def import_cert(name,
                    r"-FilePath '{0}'".format(cached_source_path))
         cmd.append(r" -CertStoreLocation '{0}'".format(store_path))
 
-    _cmd_run(cmd=str().join(cmd))
+    _cmd_run(cmd=six.text_type().join(cmd))
 
     new_certs = get_certs(context=context, store=store)
 
@@ -321,7 +360,8 @@ def export_cert(name,
     :param str context: The name of the certificate store location context.
     :param str store: The name of the certificate store.
     :param str password: The password of the certificate. Only applicable to pfx
-        format.
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
 
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
@@ -360,7 +400,7 @@ def export_cert(name,
 
     cmd.append(r" | Out-Null; Test-Path -Path '{0}'".format(name))
 
-    ret = ast.literal_eval(_cmd_run(cmd=str().join(cmd)))
+    ret = ast.literal_eval(_cmd_run(cmd=six.text_type().join(cmd)))
 
     if ret:
         _LOG.debug('Certificate exported successfully: %s', name)
@@ -413,7 +453,7 @@ def test_cert(thumbprint,
 
     cmd.append(' -ErrorAction SilentlyContinue')
 
-    return ast.literal_eval(_cmd_run(cmd=str().join(cmd)))
+    return ast.literal_eval(_cmd_run(cmd=six.text_type().join(cmd)))
 
 
 def remove_cert(thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):

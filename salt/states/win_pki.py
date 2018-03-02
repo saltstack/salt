@@ -8,11 +8,14 @@ Microsoft certificate management via the Pki PowerShell module.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 _DEFAULT_CONTEXT = 'LocalMachine'
 _DEFAULT_FORMAT = 'cer'
 _DEFAULT_STORE = 'My'
+
+# import 3rd party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -61,14 +64,17 @@ def import_cert(name, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_CONTEXT, sto
     '''
     ret = {'name': name,
            'changes': dict(),
-           'comment': str(),
+           'comment': six.text_type(),
            'result': None}
 
     store_path = r'Cert:\{0}\{1}'.format(context, store)
 
     cached_source_path = __salt__['cp.cache_file'](name, saltenv)
     current_certs = __salt__['win_pki.get_certs'](context=context, store=store)
-    cert_props = __salt__['win_pki.get_cert_file'](name=cached_source_path)
+    if password:
+        cert_props = __salt__['win_pki.get_cert_file'](name=cached_source_path, cert_format=cert_format, password=password)
+    else:
+        cert_props = __salt__['win_pki.get_cert_file'](name=cached_source_path, cert_format=cert_format)
 
     if cert_props['thumbprint'] in current_certs:
         ret['comment'] = ("Certificate '{0}' already contained in store:"
@@ -123,7 +129,7 @@ def remove_cert(name, thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE
     '''
     ret = {'name': name,
            'changes': dict(),
-           'comment': str(),
+           'comment': six.text_type(),
            'result': None}
 
     store_path = r'Cert:\{0}\{1}'.format(context, store)

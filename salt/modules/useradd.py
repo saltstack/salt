@@ -8,7 +8,7 @@ Manage users with the useradd command
     *'user.info' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import pwd
@@ -19,11 +19,15 @@ import logging
 import copy
 
 # Import salt libs
-import salt.utils
-import salt.utils.decorators as decorators
-from salt.ext import six
+import salt.utils.files
+import salt.utils.decorators.path
+import salt.utils.locales
+import salt.utils.stringutils
+import salt.utils.user
 from salt.exceptions import CommandExecutionError
-from salt.utils import locales
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -33,29 +37,40 @@ __virtualname__ = 'user'
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux, OpenBSD or NetBSD
+    Set the user module if the kernel is Linux, OpenBSD, NetBSD or AIX
     '''
 
-    if HAS_PWD and __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD'):
+    if HAS_PWD and __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD', 'AIX'):
         return __virtualname__
-    return (False, 'useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD or NetBSD')
+    return (False, 'useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD, NetBSD or AIX')
+
+
+def _quote_username(name):
+    '''
+    Usernames can only contain ascii chars, so make sure we return a str type
+    '''
+    if not isinstance(name, six.string_types):
+        return str(name)  # future lint: disable=blacklisted-function
+    else:
+        return salt.utils.stringutils.to_str(name)
 
 
 def _get_gecos(name):
     '''
     Retrieve GECOS field info and return it in dictionary form
     '''
-    gecos_field = pwd.getpwnam(name).pw_gecos.split(',', 3)
+    gecos_field = salt.utils.stringutils.to_unicode(
+        pwd.getpwnam(_quote_username(name)).pw_gecos).split(',', 3)
     if not gecos_field:
         return {}
     else:
         # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4:
             gecos_field.append('')
-        return {'fullname': locales.sdecode(gecos_field[0]),
-                'roomnumber': locales.sdecode(gecos_field[1]),
-                'workphone': locales.sdecode(gecos_field[2]),
-                'homephone': locales.sdecode(gecos_field[3])}
+        return {'fullname': salt.utils.locales.sdecode(gecos_field[0]),
+                'roomnumber': salt.utils.locales.sdecode(gecos_field[1]),
+                'workphone': salt.utils.locales.sdecode(gecos_field[2]),
+                'homephone': salt.utils.locales.sdecode(gecos_field[3])}
 
 
 def _build_gecos(gecos_dict):
@@ -63,7 +78,7 @@ def _build_gecos(gecos_dict):
     Accepts a dictionary entry containing GECOS field names and their values,
     and returns a full GECOS comment string, to be used with usermod.
     '''
-    return u'{0},{1},{2},{3}'.format(gecos_dict.get('fullname', ''),
+    return '{0},{1},{2},{3}'.format(gecos_dict.get('fullname', ''),
                                     gecos_dict.get('roomnumber', ''),
                                     gecos_dict.get('workphone', ''),
                                     gecos_dict.get('homephone', ''))
@@ -76,7 +91,9 @@ def _update_gecos(name, key, value, root=None):
     if value is None:
         value = ''
     elif not isinstance(value, six.string_types):
-        value = str(value)
+        value = six.text_type(value)
+    else:
+        value = salt.utils.stringutils.to_unicode(value)
     pre_info = _get_gecos(name)
     if not pre_info:
         return False
@@ -87,7 +104,7 @@ def _update_gecos(name, key, value, root=None):
 
     cmd = ['usermod', '-c', _build_gecos(gecos_data), name]
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     __salt__['cmd.run'](cmd, python_shell=False)
@@ -109,7 +126,8 @@ def add(name,
         homephone='',
         createhome=True,
         loginclass=None,
-        root=None):
+        root=None,
+        nologinit=False):
     '''
     Add a user to the minion
 
@@ -123,21 +141,22 @@ def add(name,
     if shell:
         cmd.extend(['-s', shell])
     if uid not in (None, ''):
-        cmd.extend(['-u', str(uid)])
+        cmd.extend(['-u', uid])
     if gid not in (None, ''):
-        cmd.extend(['-g', str(gid)])
+        cmd.extend(['-g', gid])
     elif groups is not None and name in groups:
         defs_file = '/etc/login.defs'
         if __grains__['kernel'] != 'OpenBSD':
             try:
-                with salt.utils.fopen(defs_file) as fp_:
+                with salt.utils.files.fopen(defs_file) as fp_:
                     for line in fp_:
+                        line = salt.utils.stringutils.to_unicode(line)
                         if 'USERGROUPS_ENAB' not in line[:15]:
                             continue
 
                         if 'yes' in line:
                             cmd.extend([
-                                '-g', str(__salt__['file.group_to_gid'](name))
+                                '-g', __salt__['file.group_to_gid'](name)
                             ])
 
                         # We found what we wanted, let's break out of the loop
@@ -150,13 +169,14 @@ def add(name,
         else:
             usermgmt_file = '/etc/usermgmt.conf'
             try:
-                with salt.utils.fopen(usermgmt_file) as fp_:
+                with salt.utils.files.fopen(usermgmt_file) as fp_:
                     for line in fp_:
+                        line = salt.utils.stringutils.to_unicode(line)
                         if 'group' not in line[:5]:
                             continue
 
                         cmd.extend([
-                            '-g', str(line.split()[-1])
+                            '-g', line.split()[-1]
                         ])
 
                         # We found what we wanted, let's break out of the loop
@@ -171,10 +191,13 @@ def add(name,
             and __grains__['kernel'] != 'OpenBSD'):
         cmd.append('-M')
 
+    if nologinit:
+        cmd.append('-l')
+
     if home is not None:
         cmd.extend(['-d', home])
 
-    if not unique:
+    if not unique and __grains__['kernel'] != 'AIX':
         cmd.append('-o')
 
     if (system
@@ -188,7 +211,7 @@ def add(name,
 
     cmd.append(name)
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -232,12 +255,12 @@ def delete(name, remove=False, force=False, root=None):
     if remove:
         cmd.append('-r')
 
-    if force and __grains__['kernel'] != 'OpenBSD':
+    if force and __grains__['kernel'] != 'OpenBSD' and __grains__['kernel'] != 'AIX':
         cmd.append('-f')
 
     cmd.append(name)
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -297,7 +320,7 @@ def chuid(name, uid):
     pre_info = info(name)
     if uid == pre_info['uid']:
         return True
-    cmd = ['usermod', '-u', '{0}'.format(uid), name]
+    cmd = ['usermod', '-u', uid, name]
     __salt__['cmd.run'](cmd, python_shell=False)
     return info(name).get('uid') == uid
 
@@ -315,9 +338,9 @@ def chgid(name, gid, root=None):
     pre_info = info(name)
     if gid == pre_info['gid']:
         return True
-    cmd = ['usermod', '-g', '{0}'.format(gid), name]
+    cmd = ['usermod', '-g', gid, name]
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     __salt__['cmd.run'](cmd, python_shell=False)
@@ -339,7 +362,7 @@ def chshell(name, shell, root=None):
         return True
     cmd = ['usermod', '-s', shell, name]
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     __salt__['cmd.run'](cmd, python_shell=False)
@@ -360,9 +383,9 @@ def chhome(name, home, persist=False, root=None):
     pre_info = info(name)
     if home == pre_info['home']:
         return True
-    cmd = ['usermod', '-d', '{0}'.format(home)]
+    cmd = ['usermod', '-d', home]
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     if persist and __grains__['kernel'] != 'OpenBSD':
@@ -401,29 +424,31 @@ def chgroups(name, groups, append=False, root=None):
     cmd = ['usermod']
 
     if __grains__['kernel'] != 'OpenBSD':
-        if append:
+        if append and __grains__['kernel'] != 'AIX':
             cmd.append('-a')
+        cmd.append('-G')
     else:
         if append:
             cmd.append('-G')
         else:
             cmd.append('-S')
 
-    if __grains__['kernel'] != 'OpenBSD':
-        cmd.append('-G')
-    cmd.extend([','.join(groups), name])
+    if append and __grains__['kernel'] == 'AIX':
+        cmd.extend([','.join(ugrps) + ',' + ','.join(groups), name])
+    else:
+        cmd.extend([','.join(groups), name])
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     # try to fallback on gpasswd to add user to localgroups
     # for old lib-pamldap support
-    if __grains__['kernel'] != 'OpenBSD':
+    if __grains__['kernel'] != 'OpenBSD' and __grains__['kernel'] != 'AIX':
         if result['retcode'] != 0 and 'not found in' in result['stderr']:
             ret = True
             for group in groups:
-                cmd = ['gpasswd', '-a', '{0}'.format(name), '{1}'.format(group)]
+                cmd = ['gpasswd', '-a', name, group]
                 if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
                     ret = False
             return ret
@@ -501,7 +526,7 @@ def chloginclass(name, loginclass, root=None):
     if loginclass == get_loginclass(name):
         return True
 
-    cmd = ['usermod', '-L', '{0}'.format(loginclass), '{0}'.format(name)]
+    cmd = ['usermod', '-L', loginclass, name]
 
     if root is not None:
         cmd.extend(('-R', root))
@@ -521,7 +546,7 @@ def info(name):
         salt '*' user.info root
     '''
     try:
-        data = pwd.getpwnam(name)
+        data = pwd.getpwnam(_quote_username(name))
     except KeyError:
         return {}
     else:
@@ -563,7 +588,7 @@ def _format_info(data):
     Return user information in a pretty way
     '''
     # Put GECOS info into a list
-    gecos_field = data.pw_gecos.split(',', 3)
+    gecos_field = salt.utils.stringutils.to_unicode(data.pw_gecos).split(',', 3)
     # Make sure our list has at least four elements
     while len(gecos_field) < 4:
         gecos_field.append('')
@@ -581,7 +606,7 @@ def _format_info(data):
             'homephone': gecos_field[3]}
 
 
-@decorators.which('id')
+@salt.utils.decorators.path.which('id')
 def primary_group(name):
     '''
     Return the primary group of the named user
@@ -607,7 +632,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    return salt.utils.get_group_list(name)
+    return salt.utils.user.get_group_list(name)
 
 
 def list_users():
@@ -643,9 +668,9 @@ def rename(name, new_name, root=None):
             'User \'{0}\' already exists'.format(new_name)
         )
 
-    cmd = ['usermod', '-l', '{0}'.format(new_name), '{0}'.format(name)]
+    cmd = ['usermod', '-l', new_name, name]
 
-    if root is not None:
+    if root is not None and __grains__['kernel'] != 'AIX':
         cmd.extend(('-R', root))
 
     __salt__['cmd.run'](cmd, python_shell=False)

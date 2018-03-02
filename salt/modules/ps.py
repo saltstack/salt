@@ -8,7 +8,7 @@ See http://code.google.com/p/psutil.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import time
 import datetime
 import re
@@ -17,7 +17,8 @@ import re
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
-import salt.ext.six as six
+import salt.utils.decorators.path
+from salt.ext import six
 # pylint: disable=import-error
 try:
     import salt.utils.psutil_compat as psutil
@@ -496,6 +497,9 @@ def total_physical_memory():
 
         salt '*' ps.total_physical_memory
     '''
+    if psutil.version_info < (0, 6, 0):
+        msg = 'virtual_memory is only available in psutil 0.6.0 or greater'
+        raise CommandExecutionError(msg)
     try:
         return psutil.virtual_memory().total
     except AttributeError:
@@ -637,7 +641,7 @@ def get_users():
 
 def lsof(name):
     '''
-    Retrieve the lsof informations of the given process name.
+    Retrieve the lsof information of the given process name.
 
     CLI Example:
 
@@ -645,16 +649,17 @@ def lsof(name):
 
         salt '*' ps.lsof apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     lsof_infos = __salt__['cmd.run']("lsof -c " + sanitize_name)
     ret = []
     ret.extend([sanitize_name, lsof_infos])
     return ret
 
 
+@salt.utils.decorators.path.which('netstat')
 def netstat(name):
     '''
-    Retrieve the netstat informations of the given process name.
+    Retrieve the netstat information of the given process name.
 
     CLI Example:
 
@@ -662,11 +667,36 @@ def netstat(name):
 
         salt '*' ps.netstat apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     netstat_infos = __salt__['cmd.run']("netstat -nap")
     found_infos = []
     ret = []
     for info in netstat_infos.splitlines():
+        if info.find(sanitize_name) != -1:
+            found_infos.append(info)
+    ret.extend([sanitize_name, found_infos])
+    return ret
+
+
+@salt.utils.decorators.path.which('ss')
+def ss(name):
+    '''
+    Retrieve the ss information of the given process name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.ss apache2
+
+    .. versionadded:: 2016.11.6
+
+    '''
+    sanitize_name = six.text_type(name)
+    ss_infos = __salt__['cmd.run']("ss -neap")
+    found_infos = []
+    ret = []
+    for info in ss_infos.splitlines():
         if info.find(sanitize_name) != -1:
             found_infos.append(info)
     ret.extend([sanitize_name, found_infos])
@@ -685,7 +715,7 @@ def psaux(name):
 
         salt '*' ps.psaux www-data.+apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     pattern = re.compile(sanitize_name)
     salt_exception_pattern = re.compile("salt.+ps.psaux.+")
     ps_aux = __salt__['cmd.run']("ps aux")
@@ -699,7 +729,7 @@ def psaux(name):
             if not salt_exception_pattern.search(info):
                 nb_lines += 1
                 found_infos.append(info)
-    pid_count = str(nb_lines) + " occurence(s)."
+    pid_count = six.text_type(nb_lines) + " occurence(s)."
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
     return ret
