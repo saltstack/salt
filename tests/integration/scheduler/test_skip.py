@@ -160,9 +160,9 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Check the first job
         ret = self.schedule.job_status('job1')
-        _expected = ('Invalid date string for start in ',
-                     'skip_during_range. Ignoring ',
-                     'job %s.', 'job1')
+        _expected = ('Invalid date string for start in '
+                     'skip_during_range. Ignoring '
+                     'job job1.')
         self.assertEqual(ret['_error'], _expected)
 
         # Clear out schedule
@@ -176,9 +176,9 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Check the second job
         ret = self.schedule.job_status('job2')
-        _expected = ('Invalid date string for end in ',
-                     'skip_during_range. Ignoring ',
-                     'job %s.', 'job2')
+        _expected = ('Invalid date string for end in '
+                     'skip_during_range. Ignoring '
+                     'job job2.')
         self.assertEqual(ret['_error'], _expected)
 
     def test_skip_during_range_global(self):

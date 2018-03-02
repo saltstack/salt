@@ -296,7 +296,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             self.schedule.eval(now=run_time)
 
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_error'], 'Invalid cron string. Ignoring.')
+        self.assertEqual(ret['_error'], 'Invalid cron string. Ignoring job job1.')
 
     @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
     def test_eval_cron_loop_interval(self):
@@ -347,7 +347,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Evaluate 1 second before the run time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_error'], 'Invalid date string. Ignoring.')
+        self.assertEqual(ret['_error'], 'Invalid date string. Ignoring job job1.')
 
     def test_eval_once_invalid_datestring(self):
         '''
@@ -370,10 +370,9 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        _expected = ('Date string could not ',
-                     'be parsed: %s, %s',
-                     '2017-13-13T13:00:00',
-                     '%Y-%m-%dT%H:%M:%S')
+        _expected = ('Date string could not be parsed: '
+                     '2017-13-13T13:00:00, %Y-%m-%dT%H:%M:%S. '
+                     'Ignoring job job1.')
         self.assertEqual(ret['_error'], _expected)
 
     def test_eval_until(self):
