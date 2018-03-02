@@ -374,6 +374,15 @@ class Pillar(object):
                 opts['ext_pillar'].append(self.ext)
             else:
                 opts['ext_pillar'] = [self.ext]
+        if '__env__' in opts['file_roots']:
+            env = opts.get('pillarenv') or opts.get('saltenv') or 'base'
+            if env not in opts['file_roots']:
+                log.debug("pillar environment '%s' maps to __env__ pillar_roots directory", env)
+                opts['file_roots'][env] = opts['file_roots'].pop('__env__')
+            else:
+                log.debug("pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
+                          env)
+                opts['file_roots'].pop('__env__')
         return opts
 
     def _get_envs(self):
