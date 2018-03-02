@@ -1023,10 +1023,7 @@ class LocalClient(Client):
         '''
         Return the available environments
         '''
-        ret = []
-        for saltenv in self.opts['file_roots']:
-            ret.append(saltenv)
-        return ret
+        return list(self.opts['file_roots'])
 
     def master_tops(self):
         '''
