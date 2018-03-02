@@ -754,6 +754,35 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 ret = docker_mod.compare_containers('container1', 'container2')
                 self.assertEqual(ret, {})
 
+    def test_compare_container_ulimits_order(self):
+        '''
+        Test comparing two containers when the order of the Ulimits HostConfig
+        values are different, but the values are the same.
+        '''
+        def _inspect_container_effect(id_):
+            return {
+                'container1': {'Config': {},
+                               'HostConfig': {
+                                   'Ulimits': [
+                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'},
+                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'}
+                                   ]
+                               }},
+                'container2': {'Config': {},
+                               'HostConfig': {
+                                   'Ulimits': [
+                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'},
+                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'}
+                                   ]
+                               }},
+            }[id_]
+
+        inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+
+        with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
+            ret = docker_mod.compare_container('container1', 'container2')
+            self.assertEqual(ret, {})
+
     def test_resolve_tag(self):
         '''
         Test the resolve_tag function. It runs docker.insect_image on the image
