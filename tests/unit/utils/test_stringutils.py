@@ -14,6 +14,9 @@ from salt.ext.six.moves import builtins, range  # pylint: disable=redefined-buil
 
 UNICODE = '中国語 (繁体)'
 STR = BYTES = UNICODE.encode('utf-8')
+# This is an example of a unicode string with й constructed using two separate
+# code points. Do not modify it.
+EGGS = '\u044f\u0438\u0306\u0446\u0430'
 
 
 class StringutilsTestCase(TestCase):
@@ -91,6 +94,23 @@ class StringutilsTestCase(TestCase):
             self.assertEqual(salt.utils.stringutils.to_bytes(UNICODE, 'utf-8'), BYTES)
 
     def test_to_unicode(self):
+        self.assertEqual(
+            salt.utils.stringutils.to_unicode(
+                EGGS,
+                encoding='utf=8',
+                normalize=True
+            ),
+            'яйца'
+        )
+        self.assertNotEqual(
+            salt.utils.stringutils.to_unicode(
+                EGGS,
+                encoding='utf=8',
+                normalize=False
+            ),
+            'яйца'
+        )
+
         if six.PY3:
             self.assertEqual(salt.utils.stringutils.to_unicode('plugh'), 'plugh')
             self.assertEqual(salt.utils.stringutils.to_unicode('áéíóúý'), 'áéíóúý')

@@ -18,6 +18,7 @@ from salt.ext.six.moves import queue
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.paths import TMP
+from tests.support.helpers import flaky
 
 # Import Salt Libs
 import salt.utils.platform
@@ -44,6 +45,7 @@ class StateRunnerTest(ShellCase):
         q.put(ret)
         q.task_done()
 
+    @flaky
     def test_orchestrate_output(self):
         '''
         Ensure the orchestrate runner outputs useful state data.

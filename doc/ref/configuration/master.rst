@@ -1398,7 +1398,7 @@ comparison, then by globbing, then by full-string regex matching.
 This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion id.
 
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     For security reasons the file must be readonly except for it's owner.
     If :conf_master:`permissive_pki_access` is ``True`` the owning group can also
     have write access, but if Salt is running as ``root`` it must be a member of that group.
@@ -1423,7 +1423,7 @@ membership in the :conf_master:`autosign_file` and the
 ``autosign_grains_dir``
 -----------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``not defined``
 
@@ -1920,7 +1920,7 @@ Set additional directories to search for runner modules.
 ``utils_dirs``
 ---------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``[]``
 
@@ -2130,7 +2130,7 @@ the cloud profile or master config file, no templating will be performed.
 ``jinja_env``
 -------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``{}``
 
@@ -2166,7 +2166,7 @@ The default options are:
 ``jinja_sls_env``
 -----------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``{}``
 
@@ -2236,7 +2236,7 @@ be used if you had not set the line_statement and line_comment options:
 ``jinja_trim_blocks``
 ---------------------
 
-.. deprecated:: Oxygen
+.. deprecated:: 2018.3.0
     Replaced by :conf_master:`jinja_env` and :conf_master:`jinja_sls_env`
 
 .. versionadded:: 2014.1.0
@@ -2256,7 +2256,7 @@ to the Jinja environment init variable ``trim_blocks``.
 ``jinja_lstrip_blocks``
 -----------------------
 
-.. deprecated:: Oxygen
+.. deprecated:: 2018.3.0
     Replaced by :conf_master:`jinja_env` and :conf_master:`jinja_sls_env`
 
 .. versionadded:: 2014.1.0
@@ -2666,7 +2666,7 @@ Example:
 ``roots_update_interval``
 *************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -2853,7 +2853,7 @@ gitfs remotes.
 ``gitfs_disable_saltenv_mapping``
 *********************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``False``
 
@@ -2876,7 +2876,7 @@ parameters <gitfs-per-saltenv-config>`.
 ``gitfs_ref_types``
 *******************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``['branch', 'tag', 'sha']``
 
@@ -2908,7 +2908,7 @@ are mapped as saltenvs:
 ***************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``gitfs_env_whitelist`` to ``gitfs_saltenv_whitelist``
 
 Default: ``[]``
@@ -2931,7 +2931,7 @@ information can be found in the :ref:`GitFS Walkthrough
 ***************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``gitfs_env_blacklist`` to ``gitfs_saltenv_blacklist``
 
 Default: ``[]``
@@ -2983,7 +2983,7 @@ they were created by a different master.
 ``gitfs_update_interval``
 *************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -3298,7 +3298,7 @@ bookmark should be used as the ``base`` environment.
 **************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``hgfs_env_whitelist`` to ``hgfs_saltenv_whitelist``
 
 Default: ``[]``
@@ -3328,7 +3328,7 @@ blacklist will be exposed as fileserver environments.
 **************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``hgfs_env_blacklist`` to ``hgfs_saltenv_blacklist``
 
 Default: ``[]``
@@ -3357,7 +3357,7 @@ blacklist will be exposed as fileserver environments.
 ``hgfs_update_interval``
 ************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -3525,7 +3525,7 @@ also be configured on a per-remote basis, see :conf_master:`here
 ***************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``svnfs_env_whitelist`` to ``svnfs_saltenv_whitelist``
 
 Default: ``[]``
@@ -3555,7 +3555,7 @@ will be exposed as fileserver environments.
 ***************************
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``svnfs_env_blacklist`` to ``svnfs_saltenv_blacklist``
 
 Default: ``[]``
@@ -3584,7 +3584,7 @@ will be exposed as fileserver environments.
 ``svnfs_update_interval``
 *************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -3690,7 +3690,7 @@ exposed.
 ``minionfs_update_interval``
 ****************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -3719,7 +3719,7 @@ examples.
 ``azurefs_update_interval``
 ***************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
@@ -3741,7 +3741,7 @@ See the :mod:`s3fs documentation <salt.fileserver.s3fs>` for usage examples.
 ``s3fs_update_interval``
 ************************
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``60``
 
