@@ -678,7 +678,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         tally = self._get_tally(sconfig.master_config)
         non_unicode = tally.get('non_unicode', [])
-        self.assertEqual(len(non_unicode), 8, non_unicode)
+        self.assertEqual(len(non_unicode), 8 if six.PY2 else 0, non_unicode)
         self.assertTrue(tally['unicode'] > 0)
 
     def test_conf_file_strings_are_unicode_for_minion(self):
