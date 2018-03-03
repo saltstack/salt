@@ -240,7 +240,7 @@ def get_file(path,
              gzip=None,
              **kwargs):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         ``dest`` can now be a directory
 
     Used to get a single file from the salt master
@@ -354,7 +354,7 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, **kwargs):
 
 def get_url(path, dest='', saltenv='base', makedirs=False, source_hash=None):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         ``dest`` can now be a directory
 
     Used to get a single file from a URL.
@@ -391,7 +391,7 @@ def get_url(path, dest='', saltenv='base', makedirs=False, source_hash=None):
         minion's file cache, this option can be passed to keep the minion from
         re-downloading the file if the cached copy matches the specified hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -445,7 +445,7 @@ def cache_file(path, saltenv='base', source_hash=None):
         minion's file cache, this option can be passed to keep the minion from
         re-downloading the file if the cached copy matches the specified hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 

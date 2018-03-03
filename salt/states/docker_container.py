@@ -248,7 +248,7 @@ def running(name,
             <salt.states.dockermod.image_present>` state should be used to
             manage the image.
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             If no tag is specified in the image name, and nothing matching the
             specified image is pulled on the minion, the ``docker pull`` that
             retrieves the image will pull *all tags* for the image. A tag of
@@ -383,7 +383,7 @@ def running(name,
 
     **NETWORK MANAGEMENT**
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     The ``networks`` argument can be used to ensure that a container is
     attached to one or more networks. Optionally, arguments can be passed to
@@ -1043,7 +1043,7 @@ def running(name,
                     bar: baz
                     hello: world
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             Methods for specifying labels can now be mixed. Earlier releases
             required either labels with or without values.
 
@@ -2067,7 +2067,7 @@ def run(name,
         client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
         **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     .. note::
         If no tag is specified in the image name, and nothing matching the

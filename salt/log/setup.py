@@ -120,6 +120,7 @@ __MP_LOGGING_QUEUE = None
 __MP_LOGGING_QUEUE_PROCESS = None
 __MP_LOGGING_QUEUE_HANDLER = None
 __MP_IN_MAINPROCESS = multiprocessing.current_process().name == 'MainProcess'
+__MP_MAINPROCESS_ID = None
 
 
 class __NullLoggingHandler(TemporaryLoggingHandler):
@@ -822,6 +823,7 @@ def set_multiprocessing_logging_queue(queue):
 def setup_multiprocessing_logging_listener(opts, queue=None):
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
+    global __MP_MAINPROCESS_ID
 
     if __MP_IN_MAINPROCESS is False:
         # We're not in the MainProcess, return! No logging listener setup shall happen
@@ -830,6 +832,11 @@ def setup_multiprocessing_logging_listener(opts, queue=None):
     if __MP_LOGGING_LISTENER_CONFIGURED is True:
         return
 
+    if __MP_MAINPROCESS_ID is not None and __MP_MAINPROCESS_ID != os.getpid():
+        # We're not in the MainProcess, return! No logging listener setup shall happen
+        return
+
+    __MP_MAINPROCESS_ID = os.getpid()
     __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
         target=__process_multiprocessing_logging_queue,
         args=(opts, queue or get_multiprocessing_logging_queue(),)
@@ -967,6 +974,11 @@ def shutdown_multiprocessing_logging_listener(daemonizing=False):
 
     if __MP_LOGGING_QUEUE_PROCESS is None:
         return
+
+    if __MP_MAINPROCESS_ID is not None and __MP_MAINPROCESS_ID != os.getpid():
+        # We're not in the MainProcess, return! No logging listener setup shall happen
+        return
+
     if __MP_LOGGING_QUEUE_PROCESS.is_alive():
         logging.getLogger(__name__).debug('Stopping the multiprocessing logging queue listener')
         try:
