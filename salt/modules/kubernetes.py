@@ -31,6 +31,13 @@ In case both are provided the `file` entry is prefered.
     salt '*' kubernetes.nodes api_url=http://k8s-api-server:port api_user=myuser api_password=pass
 
 .. versionadded: 2017.7.0
+
+.. warning::
+
+    Configuration options will change in Flourine. All options above will be replaced by:
+
+    - kubernetes.kubeconfig or kubernetes.kubeconfig-data
+    - kubernetes.context
 '''
 
 # Import Python Futures
