@@ -157,7 +157,7 @@ def list_(name,
         re-downloading the archive if the cached copy matches the specified
         hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
     .. _xz: http://tukaani.org/xz/
@@ -1135,7 +1135,7 @@ def is_encrypted(name, clean=False, saltenv='base', source_hash=None):
         re-downloading the archive if the cached copy matches the specified
         hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Examples:
 

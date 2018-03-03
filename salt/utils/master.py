@@ -34,11 +34,7 @@ from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
 from salt.ext import six
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
 

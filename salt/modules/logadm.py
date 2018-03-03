@@ -183,7 +183,7 @@ def list_conf(conf_file=default_conf, log_file=None, include_unset=False):
     '''
     Show parsed configuration
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     conf_file : string
         path to logadm.conf, defaults to /etc/logadm.conf
@@ -222,7 +222,7 @@ def show_args():
     '''
     Show which arguments map to which flags and options.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 

@@ -197,9 +197,6 @@ VALID_OPTS = {
     # The directory used to store public key data
     'pki_dir': six.string_types,
 
-    # The directory to store authentication keys of a master's local environment.
-    'key_dir': six.string_types,
-
     # A unique identifier for this daemon
     'id': six.string_types,
 
@@ -284,6 +281,7 @@ VALID_OPTS = {
 
     # Location of the files a minion should look for. Set to 'local' to never ask the master.
     'file_client': six.string_types,
+    'local': bool,
 
     # When using a local file_client, this parameter is used to allow the client to connect to
     # a master for remote execution.
@@ -1050,6 +1048,10 @@ VALID_OPTS = {
     # If set, all minion exec module actions will be rerouted through sudo as this user
     'sudo_user': six.string_types,
 
+    # HTTP connection timeout in seconds. Applied for tornado http fetch functions like cp.get_url
+    # should be greater than overall download time
+    'http_connect_timeout': float,
+
     # HTTP request timeout in seconds. Applied for tornado http fetch functions like cp.get_url
     # should be greater than overall download time
     'http_request_timeout': float,
@@ -1246,6 +1248,7 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
         },
     'file_client': 'remote',
+    'local': False,
     'use_master_when_local': False,
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
@@ -1451,6 +1454,7 @@ DEFAULT_MINION_OPTS = {
     'cache_sreqs': True,
     'cmd_safe': True,
     'sudo_user': '',
+    'http_connect_timeout': 20.0,  # tornado default - 20 seconds
     'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
     'event_match_type': 'startswith',
@@ -1495,7 +1499,6 @@ DEFAULT_MASTER_OPTS = {
     'archive_jobs': False,
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
-    'key_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'key'),
     'key_cache': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
@@ -1525,6 +1528,7 @@ DEFAULT_MASTER_OPTS = {
     'pillarenv': None,
     'default_top': 'base',
     'file_client': 'local',
+    'local': True,
 
     # Update intervals
     'roots_update_interval': DEFAULT_INTERVAL,
@@ -1785,6 +1789,7 @@ DEFAULT_MASTER_OPTS = {
     'rotate_aes_key': True,
     'cache_sreqs': True,
     'dummy_pub': False,
+    'http_connect_timeout': 20.0,  # tornado default - 20 seconds
     'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
     'python2_bin': 'python2',
@@ -1810,7 +1815,6 @@ DEFAULT_MASTER_OPTS = {
     'schedule': {},
     'auth_events': True,
     'minion_data_cache_events': True,
-    'enable_ssh': False,
     'enable_ssh_minions': False,
 }
 
@@ -2310,6 +2314,12 @@ def prepend_root_dir(opts, path_options):
                     path = tmp_path_root_dir
                 else:
                     path = tmp_path_def_root_dir
+            elif salt.utils.platform.is_windows() and not os.path.splitdrive(path)[0]:
+                # In windows, os.path.isabs resolves '/' to 'C:\\' or whatever
+                # the root drive is.  This elif prevents the next from being
+                # hit, so that the root_dir is prefixed in cases where the
+                # drive is not prefixed on a config option
+                pass
             elif os.path.isabs(path):
                 # Absolute path (not default or overriden root_dir)
                 # No prepending required
@@ -2497,7 +2507,7 @@ def syndic_config(master_config_path,
     opts.update(syndic_opts)
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'key_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir', 'autosign_grains_dir'
     ]
     for config_key in ('log_file', 'key_logfile', 'syndic_log_file'):
@@ -3645,7 +3655,7 @@ def _adjust_log_file_override(overrides, default_log_file):
     if overrides.get('log_dir'):
         # Adjust log_file if a log_dir override is introduced
         if overrides.get('log_file'):
-            if not os.path.abspath(overrides['log_file']):
+            if not os.path.isabs(overrides['log_file']):
                 # Prepend log_dir if log_file is relative
                 overrides['log_file'] = os.path.join(overrides['log_dir'],
                                                      overrides['log_file'])
@@ -3934,7 +3944,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'key_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir', 'syndic_dir',
         'sqlite_queue_dir', 'autosign_grains_dir'
     ]

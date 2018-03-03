@@ -630,7 +630,6 @@ def _client_wrapper(attr, *args, **kwargs):
         )
         ret = func(*args, **kwargs)
     except docker.errors.APIError as exc:
-        log.exception('Encountered error running API function %s', attr)
         if catch_api_errors:
             # Generic handling of Docker API errors
             raise CommandExecutionError(
@@ -790,7 +789,7 @@ def get_client_args(limit=None):
     .. versionchanged:: 2017.7.0
         Replaced the container config args with the ones from the API's
         ``create_container`` function.
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added ability to limit the input to specific client functions
 
     Many functions in Salt have been written to support the full list of
@@ -885,7 +884,7 @@ def _get_create_kwargs(skip_translate=None,
 def compare_containers(first, second, ignore=None):
     '''
     .. versionadded:: 2017.7.0
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Renamed from ``docker.compare_container`` to
         ``docker.compare_containers`` (old function name remains as an alias)
 
@@ -968,7 +967,7 @@ compare_container = salt.utils.functools.alias_function(
 
 def compare_container_networks(first, second):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Returns the differences between two containers' networks. When a network is
     only present one of the two containers, that network's diff will simply be
@@ -1205,7 +1204,7 @@ def compare_container_networks(first, second):
 
 def compare_networks(first, second, ignore='Name,Id,Created,Containers'):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Compare two networks and return any differences between the two
 
@@ -1278,7 +1277,7 @@ def compare_networks(first, second, ignore='Name,Id,Created,Containers'):
 
 def connected(name, verbose=False):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Return a list of running containers attached to the specified network
 
@@ -1867,7 +1866,7 @@ def list_tags():
 
 def resolve_image_id(name):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Given an image name (or partial image ID), return the full image ID. If no
     match is found among the locally-pulled images, then ``False`` will be
@@ -1898,7 +1897,7 @@ def resolve_image_id(name):
 def resolve_tag(name, tags=None, **kwargs):
     '''
     .. versionadded:: 2017.7.2
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Instead of matching against pulled tags using
         :py:func:`docker.list_tags <salt.modules.dockermod.list_tags>`, this
         function now simply inspects the passed image name using
@@ -1921,10 +1920,10 @@ def resolve_tag(name, tags=None, **kwargs):
         is found but there are no tags, then a list will still be returned, but
         it will simply contain the image ID.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     tags
-        .. deprecated:: Oxygen
+        .. deprecated:: 2018.3.0
             Ignored if passed, will be removed in the Neon release.
 
     CLI Examples:
@@ -1973,7 +1972,7 @@ def resolve_tag(name, tags=None, **kwargs):
 
 def logs(name, **kwargs):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Support for all of docker-py's `logs()`_ function's arguments, with the
         exception of ``stream``.
 
@@ -2394,7 +2393,7 @@ def create(image,
     start : False
         If ``True``, start container after creating it
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     skip_translate
         This function translates Salt CLI or SLS input into the format which
@@ -2765,7 +2764,7 @@ def create(image,
         - ``labels=foo,bar=baz``
         - ``labels="['foo', 'bar=baz']"``
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             Labels both with and without values can now be mixed. Earlier
             releases only permitted one method or the other.
 
@@ -3159,7 +3158,7 @@ def run_container(image,
                   networks=None,
                   **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Equivalent to ``docker run`` on the Docker CLI. Runs the container, waits
     for it to exit, and returns the container's logs when complete.
@@ -3763,7 +3762,7 @@ def rm_(name, force=False, volumes=False, **kwargs):
         Optional timeout to be passed to :py:func:`docker.stop
         <salt.modules.dockermod.stop>` if stopping the container.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     volumes : False
         Also remove volumes associated with container
@@ -3840,7 +3839,7 @@ def build(path=None,
           buildargs=None,
           image=None):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         If the built image should be tagged, then the repository and tag must
         now be passed separately using the ``repository`` and ``tag``
         arguments, rather than together in the (now deprecated) ``image``
@@ -3854,15 +3853,15 @@ def build(path=None,
     repository
         Optional repository name for the image being built
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     tag : latest
         Tag name for the image (required if ``repository`` is passed)
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     image
-        .. deprecated:: Oxygen
+        .. deprecated:: 2018.3.0
             Use both ``repository`` and ``tag`` instead
 
     cache : True
@@ -4021,7 +4020,7 @@ def commit(name,
            author=None,
            image=None):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The repository and tag must now be passed separately using the
         ``repository`` and ``tag`` arguments, rather than together in the (now
         deprecated) ``image`` argument.
@@ -4035,15 +4034,15 @@ def commit(name,
     repository
         Repository name for the image being committed
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     tag : latest
         Tag name for the image
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     image
-        .. deprecated:: Oxygen
+        .. deprecated:: 2018.3.0
             Use both ``repository`` and ``tag`` instead
 
     message
@@ -4169,7 +4168,7 @@ def import_(source,
             api_response=False,
             image=None):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The repository and tag must now be passed separately using the
         ``repository`` and ``tag`` arguments, rather than together in the (now
         deprecated) ``image`` argument.
@@ -4186,15 +4185,15 @@ def import_(source,
     repository
         Repository name for the image being imported
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     tag : latest
         Tag name for the image
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     image
-        .. deprecated:: Oxygen
+        .. deprecated:: 2018.3.0
             Use both ``repository`` and ``tag`` instead
 
     api_response : False
@@ -4277,7 +4276,7 @@ def import_(source,
 
 def load(path, repository=None, tag=None, image=None):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         If the loaded image should be tagged, then the repository and tag must
         now be passed separately using the ``repository`` and ``tag``
         arguments, rather than together in the (now deprecated) ``image``
@@ -4299,16 +4298,16 @@ def load(path, repository=None, tag=None, image=None):
         <salt.modules.dockermod.tag_>`. If a repository name is provided, then
         the ``tag`` argument is also required.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     tag
         Tag name to go along with the repository name, if the loaded image is
         to be tagged.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     image
-        .. deprecated:: Oxygen
+        .. deprecated:: 2018.3.0
             Use both ``repository`` and ``tag`` instead
 
 
@@ -4434,7 +4433,7 @@ def pull(image,
          api_response=False,
          client_timeout=salt.utils.docker.CLIENT_TIMEOUT):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         If no tag is specified in the ``image`` argument, all tags for the
         image will be pulled. For this reason is it recommended to pass
         ``image`` using the ``repo:tag`` notation.
@@ -4901,7 +4900,7 @@ def save(name,
 
 def tag_(name, repository, tag='latest', force=False, image=None):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The repository and tag must now be passed separately using the
         ``repository`` and ``tag`` arguments, rather than together in the (now
         deprecated) ``image`` argument.
@@ -4915,15 +4914,15 @@ def tag_(name, repository, tag='latest', force=False, image=None):
     repository
         Repository name for the image to be built
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     tag : latest
         Tag name for the image to be built
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     image
-        .. deprecated:: Oxygen
+        .. deprecated:: 2018.3.0
             Use both ``repository`` and ``tag`` instead
 
     force : False
@@ -4965,7 +4964,7 @@ def networks(names=None, ids=None):
     .. versionchanged:: 2017.7.0
         The ``names`` and ``ids`` can be passed as a comma-separated list now,
         as well as a Python list.
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The ``Containers`` key for each network is no longer always empty.
 
     List existing networks
@@ -5009,7 +5008,7 @@ def create_network(name,
                    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
                    **kwargs):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Support added for network configuration options other than ``driver``
         and ``driver_opts``, as well as IPAM configuration.
 
@@ -5054,7 +5053,7 @@ def create_network(name,
         - docker-py `low-level API`_
         - `Docker Engine API`_
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     ignore_collisions : False
         Since many of docker-py's arguments differ in name from their CLI
@@ -5065,7 +5064,7 @@ def create_network(name,
         will be raised. Set this argument to ``True`` to suppress these errors
         and keep the docker-py version of the argument.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     validate_ip_addrs : True
         For parameters which accept IP addresses as input, IP address
@@ -5077,7 +5076,7 @@ def create_network(name,
             portion will be validated, and the subnet size will be checked to
             confirm it is a valid number (1-32 for IPv4, 1-128 for IPv6).
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     .. _salt-modules-dockermod-create-network-netconf:
 
@@ -5313,7 +5312,7 @@ def connect_container_to_network(container, net_id, **kwargs):
     .. versionadded:: 2015.8.3
     .. versionchanged:: 2017.7.0
         Support for ``ipv4_address`` argument added
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         All arguments are now passed through to
         `connect_container_to_network()`_, allowing for any new arguments added
         to this function to be supported automagically.
@@ -5397,7 +5396,7 @@ def disconnect_container_from_network(container, network_id):
 
 def disconnect_all_containers_from_network(network_id):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Runs :py:func:`docker.disconnect_container_from_network
     <salt.modules.dockermod.disconnect_container_from_network>` on all
@@ -6683,7 +6682,7 @@ def sls(name, mods=None, **kwargs):
         :conf_minion:`pillarenv` minion config option nor this CLI argument is
         used, all Pillar environments will be merged together.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
@@ -6692,7 +6691,7 @@ def sls(name, mods=None, **kwargs):
             Values passed this way will override Pillar values set via
             ``pillar_roots`` or an external Pillar source.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -6779,7 +6778,7 @@ def sls_build(repository,
               dryrun=False,
               **kwargs):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The repository and tag must now be passed separately using the
         ``repository`` and ``tag`` arguments, rather than together in the (now
         deprecated) ``image`` argument.
@@ -6793,15 +6792,15 @@ def sls_build(repository,
     repository
         Repository name for the image to be built
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     tag : latest
         Tag name for the image to be built
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     name
-        .. deprecated:: Oxygen
+        .. deprecated:: 2018.3.0
             Use both ``repository`` and ``tag`` instead
 
     base : opensuse/python
@@ -6822,7 +6821,7 @@ def sls_build(repository,
         :conf_minion:`pillarenv` minion config option nor this CLI argument is
         used, all Pillar environments will be merged together.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
@@ -6831,7 +6830,7 @@ def sls_build(repository,
             Values passed this way will override Pillar values set via
             ``pillar_roots`` or an external Pillar source.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     dryrun: False
         when set to True the container will not be commited at the end of

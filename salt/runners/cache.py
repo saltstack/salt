@@ -316,7 +316,7 @@ def clear_git_lock(role, remote=None, **kwargs):
         comma-separated or Python list.
 
         .. versionadded:: 2015.8.8
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             ``mountpoint`` lock type added
 
     CLI Examples:
