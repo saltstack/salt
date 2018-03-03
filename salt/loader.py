@@ -22,6 +22,7 @@ from zipimport import zipimporter
 import salt.config
 import salt.syspaths
 import salt.utils.context
+import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
@@ -651,7 +652,7 @@ def _load_cached_grains(opts, cfn):
     try:
         serial = salt.payload.Serial(opts)
         with salt.utils.files.fopen(cfn, 'rb') as fp_:
-            cached_grains = serial.load(fp_)
+            cached_grains = salt.utils.data.decode(serial.load(fp_))
         if not cached_grains:
             log.debug('Cached grains are empty, cache might be corrupted. Refreshing.')
             return None
@@ -819,7 +820,7 @@ def grains(opts, force_refresh=False, proxy=None):
         salt.utils.dictupdate.update(grains_data, opts['grains'])
     else:
         grains_data.update(opts['grains'])
-    return grains_data
+    return salt.utils.data.decode(grains_data)
 
 
 # TODO: get rid of? Does anyone use this? You should use raw() instead
