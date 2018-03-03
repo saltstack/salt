@@ -600,10 +600,11 @@ VALID_OPTS = {
 
     # Frequency of the proxy_keep_alive, in minutes
     'proxy_keep_alive_interval': int,
-    'git_pillar_base': str,
-    'git_pillar_branch': str,
-    'git_pillar_env': str,
-    'git_pillar_root': str,
+    # NOTE: git_pillar_base, git_pillar_branch, git_pillar_env, and
+    # git_pillar_root omitted here because their values could conceivably be
+    # loaded as non-string types, which is OK because git_pillar will normalize
+    # them to strings. But rather than include all the possible types they
+    # could be, we'll just skip type-checking.
     'git_pillar_ssl_verify': bool,
     'git_pillar_global_lock': bool,
     'git_pillar_user': str,
@@ -615,10 +616,11 @@ VALID_OPTS = {
     'git_pillar_refspecs': list,
     'git_pillar_includes': bool,
     'git_pillar_verify_config': bool,
+    # NOTE: gitfs_base, gitfs_mountpoint, and gitfs_root omitted here because
+    # their values could conceivably be loaded as non-string types, which is OK
+    # because gitfs will normalize them to strings. But rather than include all
+    # the possible types they could be, we'll just skip type-checking.
     'gitfs_remotes': list,
-    'gitfs_mountpoint': str,
-    'gitfs_root': str,
-    'gitfs_base': str,
     'gitfs_user': str,
     'gitfs_password': str,
     'gitfs_insecure_auth': bool,
@@ -820,6 +822,10 @@ VALID_OPTS = {
     # (used by win_pkg.py, minion only)
     'winrepo_source_dir': str,
 
+    # NOTE: winrepo_branch omitted here because its value could conceivably be
+    # loaded as a non-string type, which is OK because winrepo will normalize
+    # them to strings. But rather than include all the possible types it could
+    # be, we'll just skip type-checking.
     'winrepo_dir': str,
     'winrepo_dir_ng': str,
     'winrepo_cachefile': str,
@@ -827,7 +833,6 @@ VALID_OPTS = {
     'winrepo_cache_expire_min': int,
     'winrepo_remotes': list,
     'winrepo_remotes_ng': list,
-    'winrepo_branch': str,
     'winrepo_ssl_verify': bool,
     'winrepo_user': str,
     'winrepo_password': str,
