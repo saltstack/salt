@@ -28,7 +28,19 @@ provided `kubeconfig` entry is preferred.
 
 .. warning::
 
-    Configuration options changed in Flourine.
+    Configuration options changed in Flourine. The following configuration options have been removed:
+
+    - kubernetes.user
+    - kubernetes.password
+    - kubernetes.api_url
+    - kubernetes.certificate-authority-data/file
+    - kubernetes.client-certificate-data/file
+    - kubernetes.client-key-data/file
+
+    Please use now:
+
+    - kubernetes.kubeconfig or kubernetes.kubeconfig-data
+    - kubernetes.context
 
 '''
 
