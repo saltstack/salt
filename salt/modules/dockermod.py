@@ -5861,6 +5861,106 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
     return result
 
 
+def prune(containers=False, networks=False, images=False,
+          build=False, volumes=False, system=None, **filters):
+    '''
+    .. versionadded:: Fluorine
+
+    Prune Docker's various subsystems
+
+    .. note::
+        This requires docker-py version 2.1.0 or later.
+
+    containers : False
+        If ``True``, prunes stopped containers (documentation__)
+
+        .. __: https://docs.docker.com/engine/reference/commandline/container_prune/#filtering
+
+    images : False
+        If ``True``, prunes unused images (documentation__)
+
+        .. __: https://docs.docker.com/engine/reference/commandline/image_prune/#filtering
+
+    networks : False
+        If ``False``, prunes unreferenced networks (documentation__)
+
+        .. __: https://docs.docker.com/engine/reference/commandline/network_prune/#filtering)
+
+    build : False
+        If ``True``, clears the builder cache
+
+        .. note::
+            Only supported in Docker 17.07.x and newer. Additionally, filters
+            do not apply to this argument.
+
+    volumes : False
+        If ``True``, prunes unreferenced volumes (documentation__)
+
+        .. __: https://docs.docker.com/engine/reference/commandline/volume_prune/
+
+    system
+        If ``True``, prunes containers, images, networks, and builder cache.
+        Assumed to be ``True`` if none of ``containers``, ``images``,
+        ``networks``, or ``build`` are set to ``True``.
+
+        .. note::
+            ``volumes=True`` must still be used to prune volumes
+
+    filters
+        - ``dangling=True`` (images only) - remove only dangling images
+
+        - ``until=<timestamp>`` - only remove objects created before given
+          timestamp. Not applicable to volumes. See the documentation links
+          above for examples of valid time expressions.
+
+        - ``label`` - only remove objects matching the label expression. Valid
+          expressions include ``labelname`` or ``labelname=value``.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion docker.prune system=True
+        salt myminion docker.prune system=True until=12h
+        salt myminion docker.prune images=True dangling=True
+        salt myminion docker.prune images=True label=foo,bar=baz
+    '''
+    if system is None and not any((containers, images, networks, build)):
+        system = True
+
+    filters = __utils__['args.clean_kwargs'](**filters)
+    for fname in list(filters):
+        if not isinstance(filters[fname], bool):
+            # support comma-separated values
+            filters[fname] = salt.utils.args.split_input(filters[fname])
+
+    ret = {}
+    if system or containers:
+        ret['containers'] = _client_wrapper('prune_containers', filters=filters)
+    if system or images:
+        ret['images'] = _client_wrapper('prune_images', filters=filters)
+    if system or networks:
+        ret['networks'] = _client_wrapper('prune_networks', filters=filters)
+    if system or build:
+        try:
+            # Doesn't exist currently in docker-py as of 3.0.1
+            ret['build'] = _client_wrapper('prune_build', filters=filters)
+        except SaltInvocationError:
+            # It's not in docker-py yet, POST directly to the API endpoint
+            ret['build'] = _client_wrapper(
+                '_result',
+                _client_wrapper(
+                    '_post',
+                    _client_wrapper('_url', '/build/prune')
+                ),
+                True
+            )
+    if volumes:
+        ret['volumes'] = _client_wrapper('prune_volumes', filters=filters)
+
+    return ret
+
+
 # Functions to run commands inside containers
 @_refresh_mine_cache
 def _run(name,
@@ -6785,59 +6885,4 @@ def sls_build(repository,
     finally:
         stop(id_)
         rm_(id_)
-    return ret
-
-
-def prune(system=True, containers=False, networks=False, images=False, build=False, volumes=False, **filters):
-    '''
-    Prune Docker's various subsystems
-
-    .. versionadded:: Fluorine
-
-    system:
-        prune containers, networks, images and build cache
-
-    containers:
-        Removes stopped containers
-        https://docs.docker.com/engine/reference/commandline/container_prune/#filtering
-    images:
-        Remove unused images
-        use dangling=True as filter to only remove dangling images
-        https://docs.docker.com/engine/reference/commandline/image_prune/#filtering
-    networks:
-        Remove unreferenced networks
-        https://docs.docker.com/engine/reference/commandline/network_prune/#filtering
-    build:
-        Delete builder cache (filters aren't applicable)
-    volumes:
-        Remove unreferenced volumes
-        Documentation: https://docs.docker.com/engine/reference/commandline/volume_prune/
-    filters:
-        until (<timestamp>) - only remove objects created before given timestamp. Not applicable to volumes
-        label (label=<key>, label=<key>=<value>, label!=<key>, or label!=<key>=<value>) - only remove objects with (or without, in case label!=... is used) the specified labels.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion docker.prune system=False images=True dangling=True
-
-    '''
-
-    filters = __utils__['args.clean_kwargs'](**filters)
-    ret = {}
-    if system or containers:
-        ret['containers'] = _client_wrapper('prune_containers', kwargs=filters)
-    if system or networks:
-        ret['networks'] = _client_wrapper('prune_networks', kwargs=filters)
-    if system or images:
-        ret['images'] = _client_wrapper('prune_images', kwargs=filters)
-    if system or build:
-        # It's not in docker-py yet
-        ret['build'] = _client_wrapper(
-            '_result', _client_wrapper('_post', _client_wrapper('_url', '/build/prune')), True
-        )
-    if volumes:
-        ret['volumes'] = _client_wrapper('prune_volumes', kwargs=filters)
-
     return ret
