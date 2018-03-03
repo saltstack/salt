@@ -134,7 +134,8 @@ class Schedule(object):
 
     def _get_schedule(self,
                       include_opts=True,
-                      include_pillar=True):
+                      include_pillar=True,
+                      remove_hidden=False):
         '''
         Return the schedule data structure
         '''
@@ -150,6 +151,12 @@ class Schedule(object):
                 raise ValueError('Schedule must be of type dict.')
             schedule.update(opts_schedule)
 
+        if remove_hidden:
+            _schedule = copy.deepcopy(schedule)
+            for job in _schedule:
+                for item in _schedule[job]:
+                    if item.startswith('_'):
+                        del schedule[job][item]
         return schedule
 
     def _check_max_running(self, func, data, opts):
@@ -210,7 +217,8 @@ class Schedule(object):
 
         schedule_conf = os.path.join(minion_d_dir, '_schedule.conf')
         log.debug('Persisting schedule')
-        schedule_data = self._get_schedule(include_pillar=False)
+        schedule_data = self._get_schedule(include_pillar=False,
+                                           remove_hidden=True)
         try:
             with salt.utils.files.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
@@ -789,11 +797,15 @@ class Schedule(object):
         '''
         Evaluate and execute the schedule
 
-        :param int now: Override current time with a Unix timestamp``
+        :param datetime now: Override current time with a datetime object instance``
 
         '''
 
         log.trace('==== evaluating schedule now %s =====', now)
+
+        loop_interval = self.opts['loop_interval']
+        if not isinstance(loop_interval, datetime.timedelta):
+            loop_interval = datetime.timedelta(seconds=loop_interval)
 
         def _splay(splaytime):
             '''
@@ -904,20 +916,20 @@ class Schedule(object):
             if 'run_explicit' in data:
                 _run_explicit = []
                 for _run_time in data['run_explicit']:
-                    _run_explicit.append(datetime.datetime.strptime(_run_time['time'],
-                                                                    _run_time['time_fmt']))
-
-                if isinstance(_run_explicit, six.integer_types):
-                    _run_explicit = [_run_explicit]
+                    if isinstance(_run_time, datetime.datetime):
+                        _run_explicit.append(_run_time)
+                    else:
+                        _run_explicit.append(datetime.datetime.strptime(_run_time['time'],
+                                                                        _run_time['time_fmt']))
 
                 # Copy the list so we can loop through it
                 for i in copy.deepcopy(_run_explicit):
                     if len(_run_explicit) > 1:
-                        if i < now - datetime.timedelta(seconds=self.opts['loop_interval']):
+                        if i < now - loop_interval:
                             _run_explicit.remove(i)
 
                 if _run_explicit:
-                    if _run_explicit[0] <= now < _run_explicit[0] + datetime.timedelta(seconds=self.opts['loop_interval']):
+                    if _run_explicit[0] <= now < _run_explicit[0] + loop_interval:
                         run = True
                         data['_next_fire_time'] = _run_explicit[0]
 
@@ -940,24 +952,25 @@ class Schedule(object):
 
             elif 'once' in data:
                 if data['_next_fire_time']:
-                    if data['_next_fire_time'] < now - datetime.timedelta(seconds=self.opts['loop_interval']) or \
+                    if data['_next_fire_time'] < now - loop_interval or \
                        data['_next_fire_time'] > now and \
                        not data['_splay']:
                         continue
 
-                if not data['_next_fire_time'] and \
-                        not data['_splay']:
-                    once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
-                    try:
-                        once = datetime.datetime.strptime(data['once'],
-                                                          once_fmt)
-                    except (TypeError, ValueError):
-                        log.error('Date string could not be parsed: %s, %s',
-                                  data['once'], once_fmt)
-                        continue
+                if not data['_next_fire_time'] and not data['_splay']:
+                    once = data['once']
+                    if not isinstance(once, datetime.datetime):
+                        once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
+                        try:
+                            once = datetime.datetime.strptime(data['once'],
+                                                              once_fmt)
+                        except (TypeError, ValueError):
+                            log.error('Date string could not be parsed: %s, %s',
+                                      data['once'], once_fmt)
+                            continue
                     # If _next_fire_time is less than now or greater
                     # than now, continue.
-                    if once < now - datetime.timedelta(seconds=self.opts['loop_interval']):
+                    if once < now - loop_interval:
                         continue
                     else:
                         data['_next_fire_time'] = once
@@ -1017,7 +1030,7 @@ class Schedule(object):
                     # Copy the list so we can loop through it
                     for i in copy.deepcopy(_when):
                         if len(_when) > 1:
-                            if i < now - datetime.timedelta(seconds=self.opts['loop_interval']):
+                            if i < now - loop_interval:
                                 # Remove all missed schedules except the latest one.
                                 # We need it to detect if it was triggered previously.
                                 _when.remove(i)
@@ -1029,7 +1042,7 @@ class Schedule(object):
 
                         if '_run' not in data:
                             # Prevent run of jobs from the past
-                            data['_run'] = bool(when >= now - datetime.timedelta(seconds=self.opts['loop_interval']))
+                            data['_run'] = bool(when >= now - loop_interval)
 
                         if not data['_next_fire_time']:
                             data['_next_fire_time'] = when
@@ -1071,13 +1084,15 @@ class Schedule(object):
                             log.error('Invalid date string. Ignoring')
                             continue
                     else:
-                        try:
-                            when = dateutil_parser.parse(data['when'])
-                        except ValueError:
-                            log.error('Invalid date string. Ignoring')
-                            continue
+                        when = data['when']
+                        if not isinstance(when, datetime.datetime):
+                            try:
+                                when = dateutil_parser.parse(when)
+                            except ValueError:
+                                log.error('Invalid date string. Ignoring')
+                                continue
 
-                    if when < now - datetime.timedelta(seconds=self.opts['loop_interval']) and \
+                    if when < now - loop_interval and \
                             not data.get('_run', False) and \
                             not run and \
                             not data['_splay']:
@@ -1119,11 +1134,10 @@ class Schedule(object):
                     interval = (now - data['_next_fire_time']).total_seconds()
                     if interval >= 60 and interval < self.loop_interval:
                         self.loop_interval = interval
-
             else:
                 continue
 
-            seconds = (data['_next_fire_time'] - now).total_seconds()
+            seconds = int((data['_next_fire_time'] - now).total_seconds())
 
             if 'splay' in data:
                 # Got "splay" configured, make decision to run a job based on that
@@ -1151,7 +1165,7 @@ class Schedule(object):
                 if seconds <= 0:
                     run = True
             elif 'when' in data and data['_run']:
-                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + datetime.timedelta(seconds=self.opts['loop_interval'])):
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + loop_interval):
                     data['_run'] = False
                     run = True
             elif 'cron' in data:
@@ -1161,7 +1175,7 @@ class Schedule(object):
                     data['_next_fire_time'] = None
                     run = True
             elif 'once' in data:
-                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + datetime.timedelta(seconds=self.opts['loop_interval'])):
+                if data['_next_fire_time'] <= now <= (data['_next_fire_time'] + loop_interval):
                     run = True
             elif seconds == 0:
                 run = True
@@ -1257,7 +1271,7 @@ class Schedule(object):
                                     data['run_explicit'] = []
                                 # Add a run_explicit for immediately after the
                                 # skip_during_range ends
-                                _run_immediate = (end + datetime.timedelta(seconds=self.opts['loop_interval'])).strftime('%Y-%m-%dT%H:%M:%S')
+                                _run_immediate = (end + loop_interval).strftime('%Y-%m-%dT%H:%M:%S')
                                 if _run_immediate not in data['run_explicit']:
                                     data['run_explicit'].append({'time': _run_immediate,
                                                                  'time_fmt': '%Y-%m-%dT%H:%M:%S'})
@@ -1292,18 +1306,19 @@ class Schedule(object):
                 if 'skip_explicit' in data:
                     _skip_explicit = []
                     for _skip_time in data['skip_explicit']:
-                        _skip_explicit.append(datetime.datetime.strptime(_skip_time['time'],
-                                                                         _skip_time['time_fmt']))
-                    if isinstance(_skip_explicit, six.string_types):
-                        _skip_explicit = [_skip_explicit]
+                        if isinstance(_skip_time, datetime.datetime):
+                            _skip_explicit.append(_skip_time)
+                        else:
+                            _skip_explicit.append(datetime.datetime.strptime(_skip_time['time'],
+                                                                             _skip_time['time_fmt']))
 
                     # Copy the list so we can loop through it
                     for i in copy.deepcopy(_skip_explicit):
-                        if i < now - datetime.timedelta(seconds=self.opts['loop_interval']):
+                        if i < now - loop_interval:
                             _skip_explicit.remove(i)
 
                     if _skip_explicit:
-                        if _skip_explicit[0] <= now <= (_skip_explicit[0] + datetime.timedelta(seconds=self.opts['loop_interval'])):
+                        if _skip_explicit[0] <= now <= (_skip_explicit[0] + loop_interval):
                             if self.skip_function:
                                 run = True
                                 func = self.skip_function
