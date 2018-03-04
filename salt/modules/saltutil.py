@@ -588,7 +588,7 @@ def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blac
 
 def sync_thorium(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Sync Thorium modules from ``salt://_thorium`` to the minion
 
@@ -1045,7 +1045,7 @@ def clear_job_cache(hours=24):
     '''
     Forcibly removes job cache folders and files on a minion.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     WARNING: The safest way to clear a minion cache is by first stopping
     the minion and then deleting the cache files before restarting it.

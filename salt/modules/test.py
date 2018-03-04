@@ -505,7 +505,7 @@ def rand_str(size=9999999999, hash_type=None):
 def random_hash(size=9999999999, hash_type=None):
     '''
     .. versionadded:: 2015.5.2
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Function has been renamed from ``test.rand_str`` to
         ``test.random_hash``
 

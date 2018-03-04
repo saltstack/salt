@@ -11,7 +11,7 @@ import textwrap
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, mock_open
+from tests.support.mock import MagicMock, Mock, patch, mock_open
 
 try:
     import pytest
@@ -19,6 +19,7 @@ except ImportError:
     pytest = None
 
 # Import Salt libs
+from salt.ext import six
 import salt.config
 import salt.loader
 import salt.utils.files
@@ -28,7 +29,7 @@ import salt.modules.file as filemod
 import salt.modules.config as configmod
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
+from salt.utils.jinja import SaltCacheLoader
 
 SED_CONTENT = '''test
 some
@@ -754,12 +755,13 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         contents = 'This is a {{ template }}.'
         defaults = {'template': 'templated file'}
-        ret = filemod.apply_template_on_contents(
-            contents,
-            template='jinja',
-            context={'opts': filemod.__opts__},
-            defaults=defaults,
-            saltenv='base')
+        with patch.object(SaltCacheLoader, 'file_client', Mock()):
+            ret = filemod.apply_template_on_contents(
+                contents,
+                template='jinja',
+                context={'opts': filemod.__opts__},
+                defaults=defaults,
+                saltenv='base')
         self.assertEqual(ret, 'This is a templated file.')
 
 
