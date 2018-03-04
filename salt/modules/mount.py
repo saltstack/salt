@@ -1303,7 +1303,7 @@ def is_mounted(name):
 
 def read_mount_cache(name):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Provide information if the path is mounted
 
@@ -1327,7 +1327,7 @@ def write_mount_cache(real_name,
                       fstype,
                       mount_opts):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Provide information if the path is mounted
 
@@ -1367,7 +1367,7 @@ def write_mount_cache(real_name,
 
 def delete_mount_cache(real_name):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Provide information if the path is mounted
 

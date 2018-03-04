@@ -123,7 +123,7 @@ def synchronized(name, source,
     additional_opts
         Pass additional options to rsync, should be included as a list.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
     '''
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}

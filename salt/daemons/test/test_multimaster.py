@@ -348,8 +348,8 @@ if __name__ == '__main__' and __package__ is None:
 
     #console.reinit(verbosity=console.Wordage.concise)
 
-    #runAll() # run all unittests
+    runAll()  # run all unittests
 
-    runSome()  # only run some
+    #runSome()  # only run some
 
     #runOne('testParseHostname')

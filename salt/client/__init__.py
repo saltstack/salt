@@ -57,11 +57,6 @@ from salt.exceptions import (
 # Import third party libs
 from salt.ext import six
 # pylint: disable=import-error
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -194,11 +189,11 @@ class LocalClient(object):
             # The username may contain '\' if it is in Windows
             # 'DOMAIN\username' format. Fix this for the keyfile path.
             key_user = key_user.replace('\\', '_')
-        keyfile = os.path.join(self.opts['key_dir'],
+        keyfile = os.path.join(self.opts['cachedir'],
                                '.{0}_key'.format(key_user))
         try:
             # Make sure all key parent directories are accessible
-            salt.utils.verify.check_path_traversal(self.opts['key_dir'],
+            salt.utils.verify.check_path_traversal(self.opts['cachedir'],
                                                    key_user,
                                                    self.skip_perm_errors)
             with salt.utils.files.fopen(keyfile, 'r') as key:
