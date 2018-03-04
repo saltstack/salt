@@ -714,7 +714,7 @@ def import_file(source, use_32bit_registry=False):
     '''
     Import registry settings from a Windows ``REG`` file by invoking ``REG.EXE``.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Usage:
 
