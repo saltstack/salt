@@ -7,7 +7,7 @@ Zookeeper Module
 :platform:      all
 :depends:       kazoo
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Configuration
 =============
