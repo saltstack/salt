@@ -156,7 +156,7 @@ A State Module must return a dict containing the following keys/values:
       in test mode without applying the change, ``False`` can be returned.
 
 - **comment:** A list of strings or a single string summarizing the result.
-  Note that support for lists of strings is available as of Salt Oxygen.
+  Note that support for lists of strings is available as of Salt 2018.3.0.
   Lists of strings will be joined with newlines to form the final comment;
   this is useful to allow multiple comments from subparts of a state.
   Prefer to keep line lengths short (use multiple lines as needed),

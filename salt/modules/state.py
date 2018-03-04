@@ -756,8 +756,8 @@ def request(mods=None,
     .. versionadded:: 2015.5.0
 
     Request that the local admin execute a state run via
-    `salt-call state.run_request`
-    All arguments match state.apply
+    `salt-call state.run_request`.
+    All arguments match those of state.apply.
 
     CLI Example:
 
@@ -903,7 +903,7 @@ def highstate(test=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.highstate test pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -927,8 +927,8 @@ def highstate(test=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.higstate exclude=bar,baz
-            salt '*' state.higstate exclude=foo*
+            salt '*' state.highstate exclude=bar,baz
+            salt '*' state.highstate exclude=foo*
             salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
 
     saltenv
@@ -1083,7 +1083,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.sls test pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override existing Pillar values set via
@@ -1616,7 +1616,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
             ``pillar_roots`` or an external Pillar source.  Pillar values that
             are not included in the kwarg will not be overwritten.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -2066,7 +2066,7 @@ def pkg(pkg_path,
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = salt.utils.json.load(fp_, object_hook=salt.utils.data.encode_dict)
+            roster_grains = salt.utils.json.load(fp_)
 
     if os.path.isfile(roster_grains_json):
         popts['grains'] = roster_grains

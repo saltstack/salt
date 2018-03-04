@@ -22,43 +22,13 @@ import salt.modules.win_path as win_path
 import salt.utils.stringutils
 
 
-class MockWin32API(object):
-    '''
-        Mock class for win32api
-    '''
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def SendMessage(*args):
-        '''
-            Mock method for SendMessage
-        '''
-        return [args[0]]
-
-
-class MockWin32Con(object):
-    '''
-        Mock class for win32con
-    '''
-    HWND_BROADCAST = 1
-    WM_SETTINGCHANGE = 1
-
-    def __init__(self):
-        pass
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.win_path
     '''
     def setup_loader_modules(self):
-        return {win_path: {'win32api': MockWin32API,
-                           'win32con': MockWin32Con,
-                           'SendMessage': MagicMock,
-                           'HWND_BROADCAST': MagicMock,
-                           'WM_SETTINGCHANGE': MagicMock}}
+        return {win_path: {}}
 
     def __init__(self, *args, **kwargs):
         super(WinPathTestCase, self).__init__(*args, **kwargs)
@@ -78,12 +48,6 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             env['PATH'],
             salt.utils.stringutils.to_str(self.pathsep.join(new_path))
         )
-
-    def test_rehash(self):
-        '''
-        Test to rehash the Environment variables
-        '''
-        self.assertTrue(win_path.rehash())
 
     def test_get_path(self):
         '''

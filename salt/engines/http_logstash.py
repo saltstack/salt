@@ -6,7 +6,7 @@ HTTP Logstash engine
 An engine that reads messages from the salt event bus and pushes
 them onto a logstash endpoint via HTTP requests.
 
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
 
 .. note::
     By default, this engine take everything from the Salt bus and exports into

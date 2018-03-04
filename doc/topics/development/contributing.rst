@@ -223,7 +223,7 @@ branches, and dot release branches.
 .. note::
 
     GitHub will open pull requests against Salt's main branch, ``develop``,
-    byndefault. Be sure to check which branch is selected when creating the
+    by default. Be sure to check which branch is selected when creating the
     pull request.
 
 The Develop Branch

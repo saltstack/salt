@@ -270,7 +270,7 @@ def managed(name, ppa=None, **kwargs):
     key_text
         The string representation of the GPG key to install.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
        .. note::
 
@@ -299,7 +299,7 @@ def managed(name, ppa=None, **kwargs):
        on debian based systems.
 
     refresh_db : True
-       .. deprecated:: Oxygen
+       .. deprecated:: 2018.3.0
            Use ``refresh`` instead.
 
     require_in

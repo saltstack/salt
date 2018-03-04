@@ -277,6 +277,7 @@ execution modules
     napalm_users
     napalm_yang_mod
     netaddress
+    netbox
     netbsd_sysctl
     netbsdservice
     netscaler
@@ -315,6 +316,7 @@ execution modules
     pcs
     pdbedit
     pecl
+    pf
     philips_hue
     pillar
     pip

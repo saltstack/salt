@@ -89,7 +89,7 @@ to it can be verified with Salt:
 Destroy Options
 ---------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 For obvious reasons, the ``destroy`` action does not actually vaporize hardware.
 If the salt  master is connected, it can tear down parts of the client machines.
@@ -113,7 +113,7 @@ and can execute the following options:
 Wake On LAN
 -----------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 In addition to connecting a hardware machine to a Salt master,
 you have the option of sending a wake-on-LAN
