@@ -540,6 +540,7 @@ class CPModuleTest(ModuleCase):
             url = url_prefix + (code or 'actual_file')
             log.debug('attempting to cache %s', url)
             ret = self.run_function('cp.cache_file', [url])
+            self.assertTrue(ret)
             with salt.utils.files.fopen(ret) as fp_:
                 cached_contents = salt.utils.stringutils.to_unicode(fp_.read())
                 self.assertEqual(cached_contents, file_contents)

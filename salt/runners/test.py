@@ -78,7 +78,7 @@ def stream():
 
 def get_opts():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Return the configuration options of the master.
 

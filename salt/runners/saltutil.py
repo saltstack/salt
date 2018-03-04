@@ -308,7 +308,7 @@ def sync_engines(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_thorium(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Sync Thorium from ``salt://_thorium`` to the master
 
@@ -480,7 +480,7 @@ def sync_cache(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_fileserver(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Sync fileserver modules from ``salt://_fileserver`` to the master
 
@@ -558,7 +558,7 @@ def sync_roster(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_eauth_tokens(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Sync eauth token modules from ``salt://_tokens`` to the master
 
