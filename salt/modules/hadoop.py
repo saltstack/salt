@@ -87,6 +87,7 @@ def dfs(command=None, *args):
     else:
         return 'Error: command must be provided'
 
+
 def dfsadmin(command=None, *args):
     '''
     Execute a command on DFS
