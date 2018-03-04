@@ -1776,6 +1776,22 @@ def _set_line_eol(src, line):
     return line.rstrip() + line_ending
 
 
+def _insert_line_before(idx, body, content, indent):
+    if not idx or (idx and _starts_till(body[idx - 1], content) < 0):
+        cnd = _set_line_indent(body[idx], content, indent)
+        body.insert(idx, cnd)
+    return body
+
+
+def _insert_line_after(idx, body, content, indent):
+    # No duplicates or append, if "after" is the last line
+    next_line = idx + 1 < len(body) and body[idx + 1] or None
+    if next_line is None or _starts_till(next_line, content) < 0:
+        cnd = _set_line_indent(body[idx], content, indent)
+        body.insert(idx + 1, cnd)
+    return body
+
+
 def line(path, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False, indent=True):
@@ -1906,8 +1922,8 @@ def line(path, content=None, match=None, mode=None, location=None,
     with salt.utils.files.fopen(path, mode='r') as fp_:
         body = [salt.utils.stringutils.to_unicode(line) for line in fp_.readlines()]
     body_before = hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
-    if body and body[-1] and not _get_eol(body[-1]):
-        body[-1] += (len(body) > 1) and _get_eol(body[-2]) or os.linesep
+    if body and _get_eol(body[-1]):
+        body.append('')
 
     after = _regex_to_static(body, after)
     before = _regex_to_static(body, before)
@@ -1937,7 +1953,8 @@ def line(path, content=None, match=None, mode=None, location=None,
                     if line == after[0]:
                         in_range = True
                     elif line == before[0] and in_range:
-                        out.append(_set_line_indent(line, _set_line_eol(line, content), indent))
+                        cnd = _set_line_indent(line, content, indent)
+                        out.append(cnd)
                     out.append(line)
                 body = out
 
@@ -1945,20 +1962,13 @@ def line(path, content=None, match=None, mode=None, location=None,
                 _assert_occurrence(before, 'before')
 
                 idx = body.index(before[0])
-                if not idx or (idx and _starts_till(body[idx - 1], content) < 0):  # Job for replace instead
-                    cnd = _set_line_indent(body[idx], content, indent)
-                    cnd = _set_line_eol(body[idx], cnd)
-                    body.insert(idx, cnd)
+                body = _insert_line_before(idx, body, content, indent)
 
             elif after and not before:
                 _assert_occurrence(after, 'after')
 
                 idx = body.index(after[0])
-                # No duplicates or append, if "after" is the last line
-                if body[((idx + 1) < len(body)) and idx + 1 or idx].strip() != content or idx + 1 == len(body):
-                    cnd = _set_line_indent(body[idx], content, indent)
-                    cnd = _set_line_eol(body[idx], cnd)
-                    body.insert(idx + 1, cnd)
+                body = _insert_line_after(idx, body, content, indent)
 
         else:
             if location == 'start':
@@ -1979,7 +1989,8 @@ def line(path, content=None, match=None, mode=None, location=None,
             if not is_there:
                 idx = body.index(after[0])
                 if idx < (len(body) - 1) and body[idx + 1] == before[0]:
-                    body.insert(idx + 1, _set_line_indent(body[idx], _set_line_eol(body[idx], content), indent))
+                    cnd = _set_line_indent(body[idx], content, indent)
+                    body.insert(idx + 1, cnd)
                 else:
                     raise CommandExecutionError('Found more than one line between '
                                                 'boundaries "before" and "after".')
@@ -1988,16 +1999,13 @@ def line(path, content=None, match=None, mode=None, location=None,
             _assert_occurrence(before, 'before')
 
             idx = body.index(before[0])
-            if body[idx-1].find(content) < 0:
-                body.insert(idx, _set_line_indent(body[idx], _set_line_eol(body[idx], content), indent))
+            body = _insert_line_before(idx, body, content, indent)
 
         elif not before and after:
             _assert_occurrence(after, 'after')
 
             idx = body.index(after[0])
-            next_line = idx + 1 < len(body) and body[idx + 1] or None
-            if next_line is None or _starts_till(next_line, content) < 0:
-                body.insert(idx+1, _set_line_indent(body[idx], _set_line_eol(body[idx], content), indent))
+            body = _insert_line_after(idx, body, content, indent)
 
         else:
             raise CommandExecutionError("Wrong conditions? "
@@ -2005,7 +2013,12 @@ def line(path, content=None, match=None, mode=None, location=None,
                                         "where to put it before and/or after.")
 
     if body:
-        body.append(body.pop().rstrip('\r\n'))
+        for idx, line in enumerate(body):
+            if not _get_eol(line) and idx+1 < len(body):
+                prev = idx and idx-1 or 1
+                body[idx] = _set_line_eol(body[prev], line)
+        if '' == body[-1]:
+            body.pop()
 
     changed = body_before != hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
 

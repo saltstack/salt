@@ -1382,6 +1382,33 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             write_content = handles[0].write.call_args_list[0][0][0]
             assert write_content == file_modified, write_content
 
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
+    def test_line_insert_ensure_before_first_line(self):
+        '''
+        Test for file.line for insertion ensuring the line is before first line
+        :return:
+        '''
+        cfg_content = '#!/bin/bash'
+        file_content = os.linesep.join([
+            '/etc/init.d/someservice restart',
+            'exit 0'
+        ])
+        file_modified = os.linesep.join([
+            cfg_content,
+            '/etc/init.d/someservice restart',
+            'exit 0'
+        ])
+        files_fopen = mock_open(read_data=file_content)
+        with patch('salt.utils.files.fopen', files_fopen):
+            atomic_opener = mock_open()
+            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                filemod.line('foo', content=cfg_content, before='/etc/init.d/someservice restart', mode='ensure')
+            self.assertEqual(len(atomic_opener().write.call_args_list), 1)
+            self.assertEqual(atomic_opener().write.call_args_list[0][0][0],
+                             file_modified)
+
     @with_tempfile()
     def test_line_insert_ensure_beforeafter_twolines(self, name):
         '''
