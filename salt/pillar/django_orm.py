@@ -96,7 +96,7 @@ import os
 import sys
 
 from salt.ext import six
-import salt.utils.stringutils
+import salt.utils.stringutils  # pylint: disable=W0611
 
 HAS_VIRTUALENV = False
 
