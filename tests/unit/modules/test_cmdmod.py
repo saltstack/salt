@@ -38,7 +38,7 @@ MOCK_SHELL_FILE = '# List of acceptable shells\n' \
 
 class MockTimedProc(object):
     '''
-    Class used as a stand-in for salt.utils.timed_subprocess.TimedProc
+    Class used as a stand-in for salt.utils.subprocess.TimedProc
     '''
     class _Process(object):
         '''
