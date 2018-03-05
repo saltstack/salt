@@ -1984,7 +1984,6 @@ class ClearFuncs(object):
         by the LocalClient.
         '''
         extra = clear_load.get('kwargs', {})
-        from pudb.remote import set_trace; set_trace(term_size=(200, 48), port=6898)
 
         publisher_acl = salt.acl.PublisherACL(self.opts['publisher_acl_blacklist'])
 
