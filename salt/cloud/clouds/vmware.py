@@ -2594,14 +2594,15 @@ def create(vm_):
             non_hostname_chars = compile(r'[^\w-]')
             if search(non_hostname_chars, vm_name):
                 hostName = split(non_hostname_chars, vm_name, maxsplit=1)[0]
+                domainName = split(non_hostname_chars, vm_name, maxsplit=1)[-1]
             else:
                 hostName = vm_name
-            domainName = hostName.split('.', 1)[-1]
+                domainName = domain
 
             if 'Windows' not in object_ref.config.guestFullName:
                 identity = vim.vm.customization.LinuxPrep()
                 identity.hostName = vim.vm.customization.FixedName(name=hostName)
-                identity.domain = domainName if hostName != domainName else domain
+                identity.domain = domainName
             else:
                 identity = vim.vm.customization.Sysprep()
                 identity.guiUnattended = vim.vm.customization.GuiUnattended()
