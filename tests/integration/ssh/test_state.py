@@ -6,6 +6,7 @@ import os
 import shutil
 import threading
 import time
+import logging
 
 # Import Salt Testing Libs
 from tests.support.case import SSHCase
@@ -19,12 +20,16 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 SSH_SLS = 'ssh_state_tests'
 SSH_SLS_FILE = '/tmp/test'
 
+log = logging.getLogger(__name__)
+
 
 class SSHStateTest(SSHCase):
     '''
     testing the state system with salt-ssh
     '''
     def _check_dict_ret(self, ret, val, exp_ret):
+        self.assertTrue(isinstance(ret, dict),
+                'ret is not dict\nret: {0}'.format(ret))
         for key, value in ret.items():
             self.assertEqual(value[val], exp_ret)
 
@@ -70,7 +75,7 @@ class SSHStateTest(SSHCase):
         '''
         test state.show_top with salt-ssh
         '''
-        ret = self.run_function('state.show_top')
+        ret = self.run_function('state.show_top', timeout=180)
         self.assertEqual(ret, {'base': ['core', 'master_tops_test']})
 
     def test_state_single(self):
@@ -84,6 +89,8 @@ class SSHStateTest(SSHCase):
         single = self.run_function('state.single',
                                    ['test.succeed_with_changes name=itworked'])
 
+        self.assertTrue(isinstance(single, dict),
+                'single is not dict\nsingle: {0}'.format(single))
         for key, value in six.iteritems(single):
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
@@ -109,6 +116,8 @@ class SSHStateTest(SSHCase):
 
         high = self.run_function('state.high', ['"{"itworked": {"test": ["succeed_with_changes"]}}"'])
 
+        self.assertTrue(isinstance(high, dict),
+                'high is not dict\nhigh: {0}'.format(high))
         for key, value in six.iteritems(high):
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
@@ -120,7 +129,9 @@ class SSHStateTest(SSHCase):
         '''
         low = self.run_function('state.show_lowstate')
         self.assertTrue(isinstance(low, list))
-        self.assertTrue(isinstance(low[0], dict))
+        self.assertTrue(isinstance(low[0], dict),
+                'low[0] is not a dict\nlow: {0}'.format(low)
+                )
 
     def test_state_low(self):
         '''
@@ -132,6 +143,8 @@ class SSHStateTest(SSHCase):
 
         low = self.run_function('state.low', ['"{"state": "test", "fun": "succeed_with_changes", "name": "itworked"}"'])
 
+        self.assertTrue(isinstance(low, dict),
+                'low is not dict\nlow: {0}'.format(low))
         for key, value in six.iteritems(low):
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
@@ -175,9 +188,11 @@ class SSHStateTest(SSHCase):
         bg_thread.start()
 
         expected = 'The function "state.pkg" is running as'
+        state_ret = []
         for _ in range(3):
             time.sleep(5)
             get_sls = self.run_function('state.running', wipe=False)
+            state_ret.append(get_sls)
             try:
                 self.assertIn(expected, ' '.join(get_sls))
             except AssertionError:
@@ -187,7 +202,7 @@ class SSHStateTest(SSHCase):
                 break
         else:
             self.fail(
-                'Did not find \'{0}\' in state.running return'.format(expected)
+                    'Did not find \'{0}\' in state.running return: {1}'.format(expected, state_ret)
             )
 
         # make sure we wait until the earlier state is complete
@@ -203,6 +218,7 @@ class SSHStateTest(SSHCase):
         make sure to clean up any old ssh directories
         '''
         salt_dir = self.run_function('config.get', ['thin_dir'], wipe=False)
+        log.debug('tearDown: config path type/value: %s:%s', type(salt_dir), salt_dir)
         if os.path.exists(salt_dir):
             shutil.rmtree(salt_dir)
 
