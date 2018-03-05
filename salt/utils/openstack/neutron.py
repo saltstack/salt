@@ -83,6 +83,13 @@ class SaltNeutron(NeutronShell):
         '''
         if not HAS_NEUTRON:
             return None
+        __utils__['versions.warn_until'](
+            'Neon',
+            (
+                'The neutron module has been deprecated and will be removed in {version}.  '
+                'Please update to using the neutronng module'
+            ),
+        )
 
         elif all([use_keystoneauth, HAS_KEYSTONEAUTH]):
             self._new_init(username=username,

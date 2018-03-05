@@ -665,6 +665,37 @@ The Windows installer will now display command-line help when a help switch
 Salt Cloud Features
 -------------------
 
+OpenStack Revamp
+================
+
+The OpenStack Driver has been rewritten mostly from scratch.  Salt is now using
+the `shade driver <https://docs.openstack.org/shade/latest/>`.
+
+With this, the ``nova`` driver is being deprecated.
+
+:mod:`openstack driver <salt.cloud.clouds.openstack>`
+
+There have also been several new modules and states added for managing OpenStack
+setups using shade as well.
+
+:mod:`keystone <salt.modules.keystoneng>`
+:mod:`keystone role grant <salt.states.keystone_role_grant>`
+:mod:`keystone group <salt.states.keystone_group>`
+:mod:`keystone role <salt.states.keystone_role>`
+:mod:`keystone service <salt.states.keystone_service>`
+:mod:`keystone user <salt.states.keystone_user>`
+:mod:`keystone domain <salt.states.keystone_domain>`
+:mod:`keystone project <salt.states.keystone_project>`
+:mod:`keystone endpoint <salt.states.keystone_endpoint>`
+:mod:`glance <salt.modules.glanceng>`
+:mod:`glance_image <salt.states.glance_image>`
+:mod:`neutron <salt.modules.neutronng>`
+:mod:`neutron subnet <salt.states.neutron_subnet>`
+:mod:`neutron secgroup <salt.states.neutron_secgroup>`
+:mod:`neutron secgroup rule <salt.states.neutron_secgroup_rule>`
+:mod:`neutron network <salt.states.neutron_network>`
+
+
 Pre-Flight Commands
 ===================
 
