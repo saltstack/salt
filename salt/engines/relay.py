@@ -29,7 +29,6 @@ class JsonRenderer(object):
 # FIXME [KN] refactor to use salt.transport.zmq instead
 class ZmqSender(object):
     def __init__(self, json_renderer, zmq_host='localhost', zmq_port=9900):
-        super(ZmqSender).__init__()
         self.json_renderer = json_renderer
         log.debug("ZMQ version: {}".format(zmq.zmq_version()))
 
