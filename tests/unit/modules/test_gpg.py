@@ -6,6 +6,9 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import datetime
+import time
+
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
@@ -20,6 +23,13 @@ from tests.support.mock import (
 import salt.modules.gpg as gpg
 
 
+try:
+    import gnupg
+    HAS_GPG = True
+except ImportError:
+    HAS_GPG = False
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GpgTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -28,6 +38,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {gpg: {'__salt__': {}}}
 
+    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_list_keys(self):
         '''
         Test gpg.list_keys
@@ -77,6 +88,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(gpg, '_list_keys', return_value=_list_result):
                     self.assertEqual(gpg.list_keys(), _expected_result)
 
+    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_get_key(self):
         '''
         Test gpg.get_key
@@ -127,6 +139,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret = gpg.get_key('xxxxxxxxxxxxxxxx')
                     self.assertEqual(ret, _expected_result)
 
+    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_delete_key(self):
         '''
         Test gpg.delete_key
@@ -172,6 +185,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                         ret = gpg.delete_key('xxxxxxxxxxxxxxxx', delete_secret=True)
                         self.assertEqual(ret, _expected_result)
 
+    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_search_keys(self):
         '''
         Test gpg.search_keys
@@ -197,11 +211,11 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                            u'sigs': [],
                            u'length': u'1024',
                            u'algo': u'17',
-                           u'date': u'1100418400',
+                           u'date': int(time.mktime(datetime.datetime(2004, 11, 13).timetuple())),
                            u'type': u'pub'}]
 
         _expected_result = [{u'uids': [u'GPG Person <person@example.com>'],
-                             u'created': '2004-11-13',
+                             'created': '2004-11-13',
                              u'keyLength': u'1024',
                              u'keyid': u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}]
 
