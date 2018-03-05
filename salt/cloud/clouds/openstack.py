@@ -72,6 +72,7 @@ Or if you need to use a profile to setup some extra stuff, it can be passed as a
         username: rackusername
         api_key: myapikey
       region_name: ORD
+      auth_type: rackspace_apikey
 
 And this will pull in the profile for rackspace and setup all the correct
 options for the auth_url and different api versions for services.
