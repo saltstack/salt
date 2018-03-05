@@ -364,7 +364,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 stderr=stderr_bytes
             )
         )
-        with patch('salt.utils.timed_subprocess.TimedProc', proc):
+        with patch('salt.utils.subprocess.TimedProc', proc):
             ret = cmdmod.run_all(
                 'dd if=/dev/urandom of=/dev/stdout bs=4 count=1',
                 rstrip=False)
@@ -378,7 +378,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         caught and replaced with empty strings.
         '''
         proc = MagicMock(return_value=MockTimedProc(stdout=None, stderr=None))
-        with patch('salt.utils.timed_subprocess.TimedProc', proc):
+        with patch('salt.utils.subprocess.TimedProc', proc):
             ret = cmdmod.run_all('some command', rstrip=False)
 
         self.assertEqual(ret['stdout'], '')
@@ -400,7 +400,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
-        with patch('salt.utils.timed_subprocess.TimedProc', proc), \
+        with patch('salt.utils.subprocess.TimedProc', proc), \
                 patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
             ret = cmdmod.run_all('some command', rstrip=False)
 
@@ -416,7 +416,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
         proc = MagicMock(return_value=MockTimedProc(stdout=stdout_latin1_enc))
 
-        with patch('salt.utils.timed_subprocess.TimedProc', proc), \
+        with patch('salt.utils.subprocess.TimedProc', proc), \
                 patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
             ret = cmdmod.run_all('some command', output_encoding='latin1')
 
