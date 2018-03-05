@@ -24,7 +24,7 @@ import salt.modules.gpg as gpg
 
 
 try:
-    import gnupg
+    import gnupg # pylint: disable=import-error,unused-import
     HAS_GPG = True
 except ImportError:
     HAS_GPG = False
@@ -174,8 +174,8 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                          'type': u'pub',
                          'uids': [u'GPG Person <person@example.com>']}]
 
-        _expected_result= {u'res': True,
-                           u'message': u'Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted'}
+        _expected_result = {u'res': True,
+                            u'message': u'Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted'}
 
         mock_opt = MagicMock(return_value='root')
         with patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=_user_mock)}):
