@@ -162,7 +162,7 @@ def _always_running_service(name):
 
     :rtype: bool
 
-    .. versionadded::
+    .. versionadded:: Fluorine
     '''
 
     # get all the info from the launchctl service
