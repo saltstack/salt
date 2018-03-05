@@ -47,6 +47,7 @@ from salt.ext import six
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.odict as odict
+import salt.utils.versions
 
 # Import third party libs
 # pylint: disable=unused-import
@@ -70,9 +71,9 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_iam module could not be loaded: boto libraries not found')
-    return True
+    return salt.utils.versions.check_boto_reqs(
+        check_boto3=False
+    )
 
 
 def __init__(opts):

@@ -28,7 +28,7 @@ def find_json(raw):
     for ind, _ in enumerate(raw):
         working = '\n'.join(raw.splitlines()[ind:])
         try:
-            ret = json.loads(working, object_hook=salt.utils.data.decode_dict)  # future lint: blacklisted-function
+            ret = json.loads(working)  # future lint: blacklisted-function
         except ValueError:
             continue
         if ret:
@@ -53,7 +53,7 @@ def import_json():
 
 def load(fp, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Wraps json.load
 
@@ -65,7 +65,7 @@ def load(fp, **kwargs):
 
 def loads(s, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Wraps json.loads and prevents a traceback in the event that a bytestring is
     passed to the function. (Python < 3.6 cannot load bytestrings)
@@ -86,7 +86,7 @@ def loads(s, **kwargs):
 
 def dump(obj, fp, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Wraps json.dump, and assumes that ensure_ascii is False (unless explicitly
     passed as True) for unicode compatibility. Note that setting it to True
@@ -104,12 +104,12 @@ def dump(obj, fp, **kwargs):
         kwargs['ensure_ascii'] = False
     if six.PY2:
         obj = salt.utils.data.encode(obj)
-    return json.dump(obj, fp, **kwargs)  # future lint: blacklisted-function
+    return json_module.dump(obj, fp, **kwargs)  # future lint: blacklisted-function
 
 
 def dumps(obj, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Wraps json.dumps, and assumes that ensure_ascii is False (unless explicitly
     passed as True) for unicode compatibility. Note that setting it to True

@@ -34,7 +34,6 @@ from salt.ext.six.moves import range  # pylint: disable=W0622,import-error
 
 # Import third party libs
 try:
-    import win32gui
     import win32api
     import win32con
     import pywintypes
@@ -45,6 +44,7 @@ except ImportError:
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.win_functions
 from salt.exceptions import CommandExecutionError
 
 PY2 = sys.version_info[0] == 2
@@ -65,7 +65,7 @@ def __virtual__():
     if not HAS_WINDOWS_MODULES:
         return (False, 'reg execution module failed to load: '
                        'One of the following libraries did not load: '
-                       + 'win32gui, win32con, win32api')
+                       'win32con, win32api, pywintypes')
 
     return __virtualname__
 
@@ -92,9 +92,13 @@ class Registry(object):  # pylint: disable=R0903
     '''
     def __init__(self):
         self.hkeys = {
+            'HKEY_CURRENT_CONFIG': win32con.HKEY_CURRENT_CONFIG,
+            'HKEY_CLASSES_ROOT': win32con.HKEY_CLASSES_ROOT,
             'HKEY_CURRENT_USER':  win32con.HKEY_CURRENT_USER,
             'HKEY_LOCAL_MACHINE': win32con.HKEY_LOCAL_MACHINE,
             'HKEY_USERS': win32con.HKEY_USERS,
+            'HKCC': win32con.HKEY_CURRENT_CONFIG,
+            'HKCR': win32con.HKEY_CLASSES_ROOT,
             'HKCU': win32con.HKEY_CURRENT_USER,
             'HKLM': win32con.HKEY_LOCAL_MACHINE,
             'HKU':  win32con.HKEY_USERS,
@@ -127,9 +131,11 @@ class Registry(object):  # pylint: disable=R0903
         # delete_key_recursive uses this to check the subkey contains enough \
         # as we do not want to remove all or most of the registry
         self.subkey_slash_check = {
-            win32con.HKEY_CURRENT_USER:  0,
-            win32con.HKEY_LOCAL_MACHINE: 1,
-            win32con.HKEY_USERS:         1
+            win32con.HKEY_CURRENT_USER:   0,
+            win32con.HKEY_LOCAL_MACHINE:  1,
+            win32con.HKEY_USERS:          1,
+            win32con.HKEY_CURRENT_CONFIG: 1,
+            win32con.HKEY_CLASSES_ROOT:   1
         }
 
         self.registry_32 = {
@@ -184,11 +190,7 @@ def broadcast_change():
 
         salt '*' reg.broadcast_change
     '''
-    # https://msdn.microsoft.com/en-us/library/windows/desktop/ms644952(v=vs.85).aspx
-    _, res = win32gui.SendMessageTimeout(
-        win32con.HWND_BROADCAST, win32con.WM_SETTINGCHANGE, 0, 0,
-        win32con.SMTO_ABORTIFHUNG, 5000)
-    return not bool(res)
+    return salt.utils.win_functions.broadcast_setting_change('Environment')
 
 
 def list_keys(hive, key=None, use_32bit_registry=False):
@@ -200,6 +202,8 @@ def list_keys(hive, key=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name. If a key is
         not passed, the keys under the hive will be returned.
@@ -253,6 +257,8 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name. If a key is
         not passed, the values under the hive will be returned.
@@ -292,9 +298,15 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
             value = {'hive':   local_hive,
                      'key':    local_key,
                      'vname':  _to_mbcs(vname),
-                     'vdata':  _to_mbcs(vdata),
                      'vtype':  registry.vtype_reverse[vtype],
                      'success': True}
+            # Only convert text types to unicode
+            if vtype == win32con.REG_MULTI_SZ:
+                value['vdata'] = [_to_mbcs(i) for i in vdata]
+            elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
+                value['vdata'] = _to_mbcs(vdata)
+            else:
+                value['vdata'] = vdata
             values.append(value)
     except pywintypes.error as exc:  # pylint: disable=E0602
         log.debug(r'Cannot find key: %s\%s', hive, key, exc_info=True)
@@ -314,6 +326,8 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -367,11 +381,14 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
             # RegQueryValueEx returns and accepts unicode data
             vdata, vtype = win32api.RegQueryValueEx(handle, local_vname)
             if vdata or vdata in [0, '']:
+                # Only convert text types to unicode
                 ret['vtype'] = registry.vtype_reverse[vtype]
-                if vtype == 7:
+                if vtype == win32con.REG_MULTI_SZ:
                     ret['vdata'] = [_to_mbcs(i) for i in vdata]
-                else:
+                elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
                     ret['vdata'] = _to_mbcs(vdata)
+                else:
+                    ret['vdata'] = vdata
             else:
                 ret['comment'] = 'Empty Value'
         except WindowsError:  # pylint: disable=E0602
@@ -408,6 +425,8 @@ def set_value(hive,
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -548,6 +567,8 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param key: The key to remove (looks like a path)
 
@@ -645,6 +666,8 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
     :param str key: The key (looks like a path) to the value name.
 
@@ -691,7 +714,7 @@ def import_file(source, use_32bit_registry=False):
     '''
     Import registry settings from a Windows ``REG`` file by invoking ``REG.EXE``.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Usage:
 

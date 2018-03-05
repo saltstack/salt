@@ -138,8 +138,8 @@ def managed(name,
     To replace the config, set ``replace`` to ``True``. This option is recommended to be used with caution!
 
     .. warning::
-        The spport for NAPALM native templates will be dropped beginning with Salt Fluorine.
-        Implicitly, the ``template_path`` argument will be depreacted and removed.
+        The support for NAPALM native templates will be dropped beginning with Salt Fluorine.
+        Implicitly, the ``template_path`` argument will be deprecated and removed.
 
     template_name
         Identifies path to the template source. The template can be either stored on the local machine,
@@ -192,7 +192,7 @@ def managed(name,
     template_attrs: "--------------e----"
         Attributes of file (see `man lsattr`)
 
-        .. versionadded:: oxygen
+        .. versionadded:: 2018.3.0
 
     saltenv: base
         Specifies the template environment. This will influence the relative imports inside the templates.

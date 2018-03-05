@@ -227,7 +227,7 @@ def sign_message(privkey_path, message, passphrase=None):
         return key.sign(digest)
     else:
         signer = PKCS1_v1_5.new(key)
-        return signer.sign(SHA.new(message))
+        return signer.sign(SHA.new(salt.utils.stringutils.to_bytes(message)))
 
 
 def verify_signature(pubkey_path, message, signature):
@@ -245,7 +245,7 @@ def verify_signature(pubkey_path, message, signature):
         return pubkey.verify(digest, signature)
     else:
         verifier = PKCS1_v1_5.new(pubkey)
-        return verifier.verify(SHA.new(message), signature)
+        return verifier.verify(SHA.new(salt.utils.stringutils.to_bytes(message)), signature)
 
 
 def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
@@ -806,7 +806,7 @@ class AsyncAuth(object):
             pubkey_path = os.path.join(self.opts['pki_dir'], self.mpub)
             pub = get_rsa_pub_key(pubkey_path)
             if HAS_M2:
-                payload['token'] = pub.public_encrypt(six.b(self.token), RSA.pkcs1_oaep_padding)
+                payload['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
             else:
                 cipher = PKCS1_OAEP.new(pub)
                 payload['token'] = cipher.encrypt(self.token)
@@ -845,7 +845,8 @@ class AsyncAuth(object):
             log.debug('Decrypting the current master AES key')
         key = self.get_keys()
         if HAS_M2:
-            key_str = key.private_decrypt(six.b(payload['aes']), RSA.pkcs1_oaep_padding)
+            key_str = key.private_decrypt(payload['aes'],
+                                          RSA.pkcs1_oaep_padding)
         else:
             cipher = PKCS1_OAEP.new(key)
             key_str = cipher.decrypt(payload['aes'])
@@ -876,7 +877,8 @@ class AsyncAuth(object):
         else:
             if 'token' in payload:
                 if HAS_M2:
-                    token = key.private_decrypt(six.b(payload['token']), RSA.pkcs1_oaep_padding)
+                    token = key.private_decrypt(payload['token'],
+                                                RSA.pkcs1_oaep_padding)
                 else:
                     token = cipher.decrypt(payload['token'])
                 return key_str, token

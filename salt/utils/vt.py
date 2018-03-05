@@ -642,7 +642,7 @@ class Terminal(object):
             if self.child_fde in rlist:
                 try:
                     stderr = self._translate_newlines(
-                        salt.utils.stringutils.to_str(
+                        salt.utils.stringutils.to_unicode(
                             os.read(self.child_fde, maxsize)
                         )
                     )
@@ -675,7 +675,7 @@ class Terminal(object):
             if self.child_fd in rlist:
                 try:
                     stdout = self._translate_newlines(
-                        salt.utils.stringutils.to_str(
+                        salt.utils.stringutils.to_unicode(
                             os.read(self.child_fd, maxsize)
                         )
                     )
@@ -708,9 +708,9 @@ class Terminal(object):
         def __detect_parent_terminal_size(self):
             try:
                 TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
-                packed = struct.pack('HHHH', 0, 0, 0, 0)
+                packed = struct.pack(b'HHHH', 0, 0, 0, 0)
                 ioctl = fcntl.ioctl(sys.stdin.fileno(), TIOCGWINSZ, packed)
-                return struct.unpack('HHHH', ioctl)[0:2]
+                return struct.unpack(b'HHHH', ioctl)[0:2]
             except IOError:
                 # Return a default value of 24x80
                 return 24, 80
@@ -731,9 +731,9 @@ class Terminal(object):
                 )
 
             TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
-            packed = struct.pack('HHHH', 0, 0, 0, 0)
+            packed = struct.pack(b'HHHH', 0, 0, 0, 0)
             ioctl = fcntl.ioctl(self.child_fd, TIOCGWINSZ, packed)
-            return struct.unpack('HHHH', ioctl)[0:2]
+            return struct.unpack(b'HHHH', ioctl)[0:2]
 
         def setwinsize(self, rows, cols):
             '''
@@ -759,7 +759,7 @@ class Terminal(object):
                 # Same bits, but with sign.
                 TIOCSWINSZ = -2146929561
             # Note, assume ws_xpixel and ws_ypixel are zero.
-            packed = struct.pack('HHHH', rows, cols, 0, 0)
+            packed = struct.pack(b'HHHH', rows, cols, 0, 0)
             fcntl.ioctl(self.child_fd, TIOCSWINSZ, packed)
 
         def isalive(self,

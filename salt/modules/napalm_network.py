@@ -101,7 +101,7 @@ def _filter_dict(input_dict, search_key, search_value):
 
 def _explicit_close(napalm_device):
     '''
-    Will explicitely close the config session with the network device,
+    Will explicily close the config session with the network device,
     when running in a now-always-alive proxy minion or regular minion.
     This helper must be used in configuration-related functions,
     as the session is preserved and not closed before making any changes.
@@ -139,7 +139,7 @@ def _config_logic(napalm_device,
     # then the decorator will make sure that
     # if not proxy (when the connection is always alive)
     # and the `inherit_napalm_device` is set,
-    # `napalm_device` will be overriden.
+    # `napalm_device` will be overridden.
     # See `salt.utils.napalm.proxy_napalm_wrap` decorator.
 
     loaded_result['already_configured'] = False
@@ -380,7 +380,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     textfsm_parse: ``False``
         Try parsing the outputs using the TextFSM templates.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This option can be also specified in the minion configuration
@@ -394,7 +394,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         ``salt://``, ``http://``, ``https://``, ``ftp://``,
         ``s3://``, ``swift://``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This needs to be a directory with a flat structure, having an
@@ -416,14 +416,14 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         - ``s3://``
         - ``swift://``
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     textfsm_template_dict
         A dictionary with the mapping between a command
         and the corresponding TextFSM path to use to extract the data.
         The TextFSM paths can be specified as in ``textfsm_template``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This option can be also specified in the minion configuration
@@ -433,7 +433,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         The name of the grain used to identify the platform name
         in the TextFSM index file. Default: ``os``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This option can be also specified in the minion configuration
@@ -444,7 +444,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         exactly as specified in the TextFSM index file.
         Default: ``Platform``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This is field is case sensitive, make sure
@@ -458,7 +458,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     index_file: ``index``
         The name of the TextFSM index file, under the ``textfsm_path``. Default: ``index``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             This option can be also specified in the minion configuration
@@ -468,26 +468,26 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         Salt fileserver envrionment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     include_empty: ``False``
         Include empty files under the ``textfsm_path``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     include_pat
         Glob or regex to narrow down the files cached from the given path.
         If matching with a regex, the regex must be prefixed with ``E@``,
         otherwise the expression will be interpreted as a glob.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     exclude_pat
         Glob or regex to exclude certain files from being cached from the given path.
         If matching with a regex, the regex must be prefixed with ``E@``,
         otherwise the expression will be interpreted as a glob.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         .. note::
             If used with ``include_pat``, files matching this pattern will be
@@ -1207,7 +1207,7 @@ def load_config(filename=None,
         - ``s3://``
         - ``swift://``
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
 
     text
         String containing the desired configuration.
@@ -1234,7 +1234,7 @@ def load_config(filename=None,
     saltenv: ``base``
         Specifies the Salt environment name.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :return: a dictionary having the following keys:
 
@@ -1422,7 +1422,7 @@ def load_template(template_name,
     template_attrs: "--------------e----"
         attributes of file. (see `man lsattr`)
 
-        .. versionadded:: oxygen
+        .. versionadded:: 2018.3.0
 
     saltenv: base
         Specifies the template environment.

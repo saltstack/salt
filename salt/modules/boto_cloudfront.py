@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon CloudFront
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: boto3
 
@@ -57,6 +57,7 @@ import logging
 # Import Salt libs
 import salt.ext.six as six
 from salt.utils.odict import OrderedDict
+import salt.utils.versions
 
 # Import third party libs
 try:
@@ -76,11 +77,10 @@ def __virtual__():
     '''
     Only load if boto3 libraries exist.
     '''
-    if not HAS_BOTO:
-        msg = 'The boto_cloudfront module could not be loaded: {}.'
-        return (False, msg.format('boto3 libraries not found'))
-    __utils__['boto3.assign_funcs'](__name__, 'cloudfront')
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto3.assign_funcs'](__name__, 'cloudfront')
+    return has_boto_reqs
 
 
 def _list_distributions(

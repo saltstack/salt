@@ -107,7 +107,9 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
 
     # Package installed
     else:
-        version_info = __salt__['chocolatey.version'](name, check_remote=True)
+        version_info = __salt__['chocolatey.version'](name=name,
+                                                      check_remote=True,
+                                                      source=source)
 
         full_name = name
         for pkg in version_info:
@@ -283,7 +285,7 @@ def upgraded(name,
     '''
     Upgrades a package. Will install the package if not installed.
 
-    .. versionadded: Oxygen
+    .. versionadded:: 2018.3.0
 
     Args:
 

@@ -505,7 +505,7 @@ def chgrp(path, group):
 
 def _cmp_attrs(path, attrs):
     '''
-    .. versionadded: Oxygen
+    .. versionadded:: 2018.3.0
 
     Compare attributes of a given file to given attributes.
     Returns a pair (list) where first item are attributes to
@@ -534,7 +534,7 @@ def _cmp_attrs(path, attrs):
 
 def lsattr(path):
     '''
-    .. versionadded: Oxygen
+    .. versionadded:: 2018.3.0
 
     Obtain the modifiable attributes of the given file. If path
     is to a directory, an empty list is returned.
@@ -565,7 +565,7 @@ def lsattr(path):
 
 def chattr(*args, **kwargs):
     '''
-    .. versionadded: Oxygen
+    .. versionadded:: 2018.3.0
 
     Change the attributes of files
 
@@ -3669,7 +3669,7 @@ def path_exists_glob(path):
     Expansion allows usage of ? * and character ranges []. Tilde expansion
     is not supported. Returns True/False.
 
-    .. versionadded:: Hellium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -3974,7 +3974,7 @@ def get_managed(
     attrs
         Attributes of file
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     context
         Variables to add to the template context
@@ -4729,7 +4729,7 @@ def check_file_meta(
     attrs
         Destination file attributes
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     saltenv
         Salt environment used to resolve source files
@@ -4835,14 +4835,14 @@ def get_diff(file1,
     file1
         The first file to feed into the diff utility
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             Can now be either a local or remote file. In earlier releases,
             thuis had to be a file local to the minion.
 
     file2
         The second file to feed into the diff utility
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             Can now be either a local or remote file. In earlier releases, this
             had to be a file on the salt fileserver (i.e.
             ``salt://somefile.txt``)
@@ -4861,7 +4861,7 @@ def get_diff(file1,
         except for within states, with the ``obfuscate_templates`` option set
         to ``True``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     source_hash_file1
         If ``file1`` is an http(s)/ftp URL and the file exists in the minion's
@@ -4869,7 +4869,7 @@ def get_diff(file1,
         re-downloading the archive if the cached copy matches the specified
         hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     source_hash_file2
         If ``file2`` is an http(s)/ftp URL and the file exists in the minion's
@@ -4877,7 +4877,7 @@ def get_diff(file1,
         re-downloading the archive if the cached copy matches the specified
         hash.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Examples:
 
@@ -5015,7 +5015,7 @@ def manage_file(name,
     attrs
         attributes to be set on file: '' means remove all of them
 
-        .. versionadded: Oxygen
+        .. versionadded:: 2018.3.0
 
     makedirs
         make directories if they do not exist

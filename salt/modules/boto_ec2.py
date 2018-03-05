@@ -54,9 +54,9 @@ import time
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.json
+import salt.utils.versions
 from salt.ext import six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
 try:
@@ -78,17 +78,16 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.8.0'
     # the boto_ec2 execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, "The boto_ec2 module cannot be loaded: boto library not found")
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, "The boto_ec2 module cannot be loaded: boto library version incorrect ")
-    else:
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(
+        boto_ver='2.8.0',
+        check_boto3=False
+    )
+    if has_boto_reqs is True:
         __utils__['boto.assign_funcs'](__name__, 'ec2', pack=__salt__)
-        return True
+    return has_boto_reqs
 
 
 def __init__(opts):
@@ -1866,7 +1865,7 @@ def get_all_tags(filters=None, region=None, key=None, keyid=None, profile=None):
     '''
     Describe all tags matching the filter criteria, or all tags in the account otherwise.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     filters
         (dict) - Additional constraints on which volumes to return.  Note that valid filters vary
