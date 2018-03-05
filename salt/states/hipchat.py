@@ -45,7 +45,7 @@ def send_message(name,
                  api_url=None,
                  api_key=None,
                  api_version=None,
-                 message_color='yellow',
+                 color='yellow',
                  notify=False):
     '''
     Send a message to a Hipchat room.
@@ -129,7 +129,7 @@ def send_message(name,
         api_url=api_url,
         api_key=api_key,
         api_version=api_version,
-        color=message_color,
+        color=color,
         notify=notify,
     )
 
