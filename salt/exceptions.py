@@ -285,7 +285,7 @@ class SaltRenderError(SaltException):
         if self.line_num and self.buffer:
             # Avoid circular import
             import salt.utils.templates
-            self.context = salt.utils.templates.get_context(
+            self.context = salt.utils.stringutils.get_context(
                 self.buffer,
                 self.line_num,
                 marker=marker

@@ -14,7 +14,7 @@ import shlex
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import map, zip  # pylint: disable=import-error,redefined-builtin
 import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
@@ -269,7 +269,13 @@ def shlex_split(s, **kwargs):
     Only split if variable is a string
     '''
     if isinstance(s, six.string_types):
-        return shlex.split(s, **kwargs)
+        # On PY2, shlex.split will fail with unicode types if there are
+        # non-ascii characters in the string. So, we need to make sure we
+        # invoke it with a str type, and then decode the resulting string back
+        # to unicode to return it.
+        return salt.utils.data.decode(
+            shlex.split(salt.utils.stringutils.to_str(s), **kwargs)
+        )
     else:
         return s
 
@@ -333,16 +339,18 @@ def argspec_report(functions, module=''):
     return ret
 
 
-def split_input(val):
+def split_input(val, mapper=None):
     '''
     Take an input value and split it into a list, returning the resulting list
     '''
+    if mapper is None:
+        mapper = lambda x: x
     if isinstance(val, list):
-        return val
+        return list(map(mapper, val))
     try:
-        return [x.strip() for x in val.split(',')]
+        return list(map(mapper, [x.strip() for x in val.split(',')]))
     except AttributeError:
-        return [x.strip() for x in six.text_type(val).split(',')]
+        return list(map(mapper, [x.strip() for x in six.text_type(val).split(',')]))
 
 
 def test_mode(**kwargs):

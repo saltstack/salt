@@ -300,7 +300,7 @@ def cpustats():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for OpenBSD
 
     CLI Example:
@@ -448,7 +448,7 @@ def meminfo():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for OpenBSD
 
     CLI Example:
@@ -612,7 +612,7 @@ def cpuinfo():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for NetBSD and OpenBSD
 
     CLI Example:
@@ -1081,7 +1081,7 @@ def nproc():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for Darwin, FreeBSD and OpenBSD
 
     CLI Example:
@@ -1130,7 +1130,7 @@ def netstats():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for OpenBSD
 
     CLI Example:
@@ -1555,7 +1555,7 @@ def version():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for OpenBSD
 
     CLI Example:

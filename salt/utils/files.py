@@ -328,6 +328,17 @@ def fopen(*args, **kwargs):
 
     NB! We still have small race condition between open and fcntl.
     '''
+    if six.PY3:
+        try:
+            # Don't permit stdin/stdout/stderr to be opened. The boolean False
+            # and True are treated by Python 3's open() as file descriptors 0
+            # and 1, respectively.
+            if args[0] in (0, 1, 2):
+                raise TypeError(
+                    '{0} is not a permitted file descriptor'.format(args[0])
+                )
+        except IndexError:
+            pass
     binary = None
     # ensure 'binary' mode is always used on Windows in Python 2
     if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or

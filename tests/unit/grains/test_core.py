@@ -10,6 +10,11 @@ import os
 import socket
 
 # Import Salt Testing Libs
+try:
+    import pytest
+except ImportError as import_error:
+    pytest = None
+
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
@@ -21,6 +26,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
 import salt.grains.core as core
@@ -43,15 +49,46 @@ IP4_ADD2 = '10.0.0.2'
 IP6_LOCAL = '::1'
 IP6_ADD1 = '2001:4860:4860::8844'
 IP6_ADD2 = '2001:4860:4860::8888'
+OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not pytest, False)
 class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for core grains
     '''
     def setup_loader_modules(self):
         return {core: {}}
+
+    @patch("os.path.isfile")
+    def test_parse_etc_os_release(self, path_isfile_mock):
+        path_isfile_mock.side_effect = lambda x: x == "/usr/lib/os-release"
+        with salt.utils.files.fopen(os.path.join(OS_RELEASE_DIR, "ubuntu-17.10")) as os_release_file:
+            os_release_content = os_release_file.readlines()
+        with patch("salt.utils.files.fopen", mock_open()) as os_release_file:
+            os_release_file.return_value.__iter__.return_value = os_release_content
+            os_release = core._parse_os_release(["/etc/os-release", "/usr/lib/os-release"])
+        self.assertEqual(os_release, {
+            "NAME": "Ubuntu",
+            "VERSION": "17.10 (Artful Aardvark)",
+            "ID": "ubuntu",
+            "ID_LIKE": "debian",
+            "PRETTY_NAME": "Ubuntu 17.10",
+            "VERSION_ID": "17.10",
+            "HOME_URL": "https://www.ubuntu.com/",
+            "SUPPORT_URL": "https://help.ubuntu.com/",
+            "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+            "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+            "VERSION_CODENAME": "artful",
+            "UBUNTU_CODENAME": "artful",
+        })
+
+    @patch("os.path.isfile")
+    def test_missing_os_release(self, path_isfile_mock):
+        path_isfile_mock.return_value = False
+        os_release = core._parse_os_release(["/etc/os-release", "/usr/lib/os-release"])
+        self.assertEqual(os_release, {})
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_gnu_slash_linux_in_os_name(self):
@@ -151,9 +188,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         _path_exists_map = {
             '/proc/1/cmdline': False
         }
-        _path_isfile_map = {
-            '/etc/os-release': True,
-        }
         _os_release_map = {
             'NAME': 'SLES',
             'VERSION': '12-SP1',
@@ -165,9 +199,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         path_exists_mock = MagicMock(side_effect=lambda x: _path_exists_map[x])
-        path_isfile_mock = MagicMock(
-            side_effect=lambda x: _path_isfile_map.get(x, False)
-        )
         empty_mock = MagicMock(return_value={})
         osarch_mock = MagicMock(return_value="amd64")
         os_release_mock = MagicMock(return_value=_os_release_map)
@@ -195,7 +226,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     with patch('{0}.__import__'.format(built_in),
                                side_effect=_import_mock):
                         # Skip all the /etc/*-release stuff (not pertinent)
-                        with patch.object(os.path, 'isfile', path_isfile_mock):
+                        with patch.object(os.path, 'isfile', MagicMock(return_value=False)):
                             with patch.object(core, '_parse_os_release', os_release_mock):
                                 # Mock linux_distribution to give us the OS
                                 # name that we want.
@@ -214,11 +245,16 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(os_grains.get('os_family'), 'Suse')
         self.assertEqual(os_grains.get('os'), 'SUSE')
 
-    def _run_suse_os_grains_tests(self, os_release_map):
-        path_isfile_mock = MagicMock(side_effect=lambda x: x in os_release_map['files'])
+    def _run_os_grains_tests(self, os_release_filename, os_release_map, expectation):
+        path_isfile_mock = MagicMock(side_effect=lambda x: x in os_release_map.get('files', []))
         empty_mock = MagicMock(return_value={})
         osarch_mock = MagicMock(return_value="amd64")
-        os_release_mock = MagicMock(return_value=os_release_map.get('os_release_file'))
+        if os_release_filename:
+            os_release_data = core._parse_os_release(
+                [os.path.join(OS_RELEASE_DIR, os_release_filename)])
+        else:
+            os_release_data = os_release_map.get('os_release_file', {})
+        os_release_mock = MagicMock(return_value=os_release_data)
 
         orig_import = __import__
         if six.PY2:
@@ -248,10 +284,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 # Mock linux_distribution to give us the OS
                                 # name that we want.
                                 distro_mock = MagicMock(
-                                    return_value=('SUSE test', 'version', 'arch')
+                                    return_value=os_release_map['linux_distribution']
                                 )
                                 with patch('salt.utils.files.fopen', mock_open()) as suse_release_file:
-                                    suse_release_file.return_value.__iter__.return_value = os_release_map.get('suse_release_file', '').splitlines()
+                                    suse_release_file.return_value.__iter__.return_value = \
+                                        os_release_map.get('suse_release_file', '').splitlines()
                                     with patch.object(core, 'linux_distribution', distro_mock):
                                         with patch.object(core, '_linux_gpu_data', empty_mock):
                                             with patch.object(core, '_linux_cpudata', empty_mock):
@@ -260,13 +297,16 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                                     with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
                                                         os_grains = core.os_data()
 
-        self.assertEqual(os_grains.get('os'), 'SUSE')
-        self.assertEqual(os_grains.get('os_family'), 'Suse')
-        self.assertEqual(os_grains.get('osfullname'), os_release_map['osfullname'])
-        self.assertEqual(os_grains.get('oscodename'), os_release_map['oscodename'])
-        self.assertEqual(os_grains.get('osrelease'), os_release_map['osrelease'])
-        self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
-        self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
+        grains = {k: v for k, v in os_grains.items()
+                  if k in set(["os", "os_family", "osfullname", "oscodename", "osfinger",
+                               "osrelease", "osrelease_info", "osmajorrelease"])}
+        self.assertEqual(grains, expectation)
+
+    def _run_suse_os_grains_tests(self, os_release_map, expectation):
+        os_release_map['linux_distribution'] = ('SUSE test', 'version', 'arch')
+        expectation['os'] = 'SUSE'
+        expectation['os_family'] = 'Suse'
+        self._run_os_grains_tests(None, os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles11sp3(self):
@@ -278,14 +318,17 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 VERSION = 11
 PATCHLEVEL = 3
 ''',
+            'files': ["/etc/SuSE-release"],
+        }
+        expectation = {
             'oscodename': 'SUSE Linux Enterprise Server 11 SP3',
             'osfullname': "SLES",
             'osrelease': '11.3',
-            'osrelease_info': [11, 3],
+            'osrelease_info': (11, 3),
             'osmajorrelease': 11,
-            'files': ["/etc/SuSE-release"],
+            'osfinger': 'SLES-11',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles11sp4(self):
@@ -302,14 +345,16 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:suse:sles:11:4'
             },
+        }
+        expectation = {
             'oscodename': 'SUSE Linux Enterprise Server 11 SP4',
             'osfullname': "SLES",
             'osrelease': '11.4',
-            'osrelease_info': [11, 4],
+            'osrelease_info': (11, 4),
             'osmajorrelease': 11,
-            'files': ["/etc/os-release"],
+            'osfinger': 'SLES-11',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles12(self):
@@ -326,14 +371,16 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:suse:sles:12'
             },
+        }
+        expectation = {
             'oscodename': 'SUSE Linux Enterprise Server 12',
             'osfullname': "SLES",
             'osrelease': '12',
-            'osrelease_info': [12],
+            'osrelease_info': (12,),
             'osmajorrelease': 12,
-            'files': ["/etc/os-release"],
+            'osfinger': 'SLES-12',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles12sp1(self):
@@ -350,14 +397,16 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:suse:sles:12:sp1'
             },
+        }
+        expectation = {
             'oscodename': 'SUSE Linux Enterprise Server 12 SP1',
             'osfullname': "SLES",
             'osrelease': '12.1',
-            'osrelease_info': [12, 1],
+            'osrelease_info': (12, 1),
             'osmajorrelease': 12,
-            'files': ["/etc/os-release"],
+            'osfinger': 'SLES-12',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_opensuse_leap_42_1(self):
@@ -374,14 +423,16 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:opensuse:opensuse:42.1'
             },
+        }
+        expectation = {
             'oscodename': 'openSUSE Leap 42.1 (x86_64)',
             'osfullname': "Leap",
             'osrelease': '42.1',
-            'osrelease_info': [42, 1],
+            'osrelease_info': (42, 1),
             'osmajorrelease': 42,
-            'files': ["/etc/os-release"],
+            'osfinger': 'Leap-42',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_tumbleweed(self):
@@ -398,90 +449,116 @@ PATCHLEVEL = 3
                 'ANSI_COLOR': '0;32',
                 'CPE_NAME': 'cpe:/o:opensuse:opensuse:20160504'
             },
+        }
+        expectation = {
             'oscodename': 'openSUSE Tumbleweed (20160504) (x86_64)',
             'osfullname': "Tumbleweed",
             'osrelease': '20160504',
-            'osrelease_info': [20160504],
+            'osrelease_info': (20160504,),
             'osmajorrelease': 20160504,
-            'files': ["/etc/os-release"],
+            'osfinger': 'Tumbleweed-20160504',
         }
-        self._run_suse_os_grains_tests(_os_release_map)
+        self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
-    def test_ubuntu_os_grains(self):
+    def test_debian_7_os_grains(self):
         '''
-        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        Test if OS grains are parsed correctly in Debian 7 "wheezy"
         '''
         _os_release_map = {
-            'os_release_file': {
-                'NAME': 'Ubuntu',
-                'VERSION': '16.04.1 LTS (Xenial Xerus)',
-                'VERSION_ID': '16.04',
-                'PRETTY_NAME': '',
-                'ID': 'ubuntu',
-            },
+            'linux_distribution': ('debian', '7.11', ''),
+        }
+        expectation = {
+            'os': 'Debian',
+            'os_family': 'Debian',
+            'oscodename': 'wheezy',
+            'osfullname': 'Debian GNU/Linux',
+            'osrelease': '7',
+            'osrelease_info': (7,),
+            'osmajorrelease': 7,
+            'osfinger': 'Debian-7',
+        }
+        self._run_os_grains_tests("debian-7", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_debian_8_os_grains(self):
+        '''
+        Test if OS grains are parsed correctly in Debian 8 "jessie"
+        '''
+        _os_release_map = {
+            'linux_distribution': ('debian', '8.10', ''),
+        }
+        expectation = {
+            'os': 'Debian',
+            'os_family': 'Debian',
+            'oscodename': 'jessie',
+            'osfullname': 'Debian GNU/Linux',
+            'osrelease': '8',
+            'osrelease_info': (8,),
+            'osmajorrelease': 8,
+            'osfinger': 'Debian-8',
+        }
+        self._run_os_grains_tests("debian-8", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_debian_9_os_grains(self):
+        '''
+        Test if OS grains are parsed correctly in Debian 9 "stretch"
+        '''
+        _os_release_map = {
+            'linux_distribution': ('debian', '9.3', ''),
+        }
+        expectation = {
+            'os': 'Debian',
+            'os_family': 'Debian',
+            'oscodename': 'stretch',
+            'osfullname': 'Debian GNU/Linux',
+            'osrelease': '9',
+            'osrelease_info': (9,),
+            'osmajorrelease': 9,
+            'osfinger': 'Debian-9',
+        }
+        self._run_os_grains_tests("debian-9", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_ubuntu_xenial_os_grains(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu 16.04 "Xenial Xerus"
+        '''
+        _os_release_map = {
+            'linux_distribution': ('Ubuntu', '16.04', 'xenial'),
+        }
+        expectation = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
             'oscodename': 'xenial',
             'osfullname': 'Ubuntu',
             'osrelease': '16.04',
-            'osrelease_info': [16, 4],
+            'osrelease_info': (16, 4),
             'osmajorrelease': 16,
             'osfinger': 'Ubuntu-16.04',
         }
-        self._run_ubuntu_os_grains_tests(_os_release_map)
+        self._run_os_grains_tests("ubuntu-16.04", _os_release_map, expectation)
 
-    def _run_ubuntu_os_grains_tests(self, os_release_map):
-        path_isfile_mock = MagicMock(side_effect=lambda x: x in ['/etc/os-release'])
-        empty_mock = MagicMock(return_value={})
-        osarch_mock = MagicMock(return_value="amd64")
-        os_release_mock = MagicMock(return_value=os_release_map.get('os_release_file'))
-
-        if six.PY2:
-            built_in = '__builtin__'
-        else:
-            built_in = 'builtins'
-
-        orig_import = __import__
-
-        def _import_mock(name, *args):
-            if name == 'lsb_release':
-                raise ImportError('No module named lsb_release')
-            return orig_import(name, *args)
-
-        # Skip the first if statement
-        with patch.object(salt.utils.platform, 'is_proxy',
-                          MagicMock(return_value=False)):
-            # Skip the selinux/systemd stuff (not pertinent)
-            with patch.object(core, '_linux_bin_exists',
-                              MagicMock(return_value=False)):
-                # Skip the init grain compilation (not pertinent)
-                with patch.object(os.path, 'exists', path_isfile_mock):
-                    # Ensure that lsb_release fails to import
-                    with patch('{0}.__import__'.format(built_in),
-                               side_effect=_import_mock):
-                        # Skip all the /etc/*-release stuff (not pertinent)
-                        with patch.object(os.path, 'isfile', path_isfile_mock):
-                            with patch.object(core, '_parse_os_release', os_release_mock):
-                                # Mock linux_distribution to give us the OS
-                                # name that we want.
-                                distro_mock = MagicMock(return_value=('Ubuntu', '16.04', 'xenial'))
-                                with patch('salt.utils.files.fopen', mock_open()) as suse_release_file:
-                                    suse_release_file.return_value.__iter__.return_value = os_release_map.get(
-                                        'suse_release_file', '').splitlines()
-                                    with patch.object(core, 'linux_distribution', distro_mock):
-                                        with patch.object(core, '_linux_gpu_data', empty_mock):
-                                            with patch.object(core, '_linux_cpudata', empty_mock):
-                                                with patch.object(core, '_virtual', empty_mock):
-                                                    # Mock the osarch
-                                                    with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
-                                                        os_grains = core.os_data()
-
-        self.assertEqual(os_grains.get('os'), 'Ubuntu')
-        self.assertEqual(os_grains.get('os_family'), 'Debian')
-        self.assertEqual(os_grains.get('osfullname'), os_release_map['osfullname'])
-        self.assertEqual(os_grains.get('oscodename'), os_release_map['oscodename'])
-        self.assertEqual(os_grains.get('osrelease'), os_release_map['osrelease'])
-        self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
-        self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_ubuntu_artful_os_grains(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu 17.10 "Artful Aardvark"
+        '''
+        _os_release_map = {
+            'linux_distribution': ('Ubuntu', '17.10', 'artful'),
+        }
+        expectation = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'artful',
+            'osfullname': 'Ubuntu',
+            'osrelease': '17.10',
+            'osrelease_info': (17, 10),
+            'osmajorrelease': 17,
+            'osfinger': 'Ubuntu-17.10',
+        }
+        self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
     def test_windows_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
@@ -517,8 +594,8 @@ PATCHLEVEL = 3
         self.assertEqual(_grains.get('iscsi_iqn'),
                          ['iqn.localhost.hostid.7f000001'])
 
-    @skipIf(salt.utils.platform.is_darwin(), 'MacOSX iscsi grains not supported')
-    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
+    @patch('salt.grains.core.os.path.isfile', MagicMock(return_value=True))
+    @patch('salt.grains.core.os.access', MagicMock(return_value=True))
     def test_linux_iscsi_iqn_grains(self):
         _iscsi_file = '## DO NOT EDIT OR REMOVE THIS FILE!\n' \
                       '## If you remove this file, the iSCSI daemon will not start.\n' \
@@ -527,13 +604,13 @@ PATCHLEVEL = 3
                       '## for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.\n' \
                       'InitiatorName=iqn.1993-08.org.debian:01:d12f7aba36\n'
 
-        with patch('os.path.isfile', MagicMock(return_value=True)):
-            with patch('salt.utils.files.fopen', mock_open()) as iscsi_initiator_file:
-                iscsi_initiator_file.return_value.__iter__.return_value = _iscsi_file.splitlines()
-                _grains = core.iscsi_iqn()
+        with patch('salt.utils.files.fopen', mock_open()) as iscsi_initiator_file:
+            iscsi_initiator_file.return_value.__iter__.return_value = _iscsi_file.splitlines()
+            iqn = core._linux_iqn()
 
-        self.assertEqual(_grains.get('iscsi_iqn'),
-                         ['iqn.1993-08.org.debian:01:d12f7aba36'])
+        assert isinstance(iqn, list)
+        assert len(iqn) == 1
+        assert iqn == ['iqn.1993-08.org.debian:01:d12f7aba36']
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
@@ -811,6 +888,8 @@ SwapTotal:       4789244 kB'''
                             _check_type(key, value, ip4_empty, ip6_empty)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils.platform, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.grains.core.__opts__', {'ipv6': False})
     def test_dns_return(self):
         '''
         test the return for a dns grain. test for issue:
@@ -860,3 +939,30 @@ SwapTotal:       4789244 kB'''
                 with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
                     fqdns = core.fqdns()
                     self.assertEqual(fqdns, ret)
+
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.EPERM,
+                                                                   'The cables are not the same length.')))
+    @patch('salt.grains.core.log', MagicMock())
+    def test_linux_iqn_non_root(self):
+        '''
+        Test if linux_iqn is running on salt-master as non-root
+        and handling access denial properly.
+        :return:
+        '''
+        assert core._linux_iqn() == []
+        core.log.debug.assert_called()
+        assert 'Error while accessing' in core.log.debug.call_args[0][0]
+        assert 'cables are not the same' in core.log.debug.call_args[0][2].strerror
+        assert core.log.debug.call_args[0][2].errno == os.errno.EPERM
+        assert core.log.debug.call_args[0][1] == '/etc/iscsi/initiatorname.iscsi'
+
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.ENOENT, '')))
+    @patch('salt.grains.core.log', MagicMock())
+    def test_linux_iqn_no_iscsii_initiator(self):
+        '''
+        Test if linux_iqn is running on salt-master as root.
+        iscsii initiator is not there accessible or is not supported.
+        :return:
+        '''
+        assert core._linux_iqn() == []
+        core.log.debug.assert_not_called()

@@ -1812,7 +1812,7 @@ def managed(name,
         .. note::
             This option is **not** supported on Windows.
 
-        .. versionadded: Oxygen
+        .. versionadded:: 2018.3.0
 
     template
         If this setting is applied, the named templating engine will be used to
@@ -2117,7 +2117,7 @@ def managed(name,
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -2821,7 +2821,7 @@ def directory(name,
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -6645,7 +6645,7 @@ def cached(name,
 
     .. code-block:: python
 
-        cached = __salt__['cp.is_cached'](source_match)
+        cached = __salt__['cp.is_cached'](source_match, saltenv=__env__)
 
     This function will return the cached path of the file, or an empty string
     if the file is not present in the minion cache.

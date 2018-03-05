@@ -48,7 +48,8 @@ def latest(name,
            password=None,
            force=False,
            externals=True,
-           trust=False):
+           trust=False,
+           trust_failures=None):
     '''
     Checkout or update the working directory to the latest revision from the
     remote repository.
@@ -84,6 +85,14 @@ def latest(name,
 
     trust : False
         Automatically trust the remote server. SVN's --trust-server-cert
+
+    trust_failures : None
+        Comma-separated list of certificate trust failures, that shall be
+        ignored. This can be used if trust=True is not sufficient. The
+        specified string is passed to SVN's --trust-server-cert-failures
+        option as-is.
+
+        .. versionadded:: Fluorine
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -147,6 +156,9 @@ def latest(name,
     if trust:
         opts += ('--trust-server-cert',)
 
+    if trust_failures:
+        opts += ('--trust-server-cert-failures', trust_failures)
+
     if svn_cmd == 'svn.update':
         out = __salt__[svn_cmd](cwd, basename, user, username, password, *opts)
 
@@ -184,7 +196,8 @@ def export(name,
            force=False,
            overwrite=False,
            externals=True,
-           trust=False):
+           trust=False,
+           trust_failures=None):
     '''
     Export a file or directory from an SVN repository
 
@@ -222,6 +235,14 @@ def export(name,
 
     trust : False
         Automatically trust the remote server. SVN's --trust-server-cert
+
+    trust_failures : None
+        Comma-separated list of certificate trust failures, that shall be
+        ignored. This can be used if trust=True is not sufficient. The
+        specified string is passed to SVN's --trust-server-cert-failures
+        option as-is.
+
+        .. versionadded:: Fluorine
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -259,6 +280,9 @@ def export(name,
 
     if trust:
         opts += ('--trust-server-cert',)
+
+    if trust_failures:
+        opts += ('--trust-server-cert-failures', trust_failures)
 
     out = __salt__[svn_cmd](cwd, name, basename, user, username, password, rev, *opts)
     ret['changes'] = name + ' was Exported to ' + target
