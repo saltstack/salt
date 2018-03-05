@@ -20,15 +20,31 @@ This renderer requires the boto3_ Python library.
 Setup
 -----
 
-To set things up, first generate a KMS key.
-https://docs.aws.amazon.com/kms/latest/developerguide/create-keys.html
+First, set up your AWS client. For complete instructions on configuration the AWS client,
+please read the `boto3 configuration documentation`_. By default, this renderer will use
+the default AWS profile. You can override the profile name in salt configuration.
+For example, if you have a profile in your aws client configuration named "salt",
+you can add the following salt configuration:
 
-Then generate a local data key from that KMS key and store it in your master config:
+.. code-block:: yaml
+
+    aws_kms:
+      profile_name: salt
+
+.. _boto3 configuration documentation: https://boto3.readthedocs.io/en/latest/guide/configuration.html
+
+The rest of these instructions assume that you will use the default profile for key generation
+and setup. If not, export AWS_PROFILE and set it to the desired value.
+
+Once the aws client is configured, generate a KMS customer master key and use that to generate
+a local data key.
 
 .. code-block:: bash
 
-    # data_key=$(aws kms generate-data-key --key-id your-key-id --key-spec AES_256 --query 'CiphertextBlob' --output text)
-    # printf 'aws_kms_data_key: !!binary "%s"\n' "$data_key" >> config/master
+    # data_key=$(aws kms generate-data-key --key-id your-key-id --key-spec AES_256
+                 --query 'CiphertextBlob' --output text)
+    # echo 'aws_kms:'
+    # echo '  data_key: !!binary "%s"\n' "$data_key" >> config/master
 
 To apply the renderer on a file-by-file basis add the following line to the
 top of any pillar with gpg data in it:
@@ -45,7 +61,6 @@ data like so:
     #!yaml|aws_kms
 
     a-secret: gAAAAABaj5uzShPI3PEz6nL5Vhk2eEHxGXSZj8g71B84CZsVjAAtDFY1mfjNRl-1Su9YVvkUzNjI4lHCJJfXqdcTvwczBYtKy0Pa7Ri02s10Wn1tF0tbRwk=
-
 '''
 
 # Import python libs
@@ -84,31 +99,106 @@ def __virtual__():
 log = logging.getLogger(__name__)
 
 
-@decorators.memoize
-def _get_data_key():
+def _cfg(key, default=None):
+    '''
+    Return the requested value from the aws_kms key in salt configuration.
+
+    If it's not set, return the default.
+    '''
+    root_cfg = __salt__.get('config.get', __opts__.get)
+    kms_cfg = root_cfg('aws_kms', {})
+    return kms_cfg.get(key, default)
+
+
+def _cfg_data_key():
+    '''
+    Return the encrypted KMS data key from configuration.
+
+    Raises SaltConfigurationError if not set.
+    '''
+    data_key = _cfg('data_key', '')
+    if data_key:
+        return data_key
+    raise salt.exceptions.SaltConfigurationError('aws_kms:data_key is not set')
+
+
+def _session():
+    '''
+    Return the boto3 session to use for the KMS client.
+
+    If aws_kms:profile_name is set in the salt configuration, use that profile.
+    Otherwise, fall back on the default aws profile.
+
+    We use the boto3 profile system to avoid having to duplicate
+    individual boto3 configuration settings in salt configuration.
+    '''
+    profile_name = _cfg('profile_name')
+    if profile_name:
+        log.info('Using the "%s" aws profile.', profile_name)
+    else:
+        log.info('aws_kms:profile_name is not set in salt. Falling back on default profile.')
+    try:
+        return boto3.Session(profile_name=profile_name)
+    except botocore.exceptions.ProfileNotFound as orig_exc:
+        err_msg = 'Boto3 could not find the "{}" profile configured in Salt.'.format(
+                profile_name or 'default')
+        config_error = salt.exceptions.SaltConfigurationError(err_msg)
+        six.raise_from(config_error, orig_exc)
+    except botocore.exceptions.NoRegionError as orig_exc:
+        err_msg = ('Boto3 was unable to determine the AWS '
+                   'endpoint region using the {} profile.').format(profile_name or 'default')
+        config_error = salt.exceptions.SaltConfigurationError(err_msg)
+        six.raise_from(config_error, orig_exc)
+
+
+def _kms():
+    '''
+    Return the boto3 client for the KMS API.
+    '''
+    session = _session()
+    return session.client('kms')
+
+
+def _api_decrypt():
+    '''
+    Return the response dictionary from the KMS decrypt API call.
+    '''
+    kms = _kms()
+    data_key = _cfg_data_key()
+    try:
+        return kms.decrypt(CiphertextBlob=data_key)
+    except botocore.exceptions.ClientError as orig_exc:
+        error_code = orig_exc.response.get('Error', {}).get('Code', '')
+        if error_code != 'InvalidCiphertextException':
+            raise
+        err_msg = 'aws_kms:data_key is not a valid KMS data key'
+        config_error = salt.exceptions.SaltConfigurationError(err_msg)
+        six.raise_from(config_error, orig_exc)
+
+
+def _plaintext_data_key():
     '''
     Return the configured KMS data key decrypted and encoded in urlsafe base64.
 
-    Memoize the result to minimize API calls to AWS.
+    Cache the result to minimize API calls to AWS.
     '''
-    get_config = __salt__['config.get'] if 'config.get' in __salt__ else __opts__.get
-    data_key = get_config('aws_kms_data_key', '')
-    if not data_key:
-        raise salt.exceptions.SaltConfigurationError('aws_kms_data_key is not set')
-    client = boto3.client('kms')
-    try:
-        response = client.decrypt(CiphertextBlob=data_key)
-    except botocore.exceptions.ClientError as orig_exc:
-        error_code = orig_exc.response.get("Error", {}).get("Code", "")
-        if error_code == 'InvalidCiphertextException':
-            err_msg = 'aws_kms_data_key is not a valid KMS data key'
-            config_error = salt.exceptions.SaltConfigurationError(err_msg)
-            six.raise_from(config_error, orig_exc)
-        raise
+    response = getattr(_plaintext_data_key, 'response', None)
+    cache_hit = response is not None
+    if not cache_hit:
+        response = _api_decrypt()
+        setattr(_plaintext_data_key, 'response', response)
+    key_id = response['KeyId']
+    plaintext = response['Plaintext']
+    log.debug('Using key %s from %s', key_id, 'cache' if cache_hit else 'api call')
+    return plaintext
 
-    log.debug('Using key %s', response['KeyId'])
-    clear_data_key = response['Plaintext']
-    return base64.urlsafe_b64encode(clear_data_key)
+
+def _base64_plaintext_data_key():
+    '''
+    Return the configured KMS data key decrypted and encoded in urlsafe base64.
+    '''
+    plaintext_data_key = _plaintext_data_key()
+    return base64.urlsafe_b64encode(plaintext_data_key)
 
 
 def _decrypt_ciphertext(cipher, translate_newlines=False):
@@ -123,7 +213,7 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
         cipher = cipher.encode(__salt_system_encoding__)
 
     # Decryption
-    data_key = _get_data_key()
+    data_key = _base64_plaintext_data_key()
     plain_text = fernet.Fernet(data_key).decrypt(cipher)
     if six.PY3 and isinstance(plain_text, bytes):
         plain_text = plain_text.decode(__salt_system_encoding__)
@@ -160,10 +250,9 @@ def _decrypt_object(obj, translate_newlines=False):
         return obj
 
 
-def render(gpg_data, saltenv='base', sls='', argline='', **kwargs):  # pylint: disable=unused-argument
+def render(data, saltenv='base', sls='', argline='', **kwargs):  # pylint: disable=unused-argument
     '''
-    Create a gpg object given a gpg_keydir, and then use it to try to decrypt
-    the data to be rendered.
+    Decrypt the data to be rendered that was encrypted using AWS KMS envelope encryption.
     '''
     translate_newlines = kwargs.get('translate_newlines', False)
-    return _decrypt_object(gpg_data, translate_newlines=translate_newlines)
+    return _decrypt_object(data, translate_newlines=translate_newlines)
