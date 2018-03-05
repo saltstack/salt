@@ -2521,7 +2521,7 @@ class State(object):
                             if to_tag not in running:
                                 continue
                             if running[to_tag]['changes']:
-                                if key not in crefs:
+                                if not any(key[0] == cref[0] and key[1] in cref for cref in crefs):
                                     rerror = {_l_tag(key[0], key[1]):
                                                  {'comment': 'Referenced state {0}: {1} does not exist'.format(key[0], key[1]),
                                                   'name': 'listen_{0}:{1}'.format(key[0], key[1]),
@@ -2529,8 +2529,9 @@ class State(object):
                                                   'changes': {}}}
                                     errors.update(rerror)
                                     continue
-                                chunks = [data for cref, data in six.iteritems(crefs) if key == cref]
-                                for chunk in chunks:
+
+                                new_chunks = [data for cref, data in six.iteritems(crefs) if key[0] == cref[0] and key[1] in cref]
+                                for chunk in new_chunks:
                                     low = chunk.copy()
                                     low['sfun'] = chunk['fun']
                                     low['fun'] = 'mod_watch'
