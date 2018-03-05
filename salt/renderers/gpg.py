@@ -220,7 +220,7 @@ import subprocess
 # Import salt libs
 import salt.utils.path
 import salt.utils.stringio
-import salt.utils.subprocess
+from salt.utils.subprocess import FdPopen
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
@@ -277,8 +277,8 @@ def _decrypt_ciphertext(matchobj):
         cipher = cipher.encode(__salt_system_encoding__)
     cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '--status-fd', '2',
            '--no-tty', '-d']
-    proc = salt.utils.subprocess.FdPopen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE, shell=False)
+    proc = FdPopen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                   stderr=subprocess.PIPE, shell=False)
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
         if six.PY3:
