@@ -45,7 +45,7 @@ def send_message(name,
                  api_url=None,
                  api_key=None,
                  api_version=None,
-                 color='yellow',
+                 message_color='yellow',
                  notify=False):
     '''
     Send a message to a Hipchat room.
@@ -60,7 +60,7 @@ def send_message(name,
             - api_url: https://hipchat.myteam.com
             - api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
             - api_version: v1
-            - color: green
+            - message_color: green
             - notify: True
 
     The following parameters are required:
@@ -93,7 +93,7 @@ def send_message(name,
         The api version for Hipchat to use,
         if not specified in the configuration options of master or minion.
 
-    color
+    message_color
         The color the Hipchat message should be displayed in. One of the following, default: yellow
         "yellow", "red", "green", "purple", "gray", or "random".
 
@@ -129,7 +129,7 @@ def send_message(name,
         api_url=api_url,
         api_key=api_key,
         api_version=api_version,
-        color=color,
+        color=message_color,
         notify=notify,
     )
 
