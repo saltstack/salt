@@ -24,7 +24,7 @@ import salt.modules.gpg as gpg
 
 
 try:
-    import gnupg # pylint: disable=import-error,unused-import
+    import gnupg  # pylint: disable=import-error,unused-import
     HAS_GPG = True
 except ImportError:
     HAS_GPG = False
