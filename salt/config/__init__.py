@@ -1486,6 +1486,7 @@ DEFAULT_MASTER_OPTS = {
     'keep_acl_in_token': False,
     'eauth_acl_module': '',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
+    'module_dirs': [],
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
