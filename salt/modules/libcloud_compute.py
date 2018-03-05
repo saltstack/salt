@@ -8,7 +8,7 @@ of supported clouds, see http://libcloud.readthedocs.io/en/latest/compute/suppor
 
 Clouds include Amazon EC2, Azure, Google GCE, VMware, OpenStack Nova
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration:
     This module uses a configuration profile for one or multiple cloud providers

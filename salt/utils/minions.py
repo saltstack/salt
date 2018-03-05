@@ -13,6 +13,7 @@ import logging
 
 # Import salt libs
 import salt.payload
+import salt.roster
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
@@ -682,6 +683,13 @@ class CkMinions(object):
                 _res = check_func(expr, delimiter, greedy)
             else:
                 _res = check_func(expr, greedy)
+            _res['ssh_minions'] = False
+            if self.opts.get('enable_ssh_minions', False) is True and isinstance('tgt', six.string_types):
+                roster = salt.roster.Roster(self.opts, self.opts.get('roster', 'flat'))
+                ssh_minions = roster.targets(expr, tgt_type)
+                if ssh_minions:
+                    _res['minions'].extend(ssh_minions)
+                    _res['ssh_minions'] = True
         except Exception:
             log.exception(
                     'Failed matching available minions with %s pattern: %s',

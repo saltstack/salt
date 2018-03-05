@@ -947,7 +947,7 @@ def run(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not
         necessary) to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -972,7 +972,7 @@ def run(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -995,7 +995,7 @@ def run(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -1192,7 +1192,7 @@ def shell(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
         to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -1217,7 +1217,7 @@ def shell(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -1240,7 +1240,7 @@ def shell(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
@@ -1404,7 +1404,7 @@ def run_stdout(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
         to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -1429,7 +1429,7 @@ def run_stdout(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -1452,7 +1452,7 @@ def run_stdout(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
@@ -1515,26 +1515,6 @@ def run_stdout(cmd,
                success_retcodes=success_retcodes,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: %s', log_callback(ret['stdout']))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: %s', log_callback(ret['stderr']))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: %s', ret['retcode'])
     return ret['stdout'] if not hide_output else ''
 
 
@@ -1613,7 +1593,7 @@ def run_stderr(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not
         necessary) to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -1638,7 +1618,7 @@ def run_stderr(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -1661,7 +1641,7 @@ def run_stderr(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
@@ -1724,26 +1704,6 @@ def run_stderr(cmd,
                success_retcodes=success_retcodes,
                **kwargs)
 
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: %s', log_callback(ret['stdout']))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: %s', log_callback(ret['stderr']))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: %s', ret['retcode'])
     return ret['stderr'] if not hide_output else ''
 
 
@@ -1824,7 +1784,7 @@ def run_all(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not
         necessary) to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -1849,7 +1809,7 @@ def run_all(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -1872,7 +1832,7 @@ def run_all(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
@@ -1883,7 +1843,7 @@ def run_all(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
        Only applies to shell 'powershell'.
 
-       .. versionadded:: Oxygen
+       .. versionadded:: 2018.3.0
 
     :param bool redirect_stderr: If set to ``True``, then stderr will be
         redirected to stdout. This is helpful for cases where obtaining both
@@ -1959,27 +1919,6 @@ def run_all(cmd,
                encoded_cmd=encoded_cmd,
                success_retcodes=success_retcodes,
                **kwargs)
-
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        if ret['stdout']:
-            log.log(lvl, 'stdout: %s', log_callback(ret['stdout']))
-        if ret['stderr']:
-            log.log(lvl, 'stderr: %s', log_callback(ret['stderr']))
-        if ret['retcode']:
-            log.log(lvl, 'retcode: %s', ret['retcode'])
 
     if hide_output:
         ret['stdout'] = ret['stderr'] = ''
@@ -2078,7 +2017,7 @@ def retcode(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -2154,22 +2093,6 @@ def retcode(cmd,
                password=password,
                success_retcodes=success_retcodes,
                **kwargs)
-
-    log_callback = _check_cb(log_callback)
-
-    lvl = _check_loglevel(output_loglevel)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            msg = (
-                'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
-                    ret['retcode']
-                )
-            )
-            log.error(log_callback(msg))
-        log.log(lvl, 'output: %s', log_callback(ret['stdout']))
     return ret['retcode']
 
 
@@ -2326,7 +2249,7 @@ def script(source,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -2349,7 +2272,7 @@ def script(source,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: If the command has not terminated after timeout
         seconds, send the subprocess sigterm, and if sigterm is ignored, follow
@@ -2569,7 +2492,7 @@ def script_retcode(source,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -2875,7 +2798,7 @@ def run_chroot(root,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -2898,7 +2821,7 @@ def run_chroot(root,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout:
         A timeout in seconds for the executed process to return.
@@ -3345,7 +3268,7 @@ def powershell(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -3368,7 +3291,7 @@ def powershell(cmd,
             This is separate from ``output_loglevel``, which only handles how
             Salt logs to the minion log.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
@@ -3558,7 +3481,7 @@ def powershell_all(cmd,
         salt '*' cmd.run_all '$PSVersionTable.CLRVersion' shell=powershell
         salt '*' cmd.run_all 'Get-NetTCPConnection' shell=powershell
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     .. warning::
 
@@ -3638,7 +3561,7 @@ def powershell_all(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -3860,7 +3783,7 @@ def run_bg(cmd,
             the `locale` line in the output of :py:func:`test.versions_report
             <salt.modules.test.versions_report>`.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str output_loglevel: Control the loglevel at which the output from
         the command is logged to the minion log.
@@ -3910,7 +3833,7 @@ def run_bg(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not
         necessary) to $PATH
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,

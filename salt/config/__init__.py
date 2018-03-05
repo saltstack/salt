@@ -1528,6 +1528,7 @@ DEFAULT_MASTER_OPTS = {
     'pillarenv': None,
     'default_top': 'base',
     'file_client': 'local',
+    'local': True,
 
     # Update intervals
     'roots_update_interval': DEFAULT_INTERVAL,
@@ -1814,7 +1815,6 @@ DEFAULT_MASTER_OPTS = {
     'schedule': {},
     'auth_events': True,
     'minion_data_cache_events': True,
-    'enable_ssh': False,
     'enable_ssh_minions': False,
 }
 

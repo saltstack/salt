@@ -35,7 +35,7 @@ class NetapiClientTest(TestCase):
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
-        self.assertEqual(ret, {'minion': True, 'sub_minion': True})
+        self.assertEqual(ret, {'minion': True, 'sub_minion': True, 'localhost': True})
 
     def test_local_async(self):
         low = {'client': 'local_async', 'tgt': '*', 'fun': 'test.ping'}
@@ -47,7 +47,7 @@ class NetapiClientTest(TestCase):
         self.assertIn('jid', ret)
         ret.pop('jid', None)
         ret['minions'] = sorted(ret['minions'])
-        self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
+        self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion', 'localhost'])})
 
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
