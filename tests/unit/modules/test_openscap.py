@@ -44,7 +44,7 @@ class OpenscapTestCase(TestCase):
         self.addCleanup(patcher.stop)
 
     def test_openscap_xccdf_eval_success(self):
-        with patch('salt.modules.openscap.Popen',
+        with patch('salt.modules.openscap.salt.utils.subprocess.FdPopen',
                    MagicMock(
                        return_value=Mock(
                            **{'returncode': 0, 'communicate.return_value': ('', '')}
@@ -63,7 +63,7 @@ class OpenscapTestCase(TestCase):
                 '--profile', 'Default',
                 self.policy_file
             ]
-            openscap.Popen.assert_called_once_with(
+            openscap.salt.utils.subprocess.FdPopen.assert_called_once_with(
                 expected_cmd,
                 cwd=openscap.tempfile.mkdtemp.return_value,
                 stderr=PIPE,
@@ -82,7 +82,7 @@ class OpenscapTestCase(TestCase):
             )
 
     def test_openscap_xccdf_eval_success_with_failing_rules(self):
-        with patch('salt.modules.openscap.Popen',
+        with patch('salt.modules.openscap.salt.utils.subprocess.FdPopen',
                    MagicMock(
                        return_value=Mock(
                            **{'returncode': 2, 'communicate.return_value': ('', 'some error')}
@@ -101,7 +101,7 @@ class OpenscapTestCase(TestCase):
                 '--profile', 'Default',
                 self.policy_file
             ]
-            openscap.Popen.assert_called_once_with(
+            openscap.salt.utils.subprocess.FdPopen.assert_called_once_with(
                 expected_cmd,
                 cwd=openscap.tempfile.mkdtemp.return_value,
                 stderr=PIPE,
@@ -136,7 +136,7 @@ class OpenscapTestCase(TestCase):
         )
 
     def test_openscap_xccdf_eval_success_ignore_unknown_params(self):
-        with patch('salt.modules.openscap.Popen',
+        with patch('salt.modules.openscap.salt.utils.subprocess.FdPopen',
                    MagicMock(
                        return_value=Mock(
                            **{'returncode': 2, 'communicate.return_value': ('', 'some error')}
@@ -162,14 +162,14 @@ class OpenscapTestCase(TestCase):
                 '--profile', 'Default',
                 '/policy/file'
             ]
-            openscap.Popen.assert_called_once_with(
+            openscap.salt.utils.subprocess.FdPopen.assert_called_once_with(
                 expected_cmd,
                 cwd=openscap.tempfile.mkdtemp.return_value,
                 stderr=PIPE,
                 stdout=PIPE)
 
     def test_openscap_xccdf_eval_evaluation_error(self):
-        with patch('salt.modules.openscap.Popen',
+        with patch('salt.modules.openscap.salt.utils.subprocess.FdPopen',
                    MagicMock(
                        return_value=Mock(**{
                            'returncode': 1,
