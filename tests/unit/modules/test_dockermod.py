@@ -14,7 +14,8 @@ from tests.support.mock import (
     Mock,
     NO_MOCK,
     NO_MOCK_REASON,
-    patch
+    patch,
+    call
 )
 import logging
 log = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ log = logging.getLogger(__name__)
 import salt.config
 import salt.loader
 from salt.ext.six.moves import range
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.modules.dockermod as docker_mod
 
 
@@ -781,3 +782,225 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(docker_mod, 'inspect_image', mock_not_found):
             self.assertIs(docker_mod.resolve_tag('foo'), False)
             self.assertIs(docker_mod.resolve_tag('foo', all=True), False)
+
+    def test_prune(self):
+        '''
+        Test the prune function
+        '''
+        def _run(**kwargs):
+            side_effect = kwargs.pop('side_effect', None)
+            # No arguments passed, we should be pruning everything but volumes
+            client = Mock()
+            if side_effect is not None:
+                client.side_effect = side_effect
+            with patch.object(docker_mod, '_client_wrapper', client):
+                docker_mod.prune(**kwargs)
+            return client
+
+        # Containers only, no filters
+        client = _run(containers=True)
+        client.assert_called_once_with(
+            'prune_containers',
+            filters={}
+        )
+
+        # Containers only, with filters
+        client = _run(containers=True, until='24h', label='foo,bar=baz')
+        client.assert_called_once_with(
+            'prune_containers',
+            filters={'until': ['24h'], 'label': ['foo', 'bar=baz']}
+        )
+
+        # Images only, no filters
+        client = _run(images=True)
+        client.assert_called_once_with(
+            'prune_images',
+            filters={}
+        )
+
+        # Images only, with filters
+        client = _run(images=True, dangling=True,
+                      until='24h', label='foo,bar=baz')
+        client.assert_called_once_with(
+            'prune_images',
+            filters={'dangling': True,
+                     'until': ['24h'],
+                     'label': ['foo', 'bar=baz']}
+        )
+
+        # Networks only, no filters
+        client = _run(networks=True)
+        client.assert_called_once_with('prune_networks', filters={})
+
+        # Networks only, with filters
+        client = _run(networks=True, until='24h', label='foo,bar=baz')
+        client.assert_called_once_with(
+            'prune_networks',
+            filters={'until': ['24h'], 'label': ['foo', 'bar=baz']}
+        )
+
+        # Volumes only, no filters
+        client = _run(system=False, volumes=True)
+        client.assert_called_once_with('prune_volumes', filters={})
+
+        # Volumes only, with filters
+        client = _run(system=False, volumes=True, label='foo,bar=baz')
+        client.assert_called_once_with(
+            'prune_volumes',
+            filters={'label': ['foo', 'bar=baz']}
+        )
+
+        # Containers and images, no filters
+        client = _run(containers=True, images=True)
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={}),
+                call('prune_images', filters={}),
+            ]
+        )
+
+        # Containers and images, with filters
+        client = _run(containers=True, images=True,
+                      until='24h', label='foo,bar=baz')
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers',
+                     filters={'until': ['24h'], 'label': ['foo', 'bar=baz']}),
+                call('prune_images',
+                     filters={'until': ['24h'], 'label': ['foo', 'bar=baz']}),
+            ]
+        )
+
+        # System, no volumes, no filters, assuming prune_build in docker-py
+        client = _run(system=True)
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={}),
+                call('prune_images', filters={}),
+                call('prune_networks', filters={}),
+                call('prune_build', filters={}),
+            ]
+        )
+
+        # System, no volumes, no filters, assuming prune_build not in docker-py
+        client = _run(
+            system=True,
+            side_effect=[None, None, None, SaltInvocationError(),
+                         None, None, None]
+        )
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={}),
+                call('prune_images', filters={}),
+                call('prune_networks', filters={}),
+                call('prune_build', filters={}),
+                call('_url', '/build/prune'),
+                call('_post', None),
+                call('_result', None, True),
+            ]
+        )
+
+        # System, no volumes, with filters, assuming prune_build in docker-py
+        client = _run(system=True, label='foo,bar=baz')
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_images', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_networks', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_build', filters={'label': ['foo', 'bar=baz']}),
+            ]
+        )
+
+        # System, no volumes, with filters, assuming prune_build not in docker-py
+        client = _run(
+            system=True,
+            label='foo,bar=baz',
+            side_effect=[None, None, None, SaltInvocationError(),
+                         None, None, None]
+        )
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_images', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_networks', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_build', filters={'label': ['foo', 'bar=baz']}),
+                call('_url', '/build/prune'),
+                call('_post', None),
+                call('_result', None, True),
+            ]
+        )
+
+        # System and volumes, no filters, assuming prune_build in docker-py
+        client = _run(system=True, volumes=True)
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={}),
+                call('prune_images', filters={}),
+                call('prune_networks', filters={}),
+                call('prune_build', filters={}),
+                call('prune_volumes', filters={}),
+            ]
+        )
+
+        # System and volumes, no filters, assuming prune_build not in docker-py
+        client = _run(
+            system=True,
+            volumes=True,
+            side_effect=[None, None, None, SaltInvocationError(),
+                         None, None, None, None]
+        )
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={}),
+                call('prune_images', filters={}),
+                call('prune_networks', filters={}),
+                call('prune_build', filters={}),
+                call('_url', '/build/prune'),
+                call('_post', None),
+                call('_result', None, True),
+                call('prune_volumes', filters={}),
+            ]
+        )
+
+        # System and volumes with filters, assuming prune_build in docker-py
+        client = _run(system=True, volumes=True, label='foo,bar=baz')
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_images', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_networks', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_build', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_volumes', filters={'label': ['foo', 'bar=baz']}),
+            ]
+        )
+
+        # System and volumes, with filters, assuming prune_build not in docker-py
+        client = _run(
+            system=True,
+            volumes=True,
+            label='foo,bar=baz',
+            side_effect=[None, None, None, SaltInvocationError(),
+                         None, None, None, None]
+        )
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_images', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_networks', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_build', filters={'label': ['foo', 'bar=baz']}),
+                call('_url', '/build/prune'),
+                call('_post', None),
+                call('_result', None, True),
+                call('prune_volumes', filters={'label': ['foo', 'bar=baz']}),
+            ]
+        )

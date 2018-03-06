@@ -55,6 +55,8 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
             testfile_contents = fh_.read()
 
         for idx, minion in enumerate(minions):
+            if 'localhost' in minion:
+                continue
             ret = self.run_salt(
                 '--out yaml {0} file.directory_exists {1}'.format(
                     pipes.quote(minion), TMP
@@ -138,7 +140,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
             ret = self.run_script(
                 self._call_binary_,
-                '--out pprint --config-dir {0} \'*\' {1} {0}/{2}'.format(
+                '--out pprint --config-dir {0} \'*minion\' {1} {0}/{2}'.format(
                     config_dir,
                     fn_,
                     os.path.basename(fn_),

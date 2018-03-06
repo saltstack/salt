@@ -1135,7 +1135,7 @@ def installed(
     :param bool resolve_capabilities:
         Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     :param bool allow_updates:
         Allow the package to be updated outside Salt's control (e.g. auto
@@ -1969,7 +1969,7 @@ def downloaded(name,
     :param bool resolve_capabilities:
         Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -2261,7 +2261,7 @@ def latest(
     :param bool resolve_capabilities:
         Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Multiple Package Installation Options:
 
@@ -2856,7 +2856,7 @@ def purged(name,
 def uptodate(name, refresh=False, pkgs=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
 
         Added support for the ``pkgin`` provider.
 
@@ -2888,7 +2888,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
     :param bool resolve_capabilities:
         Turn on resolving capabilities. This allow to name "provides" or alias names for packages.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     kwargs
         Any keyword arguments to pass through to ``pkg.upgrade``.

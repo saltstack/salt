@@ -58,7 +58,7 @@ States. GitFS is a quick and natural way to use Formulas.
 
 3.  Restart the Salt master.
 
-Beginning with the Oxygen release, using formulas with GitFS is now much more
+Beginning with the 2018.3.0 release, using formulas with GitFS is now much more
 convenient for deployments which use many different fileserver environments
 (i.e. saltenvs). Using the :ref:`all_saltenvs <gitfs-global-remotes>`
 parameter, files from a single git branch/tag will appear in all environments.
@@ -1266,10 +1266,10 @@ A sample skeleton for the ``README.rst`` file:
 
     Install and configure the FOO service.
 
-    .. note::
+    **NOTE**
 
-        See the full `Salt Formulas installation and usage instructions
-        <https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
+    See the full `Salt Formulas installation and usage instructions
+    <https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
 
     Available states
     ================
