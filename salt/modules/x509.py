@@ -316,7 +316,7 @@ def _text_or_file(input_):
     '''
     if os.path.isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
-            return salt.utils.stringutils.to_unicode(fp_.read())
+            return salt.utils.stringutils.to_str(fp_.read())
     else:
         return input_
 
@@ -493,7 +493,7 @@ def get_pem_entry(text, pem_type=None):
         ret += pem_body[i:i + 64] + '\n'
     ret += pem_footer + '\n'
 
-    return ret
+    return ret.encode('ascii')
 
 
 def get_pem_entries(glob_path):
