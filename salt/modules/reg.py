@@ -532,20 +532,18 @@ def set_value(hive,
     # int will automatically become long on 64bit numbers
     # https://www.python.org/dev/peps/pep-0237/
 
-    local_vdata = None
-    if vdata is not None:
-        # String Types to Unicode
-        if vtype_value in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
-            local_vdata = _to_unicode(vdata)
-        # Don't touch binary...
-        elif vtype_value == win32con.REG_BINARY:
-            local_vdata = vdata
-        # Make sure REG_MULTI_SZ is a list of strings
-        elif vtype_value == win32con.REG_MULTI_SZ:
-            local_vdata = [_to_unicode(i) for i in vdata]
-        # Everything else is int
-        else:
-            local_vdata = int(vdata)
+    # String Types to Unicode
+    if vtype_value in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
+        local_vdata = _to_unicode(vdata)
+    # Don't touch binary...
+    elif vtype_value == win32con.REG_BINARY:
+        local_vdata = vdata
+    # Make sure REG_MULTI_SZ is a list of strings
+    elif vtype_value == win32con.REG_MULTI_SZ:
+        local_vdata = [_to_unicode(i) for i in vdata]
+    # Everything else is int
+    else:
+        local_vdata = int(vdata)
 
     if volatile:
         create_options = registry.opttype['REG_OPTION_VOLATILE']
