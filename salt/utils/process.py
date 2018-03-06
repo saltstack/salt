@@ -80,7 +80,7 @@ def daemonize(redirect_out=True):
     os.chdir('/')
     # noinspection PyArgumentList
     os.setsid()
-    os.umask(18)
+    os.umask(0o022)  # pylint: disable=blacklisted-function
 
     # do second fork
     try:

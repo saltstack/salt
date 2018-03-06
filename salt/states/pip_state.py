@@ -180,8 +180,7 @@ def _check_pkg_version_format(pkg):
 
 def _check_if_installed(prefix, state_pkg_name, version_spec,
                         ignore_installed, force_reinstall,
-                        upgrade, user, cwd, bin_env):
-
+                        upgrade, user, cwd, bin_env, env_vars):
     # result: None means the command failed to run
     # result: True means the package is installed
     # result: False means the package is not installed
@@ -190,7 +189,8 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
     # Check if the requested package is already installed.
     try:
         pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
-                                        user=user, cwd=cwd)
+                                        user=user, cwd=cwd,
+                                        env_vars=env_vars)
         prefix_realname = _find_key(prefix, pip_list)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = None
@@ -682,7 +682,7 @@ def installed(name,
                 version_spec = version_spec
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
-                                          upgrade, user, cwd, bin_env)
+                                          upgrade, user, cwd, bin_env, env_vars)
                 # If _check_if_installed result is None, something went wrong with
                 # the command running. This way we keep stateful output.
                 if out['result'] is None:
@@ -823,7 +823,8 @@ def installed(name,
                 # Case for packages that are not an URL
                 if prefix:
                     pipsearch = __salt__['pip.list'](prefix, bin_env,
-                                                     user=user, cwd=cwd)
+                                                     user=user, cwd=cwd,
+                                                     env_vars=env_vars)
 
                     # If we didnt find the package in the system after
                     # installing it report it

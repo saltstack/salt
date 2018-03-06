@@ -202,10 +202,9 @@ def mk_key(opts, user):
         os.unlink(keyfile)
 
     key = salt.crypt.Crypticle.generate_key_string()
-    cumask = os.umask(191)
-    with salt.utils.files.fopen(keyfile, 'w+') as fp_:
-        fp_.write(salt.utils.stringutils.to_str(key))
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o277):
+        with salt.utils.files.fopen(keyfile, 'w+') as fp_:
+            fp_.write(salt.utils.stringutils.to_str(key))
     # 600 octal: Read and write access to the owner only.
     # Write access is necessary since on subsequent runs, if the file
     # exists, it needs to be written to again. Windows enforces this.
