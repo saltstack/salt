@@ -2,7 +2,7 @@
 '''
 Glance module for interacting with OpenStack Glance
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends:shade
 

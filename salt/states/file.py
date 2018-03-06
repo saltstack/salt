@@ -1574,6 +1574,7 @@ def managed(name,
             show_changes=True,
             create=True,
             contents=None,
+            tmp_dir='',
             tmp_ext='',
             contents_pillar=None,
             contents_grains=None,
@@ -1811,7 +1812,7 @@ def managed(name,
         .. note::
             This option is **not** supported on Windows.
 
-        .. versionadded: Oxygen
+        .. versionadded:: 2018.3.0
 
     template
         If this setting is applied, the named templating engine will be used to
@@ -2038,6 +2039,22 @@ def managed(name,
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
 
+    tmp_dir
+        Directory for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file location (e.g. daemons restricted to their
+        own config directories by an apparmor profile).
+
+        .. code-block:: yaml
+
+            /etc/dhcp/dhcpd.conf:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0755
+                - tmp_dir: '/etc/dhcp'
+                - contents: "# Managed by Salt"
+                - check_cmd: dhcpd -t -cf
+
     tmp_ext
         Suffix for temp file created by ``check_cmd``. Useful for checkers
         dependent on config file extension (e.g. the init-checkconf upstart
@@ -2100,7 +2117,7 @@ def managed(name,
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -2454,7 +2471,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext)
+        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext, dir=tmp_dir)
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
@@ -2804,7 +2821,7 @@ def directory(name,
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -6628,7 +6645,7 @@ def cached(name,
 
     .. code-block:: python
 
-        cached = __salt__['cp.is_cached'](source_match)
+        cached = __salt__['cp.is_cached'](source_match, saltenv=__env__)
 
     This function will return the cached path of the file, or an empty string
     if the file is not present in the minion cache.
