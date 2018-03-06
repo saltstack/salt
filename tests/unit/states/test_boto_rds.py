@@ -15,9 +15,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-# Import Salt Libs
-import salt.config
-
 # pylint: disable=import-error,no-name-in-module
 import salt.states.boto_rds as boto_rds
 
@@ -42,7 +39,7 @@ class BotoRdsTestCase(TestCase, LoaderModuleMockMixin):
         del cls.master_user_password
 
     def setup_loader_modules(self):
-        return { boto_rds: {}}
+        return {boto_rds: {}}
 
     def test_db_cluster_present_when_db_cluster_exists_returns_error(self):
         '''
