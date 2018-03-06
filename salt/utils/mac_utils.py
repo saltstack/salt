@@ -286,8 +286,7 @@ def _available_services():
     decorator on the `available_services` function, which causes the function
     to run once and then return the results of the first run on subsequent
     calls. This causes problems when trying to test the functionality of the
-    `available_services` function. So this function is needed until we can
-    figure out how to properly mock the memoization decorator.
+    `available_services` function.
     '''
     launchd_paths = [
         '/Library/LaunchAgents',
@@ -342,7 +341,6 @@ def _available_services():
                         'plist': plist}
 
     return _available_services
-
 
 
 @decorators.memoize
