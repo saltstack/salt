@@ -782,17 +782,23 @@ def db_cluster_present(name, engine, master_username, master_user_password, para
            }
     res = __salt__['boto_rds.db_cluster_exists'](name=name, tags=tags, region=region, key=key,
                                                  keyid=keyid, profile=profile)
+    if 'error' in res:
+        ret['result'] = False
+        ret['comment'] = 'Error when attempting to find db cluster: {0}.'.format(
+            res['error']
+        )
+        return ret
     if not res.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'DB cluster {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
-        created = __salt__['boto_rds.create_db_cluster'](name=name, engine=engine,
-                                                         master_username=master_username,
-                                                         master_password=master_password,
-                                                         tags=tags, region=region,
-                                                         key=key, keyid=keyid, profile=profile)
-        if not created:
+        res = __salt__['boto_rds.create_db_cluster'](name=name, engine=engine,
+                                                     master_username=master_username,
+                                                     master_user_password=master_user_password,
+                                                     tags=tags, region=region,
+                                                     key=key, keyid=keyid, profile=profile)
+        if not res.get('created'):
             ret['result'] = False
             ret['comment'] = 'Failed to create {0} db cluster.'.format(name)
             return ret
