@@ -364,7 +364,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
     # Setup the return array
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
-    local_vname = _to_unicode(vname)
+    local_vname = _to_unicode(vname) if vname is not None else None
 
     ret = {'hive':  local_hive,
            'key':   local_key,
@@ -517,7 +517,7 @@ def set_value(hive,
     '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
-    local_vname = _to_unicode(vname)
+    local_vname = _to_unicode(vname) if vname is not None else None
     local_vtype = _to_unicode(vtype)
 
     registry = Registry()
@@ -529,18 +529,20 @@ def set_value(hive,
     # int will automatically become long on 64bit numbers
     # https://www.python.org/dev/peps/pep-0237/
 
-    # String Types to Unicode
-    if vtype_value in [1, 2]:
-        local_vdata = _to_unicode(vdata)
-    # Don't touch binary...
-    elif vtype_value == 3:
-        local_vdata = vdata
-    # Make sure REG_MULTI_SZ is a list of strings
-    elif vtype_value == 7:
-        local_vdata = [_to_unicode(i) for i in vdata]
-    # Everything else is int
-    else:
-        local_vdata = int(vdata)
+    local_vdata = None
+    if vdata is not None:
+        # String Types to Unicode
+        if vtype_value in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
+            local_vdata = _to_unicode(vdata)
+        # Don't touch binary...
+        elif vtype_value == win32con.REG_BINARY:
+            local_vdata = vdata
+        # Make sure REG_MULTI_SZ is a list of strings
+        elif vtype_value == win32con.REG_MULTI_SZ:
+            local_vdata = [_to_unicode(i) for i in vdata]
+        # Everything else is int
+        else:
+            local_vdata = int(vdata)
 
     if volatile:
         create_options = registry.opttype['REG_OPTION_VOLATILE']
@@ -690,10 +692,9 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
 
         salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''
-
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
-    local_vname = _to_unicode(vname)
+    local_vname = _to_unicode(vname) if vname is not None else None
 
     registry = Registry()
     hkey = registry.hkeys[local_hive]
