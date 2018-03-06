@@ -83,6 +83,8 @@ def _to_unicode(vdata):
     Converts from current users character encoding to unicode. Use this for
     parameters being pass to reg functions
     '''
+    if vdata is None:
+        return None
     return salt.utils.stringutils.to_unicode(vdata, 'utf-8')
 
 
@@ -364,7 +366,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
     # Setup the return array
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
-    local_vname = _to_unicode(vname) if vname is not None else None
+    local_vname = _to_unicode(vname)
 
     ret = {'hive':  local_hive,
            'key':   local_key,
@@ -517,7 +519,7 @@ def set_value(hive,
     '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
-    local_vname = _to_unicode(vname) if vname is not None else None
+    local_vname = _to_unicode(vname)
     local_vtype = _to_unicode(vtype)
 
     registry = Registry()
@@ -694,7 +696,7 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
     '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
-    local_vname = _to_unicode(vname) if vname is not None else None
+    local_vname = _to_unicode(vname)
 
     registry = Registry()
     hkey = registry.hkeys[local_hive]
