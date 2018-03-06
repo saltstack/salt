@@ -1865,7 +1865,7 @@ def get_all_tags(filters=None, region=None, key=None, keyid=None, profile=None):
     '''
     Describe all tags matching the filter criteria, or all tags in the account otherwise.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     filters
         (dict) - Additional constraints on which volumes to return.  Note that valid filters vary
