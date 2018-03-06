@@ -41,8 +41,6 @@ provisioner:
     testingdir: /testing
   salt_copy_filter:
     - .bundle
-    - .git
-    - .gitignore
     - .kitchen
     - .kitchen.yml
     - Gemfile
