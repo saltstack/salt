@@ -341,12 +341,12 @@ rst_prolog = """\
       | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
 
 
-.. |osxdownload2| raw:: html
+.. |osxdownloadpy2| raw:: html
 
      <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py2-x86_64.pkg"><strong>salt-{release}-py2-x86_64.pkg</strong></a>
       | <a href="https://repo.saltstack.com/osx/salt-{release}-py2-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
-.. |osxdownload3| raw:: html
+.. |osxdownloadpy3| raw:: html
 
      <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
       | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
