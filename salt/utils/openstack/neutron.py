@@ -81,8 +81,6 @@ class SaltNeutron(NeutronShell):
         '''
         Set up neutron credentials
         '''
-        if not HAS_NEUTRON:
-            return None
         __utils__['versions.warn_until'](
             'Neon',
             (
@@ -90,6 +88,8 @@ class SaltNeutron(NeutronShell):
                 'Please update to using the neutronng module'
             ),
         )
+        if not HAS_NEUTRON:
+            return None
 
         elif all([use_keystoneauth, HAS_KEYSTONEAUTH]):
             self._new_init(username=username,
