@@ -101,6 +101,23 @@ The salt specific ones are:
 
 This is the minimum setup required.
 
+If metadata is set to make sure that the host has finished setting up the
+`wait_for_metadata` can be set.
+
+.. code-block:: yaml
+
+    centos:
+      provider: myopenstack
+      image: CentOS 7
+      size: ds1G
+      ssh_key_name: mykey
+      ssh_key_file: /root/.ssh/id_rsa
+      meta:
+        build_config: rack_user_only
+      wait_for_metadata:
+        rax_service_level_automation: Complete
+        rackconnect_automation_status: DEPLOYED
+
 Anything else from the create_server_ docs can be passed through here.
 
 - **image**: Image dict, name or ID to boot with. image is required
@@ -678,12 +695,18 @@ def create(vm_):
         data = request_instance(conn=conn, call='action', vm_=vm_)
     log.debug('VM is now running')
 
-    def __query_node_ip(vm_):
+    def __query_node(vm_):
         data = show_instance(vm_['name'], conn=conn, call='action')
+        if 'wait_for_metadata' in vm_:
+            for key, value in six.iteritems(vm_.get('wait_for_metadata', {})):
+                log.debug('Waiting for metadata: {0}={1}'.format(key, value))
+                if data['metadata'].get(key, None) != value:
+                    log.debug('Metadata is not ready: {0}={1}'.format(key, data['metadata'].get(key, None)))
+                    return False
         return preferred_ip(vm_, data[ssh_interface(vm_)])
     try:
-        ip_address = __utils__['cloud.wait_for_ip'](
-            __query_node_ip,
+        ip_address = __utils__['cloud.wait_for_fun'](
+            __query_node,
             update_args=(vm_,)
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
