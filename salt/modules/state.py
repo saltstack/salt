@@ -1296,7 +1296,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
         __opts__['test'] = orig_test
 
         try:
-            with salt.utils.fopen(cfn, 'w+b') as fp_:
+            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
                 try:
                     serial.dump(high_, fp_)
                 except TypeError:
