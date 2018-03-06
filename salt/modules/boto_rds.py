@@ -200,10 +200,13 @@ def parameter_group_exists(name, tags=None, region=None, key=None, keyid=None,
 def db_cluster_exists(name, tags=None, region=None, key=None, keyid=None,
                            profile=None):
     '''
+    .. versionadded:: Fluorine
+
     Check to see if an RDS db cluster exists.
 
-      .. versionadded:: Fluorine
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.db_cluster_exists mydbcluster \
                 region=us-east-1
@@ -475,10 +478,13 @@ def create_db_cluster(name, engine, master_username, master_user_password,
                       tags=None, region=None, key=None, keyid=None,
                       profile=None):
     '''
+    .. versionadded:: Fluorine
+
     Create an RDS db cluster
 
-      .. versionadded:: Fluorine
-    CLI example to create an RDS db cluster::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.create_db_cluster my-db-cluster MySQL sqlusr sqlpassw
     '''
