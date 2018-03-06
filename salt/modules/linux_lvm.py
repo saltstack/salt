@@ -476,7 +476,7 @@ def lvremove(lvname, vgname):
     return out.strip()
 
 
-def lvresize(size, lvpath):
+def lvresize(size=None, lvpath=None, extents=None):
     '''
     Return information about the logical volume(s)
 
@@ -486,10 +486,21 @@ def lvresize(size, lvpath):
 
 
         salt '*' lvm.lvresize +12M /dev/mapper/vg1-test
+        salt '*' lvm.lvresize lvpath=/dev/mapper/vg1-test extents=+100%FREE
+
     '''
-    ret = {}
-    cmd = ['lvresize', '-L', six.text_type(size), lvpath]
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if cmd_ret['retcode'] != 0:
-        return {}
-    return ret
+    if size and extents:
+        return 'Error: Please specify only one of size or extents'
+
+    cmd = ['lvresize']
+
+    if size:
+        cmd.extend(['-L', '{0}'.format(size)])
+    elif extents:
+        cmd.extend(['-l', '{0}'.format(extents)])
+    else:
+        return 'Error: Either size or extents must be specified'
+
+    cmd.append(lvpath)
+    cmd_ret = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    return {'Output from lvresize': cmd_ret[0].strip()}

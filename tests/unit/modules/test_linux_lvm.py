@@ -290,10 +290,13 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to return information about the logical volume(s)
         '''
-        mock = MagicMock(return_value={'retcode': 1})
-        with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.lvresize(1, 'a'), {})
+        self.assertEqual(linux_lvm.lvresize(1, None, 1),
+                         'Error: Please specify only one of size or extents')
 
-        mock = MagicMock(return_value={'retcode': 0})
-        with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.lvresize(1, 'a'), {})
+        self.assertEqual(linux_lvm.lvresize(None, None, None),
+                         'Error: Either size or extents must be specified')
+
+        mock = MagicMock(return_value='A')
+        with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
+            self.assertDictEqual(linux_lvm.lvresize('A', 1),
+                                 {'Output from lvresize': 'A'})
