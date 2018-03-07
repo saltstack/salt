@@ -270,7 +270,7 @@ def set_password(name, password, use_usermod=False):
     ``SALTsalt`` is the 8-character crpytographic salt. Valid characters in the
     salt are ``.``, ``/``, and any alphanumeric character.
 
-    Keep in mind that the $7 represents a sha512 hash, if your OS is using a
+    Keep in mind that the $6 represents a sha512 hash, if your OS is using a
     different hashing algorithm this needs to be changed accordingly
 
     CLI Example:
