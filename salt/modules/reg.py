@@ -155,9 +155,10 @@ class Registry(object):  # pylint: disable=R0903
             raise CommandExecutionError(msg.format(k, hkeys))
 
 
-def _key_exists(hive, key, use_32bit_registry=False):
+def key_exists(hive, key, use_32bit_registry=False):
     '''
-    Check that the key is found in the registry
+    Check that the key is found in the registry. This refers to keys and not
+    value/data pairs.
 
     :param str hive: The hive to connect to.
     :param str key: The key to check
@@ -179,6 +180,10 @@ def _key_exists(hive, key, use_32bit_registry=False):
         return True
     except WindowsError:  # pylint: disable=E0602
         return False
+    except pywintypes.error as exc:
+        if exc.winerror == 2:
+            return False
+        raise
 
 
 def broadcast_change():
@@ -603,7 +608,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
     key_path = local_key
     access_mask = registry.registry_32[use_32bit_registry] | win32con.KEY_ALL_ACCESS
 
-    if not _key_exists(local_hive, local_key, use_32bit_registry):
+    if not key_exists(local_hive, local_key, use_32bit_registry):
         return False
 
     if (len(key) > 1) and (key.count('\\', 1) < registry.subkey_slash_check[hkey]):
