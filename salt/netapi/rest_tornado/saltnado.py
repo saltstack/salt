@@ -384,7 +384,7 @@ class EventListener(object):
             try:
                 is_matched = matcher(mtag, tag)
             except Exception as e:
-                logger.error('Failed to run a matcher.', exc_info=True)
+                log.error('Failed to run a matcher.', exc_info=True)
                 is_matched = False
 
             if not is_matched:
