@@ -280,7 +280,8 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         elif sys.platform.lower().startswith('win') and timeout is not None:
             raise RuntimeError('Timeout is not supported under windows')
 
-        process = salt.utils.subprocess.FdPopen(cmd, **popen_kwargs)
+        #process = salt.utils.subprocess.FdPopen(cmd, **popen_kwargs)
+        process = subprocess.Popen(cmd, **popen_kwargs)  # pylint: disable=blacklisted-functions
 
         if timeout is not None:
             stop_at = datetime.now() + timedelta(seconds=timeout)
