@@ -34,6 +34,11 @@ from tests.support.mock import (
 
 from salt.modules import x509
 
+try:
+    import m2crypto
+    HAS_M2CRYPTO = True
+except ImportError:
+    HAS_M2CRYPTO = False
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not bool(pytest), False)
@@ -66,6 +71,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         assert x509.log.trace.call_args[0][1] == list(subj.nid.keys())[0]
         assert isinstance(x509.log.trace.call_args[0][2], TypeError)
 
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypt is unavailble')
     def test_get_pem_entry(self):
         '''
         Test private function _parse_subject(subject) it handles a missing fields
@@ -91,6 +97,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         ret = x509.get_pem_entry(ca_key)
         self.assertEqual(ret, ca_key)
 
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypt is unavailble')
     def test_get_private_key_size(self):
         '''
         Test private function _parse_subject(subject) it handles a missing fields
