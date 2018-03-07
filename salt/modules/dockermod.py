@@ -589,6 +589,15 @@ def _scrub_links(links, name):
     return ret
 
 
+def _ulimit_sort(ulimit_val):
+    if isinstance(ulimit_val, list):
+        return sorted(ulimit_val,
+                      key=lambda x: (x.get('Name'),
+                                     x.get('Hard', 0),
+                                     x.get('Soft', 0)))
+    return ulimit_val
+
+
 def _size_fmt(num):
     '''
     Format bytes as human-readable file sizes
@@ -932,6 +941,9 @@ def compare_containers(first, second, ignore=None):
                 if item == 'Links':
                     val1 = sorted(_scrub_links(val1, first))
                     val2 = sorted(_scrub_links(val2, second))
+                if item == 'Ulimits':
+                    val1 = _ulimit_sort(val1)
+                    val2 = _ulimit_sort(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
@@ -955,6 +967,9 @@ def compare_containers(first, second, ignore=None):
                 if item == 'Links':
                     val1 = sorted(_scrub_links(val1, first))
                     val2 = sorted(_scrub_links(val2, second))
+                if item == 'Ulimits':
+                    val1 = _ulimit_sort(val1)
+                    val2 = _ulimit_sort(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
