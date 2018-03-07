@@ -39,7 +39,7 @@ A more involved example involves pulling from a custom repository.
         - keyserver: keyserver.ubuntu.com
 
     logstash:
-      pkg.installed
+      pkg.installed:
         - fromrepo: ppa:wolfnet/logstash
 
 Multiple packages can also be installed with the use of the pkgs
@@ -92,7 +92,7 @@ from salt.exceptions import (
 from salt.modules.pkg_resource import _repack_pkgs
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # pylint: disable=invalid-name
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
@@ -1613,14 +1613,10 @@ def installed(
     not_modified_hold = None
     failed_hold = None
     if targets or to_reinstall:
-        force = False
-        if salt.utils.is_freebsd():
-            force = True    # Downgrades need to be forced.
         try:
             pkg_ret = __salt__['pkg.install'](name=None,
                                               refresh=refresh,
                                               version=version,
-                                              force=force,
                                               fromrepo=fromrepo,
                                               skip_verify=skip_verify,
                                               pkgs=pkgs,
@@ -2845,8 +2841,11 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
     if isinstance(refresh, bool):
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
+            expected = {pkgname: {'new': pkgver, 'old': __salt__['pkg.version'](pkgname)}
+                        for pkgname, pkgver in six.iteritems(packages)}
             if isinstance(pkgs, list):
                 packages = [pkg for pkg in packages if pkg in pkgs]
+                expected = {pkgname: pkgver for pkgname, pkgver in six.iteritems(expected) if pkgname in pkgs}
         except Exception as exc:
             ret['comment'] = str(exc)
             return ret
@@ -2860,6 +2859,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         return ret
     elif __opts__['test']:
         ret['comment'] = 'System update will be performed'
+        ret['changes'] = expected
         ret['result'] = None
         return ret
 
@@ -2876,8 +2876,17 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
                               'packages: {0}'.format(exc))
         return ret
 
-    ret['comment'] = 'Upgrade ran successfully'
-    ret['result'] = True
+    # If a package list was provided, ensure those packages were updated
+    missing = []
+    if isinstance(pkgs, list):
+        missing = [pkg for pkg in six.iterkeys(expected) if pkg not in ret['changes']]
+
+    if missing:
+        ret['comment'] = 'The following package(s) failed to update: {0}'.format(', '.join(missing))
+        ret['result'] = False
+    else:
+        ret['comment'] = 'Upgrade ran successfully'
+        ret['result'] = True
 
     return ret
 

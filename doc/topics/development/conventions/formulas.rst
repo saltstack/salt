@@ -981,10 +981,10 @@ The :py:func:`file.serialize <salt.states.file.serialize>` state can provide a
 shorthand for creating some files from data structures. There are also many
 examples within Salt Formulas of creating one-off "serializers" (often as Jinja
 macros) that reformat a data structure to a specific config file format. For
-example, `Nginx vhosts`__ or the `php.ini`__
+example, look at the`Nginx vhosts`_ states or the `php.ini`_ file template.
 
-__: https://github.com/saltstack-formulas/nginx-formula/blob/5cad4512/nginx/ng/vhosts_config.sls
-__: https://github.com/saltstack-formulas/php-formula/blob/82e2cd3a/php/ng/files/php.ini
+.. _`Nginx vhosts`: https://github.com/saltstack-formulas/nginx-formula/blob/5cad4512/nginx/ng/vhosts_config.sls
+.. _`php.ini`: https://github.com/saltstack-formulas/php-formula/blob/82e2cd3a/php/ng/files/php.ini
 
 Environment specific information
 ................................
@@ -1234,7 +1234,7 @@ target platform, and any other installation or usage instructions or tips.
 
 A sample skeleton for the ``README.rst`` file:
 
-.. code-block:: rest
+.. code-block:: restructuredtext
 
     ===
     foo
@@ -1242,10 +1242,10 @@ A sample skeleton for the ``README.rst`` file:
 
     Install and configure the FOO service.
 
-    .. note::
+    **NOTE**
 
-        See the full `Salt Formulas installation and usage instructions
-        <http://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
+    See the full `Salt Formulas installation and usage instructions
+    <https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
 
     Available states
     ================
@@ -1274,7 +1274,7 @@ A sample skeleton for the `CHANGELOG.rst` file:
 
 :file:`CHANGELOG.rst`:
 
-.. code-block:: rest
+.. code-block:: restructuredtext
 
     foo formula
     ===========

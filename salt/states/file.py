@@ -2332,9 +2332,17 @@ def managed(name,
                 )
 
                 if salt.utils.is_windows():
-                    ret = __salt__['file.check_perms'](
-                        name, ret, win_owner, win_perms, win_deny_perms,
-                        win_inheritance)
+                    try:
+                        ret = __salt__['file.check_perms'](
+                            path=name,
+                            ret=ret,
+                            owner=win_owner,
+                            grant_perms=win_perms,
+                            deny_perms=win_deny_perms,
+                            inheritance=win_inheritance)
+                    except CommandExecutionError as exc:
+                        if exc.strerror.startswith('Path not found'):
+                            ret['pchanges'] = '{0} will be created'.format(name)
 
             if isinstance(ret['pchanges'], tuple):
                 ret['result'], ret['comment'] = ret['pchanges']
@@ -3495,7 +3503,9 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
         This is only used when datetime is pulled from ``os.path.getmtime()``.
         Defaults to ``None`` which uses the timezone from the locale.
 
-    .. code-block: yaml
+    Usage example:
+
+    .. code-block:: yaml
 
         /var/backups/example_directory:
           file.retention_schedule:
@@ -3749,7 +3759,7 @@ def line(name, content=None, match=None, mode=None, location=None,
     processing can be bypassed in order to pass an equal sign through to the
     remote shell command by manually specifying the kwarg:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
        update_config:
          file.line:
@@ -6525,37 +6535,7 @@ def cached(name,
 
     .. code-block:: python
 
-        cached = __salt__['cp.is_cached'](source_match)
-
-    This function will return the cached path of the file, or an empty string
-    if the file is not present in the minion cache.
-
-    This state will in most cases not be useful in SLS files, but it is useful
-    when writing a state or remote-execution module that needs to make sure
-    that a file at a given URL has been downloaded to the cachedir. One example
-    of this is in the :py:func:`archive.extracted <salt.states.file.extracted>`
-    state:
-
-    .. code-block:: python
-
-        result = __states__['file.cached'](source_match,
-                                           source_hash=source_hash,
-                                           source_hash_name=source_hash_name,
-                                           skip_verify=skip_verify,
-                                           saltenv=__env__)
-
-    This will return a dictionary containing the state's return data, including
-    a ``result`` key which will state whether or not the state was successful.
-    Note that this will not catch exceptions, so it is best used within a
-    try/except.
-
-    Once this state has been run from within another state or remote-execution
-    module, the actual location of the cached file can be obtained using
-    :py:func:`cp.is_cached <salt.modules.cp.is_cached>`:
-
-    .. code-block:: python
-
-        cached = __salt__['cp.is_cached'](source_match)
+        cached = __salt__['cp.is_cached'](source_match, saltenv=__env__)
 
     This function will return the cached path of the file, or an empty string
     if the file is not present in the minion cache.

@@ -664,6 +664,8 @@ class Pillar(object):
                         log.error(msg)
                         errors.append(msg)
                     else:
+                        # render included state(s)
+                        include_states = []
                         for sub_sls in state.pop('include'):
                             if isinstance(sub_sls, dict):
                                 sub_sls, v = next(six.iteritems(sub_sls))
@@ -685,16 +687,23 @@ class Pillar(object):
                                             nstate = {
                                                 key_fragment: nstate
                                             }
-
+                                    include_states.append(nstate)
+                                if err:
+                                    errors += err
+                        if include_states:
+                            # merge included state(s) with the current state merged last
+                            include_states.append(state)
+                            state = None
+                            for s in include_states:
+                                if state is None:
+                                    state = s
+                                else:
                                     state = merge(
                                         state,
-                                        nstate,
+                                        s,
                                         self.merge_strategy,
                                         self.opts.get('renderer', 'yaml'),
                                         self.opts.get('pillar_merge_lists', False))
-
-                                if err:
-                                    errors += err
         return state, mods, errors
 
     def render_pillar(self, matches, errors=None):
@@ -783,7 +792,8 @@ class Pillar(object):
                 git_pillar.init_remotes(
                     self.ext['git'],
                     salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                    salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                    salt.pillar.git_pillar.GLOBAL_ONLY)
                 git_pillar.fetch_remotes()
         except TypeError:
             # Handle malformed ext_pillar

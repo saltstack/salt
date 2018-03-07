@@ -82,6 +82,7 @@ import re
 import shutil
 import logging
 import sys
+import pkg_resources
 
 # Import salt libs
 import salt.utils
@@ -332,6 +333,20 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
 
     logger.debug('CLEANUP_REQUIREMENTS: %s', str(cleanup_requirements))
     return cleanup_requirements, None
+
+
+def _format_env_vars(env_vars):
+    ret = {}
+    if env_vars:
+        if isinstance(env_vars, dict):
+            for key, val in six.iteritems(env_vars):
+                if not isinstance(val, six.string_types):
+                    val = str(val)
+                ret[key] = val
+        else:
+            raise CommandExecutionError(
+                'env_vars {0} is not a dictionary'.format(env_vars))
+    return ret
 
 
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
@@ -803,14 +818,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
 
     if env_vars:
-        if isinstance(env_vars, dict):
-            for key, val in six.iteritems(env_vars):
-                if not isinstance(val, six.string_types):
-                    val = str(val)
-                cmd_kwargs.setdefault('env', {})[key] = val
-        else:
-            raise CommandExecutionError(
-                'env_vars {0} is not a dictionary'.format(env_vars))
+        cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
 
     try:
         if cwd:
@@ -965,7 +973,8 @@ def uninstall(pkgs=None,
 def freeze(bin_env=None,
            user=None,
            cwd=None,
-           use_vt=False):
+           use_vt=False,
+           env_vars=None):
     '''
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -1018,6 +1027,8 @@ def freeze(bin_env=None,
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+    if env_vars:
+        cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
     result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
 
     if result['retcode'] > 0:
@@ -1029,7 +1040,8 @@ def freeze(bin_env=None,
 def list_(prefix=None,
           bin_env=None,
           user=None,
-          cwd=None):
+          cwd=None,
+          env_vars=None):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
@@ -1058,7 +1070,7 @@ def list_(prefix=None,
     if prefix is None or 'pip'.startswith(prefix):
         packages['pip'] = version(bin_env)
 
-    for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
+    for line in freeze(bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
             # ignore comment lines
@@ -1216,3 +1228,79 @@ def upgrade(bin_env=None,
     ret['changes'] = salt.utils.compare_dicts(old, new)
 
     return ret
+
+
+def list_all_versions(pkg,
+                      bin_env=None,
+                      include_alpha=False,
+                      include_beta=False,
+                      include_rc=False,
+                      user=None,
+                      cwd=None):
+    '''
+    .. versionadded:: 2017.7.3
+
+    List all available versions of a pip package
+
+    pkg
+        The package to check
+
+    bin_env
+        Path to pip bin or path to virtualenv. If doing a system install,
+        and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) just
+        specify the pip bin you want.
+
+    include_alpha
+        Include alpha versions in the list
+
+    include_beta
+        Include beta versions in the list
+
+    include_rc
+        Include release candidates versions in the list
+
+    user
+        The user under which to run pip
+
+    cwd
+        Current working directory to run pip from
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' pip.list_all_versions <package name>
+    '''
+    pip_bin = _get_pip_bin(bin_env)
+
+    cmd = [pip_bin, 'install', '{0}==versions'.format(pkg)]
+
+    cmd_kwargs = dict(cwd=cwd, runas=user, output_loglevel='quiet', redirect_stderr=True)
+    if bin_env and os.path.isdir(bin_env):
+        cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+
+    result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
+
+    filtered = []
+    if not include_alpha:
+        filtered.append('a')
+    if not include_beta:
+        filtered.append('b')
+    if not include_rc:
+        filtered.append('rc')
+    if filtered:
+        excludes = re.compile(r'^((?!{0}).)*$'.format('|'.join(filtered)))
+    else:
+        excludes = re.compile(r'')
+
+    versions = []
+    for line in result['stdout'].splitlines():
+        match = re.search(r'\s*Could not find a version.* \(from versions: (.*)\)', line)
+        if match:
+            versions = [v for v in match.group(1).split(', ') if v and excludes.match(v)]
+            versions.sort(key=pkg_resources.parse_version)
+            break
+    if not versions:
+        return None
+
+    return versions

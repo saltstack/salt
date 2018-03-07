@@ -786,6 +786,13 @@ def latest(name,
             )
             remote_loc = None
 
+    if depth is not None and remote_rev_type != 'branch':
+        return _fail(
+            ret,
+            'When \'depth\' is used, \'rev\' must be set to the name of a '
+            'branch on the remote repository'
+        )
+
     if remote_rev is None and not bare:
         if rev != 'HEAD':
             # A specific rev is desired, but that rev doesn't exist on the
@@ -1663,7 +1670,7 @@ def latest(name,
             if remote != 'origin':
                 clone_opts.extend(['--origin', remote])
             if depth is not None:
-                clone_opts.extend(['--depth', str(depth)])
+                clone_opts.extend(['--depth', str(depth), '--branch', rev])
 
             # We're cloning a fresh repo, there is no local branch or revision
             local_branch = local_rev = None
@@ -2308,6 +2315,7 @@ def detached(name,
     else:
         # Clone repository
         if os.path.isdir(target):
+            target_contents = os.listdir(target)
             if force_clone:
                 # Clone is required, and target directory exists, but the
                 # ``force`` option is enabled, so we need to clear out its
@@ -2324,20 +2332,26 @@ def detached(name,
                     'place (force_clone=True set in git.detached state)'
                     .format(target, name)
                 )
-                try:
-                    if os.path.islink(target):
-                        os.unlink(target)
-                    else:
-                        salt.utils.rm_rf(target)
-                except OSError as exc:
+                removal_errors = {}
+                for target_object in target_contents:
+                    target_path = os.path.join(target, target_object)
+                    try:
+                        salt.utils.rm_rf(target_path)
+                    except OSError as exc:
+                        if exc.errno != errno.ENOENT:
+                            removal_errors[target_path] = exc
+                if removal_errors:
+                    err_strings = [
+                        '  {0}\n    {1}'.format(k, v)
+                        for k, v in six.iteritems(removal_errors)
+                    ]
                     return _fail(
                         ret,
-                        'Unable to remove {0}: {1}'.format(target, exc),
+                        'Unable to remove\n{0}'.format('\n'.join(err_strings)),
                         comments
                     )
-                else:
-                    ret['changes']['forced clone'] = True
-            elif os.listdir(target):
+                ret['changes']['forced clone'] = True
+            elif target_contents:
                 # Clone is required, but target dir exists and is non-empty. We
                 # can't proceed.
                 return _fail(

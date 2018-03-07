@@ -36,6 +36,7 @@ PER_REMOTE_OVERRIDES = ('ssl_verify', 'refspecs')
 # salt.utils.gitfs.PER_REMOTE_ONLY for this value, so this is mainly for
 # runners and other modules that import salt.runners.winrepo.
 PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
+GLOBAL_ONLY = ('branch',)
 
 
 def genrepo(opts=None, fire_event=True):
@@ -218,7 +219,10 @@ def update_git_repos(opts=None, clean=False, masterless=False):
             try:
                 winrepo = salt.utils.gitfs.WinRepo(opts, base_dir)
                 winrepo.init_remotes(
-                    remotes, PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
+                    remotes,
+                    PER_REMOTE_OVERRIDES,
+                    PER_REMOTE_ONLY,
+                    GLOBAL_ONLY)
                 winrepo.fetch_remotes()
                 # Since we're not running update(), we need to manually call
                 # clear_old_remotes() to remove directories from remotes that

@@ -956,6 +956,38 @@ The TCP port for ``mworkers`` to connect to on the master.
 
     tcp_master_workers: 4515
 
+.. conf_master:: auth_events
+
+``auth_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire authentication events.
+:ref:`Authentication events <event-master_auth>` are fired when
+a minion performs an authentication check with the master.
+
+.. code-block:: yaml
+
+    auth_events: True
+
+.. conf_master:: minion_data_cache_events
+
+``minion_data_cache_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire minion data cache events.  Minion data
+cache events are fired when a minion requests a minion data cache refresh.
+
+.. code-block:: yaml
+
+    minion_data_cache_events: True
 
 .. _salt-ssh-configuration:
 
@@ -4820,11 +4852,10 @@ branch/tag.
 
     winrepo_branch: winrepo
 
-    ext_pillar:
-      - git:
-        - https://mygitserver/winrepo1.git
-        - https://mygitserver/winrepo2.git:
-        - foo https://mygitserver/winrepo3.git
+    winrepo_remotes:
+      - https://mygitserver/winrepo1.git
+      - https://mygitserver/winrepo2.git:
+      - foo https://mygitserver/winrepo3.git
 
 .. conf_master:: winrepo_ssl_verify
 

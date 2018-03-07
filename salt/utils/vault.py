@@ -98,7 +98,7 @@ def _get_vault_connection():
     Get the connection details for calling Vault, from local configuration if
     it exists, or from the master otherwise
     '''
-    if 'vault' in __opts__ and not __opts__.get('__role', 'minion') == 'master':
+    def _use_local_config():
         log.debug('Using Vault connection details from local config')
         try:
             return {
@@ -108,6 +108,11 @@ def _get_vault_connection():
         except KeyError as err:
             errmsg = 'Minion has "vault" config section, but could not find key "{0}" within'.format(err.message)
             raise salt.exceptions.CommandExecutionError(errmsg)
+
+    if 'vault' in __opts__ and __opts__.get('__role', 'minion') == 'master':
+        return _use_local_config()
+    elif any((__opts__['local'], __opts__['file_client'] == 'local', __opts__['master_type'] == 'disable')):
+        return _use_local_config()
     else:
         log.debug('Contacting master for Vault connection details')
         return _get_token_and_url_from_master()
