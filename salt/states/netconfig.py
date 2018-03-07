@@ -192,7 +192,7 @@ def managed(name,
     template_attrs: "--------------e----"
         Attributes of file (see `man lsattr`)
 
-        .. versionadded:: oxygen
+        .. versionadded:: 2018.3.0
 
     saltenv: base
         Specifies the template environment. This will influence the relative imports inside the templates.

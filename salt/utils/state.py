@@ -2,7 +2,7 @@
 '''
 Utility functions for state functions
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 
 # Import Python Libs

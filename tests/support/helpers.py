@@ -1344,7 +1344,7 @@ def generate_random_name(prefix, size=6):
     Generates a random name by combining the provided prefix with a randomly generated
     ascii string.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     prefix
         The string to prefix onto the randomly generated ascii string.

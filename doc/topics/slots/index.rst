@@ -4,7 +4,7 @@
 Slots
 =====
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 .. note:: This functionality is under development and could be changed in the
     future releases
