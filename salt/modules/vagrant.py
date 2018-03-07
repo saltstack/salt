@@ -2,7 +2,7 @@
 '''
 Work with virtual machines managed by Vagrant.
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Mapping between a Salt node id and the Vagrant machine name
 (and the path to the Vagrantfile where it is defined)
