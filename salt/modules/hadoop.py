@@ -88,9 +88,12 @@ def dfs(command=None, *args):
         return 'Error: command must be provided'
 
 
-def dfsadmin(command=None, *args):
+def dfsadmin_report(arg=None):
     '''
-    Execute a command on DFS
+    Reports basic filesystem information and statistics. Optional flags may be used to filter the list of displayed DataNodes.
+
+    arg
+        [live] [dead] [decommissioning]
 
     CLI Example:
 
@@ -98,10 +101,13 @@ def dfsadmin(command=None, *args):
 
         salt '*' hadoop.dfsadmin -report
     '''
-    if command:
-        return _hadoop_cmd('dfsadmin', command, *args)
+    if arg is not None:
+        if arg in ['live', 'dead', 'decommissioning']:
+            return _hadoop_cmd('dfsadmin', 'report', arg)
+        else:
+            return "Error: the arg is wrong,it must be in ['live', 'dead', 'decommissioning']"
     else:
-        return 'Error: command must be provided'
+        return _hadoop_cmd('dfsadmin', 'report')
 
 
 def dfs_present(path):
