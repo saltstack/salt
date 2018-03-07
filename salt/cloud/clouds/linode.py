@@ -1507,7 +1507,7 @@ def _query(action=None,
 
             for error in result['dict']['ERRORARRAY']:
                 msg = error['ERRORMESSAGE']
- 
+
                 if msg == "Authentication failed":
                     raise SaltCloudSystemExit(
                         'Linode API Key is expired or invalid'
