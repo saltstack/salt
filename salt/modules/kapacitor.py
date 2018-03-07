@@ -141,6 +141,8 @@ def define_task(name,
         to fetch data from. For backward compatibility, the value of
         'database' and 'retention_policy' will be merged as part of dbrps.
 
+        .. versionadded:: Fluorine
+
     database
         Which database to fetch data from. Defaults to None, which will use the
         default database in InfluxDB.
