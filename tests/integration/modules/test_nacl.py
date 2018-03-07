@@ -1,0 +1,58 @@
+# -*- coding: utf-8 -*-
+'''
+Tests for the salt-run command
+'''
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+import salt.utils.stringutils
+
+# Import Salt Testing libs
+from tests.support.case import ModuleCase
+
+
+class NaclTest(ModuleCase):
+    '''
+    Test the nacl runner
+    '''
+    def test_keygen(self):
+        '''
+        Test keygen
+        '''
+        # Store the data
+        ret = self.run_function(
+            'nacl.keygen',
+        )
+        self.assertIn('pk', ret)
+        self.assertIn('sk', ret)
+
+    def test_enc_dec(self):
+        '''
+        Generate keys, encrypt, then decrypt.
+        '''
+        # Store the data
+        ret = self.run_function(
+            'nacl.keygen',
+        )
+        self.assertIn('pk', ret)
+        self.assertIn('sk', ret)
+        pk = ret['pk']
+        sk = ret['sk']
+
+        unencrypted_data = salt.utils.stringutils.to_bytes('hello')
+
+        # Encrypt with pk
+        ret = self.run_function(
+            'nacl.enc',
+            data=unencrypted_data,
+            pk=pk,
+        )
+        encrypted_data = ret
+
+        # Decrypt with sk
+        ret = self.run_function(
+            'nacl.dec',
+            data=encrypted_data,
+            sk=sk,
+        )
+        self.assertEqual(unencrypted_data, ret)
