@@ -89,9 +89,7 @@ def creds(provider):
                 proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
             )
             result.raise_for_status()
-            role = result.text.encode(
-                result.encoding if result.encoding else 'utf-8'
-            )
+            role = result.text
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
             return provider['id'], provider['key'], ''
 

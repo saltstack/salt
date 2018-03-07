@@ -62,7 +62,10 @@ def jobber_check(self):
             rms.append(jid)
             data = self.shells.value[jid]
             stdout, stderr = data['proc'].communicate()
-            ret = salt.utils.json.loads(stdout, object_hook=salt.utils.data.encode_dict)['local']
+            ret = salt.utils.json.loads(
+                stdout,
+                object_hook=salt.utils.data.encode_dict if six.PY2 else None
+            )['local']
             route = {'src': (self.stack.value.local.name, 'manor', 'jid_ret'),
                      'dst': (data['msg']['route']['src'][0], None, 'remote_cmd')}
             ret['cmd'] = '_return'

@@ -1,8 +1,8 @@
-:orphan:
+.. _release-2018-3-0:
 
-====================================
-Salt Release Notes - Codename Oxygen
-====================================
+=============================================
+Salt 2018.3.0 Release Notes - Codename Oxygen
+=============================================
 
 Lots of Docker Improvements
 ---------------------------
@@ -353,7 +353,7 @@ Prior to this release, fileservers would be updated as part of a dedicated
 performed. This tied the update interval to the :conf_master:`loop_interval`
 config option, and also forced all fileservers to update at the same interval.
 
-Oxygen adds the following configuration options for the various fileserver
+2018.3.0 adds the following configuration options for the various fileserver
 backends:
 
 - :conf_master:`roots_update_interval`
@@ -1680,8 +1680,8 @@ Utils Deprecations
 
 The ``salt.utils.cloud.py`` file had the following change:
 
-- The ``fire_event`` function now requires a ``sock_dir`` argument. It was previously
-  optional.
+- The ``fire_event`` function now requires a ``sock_dir`` argument. It was
+  previously optional.
 
 Other Miscellaneous Deprecations
 ================================
@@ -1690,9 +1690,9 @@ The ``version.py`` file had the following changes:
 
 - The ``rc_info`` function was removed. Please use ``pre_info`` instead.
 
-Warnings for moving away from the ``env`` option were removed. ``saltenv`` should be
-used instead. The removal of these warnings does not have a behavior change. Only
-the warning text was removed.
+Warnings for moving away from the ``env`` option were removed. ``saltenv``
+should be used instead. The removal of these warnings does not have a behavior
+change. Only the warning text was removed.
 
 Sentry Log Handler
 ------------------
@@ -1705,6 +1705,6 @@ RAET transport
 --------------
 
 We haven't been doing development on RAET for quite some time and decided that
-Oxygen is the time to announce the deprecation. RAET support will be removed in
-Neon. Please consider to move to ``zeromq`` or ``tcp`` transport instead of
+2018.3.0 is the time to announce the deprecation. RAET support will be removed
+in Neon. Please consider to move to ``zeromq`` or ``tcp`` transport instead of
 ``raet``.

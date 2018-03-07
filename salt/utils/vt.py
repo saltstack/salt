@@ -642,7 +642,7 @@ class Terminal(object):
             if self.child_fde in rlist:
                 try:
                     stderr = self._translate_newlines(
-                        salt.utils.stringutils.to_str(
+                        salt.utils.stringutils.to_unicode(
                             os.read(self.child_fde, maxsize)
                         )
                     )
@@ -675,7 +675,7 @@ class Terminal(object):
             if self.child_fd in rlist:
                 try:
                     stdout = self._translate_newlines(
-                        salt.utils.stringutils.to_str(
+                        salt.utils.stringutils.to_unicode(
                             os.read(self.child_fd, maxsize)
                         )
                     )
