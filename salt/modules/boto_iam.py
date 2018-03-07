@@ -745,6 +745,8 @@ def get_login_profile(user_name, region=None, key=None, keyid=None, profile=None
     Return current Login Profile attached to user, if the user exists and
     has a profile attached, None otherwise.
 
+    .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -766,11 +768,25 @@ def get_login_profile(user_name, region=None, key=None, keyid=None, profile=None
         return None
 
 
-def create_login_profile(user_name, password, password_reset_required=False,
-                         region=None, key=None, keyid=None, profile=None):
+def create_login_profile(user_name, password, region=None, key=None, keyid=None,
+                         profile=None, password_reset_required=False):
     '''
     Creates a login profile for the specified user, give the user the
     ability to access AWS services and the AWS Management Console.
+
+    user_name
+        The name of the IAM user to create a password for.  Allowed characters are upper/lower
+        alphanumerics plus any of '=', ',', '.', '@', and '-'.  Note that the user must already
+        exist before their login profile may be created.
+
+    password
+        The new password for the user.  Allowed characters are any ASCII from 0x20 through 0xff,
+        plus 0x09 (tab), 0x0a (line feed), and 0x0d (carriage return).  Practially speaking, the
+        last three generally produce pathology and use should be avoided.
+
+    password_reset_required
+        Boolean specifying whether the user is required to change their password on next sign-in.
+        .. versionadded:: Fluorine
 
     .. versionadded:: 2015.8.0
 
@@ -798,16 +814,31 @@ def create_login_profile(user_name, password, password_reset_required=False,
 def update_login_profile(user_name, password=None, password_reset_required=False,
                          region=None, key=None, keyid=None, profile=None):
     '''
-    Updates a login profile for the specified user, give the user the
-    ability to access AWS services and the AWS Management Console.
+    Updates a login profile for the specified user, give the user the ability to access AWS
+    services and the AWS Management Console.
 
-    .. versionadded:: 2015.8.0
+    user_name
+        The name of the IAM user to set the password for.  Allowed characters are upper/lower
+        alphanumerics plus any of '=', ',', '.', '@', and '-'.  Note that the user must already
+        exist before their login profile may be created.
+
+    password
+        The new password for the user, if desired.  Allowed characters are any ASCII from 0x20
+        through 0xff, plus 0x09 (tab), 0x0a (line feed), and 0x0d (carriage return).  Practially
+        speaking, the last three generally produce pathology and use should be avoided.
+
+    password_reset_required
+        Boolean specifying whether the user is required to change their password on next sign-in.
+        Note that once this has been set to True, the AWS API does not permit resetting it to False
+        without also changing the password.
+
+    .. versionadded:: Fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_iam.update_login_profile user_name password
+        salt myminion boto_iam.update_login_profile Bob.Dobbs 'GotSlack?'
     '''
     conn3 = __utils__['boto3.get_connection']('iam', region=region, key=key, keyid=keyid, profile=profile)
     try:

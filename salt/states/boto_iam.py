@@ -506,15 +506,17 @@ def user_present(name, policies=None, policies_from_pillars=None, managed_polici
         user.
 
     password (string)
-        The password for the new user. Must comply with account policy.
-        NOTE that because AWS will not for any reason return the existing password
-        if one is set, there is no way to compare one passed in with what may be
-        currently set.  This means that if ANY login profile is found, it is assumed
-        to be correct, and will never be updated.
+        The password for the new user.  Must comply with account policy.
+        NOTE that because AWS will not for any reason return an existing password, there is no way
+        to compare the one provided to what is currently set.  This in turn means that if ANY login
+        profile is found, the password is assumed to be current, and will never be updated.  It
+        will ONLY be set if no login_profile whatsoever is attached to the user.
 
     password_reset_required (bool)
-        If a password is provided, setting this to True will force the user to
-        change their password at the next login.  Defaults to False.
+        Defaults to False.  Boolean specifying whether the user is required to change their
+        password on next sign-in.  Note that once this has been set to True, the AWS API does
+        not permit resetting it to False without also changing the password.
+        .. versionadded:: Fluorine
 
     path (string)
         The path of the user. Default is '/'.
