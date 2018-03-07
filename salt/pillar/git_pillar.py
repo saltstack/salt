@@ -347,6 +347,7 @@ from salt.ext import six
 
 PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
 PER_REMOTE_ONLY = ('name', 'mountpoint')
+GLOBAL_ONLY = ('base', 'branch')
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -385,7 +386,8 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
         opts,
         repos,
         per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY)
+        per_remote_only=PER_REMOTE_ONLY,
+        global_only=GLOBAL_ONLY)
     if __opts__.get('__role') == 'minion':
         # If masterless, fetch the remotes. We'll need to remove this once
         # we make the minion daemon able to run standalone.
