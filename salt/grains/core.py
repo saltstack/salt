@@ -24,6 +24,13 @@ import uuid
 from errno import EACCES, EPERM
 import datetime
 
+# pylint: disable=import-error
+try:
+    import dateutil.tz
+    _DATEUTIL_TZ = True
+except ImportError:
+    _DATEUTIL_TZ = False
+
 __proxyenabled__ = ['*']
 __FQDN__ = None
 
@@ -1845,6 +1852,8 @@ def locale_info():
         grains['locale_info']['defaultlanguage'] = 'unknown'
         grains['locale_info']['defaultencoding'] = 'unknown'
     grains['locale_info']['detectedencoding'] = __salt_system_encoding__
+    if _DATEUTIL_TZ:
+        grains['locale_info']['timezone'] = datetime.datetime.now(dateutil.tz.tzlocal()).tzname()
     return grains
 
 
