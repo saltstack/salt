@@ -534,17 +534,21 @@ def _get_result(func_ret, changes):
             # 'result' key set to False which sets the global
             # state result.
             else:
-                res = _get_result_in_depth(changes_ret)
+                res = _get_dict_result(changes_ret)
 
     return res
 
 
-def _get_result_in_depth(node):
+def _get_dict_result(node):
+    ret = True
     for key, val in six.iteritems(node):
         if key == 'result' and val is False:
-            return False
+            ret = False
+            break
         elif isinstance(val, dict):
-            return _get_result_in_depth(val)
-    return True
+            ret = _get_dict_result(val)
+            if ret is False:
+                break
+    return ret
 
 mod_watch = salt.utils.alias_function(run, 'mod_watch')
