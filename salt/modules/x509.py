@@ -316,7 +316,7 @@ def _text_or_file(input_):
     '''
     if os.path.isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
-            return salt.utils.stringutils.to_str(fp_.read())
+            return salt.utils.stringutils.to_bytes(fp_.read())
     else:
         return input_
 
