@@ -34,10 +34,10 @@ def __virtual__():
 def task_present(name,
                  tick_script,
                  task_type='stream',
-                 dbrps=None,
                  database=None,
                  retention_policy='default',
-                 enable=True):
+                 enable=True,
+                 dbrps=None):
     '''
     Ensure that a task is present and up-to-date in Kapacitor.
 
@@ -98,9 +98,9 @@ def task_present(name,
                 name,
                 script_path,
                 task_type=task_type,
-                dbrps=dbrps,
                 database=database,
-                retention_policy=retention_policy
+                retention_policy=retention_policy,
+                dbrps=dbrps
             )
             ret['result'] = result['success']
             if not ret['result']:

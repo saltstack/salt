@@ -121,9 +121,9 @@ def _run_cmd(cmd):
 def define_task(name,
                 tick_script,
                 task_type='stream',
-                dbrps=None,
                 database=None,
-                retention_policy='default'):
+                retention_policy='default',
+                dbrps=None):
     '''
     Define a task. Serves as both create/update.
 
@@ -170,7 +170,7 @@ def define_task(name,
     if not dbrps:
         dbrps = []
 
-    if dbrps and (database and retention_policy):
+    if (database and retention_policy):
         dbrp = '{0}.{1}'.format(database, retention_policy)
         dbrps.append(dbrp)
 
