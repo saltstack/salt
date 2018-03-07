@@ -538,8 +538,9 @@ def _get_result(func_ret, changes):
 
     return res
 
+
 def _get_result_in_depth(node):
-    for key, val in node.iteritems():
+    for key, val in six.iteritems(node):
         if key == 'result' and val is False:
             return False
         elif isinstance(val, dict):
