@@ -258,7 +258,7 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
             'The \'keyfile\' argument has been deprecated and will be removed in Salt '
             '{version}. Please use \'sk_file\' argument instead.'
         )
-        sk_file = kwargs['sk_file']
+        sk_file = kwargs['keyfile']
 
     if sk_file is None:
         kp = libnacl.public.SecretKey()
