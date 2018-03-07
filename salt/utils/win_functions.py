@@ -3,7 +3,7 @@
 Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import
 import platform
 import re
 import ctypes
