@@ -60,11 +60,7 @@ try:
     HAS_WINSHELL = False
 except ImportError:
     HAS_WINSHELL = False
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.utils.zeromq import zmq
 
 # The directory where salt thin is deployed
 DEFAULT_THIN_DIR = '/var/tmp/.%%USER%%_%%FQDNUUID%%_salt'
@@ -214,7 +210,7 @@ class SSH(object):
     def __init__(self, opts):
         self.__parsed_rosters = {SSH.ROSTER_UPDATE_FLAG: True}
         pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
-        if os.path.exists(pull_sock) and HAS_ZMQ:
+        if os.path.exists(pull_sock) and zmq:
             self.event = salt.utils.event.get_event(
                     'master',
                     opts['sock_dir'],
@@ -444,7 +440,7 @@ class SSH(object):
             if target.get('passwd', False) or self.opts['ssh_passwd']:
                 self._key_deploy_run(host, target, False)
             return ret
-        if ret[host].get('stderr', '').count('Permission denied'):
+        if (ret[host].get('stderr') or '').count('Permission denied'):
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
@@ -662,7 +658,11 @@ class SSH(object):
             host = next(six.iterkeys(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
-                _, data = next(six.iteritems(ret))
+                id_, data = next(six.iteritems(ret))
+                if isinstance(data, six.text_type):
+                    data = {'return': data}
+                if 'id' not in data:
+                    data['id'] = id_
                 data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
                 self.event.fire_event(
                     data,
@@ -755,7 +755,7 @@ class SSH(object):
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
 
-            if isinstance(ret[host], dict) and ret[host].get('stderr', '').startswith('ssh:'):
+            if isinstance(ret[host], dict) and (ret[host].get('stderr') or '').startswith('ssh:'):
                 ret[host] = ret[host]['stderr']
 
             if not isinstance(ret[host], dict):
@@ -773,7 +773,11 @@ class SSH(object):
                         outputter,
                         self.opts)
             if self.event:
-                _, data = next(six.iteritems(ret))
+                id_, data = next(six.iteritems(ret))
+                if isinstance(data, six.text_type):
+                    data = {'return': data}
+                if 'id' not in data:
+                    data['id'] = id_
                 data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
                 self.event.fire_event(
                     data,

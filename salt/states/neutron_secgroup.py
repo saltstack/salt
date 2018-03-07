@@ -3,7 +3,7 @@
 Management of OpenStack Neutron Security Groups
 =========================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.neutronng` for setup instructions

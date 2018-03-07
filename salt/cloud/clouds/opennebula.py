@@ -758,7 +758,7 @@ def get_template_image(kwargs=None, call=None):
     '''
     Returns a template's image from the given template name.
 
-    .. versionadded:: oxygen
+    .. versionadded:: 2018.3.0
 
     .. code-block:: bash
 
@@ -921,7 +921,7 @@ def _get_device_template(disk, disk_info, template=None):
     '''
     Returns the template format to create a disk in open nebula
 
-    .. versionadded:: oxygen
+    .. versionadded:: 2018.3.0
 
     '''
     def _require_disk_opts(*args):

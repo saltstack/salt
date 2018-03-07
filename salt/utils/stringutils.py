@@ -13,6 +13,7 @@ import os
 import shlex
 import re
 import time
+import unicodedata
 
 # Import Salt libs
 from salt.utils.decorators.jinja import jinja_filter
@@ -83,31 +84,34 @@ def to_str(s, encoding=None, errors='strict'):
         raise TypeError('expected str, bytearray, or unicode')
 
 
-def to_unicode(s, encoding=None, errors='strict'):
+def to_unicode(s, encoding=None, errors='strict', normalize=False):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
+    def _normalize(s):
+        return unicodedata.normalize('NFC', s) if normalize else s
+
     if six.PY3:
         if isinstance(s, str):
-            return s
+            return _normalize(s)
         elif isinstance(s, (bytes, bytearray)):
-            return to_str(s, encoding, errors)
+            return _normalize(to_str(s, encoding, errors))
         raise TypeError('expected str, bytes, or bytearray')
     else:
         # This needs to be str and not six.string_types, since if the string is
         # already a unicode type, it does not need to be decoded (and doing so
         # will raise an exception).
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
-            return s
+            return _normalize(s)
         elif isinstance(s, (str, bytearray)):
             if encoding:
-                return s.decode(encoding, errors)
+                return _normalize(s.decode(encoding, errors))
             else:
                 try:
-                    return s.decode(__salt_system_encoding__, errors)
+                    return _normalize(s.decode(__salt_system_encoding__, errors))
                 except UnicodeDecodeError:
                     # Fall back to UTF-8
-                    return s.decode('utf-8', errors)
+                    return _normalize(s.decode('utf-8', errors))
         raise TypeError('expected str or bytearray')
 
 
@@ -221,7 +225,7 @@ def human_to_bytes(size):
     return the number of bytes.  Will return 0 if the argument has
     unexpected form.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
     '''
     sbytes = size[:-1]
     unit = size[-1]
