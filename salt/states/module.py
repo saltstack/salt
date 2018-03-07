@@ -530,7 +530,20 @@ def _get_result(func_ret, changes):
                 res = changes_ret.get('result', {})
             elif changes_ret.get('retcode', 0) != 0:
                 res = False
+            # Explore dict in depth to determine if there is a
+            # 'result' key set to False which sets the global
+            # state result.
+            else:
+                res = _get_result_in_depth(changes_ret)
 
     return res
+
+def _get_result_in_depth(node):
+    for key, val in node.iteritems():
+        if key == 'result' and val is False:
+            return False
+        elif isinstance(val, dict):
+            return _get_result_in_depth(val)
+    return True
 
 mod_watch = salt.utils.alias_function(run, 'mod_watch')
