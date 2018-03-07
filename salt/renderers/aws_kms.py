@@ -70,7 +70,6 @@ import base64
 
 # Import salt libs
 import salt.utils.stringio
-import salt.utils.decorators as decorators
 
 # Import 3rd-party libs
 from salt.ext import six
