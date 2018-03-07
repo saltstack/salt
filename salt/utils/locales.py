@@ -17,7 +17,10 @@ def get_encodings():
     '''
     return a list of string encodings to try
     '''
-    encodings = [__salt_system_encoding__]
+    if salt.utils.is_windows():
+        encodings = ['utf-8', __salt_system_encoding__]
+    else:
+        encodings = [__salt_system_encoding__]
 
     try:
         sys_enc = sys.getdefaultencoding()
