@@ -71,6 +71,11 @@ def task_present(name,
 
     task = __salt__['kapacitor.get_task'](name)
     old_script = task['script'] if task else ''
+    if not dbrps:
+        dbrps = []
+    if (database and retention_policy):
+        dbrp = '{0}.{1}'.format(database, retention_policy)
+        dbrps.append(dbrp)
     task_dbrps = [{'db': dbrp[0], 'rp': dbrp[1]} for dbrp in (dbrp.split('.') for dbrp in dbrps)]
 
     if tick_script.startswith('salt://'):
