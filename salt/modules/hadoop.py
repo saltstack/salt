@@ -90,6 +90,8 @@ def dfs(command=None, *args):
 
 def dfsadmin_report(arg=None):
     '''
+    .. versionadded:: Fluorine
+    
     Reports basic filesystem information and statistics. Optional flags may be used to filter the list of displayed DataNodes.
 
     arg
@@ -105,7 +107,7 @@ def dfsadmin_report(arg=None):
         if arg in ['live', 'dead', 'decommissioning']:
             return _hadoop_cmd('dfsadmin', 'report', arg)
         else:
-            return "Error: the arg is wrong,it must be in ['live', 'dead', 'decommissioning']"
+            return "Error: the arg is wrong, it must be in ['live', 'dead', 'decommissioning']"
     else:
         return _hadoop_cmd('dfsadmin', 'report')
 
