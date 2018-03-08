@@ -63,30 +63,30 @@ def keys(name, basepath='/etc/pki', **kwargs):
         country
             The country that the certificate should use.  Defaults to US.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         state
             The state that the certificate should use.  Defaults to Utah.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         locality
             The locality that the certificate should use.
             Defaults to Salt Lake City.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         organization
             The organization that the certificate should use.
             Defaults to Salted.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         expiration_days
             The number of days that the certificate should be valid for.
             Defaults to 365 days (1 year)
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}

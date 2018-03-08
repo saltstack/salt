@@ -102,3 +102,7 @@ autosign_file: autosign_file
 
 # disable discovery for test suite saltstack/salt-jenkins#683
 discovery: false
+
+# enable using ssh minions and regular minions
+enable_ssh_minions: True
+ignore_host_keys: True

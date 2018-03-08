@@ -139,11 +139,7 @@ def _get_pip_bin(bin_env):
     # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
         if salt.utils.platform.is_windows():
-            if six.PY2:
-                pip_bin = os.path.join(
-                    bin_env, 'Scripts', 'pip.exe').encode('string-escape')
-            else:
-                pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
+            pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
         else:
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
@@ -1198,7 +1194,7 @@ def is_installed(pkgname=None,
 
         salt '*' pip.is_installed salt
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
         The packages wheel, setuptools, and distribute are included if the
         installed pip is new enough.
