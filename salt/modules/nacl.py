@@ -394,6 +394,9 @@ def dec(data, **kwargs):
         )
         kwargs['sk_file'] = kwargs['keyfile']
 
+        # set boxtype to `secretbox` to maintain backward compatibility
+        kwargs['box_type'] = 'secretbox'
+
     if 'key' in kwargs:
         salt.utils.versions.warn_until(
             'Fluorine',
@@ -401,6 +404,9 @@ def dec(data, **kwargs):
             '{version}. Please use \'sk\' argument instead.'
         )
         kwargs['sk'] = kwargs['key']
+
+        # set boxtype to `secretbox` to maintain backward compatibility
+        kwargs['box_type'] = 'secretbox'
 
     # ensure data is in bytes
     data = salt.utils.stringutils.to_bytes(data)
