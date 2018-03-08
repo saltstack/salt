@@ -141,7 +141,7 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
         Parameter dict used to create the stack
 
     poll
-        Poll(in sec.) and report events until stack complete
+        Poll (in sec.) and report events until stack complete
 
     rollback
         Enable rollback on create failure

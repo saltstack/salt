@@ -156,7 +156,7 @@ security_group
 ~~~~~~~~~~~~~~
 .. versionadded:: next-release
 
-You can specifiy a list of security groups (by name or id) that should be
+You can specify a list of security groups (by name or id) that should be
 assigned to the VM.
 
 .. code-block:: yaml

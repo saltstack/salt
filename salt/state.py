@@ -1742,7 +1742,7 @@ class State(object):
         ret = {'name': cdata['args'][0],
                 'result': None,
                 'changes': {},
-                'comment': 'Started in a seperate process',
+                'comment': 'Started in a separate process',
                 'proc': proc}
         return ret
 
