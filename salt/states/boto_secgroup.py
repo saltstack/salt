@@ -443,7 +443,8 @@ def _rules_present(name, rules, delete_ingress_rules=True, vpc_id=None,
                         'source group id.'.format(_source_group_name)
                     )
                 rule['source_group_name'] = None
-                rule.pop('source_group_name_vpc') if _source_group_name_vpc else True
+                if _source_group_name_vpc:
+                    rule.pop('source_group_name_vpc')
                 rule['source_group_group_id'] = _group_id
     # rules = rules that exist in salt state
     # sg['rules'] = that exist in present group
@@ -536,7 +537,8 @@ def _rules_egress_present(name, rules_egress, delete_egress_rules=True, vpc_id=N
                         'source group id.'.format(_source_group_name)
                     )
                 rule['source_group_name'] = None
-                rule.pop('source_group_name_vpc') if _source_group_name_vpc else True
+                if _source_group_name_vpc:
+                    rule.pop('source_group_name_vpc')
                 rule['source_group_group_id'] = _group_id
     # rules_egress = rules that exist in salt state
     # sg['rules_egress'] = that exist in present group
