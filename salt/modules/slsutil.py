@@ -4,7 +4,7 @@ Utility functions for use with or in SLS files
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
 import salt.exceptions
@@ -58,7 +58,7 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
     '''
     Parse a string or file through Salt's renderer system
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
        Add support for Salt fileserver URIs.
 
     This is an open-ended function and can be used for a variety of tasks. It

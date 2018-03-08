@@ -8,7 +8,7 @@ of supported clouds, see http://libcloud.readthedocs.io/en/latest/storage/suppor
 
 Clouds include Amazon S3, Google Storage, Aliyun, Azure Blobs, Ceph, OpenStack swift
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration:
     This module uses a configuration profile for one or multiple Storage providers
@@ -30,7 +30,7 @@ Clouds include Amazon S3, Google Storage, Aliyun, Azure Blobs, Ceph, OpenStack s
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging

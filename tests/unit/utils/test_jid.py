@@ -4,7 +4,7 @@ Tests for salt.utils.jid
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import datetime
 import os
 

@@ -271,7 +271,7 @@ for standing up an ESXi host from scratch.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -317,13 +317,12 @@ def init(opts):
     ESXi devices, the host, login credentials, and, if configured,
     the protocol and port are cached.
     '''
-    log.debug('Initting esxi proxy module in process \'{}\''
-              ''.format(os.getpid()))
+    log.debug('Initting esxi proxy module in process %s', os.getpid())
     log.debug('Validating esxi proxy input')
     schema = EsxiProxySchema.serialize()
-    log.trace('esxi_proxy_schema = {}'.format(schema))
+    log.trace('esxi_proxy_schema = %s', schema)
     proxy_conf = merge(opts.get('proxy', {}), __pillar__.get('proxy', {}))
-    log.trace('proxy_conf = {0}'.format(proxy_conf))
+    log.trace('proxy_conf = %s', proxy_conf)
     try:
         jsonschema.validate(proxy_conf, schema)
     except jsonschema.exceptions.ValidationError as exc:
@@ -348,7 +347,7 @@ def init(opts):
         try:
             username, password = find_credentials(host)
         except SaltSystemExit as err:
-            log.critical('Error: {0}'.format(err))
+            log.critical('Error: %s', err)
             return False
 
         # Set configuration details
@@ -408,7 +407,7 @@ def init(opts):
                 username, password = find_credentials(DETAILS['vcenter'])
                 DETAILS['password'] = password
             except SaltSystemExit as err:
-                log.critical('Error: {0}'.format(err))
+                log.critical('Error: %s', err)
                 return False
 
     # Save optional

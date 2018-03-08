@@ -169,6 +169,12 @@ TEST_SUITES = {
     'external_api':
         {'display_name': 'ExternalAPIs',
          'path': 'integration/externalapi'},
+    'daemons':
+        {'display_name': 'Daemon',
+         'path': 'integration/daemons'},
+    'scheduler':
+        {'display_name': 'Scheduler',
+         'path': 'integration/scheduler'},
 }
 
 
@@ -467,6 +473,21 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             default=False,
             help='Run venafi runner tests'
+        )
+        self.test_selection_group.add_option(
+            '--daemons',
+            '--daemon-tests',
+            dest='daemons',
+            action='store_true',
+            default=False,
+            help='Run salt/daemons/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '--scheduler',
+            dest='scheduler',
+            action='store_true',
+            default=False,
+            help='Run scheduler integration tests'
         )
 
     def validate_options(self):
@@ -790,7 +811,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         return status
 
 
-def main():
+def main(**kwargs):
     '''
     Parse command line options for running specific tests
     '''
@@ -801,6 +822,12 @@ def main():
             tests_logfile=os.path.join(SYS_TMP_DIR, 'salt-runtests.log')
         )
         parser.parse_args()
+
+        # Override parser options (helpful when importing runtests.py and
+        # running from within a REPL). Using kwargs.items() to avoid importing
+        # six, as this feature will rarely be used.
+        for key, val in kwargs.items():
+            setattr(parser.options, key, val)
 
         overall_status = []
         if parser.options.interactive:

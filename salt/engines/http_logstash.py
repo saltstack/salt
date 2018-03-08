@@ -6,7 +6,7 @@ HTTP Logstash engine
 An engine that reads messages from the salt event bus and pushes
 them onto a logstash endpoint via HTTP requests.
 
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
 
 .. note::
     By default, this engine take everything from the Salt bus and exports into
@@ -29,15 +29,15 @@ them onto a logstash endpoint via HTTP requests.
                   - bgp.config
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python lib
-import json
 import fnmatch
 
 # Import salt libs
 import salt.utils.http
 import salt.utils.event
+import salt.utils.json
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -62,7 +62,7 @@ def _logstash(url, data):
         url,
         'POST',
         header_dict=_HEADERS,
-        data=json.dumps(data),
+        data=salt.utils.json.dumps(data),
         decode=True,
         status=True,
         opts=__opts__

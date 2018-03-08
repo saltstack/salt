@@ -3,7 +3,7 @@
 Management of OpenStack Keystone Roles
 ======================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.keystoneng` for setup instructions
@@ -26,7 +26,7 @@ Example States
         - description: 'my group'
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 __virtualname__ = 'keystone_role'
 

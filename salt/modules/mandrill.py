@@ -15,13 +15,15 @@ In the minion configuration file, the following block is required:
   mandrill:
     key: <API_KEY>
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
-from __future__ import absolute_import
 
-# import python std lib
-import json
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
+# Import Salt libs
+import salt.utils.json
 
 # import third party
 try:
@@ -30,20 +32,12 @@ try:
 except ImportError:
     HAS_REQUESTS = False
 
-# ------------------------------------------------------------------------------
-# module properties
-# ------------------------------------------------------------------------------
-
 __virtualname__ = 'mandrill'
 
 log = logging.getLogger(__file__)
 
 BASE_URL = 'https://mandrillapp.com/api'
 DEFAULT_VERSION = 1
-
-# ------------------------------------------------------------------------------
-# property functions
-# ------------------------------------------------------------------------------
 
 
 def __virtual__():
@@ -112,10 +106,10 @@ def _http_request(url,
     if not headers:
         headers = _get_headers()
     session = requests.session()
-    log.debug('Querying {}'.format(url))
+    log.debug('Querying %s', url)
     req = session.post(url,
                        headers=headers,
-                       data=json.dumps(data))
+                       data=salt.utils.json.dumps(data))
     req_body = req.json()
     ret = _default_ret()
     log.debug('Status code: %d', req.status_code)

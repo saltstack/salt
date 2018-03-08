@@ -2,7 +2,7 @@
 '''
 Runner module to directly manage the git external pillar
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -28,7 +28,7 @@ def update(branch=None, repo=None):
         fetched, and ``False`` if there were errors or no new commits were
         fetched.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The return for a given git_pillar remote will now be ``None`` when no
         changes were fetched. ``False`` now is reserved only for instances in
         which there were errors.
@@ -70,7 +70,8 @@ def update(branch=None, repo=None):
             __opts__,
             pillar_conf,
             per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-            per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
+            per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
+            global_only=salt.pillar.git_pillar.GLOBAL_ONLY)
         for remote in pillar.remotes:
             # Skip this remote if it doesn't match the search criteria
             if branch is not None:
@@ -83,8 +84,8 @@ def update(branch=None, repo=None):
                 result = remote.fetch()
             except Exception as exc:
                 log.error(
-                    'Exception \'{0}\' caught while fetching git_pillar '
-                    'remote \'{1}\''.format(exc, remote.id),
+                    'Exception \'%s\' caught while fetching git_pillar '
+                    'remote \'%s\'', exc, remote.id,
                     exc_info_on_loglevel=logging.DEBUG
                 )
                 result = False

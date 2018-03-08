@@ -8,7 +8,7 @@ The service module for NetBSD
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -109,7 +109,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:
