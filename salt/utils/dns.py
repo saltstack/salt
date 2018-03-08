@@ -19,6 +19,7 @@ import hashlib
 import itertools
 import logging
 import random
+import re
 import shlex
 import socket
 import ssl
@@ -43,6 +44,11 @@ try:
     HAS_DNSPYTHON = True
 except ImportError:
     HAS_DNSPYTHON = False
+try:
+    import tldextract
+    HAS_TLDEXTRACT = True
+except ImportError:
+    HAS_TLDEXTRACT = False
 HAS_DIG = salt.utils.path.which('dig') is not None
 HAS_DRILL = salt.utils.path.which('drill') is not None
 HAS_HOST = salt.utils.path.which('host') is not None
@@ -126,13 +132,23 @@ def _to_port(port):
 def _tree(domain, tld=False):
     '''
     Split out a domain in its parents
+
+    Leverages tldextract to take the TLDs from publicsuffix.org
+    or makes a valiant approximation of that
+
     :param domain: dc2.ams2.example.com
     :param tld: Include TLD in list
     :return: [ 'dc2.ams2.example.com', 'ams2.example.com', 'example.com']
     '''
     domain = domain.rstrip('.')
-    if '.' not in domain:
-        raise ValueError('Provide a decent domain')
+    assert '.' in domain, 'Provide a decent domain'
+
+    if not tld:
+        if HAS_TLDEXTRACT:
+            tld = tldextract.extract(domain).suffix
+        else:
+            tld = re.search(r'((?:(?:ac|biz|com?|info|edu|gov|mil|name|net|n[oi]m|org)\.)?[^.]+)$', domain).group()
+            log.info('Without tldextract, dns.util resolves the TLD of {0} to {1}'.format(domain, tld))
 
     res = [domain]
     while True:
@@ -140,11 +156,9 @@ def _tree(domain, tld=False):
         if idx < 0:
             break
         domain = domain[idx + 1:]
+        if domain == tld:
+            break
         res.append(domain)
-
-    # properly validating the tld is impractical
-    if not tld:
-        res = res[:-1]
 
     return res
 
