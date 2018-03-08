@@ -17,6 +17,7 @@ def _present(name='testname',
              task_type='stream',
              database='testdb',
              retention_policy='default',
+             dbrps=['testdb2.default_rp'],
              enable=True,
              task=None,
              define_result=True,
@@ -49,12 +50,13 @@ def _present(name='testname',
     }):
         with patch('salt.utils.files.fopen', mock_open(read_data=script)) as open_mock:
             retval = kapacitor.task_present(name, tick_script, task_type=task_type,
-                database=database, retention_policy=retention_policy, enable=enable)
+                database=database, retention_policy=retention_policy, enable=enable, dbrps=dbrps)
 
     return retval, get_mock, define_mock, enable_mock, disable_mock
 
 
-def _task(script='testscript', enabled=True, task_type='stream', db='testdb', rp='default'):
+def _task(script='testscript', enabled=True, task_type='stream',
+          db='testdb', rp='default'):
     return {
         'script': script,
         'enabled': enabled,
@@ -76,7 +78,8 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         ret, get_mock, define_mock, enable_mock, _ = _present()
         get_mock.assert_called_once_with('testname')
         define_mock.assert_called_once_with('testname', '/tmp/script.tick',
-            database='testdb', retention_policy='default', task_type='stream')
+            database='testdb', retention_policy='default',
+            task_type='stream', dbrps=['testdb2.default_rp'])
         enable_mock.assert_called_once_with('testname')
         self.assertIn('TICKscript diff', ret['changes'])
         self.assertIn('enabled', ret['changes'])
