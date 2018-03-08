@@ -238,7 +238,7 @@ def call(napalm_device, method, *args, **kwargs):
             # either running in a not-always-alive proxy
             # either running in a regular minion
             # close the connection when the call is over
-            # unless the CLOSE is explicitely set as False
+            # unless the CLOSE is explicitly set as False
             napalm_device['DRIVER'].close()
     return {
         'out': out,
@@ -392,7 +392,7 @@ def proxy_napalm_wrap(func):
             else:
                 # in case the `inherit_napalm_device` is set
                 # and it also has a non-empty value,
-                # the global var `napalm_device` will be overriden.
+                # the global var `napalm_device` will be overridden.
                 # this is extremely important for configuration-related features
                 # as all actions must be issued within the same configuration session
                 # otherwise we risk to open multiple sessions
@@ -418,7 +418,7 @@ def proxy_napalm_wrap(func):
             else:
                 # in case the `inherit_napalm_device` is set
                 # and it also has a non-empty value,
-                # the global var `napalm_device` will be overriden.
+                # the global var `napalm_device` will be overridden.
                 # this is extremely important for configuration-related features
                 # as all actions must be issued within the same configuration session
                 # otherwise we risk to open multiple sessions

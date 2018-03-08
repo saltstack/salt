@@ -17,7 +17,7 @@ Module for handling kubernetes calls.
         kubernetes.client-key-file: '/path/to/client.key'
 
 
-These settings can be also overrided by adding `api_url`, `api_user`,
+These settings can be also overridden by adding `api_url`, `api_user`,
 `api_password`, `api_certificate_authority_file`, `api_client_certificate_file`
 or `api_client_key_file` parameters when calling a function:
 
@@ -25,7 +25,7 @@ The data format for `kubernetes.*-data` values is the same as provided in `kubec
 It's base64 encoded certificates/keys in one line.
 
 For an item only one field should be provided. Either a `data` or a `file` entry.
-In case both are provided the `file` entry is prefered.
+In case both are provided the `file` entry is preferred.
 
 .. code-block:: bash
     salt '*' kubernetes.nodes api_url=http://k8s-api-server:port api_user=myuser api_password=pass

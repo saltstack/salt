@@ -12,7 +12,7 @@ option to your state declaration:
       service.running:
         - parallel: True
 
-Now ``nginx`` will be started in a seperate process from the normal state run
+Now ``nginx`` will be started in a separate process from the normal state run
 and will therefore not block additional states.
 
 Parallel States and Requisites

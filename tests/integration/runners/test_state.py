@@ -107,7 +107,7 @@ class StateRunnerTest(ShellCase):
 
     def test_orchestrate_target_doesnt_exists(self):
         '''
-        test orchestration when target doesnt exist
+        test orchestration when target doesn't exist
         while using multiple states
         '''
         ret = self.run_run('state.orchestrate orch.target-doesnt-exists')
