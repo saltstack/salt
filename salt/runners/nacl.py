@@ -223,7 +223,7 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
             'The \'keyfile\' argument has been deprecated and will be removed in Salt '
             '{version}. Please use \'sk_file\' argument instead.'
         )
-        sk_file = kwargs['sk_file']
+        sk_file = kwargs['keyfile']
 
     if sk_file is None:
         kp = libnacl.public.SecretKey()
@@ -300,7 +300,7 @@ def enc(data, **kwargs):
             'The \'key\' argument has been deprecated and will be removed in Salt '
             '{version}. Please use \'sk\' argument instead.'
         )
-        kwargs['sk'] = kwargs['sk']
+        kwargs['sk'] = kwargs['key']
 
     # ensure data is bytes
     data = salt.utils.stringutils.to_bytes(data)
@@ -426,7 +426,7 @@ def sealedbox_encrypt(data, **kwargs):
 
     pk = _get_pk(**kwargs)
     b = libnacl.sealed.SealedBox(pk)
-    return base64.b64encode(b.encrypt(salt.utils.stringutils.to_bytes(data)))
+    return base64.b64encode(b.encrypt(data))
 
 
 def sealedbox_decrypt(data, **kwargs):
