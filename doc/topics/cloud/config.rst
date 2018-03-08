@@ -71,7 +71,7 @@ The generated grain information will appear similar to:
         provider: my_ec2:ec2
         profile: ec2-web
 
-The generation of the salt-cloud grain can be surpressed by the
+The generation of the salt-cloud grain can be suppressed by the
 option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
 
 Cloud Configuration Syntax

@@ -1058,7 +1058,7 @@ def install(name=None,
         This parameter is ignored if ``pkgs`` or ``sources`` is passed.
 
     resolve_capabilities
-        If this option is set to True zypper will take capabilites into
+        If this option is set to True zypper will take capabilities into
         account. In this case names which are just provided by a package
         will get installed. Default is False.
 

@@ -2463,7 +2463,7 @@ The grains that should be sent to the master on authentication to decide if
 the minion's key should be accepted automatically.
 
 Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
-documentation for more infomation.
+documentation for more information.
 
 .. code-block:: yaml
 
