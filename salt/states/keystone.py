@@ -812,3 +812,87 @@ def endpoint_absent(name, region=None, profile=None, interface=None, **connectio
                          ', interface "{0}",'.format(interface) if interface is not None else '')
         ret['changes']['endpoint'] = 'Deleted'
     return ret
+
+
+def domain_present(name, description=None, enabled=True, profile=None,
+                   **connection_args):
+    '''
+    Ensure domain exists and is up-to-date
+
+    name
+        Name of the domain
+
+    enabled
+        Boolean to control if domain is enabled
+
+    description
+        An arbitrary description of the domain
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Domain "{0}" already exists'.format(name)}
+
+    _api_version(profile=profile, **connection_args)
+
+    if _OS_IDENTITY_API_VERSION > 2:
+        domain = __salt__['keystone.domain_get'](name=name,
+                                                 profile=profile,
+                                                 **connection_args)
+        if domain and 'Error' not in domain:
+            return ret
+        else:
+            if __opts__['test'] is True:
+                ret['result'] = None
+                ret['comment'] = 'Domain {} will be created.'.format(name)
+                return ret
+
+            domain = __salt__['keystone.domain_create'](name=name,
+                                                        description=description,
+                                                        enabled=enabled,
+                                                        profile=profile,
+                                                        **connection_args)
+            ret['changes'] = domain
+            ret['comment'] = 'Created domain'
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Only api version v3'
+
+    return ret
+
+
+def domain_absent(name, profile=None, **connection_args):
+    '''
+    Ensure that the keystone domain is absent.
+
+    name
+        The name of the domain that should not exist
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Domain "{0}" is already absent'.format(name)}
+    _api_version(profile=profile, **connection_args)
+
+    if _OS_IDENTITY_API_VERSION > 2:
+        # Check if domain is present
+        domain = __salt__['keystone.domain_get'](name=name,
+                                                 profile=profile,
+                                                 **connection_args)
+        if 'Error' not in domain:
+            if __opts__.get('test'):
+                ret['result'] = None
+                ret['comment'] = 'Domain "{0}" will be deleted'.format(name)
+                return ret
+            # Delete domain
+            __salt__['keystone.domain_delete'](name=name, profile=profile,
+                                               **connection_args)
+            ret['comment'] = 'Domain "{0}" has been deleted'.format(name)
+            ret['changes']['Domain'] = 'Deleted'
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Domain "{0}" has error'.format(name)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Only api version v3'
+    return ret
