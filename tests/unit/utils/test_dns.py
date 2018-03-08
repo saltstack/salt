@@ -36,13 +36,17 @@ class DNShelpersCase(TestCase):
         test_map = (
             'ex1.nl',
             'o.1.example.eu',
-            'a1a.b2b.c3c.example.com'
+            'a1a.b2b.c3c.example.com',
+            'c3c.example.co.uk',
+            'c3c.example.mil.ng',
         )
 
         res_map = (
             ['ex1.nl'],
             ['o.1.example.eu', '1.example.eu', 'example.eu'],
-            ['a1a.b2b.c3c.example.com', 'b2b.c3c.example.com', 'c3c.example.com', 'example.com']
+            ['a1a.b2b.c3c.example.com', 'b2b.c3c.example.com', 'c3c.example.com', 'example.com'],
+            ['c3c.example.co.uk', 'example.co.uk'],
+            ['c3c.example.mil.ng', 'example.mil.ng']
         )
 
         for domain, result in zip(test_map, res_map):
