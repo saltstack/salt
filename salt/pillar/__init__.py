@@ -145,7 +145,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
-        self.pillar_override =  OrderedDict(pillar_override or {})
+        self.pillar_override = OrderedDict(pillar_override or {})
         if not isinstance(self.pillar_override, dict):
             self.pillar_override = OrderedDict()
             log.error('Pillar data must be a dictionary or OrderedDict')
