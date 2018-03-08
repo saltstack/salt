@@ -739,7 +739,7 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
 
 def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: ?
+    .. versionadded:: Fluorine
 
     Sync serializers from ``salt://_serializers`` to the minion
 
