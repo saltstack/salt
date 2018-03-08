@@ -139,11 +139,7 @@ def _get_pip_bin(bin_env):
     # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
         if salt.utils.platform.is_windows():
-            if six.PY2:
-                pip_bin = os.path.join(
-                    bin_env, 'Scripts', 'pip.exe').encode('string-escape')
-            else:
-                pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
+            pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
         else:
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
@@ -1198,7 +1194,7 @@ def is_installed(pkgname=None,
 
         salt '*' pip.is_installed salt
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
         The packages wheel, setuptools, and distribute are included if the
         installed pip is new enough.
@@ -1305,7 +1301,8 @@ def list_all_versions(pkg,
                       include_beta=False,
                       include_rc=False,
                       user=None,
-                      cwd=None):
+                      cwd=None,
+                      index_url=None):
     '''
     .. versionadded:: 2017.7.3
 
@@ -1334,6 +1331,10 @@ def list_all_versions(pkg,
     cwd
         Current working directory to run pip from
 
+    index_url
+        Base URL of Python Package Index
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1343,6 +1344,13 @@ def list_all_versions(pkg,
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'install', '{0}==versions'.format(pkg)]
+
+    if index_url:
+        if not salt.utils.url.validate(index_url, VALID_PROTOS):
+            raise CommandExecutionError(
+                '\'{0}\' is not a valid URL'.format(index_url)
+            )
+        cmd.extend(['--index-url', index_url])
 
     cmd_kwargs = dict(cwd=cwd, runas=user, output_loglevel='quiet', redirect_stderr=True)
     if bin_env and os.path.isdir(bin_env):

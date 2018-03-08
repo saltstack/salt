@@ -9,7 +9,7 @@ I'm leaving it for now, but this should really be gutted and replaced
 with something sensible.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 from salt.ext import six

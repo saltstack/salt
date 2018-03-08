@@ -1170,6 +1170,27 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+    def test_recurse_issue_40578(self):
+        '''
+        This ensures that the state doesn't raise an exception when it
+        encounters a file with a unicode filename in the process of invoking
+        file.source_list.
+        '''
+        issue_dir = 'issue-40578'
+        name = os.path.join(TMP, issue_dir)
+
+        try:
+            ret = self.run_state('file.recurse',
+                                 name=name,
+                                 source='salt://соль')
+            self.assertSaltTrueReturn(ret)
+            self.assertEqual(
+                sorted(salt.utils.data.decode(os.listdir(name), normalize=True)),
+                sorted(['foo.txt', 'спам.txt', 'яйца.txt']),
+            )
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
     def test_replace(self):
         '''
         file.replace
@@ -2214,8 +2235,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 '+마지막 행\n'
             )
             diff = salt.utils.stringutils.to_str(diff)
-            # using unicode.encode('utf-8') we should get the same as
-            # an utf-8 string
             # future_lint: disable=blacklisted-function
             expected = {
                 str('file_|-some-utf8-file-create_|-{0}_|-managed').format(test_file_encoded): {

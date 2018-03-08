@@ -2442,7 +2442,7 @@ class _policy_info(object):
                 elif ord(val) == 1:
                     return 'Enabled'
                 else:
-                    return 'Invalid Value'
+                    return 'Invalid Value: {0!r}'.format(val)  # pylint: disable=repr-flag-used-in-string
             else:
                 return 'Not Defined'
         except TypeError:
@@ -3158,10 +3158,10 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
                         if value:
                             if vtype == 'REG_DWORD':
-                                for v in struct.unpack('I', value):
+                                for v in struct.unpack(b'I', value):
                                     value = v
                             elif vtype == 'REG_QWORD':
-                                for v in struct.unpack('Q', value):
+                                for v in struct.unpack(b'Q', value):
                                     value = v
                         else:
                             value = 0
@@ -3292,9 +3292,9 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
         reg_valueName = reg_valueName.encode('utf-16-le')
     if reg_data and not check_deleted:
         if reg_vtype == 'REG_DWORD':
-            this_element_value = struct.pack('I', int(reg_data))
+            this_element_value = struct.pack(b'I', int(reg_data))
         elif reg_vtype == "REG_QWORD":
-            this_element_value = struct.pack('Q', int(reg_data))
+            this_element_value = struct.pack(b'Q', int(reg_data))
         elif reg_vtype == 'REG_SZ':
             this_element_value = b''.join([reg_data.encode('utf-16-le'),
                                            encoded_null])
@@ -3365,7 +3365,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
     if etree.QName(element).localname == 'decimal' and etree.QName(parent_element).localname != 'elements':
         this_vtype = 'REG_DWORD'
         if 'value' in element.attrib:
-            this_element_value = struct.pack('I', int(element.attrib['value']))
+            this_element_value = struct.pack(b'I', int(element.attrib['value']))
         else:
             log.error('The %s child %s element for the policy with '
                       'attributes: %s does not have the required "value" '
@@ -3380,7 +3380,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
         # server, so untested/assumed
         this_vtype = 'REG_QWORD'
         if 'value' in element.attrib:
-            this_element_value = struct.pack('Q', int(element.attrib['value']))
+            this_element_value = struct.pack(b'Q', int(element.attrib['value']))
         else:
             log.error('The %s child %s element for the policy with '
                       'attributes: %s does not have the required "value" '
@@ -3411,7 +3411,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             this_vtype = 'REG_DWORD'
             requested_val = this_element_value
             if this_element_value is not None:
-                this_element_value = struct.pack('I', int(this_element_value))
+                this_element_value = struct.pack(b'I', int(this_element_value))
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
@@ -3424,7 +3424,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             this_vtype = 'REG_QWORD'
             requested_val = this_element_value
             if this_element_value is not None:
-                this_element_value = struct.pack('Q', int(this_element_value))
+                this_element_value = struct.pack(b'Q', int(this_element_value))
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
@@ -4207,12 +4207,12 @@ def _write_regpol_data(data_to_write,
                                         re.IGNORECASE | re.MULTILINE)
                 version_str = gpt_ini_data[version_loc.start():version_loc.end()]
                 version_str = version_str.split('=')
-                version_nums = struct.unpack('>2H', struct.pack('>I', int(version_str[1])))
+                version_nums = struct.unpack(b'>2H', struct.pack(b'>I', int(version_str[1])))
                 if gpt_extension.lower() == 'gPCMachineExtensionNames'.lower():
                     version_nums = (version_nums[0], version_nums[1] + 1)
                 elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
                     version_nums = (version_nums[0] + 1, version_nums[1])
-                version_num = struct.unpack('>I', struct.pack('>2H', *version_nums))[0]
+                version_num = struct.unpack(b'>I', struct.pack(b'>2H', *version_nums))[0]
                 gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
                         gpt_ini_data[0:version_loc.start()],
                         'Version', version_num,
@@ -5066,7 +5066,10 @@ def get(policy_class=None, return_full_policy_names=True,
                     class_vals[policy_name] = __salt__['reg.read_value'](_pol['Registry']['Hive'],
                                                                          _pol['Registry']['Path'],
                                                                          _pol['Registry']['Value'])['vdata']
-                    log.debug('Value %s found for reg policy %s', class_vals[policy_name], policy_name)
+                    log.debug(
+                        'Value %r found for reg policy %s',
+                        class_vals[policy_name], policy_name
+                    )
                 elif 'Secedit' in _pol:
                     # get value from secedit
                     _ret, _val = _findOptionValueInSeceditFile(_pol['Secedit']['Option'])

@@ -168,7 +168,11 @@ def generate_minion_id():
 
     :return:
     '''
-    return _generate_minion_id().first() or 'localhost'
+    try:
+        ret = salt.utils.stringutils.to_unicode(_generate_minion_id().first())
+    except TypeError:
+        ret = None
+    return ret or 'localhost'
 
 
 def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
