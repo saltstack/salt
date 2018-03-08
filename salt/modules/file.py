@@ -1763,8 +1763,7 @@ def _set_line_indent(src, line, indent):
 
 
 def _get_eol(line):
-    compiled = re.compile('((?<!\r)\n|\r(?!\n)|\r\n)$')
-    match = compiled.search(line)
+    match = re.search('((?<!\r)\n|\r(?!\n)|\r\n)$', line)
     return match and match.group() or ''
 
 
