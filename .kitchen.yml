@@ -49,6 +49,9 @@ provisioner:
     - .travis.yml
   state_top:
     base:
+      "os:Windows":
+        - match: grain
+        - prep_windows
       "*":
         - git.salt
 <% if File.exists?(platformsfile) %>
@@ -117,39 +120,57 @@ platforms:
   - name: windows-2012r2
     driver:
       box: mwrock/Windows2012R2
-      communicator: winrm
       name: vagrant
       gui: true
-      username: administrator
+    transport:
+      name: winrm
+      username: Administrator
       password: Pass@word1
-    provisioner:
-      init_environment: |
-        Clear-Host
-        $AddedLocation ="c:\salt"
-        $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-        $OldPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
-        $NewPath= $OldPath + ’;’ + $AddedLocation
-        Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
-      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
-      salt_bootstrap_options: ''
-  - name: windows-2016
-    driver:
-      box: mwrock/Windows2016
-      communicator: winrm
-      name: vagrant
-      username: Vagrant
-      password: vagrant
-      gui: true
     provisioner:
       init_environment: |
         Clear-Host
         $AddedLocation ="c:\salt;c:\salt\bin\Scripts"
         $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-        $OldPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
-        $NewPath= $OldPath + ’;’ + $AddedLocation
-        Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
+        $OldPath = (Get-ItemProperty -Path $Reg -Name PATH).Path
+        $NewPath= $OldPath + ";" + $AddedLocation
+        Set-ItemProperty -Path $Reg -Value $NewPath -Name PATH
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
       salt_bootstrap_options: ''
+    verifier:
+      windows: true
+      types:
+        - unit
+      coverage_xml: false
+      save:
+        $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
+        /salt/var/log/salt/minion: artifacts/logs/minion
+  - name: windows-2016
+    driver:
+      box: mwrock/Windows2016
+      name: vagrant
+      gui: true
+    transport:
+      name: winrm
+      username: Administrator
+      password: vagrant
+    provisioner:
+      init_environment: |
+        Clear-Host
+        $AddedLocation ="c:\salt;c:\salt\bin\Scripts"
+        $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+        $OldPath = (Get-ItemProperty -Path $Reg -Name PATH).Path
+        $NewPath= $OldPath + ";" + $AddedLocation
+        Set-ItemProperty -Path $Reg -Value $NewPath -Name PATH
+      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
+      salt_bootstrap_options: ''
+    verifier:
+      windows: true
+      types:
+        - unit
+      coverage_xml: false
+      save:
+        $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
+        /salt/var/log/salt/minion: artifacts/logs/minion
 <% end %>
 <% end %>
 suites:
@@ -162,10 +183,15 @@ suites:
           base:
             "*":
               - jenkins
+            "os:Windows":
+              - match: grain
+              - windows
         jenkins.sls:
-          testing_dir: /tmp/kitchen/testing
+          testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
           clone_repo: false
           salttesting_namespec: salttesting==2017.6.1
+        windows.sls:
+          virtualenv_path: 'c:\Python27\Scripts\pip.exe'
   - name: py3
     excludes:
       - centos-6
@@ -178,11 +204,16 @@ suites:
           base:
             "*":
               - jenkins
+            "os:Windows":
+              - match: grain
+              - windows
         jenkins.sls:
-          testing_dir: /tmp/kitchen/testing
+          testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
           clone_repo: false
           py3: true
           salttesting_namespec: salttesting==2017.6.1
+        windows.sls:
+          virtualenv_path: 'c:\Python35\Scripts\pip.exe'
 
 <% if File.exists?(verifierfile) %>
 <%= ERB.new(File.read(verifierfile)).result %>
