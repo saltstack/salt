@@ -223,7 +223,7 @@ def _parse_template(tmpl_str):
     return tpl
 
 
-def _parse_enviroment(env_str):
+def _parse_environment(env_str):
     '''
     Parsing template
     '''
@@ -460,9 +460,9 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
     return ret
 
 
-def create_stack(name=None, template_file=None, enviroment=None,
+def create_stack(name=None, template_file=None, environment=None,
                  parameters=None, poll=0, rollback=False, timeout=60,
-                 profile=None):
+                 profile=None, enviroment=None):
     '''
     Create a stack (heat stack-create)
 
@@ -472,8 +472,8 @@ def create_stack(name=None, template_file=None, enviroment=None,
     template_file
         File of template
 
-    enviroment
-        File of enviroment
+    environment
+        File of environment
 
     parameters
         Parameter dict used to create the stack
@@ -496,11 +496,23 @@ def create_stack(name=None, template_file=None, enviroment=None,
 
         salt '*' heat.create_stack name=mystack \\
                  template_file=salt://template.yaml \\
-                 enviroment=salt://enviroment.yaml \\
+                 environment=salt://environment.yaml \\
                  parameters="{"image": "Debian 8", "flavor": "m1.small"}" \\
                  poll=5 rollback=False timeout=60 profile=openstack1
 
+    .. versionadded:: 2017.7.5,2018.3.1
+
+        The spelling mistake in parameter `enviroment` was corrected to `environment`.
+        The misspelled version is still supported for backward compatibility, but will
+        be removed in Salt Neon.
+
     '''
+    if environment is None and enviroment is not None:
+        salt.utils.warn_until('Neon', (
+            "Please use the 'environment' parameter instead of the misspelled 'enviroment' "
+            "parameter which will be removed in Salt Neon."
+        ))
+        environment = enviroment
     h_client = _auth(profile)
     ret = {
         'result': True,
@@ -570,12 +582,12 @@ def create_stack(name=None, template_file=None, enviroment=None,
         ret['comment'] = 'Template not valid {0}'.format(ex)
         return ret
     env = {}
-    if enviroment:
-        enviroment_tmp_file = salt.utils.files.mkstemp()
+    if environment:
+        environment_tmp_file = salt.utils.files.mkstemp()
         esfn, source_sum, comment_ = __salt__['file.get_managed'](
-            name=enviroment_tmp_file,
+            name=environment_tmp_file,
             template=None,
-            source=enviroment,
+            source=environment,
             source_hash=None,
             user=None,
             group=None,
@@ -586,11 +598,11 @@ def create_stack(name=None, template_file=None, enviroment=None,
             skip_verify=False,
             kwargs=None)
 
-        enviroment_manage_result = __salt__['file.manage_file'](
-            name=enviroment_tmp_file,
+        environment_manage_result = __salt__['file.manage_file'](
+            name=environment_tmp_file,
             sfn=esfn,
             ret=None,
-            source=enviroment,
+            source=environment,
             source_sum=source_sum,
             user=None,
             group=None,
@@ -602,18 +614,18 @@ def create_stack(name=None, template_file=None, enviroment=None,
             show_changes=False,
             contents=None,
             dir_mode=None)
-        if enviroment_manage_result['result']:
-            with salt.utils.fopen(enviroment_tmp_file, 'r') as efp_:
+        if environment_manage_result['result']:
+            with salt.utils.fopen(environment_tmp_file, 'r') as efp_:
                 env_str = efp_.read()
-                salt.utils.safe_rm(enviroment_tmp_file)
+                salt.utils.safe_rm(environment_tmp_file)
                 try:
-                    env = _parse_enviroment(env_str)
+                    env = _parse_environment(env_str)
                 except ValueError as ex:
                     ret['result'] = False
                     ret['comment'] = 'Error parsing template {0}'.format(ex)
         else:
             ret['result'] = False
-            ret['comment'] = 'Can not open enviroment: {0}, {1}'.format(enviroment, comment_)
+            ret['comment'] = 'Can not open environment: {0}, {1}'.format(environment, comment_)
     if ret['result'] is False:
         return ret
 
@@ -645,9 +657,9 @@ def create_stack(name=None, template_file=None, enviroment=None,
     return ret
 
 
-def update_stack(name=None, template_file=None, enviroment=None,
+def update_stack(name=None, template_file=None, environment=None,
                  parameters=None, poll=0, rollback=False, timeout=60,
-                 profile=None):
+                 profile=None, enviroment=None):
     '''
     Update a stack (heat stack-template)
 
@@ -657,8 +669,8 @@ def update_stack(name=None, template_file=None, enviroment=None,
     template_file
         File of template
 
-    enviroment
-        File of enviroment
+    environment
+        File of environment
 
     parameters
         Parameter dict used to update the stack
@@ -681,11 +693,23 @@ def update_stack(name=None, template_file=None, enviroment=None,
 
         salt '*' heat.update_stack name=mystack \\
                  template_file=salt://template.yaml \\
-                 enviroment=salt://enviroment.yaml \\
+                 environment=salt://environment.yaml \\
                  parameters="{"image": "Debian 8", "flavor": "m1.small"}" \\
                  poll=5 rollback=False timeout=60 profile=openstack1
 
+    .. versionadded:: 2017.7.5,2018.3.1
+
+        The spelling mistake in parameter `enviroment` was corrected to `environment`.
+        The misspelled version is still supported for backward compatibility, but will
+        be removed in Salt Neon.
+
     '''
+    if environment is None and enviroment is not None:
+        salt.utils.warn_until('Neon', (
+            "Please use the 'environment' parameter instead of the misspelled 'enviroment' "
+            "parameter which will be removed in Salt Neon."
+        ))
+        environment = enviroment
     h_client = _auth(profile)
     ret = {
         'result': True,
@@ -759,12 +783,12 @@ def update_stack(name=None, template_file=None, enviroment=None,
         ret['comment'] = 'Template not valid {0}'.format(ex)
         return ret
     env = {}
-    if enviroment:
-        enviroment_tmp_file = salt.utils.files.mkstemp()
+    if environment:
+        environment_tmp_file = salt.utils.files.mkstemp()
         esfn, source_sum, comment_ = __salt__['file.get_managed'](
-            name=enviroment_tmp_file,
+            name=environment_tmp_file,
             template=None,
-            source=enviroment,
+            source=environment,
             source_hash=None,
             user=None,
             group=None,
@@ -775,11 +799,11 @@ def update_stack(name=None, template_file=None, enviroment=None,
             skip_verify=False,
             kwargs=None)
 
-        enviroment_manage_result = __salt__['file.manage_file'](
-            name=enviroment_tmp_file,
+        environment_manage_result = __salt__['file.manage_file'](
+            name=environment_tmp_file,
             sfn=esfn,
             ret=None,
-            source=enviroment,
+            source=environment,
             source_sum=source_sum,
             user=None,
             group=None,
@@ -791,18 +815,18 @@ def update_stack(name=None, template_file=None, enviroment=None,
             show_changes=False,
             contents=None,
             dir_mode=None)
-        if enviroment_manage_result['result']:
-            with salt.utils.fopen(enviroment_tmp_file, 'r') as efp_:
+        if environment_manage_result['result']:
+            with salt.utils.fopen(environment_tmp_file, 'r') as efp_:
                 env_str = efp_.read()
-                salt.utils.safe_rm(enviroment_tmp_file)
+                salt.utils.safe_rm(environment_tmp_file)
                 try:
-                    env = _parse_enviroment(env_str)
+                    env = _parse_environment(env_str)
                 except ValueError as ex:
                     ret['result'] = False
                     ret['comment'] = 'Error parsing template {0}'.format(ex)
         else:
             ret['result'] = False
-            ret['comment'] = 'Can not open enviroment: {0}, {1}'.format(enviroment, comment_)
+            ret['comment'] = 'Can not open environment: {0}, {1}'.format(environment, comment_)
     if ret['result'] is False:
         return ret
 
