@@ -9,8 +9,16 @@ import salt.utils.stringutils
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+
+try:
+    import libnacl  # pylint: disable=import-error
+    HAS_LIBNACL = True
+except ImportError:
+    HAS_LIBNACL = False
 
 
+@skipIf(not HAS_LIBNACL, 'skipping test_nacl, libnacl is unavailable')
 class NaclTest(ModuleCase):
     '''
     Test the nacl runner

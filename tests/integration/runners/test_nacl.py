@@ -7,8 +7,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.unit import skipIf
+
+try:
+    import libnacl  # pylint: disable=import-error
+    HAS_LIBNACL = True
+except ImportError:
+    HAS_LIBNACL = False
 
 
+@skipIf(not HAS_LIBNACL, 'skipping test_nacl, libnacl is unavailable')
 class NaclTest(ShellCase):
     '''
     Test the nacl runner
