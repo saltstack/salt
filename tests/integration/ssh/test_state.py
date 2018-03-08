@@ -9,6 +9,7 @@ import time
 
 # Import Salt Testing Libs
 from tests.support.case import SSHCase
+from tests.support.helpers import flaky
 from tests.support.paths import TMP
 
 # Import Salt Libs
@@ -162,6 +163,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
+    @flaky
     def test_state_running(self):
         '''
         test state.running with salt-ssh
