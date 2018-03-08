@@ -1588,6 +1588,14 @@ PyCrypto is used as it was in the previous releases. M2Crypto is used in the
 same way as PyCrypto so there would be no compatibility issues, different nodes
 could use different backends.
 
+NaCL Module and Runner changes
+------------------------------
+
+In addition to argument changes in both the NaCL module and runner for future
+deprecation in the Fluorine release, the default box_type has changed from
+`secretbox` to `sealedbox`.  SecretBox is data encrypted using private key
+`sk` and Sealedbox is encrypted using public key `pk`
+
 Deprecations
 ------------
 
