@@ -17,7 +17,7 @@ def _present(name='testname',
              task_type='stream',
              database='testdb',
              retention_policy='default',
-             dbrps=['testdb2.default_rp'],
+             dbrps=None,
              enable=True,
              task=None,
              define_result=True,
@@ -75,7 +75,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def test_task_present_new_task(self):
-        ret, get_mock, define_mock, enable_mock, _ = _present()
+        ret, get_mock, define_mock, enable_mock, _ = _present(dbrps=['testdb2.default_rp'])
         get_mock.assert_called_once_with('testname')
         define_mock.assert_called_once_with('testname', '/tmp/script.tick',
             database='testdb', retention_policy='default',

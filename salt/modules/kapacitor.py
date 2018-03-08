@@ -172,7 +172,7 @@ def define_task(name,
     if not dbrps:
         dbrps = []
 
-    if (database and retention_policy):
+    if database and retention_policy:
         dbrp = '{0}.{1}'.format(database, retention_policy)
         dbrps.append(dbrp)
 
