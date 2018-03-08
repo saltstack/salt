@@ -33,15 +33,12 @@ def get_encodings():
     return encodings
 
 
-def sdecode(string_, encoding=None):
+def sdecode(string_):
     '''
     Since we don't know where a string is coming from and that string will
     need to be safely decoded, this function will attempt to decode the string
     until it has a working string that does not stack trace
     '''
-    if encoding:
-        return salt.utils.to_unicode(string_, encoding)
-
     encodings = get_encodings()
     for encoding in encodings:
         try:
