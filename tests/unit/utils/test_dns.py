@@ -134,7 +134,7 @@ class DNShelpersCase(TestCase):
             ))
 
         results = [
-            OrderedDict([(10, [{'srvr': 'mbox.example.com'}])]),
+            OrderedDict([(10, ['mbox.example.com'])]),
             OrderedDict([
                 (10, ['mbox1.example.com']),
                 (20, ['mbox2.example.com', 'mbox3.example.com']),
@@ -226,7 +226,6 @@ class DNSlookupsCase(TestCase):
             cmd_mock = MagicMock(
                 return_value=test_res
             )
-
         return patch.dict(salt.utils.dns.__salt__, {'cmd.run_all': cmd_mock}, clear=True)
 
     def _test_cmd_lookup(self, lookup_cb, wrong_type, wrong, right, empty=None, secure=None):
@@ -316,8 +315,8 @@ class DNSlookupsCase(TestCase):
                 'web.example.com.\t\tAAAA\t2a00:a00:b01:c02:d03:e04:f05:333'
             ],
             'CAA': [
-                'example.com.\t\tCAA\t0\tissue\t"exampleca.com"\n',
-                'example.com.\t\tCAA\t0\tiodef\t"mailto:sslabuse@example.com"'
+                'example.com.\t\tCAA\t0 issue "exampleca.com"\n'
+                'example.com.\t\tCAA\t0 iodef "mailto:sslabuse@example.com"'
             ],
             'CNAME': [
                 'mocksrvr.example.com.\tCNAME\tweb.example.com.'
@@ -327,10 +326,10 @@ class DNSlookupsCase(TestCase):
                 'example.com.\t\tMX\t10 mx1.example.com.\nexample.com.\t\tMX\t20 mx2.example.eu.\nexample.com.\t\tMX\t30 mx3.example.nl.'
             ],
             'SSHFP': [
-                'mocksrvr.the-loeki.net.\tSSHFP\t1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n',
-                'mocksrvr.the-loeki.net.\tSSHFP\t1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344A67E5597\n',
-                'mocksrvr.the-loeki.net.\tSSHFP\t3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n',
-                'mocksrvr.the-loeki.net.\tSSHFP\t4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BBC859AB1B'
+                'mocksrvr.example.com.\tSSHFP\t1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n'
+                'mocksrvr.example.com.\tSSHFP\t1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344A67E5597\n'
+                'mocksrvr.example.com.\tSSHFP\t3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n'
+                'mocksrvr.example.com.\tSSHFP\t4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BBC859AB1B'
             ],
             'TXT': [
                 'example.com.\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
@@ -394,8 +393,8 @@ class DNSlookupsCase(TestCase):
                 'web.example.com.\t4404\tIN\tAAAA\t2a00:a00:b01:c02:d03:e04:f05:333'
             ],
             'CAA': [
-                'example.com.\t1144\tIN\tCAA\t0\tissue\t"exampleca.com"\n',
-                'example.com.\t1144\tIN\tCAA\t0\tiodef\t"mailto:sslabuse@example.com"'
+                'example.com.\t1144\tIN\tCAA\t0 issue "exampleca.com"\n'
+                'example.com.\t1144\tIN\tCAA\t0 iodef "mailto:sslabuse@example.com"'
             ],
             'CNAME': [
                 'mocksrvr.example.com.\t4404\tIN\tCNAME\tweb.example.com.'
@@ -407,10 +406,10 @@ class DNSlookupsCase(TestCase):
                 'example.com.\t4404\tIN\tMX\t30 mx3.example.nl.'
             ],
             'SSHFP': [
-                'mocksrvr.the-loeki.net.\t3339\tIN\tSSHFP\t1 1 0aabda8af5418108e8a5d3f90f207226b2c89fbe\n',
-                'mocksrvr.the-loeki.net.\t3339\tIN\tSSHFP\t1 2 500ca871d8e255e01f1261a2370c4e5406b8712f19916d3ab9f86344a67e5597\n',
-                'mocksrvr.the-loeki.net.\t3339\tIN\tSSHFP\t3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5\n',
-                'mocksrvr.the-loeki.net.\t3339\tIN\tSSHFP\t4 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b'
+                'mocksrvr.example.com.\t3339\tIN\tSSHFP\t1 1 0aabda8af5418108e8a5d3f90f207226b2c89fbe\n'
+                'mocksrvr.example.com.\t3339\tIN\tSSHFP\t1 2 500ca871d8e255e01f1261a2370c4e5406b8712f19916d3ab9f86344a67e5597\n'
+                'mocksrvr.example.com.\t3339\tIN\tSSHFP\t3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5\n'
+                'mocksrvr.example.com.\t3339\tIN\tSSHFP\t4 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b'
             ],
             'TXT': [
                 'example.com.\t4404\tIN\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
@@ -443,7 +442,7 @@ class DNSlookupsCase(TestCase):
         # wrong
         with patch.object(socket, 'getaddrinfo', MagicMock(side_effect=socket.gaierror)):
             for rec_t in ('A', 'AAAA'):
-                self.assertEqual(_lookup_gai('mockq', rec_t), False)
+                self.assertEqual(False, _lookup_gai('mockq', rec_t))
 
         # example returns from getaddrinfo
         right = {
@@ -494,8 +493,8 @@ class DNSlookupsCase(TestCase):
                 'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:333'
             ],
             'CAA': [
-                'example.com has CAA record 0 issue "exampleca.com"\n',
-                'example.com has CAA record 0 iodef "mailto:sslabuse@exampleca.com"'
+                'example.com has CAA record 0 issue "exampleca.com"\n'
+                'example.com has CAA record 0 iodef "mailto:sslabuse@example.com"'
             ],
             'CNAME': [
                 'mocksrvr.example.com is an alias for web.example.com.'
@@ -507,10 +506,10 @@ class DNSlookupsCase(TestCase):
                 'example.com mail is handled by 30 mx3.example.nl.'
             ],
             'SSHFP': [
-                'mocksrvr.the-loeki.net has SSHFP record 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n',
-                'mocksrvr.the-loeki.net has SSHFP record 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344 A67E5597\n',
-                'mocksrvr.the-loeki.net has SSHFP record 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n',
-                'mocksrvr.the-loeki.net has SSHFP record 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B'
+                'mocksrvr.example.com has SSHFP record 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n'
+                'mocksrvr.example.com has SSHFP record 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344 A67E5597\n'
+                'mocksrvr.example.com has SSHFP record 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n'
+                'mocksrvr.example.com has SSHFP record 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B'
             ],
             'TXT':   [
                 'example.com descriptive text "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
@@ -557,8 +556,8 @@ class DNSlookupsCase(TestCase):
                 'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:333'
             ],
             'CAA': [
-                'example.com\trdata_257 = 0 issue "exampleca.com"\n',
-                'example.com\trdata_257 = 0 iodef "mailto:sslabuse@comodoca.com"'
+                'example.com\trdata_257 = 0 issue "exampleca.com"\n'
+                'example.com\trdata_257 = 0 iodef "mailto:sslabuse@example.com"'
             ],
             'CNAME': [
                 'mocksrvr.example.com\tcanonical name = web.example.com.'
@@ -570,10 +569,10 @@ class DNSlookupsCase(TestCase):
                 'example.com\tmail exchanger = 30 mx3.example.nl.'
             ],
             'SSHFP': [
-                'mocksrvr.the-loeki.net\trdata_44 = 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n',
-                'mocksrvr.the-loeki.net\trdata_44 = 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344 A67E5597\n',
-                'mocksrvr.the-loeki.net\trdata_44 = 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n',
-                'mocksrvr.the-loeki.net\trdata_44 = 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B'
+                'mocksrvr.example.com\trdata_44 = 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n'
+                'mocksrvr.example.com\trdata_44 = 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344 A67E5597\n'
+                'mocksrvr.example.com\trdata_44 = 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n'
+                'mocksrvr.example.com\trdata_44 = 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B'
             ],
             'TXT': [
                 'example.com\ttext = "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
