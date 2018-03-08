@@ -406,12 +406,11 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None, encoding=None):
 
     decoded_context = {}
     for key, value in six.iteritems(context):
-        if isinstance(value, six.text_type):
+        if not isinstance(value, six.string_types):
             decoded_context[key] = value
             continue
 
-        decoded_context[key] = salt.utils.locales.sdecode(value,
-                                                          encoding=encoding)
+        decoded_context[key] = salt.utils.to_unicode(value, encoding=encoding)
 
     try:
         template = jinja_env.from_string(tmplstr)
