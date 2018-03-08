@@ -17,10 +17,7 @@ def get_encodings():
     '''
     return a list of string encodings to try
     '''
-    if salt.utils.is_windows():
-        encodings = ['utf-8', __salt_system_encoding__]
-    else:
-        encodings = [__salt_system_encoding__]
+    encodings = [__salt_system_encoding__]
 
     try:
         sys_enc = sys.getdefaultencoding()
@@ -36,12 +33,15 @@ def get_encodings():
     return encodings
 
 
-def sdecode(string_):
+def sdecode(string_, encoding=None):
     '''
     Since we don't know where a string is coming from and that string will
     need to be safely decoded, this function will attempt to decode the string
     until it has a working string that does not stack trace
     '''
+    if encoding:
+        return salt.utils.to_unicode(string_, encoding)
+
     encodings = get_encodings()
     for encoding in encodings:
         try:
