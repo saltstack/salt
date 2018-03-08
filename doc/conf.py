@@ -370,7 +370,7 @@ gettext_compact = False
 
 
 ### HTML options
-html_theme = 'saltstack2' #change to 'saltstack' to use previous theme
+html_theme = os.environ.get('HTML_THEME', 'saltstack2') # set 'HTML_THEME=saltstack' to use previous theme
 html_theme_path = ['_themes']
 html_title = u''
 html_short_title = 'Salt'
