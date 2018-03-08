@@ -79,7 +79,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         get_mock.assert_called_once_with('testname')
         define_mock.assert_called_once_with('testname', '/tmp/script.tick',
             database='testdb', retention_policy='default',
-            task_type='stream', dbrps=['testdb2.default_rp'])
+            task_type='stream', dbrps=['testdb2.default_rp', 'testdb.default'])
         enable_mock.assert_called_once_with('testname')
         self.assertIn('TICKscript diff', ret['changes'])
         self.assertIn('enabled', ret['changes'])
@@ -89,7 +89,8 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         ret, get_mock, define_mock, enable_mock, _ = _present(task=_task(script='oldscript'))
         get_mock.assert_called_once_with('testname')
         define_mock.assert_called_once_with('testname', '/tmp/script.tick',
-            database='testdb', retention_policy='default', task_type='stream')
+            database='testdb', retention_policy='default',
+            task_type='stream', dbrps=['testdb.default'])
         self.assertEqual(False, enable_mock.called)
         self.assertIn('TICKscript diff', ret['changes'])
         self.assertNotIn('enabled', ret['changes'])
