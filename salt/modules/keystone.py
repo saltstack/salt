@@ -1371,3 +1371,87 @@ def _item_list(profile=None, **connection_args):
     #                     protocols and
     # bootstrap           Grants a new role to a new user on a new tenant, after
     #                     creating each.
+
+
+def domain_get(domain_id=None, name=None, profile=None,
+               **connection_args):
+    '''
+    Return a specific domains
+    For keystone api V3 only.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.domain_get c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.domain_get domain_id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.domain_get name=nova
+    '''
+    kstone = auth(profile, **connection_args)
+    if _OS_IDENTITY_API_VERSION > 2:
+        ret = {}
+
+        if name:
+            for domain in kstone.domains.list():
+                if domain.name == name:
+                    domain_id = domain.id
+                    break
+        if not domain_id:
+            return {'Error': 'Unable to resolve domain id'}
+        domain = kstone.domains.get(domain_id)
+        ret[domain.name] = dict((value, getattr(domain, value)) for value in dir(domain)
+                                if not value.startswith('_') and
+                                isinstance(getattr(domain, value), (six.string_types, dict, bool)))
+        return ret
+    else:
+        return False
+
+
+def domain_create(name, description=None, enabled=True, profile=None,
+                  **connection_args):
+    '''
+    Create a keystone domain
+    For keystone api V3 only.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.domain_create nova description='nova domain'
+        salt '*' keystone.domain_create test enabled=False
+    '''
+    kstone = auth(profile, **connection_args)
+    if _OS_IDENTITY_API_VERSION > 2:
+        new = kstone.domains.create(name, description=description, enabled=enabled)
+        return domain_get(new.id, profile=profile, **connection_args)
+    return False
+
+
+def domain_delete(domain_id=None, name=None, profile=None, **connection_args):
+    '''
+    Delete a domain
+    For keystone api V3 only.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.domain_delete c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.domain_delete domain_id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.domain_delete name=demo
+    '''
+    kstone = auth(profile, **connection_args)
+    if _OS_IDENTITY_API_VERSION > 2:
+        if name:
+            for domain in kstone.domains.list():
+                if domain.name == name:
+                    domain_id = domain.id
+                    break
+        if not domain_id:
+            return {'Error': 'Unable to resolve domain id'}
+        kstone.domains.delete(domain_id)
+        ret = 'Domain ID {0} deleted'.format(domain_id)
+        if name:
+            ret += ' ({0})'.format(name)
+        return ret
+    return False
