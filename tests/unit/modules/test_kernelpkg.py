@@ -3,11 +3,11 @@
     :synopsis: Base class for kernelpkg modules
     :platform: Linux
     :maturity: develop
-    versionadded:: oxygen
+    versionadded:: 2018.3.0
 '''
 # pylint: disable=invalid-name,no-member
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Salt testing libs
 try:

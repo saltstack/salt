@@ -9,7 +9,7 @@ The Saltify module is designed to install Salt on a remote machine, virtual or
 bare metal, using SSH. This module is useful for provisioning machines which
 are already installed, but not Salted.
 
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     The wake_on_lan capability, and actions destroy, reboot, and query functions were added.
 
 Use of this module requires some configuration in cloud profile and provider
@@ -18,7 +18,7 @@ files as described in the
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -88,7 +88,7 @@ def avail_images(call=None):
 
     returns a list of available profiles.
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
 
     '''
     vm_ = get_configured_provider()
@@ -118,7 +118,7 @@ def list_nodes(call=None):
 
     returns a list of dictionaries of defined standard fields.
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
 
     '''
     nodes = _list_nodes_full(call)
@@ -164,7 +164,7 @@ def list_nodes_full(call=None):
 
     for 'saltify' minions, returns dict of grains (enhanced).
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
     '''
 
     ret = _list_nodes_full(call)
@@ -399,7 +399,7 @@ def _verify(vm_):
 def destroy(name, call=None):
     ''' Destroy a node.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Disconnect a minion from the master, and remove its keys.
 
@@ -489,7 +489,7 @@ def reboot(name, call=None):
     '''
     Reboot a saltify minion.
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
 
     name
         The name of the VM to reboot.

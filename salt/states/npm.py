@@ -20,7 +20,7 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
 '''
 
 # Import salt libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs

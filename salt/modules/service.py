@@ -2,7 +2,7 @@
 '''
 If Salt's OS detection does not identify a different virtual service module, the minion will fall back to using this basic module, which simply wraps sysvinit scripts.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -141,7 +141,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to PID or empty
     string is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:

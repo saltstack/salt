@@ -4,7 +4,7 @@ Functions used for CLI argument handling
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import fnmatch
 import inspect
@@ -14,10 +14,11 @@ import shlex
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import map, zip  # pylint: disable=import-error,redefined-builtin
 import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
+import salt.utils.yaml
 
 
 if six.PY3:
@@ -68,9 +69,9 @@ def condition_input(args, kwargs):
     '''
     ret = []
     for arg in args:
-        if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(str(arg))) or \
+        if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(six.text_type(arg))) or \
         (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
-            ret.append(str(arg))
+            ret.append(six.text_type(arg))
         else:
             ret.append(arg)
     if isinstance(kwargs, dict) and kwargs:
@@ -154,19 +155,19 @@ def yamlify_arg(arg):
 
     try:
         # Explicit late import to avoid circular import. DO NOT MOVE THIS.
-        import salt.utils.yamlloader as yamlloader
+        import salt.utils.yaml
         original_arg = arg
         if '#' in arg:
             # Only yamlify if it parses into a non-string type, to prevent
             # loss of content due to # as comment character
-            parsed_arg = yamlloader.load(arg, Loader=yamlloader.SaltYamlSafeLoader)
+            parsed_arg = salt.utils.yaml.safe_load(arg)
             if isinstance(parsed_arg, six.string_types) or parsed_arg is None:
                 return arg
             return parsed_arg
         if arg == 'None':
             arg = None
         else:
-            arg = yamlloader.load(arg, Loader=yamlloader.SaltYamlSafeLoader)
+            arg = salt.utils.yaml.safe_load(arg)
 
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces
@@ -268,7 +269,13 @@ def shlex_split(s, **kwargs):
     Only split if variable is a string
     '''
     if isinstance(s, six.string_types):
-        return shlex.split(s, **kwargs)
+        # On PY2, shlex.split will fail with unicode types if there are
+        # non-ascii characters in the string. So, we need to make sure we
+        # invoke it with a str type, and then decode the resulting string back
+        # to unicode to return it.
+        return salt.utils.data.decode(
+            shlex.split(salt.utils.stringutils.to_str(s), **kwargs)
+        )
     else:
         return s
 
@@ -332,16 +339,18 @@ def argspec_report(functions, module=''):
     return ret
 
 
-def split_input(val):
+def split_input(val, mapper=None):
     '''
     Take an input value and split it into a list, returning the resulting list
     '''
+    if mapper is None:
+        mapper = lambda x: x
     if isinstance(val, list):
-        return val
+        return list(map(mapper, val))
     try:
-        return [x.strip() for x in val.split(',')]
+        return list(map(mapper, [x.strip() for x in val.split(',')]))
     except AttributeError:
-        return [x.strip() for x in str(val).split(',')]
+        return list(map(mapper, [x.strip() for x in six.text_type(val).split(',')]))
 
 
 def test_mode(**kwargs):
@@ -500,3 +509,62 @@ def format_call(fun,
         # Lets pack the current extra kwargs as template context
         ret.setdefault('context', {}).update(extra)
     return ret
+
+
+def parse_function(s):
+    '''
+    Parse a python-like function call syntax.
+
+    For example: module.function(arg, arg, kw=arg, kw=arg)
+
+    This function takes care only about the function name and arguments list carying on quoting
+    and bracketing. It doesn't perform identifiers and other syntax validity check.
+
+    Returns a tuple of three values: function name string, arguments list and keyword arguments
+    dictionary.
+    '''
+    sh = shlex.shlex(s, posix=True)
+    sh.escapedquotes = '"\''
+    word = []
+    args = []
+    kwargs = {}
+    brackets = []
+    key = None
+    token = None
+    for token in sh:
+        if token == '(':
+            break
+        word.append(token)
+    if not word or token != '(':
+        return None, None, None
+    fname = ''.join(word)
+    word = []
+    good = False
+    for token in sh:
+        if token in '[{(':
+            word.append(token)
+            brackets.append(token)
+        elif (token == ',' or token == ')') and not brackets:
+            if key:
+                kwargs[key] = ''.join(word)
+            elif word:
+                args.append(''.join(word))
+            if token == ')':
+                good = True
+                break
+            key = None
+            word = []
+        elif token in ']})':
+            if not brackets or token != {'[': ']', '{': '}', '(': ')'}[brackets.pop()]:
+                break
+            word.append(token)
+        elif token == '=' and not brackets:
+            key = ''.join(word)
+            word = []
+            continue
+        else:
+            word.append(token)
+    if good:
+        return fname, args, kwargs
+    else:
+        return None, None, None

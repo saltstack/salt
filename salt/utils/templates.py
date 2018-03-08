@@ -3,7 +3,7 @@
 Template render systems
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import codecs
@@ -95,41 +95,6 @@ class AliasedModule(object):
         return getattr(self.wrapped, name)
 
 
-def get_context(template, line, num_lines=5, marker=None):
-    '''
-    Returns debugging context around a line in a given string
-
-    Returns:: string
-    '''
-    template_lines = template.splitlines()
-    num_template_lines = len(template_lines)
-
-    # in test, a single line template would return a crazy line number like,
-    # 357.  do this sanity check and if the given line is obviously wrong, just
-    # return the entire template
-    if line > num_template_lines:
-        return template
-
-    context_start = max(0, line - num_lines - 1)  # subt 1 for 0-based indexing
-    context_end = min(num_template_lines, line + num_lines)
-    error_line_in_context = line - context_start - 1  # subtr 1 for 0-based idx
-
-    buf = []
-    if context_start > 0:
-        buf.append('[...]')
-        error_line_in_context += 1
-
-    buf.extend(template_lines[context_start:context_end])
-
-    if context_end < num_template_lines:
-        buf.append('[...]')
-
-    if marker:
-        buf[error_line_in_context] += marker
-
-    return u'---\n{0}\n---'.format(u'\n'.join(buf))
-
-
 def wrap_tmpl_func(render_str):
 
     def render_tmpl(tmplsrc,
@@ -192,9 +157,8 @@ def wrap_tmpl_func(render_str):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
                     log.error(
-                        'Exception occurred while reading file '
-                        '{0}: {1}'.format(tmplsrc, exc),
-                        # Show full traceback if debug logging is enabled
+                        'Exception occurred while reading file %s: %s',
+                        tmplsrc, exc,
                         exc_info_on_loglevel=logging.DEBUG
                     )
                     raise exc
@@ -203,11 +167,9 @@ def wrap_tmpl_func(render_str):
             tmplsrc.close()
         try:
             output = render_str(tmplstr, context, tmplpath)
-            if six.PY2:
-                output = output.encode(SLS_ENCODING)
             if salt.utils.platform.is_windows():
                 newline = False
-                if output.endswith(('\n', os.linesep)):
+                if salt.utils.stringutils.to_unicode(output, encoding=SLS_ENCODING).endswith(('\n', os.linesep)):
                     newline = True
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
@@ -215,8 +177,8 @@ def wrap_tmpl_func(render_str):
                     output += os.linesep
 
         except SaltRenderError as exc:
-            log.error("Rendering exception occurred: {0}".format(exc))
-            #return dict(result=False, data=str(exc))
+            log.exception('Rendering exception occurred')
+            #return dict(result=False, data=six.text_type(exc))
             raise
         except Exception:
             return dict(result=False, data=traceback.format_exc())
@@ -224,9 +186,7 @@ def wrap_tmpl_func(render_str):
             if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False, prefix=salt.utils.files.TEMPFILE_PREFIX) as outf:
-                if six.PY3:
-                    output = output.encode(SLS_ENCODING)
-                outf.write(output)
+                outf.write(salt.utils.stringutils.to_bytes(output, encoding=SLS_ENCODING))
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
@@ -256,7 +216,7 @@ def _get_jinja_error_message(tb_data):
     '''
     try:
         line = _get_jinja_error_slug(tb_data)
-        return u'{0}({1}):\n{3}'.format(*line)
+        return '{0}({1}):\n{3}'.format(*line)
     except IndexError:
         pass
     return None
@@ -315,8 +275,8 @@ def _get_jinja_error(trace, context=None):
         if template_path:
             out = '\n{0}\n'.format(msg.splitlines()[0])
             with salt.utils.files.fopen(template_path) as fp_:
-                template_contents = fp_.read()
-            out += get_context(
+                template_contents = salt.utils.stringutils.to_unicode(fp_.read())
+            out += salt.utils.stringutils.get_context(
                 template_contents,
                 line,
                 marker='    <======================')
@@ -380,10 +340,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         for k, v in six.iteritems(opts):
             k = k.lower()
             if hasattr(jinja2.defaults, k.upper()):
-                log.debug('Jinja2 environment {0} was set to {1} by {2}'.format(k, v, optname))
+                log.debug('Jinja2 environment %s was set to %s by %s', k, v, optname)
                 env_args[k] = v
             else:
-                log.warning('Jinja2 environment {0} is not recognized'.format(k))
+                log.warning('Jinja2 environment %s is not recognized', k)
 
     if 'sls' in context and context['sls'] != '':
         opt_jinja_env_helper(opt_jinja_sls_env, 'jinja_sls_env')
@@ -418,15 +378,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         template = jinja_env.from_string(tmplstr)
         template.globals.update(decoded_context)
         output = template.render(**decoded_context)
-    except jinja2.exceptions.TemplateSyntaxError as exc:
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=decoded_context)
-        if not line:
-            tmplstr = ''
-        raise SaltRenderError(
-            'Jinja syntax error: {0}{1}'.format(exc, out),
-            line,
-            tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         out = _get_jinja_error(trace, context=decoded_context)[1]
@@ -437,6 +388,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             'Jinja variable {0}{1}'.format(
                 exc, out),
             buf=tmplstr)
+    except (jinja2.exceptions.TemplateRuntimeError,
+            jinja2.exceptions.TemplateSyntaxError) as exc:
+        trace = traceback.extract_tb(sys.exc_info()[2])
+        line, out = _get_jinja_error(trace, context=decoded_context)
+        if not line:
+            tmplstr = ''
+        raise SaltRenderError(
+            'Jinja syntax error: {0}{1}'.format(exc, out),
+            line,
+            tmplstr)
     except (SaltInvocationError, CommandExecutionError) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=decoded_context)
@@ -455,12 +416,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             tmplstr = ''
         else:
             tmplstr += '\n{0}'.format(tracestr)
-        log.debug("Jinja Error")
-        log.debug("Exception: {0}".format(exc))
-        log.debug("Out: {0}".format(out))
-        log.debug("Line: {0}".format(line))
-        log.debug("TmplStr: {0}".format(tmplstr))
-        log.debug("TraceStr: {0}".format(tracestr))
+        log.debug('Jinja Error')
+        log.debug('Exception:', exc_info=True)
+        log.debug('Out: %s', out)
+        log.debug('Line: %s', line)
+        log.debug('TmplStr: %s', tmplstr)
+        log.debug('TraceStr: %s', tracestr)
 
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
@@ -545,7 +506,7 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     Render a Cheetah template.
     '''
     from Cheetah.Template import Template
-    return str(Template(tmplstr, searchList=[context]))
+    return salt.utils.data.decode(Template(tmplstr, searchList=[context]))
 # pylint: enable=3rd-party-module-not-gated
 
 
@@ -595,7 +556,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
                     'data': data}
         tgt = salt.utils.files.mkstemp()
         with salt.utils.files.fopen(tgt, 'w+') as target:
-            target.write(data)
+            target.write(salt.utils.stringutils.to_str(data))
         return {'result': True,
                 'data': tgt}
     except Exception:

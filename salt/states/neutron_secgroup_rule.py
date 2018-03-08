@@ -3,7 +3,7 @@
 Management of OpenStack Neutron Security Group Rules
 =========================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.neutronng` for setup instructions
@@ -29,7 +29,7 @@ Example States
         - project_id: 1dcac318a83b4610b7a7f7ba01465548
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = 'neutron_secgroup_rule'
 

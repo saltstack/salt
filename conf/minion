@@ -235,13 +235,13 @@
 # cause sub minion process to restart.
 #auth_safemode: False
 
-# Ping Master to ensure connection is alive (seconds).
+# Ping Master to ensure connection is alive (minutes).
 #ping_interval: 0
 
 # To auto recover minions if master changes IP address (DDNS)
 #    auth_tries: 10
 #    auth_safemode: False
-#    ping_interval: 90
+#    ping_interval: 2
 #
 # Minions won't know master is missing until a ping fails. After the ping fail,
 # the minion will attempt authentication and likely fails out and cause a restart.
@@ -666,6 +666,12 @@
 #    certfile: <path_to_certfile>
 #    ssl_version: PROTOCOL_TLSv1_2
 
+# Grains to be sent to the master on authentication to check if the minion's key
+# will be accepted automatically. Needs to be configured on the master.
+#autosign_grains:
+#  - uuid
+#  - server_id
+
 
 ######        Reactor Settings        #####
 ###########################################
@@ -714,7 +720,7 @@
 #key_logfile: /var/log/salt/key
 
 # The level of messages to send to the console.
-# One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+# One of 'garbage', 'trace', 'debug', 'info', 'warning', 'error', 'critical'.
 #
 # The following log levels are considered INSECURE and may log sensitive data:
 # ['garbage', 'trace', 'debug']

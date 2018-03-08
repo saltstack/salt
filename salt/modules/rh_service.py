@@ -8,7 +8,7 @@ Service support for RHEL-based systems, including support for both upstart and s
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import glob
@@ -20,6 +20,7 @@ import re
 
 # Import salt libs
 import salt.utils.path
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ if salt.utils.path.which('initctl'):
         from salt.modules.upstart import _upstart_enable, _upstart_disable, _upstart_is_enabled
     except Exception as exc:
         log.error('Unable to import helper functions from '
-                  'salt.modules.upstart: {0}'.format(exc))
+                  'salt.modules.upstart: %s', exc)
     else:
         HAS_UPSTART = True
 
@@ -68,7 +69,7 @@ def __virtual__():
     if __grains__['os'] in enable:
 
         if __grains__['os'] == 'SUSE':
-            if str(__grains__['osrelease']).startswith('11'):
+            if six.text_type(__grains__['osrelease']).startswith('11'):
                 return __virtualname__
             else:
                 return (False, 'Cannot load rh_service module on SUSE > 11')
@@ -98,6 +99,15 @@ def __virtual__():
                     'RedHat-based distros >= version 7 use systemd, will not '
                     'load rh_service.py as virtual \'service\''
                 )
+        if __grains__['os'] == 'Amazon':
+            if int(osrelease_major) in (2016, 2017):
+                return __virtualname__
+            else:
+                return (
+                    False,
+                    'Amazon Linux >= version 2 uses systemd. Will not '
+                    'load rh_service.py as virtual \'service\''
+                )
         return __virtualname__
     return (False, 'Cannot load rh_service module: OS not in {0}'.format(enable))
 
@@ -125,10 +135,10 @@ def _chkconfig_add(name):
     '''
     cmd = '/sbin/chkconfig --add {0}'.format(name)
     if __salt__['cmd.retcode'](cmd, python_shell=False) == 0:
-        log.info('Added initscript "{0}" to chkconfig'.format(name))
+        log.info('Added initscript "%s" to chkconfig', name)
         return True
     else:
-        log.error('Unable to add initscript "{0}" to chkconfig'.format(name))
+        log.error('Unable to add initscript "%s" to chkconfig', name)
         return False
 
 
@@ -475,7 +485,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:

@@ -2,8 +2,9 @@
 '''
 Support for eselect, Gentoo's configuration and management tool.
 '''
-from __future__ import absolute_import
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs

@@ -11,7 +11,7 @@ that use SMF also. (e.g. SmartOS)
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import fnmatch
 import re
 
@@ -232,7 +232,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:

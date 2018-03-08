@@ -8,7 +8,7 @@ See http://code.google.com/p/psutil.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import time
 import datetime
 import re
@@ -649,7 +649,7 @@ def lsof(name):
 
         salt '*' ps.lsof apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     lsof_infos = __salt__['cmd.run']("lsof -c " + sanitize_name)
     ret = []
     ret.extend([sanitize_name, lsof_infos])
@@ -667,7 +667,7 @@ def netstat(name):
 
         salt '*' ps.netstat apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     netstat_infos = __salt__['cmd.run']("netstat -nap")
     found_infos = []
     ret = []
@@ -692,7 +692,7 @@ def ss(name):
     .. versionadded:: 2016.11.6
 
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     ss_infos = __salt__['cmd.run']("ss -neap")
     found_infos = []
     ret = []
@@ -715,7 +715,7 @@ def psaux(name):
 
         salt '*' ps.psaux www-data.+apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     pattern = re.compile(sanitize_name)
     salt_exception_pattern = re.compile("salt.+ps.psaux.+")
     ps_aux = __salt__['cmd.run']("ps aux")
@@ -729,7 +729,7 @@ def psaux(name):
             if not salt_exception_pattern.search(info):
                 nb_lines += 1
                 found_infos.append(info)
-    pid_count = str(nb_lines) + " occurence(s)."
+    pid_count = six.text_type(nb_lines) + " occurence(s)."
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
     return ret

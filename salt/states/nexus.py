@@ -2,12 +2,15 @@
 '''
 This state downloads artifacts from Nexus 3.x.
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
+# Import Salt libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -94,15 +97,15 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
         fetch_result = __fetch_from_nexus(artifact, target_dir, target_file)
     except Exception as exc:
         ret['result'] = False
-        ret['comment'] = str(exc)
+        ret['comment'] = six.text_type(exc)
         return ret
 
-    log.debug("fetch_result=%s", str(fetch_result))
+    log.debug("fetch_result=%s", fetch_result)
 
     ret['result'] = fetch_result['status']
     ret['comment'] = fetch_result['comment']
     ret['changes'] = fetch_result['changes']
-    log.debug("ret=%s", str(ret))
+    log.debug("ret=%s", ret)
 
     return ret
 

@@ -4,7 +4,7 @@ Execute puppet routines
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from distutils import version  # pylint: disable=no-name-in-module
 import logging
 import os
@@ -15,10 +15,11 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.yaml
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import yaml
 from salt.ext import six
 from salt.ext.six.moves import range
 log = logging.getLogger(__name__)
@@ -245,8 +246,8 @@ def disable(message=None):
         with salt.utils.files.fopen(puppet.disabled_lockfile, 'w') as lockfile:
             try:
                 # Puppet chokes when no valid json is found
-                str = '{{"disabled_message":"{0}"}}'.format(message) if message is not None else '{}'
-                lockfile.write(str)
+                msg = '{{"disabled_message":"{0}"}}'.format(message) if message is not None else '{}'
+                lockfile.write(salt.utils.stringutils.to_str(msg))
                 lockfile.close()
                 return True
             except (IOError, OSError) as exc:
@@ -275,7 +276,7 @@ def status():
     if os.path.isfile(puppet.run_lockfile):
         try:
             with salt.utils.files.fopen(puppet.run_lockfile, 'r') as fp_:
-                pid = int(fp_.read())
+                pid = int(salt.utils.stringutils.to_unicode(fp_.read()))
                 os.kill(pid, 0)  # raise an OSError if process doesn't exist
         except (OSError, ValueError):
             return 'Stale lockfile'
@@ -285,7 +286,7 @@ def status():
     if os.path.isfile(puppet.agent_pidfile):
         try:
             with salt.utils.files.fopen(puppet.agent_pidfile, 'r') as fp_:
-                pid = int(fp_.read())
+                pid = int(salt.utils.stringutils.to_unicode(fp_.read()))
                 os.kill(pid, 0)  # raise an OSError if process doesn't exist
         except (OSError, ValueError):
             return 'Stale pidfile'
@@ -312,7 +313,7 @@ def summary():
 
     try:
         with salt.utils.files.fopen(puppet.lastrunfile, 'r') as fp_:
-            report = yaml.safe_load(fp_.read())
+            report = salt.utils.yaml.safe_load(fp_)
         result = {}
 
         if 'time' in report:
@@ -330,7 +331,7 @@ def summary():
         if 'resources' in report:
             result['resources'] = report['resources']
 
-    except yaml.YAMLError as exc:
+    except salt.utils.yaml.YAMLError as exc:
         raise CommandExecutionError(
             'YAML error parsing puppet run summary: {0}'.format(exc)
         )

@@ -7,7 +7,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import inspect
 import logging
 import tempfile
@@ -83,7 +83,7 @@ class LazyLoaderTest(TestCase):
         self.module_file = os.path.join(self.module_dir,
                                         '{0}.py'.format(self.module_name))
         with salt.utils.files.fopen(self.module_file, 'w') as fh:
-            fh.write(loader_template)
+            fh.write(salt.utils.stringutils.to_str(loader_template))
             fh.flush()
             os.fsync(fh.fileno())
 
@@ -306,8 +306,10 @@ class LazyLoaderSingleItem(TestCase):
             self.assertEqual(err.exception[0],
                              'The key \'%s\' should contain a \'.\'')
         else:
-            self.assertEqual(str(err.exception),
-                             str(("The key '%s' should contain a '.'", 'testing_no_dot')))
+            self.assertEqual(
+                six.text_type(err.exception),
+                six.text_type(("The key '%s' should contain a '.'", 'testing_no_dot'))
+            )
 
 
 module_template = '''
@@ -863,7 +865,11 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
         with salt.utils.files.fopen(os.path.join(self.module_dir, '__init__.py'), 'w') as fh:
             # No .decode() needed here as deep_init_base is defined as str and
             # not bytes.
-            fh.write(deep_init_base.format(self.module_name))
+            fh.write(
+                salt.utils.stringutils.to_str(
+                    deep_init_base.format(self.module_name)
+                )
+            )
             fh.flush()
             os.fsync(fh.fileno())  # flush to disk
 

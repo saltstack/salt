@@ -18,12 +18,7 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-try:
-    from salt.modules import kubernetes
-except ImportError:
-    kubernetes = False
-if not kubernetes.HAS_LIBS:
-    kubernetes = False
+from salt.modules import kubernetes
 
 
 @contextmanager
@@ -41,8 +36,8 @@ def mock_kubernetes_library():
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(kubernetes is False, "Probably Kubernetes client lib is not installed. \
-                              Skipping test_kubernetes.py")
+@skipIf(not kubernetes.HAS_LIBS, "Kubernetes client lib is not installed. "
+                                 "Skipping test_kubernetes.py")
 class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.kubernetes
@@ -173,14 +168,14 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             mock_node.return_value = {
                 'metadata': {
                     'labels': {
-                        u'kubernetes.io/hostname': 'minikube',
-                        u'kubernetes.io/os': 'linux',
+                        'kubernetes.io/hostname': 'minikube',
+                        'kubernetes.io/os': 'linux',
                     }
                 }
             }
             self.assertEqual(
                 kubernetes.node_labels('minikube'),
-                {u'kubernetes.io/hostname': 'minikube', u'kubernetes.io/os': 'linux'},
+                {'kubernetes.io/hostname': 'minikube', 'kubernetes.io/os': 'linux'},
             )
 
     def test_adding_change_cause_annotation(self):
@@ -212,7 +207,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     def test_enforce_only_strings_dict(self):
         func = getattr(kubernetes, '__enforce_only_strings_dict')
         data = {
-            u'unicode': 1,
+            'unicode': 1,
             2: 2,
         }
         self.assertEqual(

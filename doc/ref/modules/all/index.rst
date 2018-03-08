@@ -83,6 +83,7 @@ execution modules
     chef
     chocolatey
     chronos
+    cimc
     cisconso
     cloud
     cmdmod
@@ -276,6 +277,7 @@ execution modules
     napalm_users
     napalm_yang_mod
     netaddress
+    netbox
     netbsd_sysctl
     netbsdservice
     netscaler
@@ -308,11 +310,13 @@ execution modules
     pagerduty
     pagerduty_util
     pam
+    panos
     parallels
     parted
     pcs
     pdbedit
     pecl
+    pf
     philips_hue
     pillar
     pip
@@ -444,6 +448,7 @@ execution modules
     victorops
     virt
     virtualenv_mod
+    vmctl
     vsphere
     win_autoruns
     win_certutil

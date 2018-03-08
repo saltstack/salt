@@ -2,7 +2,7 @@
 '''
 Module for running arbitrary tests
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -290,11 +290,11 @@ def arg_type(*args, **kwargs):
     ret = {'args': [], 'kwargs': {}}
     # all the args
     for argument in args:
-        ret['args'].append(str(type(argument)))
+        ret['args'].append(six.text_type(type(argument)))
 
     # all the kwargs
     for key, val in six.iteritems(kwargs):
-        ret['kwargs'][key] = str(type(val))
+        ret['kwargs'][key] = six.text_type(type(val))
 
     return ret
 
@@ -505,7 +505,7 @@ def rand_str(size=9999999999, hash_type=None):
 def random_hash(size=9999999999, hash_type=None):
     '''
     .. versionadded:: 2015.5.2
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Function has been renamed from ``test.rand_str`` to
         ``test.random_hash``
 

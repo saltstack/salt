@@ -3,7 +3,7 @@
 Management of OpenStack Keystone Users
 ======================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.keystoneng` for setup instructions
@@ -30,7 +30,7 @@ Example States
         - description: 'my user'
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 __virtualname__ = 'keystone_user'
 

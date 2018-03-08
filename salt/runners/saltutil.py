@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-Sync custom types to the Master
+The Saltutil runner is used to sync custom types to the Master. See the
+:mod:`saltutil module <salt.modules.saltutil>` for documentation on
+managing updates to minions.
 
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -306,7 +308,7 @@ def sync_engines(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_thorium(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Sync Thorium from ``salt://_thorium`` to the master
 
@@ -478,7 +480,7 @@ def sync_cache(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_fileserver(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Sync fileserver modules from ``salt://_fileserver`` to the master
 
@@ -556,7 +558,7 @@ def sync_roster(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_eauth_tokens(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Sync eauth token modules from ``salt://_tokens`` to the master
 

@@ -89,7 +89,7 @@ to issue #22471 (https://github.com/saltstack/salt/issues/22471)
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import time
@@ -169,8 +169,7 @@ def ext_pillar(minion_id,
                 for file_path in files:
                     cached_file_path = _get_cached_file_name(bucket, saltenv,
                                                              file_path)
-                    log.info('{0} - {1} : {2}'.format(bucket, saltenv,
-                                                      file_path))
+                    log.info('%s - %s : %s', bucket, saltenv, file_path)
                     # load the file from S3 if not in the cache or too old
                     _get_file_from_s3(s3_creds, metadata, saltenv, bucket,
                                       file_path, cached_file_path)
@@ -208,7 +207,13 @@ def _init(creds, bucket, multiple_env, environment, prefix, s3_cache_expire):
 
     expired = (cache_file_mtime <= exp)
 
-    log.debug("S3 bucket cache file {0} is {1}expired, mtime_diff={2}s, expiration={3}s".format(cache_file, "" if expired else "not ", cache_file_mtime - exp, s3_cache_expire))
+    log.debug(
+        'S3 bucket cache file %s is %sexpired, mtime_diff=%ss, expiration=%ss',
+        cache_file,
+        '' if expired else 'not ',
+        cache_file_mtime - exp,
+        s3_cache_expire
+    )
 
     if expired:
         pillars = _refresh_buckets_cache_file(creds, cache_file, multiple_env,
@@ -216,7 +221,7 @@ def _init(creds, bucket, multiple_env, environment, prefix, s3_cache_expire):
     else:
         pillars = _read_buckets_cache_file(cache_file)
 
-    log.debug("S3 bucket retrieved pillars {0}".format(pillars))
+    log.debug('S3 bucket retrieved pillars %s', pillars)
     return pillars
 
 
@@ -405,10 +410,9 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
 
         cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, 'md5')
 
-        log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
-
         # hashes match we have a cache hit
-        log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
+        log.debug('Cached file: path=%s, md5=%s, etag=%s',
+                  cached_file_path, cached_md5, file_md5)
         if cached_md5 == file_md5:
             return
 

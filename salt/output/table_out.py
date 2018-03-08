@@ -35,17 +35,19 @@ Example output::
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import operator
 from functools import reduce  # pylint: disable=redefined-builtin
 
-# Import salt libs
+# Import Salt libs
 import salt.output
-from salt.ext.six import string_types
-from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
 import salt.utils.color
 import salt.utils.locales
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
 
 __virtualname__ = 'table'
 
@@ -160,7 +162,7 @@ class TableDisplay(object):
         columns = map(None, *reduce(operator.add, logical_rows))
 
         max_widths = [
-            max([len(str(item)) for item in column])
+            max([len(six.text_type(item)) for item in column])
             for column in columns
         ]
         row_separator = self.row_delimiter * (len(self.prefix) + len(self.suffix) + sum(max_widths) +
@@ -180,7 +182,7 @@ class TableDisplay(object):
             for row in physical_rows:
                 line = self.prefix \
                         + self.delim.join([
-                                justify(str(item), width)
+                                justify(six.text_type(item), width)
                                 for (item, width) in zip(row, max_widths)
                         ]) + self.suffix
                 out.append(
@@ -232,14 +234,14 @@ class TableDisplay(object):
         if first_row_type is dict:  # and all the others
             temp_rows = []
             if not labels:
-                labels = [str(label).replace('_', ' ').title() for label in sorted(rows[0])]
+                labels = [six.text_type(label).replace('_', ' ').title() for label in sorted(rows[0])]
             for row in rows:
                 temp_row = []
                 for key in sorted(row):
-                    temp_row.append(str(row[key]))
+                    temp_row.append(six.text_type(row[key]))
                 temp_rows.append(temp_row)
             rows = temp_rows
-        elif isinstance(rows[0], string_types):
+        elif isinstance(rows[0], six.string_types):
             rows = [[row] for row in rows]  # encapsulate each row in a single-element list
 
         labels_and_rows = [labels] + rows if labels else rows
