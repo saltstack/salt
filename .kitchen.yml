@@ -1,6 +1,6 @@
 ---
 <% vagrant = system('which vagrant 2>/dev/null >/dev/null') %>
-<% version = '2017.7.1' %>
+<% version = '2017.7.4' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 <% verifierfile = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
@@ -54,6 +54,20 @@ provisioner:
         - prep_windows
       "*":
         - git.salt
+  pillars:
+    top.sls:
+      base:
+        "*":
+          - jenkins
+        "os:Windows":
+          - match: grain
+          - windows
+    jenkins.sls:
+      testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
+      clone_repo: false
+      salttesting_namespec: salttesting==2017.6.1
+    windows.sls:
+      virtualenv_path: 'c:\Python27\Scripts\pip.exe'
 <% if File.exists?(platformsfile) %>
 <%= ERB.new(File.read(platformsfile)).result %>
 <% else %>
@@ -177,21 +191,6 @@ suites:
   - name: py2
     verifier:
       python_bin: python2.7
-    provisioner:
-      pillars:
-        top.sls:
-          base:
-            "*":
-              - jenkins
-            "os:Windows":
-              - match: grain
-              - windows
-        jenkins.sls:
-          testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
-          clone_repo: false
-          salttesting_namespec: salttesting==2017.6.1
-        windows.sls:
-          virtualenv_path: 'c:\Python27\Scripts\pip.exe'
   - name: py3
     excludes:
       - centos-6
@@ -200,20 +199,8 @@ suites:
       python_bin: python3
     provisioner:
       pillars:
-        top.sls:
-          base:
-            "*":
-              - jenkins
-            "os:Windows":
-              - match: grain
-              - windows
         jenkins.sls:
-          testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
-          clone_repo: false
           py3: true
-          salttesting_namespec: salttesting==2017.6.1
-        windows.sls:
-          virtualenv_path: 'c:\Python35\Scripts\pip.exe'
 
 <% if File.exists?(verifierfile) %>
 <%= ERB.new(File.read(verifierfile)).result %>
