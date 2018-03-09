@@ -378,6 +378,7 @@ def option_present(name, value, reload=False):
             result = __salt__['csf.set_option'](option, value)
             ret['comment'] = 'Option modified.'
             ret['changes']['Option'] = 'Changed'
+			ret['changes']['Value'] = str(value)
     else:
         result = __salt__['file.append']('/etc/csf/csf.conf',
                                             args='{0} = "{1}"'.format(option, value))
