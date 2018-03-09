@@ -239,7 +239,7 @@ def update(name,
 
     composer_home
         ``$COMPOSER_HOME`` environment variable
-    
+
     env
         A list of environment variables to be set prior to execution.
     '''
