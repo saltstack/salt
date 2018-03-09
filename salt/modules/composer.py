@@ -192,6 +192,8 @@ def _run_composer(action,
     if env is not None:
         env = salt.utils.data.repack_dictlist(env)
         env['COMPOSER_HOME'] = composer_home
+    else:
+        env = {'COMPOSER_HOME': composer_home}
 
     result = __salt__['cmd.run_all'](cmd,
                                      runas=runas,
