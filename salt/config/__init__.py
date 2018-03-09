@@ -252,7 +252,7 @@ VALID_OPTS = {
     # Force the minion into a single environment when it fetches files from the master
     'saltenv': (type(None), six.string_types),
 
-    # Prevent saltenv from being overriden on the command line
+    # Prevent saltenv from being overridden on the command line
     'lock_saltenv': bool,
 
     # Force the minion into a single pillar root when it fetches pillar data from the master
@@ -2310,7 +2310,7 @@ def prepend_root_dir(opts, path_options):
                 # drive is not prefixed on a config option
                 pass
             elif os.path.isabs(path):
-                # Absolute path (not default or overriden root_dir)
+                # Absolute path (not default or overridden root_dir)
                 # No prepending required
                 continue
             # Prepending the root dir
