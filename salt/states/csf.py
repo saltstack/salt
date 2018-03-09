@@ -244,7 +244,7 @@ def ports_open(name, ports, proto='tcp', direction='in'):
            'comment': 'Ports open.'}
 
     current_ports = __salt__['csf.get_ports'](proto=proto, direction=direction)
-	plist = ', '.join([str(x) for x in ports])
+    plist = ', '.join([str(x) for x in ports])
     direction = direction.upper()
     directions = __salt__['csf.build_directions'](direction)
     for direction in directions:
@@ -256,7 +256,7 @@ def ports_open(name, ports, proto='tcp', direction='in'):
         result = __salt__['csf.allow_ports'](ports, proto=proto, direction=direction)
         ret['changes']['Ports'] = { 'Ports' : 'Changed', 'List' : plist  }
         ret['changes']['Proto'] = str(proto)
-        ret['changes']['Direction'] = str(direction)		
+        ret['changes']['Direction'] = str(direction)        
         ret['comment'] = result
     return ret
 
@@ -378,7 +378,7 @@ def option_present(name, value, reload=False):
             result = __salt__['csf.set_option'](option, value)
             ret['comment'] = 'Option modified.'
             ret['changes']['Option'] = 'Changed'
-			ret['changes']['Value'] = str(value)
+            ret['changes']['Value'] = str(value)
     else:
         result = __salt__['file.append']('/etc/csf/csf.conf',
                                             args='{0} = "{1}"'.format(option, value))
