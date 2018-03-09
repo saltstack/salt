@@ -1500,7 +1500,7 @@ class Cloud(object):
                         else:
                             log.debug(
                                 'vm:{0} in provider:{1} is not in name '
-                                'list:\'{2}\''.format(vm_name, driver, names)
+                                'list:\'{2}\''.format(vm_name.encode(__salt_system_encoding__), driver, names)
                             )
                             continue
 
