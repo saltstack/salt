@@ -146,12 +146,12 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
                     cipher='des_ede3_cbc',
                     callback=lambda x: salt.utils.stringutils.to_bytes(passphrase))
         else:
-            with salt.utils.files.fopen(priv, 'wb') as f:
+            with salt.utils.files.fopen(priv, 'wb+') as f:
                 f.write(gen.exportKey('PEM', passphrase))
     if HAS_M2:
         gen.save_pub_key(pub)
     else:
-        with salt.utils.files.fopen(pub, 'wb') as f:
+        with salt.utils.files.fopen(pub, 'wb+') as f:
             f.write(gen.publickey().exportKey('PEM'))
     os.chmod(priv, 0o400)
     if user:
