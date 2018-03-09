@@ -433,6 +433,9 @@ VALID_OPTS = {
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
 
+    # Enable old style events to be sent on minion_startup. Change default to False in Neon release
+    'enable_legacy_startup_events': bool,
+
     # Always execute states with test=True if this flag is set
     'test': bool,
 
@@ -1360,6 +1363,7 @@ DEFAULT_MINION_OPTS = {
     'log_rotate_max_bytes': 0,
     'log_rotate_backup_count': 0,
     'max_event_size': 1048576,
+    'enable_legacy_startup_events': True,
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
