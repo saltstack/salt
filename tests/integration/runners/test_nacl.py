@@ -10,7 +10,7 @@ from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 
 try:
-    import libnacl  # pylint: disable=import-error
+    import libnacl  # pylint: disable=unused-import
     HAS_LIBNACL = True
 except ImportError:
     HAS_LIBNACL = False
