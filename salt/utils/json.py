@@ -25,8 +25,13 @@ def find_json(raw):
     string to start with garbage and end with json but be cleanly loaded
     '''
     ret = {}
-    for ind, _ in enumerate(raw):
-        working = '\n'.join(raw.splitlines()[ind:])
+    lines = raw.splitlines()
+    for ind, _ in enumerate(lines):
+        try:
+            working = '\n'.join(lines[ind:])
+        except UnicodeDecodeError:
+            working = '\n'.join(salt.utils.data.decode(lines[ind:]))
+
         try:
             ret = json.loads(working)  # future lint: blacklisted-function
         except ValueError:
