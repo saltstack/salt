@@ -244,6 +244,7 @@ def ports_open(name, ports, proto='tcp', direction='in'):
            'comment': 'Ports open.'}
 
     current_ports = __salt__['csf.get_ports'](proto=proto, direction=direction)
+	plist = ', '.join([str(x) for x in ports])
     direction = direction.upper()
     directions = __salt__['csf.build_directions'](direction)
     for direction in directions:
@@ -253,7 +254,9 @@ def ports_open(name, ports, proto='tcp', direction='in'):
             diff = True
     if diff:
         result = __salt__['csf.allow_ports'](ports, proto=proto, direction=direction)
-        ret['changes']['Ports'] = 'Changed'
+        ret['changes']['Ports'] = { 'Ports' : 'Changed', 'List' : plist  }
+        ret['changes']['Proto'] = str(proto)
+        ret['changes']['Direction'] = str(direction)		
         ret['comment'] = result
     return ret
 
