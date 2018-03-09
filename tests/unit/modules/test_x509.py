@@ -35,7 +35,7 @@ from tests.support.mock import (
 from salt.modules import x509
 
 try:
-    import m2crypto # pylint: disable=unused-import
+    import m2crypto  # pylint: disable=unused-import
     HAS_M2CRYPTO = True
 except ImportError:
     HAS_M2CRYPTO = False
