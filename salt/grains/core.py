@@ -983,6 +983,59 @@ def _virtual(osdata):
         )
     return grains
 
+def _virtual_hv(osdata):
+    '''
+    Returns detailed hypervisor information from sysfs
+    Currently this seems to be used only by Xen
+    '''
+    grains = {}
+
+    # Bail early if we're not running on Xen
+    if 'xen' not in osdata['virtual']:
+        return grains
+
+    # Try to get the exact hypervisor version from sysfs
+    try:
+        version = {}
+        for file in ('major', 'minor', 'extra'):
+            with open('/sys/hypervisor/version/%s' % (file,), 'r') as fhr:
+                version[file] = fhr.read().strip()
+        grains['virtual_hv_version'] = '%s.%s%s' % (version['major'], version['minor'], version['extra'])
+        grains['virtual_hv_version_info'] = (version['major'], version['minor'], version['extra'])
+    except:
+        pass
+
+    # Try to read and decode the supported feature set of the hypervisor
+    # Based on https://github.com/brendangregg/Misc/blob/master/xen/xen-features.py
+    # Table data from include/xen/interface/features.h
+    xen_feature_table = { 0: 'writable_page_tables',
+                          1: 'writable_descriptor_tables',
+                          2: 'auto_translated_physmap',
+                          3: 'supervisor_mode_kernel',
+                          4: 'pae_pgdir_above_4gb',
+                          5: 'mmu_pt_update_preserve_ad',
+                          7: 'gnttab_map_avail_bits',
+                          8: 'hvm_callback_vector',
+                          9: 'hvm_safe_pvclock',
+                         10: 'hvm_pirqs',
+                         11: 'dom0',
+                         12: 'grant_map_identity',
+                         13: 'memory_op_vnode_supported',
+                         14: 'ARM_SMCCC_supported' }
+    try:
+        with open('/sys/hypervisor/properties/features', 'r') as fhr:
+            features = fhr.read().strip()
+        enabled_features = []
+        for bit, feat in xen_feature_table.items():
+            if int(features, 16) & (1 << bit):
+                enabled_features.append(feat)
+        grains['virtual_hv_features'] = features
+        grains['virtual_hv_features_list'] = enabled_features
+    except:
+        pass
+
+    return grains
+
 
 def _ps(osdata):
     '''
@@ -1804,6 +1857,7 @@ def os_data():
 
     # Load the virtual machine info
     grains.update(_virtual(grains))
+    grains.update(_virtual_hv(grains))
     grains.update(_ps(grains))
 
     if grains.get('osrelease', ''):
