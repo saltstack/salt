@@ -48,12 +48,11 @@ class SubprocessTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {subprocess: {}}
 
-    @patch('salt.utils.subprocess.log', MagicMock())
     @patch('sys.platform', 'linux2')
     @patch('salt.utils.subprocess.six.PY2', True)
     @patch('os.getpid', MagicMock(return_value=111))
     @patch('os.listdir', MagicMock(return_value=[0, 1, 2, 3, 4]))
-    @patch('os.closerange', MagicMock())
+    @patch('os.close', MagicMock())
     @patch('os.fdopen', MagicMock(return_value=''))
     @patch.object(salt.utils.subprocess.FdPopen, '_execute_child', MagicMock())
     @patch.object(salt.utils.subprocess.FdPopen, '_get_handles',
@@ -64,17 +63,15 @@ class SubprocessTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         subprocess.FdPopen(None)._close_fds(0)
-        salt.utils.subprocess.log.debug.assert_called()
-        msg, val = salt.utils.subprocess.log.debug.call_args[0]
-        assert (msg % val) == 'Closing 5 file descriptors'
+        subprocess.os.close.assert_called()
+        assert subprocess.os.close.call_count == 2
 
-    @patch('salt.utils.subprocess.log', MagicMock())
     @patch('salt.utils.subprocess.subprocess.MAXFD', 103)
     @patch('sys.platform', 'linux2')
     @patch('salt.utils.subprocess.six.PY2', True)
     @patch('os.getpid', MagicMock(return_value=111))
     @patch('os.listdir', MagicMock(side_effect=OSError))
-    @patch('os.closerange', MagicMock())
+    @patch('os.close', MagicMock())
     @patch('os.fdopen', MagicMock(return_value=''))
     @patch.object(salt.utils.subprocess.FdPopen, '_execute_child', MagicMock())
     @patch.object(salt.utils.subprocess.FdPopen, '_get_handles',
@@ -85,7 +82,9 @@ class SubprocessTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         subprocess.FdPopen(None)._close_fds(0)
-        assert salt.utils.subprocess.log.debug.call_args[0][1] == 100
+        subprocess.os.close.assert_called()
+        assert subprocess.os.close.call_count == 100
+
 
     @patch('salt.utils.subprocess.log', MagicMock())
     @patch('salt.utils.subprocess.subprocess.MAXFD', 100)
