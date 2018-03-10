@@ -433,6 +433,9 @@ VALID_OPTS = {
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
 
+    # Enable old style events to be sent on minion_startup. Change default to False in Neon release
+    'enable_legacy_startup_events': bool,
+
     # Always execute states with test=True if this flag is set
     'test': bool,
 
@@ -1360,6 +1363,7 @@ DEFAULT_MINION_OPTS = {
     'log_rotate_max_bytes': 0,
     'log_rotate_backup_count': 0,
     'max_event_size': 1048576,
+    'enable_legacy_startup_events': True,
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
@@ -2132,10 +2136,6 @@ def _read_conf_file(path):
                 conf_opts['id'] = six.text_type(conf_opts['id'])
             else:
                 conf_opts['id'] = sdecode(conf_opts['id'])
-        for key, value in six.iteritems(conf_opts.copy()):
-            if isinstance(value, six.text_type) and six.PY2:
-                # We do not want unicode settings
-                conf_opts[key] = value.encode('utf-8')
         return conf_opts
 
 
@@ -2228,7 +2228,6 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
     main config file.
     '''
     # Protect against empty option
-
     if not include:
         return {}
 
@@ -3587,7 +3586,7 @@ def get_id(opts, cache_minion_id=False):
     if opts.get('minion_id_caching', True):
         try:
             with salt.utils.files.fopen(id_cache) as idf:
-                name = idf.readline().strip()
+                name = salt.utils.stringutils.to_unicode(idf.readline().strip())
                 bname = salt.utils.stringutils.to_bytes(name)
                 if bname.startswith(codecs.BOM):  # Remove BOM if exists
                     name = salt.utils.stringutils.to_str(bname.replace(codecs.BOM, '', 1))
@@ -3709,7 +3708,9 @@ def apply_minion_config(overrides=None,
             )
             opts['fileserver_backend'][idx] = new_val
 
-    opts['__cli'] = os.path.basename(sys.argv[0])
+    opts['__cli'] = salt.utils.stringutils.to_unicode(
+        os.path.basename(sys.argv[0])
+    )
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
@@ -3843,10 +3844,10 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
                                     defaults['default_include'])
     include = overrides.get('include', [])
 
-    overrides.update(include_config(default_include, path, verbose=False),
-                     exit_on_config_errors=exit_on_config_errors)
-    overrides.update(include_config(include, path, verbose=True),
-                     exit_on_config_errors=exit_on_config_errors)
+    overrides.update(include_config(default_include, path, verbose=False,
+                     exit_on_config_errors=exit_on_config_errors))
+    overrides.update(include_config(include, path, verbose=True,
+                     exit_on_config_errors=exit_on_config_errors))
     opts = apply_master_config(overrides, defaults)
     _validate_ssh_minion_opts(opts)
     _validate_opts(opts)
@@ -3894,6 +3895,10 @@ def apply_master_config(overrides=None, defaults=None):
                 opts['environment']
             )
             opts['saltenv'] = opts['environment']
+
+    if six.PY2 and 'rest_cherrypy' in opts:
+        # CherryPy is not unicode-compatible
+        opts['rest_cherrypy'] = salt.utils.data.encode(opts['rest_cherrypy'])
 
     for idx, val in enumerate(opts['fileserver_backend']):
         if val in ('git', 'hg', 'svn', 'minion'):
