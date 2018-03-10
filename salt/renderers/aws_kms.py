@@ -188,6 +188,8 @@ def _plaintext_data_key():
         setattr(_plaintext_data_key, 'response', response)
     key_id = response['KeyId']
     plaintext = response['Plaintext']
+    if hasattr(plaintext, 'encode'):
+        plaintext = plaintext.encode(__salt_system_encoding__)
     log.debug('Using key %s from %s', key_id, 'cache' if cache_hit else 'api call')
     return plaintext
 
@@ -208,13 +210,13 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
     '''
     if translate_newlines:
         cipher = cipher.replace(r'\n', '\n')
-    if six.PY3:
+    if hasattr(cipher, 'encode'):
         cipher = cipher.encode(__salt_system_encoding__)
 
     # Decryption
     data_key = _base64_plaintext_data_key()
     plain_text = fernet.Fernet(data_key).decrypt(cipher)
-    if six.PY3 and isinstance(plain_text, bytes):
+    if hasattr(plain_text, 'decode'):
         plain_text = plain_text.decode(__salt_system_encoding__)
     return six.text_type(plain_text)
 
