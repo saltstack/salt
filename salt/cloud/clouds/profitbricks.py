@@ -348,7 +348,8 @@ def get_size(vm_):
         return sizes['Small Instance']
 
     for size in sizes:
-        if vm_size and six.text_type(vm_size) in (six.text_type(sizes[size]['id']), six.text_type(size)):
+        combinations = (six.text_type(sizes[size]['id']), six.text_type(size))
+        if vm_size and six.text_type(vm_size) in combinations:
             return sizes[size]
     raise SaltCloudNotFound(
         'The specified size, \'{0}\', could not be found.'.format(vm_size)
@@ -568,7 +569,8 @@ def list_nodes(conn=None, call=None):
     try:
         nodes = conn.list_servers(datacenter_id=datacenter_id)
     except PBNotFoundError:
-        log.error('Failed to get nodes list from datacenter: %s', datacenter_id)
+        log.error('Failed to get nodes list '
+                  'from datacenter: %s', datacenter_id)
         raise
 
     for item in nodes['items']:
@@ -678,9 +680,13 @@ def _get_nics(vm_):
         lan_id = set_public_lan(int(vm_['public_lan']))
         if 'public_firewall_rules' in vm_:
             firewall_rules = _get_firewall_rules(vm_['public_firewall_rules'])
-        nics.append(NIC(lan=lan_id,
-                        name='public',
-                        firewall_rules=firewall_rules))
+        nic = NIC(lan=lan_id,
+                  name='public',
+                  firewall_rules=firewall_rules)
+        if 'public_ips' in vm_:
+            ips = _get_ip_addresses(vm_['public_ips'])
+            nic.ips = ips
+        nics.append(nic)
 
     if 'private_lan' in vm_:
         firewall_rules = []
@@ -689,7 +695,10 @@ def _get_nics(vm_):
         nic = NIC(lan=int(vm_['private_lan']),
                   name='private',
                   firewall_rules=firewall_rules)
-        if 'nat' in vm_:
+        if 'private_ips' in vm_:
+            ips = _get_ip_addresses(vm_['private_ips'])
+            nic.ips = ips
+        if 'nat' in vm_ and 'private_ips' not in vm_:
             nic.nat = vm_['nat']
         nics.append(nic)
     return nics
@@ -1169,6 +1178,17 @@ def _get_data_volumes(vm_):
             volume.availability_zone = volumes[key]['disk_availability_zone']
 
         ret.append(volume)
+
+    return ret
+
+
+def _get_ip_addresses(ip_addresses):
+    '''
+    Construct a list of ip address
+    '''
+    ret = []
+    for item in ip_addresses:
+        ret.append(item)
 
     return ret
 
