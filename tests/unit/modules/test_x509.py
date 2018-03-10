@@ -152,7 +152,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         ret = x509.create_certificate(text=True,
                                       signing_private_key=ca_key,
                                       CN='Redacted Root CA',
-                                      O=R'edacted',
+                                      O='Redacted',
                                       C='BE',
                                       ST='Antwerp',
                                       L='Local Town',
