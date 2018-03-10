@@ -131,6 +131,10 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         raise salt.exceptions.SaltInvocationError(
             'value must be precomputed hash')
 
+    # ensure name and value are bytes
+    name = salt.utils.stringutils.to_bytes(name)
+    value = salt.utils.stringutils.to_bytes(value)
+
     try:
         ctx = M2Crypto.m2.x509v3_set_nconf()
         _fix_ctx(ctx, issuer)
