@@ -246,7 +246,7 @@ def lv_present(name,
     thinpool
         Logical volume is a thin pool
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     force
         Assume yes to all prompts

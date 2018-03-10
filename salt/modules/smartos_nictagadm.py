@@ -17,7 +17,6 @@ import logging
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
@@ -30,31 +29,17 @@ __func_alias__ = {
 __virtualname__ = 'nictagadm'
 
 
-@decorators.memoize
-def _check_nictagadm():
-    '''
-    Looks to see if nictagadm is present on the system
-    '''
-    return salt.utils.path.which('nictagadm')
-
-
-def _check_dladm():
-    '''
-    Looks to see if dladm is present on the system
-    '''
-    return salt.utils.path.which('dladm')
-
-
 def __virtual__():
     '''
     Provides nictagadm on SmartOS
     '''
-    if salt.utils.platform.is_smartos_globalzone() \
-            and _check_nictagadm() and _check_dladm():
+    if salt.utils.platform.is_smartos_globalzone() and \
+            salt.utils.path.which('dladm') and \
+            salt.utils.path.which('nictagadm'):
         return __virtualname__
     return (
         False,
-        '{0} module can only be loaded on SmartOS computed nodes'.format(
+        '{0} module can only be loaded on SmartOS compute nodes'.format(
             __virtualname__
         )
     )
@@ -74,10 +59,8 @@ def list_nictags(include_etherstubs=True):
         salt '*' nictagadm.list
     '''
     ret = {}
-    nictagadm = _check_nictagadm()
-    cmd = '{nictagadm} list -d "|" -p{estubs}'.format(
-        nictagadm=nictagadm,
-        estubs=' -L' if not include_etherstubs else ''
+    cmd = 'nictagadm list -d "|" -p{0}'.format(
+        ' -L' if not include_etherstubs else ''
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
@@ -109,11 +92,7 @@ def vms(nictag):
         salt '*' nictagadm.vms admin
     '''
     ret = {}
-    nictagadm = _check_nictagadm()
-    cmd = '{nictagadm} vms {nictag}'.format(
-        nictagadm=nictagadm,
-        nictag=nictag
-    )
+    cmd = 'nictagadm vms {0}'.format(nictag)
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     if retcode != 0:
@@ -139,14 +118,10 @@ def exists(*nictag, **kwargs):
         salt '*' nictagadm.exists admin
     '''
     ret = {}
-    nictagadm = _check_nictagadm()
     if len(nictag) == 0:
         return {'Error': 'Please provide at least one nictag to check.'}
 
-    cmd = '{nictagadm} exists -l {nictags}'.format(
-        nictagadm=nictagadm,
-        nictags=' '.join(nictag)
-    )
+    cmd = 'nictagadm exists -l {0}'.format(' '.join(nictag))
     res = __salt__['cmd.run_all'](cmd)
 
     if not kwargs.get('verbose', False):
@@ -178,29 +153,23 @@ def add(name, mac, mtu=1500):
         salt '*' nictagadm.add trunk 'DE:AD:OO:OO:BE:EF' 9000
     '''
     ret = {}
-    nictagadm = _check_nictagadm()
-    dladm = _check_dladm()
 
     if mtu > 9000 or mtu < 1500:
         return {'Error': 'mtu must be a value between 1500 and 9000.'}
     if mac != 'etherstub':
-        cmd = '{dladm} show-phys -m -p -o address'.format(
-            dladm=dladm
-        )
+        cmd = 'dladm show-phys -m -p -o address'
         res = __salt__['cmd.run_all'](cmd)
         if mac not in res['stdout'].splitlines():
             return {'Error': '{0} is not present on this system.'.format(mac)}
 
     if mac == 'etherstub':
-        cmd = '{nictagadm} add -l -p mtu={mtu} {name}'.format(
-            nictagadm=nictagadm,
+        cmd = 'nictagadm add -l -p mtu={mtu} {name}'.format(
             mtu=mtu,
             name=name
         )
         res = __salt__['cmd.run_all'](cmd)
     else:
-        cmd = '{nictagadm} add -p mtu={mtu},mac={mac} {name}'.format(
-            nictagadm=nictagadm,
+        cmd = 'nictagadm add -p mtu={mtu},mac={mac} {name}'.format(
             mtu=mtu,
             mac=mac,
             name=name
@@ -231,8 +200,6 @@ def update(name, mac=None, mtu=None):
         salt '*' nictagadm.update trunk mtu=9000
     '''
     ret = {}
-    nictagadm = _check_nictagadm()
-    dladm = _check_dladm()
 
     if name not in list_nictags():
         return {'Error': 'nictag {0} does not exists.'.format(name)}
@@ -245,9 +212,7 @@ def update(name, mac=None, mtu=None):
         if mac == 'etherstub':
             return {'Error': 'cannot update a nic with "etherstub".'}
         else:
-            cmd = '{dladm} show-phys -m -p -o address'.format(
-                dladm=dladm
-            )
+            cmd = 'dladm show-phys -m -p -o address'
             res = __salt__['cmd.run_all'](cmd)
             if mac not in res['stdout'].splitlines():
                 return {'Error': '{0} is not present on this system.'.format(mac)}
@@ -259,8 +224,7 @@ def update(name, mac=None, mtu=None):
     elif mtu:
         properties = "mtu={0}".format(mtu) if mtu else ""
 
-    cmd = '{nictagadm} update -p {properties} {name}'.format(
-        nictagadm=nictagadm,
+    cmd = 'nictagadm update -p {properties} {name}'.format(
         properties=properties,
         name=name
     )
@@ -288,13 +252,11 @@ def delete(name, force=False):
         salt '*' nictagadm.exists admin
     '''
     ret = {}
-    nictagadm = _check_nictagadm()
 
     if name not in list_nictags():
         return True
 
-    cmd = '{nictagadm} delete {force}{name}'.format(
-        nictagadm=nictagadm,
+    cmd = 'nictagadm delete {force}{name}'.format(
         force="-f " if force else "",
         name=name
     )
