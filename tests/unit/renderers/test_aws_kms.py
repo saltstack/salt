@@ -37,9 +37,10 @@ except ImportError:
     NO_FERNET = True
 
 
+PLAINTEXT_SECRET = 'Use more salt.'
 ENCRYPTED_DATA_KEY = 'encrypted-data-key'
-PLAINTEXT_DATA_KEY = 'plaintext-data-key'
-BASE64_DATA_KEY = 'cGxhaW50ZXh0LWRhdGEta2V5'
+PLAINTEXT_DATA_KEY = b'plaintext-data-key'
+BASE64_DATA_KEY = b'cGxhaW50ZXh0LWRhdGEta2V5'
 AWS_PROFILE = 'test-profile'
 REGION_NAME = 'us-test-1'
 
@@ -169,10 +170,9 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         test _decrypt_ciphertext
         '''
         test_key = fernet.Fernet.generate_key()
-        secret = 'Use more salt.'
-        crypted = fernet.Fernet(test_key).encrypt(bytes(secret))
+        crypted = fernet.Fernet(test_key).encrypt(PLAINTEXT_SECRET.encode())
         with patch.object(aws_kms, '_base64_plaintext_data_key', return_value=test_key):
-            self.assertEqual(aws_kms._decrypt_ciphertext(crypted), secret)
+            self.assertEqual(aws_kms._decrypt_ciphertext(crypted), PLAINTEXT_SECRET)
 
     @skipIf(NO_FERNET, 'Failed to import cryptography.fernet')
     def test__decrypt_object(self):
@@ -180,17 +180,16 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         Test _decrypt_object
         '''
         test_key = fernet.Fernet.generate_key()
-        secret = 'Use more salt.'
-        crypted = fernet.Fernet(test_key).encrypt(bytes(secret))
-        secret_map = {'secret': secret}
+        crypted = fernet.Fernet(test_key).encrypt(PLAINTEXT_SECRET.encode())
+        secret_map = {'secret': PLAINTEXT_SECRET}
         crypted_map = {'secret': crypted}
 
-        secret_list = [secret]
+        secret_list = [PLAINTEXT_SECRET]
         crypted_list = [crypted]
 
         with patch.object(aws_kms, '_base64_plaintext_data_key', return_value=test_key):
-            self.assertEqual(aws_kms._decrypt_object(secret), secret)
-            self.assertEqual(aws_kms._decrypt_object(crypted), secret)
+            self.assertEqual(aws_kms._decrypt_object(PLAINTEXT_SECRET), PLAINTEXT_SECRET)
+            self.assertEqual(aws_kms._decrypt_object(crypted), PLAINTEXT_SECRET)
             self.assertEqual(aws_kms._decrypt_object(crypted_map), secret_map)
             self.assertEqual(aws_kms._decrypt_object(crypted_list), secret_list)
             self.assertEqual(aws_kms._decrypt_object(None), None)
@@ -201,8 +200,6 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         Test that we can decrypt some data.
         '''
         test_key = fernet.Fernet.generate_key()
-        secret = 'Use more salt.'
-        crypted = fernet.Fernet(test_key).encrypt(bytes(secret))
-
+        crypted = fernet.Fernet(test_key).encrypt(PLAINTEXT_SECRET.encode())
         with patch.object(aws_kms, '_base64_plaintext_data_key', return_value=test_key):
-            self.assertEqual(aws_kms.render(crypted), secret)
+            self.assertEqual(aws_kms.render(crypted), PLAINTEXT_SECRET)
