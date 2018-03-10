@@ -37,10 +37,10 @@ class FdPopen(subprocess.Popen):
             '''
             proc_path = '/proc/{}/fd'.format(os.getpid())
             try:
-                fds = [int(fdn) for fdn in os.listdir(proc_path)]
+                #fds = [int(fdn) for fdn in os.listdir(proc_path)]
+                fds = range(3, max(map(int, os.listdir(proc_path))))
             except OSError:
                 fds = range(3, subprocess.MAXFD)
-            log.debug('Closing %s file descriptors', len(list(fds)))
 
             for i in fds:
                 if i > 2 and i != but:
