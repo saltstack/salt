@@ -55,7 +55,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with mock_kubernetes_library() as mock_kubernetes_lib:
-            with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
                 mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
                     **{"list_node.return_value.to_dict.return_value":
                         {'items': [{'metadata': {'name': 'mock_node_name'}}]}}
@@ -69,7 +69,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with mock_kubernetes_library() as mock_kubernetes_lib:
-            with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
                 mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
                     **{"list_namespaced_deployment.return_value.to_dict.return_value":
                         {'items': [{'metadata': {'name': 'mock_deployment_name'}}]}}
@@ -84,7 +84,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with mock_kubernetes_library() as mock_kubernetes_lib:
-            with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
                 mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
                     **{"list_namespaced_service.return_value.to_dict.return_value":
                         {'items': [{'metadata': {'name': 'mock_service_name'}}]}}
@@ -98,7 +98,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with mock_kubernetes_library() as mock_kubernetes_lib:
-            with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
                 mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
                     **{"list_namespaced_pod.return_value.to_dict.return_value":
                         {'items': [{'metadata': {'name': 'mock_pod_name'}}]}}
@@ -114,7 +114,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with mock_kubernetes_library() as mock_kubernetes_lib:
             with patch('salt.modules.kubernetes.show_deployment', Mock(return_value=None)):
-                with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
+                with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
                     mock_kubernetes_lib.client.V1DeleteOptions = Mock(return_value="")
                     mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
                         **{"delete_namespaced_deployment.return_value.to_dict.return_value": {'code': ''}}
@@ -130,7 +130,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with mock_kubernetes_library() as mock_kubernetes_lib:
-            with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
                 mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
                     **{"create_namespaced_deployment.return_value.to_dict.return_value": {}}
                 )
