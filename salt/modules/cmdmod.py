@@ -420,7 +420,7 @@ def _run(cmd,
                 stdout=subprocess.PIPE
             ).communicate(py_code.encode(__salt_system_encoding__))[0]
             env_mark = env_encoded.find(marker + '\n')
-            if (env_mark < 0):
+            if env_mark < 0:
                 raise CommandExecutionError(
                     'Environment could not be retrieved for User \'{0}\': missing first marker'.format(
                         runas
@@ -429,7 +429,7 @@ def _run(cmd,
             # strip first marker line plus newline
             env_encoded = env_encoded[env_mark + len(marker) + 1:]
             env_mark = env_encoded.find('\n' + marker + '\n')
-            if (env_mark < 0):
+            if env_mark < 0:
                 raise CommandExecutionError(
                     'Environment could not be retrieved for User \'{0}\': missing second marker'.format(
                         runas
