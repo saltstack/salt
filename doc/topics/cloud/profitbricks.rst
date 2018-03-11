@@ -151,6 +151,13 @@ command:
 
     # salt-cloud --list-sizes my-profitbricks-config
 
+One or more public IP address can be reserved with the following command:
+command:
+
+.. code-block:: bash
+
+    # salt-cloud -f reserve_ip my-profitbricks-config location='us/ewr' size=1
+
 Profile Specifics:
 ------------------
 

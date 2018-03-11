@@ -120,7 +120,7 @@ try:
     import profitbricks
     from profitbricks.client import (
         ProfitBricksService, Server,
-        NIC, Volume, FirewallRule,
+        NIC, Volume, FirewallRule, IPBlock,
         Datacenter, LoadBalancer, LAN,
         PBNotFoundError, PBError
     )
@@ -348,7 +348,8 @@ def get_size(vm_):
         return sizes['Small Instance']
 
     for size in sizes:
-        if vm_size and six.text_type(vm_size) in (six.text_type(sizes[size]['id']), six.text_type(size)):
+        combinations = (six.text_type(sizes[size]['id']), six.text_type(size))
+        if vm_size and six.text_type(vm_size) in combinations:
             return sizes[size]
     raise SaltCloudNotFound(
         'The specified size, \'{0}\', could not be found.'.format(vm_size)
@@ -568,7 +569,8 @@ def list_nodes(conn=None, call=None):
     try:
         nodes = conn.list_servers(datacenter_id=datacenter_id)
     except PBNotFoundError:
-        log.error('Failed to get nodes list from datacenter: %s', datacenter_id)
+        log.error('Failed to get nodes list '
+                  'from datacenter: %s', datacenter_id)
         raise
 
     for item in nodes['items']:
@@ -620,6 +622,40 @@ def list_nodes_full(conn=None, call=None):
         __active_provider_name__.split(':')[0],
         __opts__
     )
+
+    return ret
+
+
+def reserve_ip(call=None, kwargs=None):
+    '''
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The reserve_ip function must be called with -f or '
+            '--function.'
+        )
+
+    conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
+
+    ret = {}
+    ret['ips'] = []
+
+    if kwargs.get('location') is None:
+        raise SaltCloudExecutionFailure('The "location" parameter is required')
+    location = kwargs.get('location')
+
+    size = 1
+    if kwargs.get('size') is not None:
+        size = kwargs.get('size')
+
+    block = conn.reserve_ipblock(IPBlock(size=size, location=location))
+    pprint.pprint(block)
+    for item in block['properties']['ips']:
+        ret['ips'].append(item)
 
     return ret
 
