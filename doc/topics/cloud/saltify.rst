@@ -125,7 +125,7 @@ to start that machine running.
 The "magic packet" must be sent by an existing salt minion which is on
 the same network segment as the target machine. (Or your router
 must be set up especially to route WoL packets.) Your target machine
-must be set up to listen for WoL and to respond appropriatly.
+must be set up to listen for WoL and to respond appropriately.
 
 You must provide the Salt node id of the machine which will send
 the WoL packet \(parameter ``wol_sender_node``\), and

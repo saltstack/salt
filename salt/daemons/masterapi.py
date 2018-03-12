@@ -76,7 +76,8 @@ def init_git_pillar(opts):
                     opts,
                     opts_dict['git'],
                     per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=git_pillar.PER_REMOTE_ONLY)
+                    per_remote_only=git_pillar.PER_REMOTE_ONLY,
+                    global_only=git_pillar.GLOBAL_ONLY)
                 ret.append(pillar)
             except salt.exceptions.FileserverConfigError:
                 if opts.get('git_pillar_verify_config', True):

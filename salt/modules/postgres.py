@@ -302,8 +302,7 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
         return None
 
 
-def _connection_defaults(user=None, host=None, port=None, maintenance_db=None,
-                         password=None):
+def _connection_defaults(user=None, host=None, port=None, maintenance_db=None):
     '''
     Returns a tuple of (user, host, port, db) with config, pillar, or default
     values assigned to missing values.
@@ -316,31 +315,29 @@ def _connection_defaults(user=None, host=None, port=None, maintenance_db=None,
         port = __salt__['config.option']('postgres.port')
     if not maintenance_db:
         maintenance_db = __salt__['config.option']('postgres.maintenance_db')
-    if password is None:
-        password = __salt__['config.option']('postgres.pass')
 
-    return (user, host, port, maintenance_db, password)
+    return (user, host, port, maintenance_db)
 
 
 def _psql_cmd(*args, **kwargs):
     '''
     Return string with fully composed psql command.
 
-    Accept optional keyword arguments: user, host and port as well as any
-    number or positional arguments to be added to the end of command.
+    Accepts optional keyword arguments: user, host, port and maintenance_db,
+    as well as any number of positional arguments to be added to the end of
+    the command.
     '''
-    (user, host, port, maintenance_db, password) = _connection_defaults(
+    (user, host, port, maintenance_db) = _connection_defaults(
         kwargs.get('user'),
         kwargs.get('host'),
         kwargs.get('port'),
-        kwargs.get('maintenance_db'),
-        kwargs.get('password'))
+        kwargs.get('maintenance_db'))
     _PSQL_BIN = _find_pg_binary('psql')
     cmd = [_PSQL_BIN,
            '--no-align',
            '--no-readline',
            '--no-psqlrc',
-           '--no-password']  # It is never acceptable to issue a password prompt.
+           '--no-password']  # Never prompt, handled in _run_psql.
     if user:
         cmd += ['--username', user]
     if host:
@@ -363,7 +360,7 @@ def _psql_prepare_and_run(cmd,
                           user=None):
     rcmd = _psql_cmd(
         host=host, user=user, port=port,
-        maintenance_db=maintenance_db, password=password,
+        maintenance_db=maintenance_db,
         *cmd)
     cmdret = _run_psql(
         rcmd, runas=runas, password=password, host=host, port=port, user=user)
