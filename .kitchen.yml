@@ -201,6 +201,8 @@ suites:
       pillars:
         jenkins.sls:
           py3: true
+        windows.sls:
+          virtualenv_path: 'c:\Python35\Scripts\pip.exe'
 
 <% if File.exists?(verifierfile) %>
 <%= ERB.new(File.read(verifierfile)).result %>
