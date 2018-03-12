@@ -130,7 +130,7 @@ def need_deployment():
                 os.chmod(OPTIONS.saltdir, stt.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
             except OSError:
                 sys.stdout.write('\n\nUnable to set permissions on thin directory.\nIf sudo_user is set '
-                        'and is not root, be certain the user is in the same group\nas the login user')
+                                 'and is not root, be certain the user is in the same group\nas the login user')
                 sys.exit(1)
 
     # Delimiter emitted on stdout *only* to indicate shim message to master.
