@@ -2,12 +2,13 @@
 '''
 Common logic used by the docker state and execution module
 
-This module contains logic to accomodate docker/salt CLI usage, as well as
+This module contains logic to accommodate docker/salt CLI usage, as well as
 input as formatted by states.
 '''
 
 # Import Python libs
 from __future__ import absolute_import
+import copy
 import logging
 import os
 
@@ -174,7 +175,7 @@ def translate_input(**kwargs):
     have their translation skipped. Optionally, skip_translate can be set to
     True to skip *all* translation.
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = copy.deepcopy(salt.utils.clean_kwargs(**kwargs))
     invalid = {}
     collisions = []
 
@@ -287,27 +288,31 @@ def translate_input(**kwargs):
             actual_volumes.sort()
 
     if kwargs.get('port_bindings') is not None \
-            and (skip_translate is True or
-                 all(x not in skip_translate
-                     for x in ('port_bindings', 'expose', 'ports'))):
+            and all(x not in skip_translate
+                    for x in ('port_bindings', 'expose', 'ports')):
         # Make sure that all ports defined in "port_bindings" are included in
         # the "ports" param.
-        auto_ports = list(kwargs['port_bindings'])
-        if auto_ports:
-            actual_ports = []
-            # Sort list to make unit tests more reliable
-            for port in auto_ports:
-                if port in actual_ports:
-                    continue
-                if isinstance(port, six.integer_types):
-                    actual_ports.append((port, 'tcp'))
+        ports_to_bind = list(kwargs['port_bindings'])
+        if ports_to_bind:
+            ports_to_open = set(kwargs.get('ports', []))
+            for port_def in ports_to_bind:
+                if isinstance(port_def, six.integer_types):
+                    ports_to_open.add(port_def)
                 else:
-                    port, proto = port.split('/')
-                    actual_ports.append((int(port), proto))
-            actual_ports.sort()
-            actual_ports = [
-                port if proto == 'tcp' else '{}/{}'.format(port, proto) for (port, proto) in actual_ports
-            ]
-            kwargs.setdefault('ports', actual_ports)
+                    port_num, proto = port_def.split('/')
+                    ports_to_open.add((int(port_num), proto))
+            kwargs['ports'] = list(ports_to_open)
+
+    if 'ports' in kwargs \
+            and all(x not in skip_translate for x in ('expose', 'ports')):
+        # TCP ports should only be passed as the port number. Normalize the
+        # input so a port definition of 80/tcp becomes just 80 instead of
+        # (80, 'tcp').
+        for index, _ in enumerate(kwargs['ports']):
+            try:
+                if kwargs['ports'][index][1] == 'tcp':
+                    kwargs['ports'][index] = ports_to_open[index][0]
+            except TypeError:
+                continue
 
     return kwargs, invalid, sorted(collisions)

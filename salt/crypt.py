@@ -51,6 +51,7 @@ import salt.utils.decorators
 import salt.payload
 import salt.transport.client
 import salt.transport.frame
+import salt.utils.files
 import salt.utils.rsax931
 import salt.utils.verify
 import salt.version
@@ -69,8 +70,7 @@ def dropfile(cachedir, user=None):
     '''
     dfn = os.path.join(cachedir, '.dfn')
     # set a mask (to avoid a race condition on file creation) and store original.
-    mask = os.umask(191)
-    try:
+    with salt.utils.files.set_umask(0o277):
         log.info('Rotating AES key')
         if os.path.isfile(dfn):
             log.info('AES key rotation already requested')
@@ -88,8 +88,6 @@ def dropfile(cachedir, user=None):
                 os.chown(dfn, uid, -1)
             except (KeyError, ImportError, OSError, IOError):
                 pass
-    finally:
-        os.umask(mask)  # restore original umask
 
 
 def gen_keys(keydir, keyname, keysize, user=None):
@@ -119,10 +117,9 @@ def gen_keys(keydir, keyname, keysize, user=None):
     if not os.access(keydir, os.W_OK):
         raise IOError('Write access denied to "{0}" for user "{1}".'.format(os.path.abspath(keydir), getpass.getuser()))
 
-    cumask = os.umask(191)
-    with salt.utils.fopen(priv, 'wb+') as f:
-        f.write(gen.exportKey('PEM'))
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o277):
+        with salt.utils.fopen(priv, 'wb+') as f:
+            f.write(gen.exportKey('PEM'))
     with salt.utils.fopen(pub, 'wb+') as f:
         f.write(gen.publickey().exportKey('PEM'))
     os.chmod(priv, 256)
@@ -176,7 +173,7 @@ def sign_message(privkey_path, message):
     key = _get_rsa_key(privkey_path)
     log.debug('salt.crypt.sign_message: Signing message.')
     signer = PKCS1_v1_5.new(key)
-    return signer.sign(SHA.new(message))
+    return signer.sign(SHA.new(salt.utils.to_bytes(message)))
 
 
 def verify_signature(pubkey_path, message, signature):
@@ -189,7 +186,7 @@ def verify_signature(pubkey_path, message, signature):
         pubkey = RSA.importKey(f.read())
     log.debug('salt.crypt.verify_signature: Verifying signature')
     verifier = PKCS1_v1_5.new(pubkey)
-    return verifier.verify(SHA.new(message), signature)
+    return verifier.verify(SHA.new(salt.utils.to_bytes(message)), signature)
 
 
 def gen_signature(priv_path, pub_path, sign_path):
@@ -551,8 +548,9 @@ class AsyncAuth(object):
             self._crypticle = Crypticle(self.opts, creds['aes'])
             self._authenticate_future.set_result(True)  # mark the sign-in as complete
             # Notify the bus about creds change
-            event = salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False)
-            event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
+            if self.opts.get('auth_events') is True:
+                event = salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False)
+                event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
 
     @tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):

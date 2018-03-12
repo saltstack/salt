@@ -554,7 +554,7 @@ def associate_vpc_with_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
     return False
 
 
-def diassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
+def disassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
                                      VPCName=None, VPCRegion=None, Comment=None,
                                      region=None, key=None, keyid=None, profile=None):
     '''

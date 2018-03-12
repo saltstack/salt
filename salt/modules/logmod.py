@@ -18,7 +18,7 @@ CLI Example:
 
 .. code-block:: bash
 
-    salt '*' log.error 'Please dont do that, this module is not for CLI use!'
+    salt '*' log.error "Please don't do that, this module is not for CLI use!"
 '''
 from __future__ import absolute_import
 

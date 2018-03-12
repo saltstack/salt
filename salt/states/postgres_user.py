@@ -95,7 +95,7 @@ def present(name,
         encrypted to the previous
         format if it is not already done.
 
-    default_passwoord
+    default_password
         The password used only when creating the user, unless password is set.
 
         .. versionadded:: 2016.3.0

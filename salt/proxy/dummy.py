@@ -9,8 +9,9 @@ import os
 import pickle
 import logging
 
-# Import Salt modules
-import salt.utils.files
+# Import Salt libs
+import salt.ext.six as six
+import salt.utils
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['dummy']
@@ -45,9 +46,13 @@ def _save_state(details):
 
 def _load_state():
     try:
-        pck = open(FILENAME, 'r')  # pylint: disable=W8470
-        DETAILS = pickle.load(pck)
-        pck.close()
+        if six.PY3 is True:
+            mode = 'rb'
+        else:
+            mode = 'r'
+
+        with salt.utils.fopen(FILENAME, mode) as pck:
+            DETAILS = pickle.load(pck)
     except EOFError:
         DETAILS = {}
         DETAILS['initialized'] = False
@@ -135,7 +140,7 @@ def service_list():
     List "services" on the REST server
     '''
     DETAILS = _load_state()
-    return DETAILS['services'].keys()
+    return list(DETAILS['services'])
 
 
 def service_status(name):

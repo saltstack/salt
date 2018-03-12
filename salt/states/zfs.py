@@ -764,7 +764,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
 
     ## manage snapshots
     if ret['result']:
-        # retreive snapshots
+        # retrieve snapshots
         prunable = []
         snapshots = {}
         for key in schedule:

@@ -82,7 +82,7 @@ import re
 import shutil
 import logging
 import sys
-from pkg_resources import parse_version
+import pkg_resources
 
 # Import salt libs
 import salt.utils
@@ -333,6 +333,20 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
 
     logger.debug('CLEANUP_REQUIREMENTS: %s', str(cleanup_requirements))
     return cleanup_requirements, None
+
+
+def _format_env_vars(env_vars):
+    ret = {}
+    if env_vars:
+        if isinstance(env_vars, dict):
+            for key, val in six.iteritems(env_vars):
+                if not isinstance(val, six.string_types):
+                    val = str(val)
+                ret[key] = val
+        else:
+            raise CommandExecutionError(
+                'env_vars {0} is not a dictionary'.format(env_vars))
+    return ret
 
 
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
@@ -804,14 +818,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
 
     if env_vars:
-        if isinstance(env_vars, dict):
-            for key, val in six.iteritems(env_vars):
-                if not isinstance(val, six.string_types):
-                    val = str(val)
-                cmd_kwargs.setdefault('env', {})[key] = val
-        else:
-            raise CommandExecutionError(
-                'env_vars {0} is not a dictionary'.format(env_vars))
+        cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
 
     try:
         if cwd:
@@ -966,7 +973,8 @@ def uninstall(pkgs=None,
 def freeze(bin_env=None,
            user=None,
            cwd=None,
-           use_vt=False):
+           use_vt=False,
+           env_vars=None):
     '''
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -1019,6 +1027,8 @@ def freeze(bin_env=None,
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+    if env_vars:
+        cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
     result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
 
     if result['retcode'] > 0:
@@ -1030,7 +1040,8 @@ def freeze(bin_env=None,
 def list_(prefix=None,
           bin_env=None,
           user=None,
-          cwd=None):
+          cwd=None,
+          env_vars=None):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
@@ -1059,7 +1070,7 @@ def list_(prefix=None,
     if prefix is None or 'pip'.startswith(prefix):
         packages['pip'] = version(bin_env)
 
-    for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
+    for line in freeze(bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
             # ignore comment lines
@@ -1287,7 +1298,7 @@ def list_all_versions(pkg,
         match = re.search(r'\s*Could not find a version.* \(from versions: (.*)\)', line)
         if match:
             versions = [v for v in match.group(1).split(', ') if v and excludes.match(v)]
-            versions.sort(key=parse_version)
+            versions.sort(key=pkg_resources.parse_version)
             break
     if not versions:
         return None

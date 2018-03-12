@@ -15,6 +15,7 @@ import logging
 import salt.client.ssh.shell
 import salt.client.ssh.state
 import salt.utils
+import salt.utils.files
 import salt.utils.thin
 import salt.roster
 import salt.state
@@ -87,6 +88,28 @@ def _merge_extra_filerefs(*args):
     return ','.join(ret)
 
 
+def _cleanup_slsmod_low_data(low_data):
+    '''
+    Set "slsmod" keys to None to make
+    low_data JSON serializable
+    '''
+    for i in low_data:
+        if 'slsmod' in i:
+            i['slsmod'] = None
+
+
+def _cleanup_slsmod_high_data(high_data):
+    '''
+    Set "slsmod" keys to None to make
+    high_data JSON serializable
+    '''
+    for i in six.itervalues(high_data):
+        if 'stateconf' in i:
+            stateconf_data = i['stateconf'][1]
+            if 'slsmod' in stateconf_data:
+                stateconf_data['slsmod'] = None
+
+
 def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     '''
     Create the seed file for a state.sls run
@@ -99,6 +122,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    st_.push_active()
     if isinstance(mods, str):
         mods = mods.split(',')
     high_data, errors = st_.render_highstate({saltenv: mods})
@@ -130,6 +154,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
                 )
             )
     # Create the tar containing the state pkg and relevant files.
+    _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             __context__['fileclient'],
@@ -371,6 +396,7 @@ def high(data, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    st_.push_active()
     chunks = st_.state.compile_high_data(data)
     file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
@@ -380,6 +406,7 @@ def high(data, **kwargs):
                 )
             )
     # Create the tar containing the state pkg and relevant files.
+    _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             __context__['fileclient'],
@@ -470,17 +497,16 @@ def request(mods=None,
             'kwargs': kwargs
             }
         })
-    cumask = os.umask(0o77)
-    try:
-        if salt.utils.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-        with salt.utils.fopen(notify_path, 'w+b') as fp_:
-            serial.dump(req, fp_)
-    except (IOError, OSError):
-        msg = 'Unable to write state request file {0}. Check permission.'
-        log.error(msg.format(notify_path))
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o077):
+        try:
+            if salt.utils.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+            with salt.utils.fopen(notify_path, 'w+b') as fp_:
+                serial.dump(req, fp_)
+        except (IOError, OSError):
+            msg = 'Unable to write state request file {0}. Check permission.'
+            log.error(msg.format(notify_path))
     return ret
 
 
@@ -534,17 +560,16 @@ def clear_request(name=None):
             req.pop(name)
         else:
             return False
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.is_windows():
-                # Make sure cache file isn't read-only
-                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-            with salt.utils.fopen(notify_path, 'w+b') as fp_:
-                serial.dump(req, fp_)
-        except (IOError, OSError):
-            msg = 'Unable to write state request file {0}. Check permission.'
-            log.error(msg.format(notify_path))
-        os.umask(cumask)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.is_windows():
+                    # Make sure cache file isn't read-only
+                    __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+                with salt.utils.fopen(notify_path, 'w+b') as fp_:
+                    serial.dump(req, fp_)
+            except (IOError, OSError):
+                msg = 'Unable to write state request file {0}. Check permission.'
+                log.error(msg.format(notify_path))
     return True
 
 
@@ -600,6 +625,7 @@ def highstate(test=None, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    st_.push_active()
     chunks = st_.compile_low_chunks()
     file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
@@ -614,6 +640,7 @@ def highstate(test=None, **kwargs):
             __context__['retcode'] = 1
             return chunks
     # Create the tar containing the state pkg and relevant files.
+    _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             __context__['fileclient'],
@@ -680,6 +707,7 @@ def top(topfn, test=None, **kwargs):
             __salt__,
             __context__['fileclient'])
     st_.opts['state_top'] = os.path.join('salt://', topfn)
+    st_.push_active()
     chunks = st_.compile_low_chunks()
     file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
@@ -689,6 +717,7 @@ def top(topfn, test=None, **kwargs):
                 )
             )
     # Create the tar containing the state pkg and relevant files.
+    _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             __context__['fileclient'],
@@ -746,7 +775,10 @@ def show_highstate():
             __pillar__,
             __salt__,
             __context__['fileclient'])
-    return st_.compile_highstate()
+    st_.push_active()
+    chunks = st_.compile_highstate()
+    _cleanup_slsmod_high_data(chunks)
+    return chunks
 
 
 def show_lowstate():
@@ -765,7 +797,10 @@ def show_lowstate():
             __pillar__,
             __salt__,
             __context__['fileclient'])
-    return st_.compile_low_chunks()
+    st_.push_active()
+    chunks = st_.compile_low_chunks()
+    _cleanup_slsmod_low_data(chunks)
+    return chunks
 
 
 def sls_id(id_, mods, test=None, queue=False, **kwargs):
@@ -884,6 +919,7 @@ def show_sls(mods, saltenv='base', test=None, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    st_.push_active()
     if isinstance(mods, string_types):
         mods = mods.split(',')
     high_data, errors = st_.render_highstate({saltenv: mods})
@@ -898,6 +934,7 @@ def show_sls(mods, saltenv='base', test=None, **kwargs):
     # Verify that the high data is structurally sound
     if errors:
         return errors
+    _cleanup_slsmod_high_data(high_data)
     return high_data
 
 
@@ -927,6 +964,7 @@ def show_low_sls(mods, saltenv='base', test=None, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    st_.push_active()
     if isinstance(mods, string_types):
         mods = mods.split(',')
     high_data, errors = st_.render_highstate({saltenv: mods})
@@ -942,6 +980,7 @@ def show_low_sls(mods, saltenv='base', test=None, **kwargs):
     if errors:
         return errors
     ret = st_.state.compile_high_data(high_data)
+    _cleanup_slsmod_low_data(ret)
     return ret
 
 

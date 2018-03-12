@@ -256,7 +256,7 @@ def running(name,
 
         .. versionchanged:: 2017.7.0
             This option was renamed from ``stop_timeout`` to
-            ``shutdown_timeout`` to acommodate the ``stop_timeout`` container
+            ``shutdown_timeout`` to accommodate the ``stop_timeout`` container
             configuration setting.
 
     client_timeout : 60
@@ -1445,14 +1445,14 @@ def running(name,
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker_container.running:
                 - image: bar/baz:latest
                 - ulimits: nofile=1024:1024,nproc=60
 
         .. code-block:: yaml
 
             foo:
-              dockerng.running:
+              docker_container.running:
                 - image: bar/baz:latest
                 - ulimits:
                   - nofile=1024:1024

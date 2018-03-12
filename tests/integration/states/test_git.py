@@ -446,6 +446,39 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
                     if exc.errno != errno.ENOENT:
                         raise exc
 
+    def test_latest_depth(self):
+        '''
+        Test running git.latest state using the "depth" argument to limit the
+        history. See #45394.
+        '''
+        name = os.path.join(TMP, 'salt_repo')
+        try:
+            ret = self.run_state(
+                'git.latest',
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+                rev='HEAD',
+                target=name,
+                depth=1
+            )
+            # HEAD is not a branch, this should fail
+            self.assertSaltFalseReturn(ret)
+            self.assertIn(
+                'must be set to the name of a branch',
+                ret[next(iter(ret))]['comment']
+            )
+
+            ret = self.run_state(
+                'git.latest',
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
+                rev='non-default-branch',
+                target=name,
+                depth=1
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
+
     def test_present(self):
         '''
         git.present

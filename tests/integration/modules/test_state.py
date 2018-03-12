@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import shutil
+import tempfile
 import textwrap
 import threading
 import time
@@ -205,12 +206,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
                 debian_chroot=$(cat /etc/debian_chroot)
             fi
-            ''')
 
-        if not salt.utils.is_windows():
-            contents += os.linesep
-
-        contents += textwrap.dedent('''\
             # enable bash completion in interactive shells
             if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
                 . /etc/bash_completion
@@ -325,44 +321,28 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 os.unlink(testfile)
 
     def test_include(self):
-        fnames = (
-            os.path.join(TMP, 'include-test'),
-            os.path.join(TMP, 'to-include-test')
-        )
-        exclude_test_file = os.path.join(
-            TMP, 'exclude-test'
-        )
-        try:
-            ret = self.run_function('state.sls', mods='include-test')
-            self.assertSaltTrueReturn(ret)
-
-            for fname in fnames:
-                self.assertTrue(os.path.isfile(fname))
-            self.assertFalse(os.path.isfile(exclude_test_file))
-        finally:
-            for fname in list(fnames) + [exclude_test_file]:
-                if os.path.isfile(fname):
-                    os.remove(fname)
+        tempdir = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
+        pillar = {}
+        for path in ('include-test', 'to-include-test', 'exclude-test'):
+            pillar[path] = os.path.join(tempdir, path)
+        ret = self.run_function('state.sls', mods='include-test', pillar=pillar)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(pillar['include-test']))
+        self.assertTrue(os.path.isfile(pillar['to-include-test']))
+        self.assertFalse(os.path.isfile(pillar['exclude-test']))
 
     def test_exclude(self):
-        fnames = (
-            os.path.join(TMP, 'include-test'),
-            os.path.join(TMP, 'exclude-test')
-        )
-        to_include_test_file = os.path.join(
-            TMP, 'to-include-test'
-        )
-        try:
-            ret = self.run_function('state.sls', mods='exclude-test')
-            self.assertSaltTrueReturn(ret)
-
-            for fname in fnames:
-                self.assertTrue(os.path.isfile(fname))
-            self.assertFalse(os.path.isfile(to_include_test_file))
-        finally:
-            for fname in list(fnames) + [to_include_test_file]:
-                if os.path.isfile(fname):
-                    os.remove(fname)
+        tempdir = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
+        pillar = {}
+        for path in ('include-test', 'exclude-test', 'to-include-test'):
+            pillar[path] = os.path.join(tempdir, path)
+        ret = self.run_function('state.sls', mods='exclude-test', pillar=pillar)
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isfile(pillar['include-test']))
+        self.assertTrue(os.path.isfile(pillar['exclude-test']))
+        self.assertFalse(os.path.isfile(pillar['to-include-test']))
 
     @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
@@ -971,7 +951,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertIn('Gromit', data)
                 self.assertIn('Comte', data)
         finally:
-            os.unlink(tgt)
+            if os.path.islink(tgt):
+                os.unlink(tgt)
 
     # onchanges tests
 
@@ -1035,6 +1016,20 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = 'State was not run because none of the onchanges reqs changed'
         self.assertIn(expected_result, test_data)
 
+    def test_onchanges_requisite_with_duration(self):
+        '''
+        Tests a simple state using the onchanges requisite
+        the state will not run but results will include duration
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_simple')
+
+        # Then, test the result of the state run when changes are not expected to happen
+        # and ensure duration is included in the results
+        test_data = state_run['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']
+        self.assertIn('duration', test_data)
+
     # onfail tests
 
     def test_onfail_requisite(self):
@@ -1087,6 +1082,18 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
         expected_result = 'State was not run because onfail req did not change'
         self.assertIn(expected_result, test_data)
+
+    def test_onfail_requisite_with_duration(self):
+        '''
+        Tests a simple state using the onfail requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_simple')
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']
+        self.assertIn('duration', test_data)
 
     # listen tests
 
@@ -1273,17 +1280,20 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test state.sls with saltenv using a nonbase environment
         with a salt source
         '''
+        file_name = os.path.join(TMP, 'nonbase_env')
         state_run = self.run_function(
             'state.sls',
             mods='non-base-env',
             saltenv='prod'
         )
-        state_id = 'file_|-test_file_|-/tmp/nonbase_env_|-managed'
-        self.assertEqual(state_run[state_id]['comment'], 'File /tmp/nonbase_env updated')
-        self.assertTrue(state_run['file_|-test_file_|-/tmp/nonbase_env_|-managed']['result'])
-        self.assertTrue(os.path.isfile('/tmp/nonbase_env'))
+        state_id = 'file_|-test_file_|-{0}_|-managed'.format(file_name)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'File {0} updated'.format(file_name))
+        self.assertTrue(
+            state_run['file_|-test_file_|-{0}_|-managed'.format(file_name)]['result'])
+        self.assertTrue(os.path.isfile(file_name))
 
     def tearDown(self):
-        nonbase_file = '/tmp/nonbase_env'
+        nonbase_file = os.path.join(TMP, 'nonbase_env')
         if os.path.isfile(nonbase_file):
             os.remove(nonbase_file)

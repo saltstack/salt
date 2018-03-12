@@ -484,7 +484,7 @@ def daemonize(redirect_out=True):
     os.chdir('/')
     # noinspection PyArgumentList
     os.setsid()
-    os.umask(18)
+    os.umask(0o022)  # pylint: disable=blacklisted-function
 
     # do second fork
     try:
@@ -3130,7 +3130,7 @@ def chugid_and_umask(runas, umask):
     if runas is not None and runas != getpass.getuser():
         chugid(runas)
     if umask is not None:
-        os.umask(umask)
+        os.umask(umask)  # pylint: disable=blacklisted-function
 
 
 def rand_string(size=32):

@@ -2576,6 +2576,7 @@ def describe_route_tables(route_table_id=None, route_table_name=None,
                       'instance_id': 'Instance',
                       'interface_id': 'NetworkInterfaceId',
                       'nat_gateway_id': 'NatGatewayId',
+                      'vpc_peering_connection_id': 'VpcPeeringConnectionId',
                       }
         assoc_keys = {'id': 'RouteTableAssociationId',
                       'main': 'Main',
@@ -2633,7 +2634,7 @@ def _maybe_set_tags(tags, obj):
 def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
     if dns_support:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_support=dns_support)
-        log.debug('DNS spport was set to: {0} on vpc {1}'.format(dns_support, vpcid))
+        log.debug('DNS support was set to: {0} on vpc {1}'.format(dns_support, vpcid))
     if dns_hostnames:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
         log.debug('DNS hostnames was set to: {0} on vpc {1}'.format(dns_hostnames, vpcid))

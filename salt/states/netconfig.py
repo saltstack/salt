@@ -135,8 +135,8 @@ def managed(name,
     To replace the config, set ``replace`` to ``True``. This option is recommended to be used with caution!
 
     .. warning::
-        The spport for NAPALM native templates will be dropped beginning with Salt Fluorine.
-        Implicitly, the ``template_path`` argument will be depreacted and removed.
+        The support for NAPALM native templates will be dropped beginning with Salt Fluorine.
+        Implicitly, the ``template_path`` argument will be deprecated and removed.
 
     template_name
         Identifies path to the template source. The template can be either stored on the local machine,
@@ -152,7 +152,7 @@ def managed(name,
 
         Placing the template under ``/etc/salt/states/templates/example.jinja``, it can be used as
         ``salt://templates/example.jinja``.
-        Alternatively, for local files, the user can specify the abolute path.
+        Alternatively, for local files, the user can specify the absolute path.
         If remotely, the source can be retrieved via ``http``, ``https`` or ``ftp``.
 
         Examples:
@@ -213,7 +213,7 @@ def managed(name,
         Commit? Default: ``True``.
 
     debug: False
-        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` contaning the raw
+        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` containing the raw
         result after the template was rendered.
 
     replace: False
@@ -223,7 +223,7 @@ def managed(name,
         Default variables/context passed to the template.
 
     **template_vars
-        Dictionary with the arguments/context to be used when the template is rendered. Do not explicitely specify this
+        Dictionary with the arguments/context to be used when the template is rendered. Do not explicitly specify this
         argument. This represents any other variable that will be sent to the template rendering system. Please
         see an example below! In both ``ntp_peers_example_using_pillar`` and ``ntp_peers_example``, ``peers`` is sent as
         template variable.
