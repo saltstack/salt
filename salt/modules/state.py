@@ -22,6 +22,8 @@ import tarfile
 import tempfile
 import time
 
+import msgpack
+
 # Import salt libs
 import salt.config
 import salt.payload
@@ -45,7 +47,6 @@ from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
-import msgpack
 
 __proxyenabled__ = ['*']
 
@@ -604,7 +605,7 @@ def template_str(tem, queue=False, **kwargs):
 
 
 def apply_(mods=None,
-          **kwargs):
+           **kwargs):
     '''
     .. versionadded:: 2015.5.0
 
@@ -1057,8 +1058,9 @@ def highstate(test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
 
-    if isinstance(ret, dict) and (__salt__['config.option']('state_data', '') == 'terse' or
-            kwargs.get('terse')):
+    if (isinstance(ret, dict) and
+        (__salt__['config.option']('state_data', '') == 'terse') or
+       kwargs.get('terse')):
         ret = _filter_running(ret)
 
     _set_retcode(ret, highstate=st_.building_highstate)
@@ -2027,7 +2029,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
     st_._mod_init(kwargs)
     snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
     ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
-            st_.call(kwargs)}
+              st_.call(kwargs)}
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -2290,11 +2292,11 @@ def _disabled(funs):
 
 
 def event(tagmatch='*',
-        count=-1,
-        quiet=False,
-        sock_dir=None,
-        pretty=False,
-        node='minion'):
+          count=-1,
+          quiet=False,
+          sock_dir=None,
+          pretty=False,
+          node='minion'):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
