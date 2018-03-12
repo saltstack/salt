@@ -1223,6 +1223,26 @@ def request_instance(vm_):
                 userdata = fh_.read()
 
     if userdata and userdata_template:
+        userdata_sendkeys = config.get_cloud_config_value(
+            'userdata_sendkeys', vm_, __opts__, search_global=False, default=None
+        )
+        if userdata_sendkeys:
+            vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
+                config.get_cloud_config_value(
+                    'keysize',
+                    vm_,
+                    __opts__
+                )
+            )
+
+            key_id = vm_.get('name')
+            if 'append_domain' in vm_:
+                key_id = '.'.join([key_id, vm_['append_domain']])
+
+            salt.utils.cloud.accept_key(
+                __opts__['pki_dir'], vm_['pub_key'], key_id
+            )
+
         userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
 
     custom_extension = None

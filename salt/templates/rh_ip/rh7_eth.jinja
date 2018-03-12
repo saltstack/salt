@@ -1,6 +1,7 @@
 DEVICE="{{name}}"
 {% if nickname %}NAME="{{nickname}}"
-{%endif%}{% if addr %}HWADDR="{{addr}}"
+{%endif%}{% if hwaddr %}HWADDR="{{hwaddr}}"
+{%endif%}{% if macaddr %}MACADDR="{{macaddr}}"
 {%endif%}{% if uuid %}UUID="{{uuid}}"
 {%endif%}{% if userctl %}USERCTL="{{userctl}}"
 {%endif%}{% if master %}MASTER="{{master}}"
