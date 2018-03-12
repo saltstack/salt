@@ -16,6 +16,7 @@ import sys
 import os
 import stat
 import subprocess
+import time
 
 THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
@@ -199,6 +200,20 @@ def unpack_ext(ext_path):
     ver_path = os.path.join(modcache, 'ext_version')
     ver_dst = os.path.join(OPTIONS.saltdir, 'ext_version')
     shutil.move(ver_path, ver_dst)
+    reset_time(OPTIONS.saltdir)
+
+
+def reset_time(path='.', amt=None):
+    '''
+    Reset atime/mtime on all files to prevent systemd swipes only part of the files in the /tmp.
+    '''
+    if not amt:
+        amt = int(time.time())
+    for fname in os.listdir(path):
+        fname = os.path.join(path, fname)
+        if os.path.isdir(fname):
+            reset_time(fname, amt=amt)
+        os.utime(fname, (amt, amt,))
 
 
 def main(argv):  # pylint: disable=W0613
