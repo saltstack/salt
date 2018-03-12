@@ -62,6 +62,7 @@ import yaml
 import salt.cache
 import salt.config as config
 import salt.utils
+import importlib
 import salt.utils.cloud
 import salt.ext.six as six
 import salt.version
@@ -1075,26 +1076,75 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     win_installer = config.get_cloud_config_value(
         'win_installer', vm_, __opts__, search_global=True
+    )    
+    availability_set = config.get_cloud_config_value(
+        'availability_set',
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None
     )
-    if vm_['image'].startswith('http'):
-        # https://{storage_account}.blob.core.windows.net/{path}/{vhd}
-        source_image = VirtualHardDisk(vm_['image'])
-        img_ref = None
-        if win_installer:
-            os_type = 'Windows'
+    if availability_set is not None and isinstance(availability_set, six.string_types):
+        availability_set = {
+            'id': '/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Compute/availabilitySets/{2}'.format(
+                subscription_id,
+                vm_['resource_group'],
+                availability_set
+            )
+        }
+    else:
+        availability_set = None       
+    os_type = config.get_cloud_config_value(
+        'os_type', vm_, __opts__, search_global=True
+    )
+    cloud_env = _get_cloud_environment()
+    storage_endpoint_suffix = cloud_env.suffixes.storage_endpoint        
+    if vm_['image'].startswith('http') or vm_.get('vhd') == 'unmanaged':
+        if vm_['image'].startswith('http'):
+            source_image = VirtualHardDisk(vm_['image'])
+            img_ref = None
+            if not os_type:
+                raise SaltCloudSystemExit(
+                'os_type must be specified in case of custom vhd'
+                )
         else:
-            os_type = 'Linux'
+            source_image = None
+            img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
+            img_ref = ImageReference(
+                publisher=img_pub,
+                offer=img_off,
+                sku=img_sku,
+                version=img_ver,
+            )
+        os_disk = OSDisk(
+            caching=CachingTypes.none,
+            create_option=DiskCreateOptionTypes.from_image,
+            name=disk_name,
+            vhd=VirtualHardDisk(
+                'https://{0}.blob.{1}/vhds/{2}.vhd'.format(
+                    vm_['storage_account'],
+                    storage_endpoint_suffix,
+                    disk_name,
+                ),
+            ),
+            os_type=os_type,
+            image=source_image,
+            disk_size_gb=vm_.get('os_disk_size_gb')
+        )
     else:
         img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
         source_image = None
         os_type = None
+        os_disk = OSDisk(
+            create_option=DiskCreateOptionTypes.from_image,
+            disk_size_gb=vm_.get('os_disk_size_gb')
+        )
         img_ref = ImageReference(
             publisher=img_pub,
             offer=img_off,
             sku=img_sku,
             version=img_ver,
         )
-
     params = VirtualMachine(
         location=vm_['location'],
         plan=None,
@@ -1104,20 +1154,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             ),
         ),
         storage_profile=StorageProfile(
-            os_disk=OSDisk(
-                caching=CachingTypes.none,
-                create_option=DiskCreateOptionTypes.from_image,
-                name=disk_name,
-                vhd=VirtualHardDisk(
-                    'https://{0}.blob.core.windows.net/vhds/{1}.vhd'.format(
-                        vm_['storage_account'],
-                        disk_name,
-                    ),
-                ),
-                os_type=os_type,
-                image=source_image,
-                disk_size_gb=vm_.get('os_disk_size_gb', 30)
-            ),
+            os_disk=os_disk,
             data_disks=data_disks,
             image_reference=img_ref,
         ),
@@ -1132,8 +1169,9 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 NetworkInterfaceReference(vm_['iface_id']),
             ],
         ),
+        availability_set=availability_set,
     )
-
+    
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
@@ -1746,3 +1784,20 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     storageservice.delete_blob(kwargs['container'], kwargs['blob'])
     return True
+
+def _get_cloud_environment():
+    '''
+    Get the cloud environment object.
+    '''
+    cloud_environment = config.get_cloud_config_value(
+                            'cloud_environment',
+                            get_configured_provider(), __opts__, search_global=False
+                        )
+    try:
+        cloud_env_module = importlib.import_module('msrestazure.azure_cloud')
+        cloud_env = getattr(cloud_env_module, cloud_environment or 'AZURE_PUBLIC_CLOUD')
+    except (AttributeError, ImportError):
+        raise SaltCloudSystemExit(
+            'The azure {0} cloud environment is not available.'.format(cloud_environment)
+        )
+    return cloud_env
