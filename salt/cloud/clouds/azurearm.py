@@ -528,6 +528,9 @@ def show_instance(name, resource_group=None, call=None):  # pylint: disable=unus
     # Find under which cloud service the name is listed, if any
     if data is None:
         return {}
+    
+    for disk in range(len(data['storage_profile']['data_disks'])):
+        data['storage_profile']['data_disks'][disk] = object_to_dict(data['storage_profile']['data_disks'][disk])
 
     ifaces = {}
     if 'network_profile' not in data:
@@ -1026,14 +1029,26 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         # Creating the name of the datadisk if missing in the configuration of the minion
         # If the "name: name_of_my_disk" entry then we create it with the same logic than the os disk
         volume.setdefault(
-            'name', volume.get(
-                'name', volume.get('name', '{0}-datadisk{1}'.format(
-                    vm_['name'],
-                    str(lun),
-                    ),
+            'name',
+            volume.get(
+                'name',
+                volume.get(
+                    'name',
+                    '{0}-datadisk{1}'.format(vm_['name'], six.text_type(lun))
                 )
             )
         )
+
+        volume.setdefault(
+            'disk_size_gb',
+            volume.get(
+                'logical_disk_size_in_gb',
+                volume.get('size', 100)
+            )
+        )
+        # Old kwarg was host_caching, new name is caching
+        volume.setdefault('caching', volume.get('host_caching', 'ReadOnly'))
+
 
         # Use the size keyword to set a size, but you can use either the new
         # azure name (disk_size_gb) or the old (logical_disk_size_in_gb)
@@ -1056,16 +1071,18 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         if 'media_link' in volume:
             volume['vhd'] = VirtualHardDisk(volume['media_link'])
             del volume['media_link']
-        elif 'vhd' in volume:
-            volume['vhd'] = VirtualHardDisk(volume['vhd'])
-        else:
+        elif vm_.get('vhd') == 'unmanaged':
             volume['vhd'] = VirtualHardDisk(
-                'https://{0}.blob.core.windows.net/vhds/{1}-datadisk{2}.vhd'.format(
+                'https://{0}.blob.{1}/vhds/{2}-datadisk{3}.vhd'.format(
                     vm_['storage_account'],
+                    storage_endpoint_suffix,
                     vm_['name'],
                     volume['lun'],
                 ),
             )
+        elif 'vhd' in volume:
+            volume['vhd'] = VirtualHardDisk(volume['vhd'])
+
         if 'image' in volume:
             volume['create_option'] = DiskCreateOptionTypes.from_image
         elif 'attach' in volume:
