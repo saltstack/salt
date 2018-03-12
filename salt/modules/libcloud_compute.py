@@ -206,7 +206,7 @@ def destroy_node(node_id, profile, **libcloud_kwargs):
     '''
     Destroy a node in the cloud
 
-    :param node_id: Unique ID of the node to destory
+    :param node_id: Unique ID of the node to destroy
     :type  node_id: ``str``
 
     :param profile: The profile key
