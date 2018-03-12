@@ -169,6 +169,7 @@ def unpack_thin(thin_path):
         os.unlink(thin_path)
     except OSError:
         pass
+    reset_time(OPTIONS.saltdir)
 
 
 def need_ext():
@@ -200,7 +201,6 @@ def unpack_ext(ext_path):
     ver_path = os.path.join(modcache, 'ext_version')
     ver_dst = os.path.join(OPTIONS.saltdir, 'ext_version')
     shutil.move(ver_path, ver_dst)
-    reset_time(OPTIONS.saltdir)
 
 
 def reset_time(path='.', amt=None):
