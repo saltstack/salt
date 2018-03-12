@@ -33,6 +33,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.zeromq
+import salt.utils.subprocess
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
@@ -836,13 +837,13 @@ def linux_interfaces():
     ip_path = salt.utils.path.which('ip')
     ifconfig_path = None if ip_path else salt.utils.path.which('ifconfig')
     if ip_path:
-        cmd1 = subprocess.Popen(
+        cmd1 = salt.utils.subprocess.FdPopen(
             '{0} link show'.format(ip_path),
             shell=True,
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
-        cmd2 = subprocess.Popen(
+        cmd2 = salt.utils.subprocess.FdPopen(
             '{0} addr show'.format(ip_path),
             shell=True,
             close_fds=True,
@@ -852,7 +853,7 @@ def linux_interfaces():
             salt.utils.stringutils.to_str(cmd1),
             salt.utils.stringutils.to_str(cmd2)))
     elif ifconfig_path:
-        cmd = subprocess.Popen(
+        cmd = salt.utils.subprocess.FdPopen(
             '{0} -a'.format(ifconfig_path),
             shell=True,
             stdout=subprocess.PIPE,
@@ -1026,7 +1027,7 @@ def _hw_addr_aix(iface):
     Return the hardware address (a.k.a. MAC address) for a given interface on AIX
     MAC address not available in through interfaces
     '''
-    cmd = subprocess.Popen(
+    cmd = salt.utils.subprocess.FdPopen(
         'entstat -d {0} | grep \'Hardware Address\''.format(iface),
         shell=True,
         stdout=subprocess.PIPE,

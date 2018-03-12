@@ -25,6 +25,7 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.yaml
 import salt.pillar as pillar
+import salt.utils.subprocess
 
 log = logging.getLogger(__name__)
 
@@ -209,7 +210,7 @@ class DecryptGPGPillarTest(ModuleCase):
 
             cmd = cmd_prefix + ['--list-keys']
             log.debug('Instantiating gpg keyring using: %s', cmd)
-            output = subprocess.Popen(cmd,
+            output = salt.utils.subprocess.FdPopen(cmd,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
                                       shell=False).communicate()[0]
@@ -217,7 +218,7 @@ class DecryptGPGPillarTest(ModuleCase):
 
             cmd = cmd_prefix + ['--import', '--allow-secret-key-import']
             log.debug('Importing keypair using: %s', cmd)
-            output = subprocess.Popen(cmd,
+            output = salt.utils.subprocess.FdPopen(cmd,
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
@@ -239,7 +240,7 @@ class DecryptGPGPillarTest(ModuleCase):
         cmd = ['gpg-connect-agent', '--homedir', GPG_HOMEDIR]
         try:
             log.debug('Killing gpg-agent using: %s', cmd)
-            output = subprocess.Popen(cmd,
+            output = salt.utils.subprocess.FdPopen(cmd,
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,

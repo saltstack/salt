@@ -13,6 +13,7 @@ import subprocess
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+import salt.utils.subprocess
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ def get_osarch():
     '''
     Get the os architecture using rpm --eval
     '''
-    ret = subprocess.Popen(
+    ret = salt.utils.subprocess.FdPopen(
         'rpm --eval "%{_host_cpu}"',
         shell=True,
         close_fds=True,

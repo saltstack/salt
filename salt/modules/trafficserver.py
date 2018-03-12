@@ -17,6 +17,7 @@ import subprocess
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.versions
+import salt.utils.subprocess
 
 __virtualname__ = 'trafficserver'
 
@@ -58,7 +59,7 @@ def _subprocess(cmd):
     '''
 
     try:
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        proc = salt.utils.subprocess.FdPopen(cmd, shell=True, stdout=subprocess.PIPE)
         ret = salt.utils.stringutils.to_unicode(proc.communicate()[0]).strip()
         retcode = proc.wait()
 

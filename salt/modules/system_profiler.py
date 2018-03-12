@@ -14,6 +14,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import plistlib
 import subprocess
 import salt.utils.path
+import salt.utils.subprocess
 from salt.ext import six
 
 PROFILER_BINARY = '/usr/sbin/system_profiler'
@@ -37,7 +38,7 @@ def _call_system_profiler(datatype):
     of the stuff we are interested in.
     '''
 
-    p = subprocess.Popen(
+    p = salt.utils.subprocess.FdPopen(
         [PROFILER_BINARY, '-detailLevel', 'full',
          '-xml', datatype], stdout=subprocess.PIPE)
     (sysprofresults, sysprof_stderr) = p.communicate(input=None)

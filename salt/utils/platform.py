@@ -10,6 +10,7 @@ import sys
 
 # Import Salt libs
 from salt.utils.decorators import memoize as real_memoize
+import salt.utils.subprocess
 
 
 @real_memoize
@@ -90,7 +91,7 @@ def is_smartos_globalzone():
     else:
         cmd = ['zonename']
         try:
-            zonename = subprocess.Popen(
+            zonename = salt.utils.subprocess.FdPopen(
                 cmd, shell=False,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except OSError:
@@ -113,7 +114,7 @@ def is_smartos_zone():
     else:
         cmd = ['zonename']
         try:
-            zonename = subprocess.Popen(
+            zonename = salt.utils.subprocess.FdPopen(
                 cmd, shell=False,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except OSError:

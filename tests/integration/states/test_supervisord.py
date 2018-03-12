@@ -8,7 +8,6 @@ Tests for the supervisord state
 from __future__ import absolute_import, unicode_literals, print_function
 import os
 import time
-import subprocess
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -18,6 +17,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils.path
+import salt.utils.subprocess
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
@@ -62,7 +62,7 @@ class SupervisordTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if not os.path.exists(self.supervisor_conf):
             self.skipTest('failed to create supervisor config file')
-        self.supervisor_proc = subprocess.Popen(
+        self.supervisor_proc = salt.utils.subprocess.FdPopen(
             [self.supervisord, '-c', self.supervisor_conf]
         )
         if self.supervisor_proc.poll() is not None:

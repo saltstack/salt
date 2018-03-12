@@ -63,11 +63,11 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)), \
                 patch('salt.utils.path.which', MagicMock()):
-            with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGDecrypt())):
+            with patch('salt.renderers.gpg.FdPopen', MagicMock(return_value=GPGDecrypt())):
                 self.assertEqual(gpg._decrypt_ciphertexts(crypted), secret)
                 self.assertEqual(
                     gpg._decrypt_ciphertexts(multicrypted), multisecret)
-            with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGNotDecrypt())):
+            with patch('salt.renderers.gpg.FdPopen', MagicMock(return_value=GPGNotDecrypt())):
                 self.assertEqual(gpg._decrypt_ciphertexts(crypted), crypted)
                 self.assertEqual(
                     gpg._decrypt_ciphertexts(multicrypted), multicrypted)

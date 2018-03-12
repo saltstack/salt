@@ -15,6 +15,7 @@ import subprocess
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.subprocess
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ def __virtual__():
 
 
 def _execute(cmd, ret_code=False):
-    process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    process = salt.utils.subprocess.FdPopen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     if ret_code:
         return process.wait()
     output, error = process.communicate()

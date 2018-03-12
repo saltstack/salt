@@ -24,6 +24,7 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.yaml
+import salt.utils.subprocess
 try:
     from salt.utils.nb_popen import NonBlockingPopen
 except ImportError:
@@ -447,7 +448,7 @@ def run(opts):
         cmd = 'salt -t 100 {0} --out json test.version'.format(build_minion_target(opts, vm_name))
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
-        proc = subprocess.Popen(
+        proc = salt.utils.subprocess.FdPopen(
             cmd,
             shell=True,
             stdout=subprocess.PIPE,
@@ -524,7 +525,7 @@ def run(opts):
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
-    proc = subprocess.Popen(
+    proc = salt.utils.subprocess.FdPopen(
         cmd,
         shell=True,
         stdout=subprocess.PIPE,
@@ -561,7 +562,7 @@ def run(opts):
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
-        proc = subprocess.Popen(
+        proc = salt.utils.subprocess.FdPopen(
             cmd,
             shell=True,
             stdout=subprocess.PIPE,
@@ -600,7 +601,7 @@ def run(opts):
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
-        proc = subprocess.Popen(
+        proc = salt.utils.subprocess.FdPopen(
             cmd,
             shell=True,
             stdout=subprocess.PIPE,
@@ -632,7 +633,7 @@ def run(opts):
         cmd = 'salt -t 100 {0} --out json git.remote_get /testing'.format(build_minion_target(opts, vm_name))
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
-        proc = subprocess.Popen(
+        proc = salt.utils.subprocess.FdPopen(
             cmd,
             shell=True,
             stdout=subprocess.PIPE,
@@ -679,7 +680,7 @@ def run(opts):
         cmd = 'salt -t 100 {0} --out json git.revision /testing'.format(build_minion_target(opts, vm_name))
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
-        proc = subprocess.Popen(
+        proc = salt.utils.subprocess.FdPopen(
             cmd,
             shell=True,
             stdout=subprocess.PIPE,
@@ -729,7 +730,7 @@ def run(opts):
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
-    proc = subprocess.Popen(
+    proc = salt.utils.subprocess.FdPopen(
         cmd,
         shell=True,
         stdout=subprocess.PIPE,
@@ -772,7 +773,7 @@ def run(opts):
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
-        proc = subprocess.Popen(
+        proc = salt.utils.subprocess.FdPopen(
             cmd,
             shell=True,
             stdout=subprocess.PIPE,

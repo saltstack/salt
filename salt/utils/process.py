@@ -26,6 +26,7 @@ import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.subprocess
 import salt.log.setup
 import salt.defaults.exitcodes
 from salt.log.mixins import NewStyleClassMixIn
@@ -125,7 +126,7 @@ def daemonize_if(opts):
 
 
 def systemd_notify_call(action):
-    process = subprocess.Popen(['systemd-notify', action], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = salt.utils.subprocess.FdPopen(['systemd-notify', action], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.communicate()
     status = process.poll()
     return status == 0

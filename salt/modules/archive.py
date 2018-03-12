@@ -39,6 +39,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.subprocess
 import salt.utils.templates
 
 if salt.utils.platform.is_windows():
@@ -222,7 +223,7 @@ def list_(name,
                         decompress_cmd = 'xz --decompress --stdout'
 
                 if decompress_cmd:
-                    decompressed = subprocess.Popen(
+                    decompressed = salt.utils.subprocess.FdPopen(
                         '{0} {1}'.format(decompress_cmd, _quote(cached)),
                         shell=True,
                         stdout=subprocess.PIPE,

@@ -13,6 +13,7 @@ import salt.utils.data
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
+import salt.utils.subprocess
 
 # Import 3rd-party libs
 try:
@@ -967,7 +968,7 @@ class WindowsUpdateAgent(object):
 
         try:
             log.debug(cmd)
-            p = subprocess.Popen(
+            p = salt.utils.subprocess.FdPopen(
                 cmd,
                 shell=True,
                 stdout=subprocess.PIPE,

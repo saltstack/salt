@@ -37,6 +37,7 @@ import salt.utils.functools
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.yaml
+import salt.utils.subprocess
 import salt.version
 import salt.exceptions
 from salt.utils.verify import verify_env
@@ -256,7 +257,7 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
             self.skipTest('The git binary is not available')
 
         # Let's get the output of git describe
-        process = subprocess.Popen(
+        process = salt.utils.subprocess.FdPopen(
             [git, 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -265,7 +266,7 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
         )
         out, err = process.communicate()
         if process.returncode != 0:
-            process = subprocess.Popen(
+            process = salt.utils.subprocess.FdPopen(
                 [git, 'describe', '--tags', '--match', 'v[0-9]*'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

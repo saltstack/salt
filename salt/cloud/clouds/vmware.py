@@ -122,6 +122,7 @@ import logging
 import time
 import os.path
 import subprocess
+import salt.utils.subprocess
 
 # Import salt libs
 import salt.utils.cloud
@@ -3948,9 +3949,11 @@ def add_host(kwargs=None, call=None):
         log.warning('SSL thumbprint has not been specified in provider configuration')
         try:
             log.debug('Trying to get the SSL thumbprint directly from the host system')
-            p1 = subprocess.Popen(('echo', '-n'), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            p2 = subprocess.Popen(('openssl', 's_client', '-connect', '{0}:443'.format(host_name)), stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            p3 = subprocess.Popen(('openssl', 'x509', '-noout', '-fingerprint', '-sha1'), stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p1 = salt.utils.subprocess.FdPopen(('echo', '-n'), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p2 = salt.utils.subprocess.FdPopen(('openssl', 's_client', '-connect', '{0}:443'.format(host_name)),
+                                               stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p3 = salt.utils.subprocess.FdPopen(('openssl', 'x509', '-noout', '-fingerprint', '-sha1'), stdin=p2.stdout,
+                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out = salt.utils.stringutils.to_str(p3.stdout.read())
             ssl_thumbprint = out.split('=')[-1].strip()
             log.debug('SSL thumbprint received from the host system: %s', ssl_thumbprint)

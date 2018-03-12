@@ -4,12 +4,49 @@ For running command line executables with a timeout
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
+import sys
 import shlex
+import logging
 import subprocess
 import threading
 import salt.exceptions
-import salt.utils.data
 from salt.ext import six
+from salt.ext.six.moves import range
+
+
+log = logging.getLogger(__name__)
+
+
+class FdPopen(subprocess.Popen):
+    '''
+    Python2 closing file descriptors in a blind way by a system's given range.
+    Therefore close_fds can significantly slow down the system in various circumstances.
+    '''
+
+    if sys.platform.startswith('linux') and six.PY2:
+        def _close_fds(self, but):
+            '''
+            Close only file descriptors that are needed.
+            The issue is not new: https://bugs.python.org/issue1663329
+
+            Do *not* use os.closerange (!)
+
+            :param but:
+            :return:
+            '''
+            proc_path = '/proc/{}/fd'.format(os.getpid())
+            try:
+                fds = [int(fdn) for fdn in os.listdir(proc_path)]
+            except OSError:
+                fds = range(3, subprocess.MAXFD)
+
+            for i in fds:
+                if i > 2 and i != but:
+                    try:
+                        os.close(i)
+                    except Exception:
+                        pass
 
 
 class TimedProc(object):
@@ -42,7 +79,7 @@ class TimedProc(object):
             raise salt.exceptions.TimedProcTimeoutError('Error: timeout {0} must be a number'.format(self.timeout))
 
         try:
-            self.process = subprocess.Popen(args, **kwargs)
+            self.process = FdPopen(args, **kwargs)
         except (AttributeError, TypeError):
             if not kwargs.get('shell', False):
                 if not isinstance(args, (list, tuple)):
@@ -67,12 +104,14 @@ class TimedProc(object):
                     kwargs['env'][key] = six.text_type(val)
                 if not isinstance(key, six.string_types):
                     kwargs['env'][six.text_type(key)] = kwargs['env'].pop(key)
+            # Late import to avoid circular dependency
+            import salt.utils.data
             if six.PY2 and 'env' in kwargs:
                 # Ensure no unicode in custom env dict, as it can cause
                 # problems with subprocess.
                 kwargs['env'] = salt.utils.data.encode_dict(kwargs['env'])
             args = salt.utils.data.decode(args)
-            self.process = subprocess.Popen(args, **kwargs)
+            self.process = FdPopen(args, **kwargs)
         self.command = args
 
     def run(self):

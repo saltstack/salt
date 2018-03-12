@@ -24,6 +24,7 @@ from tests.support.unit import TestCase, skipIf
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.vt
+import salt.utils.subprocess
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -64,7 +65,7 @@ class VTTestCase(TestCase):
                     with salt.utils.files.fopen('/proc/sys/kernel/pty/nr') as fh_:
                         return int(fh_.read().strip())
 
-                proc = subprocess.Popen(
+                proc = salt.utils.subprocess.FdPopen(
                     'sysctl -a 2> /dev/null | grep pty.nr | awk \'{print $3}\'',
                     shell=True,
                     stdout=subprocess.PIPE

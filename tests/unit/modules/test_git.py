@@ -23,6 +23,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.utils.versions import LooseVersion
+import salt.utils.subprocess
 import salt.modules.git as git_mod  # Don't potentially shadow GitPython
 
 log = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ WORKTREE_INFO = {
 
 
 def _git_version():
-    git_version = subprocess.Popen(
+    git_version = salt.utils.subprocess.FdPopen(
         ['git', '--version'],
         shell=False,
         close_fds=True,

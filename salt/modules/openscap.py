@@ -9,11 +9,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 import tempfile
 import shlex
 import shutil
-from subprocess import Popen, PIPE
+from subprocess import PIPE
 
 # Import Salt libs
 from salt.ext import six
 from salt.client import Caller
+import salt.utils.subprocess
 
 
 ArgumentParser = object
@@ -99,7 +100,7 @@ def xccdf(params):
     if success:
         cmd = _XCCDF_MAP[action]['cmd_pattern'].format(args.profile, policy)
         tempdir = tempfile.mkdtemp()
-        proc = Popen(
+        proc = salt.utils.subprocess.FdPopen(
             shlex.split(cmd), stdout=PIPE, stderr=PIPE, cwd=tempdir)
         (stdoutdata, error) = proc.communicate()
         success = _OSCAP_EXIT_CODES_MAP[proc.returncode]

@@ -28,6 +28,8 @@ import hmac
 import base64
 import subprocess
 
+import salt.utils.subprocess
+
 # Import 3rd-party libs
 from salt.ext import six
 HAS_LIBS = False
@@ -91,7 +93,8 @@ def _send_email(name, email):
         message = email_object.get('message').format(name, name, _generate_password(email), name)
 
         try:
-            mail_process = subprocess.Popen(['mail', '-s', subject, '-c', cc, email], stdin=subprocess.PIPE)
+            mail_process = salt.utils.subprocess.FdPopen(['mail', '-s', subject, '-c', cc, email],
+                                                         stdin=subprocess.PIPE)
         except Exception as e:
             log.error("unable to send email to %s: %s", email, e)
 

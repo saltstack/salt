@@ -494,6 +494,7 @@ def __discover_version(saltstack_version):
             # Let's not import `salt.utils` for the above check
             kwargs['close_fds'] = True
 
+        # pylint: disable=blacklisted-functions
         process = subprocess.Popen(
             ['git', 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*', '--always'], **kwargs)
 
@@ -505,6 +506,7 @@ def __discover_version(saltstack_version):
             process = subprocess.Popen(
                 ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
             out, err = process.communicate()
+        # pylint: enable=blacklisted-functions
         if six.PY3:
             out = out.decode()
             err = err.decode()

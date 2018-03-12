@@ -53,6 +53,7 @@ import subprocess
 
 # Import Salt libs
 import salt.utils.yaml
+import salt.utils.subprocess
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ def top(**kwargs):
             kwargs['opts']['id']
             )
     ndata = salt.utils.yaml.safe_load(
-        subprocess.Popen(
+        salt.utils.subprocess.FdPopen(
             cmd,
             shell=True,
             stdout=subprocess.PIPE.communicate()[0])

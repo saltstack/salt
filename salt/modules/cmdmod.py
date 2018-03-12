@@ -32,7 +32,7 @@ import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.stringutils
 import salt.utils.templates
-import salt.utils.timed_subprocess
+import salt.utils.subprocess
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
@@ -277,7 +277,7 @@ def _run(cmd,
          success_retcodes=None,
          **kwargs):
     '''
-    Do the DRY thing and only call subprocess.Popen() once
+    Do the DRY thing and only call salt.utils.subprocess.FdPopen() once
     '''
     if 'pillar' in kwargs and not pillar_override:
         pillar_override = kwargs['pillar']
@@ -465,7 +465,7 @@ def _run(cmd,
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
             msg = 'env command: {0}'.format(env_cmd)
             log.debug(log_callback(msg))
-            env_bytes = salt.utils.stringutils.to_bytes(subprocess.Popen(
+            env_bytes = salt.utils.stringutils.to_bytes(salt.utils.subprocess.FdPopen(
                 env_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
@@ -594,7 +594,7 @@ def _run(cmd,
     if not use_vt:
         # This is where the magic happens
         try:
-            proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+            proc = salt.utils.subprocess.TimedProc(cmd, **kwargs)
         except (OSError, IOError) as exc:
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
@@ -3093,7 +3093,7 @@ def shell_info(shell, list_modules=False):
             newenv['HOME'] = os.path.expanduser('~')
             log.debug('HOME environment set to %s', newenv['HOME'])
         try:
-            proc = salt.utils.timed_subprocess.TimedProc(
+            proc = salt.utils.subprocess.TimedProc(
                 shell_data,
                 stdin=None,
                 stdout=subprocess.PIPE,

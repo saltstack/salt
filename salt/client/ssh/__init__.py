@@ -9,6 +9,7 @@ import copy
 import getpass
 import logging
 import multiprocessing
+import salt.utils.subprocess
 import subprocess
 import hashlib
 import tarfile
@@ -1558,7 +1559,7 @@ def ssh_version():
     '''
     # This function needs more granular checks and to be validated against
     # older versions of ssh
-    ret = subprocess.Popen(
+    ret = salt.utils.subprocess.FdPopen(
             ['ssh', '-V'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()

@@ -23,6 +23,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
+import salt.utils.subprocess
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ def container_name(func):
             os.path.join(FILES, 'file/base/mkimage-busybox-static')
         cmd = [script_path, image_build_rootdir, IMAGE_NAME]
         log.debug('Running \'%s\' to build busybox image', ' '.join(cmd))
-        process = subprocess.Popen(
+        process = salt.utils.subprocess.FdPopen(
             cmd,
             close_fds=True,
             stdout=subprocess.PIPE,
@@ -121,7 +122,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         '''
         cmd = ['docker', 'rmi', '--force', IMAGE_NAME]
         log.debug('Running \'%s\' to destroy busybox image', ' '.join(cmd))
-        process = subprocess.Popen(
+        process = salt.utils.subprocess.FdPopen(
             cmd,
             close_fds=True,
             stdout=subprocess.PIPE,

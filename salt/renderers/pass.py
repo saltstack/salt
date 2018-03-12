@@ -52,10 +52,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 from os.path import expanduser
-from subprocess import Popen, PIPE
+from subprocess import PIPE
 
 # Import salt libs
 import salt.utils.path
+import salt.utils.subprocess
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
@@ -83,7 +84,7 @@ def _fetch_secret(pass_path):
     cmd = "pass show {0}".format(pass_path.strip())
     log.debug('Fetching secret: %s', cmd)
 
-    proc = Popen(cmd.split(' '), stdout=PIPE, stderr=PIPE)
+    proc = salt.utils.subprocess.FdPopen(cmd.split(' '), stdout=PIPE, stderr=PIPE)
     pass_data, pass_error = proc.communicate()
 
     # The version of pass used during development sent output to

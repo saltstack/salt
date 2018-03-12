@@ -95,9 +95,8 @@ import logging
 import os
 import sys
 
-import salt.exceptions
 from salt.ext import six
-import salt.utils.stringutils
+import salt.utils.stringutils  # pylint: disable=W0611
 
 HAS_VIRTUALENV = False
 
@@ -173,15 +172,16 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
 
     if env_file is not None:
         import subprocess
+        import salt.utils.subprocess
 
         base_env = {}
-        proc = subprocess.Popen(['bash', '-c', 'env'], stdout=subprocess.PIPE)
+        proc = salt.utils.subprocess.FdPopen(['bash', '-c', 'env'], stdout=subprocess.PIPE)
         for line in proc.stdout:
             (key, _, value) = salt.utils.stringutils.to_str(line).partition('=')
             base_env[key] = value
 
         command = ['bash', '-c', 'source {0} && env'.format(env_file)]
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+        proc = salt.utils.subprocess.FdPopen(command, stdout=subprocess.PIPE)
 
         for line in proc.stdout:
             (key, _, value) = salt.utils.stringutils.to_str(line).partition('=')
