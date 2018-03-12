@@ -10,7 +10,6 @@ input as formatted by states.
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
-import os
 
 # Import Salt libs
 import salt.utils.args
@@ -184,7 +183,7 @@ def translate_input(translator,
     of that tuple will have their translation skipped. Optionally,
     skip_translate can be set to True to skip *all* translation.
     '''
-    kwargs = copy.deepcopy(salt.utils.clean_kwargs(**kwargs))
+    kwargs = copy.deepcopy(salt.utils.args.clean_kwargs(**kwargs))
     invalid = {}
     collisions = []
 
