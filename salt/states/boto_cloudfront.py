@@ -2,7 +2,7 @@
 '''
 Manage CloudFront distributions
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Create, update and destroy CloudFront distributions.
 

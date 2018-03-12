@@ -1185,8 +1185,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                                  source='salt://соль')
             self.assertSaltTrueReturn(ret)
             self.assertEqual(
-                sorted(salt.utils.data.decode(os.listdir(name))),
-                sorted(['foo.txt', 'спам.txt', 'яйца.txt'])
+                sorted(salt.utils.data.decode(os.listdir(name), normalize=True)),
+                sorted(['foo.txt', 'спам.txt', 'яйца.txt']),
             )
         finally:
             shutil.rmtree(name, ignore_errors=True)

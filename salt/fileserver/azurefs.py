@@ -12,9 +12,9 @@ the Master config file.
     fileserver_backend:
       - azurefs
 
-Starting in Oxygen, this fileserver requires the standalone Azure Storage SDK
-for Python. Theoretically any version >= v0.20.0 should work, but it was
-developed against the v0.33.0 version.
+Starting in Salt 2018.3.0, this fileserver requires the standalone Azure
+Storage SDK for Python. Theoretically any version >= v0.20.0 should work, but
+it was developed against the v0.33.0 version.
 
 Each storage container will be mapped to an environment. By default, containers
 will be mapped to the ``base`` environment. You can override this behavior with
