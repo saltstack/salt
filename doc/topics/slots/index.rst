@@ -10,7 +10,7 @@ Slots
     future releases
 
 Many times it is useful to store the results of a command during the course of
-an execution. Salt Slots are designed to allow to store this information and
+an execution. Salt Slots are designed to allow you to store this information and
 use it later during the :ref:`highstate <running-highstate>` or other job
 execution.
 

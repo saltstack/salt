@@ -103,8 +103,8 @@ import time
 import salt.cache
 import salt.config as config
 import salt.loader
-import salt.utils
 import salt.utils.cloud
+import salt.utils.files
 import salt.utils.yaml
 import salt.ext.six as six
 import salt.version
@@ -1003,7 +1003,7 @@ def request_instance(vm_):
     )
     if ssh_publickeyfile is not None:
         try:
-            with salt.utils.fopen(ssh_publickeyfile, 'r') as spkc_:
+            with salt.utils.files.fopen(ssh_publickeyfile, 'r') as spkc_:
                 ssh_publickeyfile_contents = spkc_.read()
         except Exception as exc:
             raise SaltCloudConfigError(
@@ -1219,7 +1219,7 @@ def request_instance(vm_):
 
     if userdata_file:
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
     if userdata and userdata_template:
