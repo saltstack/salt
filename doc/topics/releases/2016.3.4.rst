@@ -146,7 +146,7 @@ Changes:
 - **PR** `#36690`_: (*rallytime*) [2016.3] Merge forward from 2015.8 to 2016.3
 - **PR** `#36680`_: (*rallytime*) [2016.3] Merge forward from 2015.8 to 2016.3
 - **PR** `#36659`_: (*terminalmage*) Support dynamic env in new-style git_pillar
-- **PR** `#36538`_: (*clinta*) daemon-reload on call to service.avaliable
+- **PR** `#36538`_: (*clinta*) daemon-reload on call to service.available
 - **PR** `#36616`_: (*cro*) Zypper fix test
 - **PR** `#36621`_: (*terminalmage*) Fix shadowed builtins
 - **PR** `#36636`_: (*rallytime*) Back-port `#36618`_ to 2016.3
