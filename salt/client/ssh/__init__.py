@@ -833,10 +833,7 @@ class Single(object):
 
         self.opts = opts
         self.tty = tty
-        if kwargs.get('wipe'):
-            self.wipe = 'False'
-        else:
-            self.wipe = 'True' if self.opts.get('ssh_wipe') else 'False'
+        self.wipe = self.opts.get('ssh_wipe')
         if kwargs.get('thin_dir'):
             self.thin_dir = kwargs['thin_dir']
         elif self.winrm:
