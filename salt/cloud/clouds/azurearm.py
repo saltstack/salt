@@ -1076,14 +1076,20 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     win_installer = config.get_cloud_config_value(
         'win_installer', vm_, __opts__, search_global=True
     )
+    os_type = config.get_cloud_config_value(
+        'os_type', vm_, __opts__, search_global=True
+    )
+    
     if vm_['image'].startswith('http'):
         # https://{storage_account}.blob.core.windows.net/{path}/{vhd}
         source_image = VirtualHardDisk(vm_['image'])
         img_ref = None
-        if win_installer:
-            os_type = 'Windows'
-        else:
-            os_type = 'Linux'
+        if not os_type:
+            raise SaltCloudSystemExit(
+            'os_type must be specified in case of custom vhd'
+        )
+        
+        
     else:
         img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
         source_image = None
