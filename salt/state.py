@@ -703,8 +703,12 @@ class State(object):
             except AttributeError:
                 pillar_enc = str(pillar_enc).lower()
         self._pillar_enc = pillar_enc
-        if initial_pillar:
+        if initial_pillar and not self._pillar_override:
             self.opts['pillar'] = initial_pillar
+        else:
+            # Compile pillar data
+            self.opts['pillar'] = self._gather_pillar()
+            # Reapply overrides on top of compiled pillar
             if self._pillar_override:
                 self.opts['pillar'] = salt.utils.dictupdate.merge(
                     self.opts['pillar'],
@@ -712,8 +716,6 @@ class State(object):
                     self.opts.get('pillar_source_merging_strategy', 'smart'),
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
-        else:
-            self.opts['pillar'] = self._gather_pillar()
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
