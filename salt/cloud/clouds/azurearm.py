@@ -62,6 +62,7 @@ import yaml
 import salt.cache
 import salt.config as config
 import salt.utils
+import importlib
 import salt.utils.cloud
 import salt.ext.six as six
 import salt.version
@@ -527,6 +528,9 @@ def show_instance(name, resource_group=None, call=None):  # pylint: disable=unus
     # Find under which cloud service the name is listed, if any
     if data is None:
         return {}
+    
+    for disk in range(len(data['storage_profile']['data_disks'])):
+        data['storage_profile']['data_disks'][disk] = object_to_dict(data['storage_profile']['data_disks'][disk])
 
     ifaces = {}
     if 'network_profile' not in data:
@@ -1025,14 +1029,26 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         # Creating the name of the datadisk if missing in the configuration of the minion
         # If the "name: name_of_my_disk" entry then we create it with the same logic than the os disk
         volume.setdefault(
-            'name', volume.get(
-                'name', volume.get('name', '{0}-datadisk{1}'.format(
-                    vm_['name'],
-                    str(lun),
-                    ),
+            'name',
+            volume.get(
+                'name',
+                volume.get(
+                    'name',
+                    '{0}-datadisk{1}'.format(vm_['name'], six.text_type(lun))
                 )
             )
         )
+
+        volume.setdefault(
+            'disk_size_gb',
+            volume.get(
+                'logical_disk_size_in_gb',
+                volume.get('size', 100)
+            )
+        )
+        # Old kwarg was host_caching, new name is caching
+        volume.setdefault('caching', volume.get('host_caching', 'ReadOnly'))
+
 
         # Use the size keyword to set a size, but you can use either the new
         # azure name (disk_size_gb) or the old (logical_disk_size_in_gb)
@@ -1055,16 +1071,18 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         if 'media_link' in volume:
             volume['vhd'] = VirtualHardDisk(volume['media_link'])
             del volume['media_link']
-        elif 'vhd' in volume:
-            volume['vhd'] = VirtualHardDisk(volume['vhd'])
-        else:
+        elif vm_.get('vhd') == 'unmanaged':
             volume['vhd'] = VirtualHardDisk(
-                'https://{0}.blob.core.windows.net/vhds/{1}-datadisk{2}.vhd'.format(
+                'https://{0}.blob.{1}/vhds/{2}-datadisk{3}.vhd'.format(
                     vm_['storage_account'],
+                    storage_endpoint_suffix,
                     vm_['name'],
                     volume['lun'],
                 ),
             )
+        elif 'vhd' in volume:
+            volume['vhd'] = VirtualHardDisk(volume['vhd'])
+
         if 'image' in volume:
             volume['create_option'] = DiskCreateOptionTypes.from_image
         elif 'attach' in volume:
@@ -1075,26 +1093,75 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     win_installer = config.get_cloud_config_value(
         'win_installer', vm_, __opts__, search_global=True
+    )    
+    availability_set = config.get_cloud_config_value(
+        'availability_set',
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None
     )
-    if vm_['image'].startswith('http'):
-        # https://{storage_account}.blob.core.windows.net/{path}/{vhd}
-        source_image = VirtualHardDisk(vm_['image'])
-        img_ref = None
-        if win_installer:
-            os_type = 'Windows'
+    if availability_set is not None and isinstance(availability_set, six.string_types):
+        availability_set = {
+            'id': '/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Compute/availabilitySets/{2}'.format(
+                subscription_id,
+                vm_['resource_group'],
+                availability_set
+            )
+        }
+    else:
+        availability_set = None       
+    os_type = config.get_cloud_config_value(
+        'os_type', vm_, __opts__, search_global=True
+    )
+    cloud_env = _get_cloud_environment()
+    storage_endpoint_suffix = cloud_env.suffixes.storage_endpoint        
+    if vm_['image'].startswith('http') or vm_.get('vhd') == 'unmanaged':
+        if vm_['image'].startswith('http'):
+            source_image = VirtualHardDisk(vm_['image'])
+            img_ref = None
+            if not os_type:
+                raise SaltCloudSystemExit(
+                'os_type must be specified in case of custom vhd'
+                )
         else:
-            os_type = 'Linux'
+            source_image = None
+            img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
+            img_ref = ImageReference(
+                publisher=img_pub,
+                offer=img_off,
+                sku=img_sku,
+                version=img_ver,
+            )
+        os_disk = OSDisk(
+            caching=CachingTypes.none,
+            create_option=DiskCreateOptionTypes.from_image,
+            name=disk_name,
+            vhd=VirtualHardDisk(
+                'https://{0}.blob.{1}/vhds/{2}.vhd'.format(
+                    vm_['storage_account'],
+                    storage_endpoint_suffix,
+                    disk_name,
+                ),
+            ),
+            os_type=os_type,
+            image=source_image,
+            disk_size_gb=vm_.get('os_disk_size_gb')
+        )
     else:
         img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
         source_image = None
         os_type = None
+        os_disk = OSDisk(
+            create_option=DiskCreateOptionTypes.from_image,
+            disk_size_gb=vm_.get('os_disk_size_gb')
+        )
         img_ref = ImageReference(
             publisher=img_pub,
             offer=img_off,
             sku=img_sku,
             version=img_ver,
         )
-
     params = VirtualMachine(
         location=vm_['location'],
         plan=None,
@@ -1104,20 +1171,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             ),
         ),
         storage_profile=StorageProfile(
-            os_disk=OSDisk(
-                caching=CachingTypes.none,
-                create_option=DiskCreateOptionTypes.from_image,
-                name=disk_name,
-                vhd=VirtualHardDisk(
-                    'https://{0}.blob.core.windows.net/vhds/{1}.vhd'.format(
-                        vm_['storage_account'],
-                        disk_name,
-                    ),
-                ),
-                os_type=os_type,
-                image=source_image,
-                disk_size_gb=vm_.get('os_disk_size_gb', 30)
-            ),
+            os_disk=os_disk,
             data_disks=data_disks,
             image_reference=img_ref,
         ),
@@ -1132,8 +1186,9 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 NetworkInterfaceReference(vm_['iface_id']),
             ],
         ),
+        availability_set=availability_set,
     )
-
+    
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
@@ -1746,3 +1801,20 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     storageservice.delete_blob(kwargs['container'], kwargs['blob'])
     return True
+
+def _get_cloud_environment():
+    '''
+    Get the cloud environment object.
+    '''
+    cloud_environment = config.get_cloud_config_value(
+                            'cloud_environment',
+                            get_configured_provider(), __opts__, search_global=False
+                        )
+    try:
+        cloud_env_module = importlib.import_module('msrestazure.azure_cloud')
+        cloud_env = getattr(cloud_env_module, cloud_environment or 'AZURE_PUBLIC_CLOUD')
+    except (AttributeError, ImportError):
+        raise SaltCloudSystemExit(
+            'The azure {0} cloud environment is not available.'.format(cloud_environment)
+        )
+    return cloud_env
