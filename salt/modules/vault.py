@@ -40,7 +40,7 @@ Functions to interact with Hashicorp Vault.
         For details please see
         http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     auth
         Currently only token auth is supported. The token must be able to create
