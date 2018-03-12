@@ -151,8 +151,7 @@ PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
 do
     if command -v "$py_cmd" >/dev/null 2>&1 && "$py_cmd" -c \
-        "import sys; sys.exit(not (sys.version_info >= (2, 6)
-                              and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
+        "import sys; sys.exit(not (sys.version_info >= (2, 6)));"
     then
         py_cmd_path=`"$py_cmd" -c \
                    'from __future__ import print_function;
