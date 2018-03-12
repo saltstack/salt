@@ -89,8 +89,18 @@ def start(host='127.0.0.1',
             sender.send(message_observed(msg_length=len(jevent), tag=event['tag'], ts=TimestampProvider.get_now()))
 
             if event['tag'].startswith('perf/'):
-                sender.send(event['data']['data'])
+                sender.send(_extract_data(event))
 
     finally:
         sender.close()
         log.debug("ZMQ relay engine has stopped")
+
+
+def _extract_data(event):
+    # [KN] Don't know exactly why the payload can have nested 'data' envelopes.
+    # Since we know the structure of performance-related messages, the following algorithm is quite safe.
+    e = event
+    while 'data' in e:
+        e = e['data']
+    e.pop('_stamp', None)
+    return e
