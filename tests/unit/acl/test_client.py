@@ -32,7 +32,7 @@ class ClientACLTestCase(TestCase):
         '''
         test user_is_blacklisted
         '''
-        client_acl = acl.PublisherACL(self.blacklist, self.whitelist)
+        client_acl = acl.PublisherACL(self.blacklist)
 
         self.assertTrue(client_acl.user_is_blacklisted('joker'))
         self.assertTrue(client_acl.user_is_blacklisted('penguin'))
@@ -56,7 +56,7 @@ class ClientACLTestCase(TestCase):
         '''
         test cmd_is_blacklisted
         '''
-        client_acl = acl.PublisherACL(self.blacklist, self.whitelist)
+        client_acl = acl.PublisherACL(self.blacklist)
 
         self.assertTrue(client_acl.cmd_is_blacklisted('cmd.run'))
         self.assertTrue(client_acl.cmd_is_blacklisted('test.fib'))
@@ -69,18 +69,24 @@ class ClientACLTestCase(TestCase):
         self.assertTrue(client_acl.cmd_is_blacklisted(['cmd.run', 'state.sls']))
         self.assertFalse(client_acl.cmd_is_blacklisted(['state.highstate', 'state.sls']))
 
-    def test_publisher_acl_whitelisted(self):
+    def test_user_is_whitelisted(self):
         '''
-        test publisher_acl
+        test user_is_whitelisted
         '''
-        publisher_acl = acl.PublisherACL(self.blacklist, self.whitelist)
+        client_acl = acl.PublisherACL(self.whitelist)
 
-        self.assertTrue(publisher_acl.user_is_whitelisted('testuser'))
-        self.assertTrue(publisher_acl.user_is_whitelisted('saltuser'))
-        self.assertTrue(publisher_acl.cmd_is_whitelisted('test.ping'))
-        self.assertTrue(publisher_acl.cmd_is_whitelisted('grains.items'))
+        self.assertTrue(client_acl.user_is_whitelisted('testuser'))
+        self.assertTrue(client_acl.user_is_whitelisted('saltuser'))
+        self.assertTrue(client_acl.cmd_is_whitelisted('test.ping'))
+        self.assertTrue(client_acl.cmd_is_whitelisted('grains.items'))
 
-        self.assertFalse(publisher_acl.cmd_is_whitelisted('devuser'))
-        self.assertFalse(publisher_acl.cmd_is_whitelisted('superuser'))
-        self.assertFalse(publisher_acl.cmd_is_whitelisted('cmd.run'))
-        self.assertFalse(publisher_acl.cmd_is_whitelisted('test.version'))
+    def test_cmd_is_whitelisted(self):
+        '''
+        test cmd_is_whitelisted
+        '''
+        client_acl = acl.PublisherACL(self.whitelist)
+
+        self.assertFalse(client_acl.cmd_is_whitelisted('devuser'))
+        self.assertFalse(client_acl.cmd_is_whitelisted('superuser'))
+        self.assertFalse(client_acl.cmd_is_whitelisted('cmd.run'))
+        self.assertFalse(client_acl.cmd_is_whitelisted('test.version'))

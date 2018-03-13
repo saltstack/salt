@@ -18,9 +18,8 @@ class PublisherACL(object):
     Represents the publisher ACL and provides methods
     to query the ACL for given operations
     '''
-    def __init__(self, blacklist, whitelist):
+    def __init__(self, blacklist):
         self.blacklist = blacklist
-        self.whitelist = whitelist
 
     def user_is_blacklisted(self, user):
         '''
@@ -39,13 +38,13 @@ class PublisherACL(object):
         return False
 
     def user_is_whitelisted(self, user):
-        return salt.utils.check_whitelist_blacklist(user, whitelist=self.whitelist.get('users', []))
+        return salt.utils.check_whitelist_blacklist(user, whitelist=self.blacklist.get('users', []))
 
     def cmd_is_whitelisted(self, cmd):
         # If this is a regular command, it is a single function
         if isinstance(cmd, str):
             cmd = [cmd]
         for fun in cmd:
-            if salt.utils.check_whitelist_blacklist(fun, whitelist=self.whitelist.get('modules', [])):
+            if salt.utils.check_whitelist_blacklist(fun, whitelist=self.blacklist.get('modules', [])):
                 return True
         return False
