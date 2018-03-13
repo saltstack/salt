@@ -37,3 +37,18 @@ The ``cache`` roster had the following changes:
 - The ``roster_order`` option now includes IPv6 in addition to IPv4 for the
   ``private``, ``public``, ``global`` or ``local`` settings. The syntax for these
   settings has changed to ``ipv4-*`` or ``ipv6-*``, respectively.
+
+
+Failhard changes
+----------------
+
+It is now possible to override a global failhard setting with a state-level
+failhard setting. This is most useful in case where global failhard is set to
+``True`` and you want the execution not to stop for a specific state that
+could fail, by setting the state level failhard to ``False``.
+This also allows for the use of ``onfail*``-requisites, which would previously
+be ignored when a global failhard was set to ``True``.
+This is a deviation from previous behavior, where the global failhard setting
+always resulted in an immediate stop whenever any state failed (regardless
+of whether the failing state had a failhard setting of its own, or whether
+any ``onfail*``-requisites were used).
