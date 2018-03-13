@@ -108,6 +108,21 @@ def _add_dependency(container, obj):
         container.append(obj.__file__.replace('.pyc', '.py'))
 
 
+def gte():
+    '''
+    This function is called externally from the alternative
+    Python interpreter from within _get_tops function.
+
+    :param extra_mods:
+    :param so_mods:
+    :return:
+    '''
+    extra = salt.utils.json.loads(sys.argv[1])
+    tops = get_tops(**extra)
+
+    return salt.utils.json.dumps(tops, ensure_ascii=False)
+
+
 def get_tops(extra_mods='', so_mods=''):
     '''
     Get top directories for the dependencies, based on Python interpreter.
