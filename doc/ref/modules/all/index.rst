@@ -83,6 +83,7 @@ execution modules
     chef
     chocolatey
     chronos
+    cimc
     cisconso
     cloud
     cmdmod
@@ -238,6 +239,7 @@ execution modules
     mac_user
     mac_xattr
     makeconf
+    mandrill
     marathon
     match
     mattermost
@@ -275,6 +277,7 @@ execution modules
     napalm_users
     napalm_yang_mod
     netaddress
+    netbox
     netbsd_sysctl
     netbsdservice
     netscaler
@@ -307,11 +310,13 @@ execution modules
     pagerduty
     pagerduty_util
     pam
+    panos
     parallels
     parted
     pcs
     pdbedit
     pecl
+    pf
     philips_hue
     pillar
     pip
@@ -406,6 +411,7 @@ execution modules
     supervisord
     suse_apache
     svn
+    swarm
     swift
     sysbench
     sysfs
@@ -415,6 +421,7 @@ execution modules
     system
     system_profiler
     systemd
+    telegram
     telemetry
     temp
     test
@@ -441,6 +448,7 @@ execution modules
     victorops
     virt
     virtualenv_mod
+    vmctl
     vsphere
     win_autoruns
     win_certutil

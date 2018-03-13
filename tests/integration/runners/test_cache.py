@@ -3,7 +3,7 @@
 Tests for the salt-run command
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -34,3 +34,15 @@ class ManageTest(ShellCase):
         ret = self.run_run_plus('cache.flush', bank='cachetest/runner', key='test_cache')
         ret = self.run_run_plus('cache.list', bank='cachetest/runner')
         self.assertNotIn('test_cache', ret['return'])
+
+    def test_cache_invalid(self):
+        '''
+        Store, list, fetch, then flush data
+        '''
+        # Store the data
+        ret = self.run_run_plus(
+            'cache.store',
+        )
+        # Make sure we can see the new key
+        expected = 'Passed invalid arguments:'
+        self.assertIn(expected, ret['return'])

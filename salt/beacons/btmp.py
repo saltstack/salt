@@ -9,13 +9,14 @@ Beacon to fire events at failed login of users
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import os
 import struct
 import time
 
 # Import Salt Libs
+import salt.utils.stringutils
 import salt.utils.files
 
 # Import 3rd-party libs
@@ -26,7 +27,7 @@ from salt.ext.six.moves import map
 
 __virtualname__ = 'btmp'
 BTMP = '/var/log/btmp'
-FMT = 'hi32s4s32s256shhiii4i20x'
+FMT = b'hi32s4s32s256shhiii4i20x'
 FIELDS = [
           'type',
           'PID',
@@ -193,10 +194,8 @@ def beacon(config):
                 event[field] = pack[ind]
                 if isinstance(event[field], salt.ext.six.string_types):
                     if isinstance(event[field], bytes):
-                        event[field] = event[field].decode()
-                        event[field] = event[field].strip('b\x00')
-                    else:
-                        event[field] = event[field].strip('\x00')
+                        event[field] = salt.utils.stringutils.to_unicode(event[field])
+                    event[field] = event[field].strip('\x00')
 
             if users:
                 if event['user'] in users:

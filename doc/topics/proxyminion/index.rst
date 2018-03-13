@@ -157,7 +157,8 @@ will need to be restarted to pick up any changes.  A corresponding utility funct
 
 In addition, a salt.utils helper function called `is_proxy()` was added to make
 it easier to tell when the running minion is a proxy minion. **NOTE: This
-function was renamed to salt.utils.platform.is_proxy() for the Oxygen release**
+function was renamed to salt.utils.platform.is_proxy() for the 2018.3.0
+release**
 
 New in 2015.8
 -------------
@@ -753,7 +754,7 @@ This proxymodule enables "package" installation.
     from __future__ import absolute_import
 
     # Import python libs
-    import json
+    import salt.utils.json
     import logging
 
     # Import Salt's libs
@@ -821,7 +822,7 @@ This proxymodule enables "package" installation.
                 jsonret.append(ln_)
             if '}' in ln_:
                 in_json = False
-        return json.loads('\n'.join(jsonret))
+        return salt.utils.json.loads('\n'.join(jsonret))
 
 
     def package_list():

@@ -598,7 +598,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             self.assertEqual(len(list_patches), 3)
             self.assertDictEqual(list_patches, PATCHES_RET)
 
-    @patch('os.walk', MagicMock(return_value=[('test', 'test', 'test')]))
+    @patch('salt.utils.path.os_walk', MagicMock(return_value=[('test', 'test', 'test')]))
     @patch('os.path.getsize', MagicMock(return_value=123456))
     @patch('os.path.getctime', MagicMock(return_value=1234567890.123456))
     @patch('fnmatch.filter', MagicMock(return_value=['/var/cache/zypper/packages/foo/bar/test_package.rpm']))
@@ -638,9 +638,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
 
         test_out = {
             'nmap': {
-                'path': u'/var/cache/zypp/packages/SLE-12-x86_64-Pool/x86_64/nmap-6.46-1.72.x86_64.rpm',
-                'repository-alias': u'SLE-12-x86_64-Pool',
-                'repository-name': u'SLE-12-x86_64-Pool'
+                'path': '/var/cache/zypp/packages/SLE-12-x86_64-Pool/x86_64/nmap-6.46-1.72.x86_64.rpm',
+                'repository-alias': 'SLE-12-x86_64-Pool',
+                'repository-name': 'SLE-12-x86_64-Pool'
             }
         }
 
@@ -669,8 +669,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     '--download-only',
                     'vim'
                 )
@@ -699,8 +699,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     '--download-only',
                     'vim'
                 )
@@ -724,8 +724,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper_mock.assert_called_once_with(
                     '--no-refresh',
                     'install',
-                    '--name',
                     '--auto-agree-with-licenses',
+                    '--name',
                     'patch:SUSE-PATCH-1234'
                 )
                 self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
@@ -1049,7 +1049,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = 'libzypp', '*'
-        assert wcard._get_scope_versions(wcard._get_available_versions()) == [u'16.2.4-19.5', u'16.3.2-25.1', u'16.5.2-27.9.1']
+        assert wcard._get_scope_versions(wcard._get_available_versions()) == ['16.2.4-19.5', '16.3.2-25.1', '16.5.2-27.9.1']
 
     def test_wildcard_to_query_multiple_asterisk(self):
         '''
@@ -1068,7 +1068,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = 'libzypp', '16.2.*-2*'
-        assert wcard._get_scope_versions(wcard._get_available_versions()) == [u'16.2.5-25.1', u'16.2.6-27.9.1']
+        assert wcard._get_scope_versions(wcard._get_available_versions()) == ['16.2.5-25.1', '16.2.6-27.9.1']
 
     def test_wildcard_to_query_exact_match_at_end(self):
         '''
@@ -1087,7 +1087,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = 'libzypp', '16.2.5*'
-        assert wcard._get_scope_versions(wcard._get_available_versions()) == [u'16.2.5-25.1']
+        assert wcard._get_scope_versions(wcard._get_available_versions()) == ['16.2.5-25.1']
 
     def test_wildcard_to_query_exact_match_at_beginning(self):
         '''
@@ -1106,7 +1106,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = 'libzypp', '*.1'
-        assert wcard._get_scope_versions(wcard._get_available_versions()) == [u'16.2.5-25.1', u'17.2.6-27.9.1']
+        assert wcard._get_scope_versions(wcard._get_available_versions()) == ['16.2.5-25.1', '17.2.6-27.9.1']
 
     def test_wildcard_to_query_usage(self):
         '''

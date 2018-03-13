@@ -164,7 +164,7 @@ states are evaluated before ``tgt`` states.
 Each of these sections needs to be evaluated as text, rather than as YAML. 
 Consider the following block:
 
-.. code-block::
+.. code-block:: text
 
     pre_local_state: >
       echo test > /tmp/spmtest:
@@ -187,7 +187,7 @@ a minion.
 the ``>`` marker to denote that the state is evaluated as text, not a data
 structure.
 
-.. code-block::
+.. code-block:: text
 
     pre_local_state: >
       echo test > /tmp/spmtest:
@@ -203,7 +203,7 @@ the ``spm`` command is running on is a master.
 Because ``tgt`` states require that a target be specified, their code blocks
 are a little different. Consider the following state:
 
-.. code-block::
+.. code-block:: text
 
     pre_tgt_state:
       tgt: '*'
@@ -229,7 +229,7 @@ This means that you can use Jinja or any other supported renderer inside of
 Salt. All formula variables are available to the renderer, so you can reference
 ``FORMULA`` data inside your state if you need to:
 
-.. code-block::
+.. code-block:: text
 
     pre_tgt_state:
       tgt: '*'

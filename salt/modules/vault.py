@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
+Functions to interact with Hashicorp Vault.
+
 :maintainer:    SaltStack
 :maturity:      new
 :platform:      all
 
-Functions to interact with Hashicorp Vault.
 
 :note: If you see the following error, you'll need to upgrade ``requests`` to atleast 2.4.2
-.. code-block:: shell
+
+.. code-block:: text
+
     <timestamp> [salt.pillar][CRITICAL][14337] Pillar render error: Failed to load ext_pillar vault: {'error': "request() got an unexpected keyword argument 'json'"}
 
 
@@ -37,7 +40,7 @@ Functions to interact with Hashicorp Vault.
         For details please see
         http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     auth
         Currently only token auth is supported. The token must be able to create
@@ -101,9 +104,11 @@ Functions to interact with Hashicorp Vault.
 
 .. _vault-setup
 '''
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
+# Import Salt libs
 import salt.crypt
 import salt.exceptions
 
@@ -128,7 +133,7 @@ def read_secret(path, key=None):
                 first: {{ supersecret.first }}
                 second: {{ supersecret.second }}
     '''
-    log.debug('Reading Vault secret for {0} at {1}'.format(__grains__['id'], path))
+    log.debug('Reading Vault secret for %s at %s', __grains__['id'], path)
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('GET', url)
@@ -139,9 +144,9 @@ def read_secret(path, key=None):
         if key is not None:
             return data[key]
         return data
-    except Exception as e:
-        log.error('Failed to read secret! {0}: {1}'.format(type(e).__name__, e))
-        raise salt.exceptions.CommandExecutionError(e)
+    except Exception as err:
+        log.error('Failed to read secret! %s: %s', type(err).__name__, err)
+        raise salt.exceptions.CommandExecutionError(err)
 
 
 def write_secret(path, **kwargs):
@@ -151,12 +156,10 @@ def write_secret(path, **kwargs):
     CLI Example:
 
     .. code-block:: bash
+
             salt '*' vault.write_secret "secret/my/secret" user="foo" password="bar"
     '''
-    log.debug(
-        'Writing vault secrets for {0} at {1}'.
-        format(__grains__['id'], path)
-        )
+    log.debug('Writing vault secrets for %s at %s', __grains__['id'], path)
     data = dict([(x, y) for x, y in kwargs.items() if not x.startswith('__')])
     try:
         url = 'v1/{0}'.format(path)
@@ -164,9 +167,9 @@ def write_secret(path, **kwargs):
         if response.status_code != 204:
             response.raise_for_status()
         return True
-    except Exception as e:
-        log.error('Failed to write secret! {0}: {1}'.format(type(e).__name__, e))
-        raise salt.exceptions.CommandExecutionError(e)
+    except Exception as err:
+        log.error('Failed to write secret! %s: %s', type(err).__name__, err)
+        raise salt.exceptions.CommandExecutionError(err)
 
 
 def delete_secret(path):
@@ -176,19 +179,19 @@ def delete_secret(path):
     CLI Example:
 
     .. code-block:: bash
+
             salt '*' vault.delete_secret "secret/my/secret"
     '''
-    log.debug('Deleting vault secrets for {0} in {1}'
-              .format(__grains__['id'], path))
+    log.debug('Deleting vault secrets for %s in %s', __grains__['id'], path)
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('DELETE', url)
         if response.status_code != 204:
             response.raise_for_status()
         return True
-    except Exception as e:
-        log.error('Failed to delete secret! {0}: {1}'.format(type(e).__name__, e))
-        raise salt.exceptions.CommandExecutionError(e)
+    except Exception as err:
+        log.error('Failed to delete secret! %s: %s', type(err).__name__, err)
+        raise salt.exceptions.CommandExecutionError(err)
 
 
 def list_secrets(path):
@@ -199,16 +202,16 @@ def list_secrets(path):
     CLI Example:
 
     .. code-block:: bash
+
             salt '*' vault.list_secrets "secret/my/"
     '''
-    log.debug('Listing vault secret keys for {0} in {1}'
-              .format(__grains__['id'], path))
+    log.debug('Listing vault secret keys for %s in %s', __grains__['id'], path)
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('LIST', url)
         if response.status_code != 200:
             response.raise_for_status()
         return response.json()['data']
-    except Exception as e:
-        log.error('Failed to list secrets! {0}: {1}'.format(type(e).__name__, e))
-        raise salt.exceptions.CommandExecutionError(e)
+    except Exception as err:
+        log.error('Failed to list secrets! %s: %s', type(err).__name__, err)
+        raise salt.exceptions.CommandExecutionError(err)

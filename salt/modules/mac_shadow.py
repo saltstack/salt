@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: 2016.3.0
+Manage macOS local directory passwords and policies
 
-Manage macOS local directory passwords and policies.
+.. versionadded:: 2016.3.0
 
 Note that it is usually better to apply password policies through the creation
 of a configuration profile.
@@ -10,7 +10,7 @@ of a configuration profile.
 # Authentication concepts reference:
 # https://developer.apple.com/library/mac/documentation/Networking/Conceptual/Open_Directory/openDirectoryConcepts/openDirectoryConcepts.html#//apple_ref/doc/uid/TP40000917-CH3-CIFCAIBB
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from datetime import datetime
 
 
@@ -168,7 +168,7 @@ def info(name):
                 'inact': 'Unavailable'}
 
     except KeyError:
-        log.debug('User not found: {0}'.format(name))
+        log.debug('User not found: %s', name)
         return {'name': '',
                 'passwd': '',
                 'account_created': '',

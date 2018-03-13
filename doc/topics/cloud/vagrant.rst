@@ -99,7 +99,8 @@ Profile configuration example:
       # vagrant_up_timeout: 300 # (seconds) timeout for cmd.run of the "vagrant up" command
       # vagrant_provider: '' # option for "vagrant up" like: "--provider vmware_fusion"
       # ssh_host: None  # "None" means try to find the routable IP address from "ifconfig"
-      # target_network: None  # Expected CIDR address of your bridged network
+      # ssh_username: '' # also required when ssh_host is used.
+      # target_network: None  # Expected CIDR address range of your bridged network
       # force_minion_config: false  # Set "true" to re-purpose an existing VM
 
 The machine can now be created and configured with the following command:

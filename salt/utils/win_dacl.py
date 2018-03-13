@@ -128,7 +128,7 @@ should match what you see when you look at the properties for an object.
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -602,7 +602,7 @@ def dacl(obj_name=None, obj_type='file'):
                     raise SaltInvocationError(
                         'Invalid access mode: {0}'.format(access_mode))
             except Exception as exc:
-                return False, 'Error: {0}'.format(str(exc))
+                return False, 'Error: {0}'.format(exc)
 
             return True
 
@@ -867,7 +867,10 @@ def dacl(obj_name=None, obj_type='file'):
             '''
             # Get the principal from the sid (object sid)
             sid = win32security.ConvertSidToStringSid(ace[2])
-            principal = get_name(sid)
+            try:
+                principal = get_name(sid)
+            except CommandExecutionError:
+                principal = sid
 
             # Get the ace type
             ace_type = self.ace_type[ace[0][0]]
@@ -1133,9 +1136,14 @@ def get_name(principal):
 
     try:
         return win32security.LookupAccountSid(None, sid_obj)[0]
-    except TypeError:
-        raise CommandExecutionError(
-            'Could not find User for {0}'.format(principal))
+    except (pywintypes.error, TypeError) as exc:
+        if type(exc) == pywintypes.error:
+            win_error = win32api.FormatMessage(exc.winerror).rstrip('\n')
+            message = 'Error resolving {0} ({1})'.format(principal, win_error)
+        else:
+            message = 'Error resolving {0}'.format(principal)
+
+        raise CommandExecutionError(message)
 
 
 def get_owner(obj_name):
@@ -1165,17 +1173,17 @@ def get_owner(obj_name):
 
     except MemoryError:
         # Generic Memory Error (Windows Server 2003+)
-        owner_sid = 'S-1-1-0'
+        owner_sid = 'S-1-0-0'
 
     except pywintypes.error as exc:
         # Incorrect function error (Windows Server 2008+)
         if exc.winerror == 1 or exc.winerror == 50:
-            owner_sid = 'S-1-1-0'
+            owner_sid = 'S-1-0-0'
         else:
             raise CommandExecutionError(
-                'Failed to set permissions: {0}'.format(exc.strerror))
+                'Failed to get owner: {0}'.format(exc.strerror))
 
-    return get_name(win32security.ConvertSidToStringSid(owner_sid))
+    return get_name(owner_sid)
 
 
 def get_primary_group(obj_name):
@@ -1205,12 +1213,12 @@ def get_primary_group(obj_name):
 
     except MemoryError:
         # Generic Memory Error (Windows Server 2003+)
-        primary_group_gid = 'S-1-1-0'
+        primary_group_gid = 'S-1-0-0'
 
     except pywintypes.error as exc:
         # Incorrect function error (Windows Server 2008+)
         if exc.winerror == 1 or exc.winerror == 50:
-            primary_group_gid = 'S-1-1-0'
+            primary_group_gid = 'S-1-0-0'
         else:
             raise CommandExecutionError(
                 'Failed to set permissions: {0}'.format(exc.strerror))
@@ -1277,9 +1285,8 @@ def set_owner(obj_name, principal, obj_type='file'):
             sid,
             None, None, None)
     except pywintypes.error as exc:
-        log.debug('Failed to make {0} the owner: {1}'.format(principal, exc.strerror))
-        raise CommandExecutionError(
-            'Failed to set owner: {0}'.format(exc.strerror))
+        log.debug('Failed to make %s the owner: %s', principal, exc)
+        raise CommandExecutionError('Failed to set owner: {0}'.format(exc))
 
     return True
 
@@ -1350,11 +1357,8 @@ def set_primary_group(obj_name, principal, obj_type='file'):
             obj_flags.element['group'],
             None, gid, None, None)
     except pywintypes.error as exc:
-        log.debug(
-            'Failed to make {0} the primary group: {1}'
-            ''.format(principal, exc.strerror))
-        raise CommandExecutionError(
-            'Failed to set primary group: {0}'.format(exc.strerror))
+        log.debug('Failed to make %s the primary group: %s', principal, exc)
+        raise CommandExecutionError('Failed to set primary group: {0}'.format(exc))
 
     return True
 

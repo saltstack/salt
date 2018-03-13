@@ -16,9 +16,21 @@ Dependencies
 The ``napalm`` proxy module requires NAPALM_ library to be installed:  ``pip install napalm``
 Please check Installation_ for complete details.
 
-.. _NAPALM: https://napalm.readthedocs.io
-.. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
+.. _NAPALM: https://napalm-automation.net/
+.. _Installation: http://napalm.readthedocs.io/en/latest/installation/index.html
 
+.. note::
+
+    Beginning with Salt release 2017.7.3, it is recommended to use
+    ``napalm`` >= ``2.0.0``. The library has been unified into a monolithic
+    package, as in opposite to separate packages per driver. For more details
+    you can check `this document <https://napalm-automation.net/reunification/>`_.
+    While it will still work with the old packages, bear in mind that the NAPALM
+    core team will maintain only the main ``napalm`` package.
+
+    Moreover, for additional capabilities, the users can always define a
+    library that extends NAPALM's base capabilities and configure the
+    ``provider`` option (see below).
 
 Pillar
 ------
@@ -59,7 +71,7 @@ always_alive: ``True``
     .. versionadded:: 2017.7.0
 
 provider: ``napalm_base``
-    The module that provides the ``get_network_device`` function.
+    The library that provides the ``get_network_device`` function.
     This option is useful when the user has more specific needs and requires
     to extend the NAPALM capabilities using a private library implementation.
     The only constraint is that the alternative library needs to have the
@@ -123,23 +135,13 @@ Example using a user-specific library, extending NAPALM's capabilities, e.g. ``c
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python lib
 import logging
 log = logging.getLogger(__file__)
 
-# Import third party lib
-try:
-    # will try to import NAPALM
-    # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
-    import napalm_base
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
-
+# Import Salt modules
 from salt.ext import six
 import salt.utils.napalm
 
@@ -163,7 +165,7 @@ DETAILS = {}
 
 
 def __virtual__():
-    return HAS_NAPALM or (False, 'Please install the NAPALM library: `pip install napalm`!')
+    return salt.utils.napalm.virtual(__opts__, 'napalm', __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -194,10 +196,10 @@ def alive(opts):
         # or regular minion
     is_alive_ret = call('is_alive', **{})
     if not is_alive_ret.get('result', False):
-        log.debug('[{proxyid}] Unable to execute `is_alive`: {comment}'.format(
-            proxyid=opts.get('id'),
-            comment=is_alive_ret.get('comment')
-        ))
+        log.debug(
+            '[%s] Unable to execute `is_alive`: %s',
+            opts.get('id'), is_alive_ret.get('comment')
+        )
         # if `is_alive` is not implemented by the underneath driver,
         # will consider the connection to be still alive
         # we don't want overly request connection reestablishment
@@ -205,10 +207,7 @@ def alive(opts):
         #       and return False to force reconnection
         return True
     flag = is_alive_ret.get('out', {}).get('is_alive', False)
-    log.debug('Is {proxyid} still alive? {answ}'.format(
-        proxyid=opts.get('id'),
-        answ='Yes.' if flag else 'No.'
-    ))
+    log.debug('Is %s still alive? %s', opts.get('id'), 'Yes.' if flag else 'No.')
     return flag
 
 
@@ -275,13 +274,12 @@ def shutdown(opts):
             raise Exception('not connected!')
         NETWORK_DEVICE.get('DRIVER').close()
     except Exception as error:
+        port = NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port')
         log.error(
-            'Cannot close connection with {hostname}{port}! Please check error: {error}'.format(
-                hostname=NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
-                port=(':{port}'.format(port=NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port'))
-                      if NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port') else ''),
-                error=error
-            )
+            'Cannot close connection with %s%s! Please check error: %s',
+            NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
+            ':{0}'.format(port) if port else '',
+            error
         )
 
     return True

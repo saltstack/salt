@@ -171,7 +171,7 @@ Look there to find an example structure for pillar as well as an example
 ``.sls`` file for standing up a Dell Chassis from scratch.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -196,9 +196,7 @@ def __virtual__():
     Only return if all the modules are available
     '''
     if not salt.utils.path.which('racadm'):
-        log.critical('fx2 proxy minion needs "racadm" to be installed.')
-        return False
-
+        return False, 'fx2 proxy minion needs "racadm" to be installed.'
     return True
 
 

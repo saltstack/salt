@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
+States for managing Hashicorp Vault.
+Currently handles policies. Configuration instructions are documented in the execution module docs.
+
 :maintainer:    SaltStack
 :maturity:      new
 :platform:      all
 
 .. versionadded:: 2017.7.0
 
-States for managing Hashicorp Vault. Currently handles policies. Configuration
-instructions are documented in the execution module docs.
 '''
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import difflib
 
@@ -28,16 +30,16 @@ def policy_present(name, rules):
 
 
     .. code-block:: yaml
-    demo-policy:
-      vault.policy_present:
-        - name: foo/bar
-        - rules: |
-            path "secret/top-secret/*" {
-              policy = "deny"
-            }
-            path "secret/not-very-secret/*" {
-              policy = "write"
-            }
+        demo-policy:
+          vault.policy_present:
+            - name: foo/bar
+            - rules: |
+                path "secret/top-secret/*" {
+                  policy = "deny"
+                }
+                path "secret/not-very-secret/*" {
+                  policy = "write"
+                }
 
     '''
     url = "v1/sys/policy/{0}".format(name)

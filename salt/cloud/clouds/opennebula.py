@@ -61,7 +61,7 @@ to find the IP of the new VM.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import pprint
@@ -80,6 +80,7 @@ import salt.utils.data
 import salt.utils.files
 
 # Import Third Party Libs
+from salt.ext import six
 try:
     import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
     from lxml import etree
@@ -446,7 +447,7 @@ def reboot(name, call=None):
             'The start action must be called with -a or --action.'
         )
 
-    log.info('Rebooting node {0}'.format(name))
+    log.info('Rebooting node %s', name)
 
     return vm_action(name, kwargs={'action': 'reboot'}, call=call)
 
@@ -471,7 +472,7 @@ def start(name, call=None):
             'The start action must be called with -a or --action.'
         )
 
-    log.info('Starting node {0}'.format(name))
+    log.info('Starting node %s', name)
 
     return vm_action(name, kwargs={'action': 'resume'}, call=call)
 
@@ -496,7 +497,7 @@ def stop(name, call=None):
             'The start action must be called with -a or --action.'
         )
 
-    log.info('Stopping node {0}'.format(name))
+    log.info('Stopping node %s', name)
 
     return vm_action(name, kwargs={'action': 'stop'}, call=call)
 
@@ -644,7 +645,7 @@ def get_image(vm_):
         The VM dictionary for which to obtain an image.
     '''
     images = avail_images()
-    vm_image = str(config.get_cloud_config_value(
+    vm_image = six.text_type(config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
     ))
     for image in images:
@@ -699,7 +700,7 @@ def get_location(vm_):
         The VM dictionary for which to obtain a location.
     '''
     locations = avail_locations()
-    vm_location = str(config.get_cloud_config_value(
+    vm_location = six.text_type(config.get_cloud_config_value(
         'location', vm_, __opts__, search_global=False
     ))
 
@@ -757,7 +758,7 @@ def get_template_image(kwargs=None, call=None):
     '''
     Returns a template's image from the given template name.
 
-    .. versionadded:: oxygen
+    .. versionadded:: 2018.3.0
 
     .. code-block:: bash
 
@@ -833,7 +834,7 @@ def get_template(vm_):
         The VM dictionary for which to obtain a template.
     '''
 
-    vm_template = str(config.get_cloud_config_value(
+    vm_template = six.text_type(config.get_cloud_config_value(
         'template', vm_, __opts__, search_global=False
     ))
     try:
@@ -920,7 +921,7 @@ def _get_device_template(disk, disk_info, template=None):
     '''
     Returns the template format to create a disk in open nebula
 
-    .. versionadded:: oxygen
+    .. versionadded:: 2018.3.0
 
     '''
     def _require_disk_opts(*args):
@@ -1011,7 +1012,7 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
     kwargs = {
         'name': vm_['name'],
         'template_id': get_template(vm_),
@@ -1050,7 +1051,7 @@ def create(vm_):
         for disk in get_disks:
             template.append(_get_device_template(disk, get_disks[disk],
                                  template=template_name))
-        if 'CLONE' not in str(template):
+        if 'CLONE' not in six.text_type(template):
             raise SaltCloudSystemExit(
                 'Missing an image disk to clone. Must define a clone disk alongside all other disk definitions.'
             )
@@ -1067,24 +1068,20 @@ def create(vm_):
                                         template_args)
         if not cret[0]:
             log.error(
-                'Error creating {0} on OpenNebula\n\n'
+                'Error creating %s on OpenNebula\n\n'
                 'The following error was returned when trying to '
-                'instantiate the template: {1}'.format(
-                    vm_['name'],
-                    cret[1]
-                ),
+                'instantiate the template: %s',
+                vm_['name'], cret[1],
                 # Show the traceback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
             return False
     except Exception as exc:
         log.error(
-            'Error creating {0} on OpenNebula\n\n'
+            'Error creating %s on OpenNebula\n\n'
             'The following exception was thrown when trying to '
-            'run the initial deployment: {1}'.format(
-                vm_['name'],
-                str(exc)
-            ),
+            'run the initial deployment: %s',
+            vm_['name'], exc,
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -1120,7 +1117,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
@@ -1165,11 +1162,10 @@ def create(vm_):
     ret['private_ips'] = private_ip
     ret['public_ips'] = []
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data)
     )
 
     __utils__['cloud.fire_event'](
@@ -2729,7 +2725,7 @@ def vm_action(name, kwargs=None, call=None):
     response = server.one.vm.action(auth, action, vm_id)
 
     data = {
-        'action': 'vm.action.' + str(action),
+        'action': 'vm.action.' + six.text_type(action),
         'actioned': response[0],
         'vm_id': response[1],
         'error_code': response[2],
@@ -4488,10 +4484,8 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for node \'{0}\'. Remaining '
-                'attempts: {1}'.format(
-                    name, attempts
-                )
+                'Failed to get the data for node \'%s\'. Remaining '
+                'attempts: %s', name, attempts
             )
 
             # Just a little delay between attempts...
@@ -4598,7 +4592,7 @@ def _xml_to_dict(xml):
         key = item.tag.lower()
         idx = 1
         while key in dicts:
-            key += str(idx)
+            key += six.text_type(idx)
             idx += 1
         if item.text is None:
             dicts[key] = _xml_to_dict(item)

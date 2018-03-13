@@ -34,16 +34,20 @@ mysql:
     - rollback: True
 
 '''
-from __future__ import absolute_import
-import json
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-# Import third party libs
-from salt.ext import six
-import salt.utils.files
+# Import Salt libs
 import salt.exceptions
-import yaml
-# Import python libs
+import salt.utils.files
+import salt.utils.json
+import salt.utils.stringutils
+import salt.utils.yaml
+
+# Import 3rd-party libs
+from salt.ext import six
+
 # pylint: disable=import-error
 HAS_OSLO = False
 try:
@@ -51,36 +55,6 @@ try:
     HAS_OSLO = True
 except ImportError:
     pass
-
-if hasattr(yaml, 'CSafeLoader'):
-    YamlLoader = yaml.CSafeLoader
-else:
-    YamlLoader = yaml.SafeLoader
-
-if hasattr(yaml, 'CSafeDumper'):
-    YamlDumper = yaml.CSafeDumper
-else:
-    YamlDumper = yaml.SafeDumper
-
-
-def _represent_yaml_str(self, node):
-    '''
-    Represent for yaml
-    '''
-    return self.represent_scalar(node)
-YamlDumper.add_representer(u'tag:yaml.org,2002:str',
-                           _represent_yaml_str)
-YamlDumper.add_representer(u'tag:yaml.org,2002:timestamp',
-                           _represent_yaml_str)
-
-
-def _construct_yaml_str(self, node):
-    '''
-    Construct for yaml
-    '''
-    return self.construct_scalar(node)
-YamlLoader.add_constructor(u'tag:yaml.org,2002:timestamp',
-                           _construct_yaml_str)
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -102,15 +76,12 @@ def _parse_template(tmpl_str):
     '''
     tmpl_str = tmpl_str.strip()
     if tmpl_str.startswith('{'):
-        tpl = json.loads(tmpl_str)
+        tpl = salt.utils.json.loads(tmpl_str)
     else:
         try:
-            tpl = yaml.load(tmpl_str, Loader=YamlLoader)
-        except yaml.YAMLError:
-            try:
-                tpl = yaml.load(tmpl_str, Loader=yaml.SafeLoader)
-            except yaml.YAMLError as yea:
-                raise ValueError(yea)
+            tpl = salt.utils.yaml.safe_load(tmpl_str)
+        except salt.utils.yaml.YAMLError as exc:
+            raise ValueError(six.text_type(exc))
         else:
             if tpl is None:
                 tpl = {}
@@ -210,14 +181,12 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
             if (template_manage_result['result']) or \
                     ((__opts__['test']) and (template_manage_result['result'] is not False)):
                 with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
-                    tpl = tfp_.read()
+                    tpl = salt.utils.stringutils.to_unicode(tfp_.read())
                     salt.utils.files.safe_rm(template_tmp_file)
                     try:
-                        if isinstance(tpl, six.binary_type):
-                            tpl = tpl.decode('utf-8')
                         template_parse = _parse_template(tpl)
                         if 'heat_template_version' in template_parse:
-                            template_new = yaml.dump(template_parse, Dumper=YamlDumper)
+                            template_new = salt.utils.yaml.safe_dump(template_parse)
                         else:
                             template_new = jsonutils.dumps(template_parse, indent=2, ensure_ascii=False)
                         salt.utils.files.safe_rm(template_tmp_file)

@@ -32,9 +32,7 @@ Management of the Salt beacons
               - 1.0
 
 '''
-from __future__ import absolute_import
-import logging
-log = logging.getLogger(__name__)
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name,
@@ -173,7 +171,7 @@ def enabled(name, **kwargs):
             result = __salt__['beacons.enable_beacon'](name, **kwargs)
             ret['comment'].append(result['comment'])
         else:
-            result = __salt__['beacons.enable_job'](name, **kwargs)
+            result = __salt__['beacons.enable_beacon'](name, **kwargs)
             if not result['result']:
                 ret['result'] = result['result']
                 ret['comment'] = result['comment']

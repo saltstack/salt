@@ -16,7 +16,7 @@ Salt Minions maintain a *proc* directory in the Salt ``cachedir``. The *proc*
 directory maintains files named after the executed job ID. These files contain
 the information about the current running jobs on the minion and allow for
 jobs to be looked up. This is located in the *proc* directory under the
-cachedir, with a default configuration it is under ``/var/cache/salt/proc``.
+cachedir, with a default configuration it is under ``/var/cache/salt/{master|minion}/proc``.
 
 Functions in the saltutil Module
 ================================
@@ -210,6 +210,28 @@ localtime.
 
 This will schedule the command: ``state.sls httpd test=True`` at 5:00 PM on
 Monday, Wednesday and Friday, and 3:00 PM on Tuesday and Thursday.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        args:
+          - httpd
+        kwargs:
+          test: True
+        when:
+          - 'tea time'
+
+.. code-block:: yaml
+
+    whens:
+      tea time: 1:40pm
+      deployment time: Friday 5:00pm
+
+The Salt scheduler also allows custom phrases to be used for the `when`
+parameter.  These `whens` can be stored as either pillar values or
+grain values.
 
 .. code-block:: yaml
 

@@ -27,7 +27,7 @@ Please check Installation_ for complete details.
 .. _NAPALM: https://napalm.readthedocs.io
 .. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__file__)
@@ -239,6 +239,7 @@ def term(name,
         - flattened_addr
         - flattened_saddr
         - flattened_daddr
+        - priority
 
     .. note::
         The following fields can be also a single value and a list of values:

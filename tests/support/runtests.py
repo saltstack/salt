@@ -50,10 +50,11 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
-import json
 import shutil
 import logging
 import multiprocessing
+
+import salt.utils.json
 
 # Import tests support libs
 import tests.support.paths as paths
@@ -78,7 +79,7 @@ try:
         coverage_object.save()
 
     def multiprocessing_start(obj):
-        coverage_options = json.loads(os.environ.get('SALT_RUNTESTS_COVERAGE_OPTIONS', '{}'))
+        coverage_options = salt.utils.json.loads(os.environ.get('SALT_RUNTESTS_COVERAGE_OPTIONS', '{}'))
         if not coverage_options:
             return
 
@@ -215,6 +216,7 @@ RUNTIME_VARS = RuntimeVars(
     TMP_SYNDIC_MINION_CONF_DIR=paths.TMP_SYNDIC_MINION_CONF_DIR,
     TMP_SCRIPT_DIR=paths.TMP_SCRIPT_DIR,
     TMP_STATE_TREE=paths.TMP_STATE_TREE,
+    TMP_PILLAR_TREE=paths.TMP_PILLAR_TREE,
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
     RUNNING_TESTS_USER=RUNNING_TESTS_USER,
     RUNTIME_CONFIGS={}

@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing Libs
@@ -19,6 +19,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.config
+import salt.utils.path
 from salt.syspaths import BASE_FILE_ROOTS_DIR
 import salt.states.winrepo as winrepo
 
@@ -77,7 +78,7 @@ class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=[0, 1, 2, 3, 4, 5, 6, 7, 8])
             with patch.object(os, 'stat', mock):
                 mock = MagicMock(return_value=[])
-                with patch.object(os, 'walk', mock):
+                with patch.object(salt.utils.path, 'os_walk', mock):
                     with patch.dict(winrepo.__opts__, {'test': True}):
                         ret.update({'comment': '', 'result': None})
                         self.assertDictEqual(winrepo.genrepo('salt'), ret)

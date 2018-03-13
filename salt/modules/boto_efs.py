@@ -50,7 +50,7 @@ Connection module for Amazon EFS
 
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 
@@ -63,7 +63,7 @@ except ImportError:
     HAS_BOTO3 = False
 
 # Import salt libs
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -73,18 +73,10 @@ def __virtual__():
     Only load if boto3 libraries exist and if boto3 libraries are greater than
     a given version.
     '''
-
-    required_boto_version = '1.0.0'
-
-    if not HAS_BOTO3:
-        return (False, "The boto3.efs module cannot be loaded: " +
-                "boto3 library not found")
-    elif _LooseVersion(boto3.__version__) < \
-         _LooseVersion(required_boto_version):
-        return (False, "The boto3.efs module cannot be loaded:" +
-                "boto3 library version incorrect")
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto3_ver='1.0.0',
+        check_boto=False
+    )
 
 
 def _get_conn(key=None,
@@ -156,7 +148,7 @@ def create_file_system(name,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.create_file_system efs-name generalPurpose
     '''
@@ -222,7 +214,7 @@ def create_mount_target(filesystemid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.create_mount_target filesystemid subnetid
     '''
@@ -269,7 +261,7 @@ def create_tags(filesystemid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.create_tags
     '''
@@ -301,7 +293,7 @@ def delete_file_system(filesystemid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.delete_file_system filesystemid
     '''
@@ -335,7 +327,7 @@ def delete_mount_target(mounttargetid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.delete_mount_target mounttargetid
     '''
@@ -363,7 +355,7 @@ def delete_tags(filesystemid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.delete_tags
     '''
@@ -398,7 +390,7 @@ def get_file_systems(filesystemid=None,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.get_file_systems efs-id
     '''
@@ -454,7 +446,7 @@ def get_mount_targets(filesystemid=None,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.get_mount_targets
     '''
@@ -493,7 +485,7 @@ def get_tags(filesystemid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.get_tags efs-id
     '''
@@ -527,7 +519,7 @@ def set_security_groups(mounttargetid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.set_security_groups my-mount-target-id my-sec-group
     '''

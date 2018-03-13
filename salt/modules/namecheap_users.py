@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
- Namecheap management
+Namecheap users management
 
  .. versionadded:: 2017.7.0
 
@@ -40,7 +40,7 @@
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 CAN_USE_NAMECHEAP = True
 

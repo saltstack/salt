@@ -9,7 +9,7 @@ Manage X509 certificates
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import logging
 import hashlib
@@ -17,7 +17,6 @@ import glob
 import random
 import ctypes
 import tempfile
-import yaml
 import re
 import datetime
 import ast
@@ -177,7 +176,7 @@ def _parse_openssl_req(csr_filename):
     output = re.sub(r': rsaEncryption', ':', output)
     output = re.sub(r'[0-9a-f]{2}:', '', output)
 
-    return yaml.safe_load(output)
+    return salt.utils.data.decode(salt.utils.yaml.safe_load(output))
 
 
 def _get_csr_extensions(csr):
@@ -266,7 +265,7 @@ def _parse_openssl_crl(crl_filename):
 
         rev_sn = revoked.split('\n')[0].strip()
         revoked = rev_sn + ':\n' + '\n'.join(revoked.split('\n')[1:])
-        rev_yaml = yaml.safe_load(revoked)
+        rev_yaml = salt.utils.data.decode(salt.utils.yaml.safe_load(revoked))
         # pylint: disable=unused-variable
         for rev_item, rev_values in six.iteritems(rev_yaml):
             # pylint: enable=unused-variable
@@ -317,7 +316,7 @@ def _text_or_file(input_):
     '''
     if os.path.isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
-            return fp_.read()
+            return salt.utils.stringutils.to_unicode(fp_.read())
     else:
         return input_
 
@@ -336,9 +335,8 @@ def _parse_subject(subject):
             if val:
                 ret[nid_name] = val
                 nids.append(nid_num)
-        except TypeError as e:
-            if e.args and e.args[0] == 'No string argument provided':
-                pass
+        except TypeError as err:
+            log.trace("Missing attribute '%s'. Error: %s", nid_name, err)
 
     return ret
 
@@ -509,7 +507,7 @@ def get_pem_entries(glob_path):
 
     .. code-block:: bash
 
-        salt '*' x509.read_pem_entries "/etc/pki/*.crt"
+        salt '*' x509.get_pem_entries "/etc/pki/*.crt"
     '''
     ret = {}
 
@@ -775,10 +773,10 @@ def write_pem(text, path, overwrite=True, pem_type=None):
             pass
     with salt.utils.files.fopen(path, 'w') as _fp:
         if pem_type and pem_type == 'CERTIFICATE' and _private_key:
-            _fp.write(_private_key)
+            _fp.write(salt.utils.stringutils.to_str(_private_key))
         _fp.write(text)
         if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
-            _fp.write(_dhparams)
+            _fp.write(salt.utils.stringutils.to_str(_dhparams))
     os.umask(old_umask)
     return 'PEM written to {0}'.format(path)
 
@@ -951,7 +949,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
             rev_item['not_after'] = rev_cert['Not After']
 
         serial_number = rev_item['serial_number'].replace(':', '')
-        serial_number = str(int(serial_number, 16))
+        serial_number = six.text_type(int(serial_number, 16))
 
         if 'not_after' in rev_item and not include_expired:
             not_after = datetime.datetime.strptime(
@@ -1052,7 +1050,10 @@ def sign_remote_certificate(argdic, **kwargs):
     if 'minions' in signing_policy:
         if '__pub_id' not in kwargs:
             return 'minion sending this request could not be identified'
-        if not __salt__['match.glob'](
+        matcher = 'match.glob'
+        if '@' in signing_policy['minions']:
+            matcher = 'match.compound'
+        if not __salt__[matcher](
                 signing_policy['minions'], kwargs['__pub_id']):
             return '{0} not permitted to use signing policy {1}'.format(
                 kwargs['__pub_id'], argdic['signing_policy'])
@@ -1060,7 +1061,7 @@ def sign_remote_certificate(argdic, **kwargs):
     try:
         return create_certificate(path=None, text=True, **argdic)
     except Exception as except_:  # pylint: disable=broad-except
-        return str(except_)
+        return six.text_type(except_)
 
 
 def get_signing_policy(signing_policy_name):
@@ -1312,8 +1313,8 @@ def create_certificate(
         a minion pillar. It should be a yaml formatted list of arguments
         which will override any arguments passed to this function. If the
         ``minions`` key is included in the signing policy, only minions
-        matching that pattern will be permitted to remotely request
-        certificates from that policy.
+        matching that pattern (see match.glob and match.compound) will be
+        permitted to remotely request certificates from that policy.
 
         Example:
 
@@ -1381,7 +1382,7 @@ def create_certificate(
         certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
-            arg=str(kwargs))
+            arg=six.text_type(kwargs))
 
         if not any(certs):
             raise salt.exceptions.SaltInvocationError(
@@ -1535,7 +1536,7 @@ def create_certificate(
 
     if 'copypath' in kwargs:
         if 'prepend_cn' in kwargs and kwargs['prepend_cn'] is True:
-            prepend = str(kwargs['CN']) + '-'
+            prepend = six.text_type(kwargs['CN']) + '-'
         else:
             prepend = ''
         write_pem(text=cert.as_pem(), path=os.path.join(kwargs['copypath'],

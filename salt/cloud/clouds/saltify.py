@@ -9,7 +9,7 @@ The Saltify module is designed to install Salt on a remote machine, virtual or
 bare metal, using SSH. This module is useful for provisioning machines which
 are already installed, but not Salted.
 
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     The wake_on_lan capability, and actions destroy, reboot, and query functions were added.
 
 Use of this module requires some configuration in cloud profile and provider
@@ -18,7 +18,7 @@ files as described in the
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -88,7 +88,7 @@ def avail_images(call=None):
 
     returns a list of available profiles.
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
 
     '''
     vm_ = get_configured_provider()
@@ -118,7 +118,7 @@ def list_nodes(call=None):
 
     returns a list of dictionaries of defined standard fields.
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
 
     '''
     nodes = _list_nodes_full(call)
@@ -164,7 +164,7 @@ def list_nodes_full(call=None):
 
     for 'saltify' minions, returns dict of grains (enhanced).
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
     '''
 
     ret = _list_nodes_full(call)
@@ -258,19 +258,31 @@ def create(vm_):
         wol_host = config.get_cloud_config_value(
             'wol_sender_node', vm_, __opts__, default='')
         if wol_mac and wol_host:
-            log.info('sending wake-on-lan to %s using node %s',
-                     wol_mac, wol_host)
+            good_ping = False
             local = salt.client.LocalClient()
-            if isinstance(wol_mac, six.string_types):
-                wol_mac = [wol_mac]  # a smart user may have passed more params
-            ret = local.cmd(wol_host, 'network.wol', wol_mac)
-            log.info('network.wol returned value %s', ret)
-            if ret and ret[wol_host]:
-                sleep_time = config.get_cloud_config_value(
-                    'wol_boot_wait', vm_, __opts__, default=30)
-                if sleep_time > 0.0:
-                    log.info('delaying %d seconds for boot', sleep_time)
-                    time.sleep(sleep_time)
+            ssh_host = config.get_cloud_config_value(
+                'ssh_host', vm_, __opts__, default='')
+            if ssh_host:
+                log.info('trying to ping %s', ssh_host)
+                count = 'n' if salt.utils.platform.is_windows() else 'c'
+                cmd = 'ping -{} 1 {}'.format(count, ssh_host)
+                good_ping = local.cmd(wol_host, 'cmd.retcode', [cmd]) == 0
+            if good_ping:
+                log.info('successful ping.')
+            else:
+                log.info('sending wake-on-lan to %s using node %s',
+                         wol_mac, wol_host)
+
+                if isinstance(wol_mac, six.string_types):
+                    wol_mac = [wol_mac]  # a smart user may have passed more params
+                ret = local.cmd(wol_host, 'network.wol', wol_mac)
+                log.info('network.wol returned value %s', ret)
+                if ret and ret[wol_host]:
+                    sleep_time = config.get_cloud_config_value(
+                        'wol_boot_wait', vm_, __opts__, default=30)
+                    if sleep_time > 0.0:
+                        log.info('delaying %d seconds for boot', sleep_time)
+                        time.sleep(sleep_time)
         log.info('Provisioning existing machine %s', vm_['name'])
         ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     else:
@@ -387,7 +399,7 @@ def _verify(vm_):
 def destroy(name, call=None):
     ''' Destroy a node.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Disconnect a minion from the master, and remove its keys.
 
@@ -477,7 +489,7 @@ def reboot(name, call=None):
     '''
     Reboot a saltify minion.
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
 
     name
         The name of the VM to reboot.

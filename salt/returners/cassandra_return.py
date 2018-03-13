@@ -20,7 +20,7 @@ Required python modules: pycassa
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -68,9 +68,9 @@ def returner(ret):
                'id': ret['id']}
     if isinstance(ret['return'], dict):
         for key, value in six.iteritems(ret['return']):
-            columns['return.{0}'.format(key)] = str(value)
+            columns['return.{0}'.format(key)] = six.text_type(value)
     else:
-        columns['return'] = str(ret['return'])
+        columns['return'] = six.text_type(ret['return'])
 
     log.debug(columns)
     ccf.insert(ret['jid'], columns)

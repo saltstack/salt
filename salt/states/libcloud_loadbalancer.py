@@ -12,7 +12,7 @@ of supported clouds, see http://libcloud.readthedocs.io/en/latest/loadbalancer/s
 
 Clouds include Amazon ELB, ALB, Google, Aliyun, CloudStack, Softlayer
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration:
     This module uses a configuration profile for one or multiple Cloud providers
@@ -34,6 +34,7 @@ Example:
 Using States to deploy a load balancer with extended arguments to specify region
 
 .. code-block:: yaml
+
     lb_test:
         libcloud_loadbalancer.balancer_present:
             - name: example
@@ -46,7 +47,7 @@ Using States to deploy a load balancer with extended arguments to specify region
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import salt libs

@@ -4,7 +4,7 @@ Module for gathering and managing network information
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import hashlib
 import logging
@@ -864,7 +864,7 @@ def traceroute(host):
             # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
 
             traceroute_version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
-            log.debug('traceroute_version_raw: {0}'.format(traceroute_version_raw))
+            log.debug('traceroute_version_raw: %s', traceroute_version_raw)
             traceroute_version = []
             for t in traceroute_version_raw:
                 try:
@@ -875,7 +875,7 @@ def traceroute(host):
             if len(traceroute_version) < 3:
                 traceroute_version.append(0)
 
-            log.debug('traceroute_version: {0}'.format(traceroute_version))
+            log.debug('traceroute_version: %s', traceroute_version)
 
         except IndexError:
             traceroute_version = [0, 0, 0]
@@ -899,15 +899,16 @@ def traceroute(host):
             if line.startswith('fragmentation required'):
                 continue
 
-        if 'Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1]) or \
-            __grains__['kernel'] in ('SunOS', 'AIX'):
+        if 'Darwin' in six.text_type(traceroute_version[1]) or \
+            'FreeBSD' in six.text_type(traceroute_version[1]) or \
+                __grains__['kernel'] in ('SunOS', 'AIX'):
             try:
                 traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
             except IndexError:
                 traceline = re.findall(r'\s*(\d*)\s+(\*\s+\*\s+\*)', line)[0]
 
-            log.debug('traceline: {0}'.format(traceline))
-            delays = re.findall(r'(\d+\.\d+)\s*ms', str(traceline))
+            log.debug('traceline: %s', traceline)
+            delays = re.findall(r'(\d+\.\d+)\s*ms', six.text_type(traceline))
 
             try:
                 if traceline[1] == '* * *':
@@ -1140,8 +1141,8 @@ def convert_cidr(cidr):
            'netmask': None}
     cidr = calc_net(cidr)
     network_info = salt.ext.ipaddress.ip_network(cidr)
-    ret['network'] = str(network_info.network_address)
-    ret['netmask'] = str(network_info.netmask)
+    ret['network'] = six.text_type(network_info.network_address)
+    ret['netmask'] = six.text_type(network_info.netmask)
     return ret
 
 
@@ -1279,11 +1280,16 @@ def mod_hostname(hostname):
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
     if hostname_cmd.endswith('hostnamectl'):
-        out = __salt__['cmd.run']('{0} status'.format(hostname_cmd))
-        for line in out.splitlines():
-            line = line.split(':')
-            if 'Static hostname' in line[0]:
-                o_hostname = line[1].strip()
+        result = __salt__['cmd.run_all']('{0} status'.format(hostname_cmd))
+        if 0 == result['retcode']:
+            out = result['stdout']
+            for line in out.splitlines():
+                line = line.split(':')
+                if 'Static hostname' in line[0]:
+                    o_hostname = line[1].strip()
+        else:
+            log.debug('{0} was unable to get hostname'.format(hostname_cmd))
+            o_hostname = __salt__['network.get_hostname']()
     elif not salt.utils.platform.is_sunos():
         # don't run hostname -f because -f is not supported on all platforms
         o_hostname = socket.getfqdn()
@@ -1292,7 +1298,16 @@ def mod_hostname(hostname):
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
     if hostname_cmd.endswith('hostnamectl'):
-        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
+        result = __salt__['cmd.run_all']('{0} set-hostname {1}'.format(
+            hostname_cmd,
+            hostname,
+            ))
+        if result['retcode'] != 0:
+            log.debug('{0} was unable to set hostname. Error: {1}'.format(
+                hostname_cmd,
+                result['stderr'],
+                ))
+            return False
     elif not salt.utils.platform.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
     else:
@@ -1301,7 +1316,8 @@ def mod_hostname(hostname):
     # Modify the /etc/hosts file to replace the old hostname with the
     # new hostname
     with salt.utils.files.fopen('/etc/hosts', 'r') as fp_:
-        host_c = fp_.readlines()
+        host_c = [salt.utils.stringutils.to_unicode(_l)
+                  for _l in fp_.readlines()]
 
     with salt.utils.files.fopen('/etc/hosts', 'w') as fh_:
         for host in host_c:
@@ -1315,36 +1331,43 @@ def mod_hostname(hostname):
             except ValueError:
                 pass
 
-            fh_.write('\t'.join(host) + '\n')
+            fh_.write(salt.utils.stringutils.to_str('\t'.join(host) + '\n'))
 
     # Modify the /etc/sysconfig/network configuration file to set the
     # new hostname
     if __grains__['os_family'] == 'RedHat':
         with salt.utils.files.fopen('/etc/sysconfig/network', 'r') as fp_:
-            network_c = fp_.readlines()
+            network_c = [salt.utils.stringutils.to_unicode(_l)
+                         for _l in fp_.readlines()]
 
         with salt.utils.files.fopen('/etc/sysconfig/network', 'w') as fh_:
             for net in network_c:
                 if net.startswith('HOSTNAME'):
                     old_hostname = net.split('=', 1)[1].rstrip()
                     quote_type = salt.utils.stringutils.is_quoted(old_hostname)
-                    fh_.write('HOSTNAME={1}{0}{1}\n'.format(
-                        salt.utils.stringutils.dequote(hostname), quote_type))
+                    fh_.write(salt.utils.stringutils.to_str(
+                        'HOSTNAME={1}{0}{1}\n'.format(
+                            salt.utils.stringutils.dequote(hostname),
+                            quote_type)))
                 else:
-                    fh_.write(net)
+                    fh_.write(salt.utils.stringutils.to_str(net))
     elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
         with salt.utils.files.fopen('/etc/hostname', 'w') as fh_:
-            fh_.write(hostname + '\n')
+            fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))
     elif __grains__['os_family'] == 'OpenBSD':
         with salt.utils.files.fopen('/etc/myname', 'w') as fh_:
-            fh_.write(hostname + '\n')
+            fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))
 
     # Update /etc/nodename and /etc/defaultdomain on SunOS
     if salt.utils.platform.is_sunos():
         with salt.utils.files.fopen('/etc/nodename', 'w') as fh_:
-            fh_.write(hostname.split('.')[0] + '\n')
+            fh_.write(salt.utils.stringutils.to_str(
+                hostname.split('.')[0] + '\n')
+            )
         with salt.utils.files.fopen('/etc/defaultdomain', 'w') as fh_:
-            fh_.write(".".join(hostname.split('.')[1:]) + '\n')
+            fh_.write(salt.utils.stringutils.to_str(
+                ".".join(hostname.split('.')[1:]) + '\n')
+            )
 
     return True
 
@@ -1549,13 +1572,14 @@ def _mod_bufsize_linux(iface, *args, **kwargs):
     if not kwargs:
         return ret
     if args:
-        ret['comment'] = 'Unknown arguments: ' + ' '.join([str(item) for item in args])
+        ret['comment'] = 'Unknown arguments: ' + ' '.join([six.text_type(item)
+                                                           for item in args])
         return ret
     eargs = ''
     for kw in ['rx', 'tx', 'rx-mini', 'rx-jumbo']:
         value = kwargs.get(kw)
         if value is not None:
-            eargs += ' ' + kw + ' ' + str(value)
+            eargs += ' ' + kw + ' ' + six.text_type(value)
     if not eargs:
         return ret
     cmd += eargs
@@ -1825,7 +1849,7 @@ def ifacestartswith(cidr):
     '''
     net_list = interfaces()
     intfnames = []
-    pattern = str(cidr)
+    pattern = six.text_type(cidr)
     size = len(pattern)
     for ifname, ifval in six.iteritems(net_list):
         if 'inet' in ifval:

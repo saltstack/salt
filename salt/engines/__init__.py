@@ -4,7 +4,7 @@ Initialize the engines system. This plugin system allows for
 complex services to be encapsulated within the salt plugin environment
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import multiprocessing
 import logging
 
@@ -50,7 +50,7 @@ def start_engines(opts, proc_mgr, proxy=None):
         if fun in engines:
             start_func = engines[fun]
             name = '{0}.Engine({1})'.format(__name__, start_func.__module__)
-            log.info('Starting Engine {0}'.format(name))
+            log.info('Starting Engine %s', name)
             proc_mgr.add_process(
                     Engine,
                     args=(
@@ -127,4 +127,7 @@ class Engine(SignalHandlingMultiprocessingProcess):
         try:
             self.engine[self.fun](**kwargs)
         except Exception as exc:
-            log.critical('Engine {0} could not be started! Error: {1}'.format(self.engine, exc))
+            log.critical(
+                'Engine \'%s\' could not be started!',
+                self.fun.split('.')[0], exc_info=True
+            )

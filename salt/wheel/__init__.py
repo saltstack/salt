@@ -4,7 +4,7 @@ Modules used to control the master itself
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 
 # Import salt libs
@@ -14,6 +14,9 @@ import salt.loader
 import salt.transport
 import salt.utils.error
 import salt.utils.zeromq
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 class WheelClient(salt.client.mixins.SyncClientMixin,
@@ -43,7 +46,8 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
 
     def __init__(self, opts=None):
         self.opts = opts
-        self.functions = salt.loader.wheels(opts)
+        self.context = {}
+        self.functions = salt.loader.wheels(opts, context=self.context)
 
     # TODO: remove/deprecate
     def call_func(self, fun, **kwargs):
@@ -64,7 +68,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
         if interface == '0.0.0.0':
             interface = '127.0.0.1'
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(interface) + \
-                                                      ':' + str(self.opts['ret_port'])
+                                                      ':' + six.text_type(self.opts['ret_port'])
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt='clear',
                                                  master_uri=master_uri,

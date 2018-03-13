@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
- Namecheap management
+Namecheap nameservers management
 
 .. versionadded:: 2017.7.0
 
@@ -17,6 +17,7 @@
    the namecheap API:
 
         * ``requests``
+
         .. code-block:: bash
 
             pip install requests
@@ -40,7 +41,8 @@
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+
 CAN_USE_NAMECHEAP = True
 
 

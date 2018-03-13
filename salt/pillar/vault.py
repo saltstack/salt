@@ -49,11 +49,8 @@ Multiple Vault sources may also be used:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-
-# Import Salt libs
-import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -77,15 +74,9 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     '''
     comps = conf.split()
 
-    if not comps[0].startswith('path='):
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'The \'profile\' argument has been deprecated. Any parts up until '
-            'and following the first "path=" are discarded'
-        )
     paths = [comp for comp in comps if comp.startswith('path=')]
     if not paths:
-        log.error('"{0}" is not a valid Vault ext_pillar config'.format(conf))
+        log.error('"%s" is not a valid Vault ext_pillar config', conf)
         return {}
 
     try:
@@ -97,7 +88,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
             response.raise_for_status()
         vault_pillar = response.json()['data']
     except KeyError:
-        log.error('No such path in Vault: {0}'.format(path))
+        log.error('No such path in Vault: %s', path)
         vault_pillar = {}
 
     return vault_pillar
