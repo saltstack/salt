@@ -102,8 +102,6 @@ def _add_dependency(container, obj):
     :param is_file:
     :return:
     '''
-    if not obj:
-        return
     if os.path.basename(obj.__file__).split('.')[0] == '__init__':
         container.append(os.path.dirname(obj.__file__))
     else:
@@ -123,7 +121,7 @@ def get_tops(extra_mods='', so_mods=''):
                 singledispatch_helpers, ssl_match_hostname, markupsafe, backports_abc]:
         if mod:
             log.debug('Adding module: "%s"', mod.__name__)
-        _add_dependency(tops, mod)
+            _add_dependency(tops, mod)
 
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():
