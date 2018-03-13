@@ -10,12 +10,13 @@ import json
 import logging
 
 # Import salt libs
+import re
 import time
 import zmq
 
 import salt.utils.event
 import salt.utils.json
-from salt.performance.payloads import message_observed
+from salt.performance.payloads import message_observed, job_results_end
 from salt.performance.time_provider import TimestampProvider
 
 log = logging.getLogger(__name__)
@@ -67,12 +68,8 @@ def start(host='127.0.0.1',
             __opts__['sock_dir'],
             listen=True)
     else:
-        event_bus = salt.utils.event.get_event(
-            'minion',
-            transport=__opts__['transport'],
-            opts=__opts__,
-            sock_dir=__opts__['sock_dir'],
-            listen=True)
+        raise RuntimeError("Relay engine must run at master only")
+
     log.debug("Using host=%s and port=%d for ZMQ" % (host, port))
     sender = ZmqSender(JsonRenderer(), zmq_host=host, zmq_port=port)
     log.debug('ZMQ relay engine has started')
@@ -83,17 +80,54 @@ def start(host='127.0.0.1',
             if not event:
                 continue
 
-            # from pudb.remote import set_trace; set_trace(term_size=(200, 48), port=6898)
-
             jevent = salt.utils.json.dumps(event)
             sender.send(message_observed(msg_length=len(jevent), tag=event['tag'], ts=TimestampProvider.get_now()))
 
-            if event['tag'].startswith('perf/'):
+            if _is_jobcompletion(event):
+                _process_job_completion(event, sender)
+
+            if _is_performance(event):
                 sender.send(_extract_data(event))
 
     finally:
         sender.close()
         log.debug("ZMQ relay engine has stopped")
+
+
+def _is_performance(event):
+    return event['tag'].startswith('perf/')
+
+
+def _process_job_completion(event, sender):
+    data = _extract_data(event)
+
+    returned_count = len(data['returned'])
+    silent_count = len(data['missing'])
+
+    jid = _extract_jid_completion(event)
+    sender.send(job_results_end(jid,
+                                _get_master_id(),
+                                TimestampProvider.get_now(),
+                                returned_count,
+                                returned_count + silent_count
+                                ))
+
+
+def _extract_jid_completion(event):
+    return re.match(_get_completion_tag_regex(), event['tag']).group(1)
+
+
+def _get_master_id():
+    return __opts__['id']
+
+
+def _is_jobcompletion(event):
+    tag = event['tag']
+    return re.match(_get_completion_tag_regex(), tag)
+
+
+def _get_completion_tag_regex():
+    return r'^salt/job/([^/]*)/complete'
 
 
 def _extract_data(event):
@@ -104,3 +138,4 @@ def _extract_data(event):
         e = e['data']
     e.pop('_stamp', None)
     return e
+

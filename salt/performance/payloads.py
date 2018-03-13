@@ -24,9 +24,10 @@ def job_results_start(jid, ts):
                 meta=dict(jid=jid))
 
 
-def job_results_end(jid, master_id, ts):
+def job_results_end(jid, master_id, ts, minions_expected, minions_returned):
     return dict(message_type="job_results_end", ts=ts,
-                meta=dict(jid=jid, master_id=master_id, minions_expected=1, minions_returned=1))
+                meta=dict(jid=jid, master_id=master_id, minions_expected=minions_expected,
+                          minions_returned=minions_returned))
 
 
 def message_observed(msg_length, tag, ts):
