@@ -153,9 +153,10 @@ def latest_version(*names, **kwargs):
                 continue
 
             cur = pkgs.get(pkgname, '')
-            if not cur or salt.utils.compare_versions(ver1=cur,
-                                                      oper='<',
-                                                      ver2=pkgver):
+            if not cur or salt.utils.versions.compare(
+                ver1=cur,
+                oper='<',
+                ver2=pkgver):
                 ret[pkgname] = pkgver
 
     # Return a string if only one package name passed

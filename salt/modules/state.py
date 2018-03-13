@@ -231,7 +231,7 @@ def soft_kill(jid, state_id=None):
     this instructs a running state to safely exit at a given
     state id. This needs to pass in the jid of the running state.
     If a state_id is not passed then the jid referenced will be safely exited
-    at the begining of the next state run.
+    at the beginning of the next state run.
 
     The given state id is the id got a given state execution, so given a state
     that looks like this:
@@ -264,7 +264,7 @@ def pause(jid, state_id=None, duration=None):
     Set up a state id pause, this instructs a running state to pause at a given
     state id. This needs to pass in the jid of the running state and can
     optionally pass in a duration in seconds. If a state_id is not passed then
-    the jid referenced will be paused at the begining of the next state run.
+    the jid referenced will be paused at the beginning of the next state run.
 
     The given state id is the id got a given state execution, so given a state
     that looks like this:
