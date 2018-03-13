@@ -16,7 +16,7 @@ import zmq
 
 import salt.utils.event
 import salt.utils.json
-from salt.performance.payloads import message_observed, job_results_end
+from salt.performance.payloads import message_observed, job_results_end, job_return
 from salt.performance.time_provider import TimestampProvider
 
 log = logging.getLogger(__name__)
@@ -86,6 +86,9 @@ def start(host='127.0.0.1',
             if _is_jobcompletion(event):
                 _process_job_completion(event, sender)
 
+            if _is_job_return(event):
+                _process_job_return(event, sender)
+
             if _is_performance(event):
                 sender.send(_extract_data(event))
 
@@ -138,4 +141,25 @@ def _extract_data(event):
         e = e['data']
     e.pop('_stamp', None)
     return e
+
+
+def _is_job_return(event):
+    tag = event['tag']
+    return re.match(_get_return_tag_regex(), tag)
+
+
+def _get_return_tag_regex():
+    return r'^salt/job/(.*)/ret/.*$'
+
+
+def _extract_jid_return(event):
+    return re.match(_get_return_tag_regex(), event['tag']).group(1)
+
+
+def _process_job_return(event, sender):
+    data = _extract_data(event)
+    jid = _extract_jid_return(event)
+    minion_id = data['id']
+    master_id = _get_master_id()
+    sender.send(job_return(jid, master_id, minion_id, TimestampProvider.get_now()))
 

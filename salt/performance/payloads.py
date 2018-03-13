@@ -30,6 +30,11 @@ def job_results_end(jid, master_id, ts, minions_expected, minions_returned):
                           minions_returned=minions_returned))
 
 
+def job_return(jid, master_id, minion_id, ts):
+    return dict(message_type="job_return", ts=ts,
+                meta=dict(jid=jid, master_id=master_id, minion_id=minion_id))
+
+
 def message_observed(msg_length, tag, ts):
     return dict(message_type="message_observed_in_queue", ts=ts,
                 meta=dict(length=msg_length, tag=tag))
