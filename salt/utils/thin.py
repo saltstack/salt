@@ -261,10 +261,15 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             except ValueError:
                 pass
 
+    if compress not in ['gzip', 'zip']:
+        compress = 'gzip'
+        log.warning('Unknown compression type: "%s". Falling back to "gzip" compression.', compress)
+
     if compress == 'gzip':
         tfp = tarfile.open(thintar, 'w:gz', dereference=True)
     elif compress == 'zip':
         tfp = zipfile.ZipFile(thintar, 'w')
+
     try:  # cwd may not exist if it was removed but salt was run from it
         start_dir = os.getcwd()
     except OSError:
