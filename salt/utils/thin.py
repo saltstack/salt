@@ -237,20 +237,13 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
 
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)
-    if _six.PY2:
-        tops_py_version_mapping['2'] = tops
-    else:
-        tops_py_version_mapping['3'] = tops
+    tops_py_version_mapping[sys.version_info.major] = tops
 
-    # TODO: Consider putting known py2 and py3 compatible libs in it's own sharable directory.
-    #       This would reduce the thin size.
-    if _six.PY2 and sys.version_info[0] == 2:
+    # Collect tops, alternative to 2.x version
+    if _six.PY2 and sys.version_info.major == 2:
         # Get python 3 tops
-        py_shell_cmd = (
-            python3_bin + ' -c \'import sys; import json; import salt.utils.thin; '
-            'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);\' '
-            '\'{0}\''.format(salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
-        )
+        py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
+            python3_bin, salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
@@ -259,14 +252,12 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 tops_py_version_mapping['3'] = tops
             except ValueError:
                 pass
-    if _six.PY3 and sys.version_info[0] == 3:
+
+    # Collect tops, alternative to 3.x version
+    if _six.PY3 and sys.version_info.major == 3:
         # Get python 2 tops
-        py_shell_cmd = (
-            python2_bin + ' -c \'from __future__ import print_function; '
-            'import sys; import json; import salt.utils.thin; '
-            'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);\' '
-            '\'{0}\''.format(salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
-        )
+        py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
+            python2_bin, salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
