@@ -320,6 +320,40 @@ def set_state(name, backend, state, socket=DEFAULT_SOCKET_URL):
     return ha_conn.sendCmd(ha_cmd)
 
 
+def get_state(name, backend, socket='/var/run/haproxy.sock'):
+    '''
+
+    List HaProxy frontends
+
+    socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' haproxy.get_state wwww.example.com mysql
+    '''
+    class getStats(haproxy.cmds.Cmd):
+        p_args = ["backend", "server"]
+        cmdTxt = "show servers state %(backend)s\r\n"
+        helpText = "Fetch all statistics"
+    state_map = {'0': 'stopped',
+                 '1': 'starting',
+                 '2': 'running',
+                 '3': 'stopping'
+                 }
+
+    ha_conn = _get_conn(socket)
+    ha_cmd = getStats(server=name, backend=backend)
+    result = ha_conn.sendCmd(ha_cmd)
+    for line in result.split('\n'):
+        outcols = line.split()
+        if len(outcols) > 2 and outcols[3] == name:
+            status = outcols[5]
+            return state_map[status]
+
+
 def show_frontends(socket=DEFAULT_SOCKET_URL):
     '''
     Show HaProxy frontends
