@@ -13,6 +13,7 @@ import tarfile
 import zipfile
 import tempfile
 import subprocess
+import salt.utils.stringutils
 import logging
 
 # Import third party libs
@@ -73,22 +74,17 @@ import salt.version
 
 log = logging.getLogger(__name__)
 
-SALTCALL = '''
+SALTCALL = '''# -*- coding: utf-8 -*-
 import os
 import sys
 
-sys.path.insert(
-    0,
-    os.path.join(
-        os.path.dirname(__file__),
-        'py{0[0]}'.format(sys.version_info)
-    )
-)
-
-from salt.scripts import salt_call
 if __name__ == '__main__':
+    # Add own modules path to the system path
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__),
+                                    'py{0[0]}'.format(sys.version_info)))
+    from salt.scripts import salt_call
     salt_call()
-'''.encode('utf-8')
+'''
 
 
 def thin_path(cachedir):
@@ -183,7 +179,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     pythinver = os.path.join(thindir, '.thin-gen-py-version')
     salt_call = os.path.join(thindir, 'salt-call')
     with salt.utils.files.fopen(salt_call, 'wb') as fp_:
-        fp_.write(SALTCALL)
+        fp_.write(salt.utils.stringutils.to_bytes(SALTCALL))
     if os.path.isfile(thintar):
         if not overwrite:
             if os.path.isfile(thinver):
