@@ -22,3 +22,18 @@ the Neon release of Salt.
 
 The Salt Syndic currently sends an old style  `syndic_start` event as well. The
 syndic respects :conf_minion:`enable_legacy_startup_events` as well.
+
+
+Deprecations
+------------
+
+Roster Deprecations
+===================
+
+The ``cache`` roster had the following changes:
+
+- Support for ``roster_order`` as a list or tuple has been removed. As of the
+  ``Fluorine`` release, ``roster_order`` must be a dictionary.
+- The ``roster_order`` option now includes IPv6 in addition to IPv4 for the
+  ``private``, ``public``, ``global`` or ``local`` settings. The syntax for these
+  settings has changed to ``ipv4-*`` or ``ipv6-*``, respectively.

@@ -1605,7 +1605,7 @@ def check_perms(path,
             ``True``.
 
         reset (bool):
-            ``True`` wil show what permisisons will be removed by resetting the
+            ``True`` will show what permisisons will be removed by resetting the
             DACL. ``False`` will do nothing. Default is ``False``.
 
     Returns:
