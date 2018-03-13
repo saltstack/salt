@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Raet Ioflo Behavior Unittests
-"""
-# pylint: skip-file
-# pylint: disable=C0103
-
+'''
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
+from salt.ext.six.moves import map
+import importlib
+# pylint: disable=blacklisted-import
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
     import unittest
+# pylint: enable=blacklisted-import
 import time
 
 from ioflo.base.consoling import getConsole
@@ -20,13 +22,9 @@ from ioflo.test import testing
 from raet.abiding import ns2u
 from raet.lane.stacking import LaneStack
 from raet.road.stacking import RoadStack
-from raet.stacking import Stack
 
+import salt.utils.stringutils
 from salt.utils.event import tagify
-
-# Import Ioflo Deeds
-from salt.daemons.flo import core
-from salt.daemons.test.plan import actors
 
 
 def setUpModule():
@@ -38,29 +36,30 @@ def tearDownModule():
 
 
 class StatsEventerTestCase(testing.FrameIofloTestCase):
-    """
+    '''
     Test case for Salt Raet Stats Eventer Master and Minion deeds
-    """
+    '''
 
     def setUp(self):
-        """
+        '''
         Call super if override so House Framer and Frame are setup correctly
-        """
+        '''
+        behaviors = ['salt.daemons.flo', 'salt.daemons.test.plan']
+        for behavior in behaviors:
+            mod = importlib.import_module(behavior)
         super(StatsEventerTestCase, self).setUp()
 
-
     def tearDown(self):
-        """
+        '''
         Call super if override so House Framer and Frame are torn down correctly
-        """
+        '''
         super(StatsEventerTestCase, self).tearDown()
 
-
     def testMasterContextSetup(self):
-        """
+        '''
         Test the context setup procedure used in all the consequence tests works as expected
         This test intended to avoid some checks in other tests
-        """
+        '''
         console.terse("{0}\n".format(self.testMasterContextSetup.__doc__))
 
         act = self.addEnterDeed("TestOptsSetupMaster")
@@ -83,11 +82,12 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         self.resolve()  # resolve House, Framer, Frame, Acts, Actors
 
         self.frame.enter()
-        self.assertDictEqual(act.actor.Ioinits,
-                             {'opts': '.salt.opts',
-                              'stats_req': '.salt.stats.event_req',
-                              'lane_stack': '.salt.lane.manor.stack',
-                              'road_stack': '.salt.road.manor.stack'})
+        self.assertDictEqual(
+                act.actor.Ioinits,
+                {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),
+                 'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+                 'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack')})
 
         self.assertTrue(hasattr(act.actor, 'opts'))
         self.assertTrue(hasattr(act.actor, 'stats_req'))
@@ -105,9 +105,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         act.actor.road_stack.value.server.close()
 
     def testMasterRoadStats(self):
-        """
+        '''
         Test Master Road Stats request (A1)
-        """
+        '''
         console.terse("{0}\n".format(self.testMasterRoadStats.__doc__))
 
         # Bootstrap
@@ -160,9 +160,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         time.sleep(0.1)
 
     def testMasterLaneStats(self):
-        """
+        '''
         Test Master Road Stats request (A2)
-        """
+        '''
         console.terse("{0}\n".format(self.testMasterLaneStats.__doc__))
 
         # Bootstrap
@@ -214,9 +214,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
             testStack.value.server.close()
 
     def testMasterStatsWrongMissingTag(self):
-        """
+        '''
         Test Master Stats requests with unknown and missing tag (A3, A4)
-        """
+        '''
         console.terse("{0}\n".format(self.testMasterStatsWrongMissingTag.__doc__))
 
         # Bootstrap
@@ -268,9 +268,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
             testStack.value.server.close()
 
     def testMasterStatsUnknownRemote(self):
-        """
+        '''
         Test Master Stats request with unknown remote (B1)
-        """
+        '''
         console.terse("{0}\n".format(self.testMasterStatsUnknownRemote.__doc__))
 
         # Bootstrap
@@ -318,9 +318,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
             testStack.value.server.close()
 
     def testMasterStatsNoRequest(self):
-        """
+        '''
         Test Master Stats no requests (nothing to do) (B2)
-        """
+        '''
         console.terse("{0}\n".format(self.testMasterStatsNoRequest.__doc__))
 
         # Bootstrap
@@ -364,10 +364,10 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
             testStack.value.server.close()
 
     def testMinionContextSetup(self):
-        """
+        '''
         Test the context setup procedure used in all the consequence tests works as expected
         This test intended to avoid some checks in other tests
-        """
+        '''
         console.terse("{0}\n".format(self.testMinionContextSetup.__doc__))
 
         act = self.addEnterDeed("TestOptsSetupMinion")
@@ -390,11 +390,12 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         self.resolve()  # resolve House, Framer, Frame, Acts, Actors
 
         self.frame.enter()
-        self.assertDictEqual(act.actor.Ioinits,
-                             {'opts': '.salt.opts',
-                              'stats_req': '.salt.stats.event_req',
-                              'lane_stack': '.salt.lane.manor.stack',
-                              'road_stack': '.salt.road.manor.stack'})
+        self.assertDictEqual(
+                act.actor.Ioinits,
+                {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),
+                 'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+                 'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack')})
 
         self.assertTrue(hasattr(act.actor, 'opts'))
         self.assertTrue(hasattr(act.actor, 'stats_req'))
@@ -412,9 +413,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         act.actor.road_stack.value.server.close()
 
     def testMinionRoadStats(self):
-        """
+        '''
         Test Minion Road Stats request (A1)
-        """
+        '''
         console.terse("{0}\n".format(self.testMinionRoadStats.__doc__))
 
         # Bootstrap
@@ -456,10 +457,10 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         self.assertEqual(len(testStack.rxMsgs), 1)
 
         msg, sender = testStack.rxMsgs.popleft()
-        self.assertDictEqual(msg, {u'route': {u'src': [ns2u(minionName), u'manor', None],
-                                              u'dst': [ns2u(masterName), None, u'event_fire']},
-                                   u'tag': ns2u(tag),
-                                   u'data': {u'test_stats_event': 111}})
+        self.assertDictEqual(msg, {'route': {'src': [ns2u(minionName), 'manor', None],
+                                             'dst': [ns2u(masterName), None, 'event_fire']},
+                                   'tag': ns2u(tag),
+                                   'data': {'test_stats_event': 111}})
 
         # Close active stacks servers
         act.actor.lane_stack.value.server.close()
@@ -469,9 +470,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
             testStack.value.server.close()
 
     def testMinionLaneStats(self):
-        """
+        '''
         Test Minion Road Stats request (A2)
-        """
+        '''
         console.terse("{0}\n".format(self.testMinionLaneStats.__doc__))
 
         # Bootstrap
@@ -513,10 +514,10 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         self.assertEqual(len(testStack.rxMsgs), 1)
 
         msg, sender = testStack.rxMsgs.popleft()
-        self.assertDictEqual(msg, {u'route': {u'src': [ns2u(minionName), u'manor', None],
-                                              u'dst': [ns2u(masterName), None, u'event_fire']},
-                                   u'tag': ns2u(tag),
-                                   u'data': {u'test_stats_event': 111}})
+        self.assertDictEqual(msg, {'route': {'src': [ns2u(minionName), 'manor', None],
+                                             'dst': [ns2u(masterName), None, 'event_fire']},
+                                   'tag': ns2u(tag),
+                                   'data': {'test_stats_event': 111}})
 
         # Close active stacks servers
         act.actor.lane_stack.value.server.close()
@@ -526,9 +527,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
             testStack.value.server.close()
 
     def testMinionStatsWrongMissingTag(self):
-        """
+        '''
         Test Minion Stats requests with unknown and missing tag (A3, A4)
-        """
+        '''
         console.terse("{0}\n".format(self.testMinionStatsWrongMissingTag.__doc__))
 
         # Bootstrap
@@ -582,9 +583,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
             testStack.value.server.close()
 
     def testMinionStatsUnknownRemote(self):
-        """
+        '''
         Test Minion Stats request with unknown remote (B1)
-        """
+        '''
         console.terse("{0}\n".format(self.testMinionStatsUnknownRemote.__doc__))
 
         # Bootstrap
@@ -633,9 +634,9 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
             testStack.value.server.close()
 
     def testMinionStatsNoRequest(self):
-        """
+        '''
         Test Minion Stats no requests (nothing to do) (B2)
-        """
+        '''
         console.terse("{0}\n".format(self.testMinionStatsNoRequest.__doc__))
 
         # Bootstrap
@@ -679,6 +680,7 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
+
 def runOne(test):
     '''
     Unittest Runner
@@ -689,7 +691,9 @@ def runOne(test):
 
 
 def runSome():
-    """ Unittest runner """
+    '''
+    Unittest runner
+    '''
     tests = []
     names = [
         'testMasterContextSetup',
@@ -705,13 +709,15 @@ def runSome():
         'testMinionStatsUnknownRemote',
         'testMinionStatsNoRequest',
         ]
-    tests.extend(map(StatsEventerTestCase, names))
+    tests.extend(list(map(StatsEventerTestCase, names)))
     suite = unittest.TestSuite(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
 
 def runAll():
-    """ Unittest runner """
+    '''
+    Unittest runner
+    '''
     suite = unittest.TestSuite()
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(StatsEventerTestCase))
     unittest.TextTestRunner(verbosity=2).run(suite)
@@ -721,8 +727,8 @@ if __name__ == '__main__' and __package__ is None:
 
     # console.reinit(verbosity=console.Wordage.concise)
 
-    #runAll()  # run all unittests
+    runAll()  # run all unittests
 
-    runSome()  #only run some
+    #runSome()  # only run some
 
     #runOne('testMasterLaneStats')

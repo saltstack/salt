@@ -26,9 +26,9 @@ Ensure that an encrypted device is mapped with the `mapped` function:
         - keyfile: /etc/keyfile.key
         - config: /etc/alternate-crypttab
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)

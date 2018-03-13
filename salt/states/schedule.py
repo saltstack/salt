@@ -79,7 +79,25 @@ Management of the Salt scheduler
     to return the results of the scheduled job, with the alternative configuration
     options found in the xmpp_state_run section.
 
+    job1:
+      schedule.present:
+        - function: state.sls
+        - job_args:
+          - httpd
+        - job_kwargs:
+            test: True
+        - hours: 1
+        - skip_during_range:
+            - start: 2pm
+            - end: 3pm
+        - run_after_skip_range: True
+
+    This will schedule the command: state.sls httpd test=True at 5pm on Monday,
+    Wednesday and Friday, and 3pm on Tuesday and Thursday.  Requires that
+    python-dateutil is installed on the minion.
+
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name,
@@ -178,6 +196,16 @@ def present(name,
 
     persist
         Whether the job should persist between minion restarts, defaults to True.
+
+    skip_during_range
+        This will ensure that the scheduled command does not run within the
+        range specified.  The range parameter must be a dictionary with the
+        date strings using the dateutil format. Requires python-dateutil.
+
+    run_after_skip_range
+        Whether the job should run immediately after the skip_during_range time
+        period ends.
+
     '''
 
     ret = {'name': name,

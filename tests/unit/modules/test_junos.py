@@ -3,7 +3,7 @@
     :codeauthor: :email:`Rajvi Dhimar <rajvidhimar95@gmail.com>`
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import test libs
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
@@ -744,24 +744,6 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['out'] = False
             self.assertEqual(junos.cli('show version'), ret)
 
-    def test_cli_write_output(self):
-        with patch('salt.utils.files.fopen') as mock_fopen, \
-                patch('jnpr.junos.device.Device.cli') as mock_cli:
-            mock_cli.return_vale = 'cli text output'
-            args = {'__pub_user': 'root',
-                    '__pub_arg': [{'dest': 'copy/output/here'}],
-                    'dest': 'copy/output/here',
-                    '__pub_fun': 'junos.cli',
-                    '__pub_jid': '20170221182531323467',
-                    '__pub_tgt': 'mac_min',
-                    '__pub_tgt_type': 'glob',
-                    '__pub_ret': ''}
-            ret = dict()
-            ret['message'] = 'cli text output'
-            ret['out'] = True
-            junos.cli('show version', **args)
-            mock_fopen.assert_called_with('copy/output/here', 'w')
-
     def test_shutdown_without_args(self):
         ret = dict()
         ret['message'] = \
@@ -1497,7 +1479,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
     def test_rpc_write_file_format_json(self):
         with patch('jnpr.junos.device.Device.execute') as mock_execute, \
-                patch('salt.modules.junos.json.dumps') as mock_dumps:
+                patch('salt.utils.json.dumps') as mock_dumps:
             mock_dumps.return_value = 'json rpc reply'
             m = mock_open()
             with patch('salt.utils.files.fopen', m, create=True):

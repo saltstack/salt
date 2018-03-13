@@ -7,7 +7,7 @@ Control Apache Traffic Server
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
 import salt.utils.versions

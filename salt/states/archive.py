@@ -6,7 +6,7 @@ Extract an archive
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
@@ -696,7 +696,7 @@ def extracted(name,
         # True
         # >>> os.path.isfile('/tmp/foo.txt/')
         # False
-        name = name.rstrip('/')
+        name = name.rstrip(os.sep)
         if os.path.isfile(name):
             ret['comment'] = '{0} exists and is not a directory'.format(name)
             return ret
@@ -728,6 +728,11 @@ def extracted(name,
                     .format(name)
                 )
                 return ret
+
+    if if_missing is not None and os.path.exists(if_missing):
+        ret['result'] = True
+        ret['comment'] = 'Path {0} exists'.format(if_missing)
+        return ret
 
     if user or group:
         if salt.utils.platform.is_windows():
@@ -821,7 +826,7 @@ def extracted(name,
         return ret
 
     if options is not None and not isinstance(options, six.string_types):
-        options = str(options)
+        options = six.text_type(options)
 
     strip_components = None
     if options and archive_format == 'tar':
@@ -962,11 +967,11 @@ def extracted(name,
             ret['comment'] = msg
             return ret
         else:
-            log.debug('file.cached: {0}'.format(result))
+            log.debug('file.cached: %s', result)
 
         if result['result']:
             # Get the path of the file in the minion cache
-            cached = __salt__['cp.is_cached'](source_match)
+            cached = __salt__['cp.is_cached'](source_match, saltenv=__env__)
         else:
             log.debug(
                 'failed to download %s',
@@ -1233,7 +1238,7 @@ def extracted(name,
             __states__['file.directory'](name, user=user, makedirs=True)
             created_destdir = True
 
-        log.debug('Extracting {0} to {1}'.format(cached, name))
+        log.debug('Extracting %s to %s', cached, name)
         try:
             if archive_format == 'zip':
                 if use_cmd_unzip:
@@ -1511,7 +1516,7 @@ def extracted(name,
         if not if_missing:
             # If is_missing was used, and both a) the archive had never been
             # extracted, and b) the path referred to by if_missing exists, then
-            # enforce_missing would contain paths of top_levle dirs/files that
+            # enforce_missing would contain paths of top_level dirs/files that
             # _would_ have been extracted. Since if_missing can be used as a
             # semaphore to conditionally extract, we don't want to make this a
             # case where the state fails, so we only fail the state if

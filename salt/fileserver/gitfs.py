@@ -5,13 +5,17 @@ Git Fileserver Backend
 With this backend, branches and tags in a remote git repository are exposed to
 salt as different environments.
 
-To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
+To enable, add ``gitfs`` to the :conf_master:`fileserver_backend` option in the
 Master config file.
 
 .. code-block:: yaml
 
     fileserver_backend:
-      - git
+      - gitfs
+
+.. note::
+    ``git`` also works here. Prior to the 2018.3.0 release, *only* ``git``
+    would work.
 
 The Git fileserver backend supports both pygit2_ and GitPython_, to provide the
 Python interface to git. If both are present, the order of preference for which
@@ -45,14 +49,14 @@ Walkthrough <tutorial-gitfs>`.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 PER_REMOTE_OVERRIDES = (
     'base', 'mountpoint', 'root', 'ssl_verify',
     'saltenv_whitelist', 'saltenv_blacklist',
     'env_whitelist', 'env_blacklist', 'refspecs',
-    'disable_saltenv_mapping', 'ref_types'
+    'disable_saltenv_mapping', 'ref_types', 'update_interval',
 )
 PER_REMOTE_ONLY = ('all_saltenvs', 'name', 'saltenv')
 
@@ -68,7 +72,7 @@ from salt.exceptions import FileserverConfigError
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'git'
+__virtualname__ = 'gitfs'
 
 
 def _gitfs(init_remotes=True):
@@ -122,11 +126,18 @@ def lock(remote=None):
     return _gitfs().lock(remote=remote)
 
 
-def update():
+def update(remotes=None):
     '''
     Execute a git fetch on all of the repos
     '''
-    _gitfs().update()
+    _gitfs().update(remotes)
+
+
+def update_intervals():
+    '''
+    Returns the update intervals for each configured remote
+    '''
+    return _gitfs().update_intervals()
 
 
 def envs(ignore_cache=False):

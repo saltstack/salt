@@ -2,7 +2,7 @@
 '''
 Support for Linux LVM2
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os.path
@@ -239,10 +239,13 @@ def pvcreate(devices, override=True, **kwargs):
              'pvmetadatacopies', 'metadatacopies', 'metadataignore',
              'restorefile', 'norestorefile', 'labelsector',
              'setphysicalvolumesize')
+    no_parameter = ('force', 'norestorefile')
     for var in kwargs:
         if kwargs[var] and var in valid:
+            cmd.extend(['--{0}'.format(var), kwargs[var]])
+        elif kwargs[var] and var in no_parameter:
             cmd.append('--{0}'.format(var))
-            cmd.append(kwargs[var])
+
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out.get('retcode'):
         raise CommandExecutionError(out.get('stderr'))
@@ -485,7 +488,7 @@ def lvresize(size, lvpath):
         salt '*' lvm.lvresize +12M /dev/mapper/vg1-test
     '''
     ret = {}
-    cmd = ['lvresize', '-L', str(size), lvpath]
+    cmd = ['lvresize', '-L', six.text_type(size), lvpath]
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if cmd_ret['retcode'] != 0:
         return {}

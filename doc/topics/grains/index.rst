@@ -80,11 +80,20 @@ same way as in the above example, only without a top-level ``grains:`` key:
 
 .. note::
 
-    The content of ``/etc/salt/grains`` is ignored if you specify grains in the minion config.
+    Grains in ``/etc/salt/grains`` are ignored if you specify the same grains in the minion config.
 
 .. note::
 
     Grains are static, and since they are not often changed, they will need a grains refresh when they are updated. You can do this by calling: ``salt minion saltutil.refresh_modules``
+
+.. note::
+
+    You can equally configure static grains for Proxy Minions.
+    As multiple Proxy Minion processes can run on the same machine, you need
+    to index the files using the Minion ID, under ``/etc/salt/proxy.d/<minion ID>/grains``.
+    For example, the grains for the Proxy Minion ``router1`` can be defined
+    under ``/etc/salt/proxy.d/router1/grains``, while the grains for the
+    Proxy Minion ``switch7`` can be put in ``/etc/salt/proxy.d/switch7/grains``.
 
 Matching Grains in the Top File
 ===============================
@@ -278,3 +287,9 @@ Syncing grains can be done a number of ways, they are automatically synced when
 above) the grains can be manually synced and reloaded by calling the
 :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
+
+.. note::
+
+    When the :conf_minion:`grains_cache` is set to False, the grains dictionary is built
+    and stored in memory on the minion. Every time the minion restarts or
+    ``saltutil.refresh_grains`` is run, the grain dictionary is rebuilt from scratch.

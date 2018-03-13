@@ -3,7 +3,7 @@
 Tests for the spm info utility
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import shutil
 
 # Import Salt Testing libs

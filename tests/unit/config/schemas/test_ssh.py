@@ -6,7 +6,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -14,6 +14,7 @@ from tests.support.unit import TestCase, skipIf
 # Import Salt Libs
 from salt.config.schemas import ssh as ssh_schemas
 from salt.config.schemas.minion import MinionConfiguration
+import salt.utils.stringutils
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
@@ -126,8 +127,8 @@ class RosterEntryConfigTest(TestCase):
             self.assertDictContainsSubset(expected['properties'], config.serialize()['properties'])
             self.assertDictContainsSubset(expected, config.serialize())
         except AssertionError:
-            import json
-            print(json.dumps(config.serialize(), indent=4))
+            import salt.utils.json
+            print(salt.utils.json.dumps(config.serialize(), indent=4))
             raise
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
@@ -263,8 +264,8 @@ class RosterItemTest(TestCase):
                 ssh_schemas.RosterItem.serialize()
             )
         except AssertionError:
-            import json
-            print(json.dumps(ssh_schemas.RosterItem.serialize(), indent=4))
+            import salt.utils.json
+            print(salt.utils.json.dumps(ssh_schemas.RosterItem.serialize(), indent=4))
             raise
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
@@ -286,7 +287,7 @@ class RosterItemTest(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
-                {'target-1:1':
+                {salt.utils.stringutils.to_str('target-1:1'):
                     {
                         'host': 'localhost',
                         'user': 'root',

@@ -18,13 +18,14 @@ Dependencies
 .. versionadded:: 2017.7.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)
 
 # import NAPALM utils
 import salt.utils.napalm
+import salt.utils.versions
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
@@ -136,6 +137,10 @@ def managed(name,
 
     To replace the config, set ``replace`` to ``True``. This option is recommended to be used with caution!
 
+    .. warning::
+        The support for NAPALM native templates will be dropped beginning with Salt Fluorine.
+        Implicitly, the ``template_path`` argument will be deprecated and removed.
+
     template_name
         Identifies path to the template source. The template can be either stored on the local machine,
         either remotely.
@@ -187,7 +192,7 @@ def managed(name,
     template_attrs: "--------------e----"
         Attributes of file (see `man lsattr`)
 
-        .. versionadded:: oxygen
+        .. versionadded:: 2018.3.0
 
     saltenv: base
         Specifies the template environment. This will influence the relative imports inside the templates.
@@ -328,7 +333,11 @@ def managed(name,
             }
         }
     '''
-
+    if template_path:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Use of `template_path` detected. This argument will be removed in Salt Fluorine.'
+        )
     ret = salt.utils.napalm.default_ret(name)
 
     # the user can override the flags the equivalent CLI args

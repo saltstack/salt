@@ -41,7 +41,7 @@ or clusters are available.
     as this makes all master configuration settings available in all minion's
     pillars.
 
-Etcd profile configuration can be overriden using following arguments: ``host``,
+Etcd profile configuration can be overridden using following arguments: ``host``,
 ``port``, ``username``, ``password``, ``ca``, ``client_key`` and ``client_cert``.
 
 .. code-block:: yaml
@@ -118,8 +118,7 @@ Available Functions
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
-
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Define the module's virtual name
 __virtualname__ = 'etcd'

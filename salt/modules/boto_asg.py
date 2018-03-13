@@ -46,11 +46,9 @@ Connection module for Amazon Autoscale Groups
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
-import time
 import logging
-import json
 import sys
 import time
 import email.mime.multipart
@@ -59,7 +57,6 @@ log = logging.getLogger(__name__)
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Import third party libs
-import yaml
 from salt.ext import six
 try:
     import boto
@@ -79,20 +76,21 @@ except ImportError:
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.json
 import salt.utils.odict as odict
+import salt.utils.versions
 
 
 def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_asg module could not be loaded: boto libraries not found')
-
-    __utils__['boto.assign_funcs'](__name__, 'asg', module='ec2.autoscale', pack=__salt__)
-    setattr(sys.modules[__name__], '_get_ec2_conn',
-            __utils__['boto.get_connection_func']('ec2'))
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'asg', module='ec2.autoscale', pack=__salt__)
+        setattr(sys.modules[__name__], '_get_ec2_conn',
+                __utils__['boto.get_connection_func']('ec2'))
+    return has_boto_reqs
 
 
 def __init__(opts):
@@ -235,13 +233,13 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if isinstance(availability_zones, six.string_types):
-        availability_zones = json.loads(availability_zones)
+        availability_zones = salt.utils.json.loads(availability_zones)
     if isinstance(load_balancers, six.string_types):
-        load_balancers = json.loads(load_balancers)
+        load_balancers = salt.utils.json.loads(load_balancers)
     if isinstance(vpc_zone_identifier, six.string_types):
-        vpc_zone_identifier = json.loads(vpc_zone_identifier)
+        vpc_zone_identifier = salt.utils.json.loads(vpc_zone_identifier)
     if isinstance(tags, six.string_types):
-        tags = json.loads(tags)
+        tags = salt.utils.json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
     if tags:
@@ -261,11 +259,11 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
                                  propagate_at_launch=propagate_at_launch)
             _tags.append(_tag)
     if isinstance(termination_policies, six.string_types):
-        termination_policies = json.loads(termination_policies)
+        termination_policies = salt.utils.json.loads(termination_policies)
     if isinstance(suspended_processes, six.string_types):
-        suspended_processes = json.loads(suspended_processes)
+        suspended_processes = salt.utils.json.loads(suspended_processes)
     if isinstance(scheduled_actions, six.string_types):
-        scheduled_actions = json.loads(scheduled_actions)
+        scheduled_actions = salt.utils.json.loads(scheduled_actions)
     retries = 30
     while True:
         try:
@@ -289,7 +287,7 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
             # create notifications
             if notification_arn and notification_types:
                 conn.put_notification_configuration(_asg, notification_arn, notification_types)
-            log.info('Created ASG {0}'.format(name))
+            log.info('Created ASG %s', name)
             return True
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
@@ -298,7 +296,7 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
                 retries -= 1
                 continue
             log.error(e)
-            msg = 'Failed to create ASG {0}'.format(name)
+            msg = 'Failed to create ASG %s', name
             log.error(msg)
             return False
 
@@ -325,19 +323,19 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
     if not conn:
         return False, "failed to connect to AWS"
     if isinstance(availability_zones, six.string_types):
-        availability_zones = json.loads(availability_zones)
+        availability_zones = salt.utils.json.loads(availability_zones)
     if isinstance(load_balancers, six.string_types):
-        load_balancers = json.loads(load_balancers)
+        load_balancers = salt.utils.json.loads(load_balancers)
     if isinstance(vpc_zone_identifier, six.string_types):
-        vpc_zone_identifier = json.loads(vpc_zone_identifier)
+        vpc_zone_identifier = salt.utils.json.loads(vpc_zone_identifier)
     if isinstance(tags, six.string_types):
-        tags = json.loads(tags)
+        tags = salt.utils.json.loads(tags)
     if isinstance(termination_policies, six.string_types):
-        termination_policies = json.loads(termination_policies)
+        termination_policies = salt.utils.json.loads(termination_policies)
     if isinstance(suspended_processes, six.string_types):
-        suspended_processes = json.loads(suspended_processes)
+        suspended_processes = salt.utils.json.loads(suspended_processes)
     if isinstance(scheduled_actions, six.string_types):
-        scheduled_actions = json.loads(scheduled_actions)
+        scheduled_actions = salt.utils.json.loads(scheduled_actions)
 
     # Massage our tagset into  add / remove lists
     # Use a boto3 call here b/c the boto2 call doeesn't implement filters
@@ -394,10 +392,10 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             # Seems the update call doesn't handle tags, so we'll need to update
             # that separately.
             if add_tags:
-                log.debug('Adding/updating tags from ASG: {}'.format(add_tags))
+                log.debug('Adding/updating tags from ASG: %s', add_tags)
                 conn.create_or_update_tags([autoscale.Tag(**t) for t in add_tags])
             if delete_tags:
-                log.debug('Deleting tags from ASG: {}'.format(delete_tags))
+                log.debug('Deleting tags from ASG: %s', delete_tags)
                 conn.delete_tags([autoscale.Tag(**t) for t in delete_tags])
             # update doesn't handle suspended_processes either
             # Resume all processes
@@ -406,7 +404,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             # list suspends all; don't do that.
             if suspended_processes is not None and len(suspended_processes) > 0:
                 _asg.suspend_processes(suspended_processes)
-            log.info('Updated ASG {0}'.format(name))
+            log.info('Updated ASG %s', name)
             # ### scaling policies
             # delete all policies, then recreate them
             for policy in conn.get_all_policies(as_group=name):
@@ -429,7 +427,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             log.error(e)
             msg = 'Failed to update ASG {0}'.format(name)
             log.error(msg)
-            return False, str(e)
+            return False, six.text_type(e)
 
 
 def _create_scaling_policies(conn, as_name, scaling_policies):
@@ -501,7 +499,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
 def get_cloud_init_mime(cloud_init):
     '''
     Get a mime multipart encoded string from a cloud-init dict. Currently
-    supports scripts and cloud-config.
+    supports boothooks, scripts and cloud-config.
 
     CLI Example:
 
@@ -510,7 +508,7 @@ def get_cloud_init_mime(cloud_init):
         salt myminion boto.get_cloud_init_mime <cloud init>
     '''
     if isinstance(cloud_init, six.string_types):
-        cloud_init = json.loads(cloud_init)
+        cloud_init = salt.utils.json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
     if 'boothooks' in cloud_init:
         for script_name, script in six.iteritems(cloud_init['boothooks']):
@@ -522,18 +520,11 @@ def get_cloud_init_mime(cloud_init):
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
         cloud_config = cloud_init['cloud-config']
-        _cloud_config = email.mime.text.MIMEText(_safe_dump(cloud_config),
-                                                 'cloud-config')
+        _cloud_config = email.mime.text.MIMEText(
+            salt.utils.yaml.safe_dump(cloud_config, default_flow_style=False),
+            'cloud-config')
         _cloud_init.attach(_cloud_config)
     return _cloud_init.as_string()
-
-
-def _safe_dump(data):
-    def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(six.iteritems(data))
-    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
-                         Dumper=yaml.dumper.SafeDumper)
-    return yaml.safe_dump(data, default_flow_style=False)
 
 
 def launch_configuration_exists(name, region=None, key=None, keyid=None,
@@ -655,9 +646,9 @@ def create_launch_configuration(name, image_id, key_name=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if isinstance(security_groups, six.string_types):
-        security_groups = json.loads(security_groups)
+        security_groups = salt.utils.json.loads(security_groups)
     if isinstance(block_device_mappings, six.string_types):
-        block_device_mappings = json.loads(block_device_mappings)
+        block_device_mappings = salt.utils.json.loads(block_device_mappings)
     _bdms = []
     if block_device_mappings:
         # Boto requires objects for the mappings and the devices.
@@ -695,7 +686,7 @@ def create_launch_configuration(name, image_id, key_name=None,
     while True:
         try:
             conn.create_launch_configuration(lc)
-            log.info('Created LC {0}'.format(name))
+            log.info('Created LC %s', name)
             return True
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
@@ -723,7 +714,7 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None,
     while True:
         try:
             conn.delete_launch_configuration(name)
-            log.info('Deleted LC {0}'.format(name))
+            log.info('Deleted LC %s', name)
             return True
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
@@ -757,7 +748,7 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
             for policy in policies:
                 if policy.name == scaling_policy_name:
                     return policy.policy_arn
-            log.error('Could not convert: {0}'.format(as_group))
+            log.error('Could not convert: %s', as_group)
             return None
         except boto.exception.BotoServerError as e:
             if e.error_code != 'Throttling':
@@ -847,7 +838,7 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
             log.error(e)
             return False
     if len(asgs) != 1:
-        log.debug("name '{0}' returns multiple ASGs: {1}".format(name, [asg.name for asg in asgs]))
+        log.debug("name '%s' returns multiple ASGs: %s", name, [asg.name for asg in asgs])
         return False
     asg = asgs[0]
     instance_ids = []

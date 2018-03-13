@@ -5,7 +5,7 @@ like, but also useful for basic http testing.
 
 .. versionadded:: 2015.5.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import logging
 
@@ -19,7 +19,8 @@ def query(url, output=True, **kwargs):
     '''
     Query a resource, and decode the return data
 
-    .. versionadded:: 2015.5.0
+    Passes through all the parameters described in the
+    :py:func:`utils.http.query function <salt.utils.http.query>`:
 
     CLI Example:
 

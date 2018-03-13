@@ -35,7 +35,7 @@ state:
           - state: installed
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 try:
     import ansible

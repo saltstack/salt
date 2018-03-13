@@ -19,7 +19,7 @@ data to return as pillar information. From there you can take a look at the
 varstack on how this file is evaluated.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging

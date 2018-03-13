@@ -9,22 +9,21 @@ Edit ini files
 
 (for example /etc/sysctl.conf)
 '''
-
-from __future__ import absolute_import, print_function
-
 # Import Python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
-import json
 
 # Import Salt libs
-from salt.ext import six
+import salt.utils.data
 import salt.utils.files
+import salt.utils.json
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
 
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'ini'
 
@@ -289,7 +288,7 @@ class _Section(OrderedDict):
                 value = sect
                 value_plain = value.as_dict()
             else:
-                value = str(value)
+                value = six.text_type(value)
                 value_plain = value
 
             if key not in self:
@@ -344,15 +343,15 @@ class _Section(OrderedDict):
         return dict(self)
 
     def dump(self):
-        print(str(self))
+        print(six.text_type(self))
 
     def __repr__(self, _repr_running=None):
         _repr_running = _repr_running or {}
         super_repr = super(_Section, self).__repr__(_repr_running)
-        return os.linesep.join((super_repr, json.dumps(self, indent=4)))
+        return os.linesep.join((super_repr, salt.utils.json.dumps(self, indent=4)))
 
     def __str__(self):
-        return json.dumps(self, indent=4)
+        return salt.utils.json.dumps(self, indent=4)
 
     def __eq__(self, item):
         return (isinstance(item, self.__class__) and
@@ -371,7 +370,7 @@ class _Ini(_Section):
         if inicontents is None:
             try:
                 with salt.utils.files.fopen(self.name) as rfh:
-                    inicontents = rfh.read()
+                    inicontents = salt.utils.stringutils.to_unicode(rfh.read())
             except (OSError, IOError) as exc:
                 if __opts__['test'] is False:
                     raise CommandExecutionError(
@@ -397,10 +396,10 @@ class _Ini(_Section):
 
     def flush(self):
         try:
-            with salt.utils.files.fopen(self.name, 'w') as outfile:
+            with salt.utils.files.fopen(self.name, 'wb') as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
-                outfile.writelines(ini_gen)
+                outfile.writelines(salt.utils.data.encode(list(ini_gen)))
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
                 "Unable to write file '{0}'. "

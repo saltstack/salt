@@ -9,7 +9,7 @@ values are stored and computed, such as averages etc.
 '''
 
 # import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import statistics

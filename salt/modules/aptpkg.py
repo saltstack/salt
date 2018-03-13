@@ -14,7 +14,7 @@ Support for APT (Advanced Packaging Tool)
 
     For repository management, the ``python-apt`` package must be installed.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -23,10 +23,8 @@ import os
 import re
 import logging
 import time
-import json
 
 # Import third party libs
-import yaml
 # pylint: disable=no-name-in-module,import-error,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves.urllib.error import HTTPError
@@ -42,11 +40,14 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.itertools
+import salt.utils.json
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.pkg.deb
+import salt.utils.stringutils
 import salt.utils.systemd
 import salt.utils.versions
+import salt.utils.yaml
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -90,6 +91,10 @@ DPKG_ENV_VARS = {
     'DEBIAN_FRONTEND': 'noninteractive',
     'UCF_FORCE_CONFFOLD': '1',
 }
+if six.PY2:
+    # Ensure no unicode in env vars on PY2, as it causes problems with
+    # subprocess.Popen()
+    DPKG_ENV_VARS = salt.utils.data.encode(DPKG_ENV_VARS)
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -116,7 +121,7 @@ def __init__(opts):
     a few env variables to keep apt happy and
     non-interactive.
     '''
-    if __virtual__():
+    if __virtual__() == __virtualname__:
         # Export these puppies so they persist
         os.environ.update(DPKG_ENV_VARS)
 
@@ -137,7 +142,7 @@ def _get_ppa_info_from_launchpad(owner_name, ppa_name):
         owner_name, ppa_name)
     request = _Request(lp_url, headers={'Accept': 'application/json'})
     lp_page = _urlopen(request)
-    return json.load(lp_page)
+    return salt.utils.json.load(lp_page)
 
 
 def _reconstruct_ppa_name(owner_name, ppa_name):
@@ -210,7 +215,7 @@ def _warn_software_properties(repo):
     log.warning('The \'python-software-properties\' package is not installed. '
                 'For more accurate support of PPA repositories, you should '
                 'install this package.')
-    log.warning('Best guess at ppa format: {0}'.format(repo))
+    log.warning('Best guess at ppa format: %s', repo)
 
 
 def latest_version(*names, **kwargs):
@@ -395,9 +400,7 @@ def refresh_db(cache_valid_time=0, failhard=False):
         if 'stderr' in call:
             comment += call['stderr']
 
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
+        raise CommandExecutionError(comment)
     else:
         out = call['stdout']
 
@@ -494,7 +497,7 @@ def install(name=None,
         Install a specific version of the package, e.g. 1.2.3~0ubuntu0. Ignored
         if "pkgs" or "sources" is passed.
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             version can now contain comparison operators (e.g. ``>1.2.3``,
             ``<=2.0``, etc.)
 
@@ -515,7 +518,7 @@ def install(name=None,
         ignored when comparing the currently-installed version to the desired
         version.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Multiple Package Installation Options:
 
@@ -669,9 +672,8 @@ def install(name=None,
                 deb_info = None
             if deb_info is None:
                 log.error(
-                    'pkg.install: Unable to get deb information for {0}. '
-                    'Version comparisons will be unavailable.'
-                    .format(pkg_source)
+                    'pkg.install: Unable to get deb information for %s. '
+                    'Version comparisons will be unavailable.', pkg_source
                 )
                 pkg_params_items.append([pkg_source])
             else:
@@ -763,7 +765,7 @@ def install(name=None,
                 downgrade.append(pkgstr)
 
     if fromrepo and not sources:
-        log.info('Targeting repo \'{0}\''.format(fromrepo))
+        log.info('Targeting repo \'%s\'', fromrepo)
 
     cmds = []
     all_pkgs = []
@@ -1082,9 +1084,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         <value> seconds
 
     download_only
-        Only donwload the packages, don't unpack or install them
+        Only download the packages, don't unpack or install them
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     force_conf_new
         Always install the new version of any configuration files.
@@ -1536,7 +1538,8 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
 
         salt '*' pkg.version_cmp '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
     '''
-    normalize = lambda x: str(x).split(':', 1)[-1] if ignore_epoch else str(x)
+    normalize = lambda x: six.text_type(x).split(':', 1)[-1] \
+                if ignore_epoch else six.text_type(x)
     # both apt_pkg.version_compare and _cmd_quote need string arguments.
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
@@ -1555,7 +1558,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
             try:
                 ret = apt_pkg.version_compare(pkg1, pkg2)
             except TypeError:
-                ret = apt_pkg.version_compare(str(pkg1), str(pkg2))
+                ret = apt_pkg.version_compare(six.text_type(pkg1), six.text_type(pkg2))
             return 1 if ret > 0 else -1 if ret < 0 else 0
         except Exception:
             # Try to use shell version in case of errors w/python bindings
@@ -1602,8 +1605,10 @@ def _consolidate_repo_sources(sources):
 
     for repo in repos:
         repo.uri = repo.uri.rstrip('/')
+        # future lint: disable=blacklisted-function
         key = str((getattr(repo, 'architectures', []),
                    repo.disabled, repo.type, repo.uri, repo.dist))
+        # future lint: enable=blacklisted-function
         if key in consolidated:
             combined = consolidated[key]
             combined_comps = set(repo.comps).union(set(combined.comps))
@@ -1917,7 +1922,7 @@ def _convert_if_int(value):
     :rtype: bool|int|str
     '''
     try:
-        value = int(str(value))
+        value = int(str(value))  # future lint: disable=blacklisted-function
     except ValueError:
         pass
     return value
@@ -2147,7 +2152,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         Keyserver to get gpg key from
 
     keyid
-        Key ID to load with the ``keyserver`` argument
+        Key ID or a list of key IDs to load with the ``keyserver`` argument
 
     key_url
         URL to a GPG key to add to the APT GPG keyring
@@ -2155,7 +2160,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
     key_text
         GPG key in string form to add to the APT GPG keyring
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     consolidate : False
         If ``True``, will attempt to de-duplicate and consolidate sources
@@ -2205,12 +2210,18 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 if repo_info:
                     return {repo: repo_info}
                 else:
+                    env = None
+                    http_proxy_url = _get_http_proxy_url()
+                    if http_proxy_url:
+                        env = {'http_proxy': http_proxy_url,
+                               'https_proxy': http_proxy_url}
                     if float(__grains__['osrelease']) < 12.04:
                         cmd = ['apt-add-repository', repo]
                     else:
                         cmd = ['apt-add-repository', '-y', repo]
                     out = __salt__['cmd.run_all'](cmd,
                                                   python_shell=False,
+                                                  env=env,
                                                   **kwargs)
                     if out['retcode']:
                         raise CommandExecutionError(
@@ -2331,28 +2342,31 @@ def mod_repo(repo, saltenv='base', **kwargs):
         if not keyid or not keyserver:
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
-        if isinstance(keyid, int):  # yaml can make this an int, we need the hex version
-            keyid = hex(keyid)
-        cmd = ['apt-key', 'export', keyid]
-        output = __salt__['cmd.run_stdout'](cmd, python_shell=False, **kwargs)
-        imported = output.startswith('-----BEGIN PGP')
-        if keyserver:
-            if not imported:
-                http_proxy_url = _get_http_proxy_url()
-                if http_proxy_url:
-                    cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
-                           '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', keyid]
-                else:
-                    cmd = ['apt-key', 'adv', '--keyserver', keyserver,
-                           '--logger-fd', '1', '--recv-keys', keyid]
-                ret = __salt__['cmd.run_all'](cmd,
-                                              python_shell=False,
-                                              **kwargs)
-                if ret['retcode'] != 0:
-                    raise CommandExecutionError(
-                        'Error: key retrieval failed: {0}'
-                        .format(ret['stdout'])
-                    )
+        if not isinstance(keyid, list):
+            keyid = [keyid]
+
+        for key in keyid:
+            if isinstance(key, int):  # yaml can make this an int, we need the hex version
+                key = hex(key)
+            cmd = ['apt-key', 'export', key]
+            output = __salt__['cmd.run_stdout'](cmd, python_shell=False, **kwargs)
+            imported = output.startswith('-----BEGIN PGP')
+            if keyserver:
+                if not imported:
+                    http_proxy_url = _get_http_proxy_url()
+                    if http_proxy_url:
+                        cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
+                               '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', key]
+                    else:
+                        cmd = ['apt-key', 'adv', '--keyserver', keyserver,
+                               '--logger-fd', '1', '--recv-keys', key]
+                    ret = __salt__['cmd.run_all'](cmd,
+                                                  python_shell=False,
+                                                  **kwargs)
+                    if ret['retcode'] != 0:
+                        raise CommandExecutionError(
+                            'Error: key retrieval failed: {0}'.format(ret['stdout'])
+                        )
 
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']
@@ -2644,8 +2658,8 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
 
     if isinstance(selection, six.string_types):
         try:
-            selection = yaml.safe_load(selection)
-        except (yaml.parser.ParserError, yaml.scanner.ScannerError) as exc:
+            selection = salt.utils.yaml.safe_load(selection)
+        except (salt.utils.yaml.parser.ParserError, salt.utils.yaml.scanner.ScannerError) as exc:
             raise SaltInvocationError(
                 'Improperly-formatted selection: {0}'.format(exc)
             )
@@ -2653,7 +2667,8 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
     if path:
         path = __salt__['cp.cache_file'](path, saltenv)
         with salt.utils.files.fopen(path, 'r') as ifile:
-            content = ifile.readlines()
+            content = [salt.utils.stringutils.to_unicode(x)
+                       for x in ifile.readlines()]
         selection = _parse_selections(content)
 
     if selection:
@@ -2690,8 +2705,8 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
                                                      output_loglevel='trace')
                     if result['retcode'] != 0:
                         log.error(
-                            'failed to set state {0} for package '
-                            '{1}'.format(_state, _pkg)
+                            'failed to set state %s for package %s',
+                            _state, _pkg
                         )
                     else:
                         ret[_pkg] = {'old': sel_revmap.get(_pkg),
