@@ -22,12 +22,12 @@ THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
 
 # Keep these in sync with salt/defaults/exitcodes.py
+EX_THIN_PYTHON_INVALID = 10
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 EX_MOD_DEPLOY = 13
 EX_SCP_NOT_FOUND = 14
 EX_CANTCREAT = 73
-
 
 class OBJ(object):
     '''
@@ -216,6 +216,20 @@ def reset_time(path='.', amt=None):
         os.utime(fname, (amt, amt,))
 
 
+def get_executable():
+    '''
+    Find executable which matches supported python version in the thin
+    '''
+    pycmds = (sys.executable, "python3 python27 python2.7 python26 python2.6 python2 python")
+    for py_cmd in pycmds:
+        cmd = py_cmd + ' -c  "import sys; print(\'py{0[0]}\'.format(sys.version_info));"'
+        stdout, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()
+        importdir = stdout.decode(encoding=get_system_encoding(), errors="replace").strip()
+        if importdir and os.path.exists(os.path.join(OPTIONS.saltdir, importdir)):
+            return py_cmd
+
+    sys.exit(EX_THIN_PYTHON_INVALID)
+
 def main(argv):  # pylint: disable=W0613
     '''
     Main program body
@@ -287,7 +301,7 @@ def main(argv):  # pylint: disable=W0613
         argv_prepared = ARGS
 
     salt_argv = [
-        sys.executable,
+        get_executable(),
         salt_call_path,
         '--retcode-passthrough',
         '--local',
