@@ -13,6 +13,7 @@ import tarfile
 import zipfile
 import tempfile
 import subprocess
+import logging
 
 # Import third party libs
 import jinja2
@@ -70,6 +71,8 @@ import salt.utils.stringutils
 import salt.exceptions
 import salt.version
 
+log = logging.getLogger(__name__)
+
 SALTCALL = '''
 import os
 import sys
@@ -122,6 +125,8 @@ def get_tops(extra_mods='', so_mods=''):
     tops = []
     for mod in [salt, jinja2, yaml, tornado, msgpack, certifi, singledispatch,
                 singledispatch_helpers, ssl_match_hostname, markupsafe, backports_abc]:
+        if mod:
+            log.debug('Adding module: "%s"', mod.__name__)
         _add_dependency(tops, mod)
 
     for mod in [m for m in extra_mods.split(',') if m]:
@@ -134,19 +139,17 @@ def get_tops(extra_mods='', so_mods=''):
                     tops.append(moddir)
                 else:
                     tops.append(os.path.join(moddir, base + '.py'))
-            except ImportError:
-                # Not entirely sure this is the right thing, but the only
-                # options seem to be 1) fail, 2) spew errors, or 3) pass.
-                # Nothing else in here spits errors, and the markupsafe code
-                # doesn't bail on import failure, so I followed that lead.
-                # And of course, any other failure still S/T's.
-                pass
+            except ImportError as err:
+                log.exception(err)
+                log.error('Unable to import extra-module "%s"', mod)
+
     for mod in [m for m in so_mods.split(',') if m]:
         try:
             locals()[mod] = __import__(mod)
             tops.append(locals()[mod].__file__)
-        except ImportError:
-            pass   # As per comment above
+        except ImportError as err:
+            log.exception(err)
+            log.error('Unable to import so-module "%s"', mod)
 
     return tops
 
