@@ -94,6 +94,20 @@ def thin_path(cachedir):
     return os.path.join(cachedir, 'thin', 'thin.tgz')
 
 
+def _is_shareable(mod):
+    '''
+    Return True if module is share-able between major Python versions.
+
+    :param mod:
+    :return:
+    '''
+    # This list is subject to change
+    shareable = ['salt', 'jinja2',
+                 'msgpack', 'certifi']
+
+    return os.path.basename(mod) in shareable
+
+
 def _add_dependency(container, obj):
     '''
     Add a dependency to the top list.
