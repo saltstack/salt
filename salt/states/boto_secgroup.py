@@ -58,6 +58,11 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                   from_port: -1
                   to_port: -1
                   source_group_name: mysecgroup
+                - ip_protocol: tcp
+                  from_port: 8080
+                  to_port: 8080
+                  source_group_name: MyOtherSecGroup
+                  source_group_name_vpc: MyPeeredVPC
             - rules_egress:
                 - ip_protocol: all
                   from_port: -1
@@ -422,8 +427,14 @@ def _rules_present(name, rules, delete_ingress_rules=True, vpc_id=None,
         for rule in rules:
             _source_group_name = rule.get('source_group_name', None)
             if _source_group_name:
+                _group_vpc_name = vpc_name
+                _group_vpc_id = vpc_id
+                _source_group_name_vpc = rule.get('source_group_name_vpc', None)
+                if _source_group_name_vpc:
+                    _group_vpc_name = _source_group_name_vpc
+                    _group_vpc_id = None
                 _group_id = __salt__['boto_secgroup.get_group_id'](
-                    name=_source_group_name, vpc_id=vpc_id, vpc_name=vpc_name,
+                    name=_source_group_name, vpc_id=_group_vpc_id, vpc_name=_group_vpc_name,
                     region=region, key=key, keyid=keyid, profile=profile
                 )
                 if not _group_id:
@@ -432,6 +443,8 @@ def _rules_present(name, rules, delete_ingress_rules=True, vpc_id=None,
                         'source group id.'.format(_source_group_name)
                     )
                 rule['source_group_name'] = None
+                if _source_group_name_vpc:
+                    rule.pop('source_group_name_vpc')
                 rule['source_group_group_id'] = _group_id
     # rules = rules that exist in salt state
     # sg['rules'] = that exist in present group
@@ -508,8 +521,14 @@ def _rules_egress_present(name, rules_egress, delete_egress_rules=True, vpc_id=N
         for rule in rules_egress:
             _source_group_name = rule.get('source_group_name', None)
             if _source_group_name:
+                _group_vpc_name = vpc_name
+                _group_vpc_id = vpc_id
+                _source_group_name_vpc = rule.get('source_group_name_vpc', None)
+                if _source_group_name_vpc:
+                    _group_vpc_name = _source_group_name_vpc
+                    _group_vpc_id = None
                 _group_id = __salt__['boto_secgroup.get_group_id'](
-                    name=_source_group_name, vpc_id=vpc_id, vpc_name=vpc_name,
+                    name=_source_group_name, vpc_id=_group_vpc_id, vpc_name=_group_vpc_name,
                     region=region, key=key, keyid=keyid, profile=profile
                 )
                 if not _group_id:
@@ -518,6 +537,8 @@ def _rules_egress_present(name, rules_egress, delete_egress_rules=True, vpc_id=N
                         'source group id.'.format(_source_group_name)
                     )
                 rule['source_group_name'] = None
+                if _source_group_name_vpc:
+                    rule.pop('source_group_name_vpc')
                 rule['source_group_group_id'] = _group_id
     # rules_egress = rules that exist in salt state
     # sg['rules_egress'] = that exist in present group
