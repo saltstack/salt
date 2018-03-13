@@ -102,6 +102,13 @@ def thin_path(cachedir):
 
 
 def get_tops(extra_mods='', so_mods=''):
+    '''
+    Get top directories for the dependencies, based on Python interpreter.
+
+    :param extra_mods:
+    :param so_mods:
+    :return:
+    '''
     tops = [
         os.path.dirname(salt.__file__),
         os.path.dirname(jinja2.__file__),
