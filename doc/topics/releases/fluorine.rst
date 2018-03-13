@@ -65,6 +65,11 @@ instead.
 - The ``docker.volume_absent`` function was removed. Please update applicable SLS
   files to use the ``docker_volume.absent`` function instead.
 
+The ``docker_network`` state had the following changes:
+
+- Support for the ``driver`` option has been removed from the ``absent`` function.
+  This option had no functionality in ``docker_network.absent``.
+
 The ``git`` state had the following changes:
 
 - Support for the ``ref`` option in the ``detached`` state has been removed.
