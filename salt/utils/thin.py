@@ -120,7 +120,7 @@ def get_tops(extra_mods='', so_mods=''):
     for mod in [salt, jinja2, yaml, tornado, msgpack, certifi, singledispatch,
                 singledispatch_helpers, ssl_match_hostname, markupsafe, backports_abc]:
         if mod:
-            log.debug('Adding module: "%s"', mod.__name__)
+            log.debug('Adding module to the tops: "%s"', mod.__name__)
             _add_dependency(tops, mod)
 
     for mod in [m for m in extra_mods.split(',') if m]:
