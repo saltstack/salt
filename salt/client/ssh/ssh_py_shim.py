@@ -220,7 +220,7 @@ def get_executable():
     '''
     Find executable which matches supported python version in the thin
     '''
-    pycmds = (sys.executable, "python3 python27 python2.7 python26 python2.6 python2 python")
+    pycmds = (sys.executable, 'python3', 'python27', 'python2.7', 'python26', 'python2.6', 'python2', 'python')
     for py_cmd in pycmds:
         cmd = py_cmd + ' -c  "import sys; print(\'py{0[0]}\'.format(sys.version_info));"'
         stdout, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()
