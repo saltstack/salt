@@ -1140,7 +1140,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     win_installer = config.get_cloud_config_value(
         'win_installer', vm_, __opts__, search_global=True
     )
-     os_type = config.get_cloud_config_value(
+    os_type = config.get_cloud_config_value(
         'os_type', vm_, __opts__, search_global=True
     )
     if vm_['image'].startswith('http'):
