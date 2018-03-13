@@ -402,10 +402,11 @@ class Schedule(object):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
+    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, utils=None):
         self.opts = opts
         self.proxy = proxy
         self.functions = functions
+        self.utils = utils
         if isinstance(intervals, dict):
             self.intervals = intervals
         else:
@@ -752,9 +753,9 @@ class Schedule(object):
             # context data that could keep paretns connections. ZeroMQ will
             # hang on polling parents connections from the child process.
             if self.opts['__role'] == 'master':
-                self.functions = salt.loader.runner(self.opts)
+                self.functions = salt.loader.runner(self.opts, utils=self.utils)
             else:
-                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
+                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy, utils=self.utils)
             self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
