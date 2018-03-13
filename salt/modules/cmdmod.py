@@ -421,6 +421,7 @@ def _run(cmd,
             # There must be a better way to do this.
             import uuid
             marker = '<<<' + str(uuid.uuid4()) + '>>>'
+            marker_b = marker.encode(__salt_system_encoding__)
             py_code = (
                 'import sys, os, itertools; '
                 'sys.stdout.write(\"' + marker + '\\n\"); '
@@ -448,7 +449,7 @@ def _run(cmd,
             env_encoded_err = env_encoded[1]
             env_encoded = env_encoded[0]
             env_encoded_org = env_encoded
-            env_mark = env_encoded.find(marker + '\n')
+            env_mark = env_encoded.find(marker_b + b'\n')
             if env_mark < 0:
                 raise CommandExecutionError(
                     'Environment could not be retrieved for User \'{0}\':'
@@ -460,7 +461,7 @@ def _run(cmd,
                 )
             # strip first marker line plus newline
             env_encoded = env_encoded[env_mark + len(marker) + 1:]
-            env_mark = env_encoded.find('\n' + marker + '\n')
+            env_mark = env_encoded.find(b'\n' + marker_b + b'\n')
             if env_mark < 0:
                 raise CommandExecutionError(
                     'Environment could not be retrieved for User \'{0}\':'
