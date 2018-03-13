@@ -80,8 +80,9 @@ import sys
 
 if __name__ == '__main__':
     # Add own modules path to the system path
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__),
-                                    'py{0[0]}'.format(sys.version_info)))
+    for base in ['pyall', 'py{0[0]}'.format(sys.version_info)]:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), base))
+
     from salt.scripts import salt_call
     salt_call()
 '''
@@ -317,19 +318,23 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 egg.extractall(tempdir)
                 top = os.path.join(tempdir, base)
                 os.chdir(tempdir)
+
+            site_pkg_dir = _is_shareable(base) and 'pyall' or 'py{}'.format(py_ver)
+
             if not os.path.isdir(top):
                 # top is a single file module
                 if os.path.exists(os.path.join(top_dirname, base)):
-                    tfp.add(base, arcname=os.path.join('py{0}'.format(py_ver), base))
+                    tfp.add(base, arcname=os.path.join(site_pkg_dir, base))
                 continue
+            log.debug('Packing "%s" to "%s" destination', base, site_pkg_dir)
             for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
                     if not name.endswith(('.pyc', '.pyo')):
-                        arcname = os.path.join('py{0}'.format(py_ver), root, name)
+                        arcname = os.path.join(site_pkg_dir, root, name)
                         if hasattr(tfp, 'getinfo'):
                             try:
                                 # This is a little slow but there's no clear way to detect duplicates
-                                tfp.getinfo(os.path.join('py{0}'.format(py_ver), root, name))
+                                tfp.getinfo(os.path.join(site_pkg_dir, root, name))
                                 arcname = None
                             except KeyError:
                                 log.debug('ZIP: Unable to add "%s" with "getinfo"', arcname)
