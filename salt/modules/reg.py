@@ -728,7 +728,7 @@ def import_file(source, use_32bit_registry=False):
         can be either a local file path or a URL type supported by salt
         (e.g. ``salt://salt_master_path``).
 
-    :param bool use_32bit_registry: If the value of this paramater is ``True``
+    :param bool use_32bit_registry: If the value of this parameter is ``True``
         then the ``REG`` file will be imported into the Windows 32 bit registry.
         Otherwise the Windows 64 bit registry will be used.
 
