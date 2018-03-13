@@ -24,21 +24,18 @@ import tornado
 # pylint: disable=import-error,no-name-in-module
 try:
     import certifi
-    HAS_CERTIFI = True
 except ImportError:
-    HAS_CERTIFI = False
+    certifi = None
 
 try:
     import singledispatch
-    HAS_SINGLEDISPATCH = True
 except ImportError:
-    HAS_SINGLEDISPATCH = False
+    singledispatch = None
 
 try:
     import singledispatch_helpers
-    HAS_SINGLEDISPATCH_HELPERS = True
 except ImportError:
-    HAS_SINGLEDISPATCH_HELPERS = False
+    singledispatch_helpers = None
 
 try:
     import backports_abc
@@ -46,25 +43,22 @@ except ImportError:
     import salt.ext.backports_abc as backports_abc
 
 try:
+    # New Jinja only
     import markupsafe
-    HAS_MARKUPSAFE = True
 except ImportError:
-    # Older jinja does not need markupsafe
-    HAS_MARKUPSAFE = False
+    markupsafe = None
 
 # pylint: enable=import-error,no-name-in-module
 
 try:
     # Older python where the backport from pypi is installed
     from backports import ssl_match_hostname
-    HAS_SSL_MATCH_HOSTNAME = True
 except ImportError:
     # Other older python we use our bundled copy
     try:
         from salt.ext import ssl_match_hostname
-        HAS_SSL_MATCH_HOSTNAME = True
     except ImportError:
-        HAS_SSL_MATCH_HOSTNAME = False
+        ssl_match_hostname = None
 
 # Import salt libs
 import salt
@@ -109,27 +103,25 @@ def get_tops(extra_mods='', so_mods=''):
     :param so_mods:
     :return:
     '''
-    tops = [
-        os.path.dirname(salt.__file__),
-        os.path.dirname(jinja2.__file__),
-        os.path.dirname(yaml.__file__),
-        os.path.dirname(tornado.__file__),
-        os.path.dirname(msgpack.__file__),
-    ]
+    tops = [os.path.dirname(salt.__file__),
+            os.path.dirname(jinja2.__file__),
+            os.path.dirname(yaml.__file__),
+            os.path.dirname(tornado.__file__),
+            os.path.dirname(msgpack.__file__)]
 
     tops.append(_six.__file__.replace('.pyc', '.py'))
     tops.append(backports_abc.__file__.replace('.pyc', '.py'))
 
-    if HAS_CERTIFI:
+    if certifi:
         tops.append(os.path.dirname(certifi.__file__))
 
-    if HAS_SINGLEDISPATCH:
+    if singledispatch:
         tops.append(singledispatch.__file__.replace('.pyc', '.py'))
 
-    if HAS_SINGLEDISPATCH_HELPERS:
+    if singledispatch_helpers:
         tops.append(singledispatch_helpers.__file__.replace('.pyc', '.py'))
 
-    if HAS_SSL_MATCH_HOSTNAME:
+    if ssl_match_hostname:
         tops.append(os.path.dirname(os.path.dirname(ssl_match_hostname.__file__)))
 
     for mod in [m for m in extra_mods.split(',') if m]:
@@ -155,7 +147,7 @@ def get_tops(extra_mods='', so_mods=''):
             tops.append(locals()[mod].__file__)
         except ImportError:
             pass   # As per comment above
-    if HAS_MARKUPSAFE:
+    if markupsafe:
         tops.append(os.path.dirname(markupsafe.__file__))
 
     return tops
