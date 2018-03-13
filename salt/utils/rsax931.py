@@ -28,7 +28,8 @@ def _load_libcrypto():
     Load OpenSSL libcrypto
     '''
     if sys.platform.startswith('win'):
-        return cdll.LoadLibrary('libeay32')
+        # cdll.LoadLibrary on windows requires an 'str' argument
+        return cdll.LoadLibrary(str('libeay32'))  # future lint: disable=blacklisted-function
     elif getattr(sys, 'frozen', False) and salt.utils.platform.is_smartos():
         return cdll.LoadLibrary(glob.glob(os.path.join(
             os.path.dirname(sys.executable),

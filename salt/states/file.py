@@ -1574,6 +1574,7 @@ def managed(name,
             show_changes=True,
             create=True,
             contents=None,
+            tmp_dir='',
             tmp_ext='',
             contents_pillar=None,
             contents_grains=None,
@@ -1811,7 +1812,7 @@ def managed(name,
         .. note::
             This option is **not** supported on Windows.
 
-        .. versionadded: Oxygen
+        .. versionadded:: 2018.3.0
 
     template
         If this setting is applied, the named templating engine will be used to
@@ -2038,6 +2039,22 @@ def managed(name,
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
 
+    tmp_dir
+        Directory for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file location (e.g. daemons restricted to their
+        own config directories by an apparmor profile).
+
+        .. code-block:: yaml
+
+            /etc/dhcp/dhcpd.conf:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0755
+                - tmp_dir: '/etc/dhcp'
+                - contents: "# Managed by Salt"
+                - check_cmd: dhcpd -t -cf
+
     tmp_ext
         Suffix for temp file created by ``check_cmd``. Useful for checkers
         dependent on config file extension (e.g. the init-checkconf upstart
@@ -2100,7 +2117,7 @@ def managed(name,
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -2454,7 +2471,7 @@ def managed(name,
     tmp_filename = None
 
     if check_cmd:
-        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext)
+        tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext, dir=tmp_dir)
 
         # if exists copy existing file to tmp to compare
         if __salt__['file.file_exists'](name):
@@ -2804,7 +2821,7 @@ def directory(name,
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -3623,7 +3640,9 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
         This is only used when datetime is pulled from ``os.path.getmtime()``.
         Defaults to ``None`` which uses the timezone from the locale.
 
-    .. code-block: yaml
+    Usage example:
+
+    .. code-block:: yaml
 
         /var/backups/example_directory:
           file.retention_schedule:
@@ -3877,7 +3896,7 @@ def line(name, content=None, match=None, mode=None, location=None,
     processing can be bypassed in order to pass an equal sign through to the
     remote shell command by manually specifying the kwarg:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
        update_config:
          file.line:
@@ -4141,11 +4160,20 @@ def blockreplace(
         append_if_not_found=False,
         prepend_if_not_found=False,
         backup='.bak',
-        show_changes=True):
+        show_changes=True,
+        append_newline=None):
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
     .. versionadded:: 2014.1.0
+    .. versionchanged:: 2017.7.5,2018.3.1
+        ``append_newline`` argument added. Additionally, to improve
+        idempotence, if the string represented by ``marker_end`` is found in
+        the middle of the line, the content preceding the marker will be
+        removed when the block is replaced. This allows one to remove
+        ``append_newline: False`` from the SLS and have the block properly
+        replaced if the end of the content block is immediately followed by the
+        ``marker_end`` (i.e. no newline before the marker).
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you
@@ -4230,41 +4258,54 @@ def blockreplace(
         See the ``source_hash`` parameter description for :mod:`file.managed
         <salt.states.file.managed>` function for more details and examples.
 
-    template
-        The named templating engine will be used to render the downloaded file.
-        Defaults to ``jinja``. The following templates are supported:
+    template : jinja
+        Templating engine to be used to render the downloaded file. The
+        following engines are supported:
 
-        - :mod:`cheetah<salt.renderers.cheetah>`
-        - :mod:`genshi<salt.renderers.genshi>`
-        - :mod:`jinja<salt.renderers.jinja>`
-        - :mod:`mako<salt.renderers.mako>`
-        - :mod:`py<salt.renderers.py>`
-        - :mod:`wempy<salt.renderers.wempy>`
+        - :mod:`cheetah <salt.renderers.cheetah>`
+        - :mod:`genshi <salt.renderers.genshi>`
+        - :mod:`jinja <salt.renderers.jinja>`
+        - :mod:`mako <salt.renderers.mako>`
+        - :mod:`py <salt.renderers.py>`
+        - :mod:`wempy <salt.renderers.wempy>`
 
     context
-        Overrides default context variables passed to the template.
+        Overrides default context variables passed to the template
 
     defaults
-        Default context passed to the template.
+        Default context passed to the template
 
-    append_if_not_found
-        If markers are not found and set to True then the markers and content
-        will be appended to the file. Default is ``False``
+    append_if_not_found : False
+        If markers are not found and this option is set to ``True``, the
+        content block will be appended to the file.
 
-    prepend_if_not_found
-        If markers are not found and set to True then the markers and content
-        will be prepended to the file. Default is ``False``
+    prepend_if_not_found : False
+        If markers are not found and this option is set to ``True``, the
+        content block will be prepended to the file.
 
     backup
         The file extension to use for a backup of the file if any edit is made.
         Set this to ``False`` to skip making a backup.
 
-    dry_run
-        Don't make any edits to the file
+    dry_run : False
+        If ``True``, do not make any edits to the file and simply return the
+        changes that *would* be made.
 
-    show_changes
-        Output a unified diff of the old file and the new file. If ``False``
-        return a boolean if any changes were made
+    show_changes : True
+        Controls how changes are presented. If ``True``, the ``Changes``
+        section of the state return will contain a unified diff of the changes
+        made. If False, then it will contain a boolean (``True`` if any changes
+        were made, otherwise ``False``).
+
+    append_newline
+        Controls whether or not a newline is appended to the content block. If
+        the value of this argument is ``True`` then a newline will be added to
+        the content block. If it is ``False``, then a newline will *not* be
+        added to the content block. If it is unspecified, then a newline will
+        only be added to the content block if it does not already end in a
+        newline.
+
+        .. versionadded:: 2017.7.5,2018.3.1
 
     Example of usage with an accumulator and with a variable:
 
@@ -4366,17 +4407,25 @@ def blockreplace(
         for index, item in enumerate(text):
             content += six.text_type(item)
 
-    changes = __salt__['file.blockreplace'](
-        name,
-        marker_start,
-        marker_end,
-        content=content,
-        append_if_not_found=append_if_not_found,
-        prepend_if_not_found=prepend_if_not_found,
-        backup=backup,
-        dry_run=__opts__['test'],
-        show_changes=show_changes
-    )
+    try:
+        changes = __salt__['file.blockreplace'](
+            name,
+            marker_start,
+            marker_end,
+            content=content,
+            append_if_not_found=append_if_not_found,
+            prepend_if_not_found=prepend_if_not_found,
+            backup=backup,
+            dry_run=__opts__['test'],
+            show_changes=show_changes,
+            append_newline=append_newline)
+    except Exception as exc:
+        log.exception('Encountered error managing block')
+        ret['comment'] = (
+            'Encountered error managing block: {0}. '
+            'See the log for details.'.format(exc)
+        )
+        return ret
 
     if changes:
         ret['pchanges'] = {'diff': changes}
@@ -6626,7 +6675,7 @@ def cached(name,
 
     .. code-block:: python
 
-        cached = __salt__['cp.is_cached'](source_match)
+        cached = __salt__['cp.is_cached'](source_match, saltenv=__env__)
 
     This function will return the cached path of the file, or an empty string
     if the file is not present in the minion cache.

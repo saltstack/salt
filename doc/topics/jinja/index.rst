@@ -153,7 +153,7 @@ starts at the root of the state tree or pillar.
 Errors
 ======
 
-Saltstack allows to raise custom errors using the ``raise`` jinja function.
+Saltstack allows raising custom errors using the ``raise`` jinja function.
 
 .. code-block:: jinja
 
@@ -834,7 +834,7 @@ Returns:
 ----------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``str_to_num`` to ``to_num``.
 
 Converts a string to its numerical value.
@@ -882,7 +882,7 @@ Example:
 --------------------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
@@ -911,7 +911,7 @@ Returns:
 --------------------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
@@ -942,7 +942,7 @@ Returns:
 ---------------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``rand_str`` to ``random_hash`` to more accurately describe
     what the filter does. ``rand_str`` will be supported until the Neon
     release.
@@ -1122,7 +1122,7 @@ Returns:
     'body': '{
       "userId": 1,
       "id": 1,
-      "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+      "title": "sunt aut facere repellat provident occaecati excepturi option reprehenderit",
       "body": "quia et suscipit\\nsuscipit recusandae consequuntur expedita et cum\\nreprehenderit molestiae ut ut quas totam\\nnostrum rerum est autem sunt rem eveniet architecto"
     }'
   }
@@ -1384,7 +1384,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ 'www.google.com' | dns_check }}
+  {{ 'www.google.com' | dns_check(port=443) }}
 
 Returns:
 

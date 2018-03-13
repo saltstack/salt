@@ -103,7 +103,7 @@ A REST API for Salt
         Whether to check for and kill HTTP responses that have exceeded the
         default timeout.
 
-        .. deprecated:: 2016.11.9, 2017.7.3, Oxygen
+        .. deprecated:: 2016.11.9,2017.7.3,2018.3.0
 
             The "expire_responses" configuration setting, which corresponds
             to the ``timeout_monitor`` setting in CherryPy, is no longer
@@ -118,7 +118,7 @@ A REST API for Salt
     stats_disable_auth : False
         Do not require authentication to access the ``/stats`` endpoint.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``

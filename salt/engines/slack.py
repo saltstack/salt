@@ -119,6 +119,7 @@ import salt.utils.http
 import salt.utils.json
 import salt.utils.slack
 import salt.utils.yaml
+import salt.output.highstate
 from salt.ext import six
 
 __virtualname__ = 'slack'
@@ -266,7 +267,7 @@ class SlackClient(object):
 
     def can_user_run(self, user, command, groups):
         '''
-        Break out the permissions into the folowing:
+        Break out the permissions into the following:
 
         Check whether a user is in any group, including whether a group has the '*' membership
 
@@ -281,7 +282,7 @@ class SlackClient(object):
 
         :rtype: tuple
         :returns: On a successful permitting match, returns 2-element tuple that contains
-            the name of the group that successfuly matched, and a dictionary containing
+            the name of the group that successfully matched, and a dictionary containing
             the configuration of the group so it can be referenced.
 
             On failure it returns an empty tuple
@@ -399,7 +400,7 @@ class SlackClient(object):
         When encountering an error (e.g. invalid message), yields {}, the caller can proceed to the next message
 
         When the websocket being read from has given up all its messages, yields {'done': True} to
-        indicate that the caller has read all of the relevent data for now, and should continue
+        indicate that the caller has read all of the relevant data for now, and should continue
         its own processing and check back for more data later.
 
         This relies on the caller sleeping between checks, otherwise this could flood
@@ -563,20 +564,11 @@ class SlackClient(object):
         '''
         Print out YAML using the block mode
         '''
-        params = {}
-        if 'output_indent' not in __opts__:
-            # default indentation
-            params.update(default_flow_style=False)
-        elif __opts__['output_indent'] >= 0:
-            # custom indent
-            params.update(default_flow_style=False,
-                          indent=__opts__['output_indent'])
-        else:  # no indentation
-            params.update(default_flow_style=True,
-                          indent=0)
         try:
-            #return salt.utils.yaml.safe_dump(data, **params).replace("\n\n", "\n")
-            return salt.utils.json.dumps(data, sort_keys=True, indent=1)
+            salt.output.highstate.__opts__ = __opts__
+            if 'color' not in salt.output.highstate.__opts__:
+                salt.output.highstate.__opts__.update({"color": ""})
+            return salt.output.highstate.output(data)
         # pylint: disable=broad-except
         except Exception as exc:
             import pprint

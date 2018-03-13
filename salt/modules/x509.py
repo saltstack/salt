@@ -335,9 +335,8 @@ def _parse_subject(subject):
             if val:
                 ret[nid_name] = val
                 nids.append(nid_num)
-        except TypeError as e:
-            if e.args and e.args[0] == 'No string argument provided':
-                pass
+        except TypeError as err:
+            log.trace("Missing attribute '%s'. Error: %s", nid_name, err)
 
     return ret
 

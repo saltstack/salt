@@ -856,12 +856,10 @@ class LocalClient(Client):
         fnd = {'path': '',
                'rel': ''}
 
-        if saltenv not in self.opts['file_roots']:
-            return fnd
         if salt.utils.url.is_escaped(path):
             # The path arguments are escaped
             path = salt.utils.url.unescape(path)
-        for root in self.opts['file_roots'][saltenv]:
+        for root in self.opts['file_roots'].get(saltenv, []):
             full = os.path.join(root, path)
             if os.path.isfile(full):
                 fnd['path'] = full
@@ -894,10 +892,8 @@ class LocalClient(Client):
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
-        if saltenv not in self.opts['file_roots']:
-            return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -915,9 +911,7 @@ class LocalClient(Client):
         '''
         ret = []
         prefix = prefix.strip('/')
-        if saltenv not in self.opts['file_roots']:
-            return ret
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -933,10 +927,8 @@ class LocalClient(Client):
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
-        if saltenv not in self.opts['file_roots']:
-            return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -1031,10 +1023,7 @@ class LocalClient(Client):
         '''
         Return the available environments
         '''
-        ret = []
-        for saltenv in self.opts['file_roots']:
-            ret.append(saltenv)
-        return ret
+        return list(self.opts['file_roots'])
 
     def master_tops(self):
         '''
@@ -1274,8 +1263,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list'}
-
-        return [sdecode(fn_) for fn_ in self.channel.send(load)]
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def file_list_emptydirs(self, saltenv='base', prefix=''):
         '''
@@ -1284,7 +1273,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
-        self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def dir_list(self, saltenv='base', prefix=''):
         '''
@@ -1293,7 +1283,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_dir_list'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def symlink_list(self, saltenv='base', prefix=''):
         '''
@@ -1302,7 +1293,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_symlink_list'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def __hash_and_stat_file(self, path, saltenv='base'):
         '''
@@ -1368,21 +1360,24 @@ class RemoteClient(Client):
         '''
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def envs(self):
         '''
         Return a list of available environments
         '''
         load = {'cmd': '_file_envs'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def master_opts(self):
         '''
         Return the master opts data
         '''
         load = {'cmd': '_master_opts'}
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
     def master_tops(self):
         '''
@@ -1393,7 +1388,8 @@ class RemoteClient(Client):
                 'opts': self.opts}
         if self.auth:
             load['tok'] = self.auth.gen_token(b'salt')
-        return self.channel.send(load)
+        return salt.utils.data.decode(self.channel.send(load)) if six.PY2 \
+            else self.channel.send(load)
 
 
 class FSClient(RemoteClient):
