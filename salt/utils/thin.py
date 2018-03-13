@@ -264,8 +264,11 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             try:
                 tops = salt.utils.json.loads(stdout)
                 tops_py_version_mapping['3'] = tops
-            except ValueError:
-                pass
+            except ValueError as err:
+                log.error('Failed parsing tops for Python binary %s: %s', python3_bin, err)
+        else:
+            log.error('Failed collecting tops for Python binary: %s', python3_bin)
+            log.debug(stderr)
 
     # Collect tops, alternative to 3.x version
     if _six.PY3 and sys.version_info.major == 3:
@@ -278,8 +281,11 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             try:
                 tops = salt.utils.json.loads(stdout.decode('utf-8'))
                 tops_py_version_mapping['2'] = tops
-            except ValueError:
-                pass
+            except ValueError as err:
+                log.error('Failed parsing tops for Python binary %s: %s', python2_bin, err)
+        else:
+            log.error('Failed collecting tops for Python binary: %s', python2_bin)
+            log.debug(stderr)
 
     if compress not in ['gzip', 'zip']:
         compress = 'gzip'
