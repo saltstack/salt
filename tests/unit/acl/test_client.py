@@ -77,8 +77,8 @@ class ClientACLTestCase(TestCase):
 
         self.assertTrue(client_acl.user_is_whitelisted('testuser'))
         self.assertTrue(client_acl.user_is_whitelisted('saltuser'))
-        self.assertTrue(client_acl.cmd_is_whitelisted('test.ping'))
-        self.assertTrue(client_acl.cmd_is_whitelisted('grains.items'))
+        self.assertFalse(client_acl.user_is_whitelisted('three'))
+        self.assertFalse(client_acl.user_is_whitelisted('hans'))
 
     def test_cmd_is_whitelisted(self):
         '''
@@ -86,7 +86,7 @@ class ClientACLTestCase(TestCase):
         '''
         client_acl = acl.PublisherACL(self.whitelist)
 
-        self.assertFalse(client_acl.cmd_is_whitelisted('devuser'))
-        self.assertFalse(client_acl.cmd_is_whitelisted('superuser'))
+        self.assertTrue(client_acl.cmd_is_whitelisted('test.ping'))
+        self.assertTrue(client_acl.cmd_is_whitelisted('grains.items'))
         self.assertFalse(client_acl.cmd_is_whitelisted('cmd.run'))
         self.assertFalse(client_acl.cmd_is_whitelisted('test.version'))
