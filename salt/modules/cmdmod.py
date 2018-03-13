@@ -445,9 +445,9 @@ def _run(cmd,
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE
             ).communicate(py_code.encode(__salt_system_encoding__))
+            env_encoded_err = env_encoded[1]
+            env_encoded = env_encoded[0]
             env_encoded_org = env_encoded
-            env_encoded = env_encoded_org[0]
-            env_encoded_err = env_encoded_org[1]
             env_mark = env_encoded.find(marker + '\n')
             if env_mark < 0:
                 raise CommandExecutionError(
