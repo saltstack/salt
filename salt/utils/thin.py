@@ -269,6 +269,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         tfp = tarfile.open(thintar, 'w:gz', dereference=True)
     elif compress == 'zip':
         tfp = zipfile.ZipFile(thintar, 'w')
+        tfp.add = tfp.write
 
     try:  # cwd may not exist if it was removed but salt was run from it
         start_dir = os.getcwd()
@@ -293,45 +294,38 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             if not os.path.isdir(top):
                 # top is a single file module
                 if os.path.exists(os.path.join(top_dirname, base)):
-                    if compress == 'gzip':
-                        tfp.add(base, arcname=os.path.join('py{0}'.format(py_ver), base))
-                    elif compress == 'zip':
-                        tfp.write(base, arcname=os.path.join('py{0}'.format(py_ver), base))
+                    tfp.add(base, arcname=os.path.join('py{0}'.format(py_ver), base))
                 continue
             for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
                     if not name.endswith(('.pyc', '.pyo')):
-                        if compress == 'gzip':
-                            tfp.add(os.path.join(root, name),
-                                    arcname=os.path.join('py{0}'.format(py_ver), root, name))
-                        elif compress == 'zip':
+                        arcname = os.path.join('py{0}'.format(py_ver), root, name)
+                        if hasattr(tfp, 'getinfo'):
                             try:
                                 # This is a little slow but there's no clear way to detect duplicates
                                 tfp.getinfo(os.path.join('py{0}'.format(py_ver), root, name))
+                                arcname = None
                             except KeyError:
-                                tfp.write(os.path.join(root, name), arcname=os.path.join('py{0}'.format(py_ver), root, name))
+                                log.debug('ZIP: Unable to add "%s" with "getinfo"', arcname)
+                        if arcname:
+                            tfp.add(os.path.join(root, name), arcname=arcname)
+
             if tempdir is not None:
                 shutil.rmtree(tempdir)
                 tempdir = None
     os.chdir(thindir)
-    if compress == 'gzip':
-        tfp.add('salt-call')
-    elif compress == 'zip':
-        tfp.write('salt-call')
+    tfp.add('salt-call')
     with salt.utils.files.fopen(thinver, 'w+') as fp_:
         fp_.write(salt.version.__version__)
     with salt.utils.files.fopen(pythinver, 'w+') as fp_:
         fp_.write(str(sys.version_info[0]))  # future lint: disable=blacklisted-function
     os.chdir(os.path.dirname(thinver))
-    if compress == 'gzip':
-        tfp.add('version')
-        tfp.add('.thin-gen-py-version')
-    elif compress == 'zip':
-        tfp.write('version')
-        tfp.write('.thin-gen-py-version')
+    tfp.add('version')
+    tfp.add('.thin-gen-py-version')
     if start_dir:
         os.chdir(start_dir)
     tfp.close()
+
     return thintar
 
 
