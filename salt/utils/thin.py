@@ -95,6 +95,22 @@ def thin_path(cachedir):
     return os.path.join(cachedir, 'thin', 'thin.tgz')
 
 
+def _add_dependency(container, obj):
+    '''
+    Add a dependency to the top list.
+
+    :param obj:
+    :param is_file:
+    :return:
+    '''
+    if not obj:
+        return
+    if os.path.basename(obj.__file__).split('.')[0] == '__init__':
+        container.append(os.path.dirname(obj.__file__))
+    else:
+        container.append(obj.__file__.replace('.pyc', '.py'))
+
+
 def get_tops(extra_mods='', so_mods=''):
     '''
     Get top directories for the dependencies, based on Python interpreter.
@@ -103,26 +119,10 @@ def get_tops(extra_mods='', so_mods=''):
     :param so_mods:
     :return:
     '''
-    tops = [os.path.dirname(salt.__file__),
-            os.path.dirname(jinja2.__file__),
-            os.path.dirname(yaml.__file__),
-            os.path.dirname(tornado.__file__),
-            os.path.dirname(msgpack.__file__)]
-
-    tops.append(_six.__file__.replace('.pyc', '.py'))
-    tops.append(backports_abc.__file__.replace('.pyc', '.py'))
-
-    if certifi:
-        tops.append(os.path.dirname(certifi.__file__))
-
-    if singledispatch:
-        tops.append(singledispatch.__file__.replace('.pyc', '.py'))
-
-    if singledispatch_helpers:
-        tops.append(singledispatch_helpers.__file__.replace('.pyc', '.py'))
-
-    if ssl_match_hostname:
-        tops.append(os.path.dirname(os.path.dirname(ssl_match_hostname.__file__)))
+    tops = []
+    for mod in [salt, jinja2, yaml, tornado, msgpack, certifi, singledispatch,
+                singledispatch_helpers, ssl_match_hostname, markupsafe, backports_abc]:
+        _add_dependency(tops, mod)
 
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():
@@ -147,8 +147,6 @@ def get_tops(extra_mods='', so_mods=''):
             tops.append(locals()[mod].__file__)
         except ImportError:
             pass   # As per comment above
-    if markupsafe:
-        tops.append(os.path.dirname(markupsafe.__file__))
 
     return tops
 
