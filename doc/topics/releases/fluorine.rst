@@ -41,6 +41,11 @@ The ``cache`` roster had the following changes:
 State Deprecations
 ==================
 
+The ``git`` state had the following changes:
+
+- Support for the ``ref`` option in the ``detached`` state has been removed.
+  Please use the ``rev`` option instead.
+
 The ``k8s`` state has been removed. The following functions should be used
 instead:
 
