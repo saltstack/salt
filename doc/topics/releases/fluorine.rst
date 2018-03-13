@@ -27,6 +27,14 @@ syndic respects :conf_minion:`enable_legacy_startup_events` as well.
 Deprecations
 ------------
 
+Pillar Deprecations
+===================
+
+The ``vault`` pillar had the following changes:
+
+- Support for the ``profile`` argument was removed. Any options passed up until
+  and following the first ``path=`` are discarded.
+
 Roster Deprecations
 ===================
 
