@@ -74,18 +74,29 @@ import salt.version
 
 log = logging.getLogger(__name__)
 
-SALTCALL = '''# -*- coding: utf-8 -*-
+
+def _get_salt_call(dirs=None):
+    '''
+    Return salt-call source.
+
+    :return:
+    '''
+    template = '''# -*- coding: utf-8 -*-
 import os
 import sys
 
 if __name__ == '__main__':
     # Add own modules path to the system path
-    for base in ['pyall', 'py{0[0]}'.format(sys.version_info)]:
+    for base in [%dirs%'py{0[0]}'.format(sys.version_info)]:
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), base))
 
     from salt.scripts import salt_call
     salt_call()
 '''
+
+    dirs = ', '.join(["'{}'".format(name) for name in dirs or []])
+    return salt.utils.stringutils.to_bytes(template.replace(
+        '%dirs%', dirs + (dirs and ', ' or '')))
 
 
 def thin_path(cachedir):
@@ -210,7 +221,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     pythinver = os.path.join(thindir, '.thin-gen-py-version')
     salt_call = os.path.join(thindir, 'salt-call')
     with salt.utils.files.fopen(salt_call, 'wb') as fp_:
-        fp_.write(salt.utils.stringutils.to_bytes(SALTCALL))
+        fp_.write(_get_salt_call(['pyall']))
     if os.path.isfile(thintar):
         if not overwrite:
             if os.path.isfile(thinver):
@@ -390,7 +401,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
     pyminver = os.path.join(mindir, '.min-gen-py-version')
     salt_call = os.path.join(mindir, 'salt-call')
     with salt.utils.files.fopen(salt_call, 'wb') as fp_:
-        fp_.write(SALTCALL)
+        fp_.write(_get_salt_call(has_common=False))
     if os.path.isfile(mintar):
         if not overwrite:
             if os.path.isfile(minver):
