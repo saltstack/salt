@@ -110,26 +110,30 @@ def _get_branch_opts(branch, local_branch, all_local_branches,
     return ret
 
 
-def _get_local_rev_and_branch(target, user, password):
+def _get_local_rev_and_branch(target, user, password, output_encoding=None):
     '''
     Return the local revision for before/after comparisons
     '''
     log.info('Checking local revision for %s', target)
     try:
-        local_rev = __salt__['git.revision'](target,
-                                             user=user,
-                                             password=password,
-                                             ignore_retcode=True)
+        local_rev = __salt__['git.revision'](
+            target,
+            user=user,
+            password=password,
+            ignore_retcode=True,
+            output_encoding=output_encoding)
     except CommandExecutionError:
         log.info('No local revision for %s', target)
         local_rev = None
 
     log.info('Checking local branch for %s', target)
     try:
-        local_branch = __salt__['git.current_branch'](target,
-                                                      user=user,
-                                                      password=password,
-                                                      ignore_retcode=True)
+        local_branch = __salt__['git.current_branch'](
+            target,
+            user=user,
+            password=password,
+            ignore_retcode=True,
+            output_encoding=output_encoding)
     except CommandExecutionError:
         log.info('No local branch for %s', target)
         local_branch = None
@@ -260,6 +264,7 @@ def latest(name,
            unless=False,
            refspec_branch='*',
            refspec_tag='*',
+           output_encoding=None,
            **kwargs):
     '''
     Make sure the repository is cloned to the given directory and is
@@ -521,6 +526,30 @@ def latest(name,
 
         .. versionadded:: 2017.7.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
 
     .. note::
@@ -698,7 +727,8 @@ def latest(name,
             https_user=https_user,
             https_pass=https_pass,
             ignore_retcode=False,
-            saltenv=__env__)
+            saltenv=__env__,
+            output_encoding=output_encoding)
     except CommandExecutionError as exc:
         return _fail(
             ret,
@@ -808,18 +838,29 @@ def latest(name,
     check = 'refs' if bare else '.git'
     gitdir = os.path.join(target, check)
     comments = []
-    if os.path.isdir(gitdir) or __salt__['git.is_worktree'](target,
-                                                            user=user,
-                                                            password=password):
+    if os.path.isdir(gitdir) \
+            or __salt__['git.is_worktree'](
+                target,
+                user=user,
+                password=password,
+                output_encoding=output_encoding):
         # Target directory is a git repository or git worktree
         try:
             all_local_branches = __salt__['git.list_branches'](
-                target, user=user, password=password)
-            all_local_tags = __salt__['git.list_tags'](target,
-                                                       user=user,
-                                                       password=password)
-            local_rev, local_branch = \
-                _get_local_rev_and_branch(target, user, password)
+                target,
+                user=user,
+                password=password,
+                output_encoding=output_encoding)
+            all_local_tags = __salt__['git.list_tags'](
+                target,
+                user=user,
+                password=password,
+                output_encoding=output_encoding)
+            local_rev, local_branch = _get_local_rev_and_branch(
+                target,
+                user,
+                password,
+                output_encoding)
 
             if not bare and remote_rev is None and local_rev is not None:
                 return _fail(
@@ -855,7 +896,8 @@ def latest(name,
                             branch + '^{commit}',
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
                     except CommandExecutionError as exc:
                         return _fail(
                             ret,
@@ -867,7 +909,8 @@ def latest(name,
             remotes = __salt__['git.remotes'](target,
                                               user=user,
                                               password=password,
-                                              redact_auth=False)
+                                              redact_auth=False,
+                                              output_encoding=output_encoding)
 
             revs_match = _revs_equal(local_rev, remote_rev, remote_rev_type)
             try:
@@ -879,7 +922,8 @@ def latest(name,
                     __salt__['git.diff'](target,
                                          'HEAD',
                                          user=user,
-                                         password=password)
+                                         password=password,
+                                         output_encoding=output_encoding)
                 )
             except CommandExecutionError:
                 # No need to capture the error and log it, the _git_run()
@@ -933,7 +977,8 @@ def latest(name,
                             remote_rev + '^{commit}',
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
                     except CommandExecutionError:
                         # Local checkout doesn't have the remote_rev
                         pass
@@ -954,7 +999,8 @@ def latest(name,
                                         desired_upstream,
                                         user=user,
                                         password=password,
-                                        ignore_retcode=True)
+                                        ignore_retcode=True,
+                                        output_encoding=output_encoding)
                                 except CommandExecutionError:
                                     pass
                                 else:
@@ -974,7 +1020,8 @@ def latest(name,
                                         rev + '^{commit}',
                                         user=user,
                                         password=password,
-                                        ignore_retcode=True)
+                                        ignore_retcode=True,
+                                        output_encoding=output_encoding)
                                 except CommandExecutionError:
                                     # Shouldn't happen if the tag exists
                                     # locally but account for this just in
@@ -1044,7 +1091,8 @@ def latest(name,
                             is_ancestor=True,
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
 
             if fast_forward is False:
                 if not force_reset:
@@ -1075,7 +1123,8 @@ def latest(name,
                         opts=['--abbrev-ref'],
                         user=user,
                         password=password,
-                        ignore_retcode=True)
+                        ignore_retcode=True,
+                        output_encoding=output_encoding)
                 except CommandExecutionError:
                     # There is a local branch but the rev-parse command
                     # failed, so that means there is no upstream tracking
@@ -1144,7 +1193,8 @@ def latest(name,
                                            user=user,
                                            password=password,
                                            https_user=https_user,
-                                           https_pass=https_pass)
+                                           https_pass=https_pass,
+                                           output_encoding=output_encoding)
                 if fetch_url is None:
                     comments.append(
                         'Remote \'{0}\' set to {1}'.format(
@@ -1318,7 +1368,7 @@ def latest(name,
                         identity=identity,
                         saltenv=__env__,
                         ignore_retcode=True,
-                    ).keys() if '^{}' not in x
+                        output_encoding=output_encoding) if '^{}' not in x
                 ])
                 if set(all_local_tags) != remote_tags:
                     has_remote_rev = False
@@ -1336,7 +1386,8 @@ def latest(name,
                             user=user,
                             password=password,
                             identity=identity,
-                            saltenv=__env__)
+                            saltenv=__env__,
+                            output_encoding=output_encoding)
                     except CommandExecutionError as exc:
                         return _failed_fetch(ret, exc, comments)
                     else:
@@ -1352,7 +1403,8 @@ def latest(name,
                             remote_rev + '^{commit}',
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
                     except CommandExecutionError as exc:
                         return _fail(
                             ret,
@@ -1384,7 +1436,8 @@ def latest(name,
                             refs=[base_rev, remote_rev],
                             is_ancestor=True,
                             user=user,
-                            password=password)
+                            password=password,
+                            output_encoding=output_encoding)
 
                     if fast_forward is False and not force_reset:
                         return _not_fast_forward(
@@ -1427,7 +1480,8 @@ def latest(name,
                                              force=force_checkout,
                                              opts=checkout_opts,
                                              user=user,
-                                             password=password)
+                                             password=password,
+                                             output_encoding=output_encoding)
                     if '-b' in checkout_opts:
                         comments.append(
                             'New branch \'{0}\' was checked out, with {1} '
@@ -1450,7 +1504,7 @@ def latest(name,
                         opts=['--hard', remote_rev],
                         user=user,
                         password=password,
-                    )
+                        output_encoding=output_encoding)
                     ret['changes']['forced update'] = True
                     comments.append(
                         'Repository was hard-reset to {0}'.format(remote_loc)
@@ -1461,7 +1515,8 @@ def latest(name,
                         target,
                         opts=branch_opts,
                         user=user,
-                        password=password)
+                        password=password,
+                        output_encoding=output_encoding)
                     comments.append(upstream_action)
 
                 # Fast-forward to the desired revision
@@ -1474,12 +1529,14 @@ def latest(name,
                         # trying to merge changes. (The call to
                         # git.symbolic_ref will only return output if HEAD
                         # points to a branch.)
-                        if __salt__['git.symbolic_ref'](target,
-                                                        'HEAD',
-                                                        opts=['--quiet'],
-                                                        user=user,
-                                                        password=password,
-                                                        ignore_retcode=True):
+                        if __salt__['git.symbolic_ref'](
+                                target,
+                                'HEAD',
+                                opts=['--quiet'],
+                                user=user,
+                                password=password,
+                                ignore_retcode=True,
+                                output_encoding=output_encoding):
 
                             if git_ver >= _LooseVersion('1.8.1.6'):
                                 # --ff-only added in version 1.8.1.6. It's not
@@ -1499,7 +1556,8 @@ def latest(name,
                                 rev=remote_rev,
                                 opts=merge_opts,
                                 user=user,
-                                password=password)
+                                password=password,
+                                output_encoding=output_encoding)
                             comments.append(
                                 'Repository was fast-forwarded to {0}'
                                 .format(remote_loc)
@@ -1518,7 +1576,8 @@ def latest(name,
                             opts=['--hard',
                                   remote_rev if rev == 'HEAD' else rev],
                             user=user,
-                            password=password)
+                            password=password,
+                            output_encoding=output_encoding)
                         comments.append(
                             'Repository was reset to {0} (fast-forward)'
                             .format(rev)
@@ -1535,7 +1594,8 @@ def latest(name,
                             user=user,
                             password=password,
                             identity=identity,
-                            saltenv=__env__)
+                            saltenv=__env__,
+                            output_encoding=output_encoding)
                     except CommandExecutionError as exc:
                         return _failed_submodule_update(ret, exc, comments)
             elif bare:
@@ -1557,7 +1617,8 @@ def latest(name,
                         user=user,
                         password=password,
                         identity=identity,
-                        saltenv=__env__)
+                        saltenv=__env__,
+                        output_encoding=output_encoding)
                 except CommandExecutionError as exc:
                     return _failed_fetch(ret, exc, comments)
                 else:
@@ -1574,7 +1635,8 @@ def latest(name,
                     cwd=target,
                     user=user,
                     password=password,
-                    ignore_retcode=True)
+                    ignore_retcode=True,
+                    output_encoding=output_encoding)
             except CommandExecutionError:
                 new_rev = None
 
@@ -1682,7 +1744,8 @@ def latest(name,
                                       identity=identity,
                                       https_user=https_user,
                                       https_pass=https_pass,
-                                      saltenv=__env__)
+                                      saltenv=__env__,
+                                      output_encoding=output_encoding)
             except CommandExecutionError as exc:
                 msg = 'Clone failed: {0}'.format(_strip_exc(exc))
                 return _fail(ret, msg, comments)
@@ -1715,7 +1778,10 @@ def latest(name,
                 else:
                     if remote_rev_type == 'tag' \
                             and rev not in __salt__['git.list_tags'](
-                                target, user=user, password=password):
+                                target,
+                                user=user,
+                                password=password,
+                                output_encoding=output_encoding):
                         return _fail(
                             ret,
                             'Revision \'{0}\' does not exist in clone'
@@ -1728,18 +1794,21 @@ def latest(name,
                                 __salt__['git.list_branches'](
                                     target,
                                     user=user,
-                                    password=password):
+                                    password=password,
+                                    output_encoding=output_encoding):
                             if rev == 'HEAD':
                                 checkout_rev = remote_rev
                             else:
                                 checkout_rev = desired_upstream \
                                     if desired_upstream \
                                     else rev
-                            __salt__['git.checkout'](target,
-                                                     checkout_rev,
-                                                     opts=['-b', branch],
-                                                     user=user,
-                                                     password=password)
+                            __salt__['git.checkout'](
+                                target,
+                                checkout_rev,
+                                opts=['-b', branch],
+                                user=user,
+                                password=password,
+                                output_encoding=output_encoding)
                             comments.append(
                                 'Branch \'{0}\' checked out, with {1} '
                                 'as a starting point'.format(
@@ -1748,8 +1817,11 @@ def latest(name,
                                 )
                             )
 
-                    local_rev, local_branch = \
-                        _get_local_rev_and_branch(target, user, password)
+                    local_rev, local_branch = _get_local_rev_and_branch(
+                        target,
+                        user,
+                        password,
+                        output_encoding=output_encoding)
 
                     if local_branch is None \
                             and remote_rev is not None \
@@ -1771,7 +1843,8 @@ def latest(name,
                             target,
                             opts=['--hard', remote_rev],
                             user=user,
-                            password=password)
+                            password=password,
+                            output_encoding=output_encoding)
                         comments.append(
                             'Repository was reset to {0}'.format(remote_loc)
                         )
@@ -1783,7 +1856,8 @@ def latest(name,
                             opts=['--abbrev-ref'],
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
                     except CommandExecutionError:
                         upstream = False
 
@@ -1796,9 +1870,11 @@ def latest(name,
                         branch_opts = _get_branch_opts(
                             branch,
                             local_branch,
-                            __salt__['git.list_branches'](target,
-                                                          user=user,
-                                                          password=password),
+                            __salt__['git.list_branches'](
+                                target,
+                                user=user,
+                                password=password,
+                                output_encoding=output_encoding),
                             desired_upstream,
                             git_ver)
                     elif upstream and desired_upstream is False:
@@ -1821,9 +1897,11 @@ def latest(name,
                         branch_opts = _get_branch_opts(
                             branch,
                             local_branch,
-                            __salt__['git.list_branches'](target,
-                                                          user=user,
-                                                          password=password),
+                            __salt__['git.list_branches'](
+                                target,
+                                user=user,
+                                password=password,
+                                output_encoding=output_encoding),
                             desired_upstream,
                             git_ver)
                     else:
@@ -1834,17 +1912,20 @@ def latest(name,
                             target,
                             opts=branch_opts,
                             user=user,
-                            password=password)
+                            password=password,
+                            output_encoding=output_encoding)
                         comments.append(upstream_action)
 
             if submodules and remote_rev:
                 try:
-                    __salt__['git.submodule'](target,
-                                              'update',
-                                              opts=['--init', '--recursive'],
-                                              user=user,
-                                              password=password,
-                                              identity=identity)
+                    __salt__['git.submodule'](
+                        target,
+                        'update',
+                        opts=['--init', '--recursive'],
+                        user=user,
+                        password=password,
+                        identity=identity,
+                        output_encoding=output_encoding)
                 except CommandExecutionError as exc:
                     return _failed_submodule_update(ret, exc, comments)
 
@@ -1853,7 +1934,8 @@ def latest(name,
                     cwd=target,
                     user=user,
                     password=password,
-                    ignore_retcode=True)
+                    ignore_retcode=True,
+                    output_encoding=output_encoding)
             except CommandExecutionError:
                 new_rev = None
 
@@ -1883,7 +1965,8 @@ def present(name,
             separate_git_dir=None,
             shared=None,
             user=None,
-            password=None):
+            password=None,
+            output_encoding=None):
     '''
     Ensure that a repository exists in the given directory
 
@@ -1943,6 +2026,30 @@ def present(name,
 
       .. versionadded:: 2016.3.4
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-init(1)`: http://git-scm.com/docs/git-init
     .. _`worktree`: http://git-scm.com/docs/git-worktree
     '''
@@ -1954,7 +2061,10 @@ def present(name,
             return ret
         elif not bare and \
                 (os.path.isdir(os.path.join(name, '.git')) or
-                 __salt__['git.is_worktree'](name, user=user, password=password)):
+                 __salt__['git.is_worktree'](name,
+                                             user=user,
+                                             password=password,
+                                             output_encoding=output_encoding)):
             return ret
         # Directory exists and is not a git repo, if force is set destroy the
         # directory and recreate, otherwise throw an error
@@ -2013,7 +2123,8 @@ def present(name,
                          separate_git_dir=separate_git_dir,
                          shared=shared,
                          user=user,
-                         password=password)
+                         password=password,
+                         output_encoding=output_encoding)
 
     actions = [
         'Initialized {0}repository in {1}'.format(
@@ -2050,6 +2161,7 @@ def detached(name,
            https_pass=None,
            onlyif=False,
            unless=False,
+           output_encoding=None,
            **kwargs):
     '''
     .. versionadded:: 2016.3.0
@@ -2132,6 +2244,29 @@ def detached(name,
         A command to run as a check, only run the named command if the command
         passed to the ``unless`` option returns false
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -2252,10 +2387,17 @@ def detached(name,
 
     gitdir = os.path.join(target, '.git')
     if os.path.isdir(gitdir) \
-            or __salt__['git.is_worktree'](target, user=user, password=password):
+            or __salt__['git.is_worktree'](target,
+                                           user=user,
+                                           password=password,
+                                           output_encoding=output_encoding):
         # Target directory is a git repository or git worktree
 
-        local_commit_id = _get_local_rev_and_branch(target, user, password)[0]
+        local_commit_id = _get_local_rev_and_branch(
+            target,
+            user,
+            password,
+            output_encoding=output_encoding)[0]
 
         if remote_rev_type is 'hash':
             try:
@@ -2263,7 +2405,8 @@ def detached(name,
                                          rev,
                                          user=user,
                                          password=password,
-                                         ignore_retcode=True)
+                                         ignore_retcode=True,
+                                         output_encoding=output_encoding)
             except CommandExecutionError:
                 hash_exists_locally = False
             else:
@@ -2274,7 +2417,8 @@ def detached(name,
             remotes = __salt__['git.remotes'](target,
                                               user=user,
                                               password=password,
-                                              redact_auth=False)
+                                              redact_auth=False,
+                                              output_encoding=output_encoding)
 
             if remote in remotes and name in remotes[remote]['fetch']:
                 pass
@@ -2300,7 +2444,8 @@ def detached(name,
                                            user=user,
                                            password=password,
                                            https_user=https_user,
-                                           https_pass=https_pass)
+                                           https_pass=https_pass,
+                                           output_encoding=output_encoding)
                 comments.append(
                     'Remote {0} updated from \'{1}\' to \'{2}\''.format(
                         remote,
@@ -2380,7 +2525,8 @@ def detached(name,
                                   identity=identity,
                                   https_user=https_user,
                                   https_pass=https_pass,
-                                  saltenv=__env__)
+                                  saltenv=__env__,
+                                  output_encoding=output_encoding)
             comments.append('{0} cloned to {1}'.format(name, target))
 
         except Exception as exc:
@@ -2417,7 +2563,8 @@ def detached(name,
                 user=user,
                 password=password,
                 identity=identity,
-                saltenv=__env__)
+                saltenv=__env__,
+                output_encoding=output_encoding)
         except CommandExecutionError as exc:
             msg = 'Fetch failed'
             msg += ':\n\n' + six.text_type(exc)
@@ -2432,7 +2579,12 @@ def detached(name,
     #get refs and checkout
     checkout_commit_id = ''
     if remote_rev_type is 'hash':
-        if __salt__['git.describe'](target, rev, user=user, password=password):
+        if __salt__['git.describe'](
+                target,
+                rev,
+                user=user,
+                password=password,
+                output_encoding=output_encoding):
             checkout_commit_id = rev
         else:
             return _fail(
@@ -2448,7 +2600,8 @@ def detached(name,
                 identity=identity,
                 https_user=https_user,
                 https_pass=https_pass,
-                ignore_retcode=False)
+                ignore_retcode=False,
+                output_encoding=output_encoding)
 
             if 'refs/remotes/'+remote+'/'+rev in all_remote_refs:
                 checkout_commit_id = all_remote_refs['refs/remotes/' + remote + '/' + rev]
@@ -2476,7 +2629,8 @@ def detached(name,
             target,
             opts=['--hard', 'HEAD'],
             user=user,
-            password=password)
+            password=password,
+            output_encoding=output_encoding)
         comments.append(
             'Repository was reset to HEAD before checking out revision'
         )
@@ -2499,7 +2653,8 @@ def detached(name,
                                  checkout_commit_id,
                                  force=force_checkout,
                                  user=user,
-                                 password=password)
+                                 password=password,
+                                 output_encoding=output_encoding)
         comments.append(
             'Commit ID {0} was checked out at {1}'.format(
                 checkout_commit_id,
@@ -2512,7 +2667,8 @@ def detached(name,
                 cwd=target,
                 user=user,
                 password=password,
-                ignore_retcode=True)
+                ignore_retcode=True,
+                output_encoding=output_encoding)
         except CommandExecutionError:
             new_rev = None
 
@@ -2522,7 +2678,8 @@ def detached(name,
                                   opts=['--init', '--recursive'],
                                   user=user,
                                   password=password,
-                                  identity=identity)
+                                  identity=identity,
+                                  output_encoding=output_encoding)
         comments.append(
             'Submodules were updated'
         )
@@ -2544,6 +2701,7 @@ def config_unset(name,
                  repo=None,
                  user=None,
                  password=None,
+                 output_encoding=None,
                  **kwargs):
     r'''
     .. versionadded:: 2015.8.0
@@ -2585,6 +2743,30 @@ def config_unset(name,
 
     global : False
         If ``True``, this will set a global git config option
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
 
     **Examples:**
@@ -2658,6 +2840,7 @@ def config_unset(name,
         user=user,
         password=password,
         ignore_retcode=True,
+        output_encoding=output_encoding,
         **{'global': global_}
     )
 
@@ -2707,6 +2890,7 @@ def config_unset(name,
             user=user,
             password=password,
             ignore_retcode=True,
+            output_encoding=output_encoding,
             **{'global': global_}
         )
 
@@ -2722,6 +2906,7 @@ def config_unset(name,
                 all=all_,
                 user=user,
                 password=password,
+                output_encoding=output_encoding,
                 **{'global': global_}
             )
         except CommandExecutionError as exc:
@@ -2746,6 +2931,7 @@ def config_unset(name,
         user=user,
         password=password,
         ignore_retcode=True,
+        output_encoding=output_encoding,
         **{'global': global_}
     )
 
@@ -2766,6 +2952,7 @@ def config_unset(name,
             user=user,
             password=password,
             ignore_retcode=True,
+            output_encoding=output_encoding,
             **{'global': global_}
         )
 
@@ -2787,6 +2974,7 @@ def config_set(name,
                repo=None,
                user=None,
                password=None,
+               output_encoding=None,
                **kwargs):
     '''
     .. versionadded:: 2014.7.0
@@ -2828,6 +3016,30 @@ def config_set(name,
 
     global : False
         If ``True``, this will set a global git config option
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+
+            On Windows, this option works slightly differently in the git state
+            and execution module than it does in the :mod:`"cmd" execution
+            module <salt.modules.cmdmod>`. The filenames in most git
+            repositories are created using a UTF-8 locale, and the system
+            encoding on Windows (CP1252) will successfully (but incorrectly)
+            decode many UTF-8 characters. This makes interacting with
+            repositories containing UTF-8 filenames on Windows unreliable.
+            Therefore, Windows will default to decoding the output from git
+            commands using UTF-8 unless this option is explicitly used to
+            specify the encoding.
+
+            On non-Windows platforms, the default output decoding behavior will
+            be observed (i.e. the encoding specified by the locale will be
+            tried first, and if that fails, UTF-8 will be used as a fallback).
+
+        .. versionadded:: 2018.3.1
 
     **Local Config Example:**
 
@@ -2922,6 +3134,7 @@ def config_set(name,
         user=user,
         password=password,
         ignore_retcode=True,
+        output_encoding=output_encoding,
         **{'all': True, 'global': global_}
     )
 
@@ -2952,6 +3165,7 @@ def config_set(name,
             multivar=multivar,
             user=user,
             password=password,
+            output_encoding=output_encoding,
             **{'global': global_}
         )
     except CommandExecutionError as exc:
