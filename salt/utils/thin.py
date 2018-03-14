@@ -244,11 +244,6 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                     '--python2-bin=<path-to-python-2.6-binary-or-higher>".'.format(python2_bin,
                                                                                 stdout.strip())
                 )
-    elif sys.version_info < (2, 6):
-        # Bail! Though, how did we reached this far in the first place.
-        raise salt.exceptions.SaltSystemExit(
-            'The minimum required python version to run salt-ssh is "2.6".'
-        )
 
     tops_failure_msg = 'Failed %s tops for Python binary %s.'
     tops_py_version_mapping = {}
