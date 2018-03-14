@@ -87,24 +87,27 @@ from tests.support.unit import skipIf
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
-from salt.utils.gitfs import GITPYTHON_MINVER, PYGIT2_MINVER
-from salt.utils.versions import LooseVersion
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+from salt.utils.gitfs import (
+    GITPYTHON_VERSION,
+    GITPYTHON_MINVER,
+    PYGIT2_VERSION,
+    PYGIT2_MINVER,
+    LIBGIT2_VERSION,
+    LIBGIT2_MINVER
+)
 
 # Check for requisite components
 try:
-    import git
-    HAS_GITPYTHON = \
-        LooseVersion(git.__version__) >= LooseVersion(GITPYTHON_MINVER)
+    HAS_GITPYTHON = GITPYTHON_VERSION >= GITPYTHON_MINVER
 except ImportError:
     HAS_GITPYTHON = False
 
 try:
-    import pygit2
-    HAS_PYGIT2 = \
-        LooseVersion(pygit2.__version__) >= LooseVersion(PYGIT2_MINVER)
-except ImportError:
+    HAS_PYGIT2 = PYGIT2_VERSION >= PYGIT2_MINVER \
+        and LIBGIT2_VERSION >= LIBGIT2_MINVER
+except AttributeError:
     HAS_PYGIT2 = False
 
 HAS_SSHD = bool(salt.utils.path.which('sshd'))
@@ -419,7 +422,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
-@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} required'.format(PYGIT2_MINVER))
+@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(not HAS_SSHD, 'sshd not present')
 class TestPygit2SSH(GitPillarSSHTestBase):
     '''
@@ -432,12 +435,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
     id_rsa_withpass = _rand_key_name(8)
     username = USERNAME
     passphrase = PASSWORD
-
-    def setUp(self):
-        super(TestPygit2SSH, self).setUp()
-        if self.is_el7():  # pylint: disable=E1120
-            self.skipTest(
-                'skipped until EPEL7 fixes pygit2/libgit2 version mismatch')
 
     @requires_system_grains
     def test_single_source(self, grains):
@@ -1199,19 +1196,13 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
-@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} required'.format(PYGIT2_MINVER))
+@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
 @skipIf(not HAS_VIRTUALENV, 'virtualenv not present')
 class TestPygit2HTTP(GitPillarHTTPTestBase):
     '''
     Test git_pillar with pygit2 using SSH authentication
     '''
-    def setUp(self):
-        super(TestPygit2HTTP, self).setUp()
-        if self.is_el7():  # pylint: disable=E1120
-            self.skipTest(
-                'skipped until EPEL7 fixes pygit2/libgit2 version mismatch')
-
     def test_single_source(self):
         '''
         Test using a single ext_pillar repo
@@ -1452,7 +1443,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
-@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} required'.format(PYGIT2_MINVER))
+@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
 @skipIf(not HAS_VIRTUALENV, 'virtualenv not present')
 class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
@@ -1464,12 +1455,6 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     '''
     user = USERNAME
     password = PASSWORD
-
-    def setUp(self):
-        super(TestPygit2AuthenticatedHTTP, self).setUp()
-        if self.is_el7():  # pylint: disable=E1120
-            self.skipTest(
-                'skipped until EPEL7 fixes pygit2/libgit2 version mismatch')
 
     def test_single_source(self):
         '''

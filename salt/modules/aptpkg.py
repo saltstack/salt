@@ -497,7 +497,7 @@ def install(name=None,
         Install a specific version of the package, e.g. 1.2.3~0ubuntu0. Ignored
         if "pkgs" or "sources" is passed.
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             version can now contain comparison operators (e.g. ``>1.2.3``,
             ``<=2.0``, etc.)
 
@@ -518,7 +518,7 @@ def install(name=None,
         ignored when comparing the currently-installed version to the desired
         version.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     Multiple Package Installation Options:
 
@@ -1084,9 +1084,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         <value> seconds
 
     download_only
-        Only donwload the packages, don't unpack or install them
+        Only download the packages, don't unpack or install them
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     force_conf_new
         Always install the new version of any configuration files.
@@ -2160,7 +2160,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
     key_text
         GPG key in string form to add to the APT GPG keyring
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     consolidate : False
         If ``True``, will attempt to de-duplicate and consolidate sources

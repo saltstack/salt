@@ -482,15 +482,6 @@ def info_installed(*names, **kwargs):
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in six.iteritems(pkg_nfo):
-            if isinstance(value, six.string_types):
-                # Check, if string is encoded in a proper UTF-8
-                if six.PY3:
-                    value_ = value.encode('UTF-8', 'ignore').decode('UTF-8', 'ignore')
-                else:
-                    value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
-                if value != value_:
-                    value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (invalid UTF-8)'
-                    log.error('Package %s has bad UTF-8 code in %s: %s', pkg_name, key, value)
             if key == 'source_rpm':
                 t_nfo['source'] = value
             else:
@@ -681,7 +672,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         If ``all`` is specified, all valid attributes will be returned.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     removed:
         not supported
@@ -824,10 +815,10 @@ def mod_repo(repo, **kwargs):
     be created, so long as the following values are specified:
 
     repo or alias
-        alias by which the zypper refers to the repo
+        alias by which Zypper refers to the repo
 
     url, mirrorlist or baseurl
-        the URL for zypper to reference
+        the URL for Zypper to reference
 
     enabled
         Enable or disable (True or False) repository,
@@ -842,12 +833,13 @@ def mod_repo(repo, **kwargs):
     gpgcheck
         Enable or disable (True or False) GPG check for this repository.
 
-    gpgautoimport
-        Automatically trust and import new repository.
+    gpgautoimport : False
+        If set to True, automatically trust and import public GPG key for
+        the repository.
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
-    url can only be deleted if a mirrorlist is specified (or vice versa).
+    URL can only be deleted if a ``mirrorlist`` is specified (or vice versa).
 
     CLI Examples:
 
@@ -1066,7 +1058,7 @@ def install(name=None,
         This parameter is ignored if ``pkgs`` or ``sources`` is passed.
 
     resolve_capabilities
-        If this option is set to True zypper will take capabilites into
+        If this option is set to True zypper will take capabilities into
         account. In this case names which are just provided by a package
         will get installed. Default is False.
 
@@ -1120,7 +1112,7 @@ def install(name=None,
 
         If ``all`` is specified, all valid attributes will be returned.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
 
     Returns a dict containing the new package names and versions::
@@ -2129,7 +2121,7 @@ def list_installed_patches():
 
 def list_provides(**kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     List package provides of installed packages as a dict.
     {'<provided_name>': ['<package_name>', '<package_name>', ...]}
@@ -2160,7 +2152,7 @@ def list_provides(**kwargs):
 
 def resolve_capabilities(pkgs, refresh, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Convert name provides in ``pkgs`` into real package names if
     ``resolve_capabilities`` parameter is set to True. In case of

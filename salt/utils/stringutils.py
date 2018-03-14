@@ -5,6 +5,7 @@ Functions for manipulating or otherwise processing strings
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import base64
 import errno
 import fnmatch
 import logging
@@ -12,6 +13,7 @@ import os
 import shlex
 import re
 import time
+import unicodedata
 
 # Import Salt libs
 from salt.utils.decorators.jinja import jinja_filter
@@ -82,31 +84,34 @@ def to_str(s, encoding=None, errors='strict'):
         raise TypeError('expected str, bytearray, or unicode')
 
 
-def to_unicode(s, encoding=None, errors='strict'):
+def to_unicode(s, encoding=None, errors='strict', normalize=False):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
+    def _normalize(s):
+        return unicodedata.normalize('NFC', s) if normalize else s
+
     if six.PY3:
         if isinstance(s, str):
-            return s
+            return _normalize(s)
         elif isinstance(s, (bytes, bytearray)):
-            return to_str(s, encoding, errors)
+            return _normalize(to_str(s, encoding, errors))
         raise TypeError('expected str, bytes, or bytearray')
     else:
         # This needs to be str and not six.string_types, since if the string is
         # already a unicode type, it does not need to be decoded (and doing so
         # will raise an exception).
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
-            return s
+            return _normalize(s)
         elif isinstance(s, (str, bytearray)):
             if encoding:
-                return s.decode(encoding, errors)
+                return _normalize(s.decode(encoding, errors))
             else:
                 try:
-                    return s.decode(__salt_system_encoding__, errors)
+                    return _normalize(s.decode(__salt_system_encoding__, errors))
                 except UnicodeDecodeError:
                     # Fall back to UTF-8
-                    return s.decode('utf-8', errors)
+                    return _normalize(s.decode('utf-8', errors))
         raise TypeError('expected str or bytearray')
 
 
@@ -203,7 +208,7 @@ def is_binary(data):
 @jinja_filter('random_str')
 def random(size=32):
     key = os.urandom(size)
-    return key.encode('base64').replace('\n', '')[:size]
+    return to_unicode(base64.b64encode(key).replace(b'\n', b'')[:size])
 
 
 @jinja_filter('contains_whitespace')
@@ -220,7 +225,7 @@ def human_to_bytes(size):
     return the number of bytes.  Will return 0 if the argument has
     unexpected form.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
     '''
     sbytes = size[:-1]
     unit = size[-1]
@@ -429,3 +434,38 @@ def print_cli(msg, retries=10, step=0.01):
                 else:
                     raise
         break
+
+
+def get_context(template, line, num_lines=5, marker=None):
+    '''
+    Returns debugging context around a line in a given string
+
+    Returns:: string
+    '''
+    template_lines = template.splitlines()
+    num_template_lines = len(template_lines)
+
+    # In test mode, a single line template would return a crazy line number like,
+    # 357. Do this sanity check and if the given line is obviously wrong, just
+    # return the entire template
+    if line > num_template_lines:
+        return template
+
+    context_start = max(0, line - num_lines - 1)  # subt 1 for 0-based indexing
+    context_end = min(num_template_lines, line + num_lines)
+    error_line_in_context = line - context_start - 1  # subtr 1 for 0-based idx
+
+    buf = []
+    if context_start > 0:
+        buf.append('[...]')
+        error_line_in_context += 1
+
+    buf.extend(template_lines[context_start:context_end])
+
+    if context_end < num_template_lines:
+        buf.append('[...]')
+
+    if marker:
+        buf[error_line_in_context] += marker
+
+    return '---\n{0}\n---'.format('\n'.join(buf))

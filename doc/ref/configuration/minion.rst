@@ -138,7 +138,7 @@ name) is set in the :conf_minion:`master` configuration setting.
 ``master_tops_first``
 ---------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``False``
 
@@ -207,6 +207,28 @@ minion event bus. The value is expressed in bytes.
 .. code-block:: yaml
 
     max_event_size: 1048576
+
+.. conf_minion:: enable_legacy_startup_events
+
+``enable_legacy_startup_events``
+--------------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``True``
+
+When a minion starts up it sends a notification on the event bus with a tag
+that looks like this: `salt/minion/<minion_id>/start`. For historical reasons
+the minion also sends a similar event with an event tag like this:
+`minion_start`. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set `enable_legacy_startup_events: False` in the
+minion config to ensure only the `salt/minion/<minion_id>/start` events are
+sent. Beginning with the `Neon` Salt release this option will default to
+`False`
+
+.. code-block:: yaml
+
+    enable_legacy_startup_events: True
 
 .. conf_minion:: master_failback
 
@@ -340,7 +362,7 @@ option on the Salt master.
 ``source_interface_name``
 -------------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The name of the interface to use when establishing the connection to the Master.
 
@@ -379,7 +401,7 @@ Configuration example:
 ``source_address``
 ------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The source IP address or the domain name to be used when connecting the Minion
 to the Master.
@@ -404,7 +426,7 @@ Configuration example:
 ``source_ret_port``
 -------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The source port to be used when connecting the Minion to the Master ret server.
 
@@ -427,7 +449,7 @@ Configuration example:
 ``source_publish_port``
 -----------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The source port to be used when connecting the Minion to the Master publish
 server.
@@ -1267,6 +1289,40 @@ talking to the intended master.
 
     syndic_finger: 'ab:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:50:10'
 
+.. conf_minion:: http_connect_timeout
+
+``http_connect_timeout``
+------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``20``
+
+HTTP connection timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_connect_timeout: 20
+
+.. conf_minion:: http_request_timeout
+
+``http_request_timeout``
+------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``3600``
+
+HTTP request timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_request_timeout: 3600
+
 .. conf_minion:: proxy_host
 
 ``proxy_host``
@@ -1324,7 +1380,7 @@ The password used for HTTP proxy access.
 ``docker.compare_container_networks``
 -------------------------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``{'static': ['Aliases', 'Links', 'IPAMConfig'], 'automatic': ['IPAddress', 'Gateway', 'GlobalIPv6Address', 'IPv6Gateway']}``
 
@@ -1904,7 +1960,7 @@ enabled and can be disabled by changing this value to ``False``.
 ``saltenv``
 -----------
 
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     Renamed from ``environment`` to ``saltenv``. If ``environment`` is used,
     ``saltenv`` will take its value. If both are used, ``environment`` will be
     ignored and ``saltenv`` will be used.
@@ -1923,7 +1979,7 @@ environments is to isolate via the top file.
 ``lock_saltenv``
 ----------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``False``
 
@@ -2455,7 +2511,7 @@ minion's pki directory.
 ``autosign_grains``
 -------------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``not defined``
 
@@ -2463,7 +2519,7 @@ The grains that should be sent to the master on authentication to decide if
 the minion's key should be accepted automatically.
 
 Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
-documentation for more infomation.
+documentation for more information.
 
 .. code-block:: yaml
 
@@ -2648,7 +2704,7 @@ executed in a thread.
 ``process_count_max``
 -------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Default: ``-1``
 

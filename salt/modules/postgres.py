@@ -302,8 +302,7 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
         return None
 
 
-def _connection_defaults(user=None, host=None, port=None, maintenance_db=None,
-                         password=None):
+def _connection_defaults(user=None, host=None, port=None, maintenance_db=None):
     '''
     Returns a tuple of (user, host, port, db) with config, pillar, or default
     values assigned to missing values.
@@ -316,31 +315,29 @@ def _connection_defaults(user=None, host=None, port=None, maintenance_db=None,
         port = __salt__['config.option']('postgres.port')
     if not maintenance_db:
         maintenance_db = __salt__['config.option']('postgres.maintenance_db')
-    if password is None:
-        password = __salt__['config.option']('postgres.pass')
 
-    return (user, host, port, maintenance_db, password)
+    return (user, host, port, maintenance_db)
 
 
 def _psql_cmd(*args, **kwargs):
     '''
     Return string with fully composed psql command.
 
-    Accept optional keyword arguments: user, host and port as well as any
-    number or positional arguments to be added to the end of command.
+    Accepts optional keyword arguments: user, host, port and maintenance_db,
+    as well as any number of positional arguments to be added to the end of
+    the command.
     '''
-    (user, host, port, maintenance_db, password) = _connection_defaults(
+    (user, host, port, maintenance_db) = _connection_defaults(
         kwargs.get('user'),
         kwargs.get('host'),
         kwargs.get('port'),
-        kwargs.get('maintenance_db'),
-        kwargs.get('password'))
+        kwargs.get('maintenance_db'))
     _PSQL_BIN = _find_pg_binary('psql')
     cmd = [_PSQL_BIN,
            '--no-align',
            '--no-readline',
            '--no-psqlrc',
-           '--no-password']  # It is never acceptable to issue a password prompt.
+           '--no-password']  # Never prompt, handled in _run_psql.
     if user:
         cmd += ['--username', user]
     if host:
@@ -363,7 +360,7 @@ def _psql_prepare_and_run(cmd,
                           user=None):
     rcmd = _psql_cmd(
         host=host, user=user, port=port,
-        maintenance_db=maintenance_db, password=password,
+        maintenance_db=maintenance_db,
         *cmd)
     cmdret = _run_psql(
         rcmd, runas=runas, password=password, host=host, port=port, user=user)
@@ -852,6 +849,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'pg_roles.rolcanlogin as "can login", '
         '{1} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
+        '(SELECT array_agg(pg_roles2.rolname)'
+        '    FROM pg_catalog.pg_auth_members'
+        '    JOIN pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)'
+        '    WHERE pg_auth_members.member = pg_roles.oid) as "groups",'
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
         'pg_roles.rolconfig  as "defaults variables" '
         , _x(', COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
@@ -894,37 +895,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         retrow['defaults variables'] = row['defaults variables']
         if return_password:
             retrow['password'] = row['password']
+        # use csv reader to handle quoted roles correctly
+        retrow['groups'] = list(csv.reader([row['groups'].strip('{}')]))[0]
         ret[row['name']] = retrow
 
-    # for each role, determine the inherited roles
-    for role in six.iterkeys(ret):
-        rdata = ret[role]
-        groups = rdata.setdefault('groups', [])
-        query = (
-            'select rolname'
-            ' from pg_user'
-            ' join pg_auth_members'
-            '      on (pg_user.usesysid=pg_auth_members.member)'
-            ' join pg_roles '
-            '      on (pg_roles.oid=pg_auth_members.roleid)'
-            ' where pg_user.usename=\'{0}\''
-        ).format(role)
-        try:
-            rows = psql_query(query,
-                              runas=runas,
-                              host=host,
-                              user=user,
-                              port=port,
-                              maintenance_db=maintenance_db,
-                              password=password)
-            for row in rows:
-                if row['rolname'] not in groups:
-                    groups.append(row['rolname'])
-        except Exception:
-            # do not fail here, it is just a bonus
-            # to try to determine groups, but the query
-            # is not portable amongst all pg versions
-            continue
     return ret
 
 
