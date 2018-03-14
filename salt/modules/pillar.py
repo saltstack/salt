@@ -373,10 +373,16 @@ def item(*args, **kwargs):
     ret = {}
     default = kwargs.get('default', '')
     delimiter = kwargs.get('delimiter', DEFAULT_TARGET_DELIM)
+    pillarenv = kwargs.get('pillarenv', None)
+    saltenv = kwargs.get('saltenv', None)
+
+    pillar_dict = __pillar__ \
+        if all(x is None for x in (saltenv, pillarenv)) \
+        else items(saltenv=saltenv, pillarenv=pillarenv)
 
     try:
         for arg in args:
-            ret[arg] = salt.utils.traverse_dict_and_list(__pillar__,
+            ret[arg] = salt.utils.traverse_dict_and_list(pillar_dict,
                                                          arg,
                                                          default,
                                                          delimiter)
