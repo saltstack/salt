@@ -230,7 +230,7 @@ def get_tops(extra_mods='', so_mods=''):
 
 def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
              python2_bin='python2', python3_bin='python3', absonly=True,
-             compress='gzip'):
+             compress='gzip', extended_cfg=None):
     '''
     Generate the salt-thin tarball and print the location of the tarball
     Optional additional mods to include (e.g. mako) can be supplied as a comma
