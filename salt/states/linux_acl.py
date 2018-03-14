@@ -159,7 +159,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False, force=False):
                     ret.update({'comment': 'Updated permissions will be applied for '
                                            '{0}: {1} -> {2}'.format(
                         acl_name,
-                        str(user[_search_name]['octal']),
+                        six.text_type(user[_search_name]['octal']),
                         perms),
                         'result': None, 'pchanges': changes})
                     return ret
