@@ -34,6 +34,9 @@ provisioner:
   log_level: info
   sudo: true
   require_chef: false
+  retry_on_exit_code:
+    - 139
+  max_retries: 2
   remote_states:
     name: git://github.com/saltstack/salt-jenkins.git
     branch: 2017.7
