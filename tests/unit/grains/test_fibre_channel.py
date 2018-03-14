@@ -19,8 +19,6 @@ from tests.support.mock import (
 import salt.grains.fibre_channel as fibre_channel
 
 
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class FibreChannelGrainsTestCase(TestCase):
     '''
