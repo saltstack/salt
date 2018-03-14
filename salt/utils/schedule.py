@@ -1011,14 +1011,17 @@ class Schedule(object):
                                 log.error('Invalid date string. Ignoring')
                                 continue
                         else:
-                            try:
-                                when__ = dateutil_parser.parse(i)
-                            except ValueError:
-                                log.error(
-                                    'Invalid date string %s. Ignoring job %s.',
-                                    i, job
-                                )
-                                continue
+                            if isinstance(i, datetime.datetime):
+                                when__ = i
+                            else:
+                                try:
+                                    when__ = dateutil_parser.parse(i)
+                                except ValueError:
+                                    log.error(
+                                        'Invalid date string %s. Ignoring job %s.',
+                                        i, job
+                                    )
+                                    continue
                         _when.append(when__)
 
                     if data['_splay']:
@@ -1190,16 +1193,20 @@ class Schedule(object):
                         continue
                     else:
                         if isinstance(data['range'], dict):
-                            try:
-                                start = dateutil_parser.parse(data['range']['start'])
-                            except ValueError:
-                                log.error('Invalid date string for start. Ignoring job %s.', job)
-                                continue
-                            try:
-                                end = dateutil_parser.parse(data['range']['end'])
-                            except ValueError:
-                                log.error('Invalid date string for end. Ignoring job %s.', job)
-                                continue
+                            start = data['range']['start']
+                            end = data['range']['start']
+                            if not isinstance(range_start, datetime.datetime):
+                                try:
+                                    start = dateutil_parser.parse(start)
+                                except ValueError:
+                                    log.error('Invalid date string for start. Ignoring job %s.', job)
+                                    continue
+                            if not isinstance(end, datetime.datetime):
+                                try:
+                                    end = dateutil_parser.parse(data['range']['end'])
+                                except ValueError:
+                                    log.error('Invalid date string for end. Ignoring job %s.', job)
+                                    continue
                             if end > start:
                                 if 'invert' in data['range'] and data['range']['invert']:
                                     if now <= start or now >= end:
@@ -1335,7 +1342,9 @@ class Schedule(object):
                         log.error('Missing python-dateutil. '
                                   'Ignoring until.')
                     else:
-                        until = dateutil_parser.parse(data['until'])
+                        until = data['until']
+                        if not isinstance(until, datetime.datetime):
+                            until = dateutil_parser.parse(until)
 
                         if until <= now:
                             log.debug(
@@ -1352,7 +1361,9 @@ class Schedule(object):
                         log.error('Missing python-dateutil. '
                                   'Ignoring after.')
                     else:
-                        after = dateutil_parser.parse(data['after'])
+                        after = data['after']
+                        if not isinstance(after, datetime.datetime):
+                            after = dateutil_parser.parse(data['after'])
 
                         if after >= now:
                             log.debug(
