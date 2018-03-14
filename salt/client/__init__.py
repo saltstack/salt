@@ -1809,6 +1809,9 @@ class LocalClient(object):
             if listen and not self.event.connect_pub(timeout=timeout):
                 raise SaltReqTimeoutError()
             payload = channel.send(payload_kwargs, timeout=timeout)
+
+            # [KN] Just a side note: jid seems to be non empty only when the job is submitted via raas.
+            # In CLI case, jid = '' here (which is a bit meaningless for the Aggregator).
             self.event.fire_event(
                 data=taken_by_master(jid=jid, ts=TimestampProvider.get_now(), master_id=self.opts['id']),
                 tag='perf/master')
