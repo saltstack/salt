@@ -2663,9 +2663,9 @@ def mod_repo(repo, basedir=None, **kwargs):
     filerepos[repo].update(repo_opts)
     content = header
     for stanza in six.iterkeys(filerepos):
-        comments = filerepos[stanza].pop('comments', [])
-        if comments:
-            comments = salt.utils.pkg.rpm.combine_comments(comments)
+        comments = salt.utils.pkg.rpm.combine_comments(
+            filerepos[stanza].pop('comments', [])
+        )
         content += '[{0}]\n'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
             content += '{0}={1}\n'.format(
