@@ -927,7 +927,7 @@ SwapTotal:       4789244 kB'''
         ('rinzler.evil-corp.com', [], ['5.6.7.8']),
         ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
         ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
-        ret = {'fqdns': ['rinzler.evil-corp.com', 'foo.bar.baz', 'bluesniff.foo.bar']}
+        ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
         self._run_fqdns_test(reverse_resolv_mock, ret)
 
     def _run_fqdns_test(self, reverse_resolv_mock, ret):
