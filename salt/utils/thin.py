@@ -250,6 +250,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             'The minimum required python version to run salt-ssh is "2.6".'
         )
 
+    tops_failure_msg = 'Failed %s tops for Python binary %s.'
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)
     tops_py_version_mapping[sys.version_info.major] = tops
@@ -266,9 +267,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 tops = salt.utils.json.loads(stdout)
                 tops_py_version_mapping['3'] = tops
             except ValueError as err:
-                log.error('Failed parsing tops for Python binary %s: %s', python3_bin, err)
+                log.error(tops_failure_msg, 'parsing', python3_bin)
+                log.exception(err)
         else:
-            log.error('Failed collecting tops for Python binary: %s', python3_bin)
+            log.error(tops_failure_msg, 'collecting', python3_bin)
             log.debug(stderr)
 
     # Collect tops, alternative to 3.x version
@@ -283,9 +285,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 tops = salt.utils.json.loads(stdout.decode('utf-8'))
                 tops_py_version_mapping['2'] = tops
             except ValueError as err:
-                log.error('Failed parsing tops for Python binary %s: %s', python2_bin, err)
+                log.error(tops_failure_msg, 'parsing', python2_bin)
+                log.exception(err)
         else:
-            log.error('Failed collecting tops for Python binary: %s', python2_bin)
+            log.error(tops_failure_msg, 'collecting', python2_bin)
             log.debug(stderr)
 
     if compress not in ['gzip', 'zip']:
