@@ -540,8 +540,8 @@ def _run(cmd,
                   'bg': bg,
                   }
 
-    if 'stdin_fix_newlines' in kwargs:
-        new_kwargs['stdin_fix_newlines'] = kwargs['stdin_fix_newlines']
+    if 'stdin_raw_newlines' in kwargs:
+        new_kwargs['stdin_raw_newlines'] = kwargs['stdin_raw_newlines']
 
     if umask is not None:
         _umask = six.text_type(umask).lstrip('0')
