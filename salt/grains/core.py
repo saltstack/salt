@@ -975,6 +975,7 @@ def _virtual(osdata):
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
+
     for command in failed_commands:
         log.info(
             "Although '%s' was found in path, the current user "
@@ -998,9 +999,9 @@ def _virtual_hv(osdata):
     try:
         version = {}
         for file in ('major', 'minor', 'extra'):
-            with open('/sys/hypervisor/version/%s' % (file,), 'r') as fhr:
+            with salt.utils.fopen('/sys/hypervisor/version/{}'.format(file), 'r') as fhr:
                 version[file] = fhr.read().strip()
-        grains['virtual_hv_version'] = '%s.%s%s' % (version['major'], version['minor'], version['extra'])
+        grains['virtual_hv_version'] = '{}.{}{}'.format(version['major'], version['minor'], version['extra'])
         grains['virtual_hv_version_info'] = (version['major'], version['minor'], version['extra'])
     except:
         pass
@@ -1008,22 +1009,22 @@ def _virtual_hv(osdata):
     # Try to read and decode the supported feature set of the hypervisor
     # Based on https://github.com/brendangregg/Misc/blob/master/xen/xen-features.py
     # Table data from include/xen/interface/features.h
-    xen_feature_table = { 0: 'writable_page_tables',
-                          1: 'writable_descriptor_tables',
-                          2: 'auto_translated_physmap',
-                          3: 'supervisor_mode_kernel',
-                          4: 'pae_pgdir_above_4gb',
-                          5: 'mmu_pt_update_preserve_ad',
-                          7: 'gnttab_map_avail_bits',
-                          8: 'hvm_callback_vector',
-                          9: 'hvm_safe_pvclock',
-                         10: 'hvm_pirqs',
-                         11: 'dom0',
-                         12: 'grant_map_identity',
-                         13: 'memory_op_vnode_supported',
-                         14: 'ARM_SMCCC_supported' }
+    xen_feature_table = {0: 'writable_page_tables',
+                         1: 'writable_descriptor_tables',
+                         2: 'auto_translated_physmap',
+                         3: 'supervisor_mode_kernel',
+                         4: 'pae_pgdir_above_4gb',
+                         5: 'mmu_pt_update_preserve_ad',
+                         7: 'gnttab_map_avail_bits',
+                         8: 'hvm_callback_vector',
+                         9: 'hvm_safe_pvclock',
+                        10: 'hvm_pirqs',
+                        11: 'dom0',
+                        12: 'grant_map_identity',
+                        13: 'memory_op_vnode_supported',
+                        14: 'ARM_SMCCC_supported'}
     try:
-        with open('/sys/hypervisor/properties/features', 'r') as fhr:
+        with salt.utils.fopen('/sys/hypervisor/properties/features', 'r') as fhr:
             features = fhr.read().strip()
         enabled_features = []
         for bit, feat in xen_feature_table.items():
