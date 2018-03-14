@@ -448,10 +448,10 @@ def _run(cmd,
             ).communicate(py_code.encode(__salt_system_encoding__))
             env_encoded_err = env_encoded[1]
             env_encoded = env_encoded[0]
-            if isinstance(env_encoded_err,str):
-              env_encoded_err = env_encoded_err.encode(__salt_system_encoding__)
-            if isinstance(env_encoded,str):
-              env_encoded = env_encoded.encode(__salt_system_encoding__)
+            if isinstance(env_encoded_err, str):
+                env_encoded_err = env_encoded_err.encode(__salt_system_encoding__)
+            if isinstance(env_encoded, str):
+                env_encoded = env_encoded.encode(__salt_system_encoding__)
             env_encoded_org = env_encoded
             env_mark = env_encoded.find(marker_b + b'\n')
             if env_mark < 0:
