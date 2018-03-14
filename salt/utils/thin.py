@@ -195,6 +195,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         salt-run thin.generate mako,wempy 1
         salt-run thin.generate overwrite=1
     '''
+    if sys.version_info < (2, 6):
+        raise salt.exceptions.SaltSystemExit('The minimum required python version to run salt-ssh is "2.6".')
+
     thindir = os.path.join(cachedir, 'thin')
     if not os.path.isdir(thindir):
         os.makedirs(thindir)
