@@ -2604,7 +2604,7 @@ class Minion(MinionBase):
             def ping_master():
                 try:
                     def ping_timeout_handler(*_):
-                        if not self.opts.get('auth_safemode', True):
+                        if self.opts.get('auth_safemode', False):
                             log.error('** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay %ss', delay)
