@@ -231,10 +231,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             return thintar
     if _six.PY3:
         # Let's check for the minimum python 2 version requirement, 2.6
-        py_shell_cmd = (
-            python2_bin + ' -c \'from __future__ import print_function; import sys; '
-            'print("{0}.{1}".format(*(sys.version_info[:2])));\''
-        )
+        py_shell_cmd = "{} -c 'import sys;sys.stdout.write(\"%s.%s\\n\" % sys.version_info[:2]);'".format(python2_bin)
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
         stdout, _ = cmd.communicate()
         if cmd.returncode == 0:
